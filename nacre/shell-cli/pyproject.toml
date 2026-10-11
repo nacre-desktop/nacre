@@ -7,7 +7,7 @@ name = "nacre_shell"
 requires-python = ">=3.13"
 version = "0.1.0.dev1"
 description = "Orient: Nacre's independent wallpaper palette engine"
-dependencies = ["orient-colors==0.1.0.dev2"]
+dependencies = ["orient-colors==0.1.0.dev3"]
 
 [project.scripts]
 nacre_shell = "nacre_shell:main"

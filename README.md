@@ -105,5 +105,6 @@ opens AI when installed. Enter opens a search result; Ctrl+D toggles its favorit
 
 ## License
 
-Nacre-owned source is [GPL-3.0-only](LICENSE). System dependencies retain their own
-licenses. The temporary bundled landscape wallpapers are public domain.
+Nacre-owned source is [GPL-3.0-only](LICENSE). The standalone
+[Orient engine](https://github.com/nacre-desktop/orient) is MIT-licensed. System
+dependencies retain their own licenses. The temporary bundled landscape wallpapers are public domain.
