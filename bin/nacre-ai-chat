@@ -1,0 +1,585 @@
+#!/usr/bin/env python3
+"""Read chat titles and name the current chat through Codex's local protocol."""
+
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import select
+import shlex
+import signal
+import subprocess
+import sys
+import time
+import unicodedata
+
+
+def label(value):
+    return " ".join(
+        "".join(
+            c for c in str(value) if not unicodedata.category(c).startswith("C")
+        ).split()
+    )[:100]
+
+
+def account_env(account):
+    env = dict(os.environ)
+    if account:
+        if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,47}", account):
+            raise ValueError("Invalid account name")
+        env["CODEX_HOME"] = str(
+            Path.home() / ".local/share/nacre/ai/accounts" / account
+        )
+    return env
+
+
+class Codex:
+    def __init__(self, env):
+        self.process = subprocess.Popen(
+            [str(Path.home() / ".local/bin/codex"), "app-server", "--stdio"],
+            env=env,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=0,
+            start_new_session=True,
+        )
+        self.buffer = b""
+        self.sequence = 0
+        self.deadline = time.monotonic() + 22
+
+    def send(self, value):
+        self.process.stdin.write((json.dumps(value) + "\n").encode())
+        self.process.stdin.flush()
+
+    def __enter__(self):
+        try:
+            self.call(
+                "initialize",
+                {
+                    "clientInfo": {
+                        "name": "nacre_workflow",
+                        "version": "1.0",
+                        "title": "Nacre AI",
+                    }
+                },
+            )
+            self.send({"method": "initialized"})
+            return self
+        except BaseException:
+            self.close()
+            raise
+
+    def call(self, method, params):
+        self.sequence += 1
+        identity = self.sequence
+        self.send({"id": identity, "method": method, "params": params})
+        while time.monotonic() < self.deadline:
+            while b"\n" in self.buffer:
+                line, self.buffer = self.buffer.split(b"\n", 1)
+                message = json.loads(line)
+                if message.get("id") != identity:
+                    continue
+                if "error" in message:
+                    raise ValueError(
+                        message["error"].get("message", "Codex request failed")
+                    )
+                return message["result"]
+            if not select.select([self.process.stdout], [], [], 1)[0]:
+                continue
+            chunk = os.read(self.process.stdout.fileno(), 65536)
+            if not chunk:
+                raise ValueError(
+                    "Codex closed the connection; run codex doctor for details"
+                )
+            self.buffer += chunk
+            if len(self.buffer) > 4 * 1024 * 1024:
+                raise ValueError("Codex response exceeds the workflow limit")
+        raise ValueError("Reading Codex chats timed out")
+
+    def close(self):
+        try:
+            os.killpg(self.process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            self.process.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            os.killpg(self.process.pid, signal.SIGKILL)
+            self.process.wait()
+        for stream in (self.process.stdin, self.process.stdout):
+            stream.close()
+
+    def __exit__(self, *_):
+        self.close()
+
+
+def running_sessions(project, account):
+    tag = f"profile-{account}" if account else "default"
+    pattern = re.compile(
+        re.escape(f"ai-{project}-{tag}-")
+        + r"(?:[0-9]{8}T[0-9]{6}-[0-9]+|resume-[a-zA-Z0-9-]+)$"
+    )
+    if not __import__("shutil").which("tmux"):
+        return {}
+    result = subprocess.run(
+        ["tmux", "list-panes", "-a", "-F", "#{session_name}\t#{pane_current_path}"],
+        capture_output=True,
+        text=True,
+        timeout=4,
+    )
+    return {
+        name: path
+        for row in result.stdout.splitlines()
+        if "\t" in row
+        for name, path in [row.split("\t", 1)]
+        if pattern.fullmatch(name)
+    }
+
+
+def chat_records(threads, sessions):
+    result = []
+    matched = set()
+    for thread in threads:
+        session = next(
+            (
+                name
+                for name, path in sessions.items()
+                if path == thread.get("cwd") and name not in matched
+            ),
+            None,
+        )
+        if session:
+            matched.add(session)
+        result.append(
+            {
+                "id": thread["id"],
+                "title": label(
+                    thread.get("name") or thread.get("preview") or "New task"
+                ),
+                "state": "running" if session else "saved",
+                "session": session,
+                "updated_at": thread.get("updatedAt", 0),
+                "cwd": thread.get("cwd"),
+            }
+        )
+    for session in sessions.keys() - matched:
+        result.append(
+            {
+                "id": None,
+                "title": "New task",
+                "state": "running",
+                "session": session,
+                "updated_at": 0,
+                "cwd": sessions[session],
+            }
+        )
+    return result
+
+
+def cache_title(thread_id, title):
+    if not re.fullmatch(r"[a-zA-Z0-9-]{1,100}", thread_id or ""):
+        raise ValueError("Invalid title cache ID")
+    import tempfile
+
+    root = Path.home() / ".local/state/nacre/ai/chat-titles"
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    fd, temp = tempfile.mkstemp(dir=root, prefix=".title-")
+    with os.fdopen(fd, "w") as output:
+        json.dump({"title": label(title)}, output)
+    os.replace(temp, root / f"{thread_id}.json")
+
+
+def set_title(thread_id, title, env):
+    if not re.fullmatch(r"[a-zA-Z0-9-]{1,100}", thread_id or ""):
+        raise ValueError("A valid chat ID is required")
+    name = label(title)
+    if not name:
+        raise ValueError("A title is required")
+    with Codex(env) as codex:
+        codex.call("thread/name/set", {"threadId": thread_id, "name": name})
+    cache_title(thread_id, name)
+
+
+def knowledge_tools():
+    common = {"type": "object", "additionalProperties": False}
+    return [
+        {
+            "name": "resolve_context",
+            "description": "Find relevant registered project paths and build hosts from conversation. This does not execute or select a project. Clarify only genuine ambiguity.",
+            "annotations": {"readOnlyHint": True},
+            "inputSchema": common
+            | {"properties": {"query": {"type": "string"}}, "required": ["query"]},
+        },
+        {
+            "name": "find_knowledge",
+            "description": "Search shared private evidence for a subject before relying on it or adding memory. Read INDEX.md and relevant wiki pages first.",
+            "annotations": {"readOnlyHint": True},
+            "inputSchema": common
+            | {"properties": {"query": {"type": "string"}}, "required": ["query"]},
+        },
+        {
+            "name": "remember",
+            "description": "Save meaningful durable personal knowledge, decisions, research or verified work at milestones. No raw transcripts, secrets, repetitive mentions or speculation as facts. Worlds are stable subjects, not necessarily projects. Topics connect subjects. Search first; distinguish reported/verified/unverified.",
+            "annotations": {"destructiveHint": False},
+            "inputSchema": common
+            | {
+                "properties": {
+                    "title": {"type": "string"},
+                    "source": {"type": "string"},
+                    "body": {"type": "string"},
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "inbox",
+                            "personal",
+                            "projects",
+                            "infrastructure",
+                            "devices",
+                            "runbooks",
+                            "decisions",
+                            "checkpoints",
+                        ],
+                    },
+                    "confidence": {
+                        "type": "string",
+                        "enum": ["reported", "verified", "unverified"],
+                    },
+                    "worlds": {"type": "array", "items": {"type": "string"}},
+                    "topics": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["title", "source", "body", "confidence"],
+            },
+        },
+    ]
+
+
+def knowledge_call(name, args):
+    if name in ("resolve_context", "find_knowledge") and (
+        not isinstance(args.get("query"), str) or not args["query"].strip()
+    ):
+        raise ValueError("A nonempty query is required")
+    if name == "remember" and any(
+        not isinstance(args.get(k), str) or not args[k].strip()
+        for k in ("title", "source", "body", "confidence")
+    ):
+        raise ValueError("Title, source, body and confidence are required")
+    folder = Path(__file__).resolve().parent
+    if name == "resolve_context":
+        command = [str(folder / "nacre-ai-context"), args["query"]]
+        body = None
+    elif name == "find_knowledge":
+        command = [str(folder / "nacre-brain"), "search", args["query"]]
+        body = None
+    else:
+        command = [
+            str(folder / "nacre-ai-memory"),
+            "--title",
+            args["title"],
+            "--source",
+            args["source"],
+            "--confidence",
+            args["confidence"],
+            "--kind",
+            args.get("kind", "inbox"),
+        ]
+        for key, flag in [("worlds", "--world"), ("topics", "--topic")]:
+            for value in args.get(key, []):
+                command.extend([flag, value])
+        body = args["body"]
+    result = subprocess.run(
+        command, input=body, text=True, capture_output=True, timeout=25
+    )
+    if result.returncode and not (name == "find_knowledge" and result.returncode == 1):
+        raise ValueError(result.stderr.strip() or "Knowledge request failed")
+    return result.stdout[:50000] or "No matching evidence"
+
+
+def serve(env):
+    """Expose naming, context and scoped private memory over local MCP stdio."""
+    for line in sys.stdin:
+        try:
+            request = json.loads(line)
+            if "id" not in request:
+                continue
+            method = request.get("method")
+            params = request.get("params", {})
+            if method == "initialize":
+                result = {
+                    "protocolVersion": params.get("protocolVersion", "2024-11-05"),
+                    "capabilities": {"tools": {}},
+                    "serverInfo": {"name": "nacre-workflow", "version": "1.0"},
+                }
+            elif method == "ping":
+                result = {}
+            elif method == "tools/list":
+                result = {
+                    "tools": [
+                        {
+                            "name": "set_chat_title",
+                            "annotations": {
+                                "readOnlyHint": False,
+                                "destructiveHint": False,
+                                "idempotentHint": True,
+                                "openWorldHint": False,
+                            },
+                            "description": "Name this Codex chat with a concise 3–7 word title. Read CODEX_THREAD_ID from your shell for thread_id.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "thread_id": {
+                                        "type": "string",
+                                        "pattern": "^[a-zA-Z0-9-]{1,100}$",
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100,
+                                    },
+                                },
+                                "required": ["thread_id", "title"],
+                                "additionalProperties": False,
+                            },
+                        },
+                        *knowledge_tools(),
+                    ]
+                }
+            elif method == "tools/call" and params.get("name") == "set_chat_title":
+                try:
+                    args = params.get("arguments", {})
+                    set_title(args.get("thread_id"), args.get("title", ""), env)
+                    result = {"content": [{"type": "text", "text": "Chat title saved"}]}
+                except (ValueError, OSError, subprocess.SubprocessError) as error:
+                    result = {
+                        "isError": True,
+                        "content": [{"type": "text", "text": str(error)}],
+                    }
+            elif method == "tools/call" and params.get("name") in (
+                "resolve_context",
+                "remember",
+                "find_knowledge",
+            ):
+                try:
+                    result = {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": knowledge_call(
+                                    params["name"], params.get("arguments", {})
+                                ),
+                            }
+                        ]
+                    }
+                except (ValueError, OSError, subprocess.SubprocessError) as error:
+                    result = {
+                        "isError": True,
+                        "content": [{"type": "text", "text": str(error)}],
+                    }
+            else:
+                print(
+                    json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "id": request["id"],
+                            "error": {"code": -32601, "message": "Unknown method"},
+                        }
+                    ),
+                    flush=True,
+                )
+                continue
+            print(
+                json.dumps({"jsonrpc": "2.0", "id": request["id"], "result": result}),
+                flush=True,
+            )
+        except (ValueError, TypeError, AttributeError):
+            print(
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": None,
+                        "error": {"code": -32700, "message": "Invalid request"},
+                    }
+                ),
+                flush=True,
+            )
+
+
+def configure(env):
+    import tomllib
+
+    home = Path(env.get("CODEX_HOME", str(Path.home() / ".codex")))
+    home.mkdir(parents=True, exist_ok=True, mode=0o700)
+    config = home / "config.toml"
+    text = config.read_text() if config.exists() else ""
+    tomllib.loads(text)  # Validate before changing an existing configuration.
+    first_table = re.search(r"^\s*\[", text, re.MULTILINE)
+    boundary = first_table.start() if first_table else len(text)
+    top, tables = text[:boundary], text[boundary:]
+    top = re.sub(
+        r"^(?:sandbox_mode|approval_policy)\s*=.*(?:\n|$)", "", top, flags=re.MULTILINE
+    )
+    updated = (
+        'sandbox_mode = "danger-full-access"\napproval_policy = "never"\n'
+        + top
+        + tables
+    )
+    if updated != text:
+        temporary = config.with_suffix(".toml.tmp")
+        temporary.write_text(updated)
+        temporary.chmod(0o600)
+        temporary.replace(config)
+    text = updated
+    servers = tomllib.loads(text).get("mcp_servers", {})
+    expected = {
+        "command": str(Path.home() / ".local/bin/nacre-ai-chat"),
+        "args": ["serve"],
+    }
+    if "nacre_workflow" in servers:
+        if any(servers["nacre_workflow"].get(k) != v for k, v in expected.items()):
+            raise ValueError("Existing nacre_workflow config differs; preserving it")
+    else:
+        with config.open("a") as output:
+            output.write(
+                "\n[mcp_servers.nacre_workflow]\ncommand = "
+                + json.dumps(expected["command"])
+                + '\nargs = ["serve"]\n'
+            )
+    settings = servers.get("nacre_workflow", {}).get("tools", {}).get("set_chat_title")
+    if settings is None:
+        with config.open("a") as output:
+            output.write(
+                '\n[mcp_servers.nacre_workflow.tools.set_chat_title]\napproval_mode = "approve"\n'
+            )
+    server_env = servers.get("nacre_workflow", {}).get("env", {})
+    if not server_env:
+        with config.open("a") as output:
+            output.write(
+                "\n[mcp_servers.nacre_workflow.env]\nCODEX_HOME = "
+                + json.dumps(str(home.resolve()))
+                + "\n"
+            )
+    elif server_env.get("CODEX_HOME") != str(home.resolve()):
+        raise ValueError(
+            "Workflow tool points to another account home; preserving config"
+        )
+    config.chmod(0o600)
+
+
+def history_paths(path, chat_directory=False):
+    root = Path(path)
+    if chat_directory:
+        # General conversations have independent scratch folders, not Git worktrees.
+        if not root.is_dir():
+            return []
+        return [
+            str(root),
+            *[
+                str(child)
+                for child in root.iterdir()
+                if child.is_dir()
+                and not child.is_symlink()
+                and re.fullmatch(r"[0-9a-f]{32}", child.name)
+            ],
+        ]
+    result = subprocess.run(
+        ["git", "-C", path, "worktree", "list", "--porcelain"],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=5,
+    )
+    return [
+        row[len("worktree ") :]
+        for row in result.stdout.splitlines()
+        if row.startswith("worktree ")
+    ]
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("command", choices=["title", "list", "resume", "serve", "configure"])
+    p.add_argument("name", nargs="?")
+    p.add_argument("--thread-id", default=os.environ.get("CODEX_THREAD_ID"))
+    p.add_argument("--project")
+    p.add_argument("--path")
+    p.add_argument("--chat-directory", action="store_true")
+    p.add_argument("--account", default="")
+    a = p.parse_args()
+    env = account_env(a.account)
+    if a.command == "serve":
+        return serve(env)
+    if a.command == "configure":
+        return configure(env)
+    if a.command == "resume":
+        if not a.thread_id or not re.fullmatch(r"[a-zA-Z0-9-]+", a.thread_id):
+            raise ValueError("A valid chat ID is required")
+        tag = f"profile-{a.account}" if a.account else "default"
+        if not a.project or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*", a.project):
+            raise ValueError("A project ID is required")
+        session = f"ai-{a.project}-{tag}-resume-{a.thread_id}"
+        argv = [
+            str(Path.home() / ".local/bin/codex"),
+            "resume",
+            a.thread_id,
+            "--sandbox",
+            "danger-full-access",
+            "--ask-for-approval",
+            "never",
+            "--add-dir",
+            str(Path.home() / "Documents/Nacre-Brain"),
+        ]
+        # tmux may predate this account selection; pass its home to the new child explicitly.
+        if env.get("CODEX_HOME"):
+            argv = ["env", "CODEX_HOME=" + env["CODEX_HOME"], *argv]
+        os.execvpe(
+            "tmux", ["tmux", "new-session", "-A", "-s", session, shlex.join(argv)], env
+        )
+    with Codex(env) as codex:
+        if a.command == "title":
+            name = label(a.name or "")
+            if not name or not a.thread_id:
+                raise ValueError(
+                    "Run in a Codex tool session or pass --thread-id, plus a short title"
+                )
+            codex.call("thread/name/set", {"threadId": a.thread_id, "name": name})
+            cache_title(a.thread_id, name)
+            print("Chat title saved")
+        else:
+            if not a.path or not a.project:
+                raise ValueError("Project ID and path are required")
+            paths = history_paths(a.path, a.chat_directory)
+            if not paths:
+                print("[]")
+                return
+            threads = []
+            cursor = None
+            for _ in range(5):
+                data = codex.call(
+                    "thread/list",
+                    {
+                        "cwd": paths,
+                        "limit": 100,
+                        "cursor": cursor,
+                        "sortKey": "updated_at",
+                        "useStateDbOnly": True,
+                    },
+                )
+                threads.extend(data["data"])
+                cursor = data.get("nextCursor")
+                if not cursor:
+                    break
+            print(
+                json.dumps(
+                    chat_records(threads, running_sessions(a.project, a.account))
+                )
+            )
+
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    try:
+        main()
+    except (ValueError, OSError, subprocess.SubprocessError) as error:
+        print(f"nacre-ai-chat: {error}", file=sys.stderr)
+        raise SystemExit(1) from None

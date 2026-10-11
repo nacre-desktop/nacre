@@ -1,0 +1,1266 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "home",
+      "kind": "group",
+      "label": "Home",
+      "icon": "home",
+      "description": "Favorites and recent destinations"
+    },
+    {
+      "id": "apps",
+      "kind": "group",
+      "label": "All apps",
+      "icon": "apps",
+      "description": "Your installed applications",
+      "provider": "apps"
+    },
+    {
+      "id": "actions",
+      "kind": "group",
+      "label": "Actions",
+      "icon": "bolt",
+      "description": "Capture, tools and quick controls"
+    },
+    {
+      "id": "style",
+      "kind": "group",
+      "label": "Style",
+      "icon": "palette",
+      "description": "Wallpapers, Orient and appearance"
+    },
+    {
+      "id": "setup",
+      "kind": "group",
+      "label": "Setup",
+      "icon": "tune",
+      "description": "Devices and desktop preferences"
+    },
+    {
+      "id": "software",
+      "kind": "group",
+      "label": "Software",
+      "icon": "download",
+      "description": "Discover and manage software"
+    },
+    {
+      "id": "health",
+      "kind": "group",
+      "label": "Health",
+      "icon": "build",
+      "description": "Updates, checks and recovery"
+    },
+    {
+      "id": "learn",
+      "kind": "group",
+      "label": "Learn",
+      "icon": "help",
+      "description": "Shortcuts, the tour and guides"
+    },
+    {
+      "id": "power",
+      "kind": "group",
+      "label": "Power",
+      "icon": "power_settings_new",
+      "description": "Lock and session controls"
+    },
+    {
+      "id": "actions.capture",
+      "kind": "group",
+      "label": "Capture",
+      "icon": "screenshot",
+      "description": "Screenshots, recording and reading the screen"
+    },
+    {
+      "id": "actions.capture.area",
+      "kind": "action",
+      "label": "Screenshot area",
+      "icon": "crop_free",
+      "operation": "tool",
+      "value": "capture-area",
+      "description": "Save in Pictures/Screenshots",
+      "capability": "capture"
+    },
+    {
+      "id": "actions.capture.screen",
+      "kind": "action",
+      "label": "Screenshot screen",
+      "icon": "screenshot_monitor",
+      "operation": "tool",
+      "value": "capture-screen",
+      "description": "Save in Pictures/Screenshots",
+      "capability": "capture"
+    },
+    {
+      "id": "actions.capture.window",
+      "kind": "action",
+      "label": "Screenshot window",
+      "icon": "window",
+      "operation": "tool",
+      "value": "capture-window",
+      "description": "Save in Pictures/Screenshots",
+      "capability": "capture"
+    },
+    {
+      "id": "actions.capture.record",
+      "kind": "action",
+      "label": "Record an area",
+      "icon": "videocam",
+      "operation": "tool",
+      "value": "record-start",
+      "description": "Record to Videos/Recordings",
+      "capability": "record"
+    },
+    {
+      "id": "actions.capture.stop",
+      "kind": "action",
+      "label": "Stop recording",
+      "icon": "stop_circle",
+      "operation": "tool",
+      "value": "record-stop",
+      "description": "Record to Videos/Recordings",
+      "capability": "record"
+    },
+    {
+      "id": "actions.capture.text",
+      "kind": "action",
+      "label": "Read text from screen",
+      "icon": "text_fields",
+      "operation": "tool",
+      "value": "capture-text",
+      "description": "Copy the result",
+      "capability": "ocr"
+    },
+    {
+      "id": "actions.capture.qr",
+      "kind": "action",
+      "label": "Read a QR code",
+      "icon": "qr_code",
+      "operation": "tool",
+      "value": "capture-qr",
+      "description": "Copy the result",
+      "capability": "qr"
+    },
+    {
+      "id": "actions.capture.color",
+      "kind": "action",
+      "label": "Pick a screen color",
+      "icon": "colorize",
+      "operation": "tool",
+      "value": "color-picker",
+      "description": "Copy the result",
+      "capability": "color-picker"
+    },
+    {
+      "id": "actions.clipboard",
+      "kind": "group",
+      "label": "Clipboard history",
+      "icon": "content_paste",
+      "description": "Reuse copied text and images",
+      "provider": "clipboard"
+    },
+    {
+      "id": "actions.emoji",
+      "kind": "group",
+      "label": "Emoji",
+      "icon": "mood",
+      "description": "Choose an emoji and copy it",
+      "provider": "emoji"
+    },
+    {
+      "id": "actions.calculator",
+      "kind": "action",
+      "label": "Calculator",
+      "icon": "calculate",
+      "operation": "calculator",
+      "value": "",
+      "description": "Type = followed by an expression"
+    },
+    {
+      "id": "actions.windows",
+      "kind": "group",
+      "label": "Windows",
+      "icon": "view_quilt",
+      "description": "Focus an open window",
+      "provider": "windows"
+    },
+    {
+      "id": "actions.reminders",
+      "kind": "group",
+      "label": "Reminders",
+      "icon": "timer",
+      "description": "Small timers and reminders",
+      "provider": "timers"
+    },
+    {
+      "id": "actions.reminders.new",
+      "kind": "action",
+      "label": "Set a reminder",
+      "icon": "add_alarm",
+      "operation": "form",
+      "value": "reminder",
+      "description": "Choose a duration and message"
+    },
+    {
+      "id": "actions.reminders.focus",
+      "kind": "action",
+      "label": "Focus for 25 minutes",
+      "icon": "hourglass_top",
+      "operation": "tool",
+      "value": "focus-timer",
+      "description": "A reminder when it is time for a break"
+    },
+    {
+      "id": "actions.assistant",
+      "kind": "group",
+      "label": "Nacre AI and Brain",
+      "icon": "neurology",
+      "description": "Your assistant and private knowledge"
+    },
+    {
+      "id": "actions.assistant.ai",
+      "kind": "action",
+      "label": "Nacre AI",
+      "icon": "neurology",
+      "operation": "legacy",
+      "value": "tasks",
+      "description": "Open your assistant workspace",
+      "brand": "ai",
+      "capability": "ai",
+      "aliases": [
+        "ai",
+        "assistant",
+        "ai workspace"
+      ]
+    },
+    {
+      "id": "actions.assistant.new",
+      "kind": "action",
+      "label": "Nacre AI: New chat",
+      "icon": "neurology",
+      "operation": "legacy",
+      "value": "new",
+      "description": "Start a conversation",
+      "brand": "ai",
+      "capability": "ai"
+    },
+    {
+      "id": "actions.assistant.resume",
+      "kind": "action",
+      "label": "Nacre AI: Resume chat",
+      "icon": "neurology",
+      "operation": "legacy",
+      "value": "resume",
+      "description": "Continue the latest conversation",
+      "brand": "ai",
+      "capability": "ai"
+    },
+    {
+      "id": "actions.assistant.chats",
+      "kind": "action",
+      "label": "Nacre AI: Browse chats",
+      "icon": "neurology",
+      "operation": "legacy",
+      "value": "load",
+      "description": "Choose a saved conversation",
+      "brand": "ai",
+      "capability": "ai"
+    },
+    {
+      "id": "actions.assistant.brain",
+      "kind": "action",
+      "label": "Nacre Brain",
+      "icon": "edit_note",
+      "operation": "legacy",
+      "value": "brain",
+      "description": "Browse your private knowledge",
+      "brand": "brain",
+      "capability": "brain",
+      "aliases": [
+        "brain",
+        "notes",
+        "knowledge"
+      ]
+    },
+    {
+      "id": "actions.assistant.capture",
+      "kind": "action",
+      "label": "Nacre Brain: Capture note",
+      "icon": "edit_note",
+      "operation": "legacy",
+      "value": "capture",
+      "description": "Save a thought",
+      "brand": "brain",
+      "capability": "brain"
+    },
+    {
+      "id": "actions.assistant.search",
+      "kind": "action",
+      "label": "Search Nacre Brain",
+      "icon": "search",
+      "operation": "scope",
+      "value": "# ",
+      "description": "Search private notes",
+      "brand": "brain",
+      "capability": "brain"
+    },
+    {
+      "id": "actions.assistant.ask",
+      "kind": "action",
+      "label": "Ask Nacre AI",
+      "icon": "chat",
+      "operation": "scope",
+      "value": "? ",
+      "description": "Compose an explicit question",
+      "brand": "ai",
+      "capability": "ai"
+    },
+    {
+      "id": "actions.controls",
+      "kind": "group",
+      "label": "Quick controls",
+      "icon": "toggle_on",
+      "description": "Live desktop controls"
+    },
+    {
+      "id": "actions.controls.dnd",
+      "kind": "action",
+      "label": "Do not disturb",
+      "icon": "notifications_off",
+      "operation": "toggle",
+      "value": "dnd",
+      "description": "Change it without leaving the launcher",
+      "state": "dnd"
+    },
+    {
+      "id": "actions.controls.night-light",
+      "kind": "action",
+      "label": "Night light",
+      "icon": "bedtime",
+      "operation": "toggle",
+      "value": "night-light",
+      "description": "Change it without leaving the launcher",
+      "state": "night-light"
+    },
+    {
+      "id": "actions.controls.stay-awake",
+      "kind": "action",
+      "label": "Stay awake",
+      "icon": "coffee",
+      "operation": "toggle",
+      "value": "stay-awake",
+      "description": "Change it without leaving the launcher",
+      "state": "stay-awake"
+    },
+    {
+      "id": "actions.controls.mute",
+      "kind": "action",
+      "label": "Mute speakers",
+      "icon": "volume_off",
+      "operation": "toggle",
+      "value": "mute",
+      "description": "Change it without leaving the launcher",
+      "state": "mute"
+    },
+    {
+      "id": "actions.controls.mic-mute",
+      "kind": "action",
+      "label": "Mute microphone",
+      "icon": "mic_off",
+      "operation": "toggle",
+      "value": "mic-mute",
+      "description": "Change it without leaving the launcher",
+      "state": "mic-mute"
+    },
+    {
+      "id": "actions.controls.wifi",
+      "kind": "action",
+      "label": "Wi-Fi",
+      "icon": "wifi",
+      "operation": "toggle",
+      "value": "wifi",
+      "description": "Change it without leaving the launcher",
+      "state": "wifi"
+    },
+    {
+      "id": "actions.controls.bluetooth",
+      "kind": "action",
+      "label": "Bluetooth",
+      "icon": "bluetooth",
+      "operation": "toggle",
+      "value": "bluetooth",
+      "description": "Change it without leaving the launcher",
+      "state": "bluetooth"
+    },
+    {
+      "id": "style.wallpapers",
+      "kind": "group",
+      "label": "Wallpapers",
+      "icon": "wallpaper",
+      "description": "Preview and choose from your collection",
+      "provider": "wallpapers"
+    },
+    {
+      "id": "style.wallpapers.picker",
+      "kind": "action",
+      "label": "Wallpaper picker",
+      "icon": "wallpaper",
+      "operation": "route",
+      "value": "wallpaper",
+      "description": "Open the full wallpaper view"
+    },
+    {
+      "id": "style.wallpapers.next",
+      "kind": "action",
+      "label": "Next wallpaper",
+      "icon": "skip_next",
+      "operation": "next-wallpaper",
+      "value": "",
+      "description": "Move to the next image in your collection"
+    },
+    {
+      "id": "style.personality",
+      "kind": "group",
+      "label": "Orient personality",
+      "icon": "palette",
+      "description": "How Nacre uses the wallpaper colors"
+    },
+    {
+      "id": "style.personality.natural",
+      "kind": "action",
+      "label": "Natural",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "natural",
+      "description": "The original balance of wallpaper colors",
+      "state": "personality"
+    },
+    {
+      "id": "style.personality.pigment",
+      "kind": "action",
+      "label": "Pigment",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "pigment",
+      "description": "Coverage-weighted color families",
+      "state": "personality"
+    },
+    {
+      "id": "style.personality.harmony",
+      "kind": "action",
+      "label": "Harmony",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "harmony",
+      "description": "Related supporting accents",
+      "state": "personality"
+    },
+    {
+      "id": "style.personality.pop",
+      "kind": "action",
+      "label": "Pop",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "pop",
+      "description": "A striking contrasting detail",
+      "state": "personality"
+    },
+    {
+      "id": "style.personality.mist",
+      "kind": "action",
+      "label": "Mist",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "mist",
+      "description": "Soft, quiet colors",
+      "state": "personality"
+    },
+    {
+      "id": "style.personality.vivid",
+      "kind": "action",
+      "label": "Vivid",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "vivid",
+      "description": "Stronger wallpaper colors",
+      "state": "personality"
+    },
+    {
+      "id": "style.personality.pearl",
+      "kind": "action",
+      "label": "Pearl",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "pearl",
+      "description": "Nacre mother-of-pearl tones",
+      "state": "personality"
+    },
+    {
+      "id": "style.personality.tide",
+      "kind": "action",
+      "label": "Tide",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "tide",
+      "description": "Colors that shift with the time of day",
+      "state": "personality"
+    },
+    {
+      "id": "style.background",
+      "kind": "group",
+      "label": "Background tint",
+      "icon": "gradient",
+      "description": "Choose where panel background colors come from"
+    },
+    {
+      "id": "style.background.accent",
+      "kind": "action",
+      "label": "Accent tint",
+      "icon": "palette",
+      "operation": "background",
+      "value": "accent",
+      "description": "Subtle tint from the main accent",
+      "state": "background"
+    },
+    {
+      "id": "style.background.wallpaper",
+      "kind": "action",
+      "label": "Wallpaper shadows",
+      "icon": "image",
+      "operation": "background",
+      "value": "wallpaper",
+      "description": "Tint from the image\u2019s own tones",
+      "state": "background"
+    },
+    {
+      "id": "style.appearance",
+      "kind": "group",
+      "label": "Light and dark",
+      "icon": "contrast",
+      "description": "Desktop brightness"
+    },
+    {
+      "id": "style.appearance.dark",
+      "kind": "action",
+      "label": "Dark",
+      "icon": "dark_mode",
+      "operation": "palette-mode",
+      "value": "dark",
+      "description": "",
+      "state": "palette-mode"
+    },
+    {
+      "id": "style.appearance.light",
+      "kind": "action",
+      "label": "Light",
+      "icon": "light_mode",
+      "operation": "palette-mode",
+      "value": "light",
+      "description": "",
+      "state": "palette-mode"
+    },
+    {
+      "id": "style.appearance.auto",
+      "kind": "action",
+      "label": "Auto",
+      "icon": "light_mode",
+      "operation": "palette-mode",
+      "value": "auto",
+      "description": "",
+      "state": "palette-mode"
+    },
+    {
+      "id": "style.accents",
+      "kind": "group",
+      "label": "Accent choice",
+      "icon": "color_lens",
+      "description": "Choose a color family from this wallpaper",
+      "provider": "accents"
+    },
+    {
+      "id": "style.fonts",
+      "kind": "group",
+      "label": "Interface font",
+      "icon": "text_fields",
+      "description": "Preview installed font families",
+      "provider": "fonts"
+    },
+    {
+      "id": "style.animations",
+      "kind": "action",
+      "label": "Animations",
+      "icon": "animation",
+      "operation": "setting-toggle",
+      "value": "animations",
+      "description": "",
+      "state": "setting"
+    },
+    {
+      "id": "style.blur",
+      "kind": "action",
+      "label": "Background blur",
+      "icon": "blur_on",
+      "operation": "setting-toggle",
+      "value": "blur",
+      "description": "",
+      "state": "setting"
+    },
+    {
+      "id": "style.shadow",
+      "kind": "action",
+      "label": "Window shadows",
+      "icon": "shadow",
+      "operation": "setting-toggle",
+      "value": "shadow",
+      "description": "",
+      "state": "setting"
+    },
+    {
+      "id": "style.colors",
+      "kind": "action",
+      "label": "Nacre Colors",
+      "icon": "palette",
+      "operation": "legacy",
+      "value": "colors",
+      "description": "Preview, fine-tune and export themes",
+      "brand": "colors",
+      "aliases": [
+        "colors",
+        "colours",
+        "orient"
+      ]
+    },
+    {
+      "id": "setup.appearance",
+      "kind": "action",
+      "label": "Appearance",
+      "icon": "palette",
+      "operation": "settings",
+      "value": "appearance",
+      "description": "Wallpaper, colors and frame",
+      "brand": "settings"
+    },
+    {
+      "id": "setup.desktop",
+      "kind": "action",
+      "label": "Desktop and input",
+      "icon": "desktop_windows",
+      "operation": "settings",
+      "value": "desktop",
+      "description": "Layout and desktop controls",
+      "brand": "settings",
+      "aliases": [
+        "input",
+        "keyboard",
+        "mouse",
+        "desktop settings"
+      ]
+    },
+    {
+      "id": "setup.displays",
+      "kind": "action",
+      "label": "Displays",
+      "icon": "monitor",
+      "operation": "settings",
+      "value": "displays",
+      "description": "Resolution, scaling and arrangement",
+      "brand": "settings"
+    },
+    {
+      "id": "setup.sound",
+      "kind": "action",
+      "label": "Sound",
+      "icon": "volume_up",
+      "operation": "settings",
+      "value": "sound",
+      "description": "Speakers, microphones and apps",
+      "brand": "settings"
+    },
+    {
+      "id": "setup.network",
+      "kind": "action",
+      "label": "Network",
+      "icon": "wifi",
+      "operation": "settings",
+      "value": "network",
+      "description": "Wi-Fi and connections",
+      "brand": "settings",
+      "aliases": [
+        "wifi",
+        "wireless",
+        "network settings"
+      ]
+    },
+    {
+      "id": "setup.bluetooth",
+      "kind": "action",
+      "label": "Bluetooth",
+      "icon": "bluetooth",
+      "operation": "settings",
+      "value": "bluetooth",
+      "description": "Pair and manage devices",
+      "brand": "settings"
+    },
+    {
+      "id": "setup.notifications",
+      "kind": "action",
+      "label": "Notifications",
+      "icon": "notifications",
+      "operation": "settings",
+      "value": "notifications",
+      "description": "Messages and quiet mode",
+      "brand": "settings"
+    },
+    {
+      "id": "setup.workflows",
+      "kind": "action",
+      "label": "Workspaces and apps",
+      "icon": "workspaces",
+      "operation": "settings",
+      "value": "workflows",
+      "description": "Application routes and workspace roles",
+      "brand": "settings"
+    },
+    {
+      "id": "setup.lock",
+      "kind": "action",
+      "label": "Lock screen and idle",
+      "icon": "lock",
+      "operation": "settings",
+      "value": "lock",
+      "description": "Appearance and idle behavior",
+      "brand": "settings"
+    },
+    {
+      "id": "setup.time",
+      "kind": "action",
+      "label": "Date and time",
+      "icon": "schedule",
+      "operation": "settings",
+      "value": "time",
+      "description": "Time zone and travel",
+      "brand": "settings"
+    },
+    {
+      "id": "setup.ai",
+      "kind": "action",
+      "label": "Nacre AI preferences",
+      "icon": "neurology",
+      "operation": "settings",
+      "value": "ai",
+      "description": "Assistant integration",
+      "brand": "settings"
+    },
+    {
+      "id": "setup.wifi-networks",
+      "kind": "group",
+      "label": "Wi-Fi networks",
+      "icon": "wifi",
+      "description": "Nearby connections",
+      "provider": "wifi"
+    },
+    {
+      "id": "setup.bluetooth-devices",
+      "kind": "group",
+      "label": "Bluetooth devices",
+      "icon": "bluetooth",
+      "description": "Paired and nearby devices",
+      "provider": "bluetooth"
+    },
+    {
+      "id": "setup.shortcuts",
+      "kind": "action",
+      "label": "Edit personal shortcuts",
+      "icon": "keyboard",
+      "operation": "config",
+      "value": "shortcuts",
+      "description": "Open your private Hyprland override"
+    },
+    {
+      "id": "setup.defaults",
+      "kind": "action",
+      "label": "Default applications",
+      "icon": "apps",
+      "operation": "config",
+      "value": "defaults",
+      "description": "Choose the apps used by Nacre"
+    },
+    {
+      "id": "software.discover",
+      "kind": "group",
+      "label": "Recommended software",
+      "icon": "apps",
+      "description": "A small catalog, with installed status",
+      "provider": "software"
+    },
+    {
+      "id": "software.packages",
+      "kind": "group",
+      "label": "Search packages",
+      "icon": "search",
+      "description": "Search official and community repositories",
+      "provider": "packages"
+    },
+    {
+      "id": "software.installed",
+      "kind": "group",
+      "label": "Installed packages",
+      "icon": "inventory_2",
+      "description": "Search installed software and remove it",
+      "provider": "installed"
+    },
+    {
+      "id": "software.webapps",
+      "kind": "group",
+      "label": "Web apps",
+      "icon": "public",
+      "description": "Your website shortcuts",
+      "provider": "webapps"
+    },
+    {
+      "id": "software.webapps.new",
+      "kind": "action",
+      "label": "Create a web app",
+      "icon": "add",
+      "operation": "form",
+      "value": "webapp",
+      "description": "Add a website to the application launcher"
+    },
+    {
+      "id": "health.updates",
+      "kind": "action",
+      "label": "System updates",
+      "icon": "system_update",
+      "operation": "tool",
+      "value": "updates",
+      "description": "Review and install available updates",
+      "state": "updates"
+    },
+    {
+      "id": "health.nacre",
+      "kind": "action",
+      "label": "Nacre maintenance",
+      "icon": "build",
+      "operation": "settings",
+      "value": "maintenance",
+      "description": "Desktop releases, checks and rollback",
+      "brand": "settings"
+    },
+    {
+      "id": "health.check",
+      "kind": "action",
+      "label": "Check the desktop",
+      "icon": "health_and_safety",
+      "operation": "maintenance",
+      "value": "check",
+      "description": "Run the existing desktop health checks"
+    },
+    {
+      "id": "health.status",
+      "kind": "action",
+      "label": "Current health",
+      "icon": "monitor_heart",
+      "operation": "info",
+      "value": "health",
+      "description": "Show the current services and release"
+    },
+    {
+      "id": "health.logs",
+      "kind": "action",
+      "label": "Desktop logs",
+      "icon": "article",
+      "operation": "tool",
+      "value": "logs",
+      "description": "Open the recent shell log"
+    },
+    {
+      "id": "health.restart",
+      "kind": "action",
+      "label": "Restart the desktop shell",
+      "icon": "restart_alt",
+      "operation": "maintenance",
+      "value": "restart",
+      "description": "Reload shell software; apps remain running",
+      "confirm": "Restart the Nacre shell?"
+    },
+    {
+      "id": "health.rollback",
+      "kind": "action",
+      "label": "Review a rollback",
+      "icon": "restore",
+      "operation": "settings",
+      "value": "maintenance",
+      "description": "Review the saved release before restoring it",
+      "brand": "settings"
+    },
+    {
+      "id": "learn.shortcuts",
+      "kind": "group",
+      "label": "Keyboard shortcuts",
+      "icon": "keyboard",
+      "description": "Read your actual current bindings",
+      "provider": "keys"
+    },
+    {
+      "id": "learn.welcome",
+      "kind": "action",
+      "label": "Nacre Welcome",
+      "icon": "waving_hand",
+      "operation": "legacy",
+      "value": "welcome",
+      "description": "Revisit the desktop tour",
+      "brand": "welcome"
+    },
+    {
+      "id": "learn.nacre",
+      "kind": "action",
+      "label": "Nacre guide",
+      "icon": "help",
+      "operation": "info",
+      "value": "guide",
+      "description": "Getting around the universal launcher"
+    },
+    {
+      "id": "learn.hyprland",
+      "kind": "action",
+      "label": "Hyprland manual",
+      "icon": "public",
+      "operation": "url",
+      "value": "https://wiki.hypr.land/",
+      "description": ""
+    },
+    {
+      "id": "learn.arch",
+      "kind": "action",
+      "label": "Arch Linux guide",
+      "icon": "public",
+      "operation": "url",
+      "value": "https://wiki.archlinux.org/",
+      "description": ""
+    },
+    {
+      "id": "learn.quickshell",
+      "kind": "action",
+      "label": "Quickshell documentation",
+      "icon": "public",
+      "operation": "url",
+      "value": "https://quickshell.org/docs/",
+      "description": ""
+    },
+    {
+      "id": "learn.news",
+      "kind": "action",
+      "label": "Nacre project",
+      "icon": "public",
+      "operation": "url",
+      "value": "https://github.com/nacre-desktop/nacre",
+      "description": ""
+    },
+    {
+      "id": "power.lock",
+      "kind": "action",
+      "label": "Lock the desktop",
+      "icon": "lock",
+      "operation": "power",
+      "value": "lock",
+      "description": "Keep your apps running"
+    },
+    {
+      "id": "power.suspend",
+      "kind": "action",
+      "label": "Sleep",
+      "icon": "bedtime",
+      "operation": "power",
+      "value": "suspend",
+      "description": "Suspend and resume later",
+      "confirm": "Sleep?"
+    },
+    {
+      "id": "power.logout",
+      "kind": "action",
+      "label": "Log out",
+      "icon": "logout",
+      "operation": "power",
+      "value": "logout",
+      "description": "Close this desktop session",
+      "confirm": "Log out?"
+    },
+    {
+      "id": "power.reboot",
+      "kind": "action",
+      "label": "Restart",
+      "icon": "restart_alt",
+      "operation": "power",
+      "value": "reboot",
+      "description": "Close apps and restart",
+      "confirm": "Restart?"
+    },
+    {
+      "id": "power.poweroff",
+      "kind": "action",
+      "label": "Shut down",
+      "icon": "power_settings_new",
+      "operation": "power",
+      "value": "poweroff",
+      "description": "Close apps and turn off",
+      "confirm": "Shut down?"
+    },
+    {
+      "id": "actions.files",
+      "kind": "action",
+      "label": "Files",
+      "icon": "folder_open",
+      "operation": "legacy",
+      "value": "files",
+      "description": "Browse folders and archives",
+      "aliases": [
+        "files",
+        "file manager",
+        "dolphin"
+      ]
+    },
+    {
+      "id": "actions.terminal",
+      "kind": "action",
+      "label": "Terminal",
+      "icon": "terminal",
+      "operation": "legacy",
+      "value": "terminal",
+      "description": "Open a new terminal",
+      "aliases": [
+        "terminal",
+        "kitty"
+      ]
+    },
+    {
+      "id": "actions.apps",
+      "kind": "action",
+      "label": "All apps",
+      "icon": "apps",
+      "operation": "route",
+      "value": "apps",
+      "description": "Browse installed applications"
+    },
+    {
+      "id": "actions.controls.profile",
+      "kind": "group",
+      "label": "Power profile",
+      "icon": "battery_full",
+      "description": "Choose battery life or responsiveness"
+    },
+    {
+      "id": "actions.controls.profile.power-saver",
+      "kind": "action",
+      "label": "Power saver",
+      "icon": "battery_full",
+      "operation": "power-profile",
+      "value": "power-saver",
+      "state": "power-profile"
+    },
+    {
+      "id": "actions.controls.profile.balanced",
+      "kind": "action",
+      "label": "Balanced",
+      "icon": "battery_full",
+      "operation": "power-profile",
+      "value": "balanced",
+      "state": "power-profile"
+    },
+    {
+      "id": "actions.controls.profile.performance",
+      "kind": "action",
+      "label": "Performance",
+      "icon": "battery_full",
+      "operation": "power-profile",
+      "value": "performance",
+      "state": "power-profile"
+    },
+    {
+      "id": "actions.media",
+      "kind": "group",
+      "label": "Media and audio",
+      "description": "Playback and output devices",
+      "icon": "volume_up",
+      "provider": "audio"
+    },
+    {
+      "id": "actions.media.play-pause",
+      "kind": "action",
+      "label": "Play or pause",
+      "description": "Control the current player",
+      "icon": "play_arrow",
+      "operation": "media",
+      "value": "playPause"
+    },
+    {
+      "id": "actions.media.next",
+      "kind": "action",
+      "label": "Next track",
+      "description": "Control the current player",
+      "icon": "skip_next",
+      "operation": "media",
+      "value": "next"
+    },
+    {
+      "id": "actions.media.previous",
+      "kind": "action",
+      "label": "Previous track",
+      "description": "Control the current player",
+      "icon": "skip_previous",
+      "operation": "media",
+      "value": "previous"
+    },
+    {
+      "id": "actions.find-files",
+      "kind": "action",
+      "label": "Find files",
+      "description": "Search Documents, Downloads, Pictures, Desktop and Projects",
+      "icon": "folder",
+      "operation": "scope",
+      "value": ": "
+    }
+  ],
+  "software": [
+    {
+      "package": "firefox",
+      "label": "Firefox",
+      "description": "Web browser"
+    },
+    {
+      "package": "chromium",
+      "label": "Chromium",
+      "description": "Web browser"
+    },
+    {
+      "package": "zen-browser-bin",
+      "label": "Zen",
+      "description": "Web browser"
+    },
+    {
+      "package": "code",
+      "label": "Visual Studio Code",
+      "description": "Code editor"
+    },
+    {
+      "package": "neovim",
+      "label": "Neovim",
+      "description": "Terminal editor"
+    },
+    {
+      "package": "helix",
+      "label": "Helix",
+      "description": "Terminal editor"
+    },
+    {
+      "package": "btop",
+      "label": "btop",
+      "description": "System monitor"
+    },
+    {
+      "package": "tmux",
+      "label": "tmux",
+      "description": "Terminal sessions"
+    },
+    {
+      "package": "ripgrep",
+      "label": "ripgrep",
+      "description": "Search files"
+    },
+    {
+      "package": "fd",
+      "label": "fd",
+      "description": "Find files"
+    },
+    {
+      "package": "bat",
+      "label": "bat",
+      "description": "Read files"
+    },
+    {
+      "package": "obs-studio",
+      "label": "OBS Studio",
+      "description": "Capture and stream"
+    },
+    {
+      "package": "vlc",
+      "label": "VLC",
+      "description": "Media player"
+    },
+    {
+      "package": "mpv",
+      "label": "mpv",
+      "description": "Media player"
+    },
+    {
+      "package": "spotify",
+      "label": "Spotify",
+      "description": "Music"
+    },
+    {
+      "package": "gimp",
+      "label": "GIMP",
+      "description": "Image editor"
+    },
+    {
+      "package": "krita",
+      "label": "Krita",
+      "description": "Painting"
+    },
+    {
+      "package": "inkscape",
+      "label": "Inkscape",
+      "description": "Vector graphics"
+    },
+    {
+      "package": "steam",
+      "label": "Steam",
+      "description": "Games"
+    },
+    {
+      "package": "lutris",
+      "label": "Lutris",
+      "description": "Game library"
+    },
+    {
+      "package": "heroic-games-launcher-bin",
+      "label": "Heroic",
+      "description": "Game launcher"
+    },
+    {
+      "package": "localsend",
+      "label": "LocalSend",
+      "description": "Share files locally"
+    },
+    {
+      "package": "tailscale",
+      "label": "Tailscale",
+      "description": "Private network"
+    },
+    {
+      "package": "keepassxc",
+      "label": "KeePassXC",
+      "description": "Password manager"
+    },
+    {
+      "package": "wf-recorder",
+      "label": "Screen recording",
+      "description": "Record Wayland screens"
+    },
+    {
+      "package": "tesseract",
+      "label": "Screen text recognition",
+      "description": "Read text in screenshots"
+    },
+    {
+      "package": "zbar",
+      "label": "QR recognition",
+      "description": "Read QR codes"
+    },
+    {
+      "package": "hyprpicker",
+      "label": "Screen color picker",
+      "description": "Copy a color from the screen"
+    }
+  ]
+}

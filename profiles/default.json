@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "id": "default",
+  "components": [
+    "configs",
+    "shell"
+  ],
+  "workspaceCount": 7,
+  "workspaceNames": [],
+  "workspaceIcons": [],
+  "startup": [],
+  "routes": [],
+  "brainWorkspace": null,
+  "aiWorkspace": null
+}

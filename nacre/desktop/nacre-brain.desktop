@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Nacre Brain
+GenericName=Knowledge Library
+Comment=Browse your private knowledge, notes and memories
+Exec=nacre-brain open
+TryExec=nacre-brain
+Icon=nacre-brain
+Terminal=false
+StartupWMClass=nacre-brain
+Categories=Utility;Office;
+Keywords=Nacre;Brain;Knowledge;Notes;Memory;Search;

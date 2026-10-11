@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""Small desktop application routes; executable arguments are never shell strings."""
+
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+DEFAULTS = {
+    "browser": ["google-chrome-stable"],
+    "files": ["nacre-shell", "dolphin"],
+    "mail": ["google-chrome-stable", "--app=https://mail.google.com/"],
+    "emoji": ["nacre-menu", "actions.emoji"],
+}
+
+
+def main():
+    name = sys.argv[1] if len(sys.argv) > 1 else "browser"
+    config = Path.home() / ".config/nacre/apps.json"
+    choices = json.loads(config.read_text()) if config.exists() else {}
+    argv = choices.get(name, DEFAULTS.get(name))
+    if (
+        not isinstance(argv, list)
+        or not argv
+        or any(not isinstance(a, str) for a in argv)
+    ):
+        raise SystemExit("Unknown or invalid app route")
+    if name == "mail" and name not in choices and shutil.which("evolution"):
+        argv = ["evolution"]
+    if name == "files" and name not in choices:
+        argv = [str(Path.home() / ".local/bin/nacre-shell"), "dolphin"]
+    if not shutil.which(argv[0]):
+        raise SystemExit(
+            "Install the selected application or edit ~/.config/nacre/apps.json"
+        )
+    os.execvp(argv[0], [*argv, *sys.argv[2:]])
+
+
+if __name__ == "__main__":
+    main()

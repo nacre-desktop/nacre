@@ -1,0 +1,13 @@
+[Unit]
+Description=Nacre native desktop shell
+PartOf=graphical-session.target
+After=graphical-session.target
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/nacre-shell start
+Restart=on-failure
+RestartSec=2
+KillMode=control-group
+TimeoutStopSec=10
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,40 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const context=vm.createContext({});
+vm.runInContext(fs.readFileSync(process.argv[2],'utf8').replace('.pragma library',''),context);
+const source=fs.readFileSync(process.argv[3],'utf8'), menu=context.merge(source,'');
+assert.equal(menu.rows.length,118);
+assert.equal(context.rail(menu.rows).length,9);
+assert.equal(context.resolve('settings',menu.rows),'setup');
+assert.equal(context.resolve('clipboard',menu.rows),'actions.clipboard');
+assert.equal(context.resolve('poweroff',menu.rows),'');
+assert.equal(context.resolve('power',menu.rows),'power');
+const custom=context.merge(source,JSON.stringify({version:1,entries:[{id:'actions.terminal',label:'My terminal'},{id:'actions.mine',kind:'action',label:'My command',operation:'command',arguments:['my-tool','literal $(value)'] }]}));
+assert.equal(custom.rows.find(row=>row.id==='actions.terminal').label,'My terminal');
+assert.equal(custom.rows.find(row=>row.id==='actions.mine').arguments[1],'literal $(value)');
+for(const entries of [[{id:'missing.child',kind:'action',label:'Bad',operation:'url',value:'https://example.org'}],[{id:'home',hidden:true}],[{id:'actions.mine',kind:'action',label:'Bad',operation:'eval',value:'x'}],[{id:'actions.mine',kind:'action',label:'Bad',operation:'command',arguments:'shell text'}]]) {
+    const result=context.merge(source,JSON.stringify({version:1,entries}));
+    assert(result.error);assert.equal(result.rows.length,menu.rows.length);
+}
+const hidden=context.merge(source,JSON.stringify({version:1,entries:[{id:'actions.capture',hidden:true}]}));
+assert(!hidden.rows.some(row=>row.id.startsWith('actions.capture')));
+const rows=menu.rows.map(row=>context.entry(row,menu.rows));
+assert.equal(context.ranked(rows,'wifi')[0].id,'setup.network');
+assert.equal(context.ranked(rows,'')[0].id,rows[0].id);
+assert.equal(context.scope('   > wifi').kind,'actions');
+assert.equal(context.scope('# notes').text,'notes');
+assert.equal(context.scope('? question').kind,'ai');
+assert.equal(context.firstEnabled([{disabled:true},{disabled:false}]),1);
+assert.equal(context.step([{disabled:false},{disabled:true},{disabled:false}],0,1),2);
+assert.equal(context.stable({id:'style.colors',kind:'action'}),'nacre-menu:style.colors');
+assert.equal(context.stable({id:'editor',kind:'app'}),'editor');
+console.log('Menu hierarchy, overrides, routing, ranking and stable IDs passed');
+
+const apps=[{id:"code",kind:"app",name:"Visual Studio Code"},{id:"spotify",kind:"app",name:"Spotify"},{id:"edit-one",kind:"app",name:"Editor One"},{id:"edit-two",kind:"app",name:"Editor Two"}];
+assert.equal(context.ranked(apps,"vsc")[0].id,"code");
+assert.equal(context.ranked(apps,"spotfy")[0].id,"spotify");
+assert.equal(context.ranked(apps,"editor",{"edit-two":{count:20,last:100}},[],100)[0].id,"edit-two");
+assert.equal(context.ranked(apps,"Editor One",{"edit-two":{count:100000,last:100}},[],100)[0].id,"edit-one");
+assert.equal(context.ranked(apps,"unrelated").length,0);
+assert.equal(context.scope(": report").kind,"files");

@@ -1,0 +1,24 @@
+[
+  {
+    "repo": "kepano/obsidian-skills",
+    "revision": "3ccff5338ea700537839b21900aa5358a0402c98",
+    "skills": [
+      "obsidian-markdown",
+      "defuddle",
+      "obsidian-bases",
+      "json-canvas"
+    ]
+  },
+  {
+    "repo": "anthropics/skills",
+    "revision": "8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4",
+    "skills": [
+      "frontend-design",
+      "doc-coauthoring",
+      "pdf",
+      "docx",
+      "pptx",
+      "xlsx"
+    ]
+  }
+]

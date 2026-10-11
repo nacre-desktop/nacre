@@ -1,0 +1,119 @@
+"""Independent header content/workspace row with safe native-service fixtures."""
+
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import unittest
+
+from qml_source import install_foundation_interaction, remove_objects
+
+ROOT = Path(__file__).resolve().parents[1]
+SHELL = ROOT.parent / "shell"
+
+
+class HeaderWidgetTests(unittest.TestCase):
+    def test_workspace_state_header_routes_and_hover_map_ownership(self):
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Native Qt Test unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            fixtures = target / "fixtures"
+            shutil.copytree(ROOT / "tests/qml/fixtures", fixtures)
+            install_foundation_interaction(fixtures, SHELL / "widgets")
+            for name in ("NacreSurface", "NacreText"):
+                shutil.copy2(
+                    SHELL / "widgets" / (name + ".qml"), fixtures / (name + ".qml")
+                )
+            (fixtures / "NacreIcon.qml").write_text(
+                "import QtQuick\nText {width:20;height:22}"
+            )
+            (fixtures / "BrandLogo.qml").write_text(
+                "import QtQuick\nItem {property bool compact:false;implicitWidth:32;implicitHeight:30}"
+            )
+            (fixtures / "NacreActiveTitle.qml").write_text(
+                "import QtQuick\nItem {property bool horizontal:false;property var monitor:null}"
+            )
+            (fixtures / "NacrePowerButton.qml").write_text(
+                "import QtQuick\nItem {implicitWidth:30;implicitHeight:30}"
+            )
+            (target / "NacreStatusHint.qml").write_text(
+                'import QtQuick\nItem {property var output;property string text:"";property real center:0}'
+            )
+            (fixtures / "NacreStatusIcons.qml").write_text("""import QtQuick
+Item {
+ property bool horizontal:false
+ property string screenName:""
+ implicitWidth:24;implicitHeight:152
+ readonly property Item audioItem:a
+ readonly property Item network:n
+ readonly property Item bluetoothItem:b
+ readonly property Item battery:c
+ readonly property Item notificationsItem:d
+ Column {Item{id:a;width:24;height:24}Item{id:n;width:24;height:24}Item{id:b;width:24;height:24}Item{id:c;width:24;height:36}Item{id:d;width:24;height:36}}
+}""")
+            definitions = {
+                "NacrePresentation": "property var active:({workspaceColors:false})",
+                "NacreHyprland": 'property int activeWsId:2;property var clients:[];property var focusedMonitor:({name:"test"});property var activeClient:null;property var requests:[];function dispatch(value){requests=[...requests,value];return true}',
+                "NacreBar": 'property int workspaceCount:7;property var workspaceNames:["Browse","Work","Chat","Music","Mail","Brain","Other"];property var workspaceIcons:["language","terminal","forum","music_note","mail","neurology","apps"]',
+                "NacreBrightness": "function getMonitorForScreen(screen){return null}",
+                "NacreTime": 'function format(value){return "12:34"}',
+                "Updates": 'property int count:3;property string message:""',
+                "AppLaunch": "property var calls:[];function run(command){calls=[...calls,command]}",
+                "NacrePanelState": 'property bool hidden:false;property var screens:({test:{session:false,launcher:false,dashboard:false,dashboardPinned:false,edgeMenu:""}});property var panels:({});property var calls:[];function openMode(mode,q,preview){calls=[...calls,mode]}function popout(name,center,screen){calls=[...calls,name]}function openDeviceSettings(name){calls=[...calls,name];return ["audio","network","bluetooth"].includes(name)}function openControls(name,screen){calls=[...calls,name]}function hoverEdge(name,screen){calls=[...calls,name]}function openEdge(name,screen){calls=[...calls,name]}',
+            }
+            with (fixtures / "qmldir").open("a") as manifest:
+                for name in (
+                    "NacreIcon",
+                    "BrandLogo",
+                    "NacreActiveTitle",
+                    "NacreStatusIcons",
+                    "NacrePowerButton",
+                ):
+                    manifest.write(f"\n{name} 1.0 {name}.qml\n")
+                for name, body in definitions.items():
+                    (fixtures / (name + ".qml")).write_text(
+                        "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}\n"
+                    )
+                    manifest.write(f"\nsingleton {name} 1.0 {name}.qml\n")
+                intent = (
+                    (SHELL / "services/NacreHoverIntent.qml")
+                    .read_text()
+                    .replace("import Quickshell", "")
+                    .replace("Singleton {", "QtObject {")
+                )
+                (fixtures / "NacreHoverIntent.qml").write_text(intent)
+                manifest.write(
+                    "\nsingleton NacreHoverIntent 1.0 NacreHoverIntent.qml\n"
+                )
+            for name in (
+                "NacreHeader",
+                "NacreWorkspaceRow",
+                "NacreHeaderForwarder",
+            ):
+                source = (SHELL / "modules/topbar" / (name + ".qml")).read_text()
+                for imported in (
+                    "qs.widgets",
+                    "qs.services",
+                    "qs.config",
+                    "qs.modules.bar.components",
+                ):
+                    source = source.replace("import " + imported, 'import "fixtures"')
+                source = remove_objects(
+                    source.replace("import Quickshell.Io", ""), r"\bIpcHandler\s*\{"
+                )
+                (target / (name + ".qml")).write_text(source)
+            shutil.copy2(
+                ROOT / "tests/header-qml/tst_header.qml", target / "tst_header.qml"
+            )
+            result = subprocess.run(
+                [str(runner), "-input", str(target), "-o", "-,txt"],
+                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("QWARN", result.stdout + result.stderr)

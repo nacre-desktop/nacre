@@ -1,0 +1,25 @@
+configuration {
+    modes: "drun,run,window";
+    show-icons: true;
+    font: "IBM Plex Sans 12";
+    display-drun: "Apps";
+    display-run: "Run";
+    display-window: "Windows";
+}
+* { bg: #fff6f4; raised: #fae8e7; text: #241916; muted: #85736e; accent: #8d514a; border: #d7c2bc; background-color: transparent; text-color: @text; }
+window { width: 620px; border: 1px; border-color: @border; border-radius: 16px; background-color: @bg; padding: 22px; }
+mainbox { spacing: 18px; }
+inputbar { children: [prompt,entry]; spacing: 14px; background-color: @raised; border-radius: 9px; padding: 14px; }
+prompt { text-color: @accent; }
+entry { placeholder: "Find an app, start something…"; placeholder-color: @muted; }
+listview { lines: 7; fixed-height: false; spacing: 5px; scrollbar: false; }
+element { padding: 10px; spacing: 12px; border-radius: 8px; }
+element normal.normal, element alternate.normal, element normal.active, element alternate.active, element normal.urgent, element alternate.urgent { background-color: @bg; text-color: @text; }
+element selected.normal { background-color: @raised; text-color: @accent; }
+element selected.active, element selected.urgent { background-color: @raised; text-color: @accent; }
+element-icon { size: 24px; }
+element-text { vertical-align: 0.5; }
+element-text, element-icon { background-color: inherit; text-color: inherit; }
+mode-switcher { spacing: 8px; }
+button { padding: 8px; text-color: @muted; }
+button selected { background-color: @raised; text-color: @accent; border-radius: 7px; }

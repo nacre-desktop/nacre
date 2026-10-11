@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""Bounded device actions; authentication stays in the native managers."""
+
+import argparse
+import json
+import re
+import subprocess
+import os
+
+
+def command(action, value=""):
+    if action == "wifi-scan":
+        return ["nmcli", "device", "wifi", "rescan"]
+    if action == "wifi-radio" and value in ("on", "off"):
+        return ["nmcli", "radio", "wifi", value]
+    if action == "wifi-disconnect" and re.fullmatch(
+        r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}", value
+    ):
+        return ["nmcli", "device", "disconnect", value]
+    if action == "bluetooth-power" and value in ("on", "off"):
+        return ["bluetoothctl", "power", value]
+    operations = {
+        "bluetooth-connect": "connect",
+        "bluetooth-disconnect": "disconnect",
+        "bluetooth-trust": "trust",
+        "bluetooth-untrust": "untrust",
+    }
+    if action in operations and re.fullmatch(
+        r"(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}", value
+    ):
+        return ["bluetoothctl", operations[action], value]
+    if (
+        action == "wifi-connect"
+        and value
+        and len(value.encode("utf-8")) <= 32
+        and not any(ord(c) < 32 for c in value)
+    ):
+        return ["nmcli", "--ask", "device", "wifi", "connect", value]
+    raise ValueError("Unsupported device action")
+
+
+def network_status():
+    environment = dict(os.environ, LC_ALL="C")
+    enabled = (
+        subprocess.check_output(
+            ["nmcli", "radio", "wifi"], text=True, timeout=5, env=environment
+        ).strip()
+        == "enabled"
+    )
+    devices = subprocess.check_output(
+        ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device"],
+        text=True,
+        timeout=5,
+        env=environment,
+    )
+    interface = ""
+    for line in devices.splitlines():
+        parts = line.split(":")
+        if (
+            len(parts) == 3
+            and parts[1] == "wifi"
+            and parts[2] == "connected"
+            and re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}", parts[0])
+        ):
+            interface = parts[0]
+            break
+    return {"enabled": enabled, "interface": interface}
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("action")
+    p.add_argument("value", nargs="?", default="")
+    a = p.parse_args()
+    try:
+        if a.action == "network-status":
+            print(json.dumps(network_status()))
+            return
+        cmd = command(a.action, a.value)
+        if a.action == "wifi-connect":
+            subprocess.run(cmd, check=True)
+            input("\nPress Enter to close.")
+            return
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+        # bluetoothctl can return zero for an unsuccessful operation.
+        output = result.stdout + result.stderr
+        if result.returncode or any(
+            word in output.lower() for word in ("failed", "not available", "not ready")
+        ):
+            raise RuntimeError(output.strip()[:400] or "Device action failed")
+        print(json.dumps(dict(message=output.strip()[:400] or "Device updated")))
+    except (
+        OSError,
+        ValueError,
+        KeyError,
+        TypeError,
+        RuntimeError,
+        subprocess.SubprocessError,
+    ) as e:
+        print(json.dumps(dict(error=str(e))))
+
+
+if __name__ == "__main__":
+    main()

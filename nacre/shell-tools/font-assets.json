@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "plex",
+      "family": "IBM Plex Sans",
+      "license": "OFL-1.1",
+      "default": true,
+      "upstream": "https://github.com/google/fonts",
+      "revision": "bd8f81ddb5c74d5c8897b36ad88b440266245103",
+      "files": [
+        {
+          "name": "IBMPlexSans.ttf",
+          "url": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf",
+          "sha256": "3b031aa4216174205bd8471f88a49b91f093169e9e87bd5262242bc5967fe2e3",
+          "size": 537244
+        },
+        {
+          "name": "IBMPlexSans-OFL.txt",
+          "url": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/OFL.txt",
+          "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
+          "size": 4456
+        }
+      ]
+    },
+    {
+      "id": "material",
+      "family": "Material Symbols Rounded",
+      "license": "Apache-2.0",
+      "default": true,
+      "upstream": "https://github.com/google/material-design-icons",
+      "revision": "737e3324305806514d7909874fa1818ae1808232",
+      "files": [
+        {
+          "name": "MaterialSymbolsRounded.ttf",
+          "url": "https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf",
+          "sha256": "95b24392bb49efd1bc3e92cff4e2452ad094461bab7c97e7d8723fab97e330ca",
+          "size": 15214520
+        },
+        {
+          "name": "MaterialSymbols-LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/LICENSE",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "size": 11357
+        }
+      ]
+    },
+    {
+      "id": "rubik",
+      "family": "Rubik",
+      "license": "OFL-1.1",
+      "default": false,
+      "upstream": "https://github.com/google/fonts",
+      "revision": "bd8f81ddb5c74d5c8897b36ad88b440266245103",
+      "files": [
+        {
+          "name": "Rubik.ttf",
+          "url": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/rubik/Rubik%5Bwght%5D.ttf",
+          "sha256": "1b3a7437ba2af80e465e773ed60c5036d1ba6ace492d89046dbcf18fb31e4e88",
+          "size": 359804
+        },
+        {
+          "name": "Rubik-OFL.txt",
+          "url": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/rubik/OFL.txt",
+          "sha256": "472cbe7c25441df63e9c7864b43eb3c0f4b3df950c66a76224e6cfe1eae843fb",
+          "size": 4384
+        }
+      ]
+    }
+  ]
+}

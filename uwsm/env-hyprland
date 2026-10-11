@@ -1,0 +1,2 @@
+# UWSM loads env first. Match the compositor cursor to the shared cursor size.
+export HYPRCURSOR_SIZE="$XCURSOR_SIZE"

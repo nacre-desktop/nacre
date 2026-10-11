@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""Open or focus Nacre Settings, optionally at a specific page."""
+
+import argparse
+import subprocess
+import sys
+import time
+
+PAGES = (
+    "appearance",
+    "desktop",
+    "displays",
+    "sound",
+    "network",
+    "bluetooth",
+    "notifications",
+    "workflows",
+    "lock",
+    "time",
+    "ai",
+    "maintenance",
+)
+
+
+def open_settings(page="", runner=subprocess.run, sleep=time.sleep):
+    command = ["quickshell", "ipc", "-c", "nacre", "call", "settingsApp", "open", page]
+    result = runner(command, capture_output=True, text=True, timeout=3)
+    if result.returncode == 0:
+        return
+    started = runner(
+        ["systemctl", "--user", "start", "--no-block", "nacre-shell.service"],
+        capture_output=True,
+        text=True,
+        timeout=3,
+    )
+    if started.returncode:
+        raise RuntimeError("Could not start the desktop service for Settings.")
+    for _ in range(32):
+        sleep(0.25)
+        result = runner(command, capture_output=True, text=True, timeout=2)
+        if result.returncode == 0:
+            return
+    raise RuntimeError(
+        "Settings could not connect to the desktop. Check nacre-shell.service."
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("page", nargs="?", default="", choices=("", *PAGES))
+    args = parser.parse_args()
+    try:
+        open_settings(args.page)
+    except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+        message = str(error)
+        print("nacre-settings: " + message, file=sys.stderr)
+        try:
+            subprocess.run(
+                ["hyprctl", "notify", "3", "6000", "0", "Nacre Settings: " + message],
+                capture_output=True,
+                timeout=2,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

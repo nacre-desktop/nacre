@@ -1,0 +1,15 @@
+[Unit]
+Description=Nacre Brain private knowledge library
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.local/share/nacre/brain/control.py watch-brain
+Restart=on-failure
+RestartSec=2
+KillMode=control-group
+TimeoutStopSec=8
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Open Nacre Colors; opening never applies a palette."""
+
+import argparse
+from pathlib import Path
+import subprocess
+import time
+import sys
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("image", nargs="?", default="")
+    args = parser.parse_args()
+    try:
+        path = (
+            str(Path(args.image).expanduser().resolve(strict=True))
+            if args.image
+            else ""
+        )
+        command = [
+            "quickshell",
+            "ipc",
+            "-c",
+            "nacre",
+            "call",
+            "colorsApp",
+            "open",
+            path,
+        ]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=3)
+        if result.returncode:
+            subprocess.run(
+                ["systemctl", "--user", "start", "--no-block", "nacre-shell.service"],
+                check=True,
+                capture_output=True,
+                timeout=3,
+            )
+            for _ in range(32):
+                time.sleep(0.25)
+                result = subprocess.run(
+                    command, capture_output=True, text=True, timeout=2
+                )
+                if not result.returncode:
+                    break
+        if result.returncode:
+            raise RuntimeError("Colors could not connect to the desktop service")
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+        print("nacre-colors: " + str(error), file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

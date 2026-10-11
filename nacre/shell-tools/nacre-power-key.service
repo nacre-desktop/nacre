@@ -1,0 +1,13 @@
+[Unit]
+Description=Desktop power button locks without triggering logind shutdown
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/systemd-inhibit --no-ask-password --what=handle-power-key --who=Nacre-desktop --why=Hyprland-handles-short-power-press --mode=block /usr/bin/sleep infinity
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

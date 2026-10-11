@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Nacre Welcome
+GenericName=Getting started
+Comment=Personalize Nacre, learn shortcuts and find help
+Exec=nacre-welcome
+Icon=nacre
+Terminal=false
+Categories=Utility;Settings;
+Keywords=Nacre;Welcome;Setup;Guide;Help;Shortcuts;
+StartupWMClass=org.quickshell

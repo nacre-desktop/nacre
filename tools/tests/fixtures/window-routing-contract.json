@@ -1,0 +1,93 @@
+[
+  {
+    "match": {
+      "class": "^([Gg]oogle-chrome)$"
+    },
+    "name": "browser-chrome",
+    "workspace": "1 silent"
+  },
+  {
+    "match": {
+      "class": "^([Cc]hromium)$"
+    },
+    "name": "browser-chromium",
+    "workspace": "1 silent"
+  },
+  {
+    "match": {
+      "class": "^([Ff]irefox)$"
+    },
+    "name": "browser-firefox",
+    "workspace": "1 silent"
+  },
+  {
+    "match": {
+      "class": "^(nacre-ai-task|nacre-ai-dashboard)$"
+    },
+    "name": "ai-workers",
+    "workspace": "2 silent"
+  },
+  {
+    "match": {
+      "class": "^([Dd]iscord)$"
+    },
+    "name": "discord",
+    "workspace": "3 silent"
+  },
+  {
+    "match": {
+      "class": "^([Ss]potify)$"
+    },
+    "name": "spotify",
+    "workspace": "4 silent"
+  },
+  {
+    "match": {
+      "class": "^(evolution|org[.]gnome[.]Evolution)$"
+    },
+    "name": "mail-evolution",
+    "workspace": "5 silent"
+  },
+  {
+    "match": {
+      "class": "^([Cc]ode|com[.]microsoft[.]VSCode)$"
+    },
+    "name": "editor-code",
+    "workspace": "7 silent"
+  },
+  {
+    "match": {
+      "class": "^([Vv][Ss][Cc]odium)$"
+    },
+    "name": "editor-codium",
+    "workspace": "7 silent"
+  },
+  {
+    "match": {
+      "class": "^([Cc]ursor)$"
+    },
+    "name": "editor-cursor",
+    "workspace": "7 silent"
+  },
+  {
+    "center": true,
+    "float": true,
+    "match": {
+      "class": "^([Tt]hunar)$"
+    },
+    "name": "nacre-thunar-files",
+    "size": "70% 75%"
+  },
+  {
+    "center": true,
+    "float": true,
+    "match": {
+      "class": "^(org[.]kde[.]dolphin|[Dd]olphin)$"
+    },
+    "name": "nacre-dolphin-files",
+    "size": [
+      "monitor_w*0.6",
+      "monitor_h*0.75"
+    ]
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "name": "nacre-maintenance",
+  "private": true,
+  "scripts": {
+    "format:browser": "prettier --write brain/web/app.js",
+    "check:browser-format": "prettier --check brain/web/app.js"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}

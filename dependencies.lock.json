@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "orient": {
+    "repository": "https://github.com/nacre-desktop/orient.git",
+    "version": "0.1.0-dev.2",
+    "revision": "bad9219f4c6d35b9276f2d19b9400aa8d49f6841",
+    "path": "deps/orient"
+  }
+}

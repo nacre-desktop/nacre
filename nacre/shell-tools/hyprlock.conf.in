@@ -1,0 +1,14 @@
+# Nacre native backdrop; lock-config.py adds prepared art and native controls.
+# Authentication and session locking remain owned by Hyprlock.
+general {
+    ignore_empty_input = true
+}
+background {
+    monitor =
+    path = {{wallpaper}}
+    color = rgba({{surface}}ff)
+    brightness = 0.95
+    contrast = 1
+    noise = 0
+    blur_passes = 0
+}

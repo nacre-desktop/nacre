@@ -1,0 +1,6 @@
+{
+  "projects": [
+    {"id": "local-project", "label": "Local project", "path": "/absolute/path/to/project"},
+    {"id": "remote-project", "label": "Remote project", "host": "my-server", "path": "/absolute/path/on/server"}
+  ]
+}
