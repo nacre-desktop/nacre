@@ -1,0 +1,3 @@
+[submodule "deps/orient"]
+	path = deps/orient
+	url = https://github.com/nacre-desktop/orient.git

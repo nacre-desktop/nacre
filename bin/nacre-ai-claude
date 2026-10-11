@@ -1,0 +1,303 @@
+#!/usr/bin/env python3
+"""Launch Claude tasks and read native session metadata using Anthropic's SDK."""
+
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import uuid
+
+
+def agent_full_access():
+    try:
+        return (
+            json.loads((Path.home() / ".config/nacre/profile.json").read_text()).get(
+                "aiFullAccess"
+            )
+            is True
+        )
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
+def environment(account):
+    env = dict(os.environ, CLAUDE_CONFIG_DIR=str(Path.home() / ".claude"))
+    if account:
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,47}", account):
+            raise ValueError("Invalid account profile name")
+        env["CLAUDE_CONFIG_DIR"] = str(
+            Path.home() / ".local/share/nacre/ai/claude-accounts" / account
+        )
+    return env
+
+
+def executable():
+    binary = shutil.which("claude")
+    if not binary:
+        raise ValueError(
+            "Claude Code is not installed on this host. Install it using https://code.claude.com/docs/en/setup"
+        )
+    return binary
+
+
+def sdk():
+    try:
+        import claude_agent_sdk
+
+        return claude_agent_sdk
+    except ImportError as error:
+        python = Path.home() / ".local/share/nacre/ai/claude-sdk/bin/python"
+        if python.is_file() and Path(sys.prefix) != python.parent.parent:
+            os.execv(
+                str(python), [str(python), str(Path(__file__).resolve()), *sys.argv[1:]]
+            )
+        raise ValueError(
+            "Install the Claude history dependency: python3 ai/install-claude.py"
+        ) from error
+
+
+def running_sessions(project, account):
+    if not shutil.which("tmux"):
+        return {}
+    tag = "profile-" + account if account else "default"
+    prefix = f"ai-{project}-claude-{tag}-"
+    result = subprocess.run(
+        ["tmux", "list-panes", "-a", "-F", "#{session_name}\t#{pane_current_path}"],
+        text=True,
+        capture_output=True,
+        timeout=4,
+    )
+    return {
+        name: cwd
+        for row in result.stdout.splitlines()
+        if "\t" in row
+        for name, cwd in [row.split("\t", 1)]
+        if name.startswith(prefix)
+    }
+
+
+def records(sessions, running, fallback):
+    output = []
+    seen = set()
+    matched = set()
+    for session in sessions:
+        if session.session_id in seen:
+            continue
+        seen.add(session.session_id)
+        cwd = session.cwd or fallback
+        tmux = next(
+            (
+                name
+                for name, path in running.items()
+                if path == cwd and name not in matched
+            ),
+            None,
+        )
+        if tmux:
+            matched.add(tmux)
+        output.append(
+            {
+                "id": session.session_id,
+                "title": session.custom_title
+                or session.summary
+                or session.first_prompt
+                or "New chat",
+                "updated_at": session.last_modified / 1000,
+                "cwd": cwd,
+                "state": "running" if tmux else "saved",
+                "session": tmux,
+                "agent": "claude",
+            }
+        )
+    return output
+
+
+def list_chats(args):
+    config = Path(os.environ.get("CLAUDE_CONFIG_DIR", str(Path.home() / ".claude")))
+    if not (config / "projects").is_dir():
+        return []
+    api = sdk()
+    root = Path(args.path)
+    if args.chat_directory:
+        paths = (
+            [
+                root,
+                *[
+                    p
+                    for p in root.iterdir()
+                    if p.is_dir()
+                    and not p.is_symlink()
+                    and re.fullmatch(r"[0-9a-f]{32}", p.name)
+                ],
+            ]
+            if root.is_dir()
+            else []
+        )
+        sessions = [
+            s
+            for path in paths
+            for s in api.list_sessions(
+                directory=str(path), limit=500, include_worktrees=False
+            )
+        ]
+    else:
+        sessions = api.list_sessions(
+            directory=str(root), limit=500, include_worktrees=True
+        )
+    return records(sessions, running_sessions(args.project, args.account), str(root))
+
+
+def guidance():
+    return (
+        "This session was opened with Nacre AI. Read ~/.codex/AGENTS.md for shared personal workflow, "
+        "and ~/.config/nacre/ai/projects.json for project/build-host locations. "
+        "Read the selected project and working directory AGENTS.md as well as CLAUDE.md before editing. "
+        "Follow project instructions and use isolated worktrees. Keep this conversation when the user changes project. "
+        "Search the private brain with nacre-brain search and automatically save durable findings using "
+        "nacre-brain note; read ~/.agents/skills/nacre-brain/SKILL.md for details. "
+        "Codex-specific title tools do not apply to Claude: use Claude native session titles and /rename. "
+        "Never copy Codex or Claude credentials between accounts. "
+        "A General chat folder is for conversation; resolve relevant projects later using nacre-ai-context QUERY. "
+        "Save meaningful findings through nacre-ai-memory with --world and --topic, including personal and research topics. "
+        "Read ~/.agents/skills/nacre-brain/SKILL.md. Do not store transcripts or turn suggestions into facts."
+    )
+
+
+def prepare_directory(args):
+    root = Path(args.path)
+    if args.chat_directory:
+        directory = root / uuid.uuid4().hex
+        directory.mkdir(parents=True, mode=0o700)
+        return directory
+    task = uuid.uuid4().hex
+    directory = Path.home() / ".local/share/nacre/ai/worktrees" / args.project / task
+    directory.parent.mkdir(parents=True, exist_ok=True)
+    has_head = (
+        subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
+            capture_output=True,
+        ).returncode
+        == 0
+    )
+    command = ["git", "-C", str(root), "worktree", "add"]
+    if not has_head:
+        command.append("--orphan")
+    subprocess.run([*command, "-b", "claude/" + task, str(directory)], check=True)
+    return directory
+
+
+def run(args):
+    env = environment(args.account)
+    subprocess.run(
+        [
+            str(Path.home() / ".local/bin/nacre-ai-skills"),
+            "--claude-home",
+            env["CLAUDE_CONFIG_DIR"],
+        ],
+        check=True,
+    )
+    os.environ.update(env)
+    if args.command == "list":
+        print(json.dumps(list_chats(args)))
+        return
+    binary = executable()  # Fail before creating worktrees when Claude is absent.
+    if args.command == "login":
+        os.execvpe(binary, [binary, "auth", "login"], env)
+    if args.tmux:
+        tag = "profile-" + args.account if args.account else "default"
+        session = f"ai-{args.project}-claude-{tag}-" + (
+            args.thread_id or uuid.uuid4().hex
+        )
+        argv = [
+            str(Path(__file__).resolve()),
+            args.command,
+            "--project",
+            args.project,
+            "--path",
+            args.path,
+            "--account",
+            args.account,
+        ]
+        if args.thread_id:
+            argv += ["--thread-id", args.thread_id]
+        if args.chat_directory:
+            argv += ["--chat-directory"]
+        os.execvpe(
+            "tmux", ["tmux", "new-session", "-A", "-s", session, shlex.join(argv)], env
+        )
+    directory = Path(args.path) if args.command == "resume" else prepare_directory(args)
+    if not directory.is_dir():
+        raise ValueError(f"The saved workspace no longer exists: {directory}")
+    os.chdir(directory)
+    vault = Path(
+        os.environ.get("NACRE_BRAIN", str(Path.home() / "Documents/Nacre-Brain"))
+    )
+    vault.mkdir(parents=True, exist_ok=True, mode=0o700)
+    argv = [
+        binary,
+        *(["--dangerously-skip-permissions"] if agent_full_access() else []),
+        "--append-system-prompt",
+        guidance(),
+        "--add-dir",
+        str(vault),
+    ]
+    # Per-session overlay keeps subscription metrics private and preserves a custom status line.
+    status = {}
+    for settings in (
+        Path(env["CLAUDE_CONFIG_DIR"]) / "settings.json",
+        directory / ".claude/settings.json",
+        directory / ".claude/settings.local.json",
+    ):
+        if settings.exists():
+            status.update(json.loads(settings.read_text()).get("statusLine", {}))
+    command = [
+        str(Path.home() / ".local/bin/nacre-ai-usage"),
+        "capture",
+        "--agent",
+        "claude",
+        "--account",
+        args.account,
+    ]
+    if status.get("command"):
+        command += ["--delegate", status["command"]]
+    argv += [
+        "--settings",
+        json.dumps({"statusLine": {"type": "command", "command": shlex.join(command)}}),
+    ]
+    if args.command == "resume":
+        if not args.thread_id:
+            raise ValueError("A Claude session ID is required")
+        uuid.UUID(args.thread_id)
+        argv += ["--resume", args.thread_id]
+    os.execvpe(binary, argv, env)
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("command", choices=["new", "resume", "list", "login"])
+    p.add_argument("--project", default="general-chat")
+    p.add_argument("--path", default=str(Path.home() / ".local/share/nacre/ai/chats"))
+    p.add_argument("--account", default="")
+    p.add_argument("--thread-id")
+    p.add_argument("--chat-directory", action="store_true")
+    p.add_argument("--tmux", action="store_true")
+    args = p.parse_args()
+    if (
+        not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", args.project)
+        or not Path(args.path).is_absolute()
+    ):
+        raise ValueError("A valid project ID and absolute path are required")
+    run(args)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (ValueError, OSError, subprocess.SubprocessError) as error:
+        print(f"nacre-ai-claude: {error}", file=sys.stderr)
+        raise SystemExit(1) from None

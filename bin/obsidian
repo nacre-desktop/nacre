@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+    set -- --ozone-platform=wayland "$@"
+fi
+exec "$HOME/.local/share/nacre/ai/obsidian/1.13.7/squashfs-root/AppRun" "$@"

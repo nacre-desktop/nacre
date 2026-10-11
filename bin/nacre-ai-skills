@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""Install pinned shared skills, or expose the existing library to an account."""
+
+import argparse
+import io
+import json
+import os
+from pathlib import Path
+import tempfile
+import urllib.request
+import zipfile
+
+
+def expose(source, destination, owned_library=None):
+    destination.mkdir(parents=True, exist_ok=True)
+    for skill in source.iterdir():
+        if not (skill / "SKILL.md").is_file():
+            continue
+        target = destination / skill.name
+        if target.is_symlink() and target.resolve() == skill.resolve():
+            continue
+        if (
+            target.is_symlink()
+            and owned_library is not None
+            and target.resolve().is_relative_to(owned_library.resolve())
+        ):
+            pending = target.with_name(
+                "." + target.name + "-" + __import__("uuid").uuid4().hex
+            )
+            pending.symlink_to(skill.absolute(), target_is_directory=True)
+            os.replace(pending, target)
+            continue
+        if target.exists() or target.is_symlink():
+            raise RuntimeError(f"Existing skill preserved; resolve conflict: {target}")
+        target.symlink_to(skill.absolute(), target_is_directory=True)
+
+
+def install(repo, home):
+    sources = json.loads((repo / "ai/skill-sources.json").read_text())
+    library = home / ".local/share/nacre/ai/skill-library"
+    library.mkdir(parents=True, exist_ok=True)
+    for source in sources:
+        revision = source["revision"]
+        url = f"https://codeload.github.com/{source['repo']}/zip/{revision}"
+        request = urllib.request.Request(url, headers={"User-Agent": "nacre-ai"})
+        with urllib.request.urlopen(request, timeout=60) as response:
+            archive = zipfile.ZipFile(io.BytesIO(response.read()))
+        prefix = archive.namelist()[0].split("/")[0] + "/"
+        release = library / (source["repo"].replace("/", "-") + "-" + revision)
+        if not release.exists():
+            with tempfile.TemporaryDirectory(dir=library) as tmp:
+                stage = Path(tmp) / "release"
+                stage.mkdir()
+                for name in source["skills"]:
+                    lead = prefix + "skills/" + name + "/"
+                    for member in archive.infolist():
+                        if not member.filename.startswith(lead) or member.is_dir():
+                            continue
+                        relative = Path(member.filename[len(lead) :])
+                        if relative.is_absolute() or ".." in relative.parts:
+                            raise ValueError("Unsafe archive path")
+                        target = stage / name / relative
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        target.write_bytes(archive.read(member))
+                    if not (stage / name / "SKILL.md").is_file():
+                        raise ValueError(f"Missing skill {name}")
+                for member in archive.namelist():
+                    if (
+                        member.startswith(prefix)
+                        and "/" not in member[len(prefix) :]
+                        and "LICENSE" in member.upper()
+                    ):
+                        (stage / Path(member).name).write_bytes(archive.read(member))
+                stage.rename(release)
+        expose(release, home / ".agents/skills", owned_library=library)
+    print(
+        "Installed 10 pinned upstream skills; source revisions:",
+        repo / "ai/skill-sources.json",
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--install", action="store_true")
+    parser.add_argument(
+        "--repo", type=Path, default=Path(__file__).resolve().parents[1]
+    )
+    parser.add_argument("--claude-home", type=Path)
+    parser.add_argument("--codex-home", type=Path)
+    args = parser.parse_args()
+    home = Path.home()
+    if args.install:
+        install(args.repo, home)
+    source = home / ".agents/skills"
+    if not source.exists():
+        return
+    targets = [args.claude_home] if args.claude_home else []
+    targets += [args.codex_home] if args.codex_home else []
+    if not targets:
+        targets = [home / ".claude", home / ".codex"]
+        for group in ("accounts", "claude-accounts"):
+            parent = home / ".local/share/nacre/ai" / group
+            if parent.exists():
+                targets += [p for p in parent.iterdir() if p.is_dir()]
+    for target in targets:
+        expose(source, target / "skills")
+
+
+if __name__ == "__main__":
+    main()

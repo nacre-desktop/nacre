@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Dolphin
+GenericName=File Manager
+Comment=Browse files and archives with Nacre colors
+Exec=nacre-shell dolphin %U
+TryExec=dolphin
+Icon=system-file-manager
+Terminal=false
+DBusActivatable=false
+StartupWMClass=org.kde.dolphin
+MimeType=inode/directory;application/zip;application/x-zip-compressed;
+Categories=System;FileManager;
+Keywords=Files;Folders;Nacre;Archives;

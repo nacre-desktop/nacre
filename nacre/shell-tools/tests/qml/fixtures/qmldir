@@ -1,0 +1,11 @@
+module Fixtures
+singleton SidebarChat 1.0 SidebarChat.qml
+singleton NacreColours 1.0 NacreColours.qml
+NacreSurface 1.0 NacreSurface.qml
+NacreText 1.0 NacreText.qml
+ActionButton 1.0 ActionButton.qml
+NacreTextField 1.0 NacreTextField.qml
+FastScroll 1.0 FastScroll.qml
+
+singleton NacreAppearance 1.0 NacreAppearance.qml
+NacreInteraction 1.0 NacreInteraction.qml

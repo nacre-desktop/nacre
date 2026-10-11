@@ -1,0 +1,11 @@
+[SddmGreeterTheme]
+Name=Nacre
+Description=Nacre wallpaper and lock-screen palette
+Author=Nacre contributors
+Type=sddm-theme
+Version=1.0
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=nacre
+Theme-API=2.0
+QtVersion=6

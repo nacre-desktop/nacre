@@ -1,0 +1,25 @@
+[Desktop Entry]
+Type=Application
+Name=Nacre Settings
+GenericName=Desktop Settings
+Comment=Personalize and manage the Nacre desktop
+Exec=nacre-settings
+TryExec=nacre-settings
+Icon=nacre-settings
+Terminal=false
+StartupWMClass=org.quickshell
+Categories=Settings;DesktopSettings;
+Keywords=Nacre;Appearance;Wallpaper;Colors;Display;Audio;Network;Bluetooth;
+Actions=Appearance;Displays;Sound;
+
+[Desktop Action Appearance]
+Name=Appearance
+Exec=nacre-settings appearance
+
+[Desktop Action Displays]
+Name=Displays
+Exec=nacre-settings displays
+
+[Desktop Action Sound]
+Name=Sound
+Exec=nacre-settings sound

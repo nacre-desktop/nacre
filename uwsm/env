@@ -1,0 +1,12 @@
+# Toolkit preferences for the UWSM graphical session and its user services.
+export QT_QPA_PLATFORM='wayland;xcb'
+export QT_QPA_PLATFORMTHEME=qt6ct
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+export GDK_BACKEND='wayland,x11,*'
+export GDK_SCALE=1
+export OZONE_PLATFORM=wayland
+export ELECTRON_OZONE_PLATFORM_HINT=wayland
+
+# Cursor consumers share this theme and size; compositor variables follow below.
+export XCURSOR_THEME=breeze_cursors
+export XCURSOR_SIZE=24

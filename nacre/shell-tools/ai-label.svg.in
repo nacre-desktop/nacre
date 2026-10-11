@@ -1,0 +1,5 @@
+<!-- Own path lettering, fitted to the open space beneath the shell's right lip. -->
+<g aria-label="AI" fill-rule="evenodd" transform="translate(0 2)">
+  <path fill="@AI_PRIMARY@" d="M39.8 49 L44 36.8 Q44.4 35.7 45.4 35.7 Q46.4 35.7 46.8 36.8 L51 49 H48.6 L47.5 45.7 H43.3 L42.2 49 Z M44 43.5 H46.8 L45.4 39.1 Z"/>
+  <path fill="@AI_SECONDARY@" d="M52.4 35.9 H58.2 V38.1 H56.5 V46.8 H58.2 V49 H52.4 V46.8 H54.1 V38.1 H52.4 Z"/>
+</g>

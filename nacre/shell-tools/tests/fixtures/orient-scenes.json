@@ -1,0 +1,195 @@
+[
+  {
+    "name": "desert",
+    "image": "nick-nazzaro-desert.png",
+    "analysis": {
+      "seed": "e48e5a",
+      "candidates": [
+        {
+          "hex": "e48e5a",
+          "coverage": 0.29753,
+          "chroma": 0.12457,
+          "score": 0.485399,
+          "spread": 0.875
+        },
+        {
+          "hex": "bc7ca7",
+          "coverage": 0.01986,
+          "chroma": 0.09678,
+          "score": 0.069147,
+          "spread": 0.3125
+        },
+        {
+          "hex": "cf6e65",
+          "coverage": 0.29232,
+          "chroma": 0.12401,
+          "score": 0.478576,
+          "spread": 0.875
+        },
+        {
+          "hex": "fee4a1",
+          "coverage": 0.23915,
+          "chroma": 0.08975,
+          "score": 0.298173,
+          "spread": 0.4375
+        }
+      ],
+      "meanLightness": 0.73012,
+      "neutral": false,
+      "reason": "coverage, chroma, usable lightness and spatial spread"
+    },
+    "source": "https://github.com/pop-os/wallpapers/blob/20a9fdd1ed86aadfbbfcd55dc3d2d9eb8ae28e15/original/nick-nazzaro-desert.png",
+    "artist": "Nick Nazzaro",
+    "license": "CC-BY-SA-4.0"
+  },
+  {
+    "name": "jungle-red",
+    "image": "nick-nazzaro-jungle-red.png",
+    "analysis": {
+      "seed": "88373c",
+      "candidates": [
+        {
+          "hex": "88373c",
+          "coverage": 0.77691,
+          "chroma": 0.11087,
+          "score": 0.733416,
+          "spread": 1.0
+        },
+        {
+          "hex": "f4f38a",
+          "coverage": 0.07053,
+          "chroma": 0.12732,
+          "score": 0.189568,
+          "spread": 0.4375
+        },
+        {
+          "hex": "b76f4c",
+          "coverage": 0.05382,
+          "chroma": 0.10469,
+          "score": 0.149463,
+          "spread": 0.8125
+        },
+        {
+          "hex": "703950",
+          "coverage": 0.06727,
+          "chroma": 0.08303,
+          "score": 0.120362,
+          "spread": 0.625
+        },
+        {
+          "hex": "c79b5e",
+          "coverage": 0.02702,
+          "chroma": 0.09498,
+          "score": 0.086692,
+          "spread": 0.5625
+        }
+      ],
+      "meanLightness": 0.48962,
+      "neutral": false,
+      "reason": "coverage, chroma, usable lightness and spatial spread"
+    },
+    "source": "https://github.com/pop-os/wallpapers/blob/20a9fdd1ed86aadfbbfcd55dc3d2d9eb8ae28e15/original/nick-nazzaro-jungle-red.png",
+    "artist": "Nick Nazzaro",
+    "license": "CC-BY-SA-4.0"
+  },
+  {
+    "name": "space-blue",
+    "image": "nick-nazzaro-space-blue.png",
+    "analysis": {
+      "seed": "484878",
+      "candidates": [
+        {
+          "hex": "484878",
+          "coverage": 0.6033,
+          "chroma": 0.07938,
+          "score": 0.469549,
+          "spread": 1.0
+        },
+        {
+          "hex": "d5c6b0",
+          "coverage": 0.06836,
+          "chroma": 0.03385,
+          "score": 0.064465,
+          "spread": 0.4375
+        },
+        {
+          "hex": "987d79",
+          "coverage": 0.02539,
+          "chroma": 0.03367,
+          "score": 0.034933,
+          "spread": 0.375
+        },
+        {
+          "hex": "ae9dae",
+          "coverage": 0.14844,
+          "chroma": 0.03102,
+          "score": 0.099772,
+          "spread": 0.625
+        },
+        {
+          "hex": "a99aa0",
+          "coverage": 0.00532,
+          "chroma": 0.0202,
+          "score": 0.008438,
+          "spread": 0.0625
+        }
+      ],
+      "meanLightness": 0.49761,
+      "neutral": false,
+      "reason": "coverage, chroma, usable lightness and spatial spread"
+    },
+    "source": "https://github.com/pop-os/wallpapers/blob/20a9fdd1ed86aadfbbfcd55dc3d2d9eb8ae28e15/original/nick-nazzaro-space-blue.png",
+    "artist": "Nick Nazzaro",
+    "license": "CC-BY-SA-4.0"
+  },
+  {
+    "name": "underwater",
+    "image": "nick-nazzaro-underwater.png",
+    "analysis": {
+      "seed": "545a9a",
+      "candidates": [
+        {
+          "hex": "545a9a",
+          "coverage": 0.69195,
+          "chroma": 0.1024,
+          "score": 0.668685,
+          "spread": 1.0
+        },
+        {
+          "hex": "e1a7b9",
+          "coverage": 0.15506,
+          "chroma": 0.0708,
+          "score": 0.203556,
+          "spread": 0.75
+        },
+        {
+          "hex": "ceb4a2",
+          "coverage": 0.0089,
+          "chroma": 0.03919,
+          "score": 0.020127,
+          "spread": 0.1875
+        },
+        {
+          "hex": "a690b8",
+          "coverage": 0.0472,
+          "chroma": 0.06202,
+          "score": 0.088513,
+          "spread": 0.6875
+        },
+        {
+          "hex": "eccac7",
+          "coverage": 0.03016,
+          "chroma": 0.03845,
+          "score": 0.042468,
+          "spread": 0.3125
+        }
+      ],
+      "meanLightness": 0.55031,
+      "neutral": false,
+      "reason": "coverage, chroma, usable lightness and spatial spread"
+    },
+    "source": "https://github.com/pop-os/wallpapers/blob/20a9fdd1ed86aadfbbfcd55dc3d2d9eb8ae28e15/original/nick-nazzaro-underwater.png",
+    "artist": "Nick Nazzaro",
+    "license": "CC-BY-SA-4.0"
+  }
+]

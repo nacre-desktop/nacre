@@ -1,0 +1,6 @@
+<!-- Own paired lobes and cortical folds, fitted beneath the Nacre shell lip. -->
+<g aria-label="Brain" transform="translate(49 44.5) scale(.9) translate(-48.65 -42.85)">
+  <path fill="@PRIMARY@" d="M48 37.2 C47.2 35.4 44.4 35.4 43.4 37.4 C40.9 37.2 39.4 39.1 40.3 41.2 C38.5 42.9 39.1 45.1 41.1 45.9 C40.8 48.2 43 50 45 49.2 C46.5 50.3 48 49.2 48 47.6 Z"/>
+  <path fill="@SECONDARY@" d="M49.3 37.2 C50.1 35.4 52.9 35.4 53.9 37.4 C56.4 37.2 57.9 39.1 57 41.2 C58.8 42.9 58.2 45.1 56.2 45.9 C56.5 48.2 54.3 50 52.3 49.2 C50.8 50.3 49.3 49.2 49.3 47.6 Z"/>
+  <path fill="none" stroke="@ON_PRIMARY@" stroke-width=".9" stroke-linecap="round" stroke-opacity=".7" d="M43.4 37.5 Q43 40.1 45.8 40.3 M40.5 41.3 Q43.5 41.1 43.9 43.7 M41.4 46 Q43.7 45.1 45.3 47.4 M53.9 37.5 Q54.3 40.1 51.5 40.3 M56.8 41.3 Q53.8 41.1 53.4 43.7 M55.9 46 Q53.6 45.1 52 47.4"/>
+</g>

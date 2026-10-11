@@ -1,0 +1,11 @@
+[Unit]
+Description=Nacre persistent sidebar assistant
+PartOf=graphical-session.target
+After=graphical-session.target
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.local/share/nacre/shell/tools/sidebar-chat.py server
+Restart=on-failure
+RestartSec=2
+KillMode=control-group
+TimeoutStopSec=8

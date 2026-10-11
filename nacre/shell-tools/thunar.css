@@ -1,0 +1,19 @@
+/* Nacre Files: shared generated roles, scoped to Thunar only. */
+.thunar { font-family: "Noto Sans"; font-size: 11pt; }
+.thunar.background { background-color: @window_bg_color; color: @window_fg_color; }
+.thunar toolbar { background: @headerbar_bg_color; padding: 9px 12px; border: 0; }
+.thunar toolbar button { background-image: none; box-shadow: none; border-color: transparent; border-radius: 9px; padding: 7px; }
+.thunar toolbar button:hover { background: alpha(@accent_bg_color, 0.12); }
+.thunar toolbar entry { background: @view_bg_color; color: @view_fg_color; border-color: alpha(@accent_bg_color, 0.2); border-radius: 9px; min-height: 32px; }
+.thunar .sidebar { background: @sidebar_bg_color; color: @sidebar_fg_color; }
+.thunar .sidebar .view { background: @sidebar_bg_color; color: @sidebar_fg_color; }
+.thunar .sidebar .view:selected { background: alpha(@accent_bg_color, 0.18); color: @window_fg_color; }
+.thunar .standard-view { background: @view_bg_color; border: 0; padding: 12px; }
+.thunar .standard-view .view { background: @view_bg_color; color: @view_fg_color; }
+.thunar .standard-view .view:selected { background: @accent_bg_color; color: @accent_fg_color; border-radius: 8px; }
+.thunar .standard-view .view { -ThunarAbstractIconView-row-spacing: 18; -ThunarAbstractIconView-column-spacing: 16; }
+.thunar paned > separator { background: alpha(@window_fg_color, 0.10); min-width: 1px; }
+.thunar statusbar { background: @headerbar_bg_color; color: @window_fg_color; padding: 6px 12px; }
+.thunar notebook > header { background: @headerbar_bg_color; border: 0; }
+.thunar notebook tab:checked { border-color: @accent_bg_color; }
+.thunar .rubberband { background: alpha(@accent_bg_color, 0.2); border: 1px solid @accent_bg_color; }

@@ -1,0 +1,6 @@
+[Unit]
+Description=Snapshot and check the private brain
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/nacre-brain-maintain backup
+ExecStart=%h/.local/bin/nacre-brain-maintain check

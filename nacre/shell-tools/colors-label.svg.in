@@ -1,0 +1,6 @@
+<!-- Own palette dots, sharing the common app-glyph centre beneath the shell lip. -->
+<g aria-label="Colors">
+  <circle cx="42" cy="44.5" r="2.5" fill="@PRIMARY@"/>
+  <circle cx="49" cy="44.5" r="2.5" fill="@SECONDARY@"/>
+  <circle cx="56" cy="44.5" r="2.5" fill="@TERTIARY@"/>
+</g>
