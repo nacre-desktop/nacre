@@ -21,7 +21,7 @@ def main():
         "--component",
         action="append",
         choices=["configs", "apps", "shell", "brain", "ai"],
-        help="repeat to select components; default configs, shell, brain",
+        help="repeat to select components; default: selected profile components",
     )
     parser.add_argument(
         "--profile",
@@ -100,7 +100,7 @@ def main():
         print(name + ": " + " ".join(commands[name]), flush=True)
     if not args.apply:
         print(
-            "Plan only. Read docs/maintenance.md and tools/check.py output before applying."
+            "Plan only. Read docs/installation.md and tools/check.py output before applying."
         )
         return
     subprocess.run(

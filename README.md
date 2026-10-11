@@ -1,17 +1,41 @@
-<p align="center"><img src="assets/branding/nacre-avatar-transparent.png" width="140" alt="Nacre shell logo"></p>
+<p align="center"><img src="assets/branding/nacre-avatar-transparent.png" width="160" alt="Nacre shell logo"></p>
 <h1 align="center">Nacre</h1>
+<p align="center"><strong>NAY-ker</strong> · mother-of-pearl</p>
 <p align="center">Mother-of-pearl. Colors shaped by your wallpaper.</p>
+<p align="center"><a href="docs/installation.md">Get started</a> · <a href="#shortcuts">Shortcuts</a> · <a href="#user-guides">User guides</a> · <a href="https://github.com/nacre-desktop/orient">Orient</a></p>
 
-**Development preview · 0.1.0-dev.1.** Nacre is a Quickshell desktop for Hyprland.
-This repository contains the general desktop. [Orient](https://github.com/nacre-desktop/orient)
-is the independently versioned color engine.
+A desktop for Hyprland, built with Quickshell. Pick a wallpaper and Nacre carries
+its colors through the bar, windows, launcher and apps. Keep the wallpaper's own
+balance, bring a small detail forward with Pop, or choose a softer style.
 
-Nacre includes a universal launcher, desktop controls, notifications, wallpaper
-library with static/animated playback, Settings, Colors and a first-run Welcome
-tour. AI and Brain are optional components. Generic defaults have numbered
-workspaces, no personal app routing and no personal startup applications.
+**Development preview · 0.1.0-dev.1.** Nacre is in its 0.x series while installation
+and packaging settle. The current setup is source-based for an existing compatible
+CachyOS/Arch desktop. A guided installer and video tour will come later.
 
-## Get the source
+<!-- Replace this comment with a desktop video once the launch clip is ready. -->
+
+## Your desktop, in its colors
+
+- **Wallpaper colors.** [Orient](https://github.com/nacre-desktop/orient) builds
+  dark and light palettes from your images, with distinct styles and readable text.
+- **One launcher.** Search apps, actions, settings, clipboard, wallpapers and
+  shortcuts. Favorites, live controls and section routes keep everyday tasks close.
+- **Nacre apps.** Settings for desktop preferences, Colors for previews and theme
+  exports, and Welcome for a hands-on introduction.
+- **Static and animated wallpapers.** Browse your library, switch scenes and
+  choose motion behavior for battery use.
+- **Everyday controls.** Notifications, audio, network, Bluetooth, capture,
+  workspace overview and session controls share the desktop's palette.
+- **Optional AI and Brain.** Add an assistant workspace and private knowledge
+  browser when you want them. Core Nacre works without either.
+
+The default has seven numbered workspaces. Choose your own applications, startup
+behavior and workspace names through [configuration](docs/configuration.md).
+
+## Get started
+
+Read the [installation guide](docs/installation.md) for the supported Hyprland,
+Qt and Quickshell versions and required packages, then clone the pinned source:
 
 ```sh
 git clone --recurse-submodules https://github.com/nacre-desktop/nacre.git
@@ -19,59 +43,67 @@ cd nacre
 ./install.sh --profile default
 ```
 
-The last command prints a plan. Inspect it before applying. The supported initial
-target is CachyOS/Arch with the documented Hyprland Lua API and compatible Qt /
-Quickshell packages; this is not a universal distribution installer or a bootable ISO.
-See [installation](docs/installation.md) for dependencies and a clean-user workflow.
+This prints a plan. To inspect the installed file layout first, prepare an empty
+directory without changing your running desktop:
 
 ```sh
+./install.sh --profile default --prepare /tmp/nacre-preview
+```
+
+When the prerequisites are ready, provision the color engine and apply the plan
+from a running Hyprland session:
+
+```sh
+python3 nacre/shell-tools/provision.py
 ./install.sh --profile default --apply
-# Explicit optional packages; no provider credentials or models are downloaded:
-./install.sh --profile default --with ai --with brain --apply
 ```
 
-Source must be committed/clean, and live deployment requires a running Hyprland
-session plus the source/input validation gates. Existing managed changes are
-checked for drift. Accounts, vaults, conversations and wallpapers are outside the
-code snapshot; component installation does not copy them from the maintainer.
+For optional apps, add `--with ai` and/or `--with brain`. Installation does not
+sign into providers, download models or populate your memory vault. See
+[optional apps](docs/optional-apps.md).
 
-## Test a fresh installation without changing your desktop
+Managed updates check local changes and retain rollback snapshots. Your accounts,
+conversations, wallpaper collection and memories remain local user data. Use a
+separate test account to explore a fresh setup before changing your daily desktop.
 
-```sh
-./install.sh --profile default --prepare /tmp/nacre-core-preview
-./install.sh --profile default --with ai --with brain --prepare /tmp/nacre-optional-preview
-```
+## Shortcuts
 
-Preparation installs the selected file layout into an **empty** directory and
-creates an inspectable manifest. It does not install system packages, start services,
-change devices, create a vault or authenticate providers. It is a file-install
-check, not proof of a real graphical login. Use a clean test user/accelerated VM
-for complete first-install checks, then real hardware for performance/device tests.
+**Super** is usually the Windows key. These are the shipped defaults; the launcher
+under **Learn → Shortcuts** shows the bindings from your current session.
 
-## Personal profiles and updates
+| Keys | Action |
+| --- | --- |
+| Super + A | Universal launcher |
+| Super + S | Nacre Settings |
+| Super + W | Wallpaper picker |
+| Super + K | Shortcut list |
+| Super + Shift + T | Terminal |
+| Super + Shift + F | Files |
+| Super + V | Clipboard |
+| Super + Ctrl + C | Capture menu |
+| Print Screen | Capture an area to the clipboard |
+| Super + Print Screen | Save a screenshot |
+| Super + Q / Super + Shift + Q | Put a window away / restore it |
+| Super + Ctrl + Q | Close a window |
+| Super + M / Super + F | Maximize / fullscreen |
+| Super + T | Toggle floating |
+| Super + 1–7 | Change workspace |
+| Super + Shift + 1–7 | Move a window to a workspace |
+| Super + Escape | Lock |
 
-Profiles are validated JSON. They select components, workspace count/labels/icons,
-startup argument arrays and application routes. The default is in
-`profiles/default.json`; a consumer can supply its own:
+In the launcher, `>` searches actions, `=` calculates, `#` searches Brain and `?`
+opens AI when installed. Enter opens a search result; Ctrl+D toggles its favorite.
 
-```sh
-./install.sh --profile /path/to/profile.json
-```
+## User guides
 
-Custom profiles can consume a pinned Nacre revision without duplicating its implementation.
+- [Installation](docs/installation.md)
+- [Using Nacre](docs/usage.md)
+- [Configuration and profiles](docs/configuration.md)
+- [Optional AI and Brain](docs/optional-apps.md)
+- [Updates and recovery](docs/recovery.md)
+- [What's changed](CHANGELOG.md)
 
-The existing profile is retained when `--profile` is omitted. Selecting a profile
-changes the desktop composition at the next managed deployment/login. Concurrent
-full desktops on one user/session are not supported: notifications, publication
-and services have one owner. Test users isolate account/config state; optional Brain
-can use `NACRE_BRAIN_PORT` if a separate instance needs another port.
+## License
 
-## Version and license
-
-Nacre is in its0.x development-preview series. Version1.0 will be released when
-installation and daily-use acceptance are ready. See [CHANGELOG](CHANGELOG.md).
-
-Nacre-owned source is **GPL-3.0-only**: [LICENSE](LICENSE). Its system dependencies
-retain their own licenses. The bundled landscape wallpapers are public domain.
-Read [usage](docs/usage.md), [configuration](docs/configuration.md),
-[optional apps](docs/optional-apps.md) and [updates/recovery](docs/recovery.md).
+Nacre-owned source is [GPL-3.0-only](LICENSE). System dependencies retain their own
+licenses. The temporary bundled landscape wallpapers are public domain.
