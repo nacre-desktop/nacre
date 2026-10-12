@@ -53,9 +53,10 @@ FloatingWindow {
         sourceComponent: NacreWelcomeView {}
     }
     Repeater {
-        // Four bounded full-size stills, only while the tour is active. These use
-        // the same decode dimensions as the background, so clicks reuse the pixels.
-        model: NacreWelcomeApp.active ? NacreWelcomeApp.demoEntries : []
+        // Warm the four background-sized stills only while their demo is shown.
+        // The opening/help pages do not use them; clicks in the demo reuse pixels.
+        objectName: "welcomePosterPreloads"
+        model: NacreWelcomeApp.active && NacreWelcomeApp.page === "colors" ? NacreWelcomeApp.demoEntries : []
         Image {
             required property var modelData
             visible: false
