@@ -253,47 +253,50 @@ def focus_action(kind, minutes=25, dnd=False, now=None):
     return state
 
 
+def execute(action, value=""):
+    CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    with CONFIG.with_suffix(".lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if action == "preferences":
+            write(CONFIG, validate(json.loads(value)))
+        elif action.startswith("focus-"):
+            data = json.loads(value or "{}")
+            focus_action(action[6:], data.get("minutes", 25), data.get("dnd", False))
+        elif action == "capture":
+            if not value.strip() or len(value) > 16000:
+                raise ValueError("Write a note up to16000characters")
+            subprocess.run(
+                [
+                    BRAIN,
+                    "note",
+                    "--kind",
+                    "inbox",
+                    "--title",
+                    value.splitlines()[0][:100],
+                    "--source",
+                    "Nacre Focus quick capture",
+                    "--confidence",
+                    "reported",
+                ],
+                input=value,
+                text=True,
+                check=True,
+                capture_output=True,
+                timeout=8,
+            )
+        elif action not in ("read", "context"):
+            raise ValueError("Unknown dashboard action")
+        result = snapshot(action in ("context", "capture"))
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("action")
     parser.add_argument("value", nargs="?", default="")
     args = parser.parse_args()
     try:
-        CONFIG.parent.mkdir(parents=True, exist_ok=True)
-        with CONFIG.with_suffix(".lock").open("w") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
-            if args.action == "preferences":
-                write(CONFIG, validate(json.loads(args.value)))
-            elif args.action.startswith("focus-"):
-                data = json.loads(args.value or "{}")
-                focus_action(
-                    args.action[6:], data.get("minutes", 25), data.get("dnd", False)
-                )
-            elif args.action == "capture":
-                if not args.value.strip() or len(args.value) > 16000:
-                    raise ValueError("Write a note up to16000characters")
-                subprocess.run(
-                    [
-                        BRAIN,
-                        "note",
-                        "--kind",
-                        "inbox",
-                        "--title",
-                        args.value.splitlines()[0][:100],
-                        "--source",
-                        "Nacre Focus quick capture",
-                        "--confidence",
-                        "reported",
-                    ],
-                    input=args.value,
-                    text=True,
-                    check=True,
-                    capture_output=True,
-                    timeout=8,
-                )
-            elif args.action not in ("read", "context"):
-                raise ValueError("Unknown dashboard action")
-            result = snapshot(args.action in ("context", "capture"))
+        result = execute(args.action, args.value)
         print(json.dumps(result, allow_nan=False))
     except (
         OSError,

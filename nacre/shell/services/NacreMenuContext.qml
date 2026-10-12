@@ -789,22 +789,20 @@ Scope {
                 capture: "grim"
             })[entry?.capability] || (entry?.value === "night-light" ? "hyprsunset" : "");
     }
-    Process {
+    NacreHelperTask {
         id: fileWorker
         property string query: ""
         command: ["python3", root.tools + "/menu-backend.py", "files", query]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (fileWorker.query !== root.fileWanted)
-                    return;
-                try {
-                    const data = JSON.parse(text);
-                    root.fileQuery = fileWorker.query;
-                    root.fileRows = data.rows || [];
-                    root.fileMessage = data.error || data.message || "";
-                } catch (failure) {
-                    root.message = "Could not read files result";
-                }
+        onOutput: text => {
+            if (fileWorker.query !== root.fileWanted)
+                return;
+            try {
+                const data = JSON.parse(text);
+                root.fileQuery = fileWorker.query;
+                root.fileRows = data.rows || [];
+                root.fileMessage = data.error || data.message || "";
+            } catch (failure) {
+                root.message = "Could not read files result";
             }
         }
         onExited: if (query !== root.fileWanted)
@@ -822,21 +820,19 @@ Scope {
             fileWorker.running = true;
         }
     }
-    Process {
+    NacreHelperTask {
         id: conversionWorker
         property string query: ""
         command: ["python3", root.tools + "/menu-backend.py", "convert", query]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (conversionWorker.query !== root.conversionWanted)
-                    return;
-                try {
-                    const data = JSON.parse(text);
-                    root.conversionQuery = conversionWorker.query;
-                    root.conversion = data;
-                } catch (failure) {
-                    root.message = "Could not read convert result";
-                }
+        onOutput: text => {
+            if (conversionWorker.query !== root.conversionWanted)
+                return;
+            try {
+                const data = JSON.parse(text);
+                root.conversionQuery = conversionWorker.query;
+                root.conversion = data;
+            } catch (failure) {
+                root.message = "Could not read convert result";
             }
         }
         onExited: if (query !== root.conversionWanted)
@@ -854,20 +850,18 @@ Scope {
             conversionWorker.running = true;
         }
     }
-    Process {
+    NacreHelperTask {
         id: ownershipWorker
         property string ident: ""
         command: ["python3", root.tools + "/menu-backend.py", "ownership", ident]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const data = JSON.parse(text);
-                    if (typeof data.package === "string")
-                        root.ownership = Object.assign({}, root.ownership, {
-                            [ownershipWorker.ident]: data.package
-                        });
-                } catch (failure) {}
-            }
+        onOutput: text => {
+            try {
+                const data = JSON.parse(text);
+                if (typeof data.package === "string")
+                    root.ownership = Object.assign({}, root.ownership, {
+                        [ownershipWorker.ident]: data.package
+                    });
+            } catch (failure) {}
         }
         onExited: if (root.ownershipWanted !== ident) {
             ident = root.ownershipWanted;
@@ -897,21 +891,19 @@ Scope {
             root.refresh(true);
         }
     }
-    Process {
+    NacreHelperTask {
         id: stateWorker
         property bool force: false
         command: ["python3", root.tools + "/menu-backend.py", "state", ...(force ? ["--force"] : [])]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const data = JSON.parse(text);
-                    if (data.error)
-                        root.message = data.error;
-                    else if (data.version === 1 && data.capabilities && Array.isArray(data.packages))
-                        root.snapshot = data;
-                } catch (failure) {
-                    root.message = "Menu status could not be refreshed";
-                }
+        onOutput: text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.error)
+                    root.message = data.error;
+                else if (data.version === 1 && data.capabilities && Array.isArray(data.packages))
+                    root.snapshot = data;
+            } catch (failure) {
+                root.message = "Menu status could not be refreshed";
             }
         }
     }
@@ -935,22 +927,20 @@ Scope {
         }
         onExited: root.refresh(true)
     }
-    Process {
+    NacreHelperTask {
         id: packageWorker
         property string query: ""
         command: ["python3", root.tools + "/menu-backend.py", "packages", query]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (packageWorker.query !== root.packageWanted)
-                    return;
-                try {
-                    const data = JSON.parse(text);
-                    root.packageRows = data.rows || [];
-                    root.packageQuery = packageWorker.query;
-                    root.packageMessage = data.error || data.message || "";
-                } catch (failure) {
-                    root.packageMessage = "Package search could not complete";
-                }
+        onOutput: text => {
+            if (packageWorker.query !== root.packageWanted)
+                return;
+            try {
+                const data = JSON.parse(text);
+                root.packageRows = data.rows || [];
+                root.packageQuery = packageWorker.query;
+                root.packageMessage = data.error || data.message || "";
+            } catch (failure) {
+                root.packageMessage = "Package search could not complete";
             }
         }
         onExited: if (query !== root.packageWanted)

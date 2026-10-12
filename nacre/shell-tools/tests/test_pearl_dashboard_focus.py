@@ -33,7 +33,7 @@ class PearlFocusTests(unittest.TestCase):
                 "\n".join(f"singleton {name} 1.0 {name}.qml" for name in definitions)
             )
             source = (SHELL / "services/NacreDashboardState.qml").read_text()
-            for name in ("Process", "FileView", "IpcHandler"):
+            for name in ("Process", "NacreHelperTask", "FileView", "IpcHandler"):
                 source = remove_objects(source, r"\b" + name + r"\s*\{")
             source = (
                 source.replace("pragma Singleton\n", "")

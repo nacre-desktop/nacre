@@ -11,6 +11,7 @@ import qs.modules.pearls
 import qs.modules.welcome
 
 ShellRoot {
+    property var helperService: NacreHelpers
     property var controlTools: NacreControlTools
     property var batteryAlerts: NacreBatteryAlerts
     property var lockWidgets: LockWidgets

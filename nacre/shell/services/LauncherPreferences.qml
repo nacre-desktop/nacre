@@ -60,7 +60,7 @@ Singleton {
         }
     }
 
-    Process {
+    NacreHelperTask {
         id: reader
 
         running: true
@@ -70,15 +70,12 @@ Singleton {
             watcher.reload();
         }
 
-        stdout: SplitParser {
-            splitMarker: ""
-            onRead: line => {
-                return root.accept(line);
-            }
+        onOutput: line => {
+            return root.accept(line);
         }
     }
 
-    Process {
+    NacreHelperTask {
         id: worker
 
         property var change
@@ -87,11 +84,8 @@ Singleton {
         onStarted: write(JSON.stringify(change) + "\n")
         onExited: root.next()
 
-        stdout: SplitParser {
-            splitMarker: ""
-            onRead: line => {
-                return root.accept(line);
-            }
+        onOutput: line => {
+            return root.accept(line);
         }
     }
 
