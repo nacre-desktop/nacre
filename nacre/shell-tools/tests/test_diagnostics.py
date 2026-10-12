@@ -135,6 +135,41 @@ class DiagnosticsTests(unittest.TestCase):
             )
             self.assertIsNone(m.probe(["other"])["value"])
 
+    def test_report_uses_backend_diagnostic_commands_and_identity(self):
+        commands = {
+            name: ["fixture-compositor", name]
+            for name in (
+                "runningVersion",
+                "installedVersion",
+                "allMonitors",
+                "configErrors",
+            )
+        }
+        seen = []
+
+        def probe(args):
+            seen.append(args)
+            return dict(
+                status="ok", value="[]" if args == commands["allMonitors"] else ""
+            )
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            with (
+                patch.object(
+                    m.compositor, "diagnostic_commands", return_value=commands
+                ),
+                patch.object(m.compositor, "backend_display_name", "Fixture"),
+                patch.object(m, "probe", side_effect=probe),
+                patch.object(m, "sensitive_names", return_value=set()),
+                patch.object(m.shutil, "which", return_value=None),
+            ):
+                report = m.collect(root, root, root, root)
+        for command in commands.values():
+            self.assertIn(command, seen)
+        self.assertEqual(report["software"]["compositor"], "Fixture")
+        self.assertIn("FixtureInstalled", report["software"]["versions"])
+
     def test_report_has_all_sections_and_redacts_before_either_renderer(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
