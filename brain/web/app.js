@@ -109,7 +109,7 @@ function theme() {
     bg: "surface",
     panel: "surfaceContainer",
     raised: "surfaceContainerHigh",
-    text: tr("brain.ui.text.onsurface", "onSurface"),
+    text: "onSurface",
     muted: "onSurfaceVariant",
     line: "outlineVariant",
     accent: "primary",
@@ -365,7 +365,10 @@ function renderMain() {
           "Matching titles, topics and note content.",
         )
       : c
-        ? `${notesIn(c.id).length} notes · ${children(c.id).filter((n) => n.kind === "topic").length} topics`
+        ? tr("brain.ui.count.notes-topics", "{notes} notes · {topics} topics", {
+            notes: notesIn(c.id).length,
+            topics: children(c.id).filter((n) => n.kind === "topic").length,
+          })
         : tr(
             "brain.ui.label.the-subjects-you-return-to-connected-by-evidence",
             "The subjects you return to, connected by evidence.",
@@ -566,6 +569,18 @@ function sharedSubjects(focus) {
     .filter((p) => !focus || p.a.id === focus)
     .sort((a, b) => b.count - a.count);
 }
+function confidenceLabel(value) {
+  const labels = {
+    verified: () => tr("brain.ui.confidence.verified", "verified"),
+    reported: () => tr("brain.ui.confidence.reported", "reported"),
+    unverified: () => tr("brain.ui.confidence.unverified", "unverified"),
+  };
+  return (
+    labels[value]?.() ||
+    value ||
+    tr("brain.ui.literal.source-page", "Source page")
+  );
+}
 function noteRow(n) {
   const b = button(
     "",
@@ -574,16 +589,7 @@ function noteRow(n) {
   );
   const copy = el("div");
   copy.append(el("span", n.label, "note-title"));
-  copy.append(
-    el(
-      "small",
-      n.confidence ||
-        tr(
-          "brain.ui.label.source-page",
-          tr("brain.ui.literal.source-page", "Source page"),
-        ),
-    ),
-  );
+  copy.append(el("small", confidenceLabel(n.confidence)));
   const date = el("time", n.date || tr("brain.ui.label.undated", "Undated"));
   b.append(icon("note"), copy, date);
   return b;
@@ -742,7 +748,11 @@ function mapNode(svg, n, x, y, width = 225, focus = false) {
   const detail =
     n.kind === "note"
       ? n.date || tr("brain.ui.detail.evidence-note", "Evidence note")
-      : n.count + tr("brain.ui.detail.notes", " notes");
+      : tr(
+          "brain.ui.count.notes",
+          { one: "{count} notes", other: "{count} notes" },
+          { count: n.count },
+        );
   g.append(svgEl("text", { class: "node-detail", x: 27, y: 69 }, detail));
   const open = () => select(n.id, { view: "map" });
   g.addEventListener("click", open);
@@ -903,7 +913,7 @@ function badge(value) {
   const v = value || tr("brain.ui.literal.source-page", "Source page");
   return el(
     "span",
-    v,
+    confidenceLabel(value),
     "badge" + (v.toLowerCase() === "verified" ? " verified" : ""),
   );
 }
@@ -963,6 +973,7 @@ function renderInspector() {
   );
   grouping.append(summary);
   const reasons = [...new Set((n.memberships || []).map((m) => m.reason))];
+  const manuallyGrouped = reasons.includes("manual grouping");
   grouping.append(
     el(
       "small",
@@ -971,9 +982,7 @@ function renderInspector() {
             "brain.ui.label.not-enough-context-for-a-confident-grouping",
             "Not enough context for a confident grouping",
           )
-        : reasons.includes(
-              tr("brain.ui.label.manual-grouping", "manual grouping"),
-            )
+        : manuallyGrouped
           ? tr("brain.ui.label.your-grouping", "Your grouping")
           : reasons.some(
                 (r) =>

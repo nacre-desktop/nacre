@@ -147,6 +147,7 @@ QtObject { property bool visible:true;property string page:"welcome";property va
                     "key": "Super + S\nSuper + Shift + O\nSuper + Alt + K"
                     if i == 5
                     else "Super + " + str(i),
+                    "titleId": "welcome.shortcut." + str(i) + ".title",
                     "title": "Current action " + str(i),
                     "detail": "A described binding from the current compositor.",
                 }

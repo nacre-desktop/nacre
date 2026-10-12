@@ -5,10 +5,14 @@ window.NacreEnglish = {
   "brain.ui.aria-label.knowledge-subjects": "Knowledge subjects",
   "brain.ui.aria-label.note-reader": "Note reader",
   "brain.ui.aria-label.search-your-brain": "Search your brain",
+  "brain.ui.confidence.reported": "reported",
+  "brain.ui.confidence.unverified": "unverified",
+  "brain.ui.confidence.verified": "verified",
   "brain.ui.count.notes": {
     one: "{count} notes",
     other: "{count} notes",
   },
+  "brain.ui.count.notes-topics": "{notes} notes · {topics} topics",
   "brain.ui.count.shared": {
     one: "{count} shared note",
     other: "{count} shared notes",
@@ -22,7 +26,6 @@ window.NacreEnglish = {
     other: "{count} notes · Suggested",
   },
   "brain.ui.detail.evidence-note": "Evidence note",
-  "brain.ui.detail.notes": " notes",
   "brain.ui.label.could-not-read-this-note-try-selecting-it-again":
     "Could not read this note. Try selecting it again.",
   "brain.ui.label.could-not-read-your-brain-use-refresh-knowledge-to-retry":
@@ -37,7 +40,6 @@ window.NacreEnglish = {
     "From annotations and named evidence",
   "brain.ui.label.from-saved-conversations-and-work":
     "From saved conversations and work",
-  "brain.ui.label.manual-grouping": "manual grouping",
   "brain.ui.label.matching-titles-topics-and-note-content":
     "Matching titles, topics and note content.",
   "brain.ui.label.more-connections-overview-shows-all-topics-notes-shows-all-evidence":
@@ -64,7 +66,6 @@ window.NacreEnglish = {
   "brain.ui.label.searching": "Searching…",
   "brain.ui.label.shared-notes-connect-subjects-they-do-not-establish-a-dependency":
     "Shared notes connect subjects; they do not establish a dependency.",
-  "brain.ui.label.source-page": "Source page",
   "brain.ui.label.subjects": "Subjects",
   "brain.ui.label.subjects-separated-by-commas":
     "Subjects, separated by commas",
@@ -113,7 +114,6 @@ window.NacreEnglish = {
   "brain.ui.text.nacre-brain": "Nacre Brain",
   "brain.ui.text.new-chat": "New chat",
   "brain.ui.text.notes": "Notes",
-  "brain.ui.text.onsurface": "onSurface",
   "brain.ui.text.overview": "Overview",
   "brain.ui.text.private-on-this-device": "Private, on this device",
   "brain.ui.text.reading-local-notes": "Reading local notes…",

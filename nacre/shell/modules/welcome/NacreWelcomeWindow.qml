@@ -33,12 +33,12 @@ FloatingWindow {
         title: NacreWelcomeApp.windowTitle
         width: parent.width
         section: ({
-                welcome: "Welcome",
-                colors: "Your colors",
-                shortcuts: "Getting around",
-                apps: "Nacre apps",
-                ready: "You're ready",
-                help: "Help"
+                welcome: NacreI18n.tr("ui.welcome-window.section.welcome", "Welcome"),
+                colors: NacreI18n.tr("ui.welcome-window.section.your-colors", "Your colors"),
+                shortcuts: NacreI18n.tr("ui.welcome-window.section.getting-around", "Getting around"),
+                apps: NacreI18n.tr("ui.welcome-window.section.nacre-apps", "Nacre apps"),
+                ready: NacreI18n.tr("ui.welcome-window.section.you-re-ready", "You're ready"),
+                help: NacreI18n.tr("ui.welcome-window.section.help", "Help")
             })[NacreWelcomeApp.page] || ""
         onMoveRequested: root.contentItem.Window.window.startSystemMove()
     }

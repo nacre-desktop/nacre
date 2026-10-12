@@ -235,7 +235,7 @@ Scope {
                     status: entry.path === NacreWallpapers.current ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : ""
                 }));
         if (node.provider === "accents")
-            return NacreWallpapers.paletteOptions.map((entry, index) => valueRow(route, "choice-" + index, entry.name || NacreI18n.tr("launcher.provider.color", "Color {number}", {
+            return NacreWallpapers.paletteOptions.map((entry, index) => valueRow(route, "choice-" + index, (entry.name ? NacreI18n.option("palette-name", entry.name) : "") || NacreI18n.tr("launcher.provider.color", "Color {number}", {
                     number: NacreI18n.number(index + 1)
                 }), "accent", entry.accent, "palette", NacreI18n.tr("launcher.provider.use-this-color-family", "Use this color family"), {
                     colors: entry.colors || [],
@@ -557,7 +557,7 @@ Scope {
                 {
                     id: "scope-actions",
                     kind: "action",
-                    name: "> Actions",
+                    name: NacreI18n.tr("ui.menu-context.name.actions", "> Actions"),
                     label: NacreI18n.tr("ui.menu-context.label.actions", "> Actions"),
                     description: NacreI18n.tr("ui.menu-context.description.search-desktop-commands", "Search desktop commands"),
                     operation: "scope",
@@ -567,7 +567,7 @@ Scope {
                 {
                     id: "scope-calculator",
                     kind: "action",
-                    name: "= Calculator",
+                    name: NacreI18n.tr("ui.menu-context.name.calculator", "= Calculator"),
                     label: NacreI18n.tr("ui.menu-context.label.calculator", "= Calculator"),
                     description: NacreI18n.tr("ui.menu-context.description.calculate-and-copy-a-result", "Calculate and copy a result"),
                     operation: "scope",
@@ -577,7 +577,7 @@ Scope {
                 {
                     id: "scope-brain",
                     kind: "action",
-                    name: "# Brain",
+                    name: NacreI18n.tr("ui.menu-context.name.brain", "# Brain"),
                     label: NacreI18n.tr("ui.menu-context.label.brain", "# Brain"),
                     description: NacreI18n.tr("ui.menu-context.description.search-private-notes", "Search private notes"),
                     operation: "scope",
@@ -587,7 +587,7 @@ Scope {
                 {
                     id: "scope-files",
                     kind: "action",
-                    name: ": Files",
+                    name: NacreI18n.tr("ui.menu-context.name.files", ": Files"),
                     label: NacreI18n.tr("ui.menu-context.label.files", ": Files"),
                     description: NacreI18n.tr("ui.menu-context.description.search-your-usual-folders", "Search your usual folders"),
                     operation: "scope",
@@ -597,7 +597,7 @@ Scope {
                 {
                     id: "scope-ai",
                     kind: "action",
-                    name: "? Nacre AI",
+                    name: NacreI18n.tr("ui.menu-context.name.nacre-ai", "? Nacre AI"),
                     label: NacreI18n.tr("ui.menu-context.label.nacre-ai", "? Nacre AI"),
                     description: NacreI18n.tr("ui.menu-context.description.ask-an-explicit-question", "Ask an explicit question"),
                     operation: "scope",

@@ -100,7 +100,7 @@ Singleton {
             return;
         noticePending = false;
         noticeFallback.stop();
-        Quickshell.execDetached(["notify-send", "--app-name=Nacre Focus", "--icon=nacre-notifications", "Focus complete", "Take a moment to rest."]);
+        Quickshell.execDetached(["notify-send", "--app-name=Nacre Focus", "--icon=nacre-notifications", NacreI18n.tr("focus.complete.title", "Focus complete"), NacreI18n.tr("focus.complete.body", "Take a moment to rest.")]);
     }
     function failed(message) {
         root.message = message;
@@ -154,7 +154,7 @@ Singleton {
             root.finishing = false;
             root.completionPending = false;
         } catch (error) {
-            root.failed("Dashboard data unavailable");
+            root.failed(NacreI18n.tr("ui.dashboard-state.description.dashboard-data-unavailable", "Dashboard data unavailable"));
         }
     }
     function openNote(path) {

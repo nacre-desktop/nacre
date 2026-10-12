@@ -255,27 +255,29 @@ Flickable {
                     {
                         label: NacreI18n.tr("dashboard.weather-page.label.wind", "Wind"),
                         value: root.value(root.weather.wind, " km/h"),
-                        note: root.value(root.weather.direction, "° direction")
+                        note: Number.isFinite(root.weather.direction) ? NacreI18n.tr("weather.wind-direction", "{direction}° direction", {
+                            direction: Math.round(root.weather.direction)
+                        }) : "—"
                     },
                     {
                         label: NacreI18n.tr("dashboard.weather-page.label.uv", "UV"),
                         value: root.value(root.days[0]?.uv, ""),
-                        note: "Peak ultraviolet index"
+                        note: NacreI18n.tr("ui.weather-page.note.peak-ultraviolet-index", "Peak ultraviolet index")
                     },
                     {
                         label: NacreI18n.tr("dashboard.weather-page.label.humidity", "Humidity"),
                         value: root.value(root.weather.humidity, "%"),
-                        note: "Moisture in the air"
+                        note: NacreI18n.tr("ui.weather-page.note.moisture-in-the-air", "Moisture in the air")
                     },
                     {
                         label: NacreI18n.tr("dashboard.weather-page.label.air-quality", "Air quality"),
                         value: root.value(root.weather.aqi, " AQI"),
-                        note: "US air quality index"
+                        note: NacreI18n.tr("ui.weather-page.note.us-air-quality-index", "US air quality index")
                     },
                     {
                         label: NacreI18n.tr("dashboard.weather-page.label.pressure", "Pressure"),
                         value: root.value(root.weather.pressure, " hPa"),
-                        note: "Local surface pressure"
+                        note: NacreI18n.tr("ui.weather-page.note.local-surface-pressure", "Local surface pressure")
                     }
                 ]
                 Rectangle {

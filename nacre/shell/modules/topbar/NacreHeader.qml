@@ -82,12 +82,12 @@ Item {
             if (visibility.osd)
                 return;
             hoverHint = {
-                audio: "Audio",
-                network: "Wi-Fi",
-                bluetooth: "Bluetooth",
-                battery: "Power",
-                notifications: "Notifications",
-                calendar: "Calendar"
+                audio: NacreI18n.tr("ui.header.hoverHint.audio", "Audio"),
+                network: NacreI18n.tr("ui.header.hoverHint.wi-fi", "Wi-Fi"),
+                bluetooth: NacreI18n.tr("ui.header.hoverHint.bluetooth", "Bluetooth"),
+                battery: NacreI18n.tr("ui.header.hoverHint.power", "Power"),
+                notifications: NacreI18n.tr("ui.header.hoverHint.notifications", "Notifications"),
+                calendar: NacreI18n.tr("ui.header.hoverHint.calendar", "Calendar")
             }[name] || name;
             const hintTarget = {
                 audio: status.audioItem,

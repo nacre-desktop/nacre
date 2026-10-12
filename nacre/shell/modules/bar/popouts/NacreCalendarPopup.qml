@@ -55,7 +55,9 @@ Item {
                 required property int index
                 width: root.width / 7
                 height: 28
-                text: Qt.locale().dayName(((root.firstWeekday + index) % 7) || 7, Locale.ShortFormat)
+                text: NacreI18n.dayName(((root.firstWeekday + index) % 7) || 7, Locale.ShortFormat)
+                fontSizeMode: Text.Fit
+                minimumPointSize: 6
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 font.pointSize: 10
@@ -78,7 +80,7 @@ Item {
                 }
                 NacreText {
                     anchors.fill: parent
-                    text: parent.modelData.day
+                    text: NacreI18n.number(parent.modelData.day)
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     font.pointSize: 11

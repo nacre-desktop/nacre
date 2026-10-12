@@ -154,3 +154,34 @@ behavior. The final full run and pseudo layout audit remain pending at this
 checkpoint. Native previews identified expansion problems in Settings navigation,
 Colors search, calendar weekdays, control tiles and launcher toggles; fixes are
 being checked against production widgets. No translation deployment was performed.
+
+2026-10-12 audit follow-up: translated indirect form buttons, header sections,
+hover hints, forecast notes and owned battery/focus notifications. Welcome now
+keeps shortcut group keys canonical and supplies title IDs, so changing language
+cannot hide shortcut rows. Browser theme keys and grouping comparisons also remain
+canonical. Its real headless-browser audit covers overview, connections, notes,
+subject, reader, grouping, narrow layout and search using public demo content.
+Only demo content/paths remain outside pseudo wrappers; no owned truncation was
+reported. Message coverage now contains 2,015 messages.
+
+Native audit tooling renders real presenters with synthetic providers in temporary
+Qt fixtures, captures English/pseudo screenshots and a JSON text/geometry report,
+and rejects owned English literals or truncation. It includes all Settings pages,
+Colors pages, Welcome pages, launcher catalog routes/forms/search scopes, controls,
+bar/calendar/battery popups, dashboard pages, media, chat, wallpaper layouts,
+notifications, session actions and the login greeter. Daily preferences, devices,
+notification delivery and authentication are not operated by this audit.
+
+```sh
+python3 tools/i18n/audit.py --output /tmp/nacre-translation-audit
+```
+
+The optional browser audit uses Playwright from an isolated developer environment
+(no application runtime dependency). Its HTTP requests are intercepted with public
+fixtures, so it does not read the private vault or contact the running Brain app:
+
+```sh
+NACRE_PLAYWRIGHT_MODULE=/path/to/isolated/node_modules/playwright node tools/i18n/browser-audit.cjs /tmp/nacre-browser-audit
+```
+
+The final combined-baseline rebase and full checks remain pending at this checkpoint.

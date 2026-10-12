@@ -178,7 +178,7 @@ NacreSurface {
                         initial: root.activePrompt.initial || ""
                     }
                 ],
-                button: "Continue"
+                button: NacreI18n.tr("ui.app-browser.button.continue", "Continue")
             };
         }
         Qt.callLater(() => search.forceActiveFocus());
@@ -257,7 +257,7 @@ NacreSurface {
                         placeholder: "https://…"
                     }
                 ],
-                button: "Create app"
+                button: NacreI18n.tr("ui.app-browser.button.create-app", "Create app")
             } : {
                 kind: "reminder",
                 title: NacreI18n.tr("launcher.app-browser.title.set-a-reminder", "Set a reminder"),
@@ -273,7 +273,7 @@ NacreSurface {
                         placeholder: NacreI18n.tr("launcher.app-browser.placeholder.time-for-a-break", "Time for a break")
                     }
                 ],
-                button: "Set reminder"
+                button: NacreI18n.tr("ui.app-browser.button.set-reminder", "Set reminder")
             };
             return;
         }

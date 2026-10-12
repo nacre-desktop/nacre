@@ -152,11 +152,52 @@ SHORTCUTS += (
 )
 
 
+SHORTCUT_IDS = {
+    "launcher": {"titleId": "welcome.shortcut.launcher.title"},
+    "wallpaper": {"titleId": "welcome.shortcut.wallpaper.title"},
+    "settings": {"titleId": "welcome.shortcut.settings.title"},
+    "files": {"titleId": "welcome.shortcut.files.title"},
+    "terminal": {"titleId": "welcome.shortcut.terminal.title"},
+    "put-away": {"titleId": "welcome.shortcut.put-away.title"},
+    "workspace": {"titleId": "welcome.shortcut.workspace.title"},
+    "focus": {"titleId": "welcome.shortcut.focus.title"},
+    "screenshot": {"titleId": "welcome.shortcut.screenshot.title"},
+    "clipboard": {"titleId": "welcome.shortcut.clipboard.title"},
+    "ai-sidebar": {"titleId": "welcome.shortcut.ai-sidebar.title"},
+    "lock": {"titleId": "welcome.shortcut.lock.title"},
+    "restore": {"titleId": "welcome.shortcut.restore.title"},
+    "restore-all": {"titleId": "welcome.shortcut.restore-all.title"},
+    "close": {"titleId": "welcome.shortcut.close.title"},
+    "force-close": {"titleId": "welcome.shortcut.force-close.title"},
+    "hide": {"titleId": "welcome.shortcut.hide.title"},
+    "unhide": {"titleId": "welcome.shortcut.unhide.title"},
+    "move-workspace": {"titleId": "welcome.shortcut.move-workspace.title"},
+    "maximize": {"titleId": "welcome.shortcut.maximize.title"},
+    "fullscreen": {"titleId": "welcome.shortcut.fullscreen.title"},
+    "float": {"titleId": "welcome.shortcut.float.title"},
+    "pin": {"titleId": "welcome.shortcut.pin.title"},
+    "cycle-window": {"titleId": "welcome.shortcut.cycle-window.title"},
+    "group": {"titleId": "welcome.shortcut.group.title"},
+    "group-cycle": {"titleId": "welcome.shortcut.group-cycle.title"},
+    "split": {"titleId": "welcome.shortcut.split.title"},
+    "save-screenshot": {"titleId": "welcome.shortcut.save-screenshot.title"},
+    "emoji": {"titleId": "welcome.shortcut.emoji.title"},
+    "volume-up": {"titleId": "welcome.shortcut.volume-up.title"},
+    "volume-down": {"titleId": "welcome.shortcut.volume-down.title"},
+    "mute": {"titleId": "welcome.shortcut.mute.title"},
+    "mic-mute": {"titleId": "welcome.shortcut.mic-mute.title"},
+    "brightness-up": {"titleId": "welcome.shortcut.brightness-up.title"},
+    "brightness-down": {"titleId": "welcome.shortcut.brightness-down.title"},
+    "keyboard-up": {"titleId": "welcome.shortcut.keyboard-up.title"},
+    "keyboard-down": {"titleId": "welcome.shortcut.keyboard-down.title"},
+}
+
+
 def shortcut_group(action):
     if action in {"workspace", "move-workspace", "focus"}:
-        return tr("helper.welcome.workspaces-and-focus", "Workspaces and focus")
+        return "Workspaces and focus"
     if action in {"screenshot", "save-screenshot", "clipboard", "emoji"}:
-        return tr("helper.welcome.capture-and-clipboard", "Capture and clipboard")
+        return "Capture and clipboard"
     if action in {
         "lock",
         "volume-up",
@@ -168,9 +209,7 @@ def shortcut_group(action):
         "keyboard-up",
         "keyboard-down",
     }:
-        return tr(
-            "helper.welcome.sound-display-and-locking", "Sound, display and locking"
-        )
+        return "Sound, display and locking"
     if action in {
         "launcher",
         "wallpaper",
@@ -179,8 +218,8 @@ def shortcut_group(action):
         "terminal",
         "ai-sidebar",
     }:
-        return tr("helper.welcome.apps-and-panels", "Apps and panels")
-    return tr("helper.welcome.windows", "Windows")
+        return "Apps and panels"
+    return "Windows"
 
 
 def friendly_key(key):
@@ -293,6 +332,7 @@ def shortcut_rows(bindings):
             )
         result.append(
             {
+                **SHORTCUT_IDS[action],
                 "id": action,
                 "key": labels[action],
                 "title": title,

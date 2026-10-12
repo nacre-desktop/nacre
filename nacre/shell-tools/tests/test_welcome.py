@@ -186,6 +186,15 @@ class WelcomeTests(unittest.TestCase):
         self.assertNotIn("private", json.dumps(rows))
         self.assertEqual(welcome.shortcut_rows([]), [])
 
+    def test_pseudo_preserves_grouping_and_keys_with_translatable_title_metadata(self):
+        with patch.dict(welcome.os.environ, {"NACRE_LANGUAGE": "pseudo"}):
+            rows = welcome.shortcut_rows(
+                [{"key": "3", "modmask": 64, "description": "Nacre:workspace"}]
+            )
+        self.assertEqual(rows[0]["group"], "Workspaces and focus")
+        self.assertEqual(rows[0]["key"], "Super + 3")
+        self.assertEqual(rows[0]["titleId"], "welcome.shortcut.workspace.title")
+
     def test_live_shortcut_ranges_aliases_and_related_keys(self):
         binds = [
             {"key": str(n), "modmask": 64, "description": "Nacre:workspace"}
