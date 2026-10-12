@@ -112,26 +112,26 @@ suites = {
     ),
 }
 common = r"""
- function scan(item,rows){
+ function scan(item,rows,panel){
   if(!item.visible||item.opacity===0)return;
   if(item.contentWidth!==undefined&&typeof item.text==="string"&&item.text.trim()&&item.font?.family!=="Material Symbols Rounded"){
-   rows.push({text:item.text,object:item.objectName,width:item.width,height:item.height,contentWidth:item.contentWidth,contentHeight:item.contentHeight,truncated:item.truncated||false,elide:item.elide,wrapMode:item.wrapMode});
+   let horizontalScroll=false;for(let parent=item.parent;parent&&parent!==panel;parent=parent.parent){if(parent.contentWidth!==undefined&&parent.contentWidth>parent.width+1)horizontalScroll=true;}
+   const offset=item.horizontalAlignment===Text.AlignHCenter?(item.width-item.contentWidth)/2:item.horizontalAlignment===Text.AlignRight?item.width-item.contentWidth:0;
+   const left=item.mapToItem(panel,offset,0),right=item.mapToItem(panel,offset+item.contentWidth,0);
+   const clipped=!horizontalScroll&&left.y>=0&&left.y<panel.height&&(left.x < -1 || right.x>panel.width+1);
+   rows.push({clipped:clipped,text:item.text,object:item.objectName,width:item.width,height:item.height,contentWidth:item.contentWidth,contentHeight:item.contentHeight,truncated:item.truncated||false,elide:item.elide,wrapMode:item.wrapMode});
   }
-  for(const child of item.children||[])scan(child,rows);
+  for(const child of item.children||[])scan(child,rows,panel);
  }
  function capture(panel,label){
-  const rows=[];scan(panel,rows);console.log("AUDIT "+language+" "+label+" "+JSON.stringify(rows));
+  const rows=[];scan(panel,rows,panel);console.log("AUDIT "+language+" "+label+" "+JSON.stringify(rows));
   let saved=false;verify(panel.grabToImage(result=>saved=result.saveToFile(OUTPUT+"/"+language+"-"+label+".png")));tryVerify(()=>saved,3000);
  }
  property string language:"en"
 """.replace("OUTPUT", json.dumps(str(output)))
 
 
-def runner(command, **kwargs):
-    if not command or Path(command[0]).name != "qmltestrunner":
-        return original(command, **kwargs)
-    target = Path(command[command.index("-input") + 1])
-    target = target.parent if target.is_file() else target
+def prepare_widgets(target):
     fixtures = target / "fixtures"
     if fixtures.exists():
         i18n = fixtures / "NacreI18n.qml"
@@ -173,6 +173,14 @@ def runner(command, **kwargs):
             + json.dumps({"m3" + k: "#" + v for k, v in palette.items()})
             + "}"
         )
+
+
+def runner(command, **kwargs):
+    if not command or Path(command[0]).name != "qmltestrunner":
+        return original(command, **kwargs)
+    target = Path(command[command.index("-input") + 1])
+    target = target.parent if target.is_file() else target
+    prepare_widgets(target)
     codefile = next(target.glob("tst_*.qml"))
     code = codefile.read_text()
     code = re.sub(r"\bfunction test_", "function disabled_", code)
@@ -305,10 +313,118 @@ def audit_dashboard():
             )
 
 
+def audit_extras():
+    from test_universal_menu_ui import stage
+    from qml_source import install_i18n, remove_objects
+
+    with tempfile.TemporaryDirectory() as directory:
+        target = Path(directory)
+        stage(target)
+        fixtures = target / "fixtures"
+        for name in (
+            "SearchSurface",
+            "Palette",
+            "Clipboard",
+            "Keybindings",
+            "Overview",
+        ):
+            source = (root / "nacre/shell/modules/extras" / (name + ".qml")).read_text()
+            for imported in ("Quickshell.Io", "Quickshell.Wayland", "Quickshell"):
+                source = source.replace("import " + imported + "\n", "")
+            for imported in ("qs.services", "qs.widgets", "qs.config"):
+                source = source.replace("import " + imported, 'import "fixtures"')
+            source = source.replace(
+                "required property PersistentProperties", "required property var"
+            ).replace("Quickshell.screens[0].height", "1200")
+            for component in ("IpcHandler", "Process"):
+                source = remove_objects(source, r"\b" + component + r"\s*\{")
+            (
+                target
+                / ((name if name == "SearchSurface" else "Feature" + name) + ".qml")
+            ).write_text(source)
+        from source import tokens
+
+        service = (root / "nacre/shell/services/DesktopActions.qml").read_text()
+        begin = service.index("list: [") + len("list: ")
+        depth = 0
+        for token in tokens(service[begin:]):
+            if token.text == "[":
+                depth += 1
+            elif token.text == "]":
+                depth -= 1
+                if depth == 0:
+                    body = service[begin : begin + token.end]
+                    break
+        (fixtures / "DesktopActions.qml").write_text(
+            "pragma Singleton\nimport QtQuick\nQtObject {property var list:"
+            + body
+            + ";function execute(action,value){}}"
+        )
+        definitions = {
+            "NacreBar": "property var workspaceNames:[];property var workspaceIcons:[]",
+            "ChatWindowTitle": "property var titles:({})",
+            "DesktopExtras": "property var notes:[];property var keys:[];property var clips:[];property var busy:({keys:false,clips:false});function request(action,payload){}",
+            "NacreCompositor": "property var windows:[];function refreshWindows(){}function focusWindow(id){}function switchWorkspace(id){}function moveWindowToWorkspace(id,target,follow){}",
+        }
+        for name, body in definitions.items():
+            (fixtures / (name + ".qml")).write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
+            )
+            manifest = fixtures / "qmldir"
+            if name + " 1.0" not in manifest.read_text():
+                with manifest.open("a") as stream:
+                    stream.write("\nsingleton " + name + " 1.0 " + name + ".qml\n")
+        apps = fixtures / "NacreApps.qml"
+        apps.write_text(
+            apps.read_text().replace(
+                "function launch(entry)",
+                "function fuzzyQuery(query){return all.filter(row=>row.name.toLowerCase().includes(query.toLowerCase()))}function launch(entry)",
+            )
+        )
+        (fixtures / "ScreencopyView.qml").write_text(
+            "import QtQuick\nItem {property var constraintSize;property var captureSource;property bool live:false;property bool hasContent:false;function captureFrame(){}}"
+        )
+        with (fixtures / "qmldir").open("a") as stream:
+            stream.write("\nScreencopyView 1.0 ScreencopyView.qml\n")
+        install_i18n(fixtures)
+        prepare_widgets(target)
+        code = (
+            """import QtQuick
+import QtTest
+import "fixtures"
+TestCase {id:test;name:"ExtraTranslationAudit";width:1200;height:1000;visible:true;when:windowShown
+ Component{id:palette;FeaturePalette{width:1020;height:600;visibilities:QtObject{property bool launcher:true;property string launcherMode:"palette";property int launcherRequest:0;property string windowKey:"fixture"}}}
+ Component{id:clipboard;FeatureClipboard{width:1020;height:600;visibilities:QtObject{property bool launcher:true;property string launcherMode:"clipboard";property int launcherRequest:0;property string windowKey:"fixture"}}}
+ Component{id:keys;FeatureKeybindings{width:1020;height:600;visibilities:QtObject{property bool launcher:true;property string launcherMode:"keys";property int launcherRequest:0;property string windowKey:"fixture"}}}
+ Component{id:overview;FeatureOverview{width:1020;height:800;visibilities:QtObject{property bool launcher:true;property string launcherMode:"overview";property int launcherRequest:0;property string windowKey:"fixture"}}}
+"""
+            + common
+            + """
+ function test_audit(){for(const lang of ["en","pseudo"]){language=lang;NacreI18n.language=lang;for(const pair of [[palette,"commands"],[clipboard,"clipboard"],[keys,"keybindings"],[overview,"overview"]]){const panel=createTemporaryObject(pair[0],this);wait(120);capture(panel,"extras-"+pair[1]);if(pair[0]===palette){panel.query="brain: Demo";wait(80);capture(panel,"extras-brain-command")}panel.width=680;wait(100);capture(panel,"extras-"+pair[1]+"-narrow");panel.destroy()}}}
+}"""
+        )
+        (target / "tst_menu.qml").write_text(code)
+        result = original(
+            ["/usr/lib/qt6/bin/qmltestrunner", "-input", str(target), "-o", "-,txt"],
+            env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        (output / "extras.log").write_text(result.stdout + result.stderr)
+        if result.returncode or "QWARN" in result.stdout + result.stderr:
+            raise RuntimeError("Extras audit failed; see " + str(output / "extras.log"))
+
+
 failures = []
 logfiles = []
-for current in args.surfaces or [*suites, "dashboard"]:
+for current in args.surfaces or [*suites, "dashboard", "extras"]:
     try:
+        if current == "extras":
+            audit_extras()
+            logfiles.append(output / "extras.log")
+            print("extras captured")
+            continue
         if current == "dashboard":
             audit_dashboard()
             logfiles.append(output / "dashboard-pages.log")
@@ -355,7 +471,9 @@ for state in report:
         for row in state["rows"]:
             if row["text"] in known and row["text"] not in external:
                 failures.append(state["screen"] + ": unlocalized " + row["text"])
-            if row.get("truncated") and row["text"].startswith("["):
+            if (row.get("truncated") or row.get("clipped")) and row["text"].startswith(
+                "["
+            ):
                 failures.append(state["screen"] + ": truncated " + row["text"])
 if not report:
     failures.append("No UI states were captured")

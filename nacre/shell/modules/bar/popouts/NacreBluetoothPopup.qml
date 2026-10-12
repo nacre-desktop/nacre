@@ -76,7 +76,7 @@ Item {
         NacreText {
             width: parent.width
             visible: !NacreBluetooth.powered || root.known.length === 0
-            text: !NacreBluetooth.available ? "No Bluetooth adapter" : NacreBluetooth.powered ? NacreI18n.tr("popouts.bluetooth-popup.text.no-known-devices", "No known devices") : NacreI18n.tr("popouts.bluetooth-popup.text.bluetooth-is-off", "Bluetooth is off")
+            text: !NacreBluetooth.available ? NacreI18n.tr("ui.bluetooth-popup.text.no-bluetooth-adapter", "No Bluetooth adapter") : NacreBluetooth.powered ? NacreI18n.tr("popouts.bluetooth-popup.text.no-known-devices", "No known devices") : NacreI18n.tr("popouts.bluetooth-popup.text.bluetooth-is-off", "Bluetooth is off")
             color: NacreTokens.mutedInk
         }
         NacreText {

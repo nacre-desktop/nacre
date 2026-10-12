@@ -213,6 +213,7 @@ QtObject {
                     "import Quickshell.Bluetooth as Bluez", 'import "fixtures" as Bluez'
                 )
                 .replace("import qs.widgets", 'import "fixtures"')
+                .replace("import qs.services", 'import "fixtures"')
                 .replace("import qs.utils", 'import "fixtures"')
                 .replace("Quickshell.screens", "Environment.screens")
                 .replace("target: Quickshell", "target: Environment")

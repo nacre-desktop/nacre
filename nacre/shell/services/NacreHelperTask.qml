@@ -39,7 +39,7 @@ QtObject {
             send(JSON.parse(text));
         } catch (error) {
             complete(1, 0, JSON.stringify({
-                error: "Invalid helper input"
+                error: NacreI18n.tr("ui.helper-task.error.invalid-helper-input", "Invalid helper input")
             }));
         }
     }

@@ -187,7 +187,7 @@ Scope {
             result.disabled = !NacreAudio.micAvailable;
         if (row.operation === "toggle" && row.value === "wifi") {
             result.disabled = NacreNetwork.wifiAvailable === false;
-            result.reason = result.disabled ? "No Wi-Fi adapter" : "";
+            result.reason = result.disabled ? NacreI18n.tr("ui.menu-context.reason.no-wi-fi-adapter", "No Wi-Fi adapter") : "";
         }
         if (row.value === "bluetooth")
             result.disabled = !NacreBluetooth.available;

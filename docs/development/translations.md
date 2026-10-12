@@ -192,3 +192,34 @@ the observed pseudo clipping. The native expanded gallery covered 181 states per
 language with no owned truncation; the browser covered eight states per language.
 The audit uses offline public fixtures, so real hardware transitions, compositor
 integration, lock/resume and a cold login remain outside its verification scope.
+
+## Completed review checkpoint
+
+2026-10-12: rebased onto the combined compositor/performance baseline `fa37a28`.
+Conflict resolution retained opaque compositor IDs, persistent helper callbacks,
+adapter availability checks and canonical window identities. The additional
+queue/device captions are localized, and support-report catalog companions match
+the new baseline. Generated compositor code remains canonical in pseudo mode.
+
+Final validation passed:
+
+- `tools/i18n/check.py`: 2,025 owned messages with matching English/context IDs.
+- `tools/i18n/generate.py`: login/browser assets reproduce exactly.
+- `tools/check.py`: 633 tests (120 tools, 102 AI, 38 Brain, 373 desktop helpers),
+  plus Python/Qt/JS/Lua/shell checks and compositor/generated-configuration checks.
+- `tools/i18n/audit.py`: 191 native states per language; no owned English leakage,
+  reported truncation or painted horizontal clipping. Includes separate Commands,
+  Clipboard, Keyboard shortcuts and Window overview, plus wide/narrow layouts.
+- `tools/i18n/browser-audit.cjs`: eight public demo states per language at desktop
+  and narrow widths; no owned English leakage, truncation or browser errors.
+
+The native gallery runs in CI. The optional browser gallery remains a developer
+check using an isolated Playwright installation. These checks use real presenters
+and message engines with synthetic providers; they do not establish physical
+hardware, live compositor, lock/resume or authentication behavior. No translation
+runtime has been deployed; review is required before deployment.
+
+| Preview | English | Pseudo |
+| --- | --- | --- |
+| Settings (public synthetic state) | ![English Settings](images/translations/en-settings.png) | ![Pseudo Settings](images/translations/pseudo-settings.png) |
+| Brain (public demo notes) | ![English Brain](images/translations/en-brain.png) | ![Pseudo Brain](images/translations/pseudo-brain.png) |

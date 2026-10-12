@@ -1048,7 +1048,9 @@
       "icon": "content_copy",
       "operation": "tool",
       "value": "support-report",
-      "description": "Copy redacted hardware, software and recent errors"
+      "description": "Copy redacted hardware, software and recent errors",
+      "labelId": "launcher.catalog.health.support-report.label",
+      "descriptionId": "launcher.catalog.health.support-report.description"
     },
     {
       "id": "health.logs",

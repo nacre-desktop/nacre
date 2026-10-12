@@ -44,7 +44,7 @@ Item {
         }
         NacreText {
             width: parent.width
-            text: !NacreNetwork.wifiAvailable ? "No Wi-Fi adapter; wired connections remain available." : NacreNetwork.active?.ssid || (NacreNetwork.wifiEnabled ? NacreI18n.tr("popouts.network-popup.text.not-connected", "Not connected") : NacreI18n.tr("popouts.network-popup.text.wi-fi-is-off", "Wi-Fi is off"))
+            text: !NacreNetwork.wifiAvailable ? NacreI18n.tr("ui.network-popup.text.no-wi-fi-adapter-wired-connections-remain-available", "No Wi-Fi adapter; wired connections remain available.") : NacreNetwork.active?.ssid || (NacreNetwork.wifiEnabled ? NacreI18n.tr("popouts.network-popup.text.not-connected", "Not connected") : NacreI18n.tr("popouts.network-popup.text.wi-fi-is-off", "Wi-Fi is off"))
             elide: Text.ElideRight
             color: NacreTokens.mutedInk
         }
