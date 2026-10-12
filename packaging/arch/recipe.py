@@ -72,7 +72,7 @@ check() {{
   local check_runtime
   check_runtime=$(mktemp -d)
   chmod 700 "$check_runtime"
-  XDG_RUNTIME_DIR="$check_runtime" CI=1 dbus-run-session -- xvfb-run -a python tools/check.py
+  XDG_RUNTIME_DIR="$check_runtime" CI=1 dbus-run-session -- xvfb-run -a python tools/check.py </dev/null
   rm -rf "$check_runtime"
 }}
 
