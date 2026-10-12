@@ -30,6 +30,7 @@ TestCase {
                         id: 2
                     },
                     pid: 123,
+                    monitor: 7,
                     fullscreen: 0,
                     floating: false,
                     focusHistoryID: 0
@@ -44,6 +45,14 @@ TestCase {
                 id: 2
             }
         };
+        Native.Hyprland.monitors = {
+            values: [
+                {
+                    id: 7,
+                    name: "fixture"
+                }
+            ]
+        };
         Native.Hyprland.requests = [];
         Native.Hyprland.usingLua = true;
         Native.Hyprland.refreshes = 0;
@@ -56,6 +65,17 @@ TestCase {
         const row = state.clients[0];
         compare(state.activeClient, row);
         compare(row.wmClass, "Code");
+        compare(row.appId, "Code");
+        compare(row.workspaceId, 2);
+        compare(row.outputId, "fixture");
+        compare(row.captureHandle, null);
+        compare(row.fullscreenMode, 0);
+        verify(!row.hidden);
+        verify(!row.pinned);
+        verify(state.capabilities.globalWorkspaces);
+        verify(state.capabilities.stableWorkspaceIndices);
+        verify(!state.capabilities.perOutputWorkspaces);
+        verify(state.capabilities.pinWindow);
         compare(row.width, 800);
         compare(state.activeWsId, 2);
         first.title = "Renamed";
@@ -215,6 +235,29 @@ TestCase {
         compare(Native.Hyprland.requests.pop(), "movetoworkspace 4,address:0x10");
         verify(state.resizeWindow("10", 700, 500));
         compare(Native.Hyprland.requests.pop(), "resizewindowpixel exact 700 500,address:0x10");
+        verify(state.focusWindow("10"));
+        compare(Native.Hyprland.requests.pop(), "focuswindow address:0x10");
+        verify(state.closeWindow("10"));
+        compare(Native.Hyprland.requests.pop(), "closewindow address:0x10");
+        verify(state.floatWindow("10", true));
+        compare(Native.Hyprland.requests.pop(), "setfloating address:0x10");
+        verify(state.floatWindow("10", false));
+        compare(Native.Hyprland.requests.pop(), "settiled address:0x10");
+        verify(state.pinWindow("10"));
+        compare(Native.Hyprland.requests.pop(), "pin address:0x10");
+    }
+    function test_metadata_refresh_and_configuration_reload_are_distinct() {
+        const state = createTemporaryObject(service, test);
+        const config = findChild(state, "compositorConfigurationReload");
+        verify(!config.running);
+        const reads = Native.Hyprland.refreshes;
+        state.reload();
+        compare(Native.Hyprland.refreshes, reads + 1);
+        verify(!config.running);
+        verify(state.reloadConfiguration());
+        verify(config.running);
+        compare(config.command.join(" "), "hyprctl reload");
+        compare(Native.Hyprland.refreshes, reads + 1);
     }
     function test_neutral_events_and_serial_geometry_publication() {
         const state = createTemporaryObject(service, test);
