@@ -16,14 +16,23 @@ client geometry. Each window has a unique, human-readable Nacre Pearl title; onl
 owned titles/processes are manipulated. A title rule floats them by default; tiling
 is a user choice. Never take an arbitrary focused window for placement or pinning.
 
-Super+left-drag is routed by an owned Lua binding. It passes the press and release
-only inside the shell's published popup rectangles, with a mapped-layer/PID guard.
-Elsewhere it dispatches normal Hyprland window movement. Geometry is throttled to the next frame during
-panel changes (never debounced until an opening animation ends); no external process runs inside the pointer callback. Native pearl movement uses a
-33ms compositor timer only for the duration of a Super-drag. It emits coordinate-change
-events through Hyprland, and disables on release. The shell handles every new
-begin/move/end transaction independently, shows a pointer-transparent inset docking
-guide, and docks on release at the matching edge. No native drag polling runs idle.
+Super+left-drag is routed by an owned Lua binding. It passes the press only
+inside the shell's published popup rectangles, with a mapped-layer/PID guard.
+An explicit, non-consuming left-button release binding finishes each transaction,
+even when Super is released first. Native implicit releases and explicit releases
+share idempotent cleanup: release runs at most once per transaction. Hyprland 0.56
+ignores a Lua callback's returned `request_release`, so shell-layer pulls must not
+depend on that newer flag. Native movement ends in Hyprland's mouse handler; the
+release callback does not dispatch another native drag.
+
+Elsewhere it dispatches normal Hyprland window movement. Geometry is throttled to
+the next frame during panel changes (never debounced until an opening animation
+ends); no external process runs inside the pointer callback. Native pearl movement
+uses a 33ms compositor timer only for the duration of a Super-drag. It emits
+coordinate-change events through Hyprland, and disables on release. The shell
+handles every new begin/move/end transaction independently, shows a
+pointer-transparent inset docking guide, and docks on release at the matching
+edge. No native drag polling runs idle.
 
 A Qt DragHandler reserves Super and moves the original live item within its existing
 layer surface. The layer retains its keyboard focus mode while dragging. Hover exit timers pause

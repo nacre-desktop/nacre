@@ -24,7 +24,7 @@ FloatingWindow {
     }
     Component.onCompleted: {
         NacreSettingsApp.window = root;
-        const focused = Quickshell.screens.find(s => s.name === NacreHyprland.focusedMonitor?.name);
+        const focused = Quickshell.screens.find(s => s.name === NacreCompositor.focusedMonitor?.name);
         if (focused)
             screen = focused;
     }

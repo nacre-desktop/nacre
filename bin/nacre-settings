@@ -2,6 +2,8 @@
 """Open or focus Nacre Settings, optionally at a specific page."""
 
 import argparse
+import importlib
+from pathlib import Path
 import subprocess
 import sys
 import time
@@ -20,6 +22,18 @@ PAGES = (
     "ai",
     "maintenance",
 )
+
+
+def compositor():
+    for directory in (
+        Path(__file__).resolve().parents[1] / "nacre/shell-tools",
+        Path.home() / ".local/share/nacre/shell/tools",
+    ):
+        if (directory / "compositor.py").is_file():
+            if str(directory) not in sys.path:
+                sys.path.insert(0, str(directory))
+            return importlib.import_module("compositor")
+    raise RuntimeError("The Nacre compositor service is not installed")
 
 
 def open_settings(page="", runner=subprocess.run, sleep=time.sleep):
@@ -55,12 +69,8 @@ def main():
         message = str(error)
         print("nacre-settings: " + message, file=sys.stderr)
         try:
-            subprocess.run(
-                ["hyprctl", "notify", "3", "6000", "0", "Nacre Settings: " + message],
-                capture_output=True,
-                timeout=2,
-            )
-        except (OSError, subprocess.TimeoutExpired):
+            compositor().notify("3", 6000, "0", "Nacre Settings: " + message, timeout=2)
+        except (OSError, RuntimeError, subprocess.SubprocessError):
             pass
         return 1
     return 0

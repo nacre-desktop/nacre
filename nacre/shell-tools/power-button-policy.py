@@ -6,12 +6,9 @@ import os
 from pathlib import Path
 import tempfile
 
-LEGACY = """-- Run after release/input processing so this key does not immediately wake DPMS.
-hl.bind("XF86PowerOff", hl.dsp.exec_cmd("sleep 0.2; ~/.config/hypr/scripts/hyprctl-lua.sh dpms disable"), {
-    release = true,
-    locked = true,
-})
-"""
+import compositor
+
+LEGACY = compositor.legacy_power_binding()
 
 
 def prepare(home=None):
@@ -60,6 +57,4 @@ def prepare(home=None):
 
 if __name__ == "__main__":
     if prepare():
-        import subprocess
-
-        subprocess.run(["hyprctl", "reload"], check=True, capture_output=True)
+        compositor.reload(timeout=None)

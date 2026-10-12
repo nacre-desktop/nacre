@@ -126,9 +126,9 @@ hl.define_submap("resize",function() hl.bind("SUPER + R",hl.dsp.submap("reset"))
             with (
                 patch.object(extras, "HOME", home),
                 patch.object(
-                    extras,
-                    "run",
-                    return_value=SimpleNamespace(stdout=json.dumps(native)),
+                    extras.compositor,
+                    "query",
+                    return_value=native,
                 ),
             ):
                 result = extras.bindings()

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ $# == 1 && "$1" =~ ^https?:// ]]; then
-    "$HOME/.config/hypr/scripts/hyprctl-lua.sh" focus-workspace 1 >/dev/null 2>&1 || true
+    python3 "$HOME/.config/hypr/scripts/compositor-compat.py" focus-workspace 1 >/dev/null 2>&1 || true
     exec "$HOME/.local/bin/nacre-app" browser "$1"
 fi
 exec /usr/bin/xdg-open "$@"

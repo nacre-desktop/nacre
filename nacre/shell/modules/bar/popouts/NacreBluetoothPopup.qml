@@ -32,7 +32,7 @@ Item {
                 objectName: "quickBluetoothPower"
                 text: NacreBluetooth.powered ? "Turn off" : "Turn on"
                 compact: true
-                enabled: !DeviceActions.busy
+                enabled: !DeviceActions.busy && NacreBluetooth.available
                 onClicked: if (enabled)
                     DeviceActions.request(["bluetooth-power", NacreBluetooth.powered ? "off" : "on"])
             }
@@ -76,7 +76,7 @@ Item {
         NacreText {
             width: parent.width
             visible: !NacreBluetooth.powered || root.known.length === 0
-            text: NacreBluetooth.powered ? "No known devices" : "Bluetooth is off"
+            text: !NacreBluetooth.available ? "No Bluetooth adapter" : NacreBluetooth.powered ? "No known devices" : "Bluetooth is off"
             color: NacreTokens.mutedInk
         }
         NacreText {

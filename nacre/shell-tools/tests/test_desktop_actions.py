@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 import tempfile
 import json
+import subprocess
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
@@ -37,16 +38,15 @@ class DesktopActionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             with (
                 patch.object(m, "HOME", Path(directory)),
-                patch.object(m, "run", return_value="[]") as run,
+                patch.object(m.compositor, "query", return_value=[]) as query,
+                patch.object(m.compositor, "switch_workspace") as switch,
                 patch.object(m, "launch_app") as launch,
             ):
                 for command in ("new", "resume", "tasks"):
                     m.action(command)
                 self.assertEqual(launch.call_count, 3)
-                self.assertEqual(
-                    run.call_args_list[0].args[0], ["hyprctl", "clients", "-j"]
-                )
-                self.assertEqual(run.call_count, 1)
+                query.assert_called_once_with("windows", timeout=10)
+                switch.assert_not_called()
 
     def test_explicit_ai_workspace_is_selected_before_launch(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -58,17 +58,59 @@ class DesktopActionTests(unittest.TestCase):
             with (
                 patch.object(m, "HOME", home),
                 patch.object(
-                    m, "run", side_effect=lambda command, *args: calls.append(command)
+                    m.compositor,
+                    "switch_workspace",
+                    side_effect=lambda workspace, **kw: calls.append((workspace, kw)),
                 ),
                 patch.object(
                     m, "launch_app", side_effect=lambda command: calls.append(command)
                 ),
             ):
                 m.action("new")
-            self.assertEqual(calls[0][:2], ["hyprctl", "eval"])
-            self.assertIn("workspace=9", calls[0][2])
+            self.assertEqual(calls[0], (9, {"current_monitor": True, "timeout": 10}))
             self.assertEqual(calls[1][0], "kitty")
 
     def test_unknown_command_cannot_become_a_shell_command(self):
         with self.assertRaises(ValueError):
             m.action("shell", "anything")
+
+    def test_window_query_fallback_and_dispatch_error_policy_are_preserved(self):
+        with patch.object(
+            m.compositor,
+            "query",
+            side_effect=subprocess.CalledProcessError(1, "compositor"),
+        ):
+            self.assertEqual(m.compositor_windows(), [])
+        with patch.object(
+            m.compositor, "query", side_effect=ValueError("bad response")
+        ):
+            with self.assertRaises(ValueError):
+                m.compositor_windows()
+        with patch.object(
+            m.compositor,
+            "focus_window",
+            side_effect=subprocess.CalledProcessError(
+                1, "compositor", stderr="offline"
+            ),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "offline"):
+                m.action("focus", "0x123")
+
+    def test_backend_owned_opaque_window_id_is_not_rejected_by_consumers(self):
+        with (
+            patch.object(
+                m.compositor,
+                "valid_window_id",
+                side_effect=lambda value: value == "window-42",
+            ),
+            patch.object(
+                m.compositor,
+                "query",
+                return_value=[
+                    {"address": "window-42", "workspace": {"id": 2}, "title": "Editor"}
+                ],
+            ),
+            patch.object(m.compositor, "focus_window") as focus,
+        ):
+            m.action("app-windows", '["window-42"]')
+        focus.assert_called_once_with("window-42", timeout=10)

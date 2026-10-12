@@ -1,6 +1,6 @@
 """Seed a private keyboard override once from the system's XKB configuration."""
 
-import json
+import importlib.util
 import os
 from pathlib import Path
 import re
@@ -39,20 +39,18 @@ def seed(home, settings=None):
     if target.exists() or target.is_symlink():
         return False
     values = system_keyboard() if settings is None else settings
-    rows = [
-        "-- Your system keyboard choice. Edit here; Nacre updates preserve this file."
-    ]
-    rows.append("hl.config({")
-    rows.extend(
-        '    ["input.kb_' + key + '"] = ' + json.dumps(value) + ","
-        for key, value in values.items()
+    spec = importlib.util.spec_from_file_location(
+        "nacre_keyboard_compositor",
+        Path(__file__).resolve().parents[1] / "nacre/shell-tools/compositor.py",
     )
-    rows.append("})")
+    compositor = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(compositor)
+    content = compositor.render_keyboard(values)
     target.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive creation preserves an override created concurrently.
     try:
         with target.open("x") as stream:
-            stream.write("\n".join(rows) + "\n")
+            stream.write(content)
     except FileExistsError:
         return False
     target.chmod(0o600)

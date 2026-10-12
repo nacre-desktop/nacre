@@ -34,37 +34,62 @@ nacre_panel_regions={{x=100,y=200,w=500,h=300}}
 local function proxy(path)
  return setmetatable({}, {__index=function(_,key)return proxy(path=="" and key or path.."."..key) end,__call=function(_,...)return {method=path,args={...}} end})
 end
+local pressed, pending = false, false
 hl={dsp=proxy(""),window_rule=function()end,unbind=function(key)unbound=key end,
- bind=function(key,fn)binds[key]=fn end,
+ bind=function(key,fn,opts)binds[key]={fn=fn,opts=opts or {}} end,
  get_cursor_pos=function()return cursor end,get_layers=function()return layers end,
  get_active_window=function()return active end,
  timer=function(fn,options) timer={callback=fn,enabled=true,set_enabled=function(self,value)self.enabled=value end};assert(options.timeout==33);return timer end,
- dispatch=function(request)if request.method=="event" then events[#events+1]=request.args[1];return {ok=true} end;moves=moves+1;return {ok=true,request_release=true} end}
+ dispatch=function(request)
+  if request.method=="event" then events[#events+1]=request.args[1];return {ok=true} end
+  assert(request.method=="window.drag");moves=moves+1;pending=true
+  -- Installed Hyprland 0.56 arms a native dispatch internally; it neither
+  -- returns request_release nor honors that flag from a shell callback.
+  return {ok=true}
+ end}
 dofile(arg[1])
 assert(unbound=="SUPER + mouse:272")
-local drag=binds["SUPER + mouse:272"]
-local press=drag();assert(press.pass_event and press.request_release and moves==0)
--- A release is routed by its press, even after crossing outside the popup.
-cursor={x=900,y=900}
-assert(drag().pass_event and moves==0)
-assert(drag().request_release and moves==1)
-cursor={x=120,y=220}
-assert(drag().request_release and moves==2) -- ordinary drag still releases natively
-layers[1].pid=99
-assert(drag().request_release and moves==3);drag()
-layers[1].pid=45;layers[1].mapped=false
-assert(drag().request_release and moves==5);drag()
-layers[1].mapped=true;nacre_panel_regions={}
-assert(drag().request_release and moves==7);drag()
+local press=binds["SUPER + mouse:272"]
+local release=binds["mouse:272"]
+assert(release.opts.release and release.opts.ignore_mods and release.opts.non_consuming)
+local function down()
+ pressed=true;pending=false;return press.fn()
+end
+local function up()
+ pressed=false
+ if pending then pending=false;press.fn() end
+ release.fn()
+ assert(not timer or not timer.enabled)
+end
+-- A shell press has no implicit release. Explicit cleanup must still happen
+-- after crossing outside the popup, even if Super was released first.
+assert(down().pass_event and moves==0)
+cursor={x=900,y=900};up()
 active={pid=45,title="Nacre Pearl Dashboard 12"}
-drag();assert(timer.enabled and #events==1)
+-- Immediately after detaching, the FIRST native pull must move and end/dock.
+assert(down().ok and moves==1 and timer.enabled and #events==1)
 cursor={x=800,y=10};timer.callback();assert(#events==2)
-drag();assert(not timer.enabled and #events==3)
+up();assert(moves==1 and #events==3)
 assert(events[3]=="nacre_pearl_drag,end,Nacre Pearl Dashboard 12,800,10")
--- Every new pull re-arms the watch; it is never left running while idle.
-drag();assert(timer.enabled);drag();assert(not timer.enabled)
-active={pid=99,title="Nacre Pearl Dashboard 12"};local count=#events
-drag();drag();assert(#events==count and not timer.enabled)
+-- No fresh key press/reset between pulls: each must re-arm and finish once.
+for i=1,3 do
+ local count=#events
+ down();assert(timer.enabled and #events==count+1)
+ cursor={x=810+i,y=10};timer.callback();up()
+ assert(#events==count+3 and events[#events]:match("^nacre_pearl_drag,end,"))
+end
+-- Reattaching and detaching again may not leave a stale shell route.
+cursor={x=120,y=220};down();up();assert(not timer.enabled)
+cursor={x=700,y=700};local count=#events
+down();assert(timer.enabled and #events==count+1);up()
+-- Foreign/unmapped layer and foreign pearl PID preserve native movement.
+active={pid=99,title="Nacre Pearl Dashboard 12"};count=#events
+layers[1].pid=99;cursor={x=120,y=220};down();up()
+assert(#events==count and not timer.enabled)
+layers[1].pid=45;layers[1].mapped=false;down();up()
+assert(#events==count and not timer.enabled)
+-- Idle ordinary releases are harmless and never launch a compositor drag.
+local before=moves;release.fn();assert(moves==before)
 print("PANEL_ROUTING_OK")
 """
         result = subprocess.run(

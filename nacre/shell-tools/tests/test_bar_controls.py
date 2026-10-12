@@ -34,7 +34,7 @@ class BarControlsTests(unittest.TestCase):
             )
             definitions = {
                 "NacreBar": "property var sizes:({batteryWidth:200})",
-                "NacreHyprland": "property var activeClient:null",
+                "NacreCompositor": "property var activeWindow:null",
                 "NacreIcons": 'function getAppCategoryIcon(name,fallback){return name==="editor"?"code":fallback}function getNetworkIcon(strength){return strength>50?"signal_wifi_4_bar":"signal_wifi_0_bar"}',
                 "NacreAudio": "property real volume:.5;property bool muted:false;property var writes:[];function setVolume(value){writes=[...writes,value];volume=value}",
                 "NacreNetwork": "property var active:null",

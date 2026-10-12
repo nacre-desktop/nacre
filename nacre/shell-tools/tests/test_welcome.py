@@ -216,7 +216,7 @@ class WelcomeTests(unittest.TestCase):
             welcome.shortcut_rows({})
 
     def test_no_compositor_has_an_explicit_unavailable_state(self):
-        with patch.object(welcome.subprocess, "run", side_effect=FileNotFoundError()):
+        with patch.object(welcome.compositor, "query", side_effect=FileNotFoundError()):
             rows, error = welcome.live_shortcuts()
         self.assertEqual(rows, [])
         self.assertIn("Hyprland", error)

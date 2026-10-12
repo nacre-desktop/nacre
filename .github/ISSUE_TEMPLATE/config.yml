@@ -1,0 +1,10 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/nacre-desktop/nacre/security/advisories/new
+    about: Do not publish exploit details, credentials or private data in an issue.
+  - name: Questions, ideas and community projects
+    url: https://github.com/nacre-desktop/nacre/discussions
+    about:
+      Use Q&A, Ideas, or Show and tell for conversation before a focused issue
+      or PR.

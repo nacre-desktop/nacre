@@ -10,6 +10,8 @@ import sys
 import time
 from pathlib import Path
 
+import compositor
+
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre"
 SERVICES = [
@@ -32,6 +34,13 @@ def run(args, default="", timeout=5):
         ).strip()
     except (OSError, subprocess.SubprocessError):
         return default
+
+
+def configuration_errors():
+    try:
+        return compositor.config_errors(timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return ""
 
 
 def service_health():
@@ -95,7 +104,7 @@ def state():
     versions = {
         name: run(args)
         for name, args in {
-            "Hyprland": ["Hyprland", "--version"],
+            compositor.backend_display_name: compositor.version_command(),
             "Python": [sys.executable, "--version"],
         }.items()
     }
@@ -111,7 +120,7 @@ def state():
             ["systemctl", "--user", "--failed", "--no-legend", "--plain"]
         ).splitlines(),
         drift=drift,
-        configErrors=run(["hyprctl", "configerrors"]),
+        configErrors=configuration_errors(),
         updatesAgeSeconds=int(time.time() - cache.stat().st_mtime)
         if cache.exists()
         else None,
@@ -173,6 +182,7 @@ def main():
         "action",
         choices=[
             "state",
+            "doctor",
             "check",
             "profile",
             "restart",
@@ -184,7 +194,21 @@ def main():
     )
     p.add_argument("--seconds", type=int, default=5)
     p.add_argument("--label", default="manual")
+    output = p.add_mutually_exclusive_group()
+    output.add_argument(
+        "--report", action="store_true", help="Redacted Markdown support report"
+    )
+    output.add_argument(
+        "--json", action="store_true", help="Redacted JSON support report"
+    )
     a = p.parse_args()
+    if (a.report or a.json) and a.action != "doctor":
+        p.error("--report and --json are only valid for doctor")
+    if a.action == "doctor":
+        from diagnostics import support_report
+
+        print(support_report(as_json=not a.report), end="")
+        return
     if a.action == "repair-portals":
         for unit in (
             "xdg-document-portal.service",
@@ -241,4 +265,13 @@ if __name__ == "__main__":
         RuntimeError,
         subprocess.SubprocessError,
     ) as e:
+        if len(sys.argv) > 1 and sys.argv[1] == "doctor":
+            # Collection failures must not bypass the support export's privacy
+            # boundary by printing an exception containing a local path or value.
+            print(
+                "# Nacre support report\n\nSupport report unavailable."
+                if "--report" in sys.argv
+                else json.dumps(dict(error="Support report unavailable."))
+            )
+            sys.exit(1)
         print(json.dumps(dict(error=str(e))))

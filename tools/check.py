@@ -107,7 +107,7 @@ def main():
             *(ROOT / "hypr").rglob("*.lua"),
             *extra_lua,
             *(ROOT / "tools").glob("*.lua"),
-            ROOT / "nacre/shell-tools/binding-contracts.lua",
+            ROOT / "nacre/shell-tools/compositor_backends/hyprland/bindings.lua",
         ]:
             run([lua, "-p", str(path)])
         print("Lua syntax passed.", flush=True)
@@ -127,10 +127,17 @@ def main():
             "Desktop QML parser skipped; target-host validation remains required.",
             flush=True,
         )
+    run([sys.executable, str(ROOT / "tools/generate_compositor_config.py"), "--check"])
+    run([sys.executable, str(ROOT / "tools/compositor_boundary.py")])
+    print("Compositor boundary and generated configuration checks passed.", flush=True)
     # Child suites must exercise the candidate engine, never the deployed old one.
     engine_source = str(ROOT / "nacre/shell-cli/src")
     os.environ["PYTHONPATH"] = (
-        engine_source + os.pathsep + os.environ.get("PYTHONPATH", "")
+        engine_source
+        + os.pathsep
+        + str(ROOT / "nacre/shell-tools")
+        + os.pathsep
+        + os.environ.get("PYTHONPATH", "")
     )
     for suite in (
         "tools/tests",
