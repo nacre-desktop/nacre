@@ -51,6 +51,43 @@ class TranslationTests(unittest.TestCase):
             self.assertTrue(value.startswith("[") and value.endswith("]"))
             self.assertNotIn("Open", value)
 
+    def test_helper_language_cache_refreshes_only_when_preferences_change(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            preference = home / ".config/nacre/desktop.json"
+            preference.parent.mkdir(parents=True)
+            preference.write_text('{"language":"en"}')
+            nacre_i18n._preference_language.cache_clear()
+            with (
+                patch.object(nacre_i18n.Path, "home", return_value=home),
+                patch.dict(os.environ, {"NACRE_LANGUAGE": ""}),
+            ):
+                self.assertEqual(nacre_i18n.language(), "en")
+                self.assertEqual(nacre_i18n.language(), "en")
+                self.assertEqual(nacre_i18n._preference_language.cache_info().misses, 1)
+                preference.write_text('{"language":"pseudo"}')
+                self.assertEqual(nacre_i18n.language(), "pseudo")
+                self.assertEqual(nacre_i18n._preference_language.cache_info().misses, 2)
+
+    def test_notification_bridge_fallback_preserves_count_without_installed_assets(
+        self,
+    ):
+        script = (ROOT / "hypr/scripts/window-trash.sh").read_text()
+        function = script[
+            script.index("nacre_message() {") : script.index("\nnotify() {")
+        ]
+        with tempfile.TemporaryDirectory() as home:
+            result = subprocess.run(
+                ["bash"],
+                input=function
+                + '\nnacre_message example.count "Restored {count} window(s) from trash" \'{"count":"2"}\'\n',
+                capture_output=True,
+                text=True,
+                env={"HOME": home, "PATH": os.environ["PATH"]},
+                check=True,
+            )
+            self.assertEqual(result.stdout, "Restored 2 window(s) from trash")
+
     def test_native_service_locale_fallback_and_expansion(self):
         runner = Path("/usr/lib/qt6/bin/qmltestrunner")
         if not runner.exists():

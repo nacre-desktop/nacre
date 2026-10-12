@@ -38,7 +38,7 @@ def references(root):
                 if (
                     isinstance(node, ast.Call)
                     and isinstance(node.func, ast.Name)
-                    and node.func.id in ("tr", "ui_label")
+                    and node.func.id in ("tr", "ui_label", "translate")
                     and node.args
                 ):
                     if isinstance(node.args[0], ast.Constant) and isinstance(
@@ -49,7 +49,7 @@ def references(root):
         stream = tokens(text)
         for index, token in enumerate(stream):
             if (
-                token.text != "tr"
+                token.text not in ("tr", "ui_label", "translate")
                 or index + 1 >= len(stream)
                 or stream[index + 1].text != "("
             ):
@@ -113,6 +113,7 @@ def check(root=ROOT):
     for path in [
         *(root / "nacre/shell").rglob("*.qml"),
         *(root / "nacre/login").glob("*.qml"),
+        *([root / "brain/web/app.js"] if (root / "brain/web/app.js").exists() else []),
     ]:
         if path.name == "NacreI18n.qml":
             continue

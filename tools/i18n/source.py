@@ -34,6 +34,11 @@ VISIBLE = {
     "summary",
     "body",
     "status",
+    "reason",
+    "estimate",
+    "profileName",
+    "rotationStatus",
+    "textContent",
 }
 ICONS = {"NacreIcon", "MaterialIcon", "IconImage", "BrandLogo"}
 
@@ -131,6 +136,7 @@ def bindings(source):
     stream = tokens(source)
     stack = []
     for index, token in enumerate(stream):
+        field = literal(token) if token.kind == "string" else token.text
         if token.text == "{":
             prior = stream[index - 1].text if index else ""
             stack.append(prior if re.match(r"[A-Z]\w*$", prior) else "")
@@ -138,9 +144,10 @@ def bindings(source):
             if stack:
                 stack.pop()
         if (
-            token.text not in VISIBLE
+            field not in VISIBLE
+            and not (field == "name" and token.kind == "string")
             and not (
-                token.text == "name"
+                field == "name"
                 and index >= 2
                 and stream[index - 2].text == "Accessible"
             )
@@ -149,9 +156,12 @@ def bindings(source):
         if stream[index + 1].text not in (":", "="):
             continue
         if (
-            token.text == "text"
+            field == "text"
             and next((name for name in reversed(stack) if name), "") in ICONS
         ):
+            continue
+        previous = stream[max(0, index - 4) : index]
+        if any(item.text == field + "Id" for item in previous):
             continue
         begin = index + 2
         if begin >= len(stream):
@@ -176,7 +186,37 @@ def bindings(source):
                     break
             end = current + 1
         if end > begin:
-            yield token.text, stream[begin].start, stream[end - 1].end
+            yield field, stream[begin].start, stream[end - 1].end
+    # Known rendering factories carry messages in arguments rather than bindings.
+    for index, token in enumerate(stream):
+        if (
+            token.text not in ("valueRow", "el", "button")
+            or index + 1 >= len(stream)
+            or stream[index + 1].text != "("
+        ):
+            continue
+        depth, argument, start = 0, 0, index + 2
+        for current in range(index + 2, len(stream)):
+            value = stream[current]
+            if depth == 0 and value.text in (",", ")"):
+                if (
+                    argument
+                    in ({"valueRow": (2, 6), "el": (1,), "button": (0,)}[token.text])
+                    and current > start
+                ):
+                    yield (
+                        "label" if argument == 2 else "description",
+                        stream[start].start,
+                        stream[current - 1].end,
+                    )
+                if value.text == ")":
+                    break
+                argument, start = argument + 1, current + 1
+                continue
+            if value.text in ("(", "[", "{"):
+                depth += 1
+            elif value.text in (")", "]", "}"):
+                depth -= 1
 
 
 def translated_ranges(source):

@@ -90,6 +90,7 @@ names, user content, icon names and protocol data are not translated.
 
 ```sh
 python3 tools/i18n/check.py
+python3 tools/i18n/generate.py
 python3 tools/i18n/tests.py
 python3 tools/check.py
 ```
@@ -111,3 +112,45 @@ Qt's locale-aware date and number APIs are documented in the
 [Date](https://doc.qt.io/qt-6/qml-qtqml-date.html) and
 [Locale](https://doc.qt.io/qt-6/qml-qtqml-locale.html) references. Weblate documents
 [monolingual source files and formats](https://docs.weblate.org/en/latest/formats.html).
+
+## Optional app surfaces and generated assets
+
+Brain's browser UI uses message IDs for its HTML text/attributes and JavaScript
+labels. It shares the desktop message engine through a generated browser copy.
+The existing local-host asset route provides the scripts; private API data still
+requires its session cookie. Notes, subjects and search results remain user content.
+The requested language is read at page load without
+changing account or vault configuration.
+
+The terminal AI menu uses canonical `UiLabel` strings for dispatch, with translated
+captions only when painted. Do not compare against translated captions. Project,
+account and conversation labels remain user data. The standalone controller falls
+back to English when the desktop translation assets are not installed.
+
+After editing English messages or the shared engine, regenerate the login/browser
+assets and run their formatters through the generator:
+
+```sh
+python3 tools/i18n/generate.py --write
+python3 tools/i18n/generate.py
+```
+
+CI checks generated content against its source. Do not edit generated language
+subsets or the browser engine copy by hand.
+
+## Audit progress
+
+2026-10-12: resumed the existing translation branch without discarding its pending
+changes. Completed the shared browser-engine generation, verified generated login
+and browser assets, and strengthened browser DOM and local-host/API-boundary
+checks. The source guard now covers disabled-action reasons, battery estimates,
+indirect status properties and browser rendering factories. Proper font names,
+media capability keys and command values remain unchanged.
+
+The first full `tools/check.py` run passed 544 tests plus Python, shell, Lua, Qt and
+browser checks. Subsequent targeted checks passed for message coverage (1,933
+messages), generation, native launcher dispatch and browser authentication/DOM
+behavior. The final full run and pseudo layout audit remain pending at this
+checkpoint. Native previews identified expansion problems in Settings navigation,
+Colors search, calendar weekdays, control tiles and launcher toggles; fixes are
+being checked against production widgets. No translation deployment was performed.

@@ -33,14 +33,24 @@ def english():
     return {}
 
 
+@lru_cache(maxsize=8)
+def _preference_language(path, modified):
+    try:
+        value = json.loads(Path(path).read_text())
+        return value.get("language", "system") if isinstance(value, dict) else "system"
+    except (OSError, ValueError):
+        return "system"
+
+
 def language():
     if os.environ.get("NACRE_LANGUAGE"):
         return os.environ["NACRE_LANGUAGE"]
+    path = Path.home() / ".config/nacre/desktop.json"
     try:
-        value = json.loads((Path.home() / ".config/nacre/desktop.json").read_text())
-        return value.get("language", "system")
-    except (OSError, ValueError):
+        modified = path.stat().st_mtime_ns
+    except OSError:
         return "system"
+    return _preference_language(str(path), modified)
 
 
 def pseudo(text):
@@ -67,7 +77,8 @@ def tr(identifier, fallback, args=None):
     message = english().get(identifier, fallback)
     if isinstance(message, dict):
         message = message.get(
-            "one" if args.get("count") == 1 else "other", message.get("other", fallback)
+            "one" if str(args.get("count")) in ("1", "1.0") else "other",
+            message.get("other", fallback),
         )
     if not isinstance(message, str):
         message = fallback.get("other", "") if isinstance(fallback, dict) else fallback

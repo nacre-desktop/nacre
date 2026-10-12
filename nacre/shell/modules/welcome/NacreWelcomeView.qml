@@ -311,7 +311,9 @@ Item {
                             optional: !!modelData.availability && NacreWelcomeApp.data.available?.[modelData.availability] !== true
                             buttonText: optional ? NacreI18n.tr("welcome.welcome-view.buttonText.setup-guide", "Setup guide") : NacreI18n.tr("welcome.welcome-view.buttonText.open", "Open")
                             available: true
-                            detail: (optional ? NacreI18n.tr("welcome.welcome-view.detail.optional", "Optional. ") : "") + modelData.detail
+                            detail: optional ? NacreI18n.tr("welcome.application.optional", "Optional. {detail}", {
+                                detail: modelData.detail
+                            }) : modelData.detail
                             onClicked: {
                                 if (optional) {
                                     NacreWelcomeApp.setup(modelData.availability);

@@ -805,6 +805,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/style.css": "style.css",
                 "/i18n.js": "i18n.js",
                 "/i18n-data.js": "i18n-data.js",
+                "/translation-engine.js": "translation-engine.js",
             }
             if path.path in assets:
                 name = assets[path.path]
@@ -835,6 +836,7 @@ class Handler(BaseHTTPRequestHandler):
                         "app.js": "text/javascript",
                         "i18n.js": "text/javascript",
                         "i18n-data.js": "text/javascript",
+                        "translation-engine.js": "text/javascript",
                         "style.css": "text/css",
                     }[name],
                 )

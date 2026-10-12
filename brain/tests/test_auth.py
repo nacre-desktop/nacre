@@ -43,12 +43,22 @@ class BrowserAuthenticationTests(unittest.TestCase):
                 self.assertEqual(get("/api/brain")[0], 403)
                 self.assertEqual(get("/api/note?path=anything")[0], 403)
                 self.assertEqual(get("/?token=invalid")[0], 403)
+                for asset in ("/i18n.js", "/i18n-data.js", "/translation-engine.js"):
+                    self.assertEqual(get(asset)[0], 200)
+                    self.assertEqual(get(asset, host="evil.invalid")[0], 403)
                 boot = get("/?" + urlencode({"token": server.auth.token}))
                 self.assertEqual(boot[0], 303)
                 cookie = boot[1]["Set-Cookie"].split(";", 1)[0]
                 self.assertIn("HttpOnly", boot[1]["Set-Cookie"])
                 self.assertIn("SameSite=Strict", boot[1]["Set-Cookie"])
                 self.assertEqual(boot[1]["Location"], "/")
+                for asset in ("/i18n.js", "/i18n-data.js", "/translation-engine.js"):
+                    response = get(asset, cookie)
+                    self.assertEqual(response[0], 200)
+                    self.assertEqual(response[1]["Content-Type"], "text/javascript")
+                    self.assertTrue(response[2])
+                with patch.dict(m.os.environ, {"NACRE_LANGUAGE": "pseudo"}):
+                    self.assertIn(b'data-nacre-language="pseudo"', get("/", cookie)[2])
                 with patch.object(m, "graph", return_value={"fixture": True}):
                     self.assertEqual(get("/api/brain", cookie)[0], 200)
                     self.assertEqual(get("/api/brain", cookie, "evil.invalid")[0], 403)

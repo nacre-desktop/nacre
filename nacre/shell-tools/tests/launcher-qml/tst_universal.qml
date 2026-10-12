@@ -39,6 +39,23 @@ TestCase {
         return value;
     }
 
+    function test_pseudo_keeps_media_capability_names_and_translates_disabled_reasons() {
+        const previousLanguage = NacreI18n.language;
+        try {
+            NacreI18n.language = "pseudo";
+            compare(NacreMenu.node("actions.media.next").disabled, false);
+            const previousPlayer = NacrePlayers.active;
+            NacrePlayers.active = null;
+            const row = NacreMenu.node("actions.media.next");
+            verify(row.disabled);
+            verify(row.reason.startsWith("["));
+            verify(!row.reason.includes("No active media player"));
+            NacrePlayers.active = previousPlayer;
+        } finally {
+            NacreI18n.language = previousLanguage;
+        }
+    }
+
     function test_shell_surface_heading_and_favorites_layout() {
         LauncherPreferences.favorites = ["editor"];
         const value = view();

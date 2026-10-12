@@ -1,62 +1,17 @@
 "use strict";
 (() => {
-  const accents = {
-    a: "á",
-    b: "ƀ",
-    c: "ç",
-    d: "ď",
-    e: "ë",
-    f: "ƒ",
-    g: "ğ",
-    h: "ħ",
-    i: "ï",
-    j: "ĵ",
-    k: "ķ",
-    l: "ľ",
-    m: "ḿ",
-    n: "ñ",
-    o: "ö",
-    p: "þ",
-    q: "ɋ",
-    r: "ŕ",
-    s: "š",
-    t: "ţ",
-    u: "ü",
-    v: "ṽ",
-    w: "ŵ",
-    x: "ẋ",
-    y: "ÿ",
-    z: "ž",
-  };
   const requested = document.documentElement.dataset.nacreLanguage || "system";
   const language = requested === "pseudo" ? "pseudo" : "en";
   const locale =
     requested === "system" || requested === "pseudo" ? undefined : requested;
-  function pseudo(text) {
-    let length = 0;
-    const value = text.replace(
-      /<[^>]+>|\{[A-Za-z_][A-Za-z0-9_]*\}|[A-Za-z]/g,
-      (token) => {
-        if (token.startsWith("<") || token.startsWith("{")) return token;
-        length++;
-        const char = accents[token.toLowerCase()] || token;
-        return token === token.toUpperCase() ? char.toUpperCase() : char;
-      },
-    );
-    return "[" + value + " " + "~".repeat(Math.ceil(length * 0.4)) + "]";
-  }
   function tr(id, fallback, args = {}) {
-    let value = window.NacreEnglish[id] ?? fallback;
-    if (value && typeof value === "object")
-      value =
-        value[new Intl.PluralRules(locale).select(args.count)] ?? value.other;
-    if (language === "pseudo") value = pseudo(value);
-    return value.replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (match, key) =>
-      Object.prototype.hasOwnProperty.call(args, key)
-        ? typeof args[key] === "number"
-          ? new Intl.NumberFormat(locale).format(args[key])
-          : String(args[key])
-        : match,
+    return window.NacreTranslation.translate(
+      window.NacreEnglish,
+      language,
+      id,
+      fallback,
+      args,
+      (value) => new Intl.NumberFormat(locale).format(value),
     );
   }
   window.NacreI18n = {

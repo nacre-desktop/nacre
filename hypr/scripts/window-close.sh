@@ -7,7 +7,7 @@ compositor() {
 }
 
 nacre_message() {
-    python3 "$HOME/.local/share/nacre/shell/tools/nacre_i18n.py" "$@" 2>/dev/null || printf '%s' "$2"
+    python3 "$HOME/.local/share/nacre/shell/tools/nacre_i18n.py" "$@" 2>/dev/null || python3 -c 'import json,re,sys; values=json.loads(sys.argv[2] or "{}"); print(re.sub(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", lambda match: str(values.get(match[1], match[0])), sys.argv[1]), end="")' "$2" "${3-}"
 }
 
 notify() {

@@ -26,7 +26,9 @@ jobs:
       - name: Install development-only JavaScript formatter
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Translation coverage
-        run: /tmp/check-env/bin/python tools/i18n/check.py
+        run: |
+          /tmp/check-env/bin/python tools/i18n/check.py
+          /tmp/check-env/bin/python tools/i18n/generate.py
       - name: Source and native UI regression checks
         run: |
           # Container root reads a runner-owned checkout; trust only this workspace.

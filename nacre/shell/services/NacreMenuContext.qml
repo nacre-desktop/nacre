@@ -154,7 +154,7 @@ Scope {
                 count: Updates.count
             }) : NacreI18n.tr("ui.menu-context.status.up-to-date", "Up to date")) : typeof checked === "boolean" ? (["setting", "dnd", "night-light", "stay-awake", "mute", "mic-mute", "wifi", "bluetooth"].includes(row.state) ? (checked ? NacreI18n.tr("ui.menu-context.status.on", "On") : NacreI18n.tr("ui.menu-context.status.off", "Off")) : checked ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : "") : "";
         result.disabled = !!row.capability && snapshot.capabilities[row.capability] !== true;
-        result.reason = result.disabled ? "Optional tool is not installed" : "";
+        result.reason = result.disabled ? NacreI18n.tr("launcher.disabled.optional-tool-is-not-installed", "Optional tool is not installed") : "";
         if (row.operation === "media") {
             const player = NacrePlayers.active;
             const capability = {
@@ -163,23 +163,23 @@ Scope {
                 previous: "canGoPrevious"
             }[row.value];
             result.disabled = !player || !player[capability];
-            result.reason = !player ? "No active media player" : result.disabled ? "This player does not support that action" : "";
+            result.reason = !player ? NacreI18n.tr("launcher.disabled.no-active-media-player", "No active media player") : result.disabled ? NacreI18n.tr("launcher.disabled.this-player-does-not-support-that-action", "This player does not support that action") : "";
         }
         if (row.value === "record-stop") {
             result.disabled = !snapshot.recording;
-            result.reason = result.disabled ? "No recording is running" : "";
+            result.reason = result.disabled ? NacreI18n.tr("launcher.disabled.no-recording-is-running", "No recording is running") : "";
         }
         if (row.value === "record-start" && snapshot.recording) {
             result.disabled = true;
-            result.reason = "A recording is already running";
+            result.reason = NacreI18n.tr("launcher.disabled.a-recording-is-already-running", "A recording is already running");
         }
         if (row.value === "night-light") {
             result.disabled = !NacreControlTools.data.nightLightSupported || !!NacreControlTools.data.nightLightExternal;
-            result.reason = NacreControlTools.data.nightLightExternal ? "Managed by an existing controller" : result.disabled ? "Install hyprsunset to use Night light" : "";
+            result.reason = NacreControlTools.data.nightLightExternal ? NacreI18n.tr("launcher.disabled.managed-by-an-existing-controller", "Managed by an existing controller") : result.disabled ? NacreI18n.tr("launcher.disabled.install-hyprsunset-to-use-night-light", "Install hyprsunset to use Night light") : "";
         }
         if (row.operation === "power-profile" && row.value === "performance" && !PowerProfiles.hasPerformanceProfile) {
             result.disabled = true;
-            result.reason = "Performance profile is unavailable on this device";
+            result.reason = NacreI18n.tr("launcher.disabled.performance-profile-is-unavailable-on-this-device", "Performance profile is unavailable on this device");
         }
         if (row.value === "mute")
             result.disabled = !NacreAudio.available;
@@ -243,7 +243,9 @@ Scope {
                     status: entry.accent === NacreWallpapers.selectedAccent ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : ""
                 }));
         if (node.provider === "fonts")
-            return [valueRow(route, "default", NacreI18n.tr("launcher.provider.nacre-default", "Nacre default"), "font", "", "text_fields", "IBM Plex Sans", {
+            return [valueRow(route, "default", NacreI18n.tr("launcher.provider.nacre-default", "Nacre default"), "font", "", "text_fields", NacreI18n.tr("ui.menu-context.description.ibm-plex-sans", "{font}", {
+                    font: "IBM Plex Sans"
+                }), {
                     checked: !DesktopSettings.data.interfaceFont
                 }), ...(snapshot.fonts || []).map(name => valueRow(route, Qt.md5(name), name, "font", name, "text_fields", NacreI18n.tr("launcher.provider.preview-this-interface-font", "Preview this interface font"), {
                         previewFont: name,
@@ -300,7 +302,7 @@ Scope {
                     checked: packageNames.has(entry.package),
                     status: packageNames.has(entry.package) ? NacreI18n.tr("ui.menu-context.status.installed", "Installed") : NacreI18n.tr("ui.menu-context.status.install", "Install"),
                     disabled: packageNames.has(entry.package) || !snapshot.capabilities.packages,
-                    reason: packageNames.has(entry.package) ? "Installed; use item actions to remove it" : !snapshot.capabilities.packages ? "Requires an Arch-compatible package manager" : ""
+                    reason: packageNames.has(entry.package) ? NacreI18n.tr("launcher.disabled.installed-use-item-actions-to-remove-it", "Installed; use item actions to remove it") : !snapshot.capabilities.packages ? NacreI18n.tr("launcher.disabled.requires-an-arch-compatible-package-manager", "Requires an Arch-compatible package manager") : ""
                 }));
         if (node.provider === "packages")
             return packageQuery === Model.scope(query).text ? packageRows.map(entry => valueRow(route, Qt.md5(entry.name), entry.name, "install-package", entry.name, "download", entry.description, {
@@ -545,10 +547,10 @@ Scope {
         if (scope.kind === "brain")
             return brainRows(scope.text);
         if (scope.kind === "ai")
-            return scope.text ? [valueRow("actions.assistant", "question", "Ask Nacre AI", "ask", scope.text, "chat", scope.text, {
+            return scope.text ? [valueRow("actions.assistant", "question", NacreI18n.tr("ui.menu-context.label.ask-nacre-ai", "Ask Nacre AI"), "ask", scope.text, "chat", scope.text, {
                     brand: "ai",
                     disabled: !canAsk || !snapshot.capabilities.ai,
-                    reason: !snapshot.capabilities.ai ? "Nacre AI is optional; open Setup to add it" : !canAsk ? "An assistant task or unsent draft is active; open Nacre AI instead" : ""
+                    reason: !snapshot.capabilities.ai ? NacreI18n.tr("launcher.disabled.nacre-ai-is-optional-open-setup-to-add-it", "Nacre AI is optional; open Setup to add it") : !canAsk ? NacreI18n.tr("launcher.disabled.an-assistant-task-or-unsent-draft-is-active-open-nacre-ai-instead", "An assistant task or unsent draft is active; open Nacre AI instead") : ""
                 })] : [];
         if (scope.kind === "help")
             return [
@@ -613,7 +615,9 @@ Scope {
                 const groups = rows.filter(row => row.provider && (row.id === route || row.id.startsWith(route + ".")));
                 return ranked(local.concat(...groups.map(row => provider(row.id, scope.text))), scope.text);
             }
-            return ranked(globalRows(), scope.text).concat([valueRow("actions", "search-web", "Search the web for “" + scope.text.slice(0, 100) + "”", "search-web", scope.text, "public", "Opens your browser only when selected")]);
+            return ranked(globalRows(), scope.text).concat([valueRow("actions", "search-web", NacreI18n.tr("ui.menu-context.label.search-the-web-for-value0", "Search the web for “{value0}”", {
+                    value0: scope.text.slice(0, 100)
+                }), "search-web", scope.text, "public", NacreI18n.tr("ui.menu-context.description.opens-your-browser-only-when-selected", "Opens your browser only when selected"))]);
         }
         if (route === "home")
             return favorites();

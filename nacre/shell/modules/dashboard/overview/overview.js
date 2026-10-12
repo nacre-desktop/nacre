@@ -37,12 +37,18 @@ function osName(text) {
     }
     return fields.PRETTY_NAME || fields.NAME || "Linux";
 }
-function uptime(seconds) {
+function uptime(seconds, translate) {
     if (!Number.isFinite(seconds) || seconds < 0)
-        return "Uptime unavailable";
+        return translate ? translate("dashboard.uptime.unavailable", "Uptime unavailable") : "Uptime unavailable";
     const minutes = Math.floor(seconds / 60);
     const days = Math.floor(minutes / 1440);
-    return "Up " + (days ? days + "d " : "") + Math.floor(minutes / 60) % 24 + "h " + minutes % 60 + "m";
+    const args = {
+        days: days,
+        hours: Math.floor(minutes / 60) % 24,
+        minutes: minutes % 60
+    };
+    const fallback = days ? "Up {days}d {hours}h {minutes}m" : "Up {hours}h {minutes}m";
+    return translate ? translate(days ? "dashboard.uptime.days" : "dashboard.uptime.hours", fallback, args) : "Up " + (days ? days + "d " : "") + args.hours + "h " + args.minutes + "m";
 }
 function inViewport(box, top, height) {
     return height > 0 && box[1] < top + height && box[1] + box[3] > top;
