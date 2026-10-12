@@ -195,7 +195,10 @@ class ArchPackageLayoutTests(unittest.TestCase):
             build = base / "build"
             build.mkdir()
             (build / "revision").write_text("fixture")
-            (build / "defaults").mkdir()
+            private_default = build / "defaults/.config/kdeglobals"
+            private_default.parent.mkdir(parents=True)
+            private_default.write_text("fixture palette")
+            private_default.chmod(0o600)
             (build / "fonts").mkdir()
             for name in (
                 "dolphin-style/styles/libnacre-dolphin.so",
@@ -217,6 +220,9 @@ class ArchPackageLayoutTests(unittest.TestCase):
                     owned & files, f"Split file collision: {owned & files}"
                 )
                 self.assertTrue(all(path.parts[0] == "usr" for path in files))
+                for path in destination.rglob("*"):
+                    if path.is_file() and not path.is_symlink():
+                        self.assertEqual(path.stat().st_mode & 0o044, 0o044, str(path))
                 owned |= files
             self.assertIn(
                 Path("usr/lib/nacre/dolphin-style/styles/libnacre-dolphin.so"), owned

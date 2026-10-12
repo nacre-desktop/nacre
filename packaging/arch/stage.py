@@ -24,6 +24,7 @@ def stage(root, destination, component, build):
             )
         else:
             shutil.copy2(source, target)
+            target.chmod(0o755 if source.stat().st_mode & 0o111 else 0o644)
 
     def text(relative, body, executable=False):
         target = deploy / relative
