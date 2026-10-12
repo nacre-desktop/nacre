@@ -16,7 +16,7 @@ NacreSettingsPage {
     }
     NacreSettingsSection {
         title: NacreI18n.tr("ui.bluetooth-page.title.bluetooth", "Bluetooth")
-        description: !NacreBluetooth.available ? "No Bluetooth adapter" : NacreBluetooth.powered ? NacreI18n.tr("ui.bluetooth-page.description.bluetooth-is-on", "Bluetooth is on") : NacreI18n.tr("ui.bluetooth-page.description.bluetooth-is-off", "Bluetooth is off")
+        description: !NacreBluetooth.available ? NacreI18n.tr("ui.bluetooth-page.description.no-bluetooth-adapter", "No Bluetooth adapter") : NacreBluetooth.powered ? NacreI18n.tr("ui.bluetooth-page.description.bluetooth-is-on", "Bluetooth is on") : NacreI18n.tr("ui.bluetooth-page.description.bluetooth-is-off", "Bluetooth is off")
         Flow {
             width: parent.width
             spacing: 8
@@ -71,7 +71,7 @@ NacreSettingsPage {
         NacreText {
             width: parent.width
             visible: NacreBluetooth.devices.length === 0
-            text: !NacreBluetooth.available ? "No Bluetooth adapter" : NacreI18n.tr("ui.bluetooth-page.text.no-devices-saved-open-the-bluetooth-manager-to-pair-one", "No devices saved. Open the Bluetooth manager to pair one.")
+            text: !NacreBluetooth.available ? NacreI18n.tr("ui.bluetooth-page.text.no-bluetooth-adapter", "No Bluetooth adapter") : NacreI18n.tr("ui.bluetooth-page.text.no-devices-saved-open-the-bluetooth-manager-to-pair-one", "No devices saved. Open the Bluetooth manager to pair one.")
             wrapMode: Text.Wrap
             color: NacreTokens.mutedInk
         }

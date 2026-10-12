@@ -69,7 +69,7 @@ Singleton {
                 root.message = data.lyricsMessage || "";
                 root.loadedKey = root.requestedKey;
             } catch (error) {
-                root.message = "Media details unavailable";
+                root.message = NacreI18n.tr("ui.media-details.message.media-details-unavailable", "Media details unavailable");
             }
         }
         onExited: if (root.requestedKey !== root.trackKey)

@@ -35,14 +35,14 @@ Item {
             id: wifi
             objectName: "nacreStatusNetwork"
             icon: NacreNetwork.active ? NacreIcons.getNetworkIcon(NacreNetwork.active.strength || 0) : "wifi_off"
-            label: NacreNetwork.wifiAvailable === false ? "No Wi-Fi adapter" : NacreNetwork.active ? NacreI18n.tr("components.status-icons.label.wi-fi-connected", "Wi-Fi connected") : NacreI18n.tr("components.status-icons.label.wi-fi-disconnected", "Wi-Fi disconnected")
+            label: NacreNetwork.wifiAvailable === false ? NacreI18n.tr("ui.status-icons.label.no-wi-fi-adapter", "No Wi-Fi adapter") : NacreNetwork.active ? NacreI18n.tr("components.status-icons.label.wi-fi-connected", "Wi-Fi connected") : NacreI18n.tr("components.status-icons.label.wi-fi-disconnected", "Wi-Fi disconnected")
             ink: root.colour
         }
         StatusTarget {
             id: bluetooth
             objectName: "nacreStatusBluetooth"
             icon: NacreBluetooth.powered ? "bluetooth" : "bluetooth_disabled"
-            label: NacreBluetooth.available === false ? "No Bluetooth adapter" : NacreBluetooth.powered ? NacreI18n.tr("components.status-icons.label.bluetooth-on", "Bluetooth on") : NacreI18n.tr("components.status-icons.label.bluetooth-off", "Bluetooth off")
+            label: NacreBluetooth.available === false ? NacreI18n.tr("ui.status-icons.label.no-bluetooth-adapter", "No Bluetooth adapter") : NacreBluetooth.powered ? NacreI18n.tr("components.status-icons.label.bluetooth-on", "Bluetooth on") : NacreI18n.tr("components.status-icons.label.bluetooth-off", "Bluetooth off")
             ink: root.colour
         }
         StatusTarget {

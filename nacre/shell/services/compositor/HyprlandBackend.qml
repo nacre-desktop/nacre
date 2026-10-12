@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.services
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland as Native
@@ -116,7 +117,7 @@ Singleton {
             if (workspace && Number(workspace[1]) > 0)
                 command = "hl.dsp.focus({workspace=" + Number(workspace[1]) + ",on_current_monitor=true})";
             else if (!command.startsWith("hl.dsp.")) {
-                error = "Unsupported workspace/window command for the Lua session.";
+                error = NacreI18n.tr("ui.hyprland.error.unsupported-workspace-window-command-for-the-lua-sessio", "Unsupported workspace/window command for the Lua session.");
                 return false;
             }
         }

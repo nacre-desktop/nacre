@@ -298,7 +298,12 @@ def execute(action, value=""):
             focus_action(action[6:], data.get("minutes", 25), data.get("dnd", False))
         elif action == "capture":
             if not value.strip() or len(value) > 16000:
-                raise ValueError("Write a note up to16000characters")
+                raise ValueError(
+                    tr(
+                        "helper.dashboard-data.write-a-note-up-to16000characters",
+                        "Write a note up to16000characters",
+                    )
+                )
             subprocess.run(
                 [
                     BRAIN,
@@ -319,7 +324,12 @@ def execute(action, value=""):
                 timeout=8,
             )
         elif action not in ("read", "context"):
-            raise ValueError("Unknown dashboard action")
+            raise ValueError(
+                tr(
+                    "helper.dashboard-data.unknown-dashboard-action",
+                    "Unknown dashboard action",
+                )
+            )
         result = snapshot(action in ("context", "capture"))
     return result
 

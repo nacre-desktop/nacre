@@ -16,7 +16,9 @@ NacreSettingsPage {
     }
     NacreSettingsSection {
         title: NacreI18n.tr("ui.network-page.title.wi-fi", "Wi-Fi")
-        description: !NacreNetwork.wifiAvailable ? "No Wi-Fi adapter; wired connections remain available." : NacreNetwork.active ? "Connected to " + NacreNetwork.active.ssid : NacreNetwork.wifiEnabled ? NacreI18n.tr("ui.network-page.description.not-connected", "Not connected") : NacreI18n.tr("ui.network-page.description.wi-fi-is-off", "Wi-Fi is off")
+        description: !NacreNetwork.wifiAvailable ? NacreI18n.tr("ui.network-page.description.no-wi-fi-adapter-wired-connections-remain-available", "No Wi-Fi adapter; wired connections remain available.") : NacreNetwork.active ? NacreI18n.tr("ui.network-page.description.connected-to-value0", "Connected to {value0}", {
+            value0: NacreNetwork.active.ssid
+        }) : NacreNetwork.wifiEnabled ? NacreI18n.tr("ui.network-page.description.not-connected", "Not connected") : NacreI18n.tr("ui.network-page.description.wi-fi-is-off", "Wi-Fi is off")
         Flow {
             width: parent.width
             spacing: 8
@@ -75,7 +77,7 @@ NacreSettingsPage {
         NacreText {
             width: parent.width
             visible: NacreNetwork.visibleNetworks.length === 0
-            text: !NacreNetwork.wifiAvailable ? "No Wi-Fi adapter; wired connections remain available." : NacreNetwork.wifiEnabled ? NacreI18n.tr("ui.network-page.text.no-networks-found-scan-to-try-again", "No networks found. Scan to try again.") : NacreI18n.tr("ui.network-page.text.turn-wi-fi-on-to-see-nearby-networks", "Turn Wi-Fi on to see nearby networks.")
+            text: !NacreNetwork.wifiAvailable ? NacreI18n.tr("ui.network-page.text.no-wi-fi-adapter-wired-connections-remain-available", "No Wi-Fi adapter; wired connections remain available.") : NacreNetwork.wifiEnabled ? NacreI18n.tr("ui.network-page.text.no-networks-found-scan-to-try-again", "No networks found. Scan to try again.") : NacreI18n.tr("ui.network-page.text.turn-wi-fi-on-to-see-nearby-networks", "Turn Wi-Fi on to see nearby networks.")
             wrapMode: Text.Wrap
             color: NacreTokens.mutedInk
         }
