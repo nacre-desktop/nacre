@@ -14,7 +14,7 @@ Singleton {
     property int activation: 0
     property string error: ""
     readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Settings" && c.wmClass === "org.quickshell") || null
-    readonly property bool active: visible && !!window && !window.minimized && (client?.workspace?.id ?? 1) > 0
+    readonly property bool active: visible && !!window && !window.minimized && (NacreCompositor.capabilities?.perOutputWorkspaces === true || (client?.workspace?.id ?? 1) > 0)
     readonly property string page: NacrePanelState.settingsPage
     onActiveChanged: NacrePanelState.settingsVisible = active
     function open(section = "") {
@@ -32,7 +32,7 @@ Singleton {
         focusAttempts = 0;
         if (window) {
             window.minimized = false;
-            if (!minimizeJob.running && (client?.workspace?.id ?? 1) > 0)
+            if (!minimizeJob.running && (NacreCompositor.capabilities?.perOutputWorkspaces === true || (client?.workspace?.id ?? 1) > 0))
                 window.activate();
         }
         focusDelay.restart();
@@ -62,6 +62,10 @@ Singleton {
         }
     }
     function minimize() {
+        if (NacreCompositor.capabilities?.windowHide === false) {
+            error = qsTr("Window minimization is unavailable on this compositor.");
+            return;
+        }
         const client = root.client;
         if (!client || minimizeJob.running || !client.windowId)
             return;

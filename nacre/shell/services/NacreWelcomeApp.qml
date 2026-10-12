@@ -34,7 +34,7 @@ Singleton {
     property int focusAttempts: 0
     readonly property bool busy: worker.running
     readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Welcome" && c.wmClass === "org.quickshell") || null
-    readonly property bool active: visible && !!window && !window.minimized && (client?.workspace?.id ?? 1) > 0
+    readonly property bool active: visible && !!window && !window.minimized && (NacreCompositor.capabilities?.perOutputWorkspaces === true || (client?.workspace?.id ?? 1) > 0)
     function prepareDemo() {
         if (demoStarting || demoSnapshot || NacreWallpapers.themeBusy || NacreWallpapers.selectedPath || NacreWallpapers.queuedPath)
             return;

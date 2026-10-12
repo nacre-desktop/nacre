@@ -76,6 +76,13 @@ class NiriStateTests(unittest.TestCase):
         self.assertEqual(window["at"], [44, 64])
         self.assertTrue(window["urgent"])
 
+    def test_config_failure_remains_in_snapshots_until_successful_reload(self):
+        value = state()
+        value.apply({"ConfigLoaded": {"failed": True}})
+        self.assertTrue(value.snapshot()["configFailed"])
+        value.apply({"ConfigLoaded": {"failed": False}})
+        self.assertFalse(value.snapshot()["configFailed"])
+
     def test_workspace_reorder_changes_index_without_changing_identity(self):
         value = state()
         changed = [
@@ -109,6 +116,7 @@ class NiriStateTests(unittest.TestCase):
         self.assertFalse(window["geometryKnown"])
         self.assertEqual(window["at"], [None, None])
         self.assertIsNone(window["outputId"])
+        self.assertEqual(window["workspaceId"], "niri-workspace:9007199254740993")
 
 
 class NiriActionTests(unittest.TestCase):

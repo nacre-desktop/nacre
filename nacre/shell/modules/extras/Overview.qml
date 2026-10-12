@@ -17,8 +17,8 @@ SearchSurface {
     property int previews: 0
     property bool dragging: false
     property string draggedAddress: ""
-    readonly property var windows: NacreCompositor.windows.filter(c => !c.hidden && (c.title + " " + c.wmClass).toLowerCase().includes(query.toLowerCase()))
-    readonly property var workspaces: [...new Set([1, 2, 3, 4, 5, 6, 7, ...windows.map(c => c.workspace?.id).filter(id => id > 0)])].sort((a, b) => a - b)
+    readonly property var windows: NacreCompositor.windows.filter(c => (NacreCompositor.capabilities?.perOutputWorkspaces !== true || c.outputId === NacreCompositor.focusedMonitor?.name) && !c.hidden && (c.title + " " + c.wmClass).toLowerCase().includes(query.toLowerCase()))
+    readonly property var workspaces: NacreCompositor.capabilities?.perOutputWorkspaces === true ? NacreCompositor.workspaces.values.filter(value => value.outputId === NacreCompositor.focusedMonitor?.name).map(value => value.index).sort((a, b) => a - b) : [...new Set([1, 2, 3, 4, 5, 6, 7, ...windows.map(c => c.workspace?.id).filter(id => id > 0)])].sort((a, b) => a - b)
     function focusWindow(client) {
         if (client) {
             if (!root.detached)
@@ -56,7 +56,7 @@ SearchSurface {
                     height: 215
                     radius: 18
                     color: drop.containsDrag ? NacreColours.palette.m3primaryContainer : NacreColours.palette.m3surfaceContainer
-                    readonly property var windows: root.windows.filter(c => c.workspace?.id === modelData)
+                    readonly property var windows: NacreCompositor.capabilities?.perOutputWorkspaces === true ? NacreCompositor.windowsForWorkspace(modelData).filter(value => root.windows.includes(value)) : root.windows.filter(c => c.workspace?.id === modelData)
                     Row {
                         x: 12
                         y: 12
@@ -117,7 +117,7 @@ SearchSurface {
                                     Timer {
                                         interval: 350
                                         repeat: true
-                                        running: root.visibilities.launcher && DesktopSettings.data.livePreviews !== false
+                                        running: NacreCompositor.capabilities?.windowCapture !== false && root.visibilities.launcher && DesktopSettings.data.livePreviews !== false
                                         onTriggered: copy.captureFrame()
                                     }
                                 }

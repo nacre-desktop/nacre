@@ -47,6 +47,22 @@ class NiriQmlTests(unittest.TestCase):
             (fixtures / "IpcHandler.qml").write_text(
                 'import QtQuick\nQtObject {property string target:""}'
             )
+            (fixtures / "NacreCompositor.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject {property var capabilities:({perOutputWorkspaces:true})}"
+            )
+            with (fixtures / "qmldir").open("a") as manifest:
+                manifest.write("singleton NacreCompositor 1.0 NacreCompositor.qml\n")
+            for app in ("NacreSettingsApp", "NacreColorsApp", "NacreWelcomeApp"):
+                text = (ROOT.parent / "shell/services" / (app + ".qml")).read_text()
+                expression = re.search(
+                    r"readonly property bool active: ([^\n]+)", text
+                ).group(1)
+                (target / (app + "Activity.qml")).write_text(
+                    'import QtQuick\nimport "fixtures"\nQtObject {'
+                    "property bool visible:true;property var window:({minimized:false});"
+                    'property var client:({workspace:{id:"niri-workspace:9007199254740993"}});'
+                    "readonly property bool active:" + expression + "}"
+                )
             source = (
                 (BACKENDS / "NiriBackend.qml")
                 .read_text()
@@ -70,7 +86,11 @@ class NiriQmlTests(unittest.TestCase):
 import QtTest
 import "session.js" as Session
 import "snapshots.js" as Snapshots
+import "fixtures"
 Item {
+ Component {id: settingsActivity; NacreSettingsAppActivity {}}
+ Component {id: colorsActivity; NacreColorsAppActivity {}}
+ Component {id: welcomeActivity; NacreWelcomeAppActivity {}}
  Component {id: factory; NiriBackend {}}
  TestCase {
   name:"NiriBackendContract"; when:windowShown
@@ -111,6 +131,19 @@ Item {
    shortcut.params={appid:"nacre_shell",name:"other"}
    verify(!backend.triggerShortcut("nacre_shell:test"));verify(backend.triggerShortcut("nacre_shell:other"))
    shortcut.destroy();tryCompare(backend,"registrations",[])
+  }
+  function test_opaque_workspace_ids_do_not_pause_actual_app_activity_predicates(){
+   for (const factory of [settingsActivity,colorsActivity,welcomeActivity]) {
+    const activity=factory.createObject(null)
+    verify(activity.active)
+    activity.window={minimized:true};verify(!activity.active)
+    activity.window={minimized:false};verify(activity.active)
+    NacreCompositor.capabilities={perOutputWorkspaces:false}
+    activity.client={workspace:{id:-1}};verify(!activity.active)
+    activity.client={workspace:{id:2}};verify(activity.active)
+    NacreCompositor.capabilities={perOutputWorkspaces:true}
+    activity.destroy()
+   }
   }
   function test_selection_preserves_hyprland_and_niri_is_explicit(){
    compare(Session.selectBackend({}),"hyprland")
