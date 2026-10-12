@@ -25,6 +25,25 @@ ruleset **Main contributor checks**:
 
 - `desktop`
 
+## Sensitive-path ownership
+
+Nacre uses `@nacre-desktop/maintainers` in CODEOWNERS. The organization team is
+visible (`closed`, not secret), contains the current maintainer, and has explicit
+Write access to this repository so GitHub can request reviews. Keep membership
+limited to trusted maintainers; do not add outside contributors automatically.
+Using a team also keeps account names out of the public runtime-name policy.
+
+If recreating it, open the organization's Teams page, create **Maintainers** as a
+visible team, add the repository maintainer, and grant Write access only to Nacre.
+Verify the CODEOWNERS errors endpoint on the proposed branch before merging:
+
+```sh
+gh api 'repos/nacre-desktop/nacre/codeowners/errors?ref=main'
+gh api orgs/nacre-desktop/teams/maintainers/repos/nacre-desktop/nacre \
+  -H 'Accept: application/vnd.github.v3.repository+json' \
+  --jq '{full_name, permissions, role_name}'
+```
+
 ## Fork workflows and private reporting
 
 In [Settings → Actions → General](https://github.com/nacre-desktop/nacre/settings/actions), under **Fork pull
