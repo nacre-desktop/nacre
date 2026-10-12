@@ -4,8 +4,8 @@
 
 - Branch `feature/niri-backend`, isolated `nacre-niri-backend` worktree, one
   PR: https://github.com/nacre-desktop/nacre/pull/12. Every milestone is committed
-  and pushed. Current baseline: main `4ee5346`, including compositor PR #3,
-  diagnostics/performance integration, approved Orient dev5 pin, and panel fixes.
+  and pushed. Current baseline: main `9a38ff0`, including compositor PR #3,
+  diagnostics/performance integration, approved Orient dev5 pin, and current magnetic docking fixes.
 - Python JSON socket backend and event reducer: initial state, outputs refreshed
   on workspace/config changes, stable opaque u64 IDs, canonical events, focus,
   urgency, dynamic per-output indices, stale IDs and unknown future events.
@@ -30,7 +30,9 @@
   actual app/wallpaper predicates and facade backend-selection behavior.
 - Complete rebased source check passed 648 tests on `b1267f8` plus lint, format,
   native source parsing, boundary and generator checks; later progress edits are
-  documentation only. Niri 26.04 validates a temporary
+  documentation only. The subsequent rebase onto `9a38ff0` adopts the latest
+  approved panel logic and generated native hook; final baseline verification
+  follows the same commands below. Niri 26.04 validates a temporary
   include wrapper and palette; test proves parser acceptance and unchanged wrapper,
   not inspection of niri's effective resolved configuration. Required `desktop` CI status for the exact branch head is recorded on PR #12.
 - Independent documentation/code reader review completed; all findings resolved,
