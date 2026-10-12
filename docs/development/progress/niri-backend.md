@@ -14,7 +14,9 @@
   fixture/action/transport tests pass, including large IDs, focus clearing,
   output-relative resolution, stale events and measured floating placement.
 - Python facade selects the backend without import-time IPC; exposes `events`
-  for QML's persistent consumer. QML integration is in progress, not live-ready.
+  for QML's persistent consumer. QML event cache, serialized actions, shortcut pulses and reconnect tests pass.
+  Focused-output necklace uses display indices while windows keep stable IDs.
+  Sixteen targeted Python/native-Qt tests pass; not yet live-ready.
 
 ## Next
 
@@ -26,9 +28,8 @@
 
 ## Open questions and integration limits
 
-- The existing interface is in open PR #3 (`0a95953`), absent from current main.
-  This branch is stacked on it. The PR integration agent owns merging it and the
-  newer main drag-lifecycle fixes; do not duplicate that prerequisite merge here.
+- PR #3 is merged at `1c38f0d`, including diagnostics and explicit Hyprland
+  drag-release preservation. This branch has been rebased onto that main baseline.
 - PC agent targets niri 26.04. Plain-niri login/live IPC observations are pending.
 - Niri lacks Hyprland pin/special-workspace semantics and a global cursor-position
   query. Report those capabilities honestly; preserve owned title+PID checks for

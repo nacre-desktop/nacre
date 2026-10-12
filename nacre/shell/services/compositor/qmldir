@@ -1,3 +1,6 @@
 singleton HyprlandBackend 1.0 HyprlandBackend.qml
 HyprlandWindow 1.0 HyprlandWindow.qml
 HyprlandShortcut 1.0 HyprlandShortcut.qml
+singleton NiriBackend 1.0 NiriBackend.qml
+NiriWindow 1.0 NiriWindow.qml
+NiriShortcut 1.0 NiriShortcut.qml
