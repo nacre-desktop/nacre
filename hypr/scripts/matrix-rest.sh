@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+compositor() {
+    python3 "$(dirname "$(realpath "$0")")/compositor-compat.py" "$@"
+}
+
 app="$HOME/.config/hypr/scripts/matrix-rest.py"
 log_dir="${XDG_CACHE_HOME:-$HOME/.cache}/matrix-rest"
 log_file="$log_dir/matrix-rest.log"
@@ -11,7 +15,7 @@ title="Nacre Matrix Sleep"
 mkdir -p "$log_dir"
 
 existing_window="$(
-    hyprctl clients -j 2>/dev/null | jq -r --arg class "$class_name" --arg title "$title" '
+    compositor query windows 2>/dev/null | jq -r --arg class "$class_name" --arg title "$title" '
         .[] | select(.class == $class or .title == $title) | [.address, .pid] | @tsv
     ' | head -n 1
 )"
@@ -50,7 +54,7 @@ setsid -f kitty \
     --override mouse_hide_wait=0.1 \
     env MATRIX_CLASS="$class_name" MATRIX_TITLE="$title" MATRIX_APP="$app" sh -lc '
         for _ in $(seq 1 50); do
-            if hyprctl clients -j 2>/dev/null | jq -e --arg class "$MATRIX_CLASS" --arg title "$MATRIX_TITLE" \
+            if compositor query windows 2>/dev/null | jq -e --arg class "$MATRIX_CLASS" --arg title "$MATRIX_TITLE" \
                 ".[] | select((.class == \$class or .title == \$title) and .fullscreen != 0)" >/dev/null; then
                 break
             fi
@@ -65,14 +69,14 @@ setsid -f kitty \
 (
     for _ in {1..30}; do
         address="$(
-            hyprctl clients -j 2>/dev/null | jq -r --arg class "$class_name" --arg title "$title" '
+            compositor query windows 2>/dev/null | jq -r --arg class "$class_name" --arg title "$title" '
                 .[] | select(.class == $class or .title == $title) | .address
             ' | head -n 1
         )"
 
         if [[ -n "$address" && "$address" != "null" ]]; then
-            "$HOME/.config/hypr/scripts/hyprctl-lua.sh" focus-window "address:$address" >/dev/null 2>&1 || true
-            "$HOME/.config/hypr/scripts/hyprctl-lua.sh" fullscreen fullscreen "address:$address" >/dev/null 2>&1 || true
+            compositor focus-window "address:$address" >/dev/null 2>&1 || true
+            compositor fullscreen fullscreen "address:$address" >/dev/null 2>&1 || true
             break
         fi
 
