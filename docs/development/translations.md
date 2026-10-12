@@ -221,5 +221,5 @@ runtime has been deployed; review is required before deployment.
 
 | Preview | English | Pseudo |
 | --- | --- | --- |
-| Settings (public synthetic state) | ![English Settings](images/translations/en-settings.png) | ![Pseudo Settings](images/translations/pseudo-settings.png) |
-| Brain (public demo notes) | ![English Brain](images/translations/en-brain.png) | ![Pseudo Brain](images/translations/pseudo-brain.png) |
+| Settings (public synthetic state) | ![English Settings](../../assets/screenshots/translation-en-settings.png) | ![Pseudo Settings](../../assets/screenshots/translation-pseudo-settings.png) |
+| Brain (public demo notes) | ![English Brain](../../assets/screenshots/translation-en-brain.png) | ![Pseudo Brain](../../assets/screenshots/translation-pseudo-brain.png) |
