@@ -5,3 +5,6 @@ hl.bind("SUPER + CTRL + B", hl.dsp.exec_cmd("~/.local/bin/nacre-shell left"), { 
 
 -- Passive hover surfaces do not steal keyboard focus. Escape still reaches apps.
 hl.bind("Escape", hl.dsp.global("nacre_shell:dismissHoverEdges"), { non_consuming = true })
+
+-- Detachment belongs to the shell, including UI-only installations.
+hl.bind("SUPER + CTRL + D", hl.dsp.exec_cmd("~/.local/bin/nacre-shell detach"), { description = "Nacre:detach-panel" })
