@@ -3,6 +3,7 @@ import QtQuick
 Loader {
     id: root
     property bool wanted: false
+    property bool keepWarm: false
     property int releaseDelay: 5000
     property bool preserveState: false
     property var savedState: null
@@ -12,7 +13,13 @@ Loader {
         if (wanted) {
             release.stop();
             retained = true;
-        } else if (retained)
+        } else if (retained && !keepWarm)
+            release.restart();
+    }
+    onKeepWarmChanged: if (!wanted && retained) {
+        if (keepWarm)
+            release.stop();
+        else
             release.restart();
     }
     Component.onCompleted: if (wanted)
@@ -22,7 +29,7 @@ Loader {
     Timer {
         id: release
         interval: Math.max(0, root.releaseDelay)
-        onTriggered: if (!root.wanted) {
+        onTriggered: if (!root.wanted && !root.keepWarm) {
             if (root.preserveState && root.item?.captureState)
                 root.savedState = root.item.captureState();
             root.retained = false;

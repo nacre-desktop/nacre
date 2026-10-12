@@ -60,6 +60,19 @@ TestCase {
         verify(loader.item);
         tryCompare(loader, "active", false, 500);
     }
+    function test_warm_policy_can_be_trimmed_after_switching_content() {
+        const loader = createTemporaryObject(holder, test, {
+            keepWarm: true
+        });
+        verify(!loader.item);
+        loader.wanted = true;
+        const item = loader.item;
+        loader.wanted = false;
+        wait(120);
+        compare(loader.item, item);
+        loader.keepWarm = false;
+        tryCompare(loader, "active", false, 500);
+    }
     function test_reset_content_when_preservation_disabled() {
         const loader = createTemporaryObject(holder, test, {
             preserveState: false

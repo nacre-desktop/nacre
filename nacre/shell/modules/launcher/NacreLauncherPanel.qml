@@ -59,6 +59,7 @@ Item {
         y: 0
         objectName: "launcherPage"
         wanted: root.visibilities.launcher || root.presentedHeight > 0
+        keepWarm: root.mode === "apps"
         width: root.width
         height: Math.max(0, root.contentHeight - y)
         focus: true

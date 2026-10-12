@@ -33,6 +33,7 @@ TestCase {
         const view = createTemporaryObject(scene, this), panel = view.panel;
         const page = findChild(panel, "launcherPage");
         verify(!page.active);
+        page.keepWarm = false;
         page.releaseDelay = 100;
         panel.state.launcher = true;
         wait(400);
@@ -51,6 +52,25 @@ TestCase {
         wait(400);
         compare(panel.height, 0);
         tryCompare(page, "active", false, 500);
+        verify(!page.item);
+    }
+    function test_apps_stay_warm_but_gallery_returns_to_idle_policy() {
+        const view = createTemporaryObject(scene, this), panel = view.panel;
+        const page = findChild(panel, "launcherPage");
+        page.releaseDelay = 80;
+        panel.state.launcher = true;
+        wait(400);
+        const apps = page.item;
+        panel.state.launcher = false;
+        wait(450);
+        compare(page.item, apps);
+        verify(page.keepWarm);
+        panel.state.launcher = true;
+        compare(page.item, apps);
+        panel.state.launcherMode = "wallpaper";
+        verify(!page.keepWarm);
+        panel.state.launcher = false;
+        tryCompare(page, "active", false, 1000);
         verify(!page.item);
     }
     function test_modes_and_full_gallery_contracts() {
