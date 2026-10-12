@@ -13,6 +13,111 @@ SHELL = ROOT.parent / "shell"
 
 
 class FrameTests(unittest.TestCase):
+    def test_hide_preserves_wallpaper_and_releases_space_and_keyboard(self):
+        binary = shutil.which("quickshell") or shutil.which("qs")
+        if not binary:
+            self.skipTest("Quickshell unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder)
+            for directory in (
+                "services",
+                "config",
+                "modules/background",
+                "modules/drawers",
+            ):
+                (target / directory).mkdir(parents=True)
+            for relative in (
+                "modules/background/NacreBackground.qml",
+                "modules/drawers/NacreReservedEdges.qml",
+            ):
+                shutil.copy2(SHELL / relative, target / relative)
+            (target / "services/qmldir").write_text(
+                "singleton Environment 1.0 Environment.qml\n"
+                "singleton NacrePanelState 1.0 NacrePanelState.qml\n"
+            )
+            (target / "services/Environment.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject {property var windows:[];property int scenesCreated:0}\n"
+            )
+            (target / "services/NacrePanelState.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject {property bool hidden:false}\n"
+            )
+            (target / "config/qmldir").write_text(
+                "singleton NacreFrame 1.0 NacreFrame.qml\n"
+            )
+            (target / "config/NacreFrame.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject {property int headerHeight:50;property int left:10;property int right:10;property int bottom:10}\n"
+            )
+            (target / "modules/background/NacreWallpaperScene.qml").write_text(
+                'import QtQuick\nimport qs.services\nimport "../.."\nQtObject {property string screenName;property Anchors anchors: Anchors {};Component.onCompleted: Environment.scenesCreated++}\n'
+            )
+            (target / "Anchors.qml").write_text(
+                "import QtQuick\nQtObject {property var fill;property bool top:false;property bool bottom:false;property bool left:false;property bool right:false}\n"
+            )
+            # Exercise production bindings without allocating compositor surfaces.
+            (target / "NacreWindow.qml").write_text("""import QtQuick
+import qs.services
+QtObject {
+ default property list<QtObject> children
+ property string name
+ property var screen
+ property bool visible: true
+ property int implicitWidth: 1
+ property int implicitHeight: 1
+ property int exclusiveZone: 0
+ property int exclusionMode: 0
+ property int layer: 0
+ property int keyboardFocus: 0
+ property QtObject mask
+ property Anchors anchors: Anchors {}
+ Component.onCompleted: Environment.windows = [...Environment.windows, this]
+}
+""")
+            for directory in ("modules/background", "modules/drawers"):
+                source = (target / directory).glob("Nacre*.qml")
+                for path in source:
+                    if path.name != "NacreWallpaperScene.qml":
+                        path.write_text(
+                            path.read_text().replace(
+                                "import qs.widgets", 'import "../.."'
+                            )
+                        )
+            screen = (SHELL / "modules/drawers/NacreScreen.qml").read_text()
+            focus = next(
+                line.strip()
+                for line in screen.splitlines()
+                if line.strip().startswith("WlrLayershell.keyboardFocus:")
+            )
+            fixture = (
+                (ROOT / "tests/frame-qml/hide.qml")
+                .read_text()
+                .replace(
+                    "keyboardFocus: WlrKeyboardFocus.None // production focus binding",
+                    focus.replace("WlrLayershell.", ""),
+                )
+            )
+            # Its binding refers to the production screen's local IDs.
+            fixture = fixture.replace(
+                "inputController.modal", "focusWindow.inputController.modal"
+            ).replace("flags.", "focusWindow.flags.")
+            (target / "shell.qml").write_text(fixture)
+            environment = {
+                **os.environ,
+                "QT_QPA_PLATFORM": "offscreen",
+                "QT_QUICK_BACKEND": "software",
+                "XDG_CACHE_HOME": str(target / "cache"),
+            }
+            environment.pop("WAYLAND_DISPLAY", None)
+            result = subprocess.run(
+                [binary, "-p", str(target / "shell.qml")],
+                cwd=target,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("HIDE_NATIVE_OK", result.stdout + result.stderr)
+
     def test_registry_preserves_newer_and_other_output_owners(self):
         runner = Path("/usr/lib/qt6/bin/qmltestrunner")
         if not runner.exists():
