@@ -297,9 +297,10 @@ This investigation uses PSS/USS and a sequential panel matrix in a disposable
 home, with both a private writable mode-0700 XDG runtime directory and a private
 D-Bus session. No live settings, account permissions or wallpaper were changed.
 
-`NacreIdleLoader` now retains the launcher content for five seconds after its
-closing animation. Rapid reopening reuses the shell and delegates; idle content
-is destroyed. Launcher reset still runs on each open. Floating Settings, Colors
+`NacreIdleLoader` keeps the apps launcher content warm after its first use; it
+does not instantiate it at startup. Reopening reuses the shell and delegates;
+launcher reset still runs on each open. Other launcher modes unload five seconds
+after their closing animation. Floating Settings, Colors
 and Welcome keep their window identity, position and size, but release content
 five seconds after closing. Search, page, scroll, expansion and color-inspection
 state are captured and restored; backend operations and unsaved options keep
@@ -319,46 +320,3 @@ destruction, view state restoration without Apply, changing video without
 reopening, muted first frames, crossfade/reverse navigation and expired poster
 slots. No layout, colors, visible strings or private preferences change.
 
-### Superseded exploratory panel matrix
-
-**Draft checkpoint only:** the table below used an inherited XDG data path and
-had an empty favorites route. It is being replaced by a fully isolated run with
-48 verified demo entries and 12 verified visible favorites. Do not use this table
-as the populated-launcher baseline.
-
-Baseline `fa37a28`, candidate runtime `221a9a3`, Quickshell 0.3.2, Qt 6.12,
-Hyprland 0.56.2. Both source trees are immutable copies and use the same generated
-3840×2160 stills, 1920×1080 H.264/24 fps clip, 48 demo desktop entries and 12 demo
-favorites. No personal catalog is copied. The home is pre-seeded, but the fresh
-shell process has opened no panel. On-disk caches are warm in both runs.
-
-A headless labwc GLES2 parent supports nested Hyprland with an explicitly created
-1920×1080 headless output, scale 1. No production session configuration or floating
-window rules are inherited. PipeWire/hardware services are unavailable. Each
-surface is opened for two seconds, sampled for two seconds at 250 ms intervals,
-closed and allowed six seconds to settle, then sampled again. Rows are sequential,
-so later rows include earlier activity. Values below are shell median **RSS / PSS /
-USS**, in MiB; sampling distributions and child-process accounting remain in JSON.
-These short scenario captures describe endpoints, not five-minute idle CPU.
-
-| Scenario | Before RSS / PSS / USS | After RSS / PSS / USS |
-| --- | ---: | ---: |
-| Fresh start; nothing opened | 297.7 / 217.5 / 196.4 | 292.6 / 213.8 / 193.4 |
-| Launcher closed | 326.6 / 245.7 / 223.8 | 319.9 / 240.0 / 219.2 |
-| Today closed | 334.6 / 253.6 / 231.6 | 338.1 / 258.1 / 237.2 |
-| Weather closed | 338.8 / 254.7 / 234.9 | 340.9 / 260.2 / 239.2 |
-| Media closed | 338.9 / 253.6 / 234.2 | 340.2 / 258.7 / 237.7 |
-| System closed | 334.2 / 252.0 / 229.9 | 337.7 / 254.4 / 235.6 |
-| Focus closed | 333.1 / 249.1 / 228.7 | 336.2 / 251.6 / 234.1 |
-| Settings closed | 355.6 / 269.9 / 248.1 | 355.2 / 271.2 / 250.0 |
-| Colors closed | 384.5 / 291.6 / 275.0 | 379.8 / 290.6 / 272.4 |
-| Welcome closed | 462.5 / 367.2 / 349.5 | 445.2 / 353.4 / 334.9 |
-| Wallpaper picker closed | 464.1 / 373.1 / 352.5 | 443.3 / 351.8 / 333.9 |
-| AI sidebar closed; whole cycle | 463.3 / 371.2 / 351.7 | 442.1 / 354.4 / 332.7 |
-
-The whole-cycle PSS change is **16.8 MiB (4.5%)**. USS drops
-19.0 MiB. Small differences in individual rows are not established wins: shared-page
-apportionment, allocator high-water marks and ambient host activity vary. Content
-destruction is verified separately; it does not imply all freed allocations
-immediately leave RSS. The current implementation additionally tests content
-created while already open and retains safe search IPC after release.
