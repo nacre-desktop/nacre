@@ -339,6 +339,27 @@ class Backend:
     def version_command(self):
         return ["niri", "--version"]
 
+    def required_commands(self):
+        return ("niri",)
+
+    def config_errors(self, *, timeout=10):
+        result = subprocess.run(
+            ["niri", "validate"],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+        return (result.stderr or result.stdout).strip() if result.returncode else ""
+
+    def diagnostic_commands(self):
+        return {
+            "runningVersion": ["niri", "msg", "--json", "version"],
+            "installedVersion": self.version_command(),
+            "allMonitors": ["niri", "msg", "--json", "outputs"],
+            "configErrors": ["niri", "validate"],
+        }
+
     def environment_updates(self, environment=None):
         environment = os.environ if environment is None else environment
         return {
@@ -662,6 +683,9 @@ class Backend:
         finite(y)
         if (width is None) != (height is None):
             raise ValueError("Specify both size dimensions")
+        if width is not None:
+            if finite(width) <= 0 or finite(height) <= 0:
+                raise ValueError("Invalid window size")
         self.float_window(window, action="enable", timeout=timeout)
         if width is not None:
             self.resize_window(window, width, height, timeout=timeout)
@@ -785,4 +809,4 @@ class Backend:
     night_light_command = night_light_configured_elsewhere = (
         night_light_external_socket
     ) = _unsupported
-    set_night_light_temperature = capture_bindings = config_errors = _unsupported
+    set_night_light_temperature = capture_bindings = _unsupported
