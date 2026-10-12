@@ -2,7 +2,7 @@
 
 ## Done
 
-- Branch `feature/niri-backend`, isolated `nacre-niri-backend` worktree, one draft
+- Branch `feature/niri-backend`, isolated `nacre-niri-backend` worktree, one
   PR: https://github.com/nacre-desktop/nacre/pull/12. Every milestone is committed
   and pushed. Current baseline: main `4ee5346`, including compositor PR #3,
   diagnostics/performance integration, approved Orient dev5 pin, and panel fixes.
@@ -28,21 +28,23 @@
   tests. Real Quickshell + source Python helpers exercise state and focus/close
   on a private fake socket with no compositor/windows. Native Qt tests execute
   actual app/wallpaper predicates and facade backend-selection behavior.
-- Complete pre-rebase source check passed 647 tests plus lint, format, native
-  source parsing, boundary and generator checks. Niri 26.04 validates a temporary
+- Complete rebased source check passed 648 tests on `b1267f8` plus lint, format,
+  native source parsing, boundary and generator checks; later progress edits are
+  documentation only. Niri 26.04 validates a temporary
   include wrapper and palette; test proves parser acceptance and unchanged wrapper,
-  not inspection of niri's effective resolved configuration. Earlier PR CI passed.
+  not inspection of niri's effective resolved configuration. Required `desktop` CI status for the exact branch head is recorded on PR #12.
 - Independent documentation/code reader review completed; all findings resolved,
   including action queue on disconnect and source-binding environment inheritance.
 
 ## Next
 
-1. Full `tools/check.py` on current `4ee5346` baseline with matching Orient dev5
-   installed in the task venv; required final-head GitHub CI.
-2. Update PR validation with exact final revision, make PR review-ready, hand off
-   to integration and PC/session agents. Do not deploy or change sessions.
-3. Save final completion evidence in the private brain. Keep this worktree for
-   branch acceptance/review; remove only after no more edits are needed.
+- Review/merge PR #12 through the enforced final-head CI gate. The backend's
+  implementation/fixture criteria are complete; current CI result remains linked
+  in the PR instead of freezing a possibly stale check status in this note.
+- PC/session agent can perform live Wayland/UI/pearl acceptance after the operator
+  resumes its session phase. Keep Hyprland running until then; no deployment here.
+- Preserve this clean worktree for branch acceptance/review. Remove it only after
+  no further edits are needed; exact tested source and logs are recorded below.
 
 ## Open questions / known differences
 
