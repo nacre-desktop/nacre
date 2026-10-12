@@ -5,6 +5,7 @@ import QtQuick
 Scope {
     id: root
     property string channel: ""
+    property bool recoveryPending: false
     property bool parked: false
     onParkedChanged: idleDisconnect.restart()
     onBusyChanged: idleDisconnect.restart()
@@ -149,6 +150,7 @@ Scope {
                         root.draft = value.text ?? "";
                         root.attachments = value.attachments ?? [];
                         root.loadingDraft = false;
+                        root.recoveryPending = false;
                     } else if (["files", "pick", "screenshot"].includes(composerWorker.action) && composerWorker.contextKey === root.composerKey && value.attachments) {
                         const unique = new Map();
                         for (const file of [...root.attachments, ...value.attachments])

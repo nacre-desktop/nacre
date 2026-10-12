@@ -22,7 +22,7 @@ Singleton {
         return !!(model.threadId || model.busy || model.draft.trim() || model.attachments?.length || model.messages?.count || model.outgoing?.length);
     }
     function retained(model) {
-        return model === edge || meaningful(model) || model.composerBusy || NacrePearls.entries.some(entry => entry.chat === model);
+        return model === edge || meaningful(model) || model.composerBusy || model.recoveryPending || NacrePearls.entries.some(entry => entry.chat === model);
     }
     function fresh(savedChannel = "") {
         const channel = savedChannel || "p" + Qt.md5(Date.now().toString() + Math.random()).slice(0, 24);
@@ -68,6 +68,7 @@ Singleton {
         parked = sessions.filter(model => model !== edge);
         for (const model of sessions) {
             model.parked = model !== edge;
+            model.recoveryPending = channels.includes(model.channel);
             if (channels.length > 1)
                 model.start();
         }

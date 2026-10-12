@@ -59,6 +59,7 @@ Item {
  property string provider:"codex"
  property string account:"Default"
  property bool busy:false
+ property bool recoveryPending:false
  property bool parked:false
  property int saves:0
  property int starts:0
@@ -107,6 +108,8 @@ TestCase {
   const state=views.snapshot();compare(state.edge,"");compare(state.channels.length,2);
   views.restore(state);compare(views.sessions.length,2);compare(views.edge,original);
   next.draft="";next.busy=false;
+  compare(views.snapshot().channels.length,2);
+  next.recoveryPending=false;
   compare(views.recent.length,0);compare(views.snapshot().channels.length,1);
  }
 }""")
