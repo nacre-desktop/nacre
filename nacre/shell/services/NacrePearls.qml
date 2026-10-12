@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import QtQuick.Window
 import Quickshell
 import Quickshell.Io
 import qs.modules.pearls as Pearl
@@ -46,6 +47,7 @@ Singleton {
                         kind: entry.kind,
                         origin: entry.window.screen?.name || entry.origin,
                         initial: entry.window.captureState(),
+                        placement: entry.window.placement(),
                         channel: entry.chat?.channel || ""
                     }))
         };
@@ -68,7 +70,7 @@ Singleton {
                 NacreAiViews.parked = NacreAiViews.parked.filter(item => item !== model);
                 model.parked = false;
             }
-            open(data.kind, data.initial || {}, data.origin || "", null, model);
+            open(data.kind, data.initial || {}, data.origin || "", data.placement || null, model);
         }
         restoring = false;
         restored = true;
@@ -175,7 +177,7 @@ Singleton {
         saveSoon();
         return entry;
     }
-    function detach(kind, host, name, point = null) {
+    function detach(kind, host, name, point = null, deferClose = false) {
         if (!enabled)
             return null;
         const view = NacrePanelState.screens[name];
@@ -189,9 +191,31 @@ Singleton {
             section: host?.section || view.controlSection || "home"
         };
         const model = kind === "ai" ? NacreAiViews.edge : null;
-        const entry = open(kind, data, name, point, model);
+        const entry = open(kind, data, name, point || Object.assign(bodyRect(host, name), {
+            exact: true
+        }), model);
         if (!entry)
             return null;
+        if (!deferClose) {
+            drag = {
+                kind: kind,
+                host: host,
+                screen: name,
+                body: bodyRect(host, name),
+                dx: 0,
+                dy: 0,
+                ready: true,
+                released: true,
+                destination: entry
+            };
+            handoffTimeout.restart();
+        }
+        return entry;
+    }
+    function finishEdge(kind, name, model) {
+        const view = NacrePanelState.screens[name];
+        if (!view)
+            return;
         NacreHoverIntent.dismiss(screen(name));
         if (kind === "ai" && NacreAiViews.edge === model)
             NacreAiViews.take();
@@ -211,7 +235,6 @@ Singleton {
             view.launcherQuery = "";
             view.launcherRoute = "home";
         }
-        return entry;
     }
     function remove(entry, park = true) {
         if (!entries.includes(entry))
@@ -253,86 +276,118 @@ Singleton {
         }
         remove(entry, false);
     }
+    function bodyRect(host, name) {
+        const monitor = screen(name);
+        const point = host.mapToItem(host.Window.window.contentItem, 0, 0);
+        return {
+            x: monitor.x + point.x,
+            y: monitor.y + point.y,
+            width: host.width,
+            height: host.height
+        };
+    }
     function begin(kind, host, name, point, entry = null) {
-        if (!enabled || DesktopSettings.data.dragPanels === false || drag)
+        if (!enabled || DesktopSettings.data.dragPanels === false || drag || host?.canDetach === false)
             return;
-        grab = null;
-        const token = Date.now().toString() + Math.random();
         drag = {
-            token: token,
             kind: kind,
             host: host,
             screen: name,
             start: point,
             point: point,
             entry: entry,
+            body: bodyRect(host, name),
+            dx: 0,
+            dy: 0,
             ready: false,
-            url: "",
-            width: Math.min(host.width, 900),
-            height: Math.min(host.height, 700)
+            released: false,
+            destination: null
         };
-        host.grabToImage(result => {
-            if (root.drag?.token === token) {
-                root.grab = result;
-                root.drag = Object.assign({}, root.drag, {
-                    url: result.url
-                });
-            }
-        }, Qt.size(Math.max(1, Math.min(host.width, 900)), Math.max(1, Math.min(host.height, 700))));
-        if (!entry) {
-            const view = NacrePanelState.screens[name];
-            if (view)
-                view.edgeMenu = ({
-                        ai: "left",
-                        controls: "osd",
-                        dashboard: "dashboard",
-                        launcher: "launcher"
-                    })[kind];
-        }
+        const view = NacrePanelState.screens[name];
+        if (view)
+            view.edgeMenu = ({
+                    ai: "left",
+                    controls: "osd",
+                    dashboard: "dashboard",
+                    launcher: "launcher"
+                })[kind];
     }
     function update(point) {
-        if (!drag)
+        if (!drag || drag.released)
             return;
         const dx = point.x - drag.start.x, dy = point.y - drag.start.y;
-        const distance = drag.entry ? Math.hypot(dx, dy) : ({
-                top: dy,
-                bottom: -dy,
-                left: dx,
-                right: -dx
-            })[edge(drag.kind)];
         drag = Object.assign({}, drag, {
             point: point,
-            ready: distance >= 64
+            dx: dx,
+            dy: dy,
+            ready: PearlGeometry.outward(drag.kind, dx, dy) >= 64
         });
     }
     function finish() {
-        if (!drag)
+        if (!drag || drag.released)
             return;
+        if (!drag.ready) {
+            drag = Object.assign({}, drag, {
+                dx: 0,
+                dy: 0,
+                released: true
+            });
+            returnDelay.restart();
+            return;
+        }
         const value = drag;
-        drag = Object.assign({}, value, {
-            released: true,
-            point: value.ready ? value.point : value.start
+        const point = Object.assign({}, value.body, {
+            x: value.body.x + value.dx,
+            y: value.body.y + value.dy,
+            exact: true
         });
-        previewExpiry.restart();
-        if (!value.ready)
+        drag = Object.assign({}, value, {
+            released: true
+        });
+        const entry = detach(value.kind, value.host, value.screen, point, true);
+        if (!entry) {
+            cancel();
             return;
-        if (value.entry) {
-            const destination = PearlGeometry.docking(value.kind, value.point, monitors());
-            if (destination)
-                dock(value.entry, destination.screen);
-            else
-                value.entry.window.place(value.point);
-        } else
-            detach(value.kind, value.host, value.screen, value.point);
+        }
+        drag = Object.assign({}, drag, {
+            destination: entry
+        });
+        handoffTimeout.restart();
+    }
+    function handoffFailed(entry) {
+        if (drag?.destination === entry) {
+            error = "Panel could not be positioned; it remains attached";
+            cancel();
+            remove(entry, false);
+        }
+    }
+    function handedOff(entry) {
+        if (drag?.destination === entry) {
+            finishEdge(drag.kind, drag.screen, entry.chat);
+            cancel();
+            // Activate after the layer releases its exclusive keyboard focus.
+            Qt.callLater(() => entry.window.activate());
+        }
     }
     function cancel() {
         drag = null;
         grab = null;
     }
     Timer {
-        id: previewExpiry
-        interval: 240
+        id: returnDelay
+        interval: 220
         onTriggered: root.cancel()
+    }
+    Timer {
+        id: handoffTimeout
+        interval: 5000
+        onTriggered: {
+            // A failed compositor placement must not strand the original panel.
+            const entry = root.drag?.destination;
+            root.cancel();
+            if (entry && !entry.window.ready)
+                root.remove(entry, false);
+        }
     }
     function detachActive() {
         const name = NacrePanelState.activeName(), view = NacrePanelState.screens[name], panels = NacrePanelState.panels[name];

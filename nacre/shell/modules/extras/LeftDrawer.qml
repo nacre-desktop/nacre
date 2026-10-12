@@ -48,10 +48,10 @@ Item {
     Item {
         id: heading
         x: 16
-        y: root.detached ? 0 : 16
-        visible: !root.detached
+        y: 16
+        visible: true
         width: Math.max(0, root.width - 32)
-        height: root.detached ? 0 : 34
+        height: 34
         BrandLogo {
             id: logo
             ai: true
@@ -67,14 +67,6 @@ Item {
             font.pointSize: 17
             color: NacreColours.palette.m3primary
         }
-        NacreDetachControls {
-            anchors.right: parent.right
-            anchors.rightMargin: 48
-            kind: "ai"
-            host: root
-            screenName: root.screen.name
-            visible: !root.detached && NacrePearls.enabled
-        }
         ActionButton {
             visible: !root.detached
             anchors.right: parent.right
@@ -88,7 +80,7 @@ Item {
         id: tabs
         x: 16
         anchors.top: heading.bottom
-        anchors.topMargin: root.detached ? 4 : 12
+        anchors.topMargin: 12
         spacing: 6
         ActionButton {
             text: "Chat"

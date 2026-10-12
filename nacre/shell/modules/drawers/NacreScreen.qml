@@ -19,6 +19,7 @@ NacreWindow {
     visible: !NacreHoverIntent.fullscreenFor(outputName) || inputController.modal
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.keyboardFocus: inputController.modal ? WlrKeyboardFocus.Exclusive : (flags.left || flags.osd || flags.dashboard) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    readonly property string dragRegions: NacrePanelDragRouting.regions
     property string registeredName: ""
     PersistentProperties {
         id: flags

@@ -1,6 +1,8 @@
 import QtQuick
 import "layout.js" as Layout
 import Quickshell
+import qs.services
+import qs.widgets
 import qs.config
 import qs.modules.bar.popouts as Popouts
 import qs.modules.dashboard as Dashboard
@@ -33,6 +35,42 @@ Item {
     function position(edge, item, offset) {
         return Layout.attached(edge, width, height, item.width, item.height, offset);
     }
+    function moved(item, position) {
+        const drag = NacrePearls.drag;
+        return drag?.host === item ? Qt.point(position.x + drag.dx, position.y + drag.dy) : position;
+    }
+    // Keep the actual popup alive during the native-window handoff.
+    readonly property var movingPanel: NacrePearls.drag?.screen === screen.name ? NacrePearls.drag.host : null
+    Rectangle {
+        visible: !!root.movingPanel
+        x: (root.movingPanel?.x ?? 0) - 1
+        y: (root.movingPanel?.y ?? 0) - 1
+        width: (root.movingPanel?.width ?? 0) + 2
+        height: (root.movingPanel?.height ?? 0) + 2
+        radius: 18
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop {
+                position: 0
+                color: Qt.alpha(NacreTokens.accent, .65)
+            }
+            GradientStop {
+                position: .5
+                color: Qt.alpha(NacreTokens.orientSecondary, .65)
+            }
+            GradientStop {
+                position: 1
+                color: Qt.alpha(NacreTokens.accent, .65)
+            }
+        }
+        NacreSurface {
+            anchors.fill: parent
+            anchors.margins: 1
+            radius: 17
+            color: NacreTokens.body
+        }
+        z: 0
+    }
     readonly property var leftPosition: position("left", left)
     readonly property var osdPosition: position("right", osd, session.width)
     readonly property var sessionPosition: position("right", session)
@@ -44,8 +82,25 @@ Item {
         enabled: root.visibilities.left
         screen: root.screen
         visibilities: root.visibilities
-        x: root.leftPosition.x
-        y: root.leftPosition.y
+        Behavior on x {
+            NumberAnimation {
+                duration: NacreTokens.motionEnabled && NacrePearls.drag?.released ? 180 : 0
+                easing.type: Easing.OutCubic
+            }
+        }
+        Behavior on y {
+            NumberAnimation {
+                duration: NacreTokens.motionEnabled && NacrePearls.drag?.released ? 180 : 0
+                easing.type: Easing.OutCubic
+            }
+        }
+        x: root.moved(left, root.leftPosition).x
+        y: root.moved(left, root.leftPosition).y
+        NacrePanelDrag {
+            kind: "ai"
+            host: left
+            screen: root.screen
+        }
         clip: true
     }
     Osd.NacreOsdPanel {
@@ -56,8 +111,25 @@ Item {
         onSectionRequested: section => root.visibilities.controlSection = section
         screen: root.screen
         visibility: root.visibilities.osd && !root.visibilities.session
-        x: root.osdPosition.x
-        y: root.osdPosition.y
+        Behavior on x {
+            NumberAnimation {
+                duration: NacreTokens.motionEnabled && NacrePearls.drag?.released ? 180 : 0
+                easing.type: Easing.OutCubic
+            }
+        }
+        Behavior on y {
+            NumberAnimation {
+                duration: NacreTokens.motionEnabled && NacrePearls.drag?.released ? 180 : 0
+                easing.type: Easing.OutCubic
+            }
+        }
+        x: root.moved(osd, root.osdPosition).x
+        y: root.moved(osd, root.osdPosition).y
+        NacrePanelDrag {
+            kind: "controls"
+            host: osd
+            screen: root.screen
+        }
         clip: true
     }
     Session.NacreSessionPanel {
@@ -73,8 +145,25 @@ Item {
         screenName: root.screen.name
         enabled: root.visibilities.dashboard
         visibilities: root.visibilities
-        x: root.dashboardPosition.x
-        y: root.dashboardPosition.y
+        Behavior on x {
+            NumberAnimation {
+                duration: NacreTokens.motionEnabled && NacrePearls.drag?.released ? 180 : 0
+                easing.type: Easing.OutCubic
+            }
+        }
+        Behavior on y {
+            NumberAnimation {
+                duration: NacreTokens.motionEnabled && NacrePearls.drag?.released ? 180 : 0
+                easing.type: Easing.OutCubic
+            }
+        }
+        x: root.moved(dashboard, root.dashboardPosition).x
+        y: root.moved(dashboard, root.dashboardPosition).y
+        NacrePanelDrag {
+            kind: "dashboard"
+            host: dashboard
+            screen: root.screen
+        }
         clip: true
     }
     Popouts.NacrePopupPanel {
@@ -98,8 +187,25 @@ Item {
         screenName: root.screen.name
         enabled: root.visibilities.launcher
         visibilities: root.visibilities
-        x: root.launcherPosition.x
-        y: root.launcherPosition.y
+        Behavior on x {
+            NumberAnimation {
+                duration: NacreTokens.motionEnabled && NacrePearls.drag?.released ? 180 : 0
+                easing.type: Easing.OutCubic
+            }
+        }
+        Behavior on y {
+            NumberAnimation {
+                duration: NacreTokens.motionEnabled && NacrePearls.drag?.released ? 180 : 0
+                easing.type: Easing.OutCubic
+            }
+        }
+        x: root.moved(launcher, root.launcherPosition).x
+        y: root.moved(launcher, root.launcherPosition).y
+        NacrePanelDrag {
+            kind: "launcher"
+            host: launcher
+            screen: root.screen
+        }
         clip: true
         z: 10
     }

@@ -16,11 +16,20 @@ client geometry. Each window has a unique, human-readable Nacre Pearl title; onl
 owned titles/processes are manipulated. A title rule floats them by default; tiling
 is a user choice. Never take an arbitrary focused window for placement or pinning.
 
-The grip owns its pointer grab. A snapshot preview crosses monitors while the
-original surface stays still; the real window is created/moved on release. Native
-system dragging remains available from the rest of the title bar. This avoids a
-fragile handoff of an already-running layer-shell drag to the compositor and avoids
-polling every floating window's geometry forever.
+Super+left-drag is routed by an owned Lua binding. It passes the press and release
+only inside the shell's published popup rectangles, with a mapped-layer/PID guard.
+Elsewhere it dispatches normal Hyprland window movement. Geometry is published on
+panel changes; no subprocess or IPC executes inside the pointer callback.
+
+A Qt DragHandler reserves Super and moves the original live item within its existing
+layer surface. Its footprint is excluded from the joined frame while lifted. On
+release, an ordinary window is created with the same body dimensions and exact
+logical coordinates; its 40-pixel header extends above the body. The original stays
+painted until placement completes and the destination has had two frame intervals
+to render. There is no screenshot ghost or second miniature panel. This respects
+the distinction between Wayland layer-shell and xdg-shell surfaces: their protocol
+roles cannot be changed during a mouse grab. A finite fallback releases the lift if
+placement fails. A short pull animates back without opening a window.
 
 View state is independent of shared providers. Launcher contexts share catalogues
 and system snapshots, with local query results. Provider visibility combines edge
@@ -30,7 +39,7 @@ existing default server and allow a fresh sidebar without restarting a busy work
 Drafts/accounts/auth remain private. Closing a view parks its session; it does not
 interrupt an assistant. Same-chat selections focus the existing owner.
 
-Acceptance: real pop-out/dock and short/canceled pulls on all four edges; two
+Acceptance: real Super-drag/dock and short/canceled pulls on all four edges; two
 independent launchers and dashboards; same-chat focus; retained drafts and busy
 workers; normal Escape/outside-click behavior; tiling/resizing/pinning; provider
 idleness; reduced motion; compositor placement and isolated geometry tests including

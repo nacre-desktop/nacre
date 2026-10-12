@@ -18,7 +18,7 @@ Item {
     readonly property bool fullScreenGallery: mode === "wallpaper" && (NacreWallpapers.preferences.layout || "carousel") !== "carousel"
     readonly property real viewportWidth: Math.max(0, parent?.width ?? 0)
     readonly property real viewportHeight: Math.max(0, parent?.height ?? 0)
-    readonly property real contentHeight: detached ? viewportHeight : fullScreenGallery ? Math.max(0, viewportHeight) : (page.item?.implicitHeight ?? 300) + (tools.visible ? 40 : 0)
+    readonly property real contentHeight: detached ? viewportHeight : fullScreenGallery ? Math.max(0, viewportHeight) : (page.item?.implicitHeight ?? 300)
     readonly property int galleryCount: mode === "wallpaper" ? page.item?.count ?? 0 : 0
     readonly property int galleryIndex: mode === "wallpaper" ? page.item?.currentIndex ?? -1 : -1
     property real presentedHeight: visibilities.launcher ? contentHeight : 0
@@ -47,19 +47,9 @@ Item {
         if (mode === "wallpaper" && page.item)
             page.item.move(delta);
     }
-    NacreDetachControls {
-        id: tools
-        kind: "launcher"
-        host: root
-        screenName: root.screenName
-        anchors.right: parent.right
-        anchors.rightMargin: 16
-        y: 4
-        visible: !root.detached && NacrePearls.enabled
-    }
     Loader {
         id: page
-        y: tools.visible ? 40 : 0
+        y: 0
         objectName: "launcherPage"
         active: root.visibilities.launcher || root.presentedHeight > 0
         width: root.width
