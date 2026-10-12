@@ -11,7 +11,7 @@ Item {
     property color colour: NacreColours.palette.m3primary
     readonly property Item child: caption
     readonly property var client: NacreCompositor.activeWindow
-    readonly property string displayTitle: String(client?.title || client?.wmClass || "Desktop")
+    readonly property string displayTitle: client ? NacreI18n.windowCaption(String(client.title || client.wmClass), client.wmClass) : NacreI18n.tr("desktop.title.empty", "Desktop")
     implicitWidth: glyph.width + caption.implicitWidth + row.spacing
     implicitHeight: 30
     Accessible.role: Accessible.StaticText

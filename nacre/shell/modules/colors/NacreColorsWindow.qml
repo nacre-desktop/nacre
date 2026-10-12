@@ -6,7 +6,7 @@ import qs.services
 
 FloatingWindow {
     id: root
-    title: NacreColorsApp.windowTitle
+    title: NacreColorsApp.nativeTitle
     readonly property var view: content.item
     visible: NacreColorsApp.visible
     minimumSize: Qt.size(760, 560)

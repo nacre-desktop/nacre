@@ -6,6 +6,8 @@ import "../modules/settings/settings-catalog.js" as Catalog
 
 Singleton {
     id: root
+    // Canonical native metadata is used by compositor rules; visible captions localize separately.
+    readonly property string nativeTitle: "Nacre Settings"
     readonly property string windowTitle: NacreI18n.tr("applications.settings.title", "Nacre Settings")
     property bool created: false
     property bool visible: false
@@ -14,7 +16,7 @@ Singleton {
     property int focusAttempts: 0
     property int activation: 0
     property string error: ""
-    readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Settings" && c.wmClass === "org.quickshell") || null
+    readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === root.nativeTitle && c.wmClass === "org.quickshell") || null
     readonly property bool active: visible && !!window && !window.minimized && (NacreCompositor.capabilities?.perOutputWorkspaces === true || (client?.workspace?.id ?? 1) > 0)
     readonly property string page: NacrePanelState.settingsPage
     onActiveChanged: NacrePanelState.settingsVisible = active

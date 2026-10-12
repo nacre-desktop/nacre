@@ -85,7 +85,7 @@ Column {
         NacreText {
             anchors.right: parent.right
             y: 0
-            text: row.usable ? Math.round(row.level * 100) + "%" : NacreI18n.tr("controlcenter.control-levels.text.unavailable", "Unavailable")
+            text: row.usable ? NacreI18n.number(Math.round(row.level * 100)) + "%" : NacreI18n.tr("controlcenter.control-levels.text.unavailable", "Unavailable")
             font.pointSize: 10
             color: NacreTokens.mutedInk
         }

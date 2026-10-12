@@ -14,14 +14,48 @@ ROOT = Path(__file__).resolve().parents[2]
 def references(root):
     result = set()
     files = (
-        list((root / "nacre/shell").rglob("*.qml"))
+        list((root / "nacre/login").glob("*.qml"))
+        + list((root / "nacre/shell").rglob("*.qml"))
         + list((root / "nacre/shell").rglob("*.js"))
         + list((root / "nacre/shell-tools").glob("*.py"))
+        + list((root / "hypr/scripts").glob("*.py"))
+        + list((root / "hypr/scripts").glob("*.sh"))
+        + list((root / "brain/web").glob("*.js"))
+        + list((root / "brain/web").glob("*.html"))
     )
     for path in files:
         text = path.read_text()
-        for match in re.finditer(r'\btr\(\s*["\']([^"\']+)["\']', text):
-            result.add(match[1])
+        result.update(
+            re.findall(
+                r'data-i18n-(?:node|title|placeholder|aria-label)="([^"]+)"', text
+            )
+        )
+        result.update(re.findall(r'nacre_message\s+"([^"]+)"', text))
+        stream = tokens(text)
+        for index, token in enumerate(stream):
+            if (
+                token.text != "tr"
+                or index + 1 >= len(stream)
+                or stream[index + 1].text != "("
+            ):
+                continue
+            depth = 0
+            first = []
+            for current in stream[index + 2 :]:
+                if depth == 0 and current.text in (",", ")"):
+                    break
+                if current.text in ("(", "[", "{"):
+                    depth += 1
+                elif current.text in (")", "]", "}"):
+                    depth -= 1
+                first.append(current)
+            if not any(current.text == "+" for current in first):
+                result.update(
+                    value
+                    for current in first
+                    if (value := literal(current))
+                    and re.fullmatch(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+", value)
+                )
         for match in re.finditer(
             r'\b(?:label|title|name|detail|description|confirm|setup|status)Id\s*:\s*"([^"]+)"',
             text,
@@ -61,7 +95,10 @@ def check(root=ROOT):
                 errors.append("Invalid plural forms: " + key)
         elif not isinstance(value, str):
             errors.append("English message must be text or plural forms: " + key)
-    for path in (root / "nacre/shell").rglob("*.qml"):
+    for path in [
+        *(root / "nacre/shell").rglob("*.qml"),
+        *(root / "nacre/login").glob("*.qml"),
+    ]:
         if path.name == "NacreI18n.qml":
             continue
         source = path.read_text()
@@ -115,4 +152,4 @@ if __name__ == "__main__":
         check()
     except ValueError as failure:
         print(failure, file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from failure

@@ -62,6 +62,8 @@ Item {
     Keys.onEscapePressed: query ? query = "" : NacreColorsApp.close()
     FileDialog {
         id: fileDialog
+        acceptLabel: NacreI18n.tr("files.dialog.open", "Open")
+        rejectLabel: NacreI18n.tr("files.dialog.cancel", "Cancel")
         title: NacreI18n.tr("colors.colors-view.title.choose-a-wallpaper", "Choose a wallpaper")
         nameFilters: [NacreI18n.tr("files.filter.wallpapers", "Wallpapers ({patterns})", {
                 patterns: "*.png *.jpg *.jpeg *.webp *.gif *.mp4 *.webm *.mkv"

@@ -249,7 +249,7 @@ NacreSurface {
                     {
                         id: "label",
                         label: NacreI18n.tr("launcher.app-browser.label.app-name", "App name"),
-                        placeholder: "My website"
+                        placeholder: NacreI18n.tr("launcher.app-browser.placeholder.my-website", "My website")
                     },
                     {
                         id: "url",
@@ -270,7 +270,7 @@ NacreSurface {
                     {
                         id: "message",
                         label: NacreI18n.tr("launcher.app-browser.label.message", "Message"),
-                        placeholder: "Time for a break"
+                        placeholder: NacreI18n.tr("launcher.app-browser.placeholder.time-for-a-break", "Time for a break")
                     }
                 ],
                 button: "Set reminder"

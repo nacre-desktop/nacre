@@ -46,9 +46,21 @@ def attachments(values):
             .resolve()
         )
         if not path.is_file():
-            raise ValueError("Attachment no longer exists: " + path.name)
+            raise ValueError(
+                tr(
+                    "helper.composer.attachment-no-longer-exists-value0",
+                    "Attachment no longer exists: {value0}",
+                    {"value0": path.name},
+                )
+            )
         if path.stat().st_size > 30 * 1024 * 1024:
-            raise ValueError("Attachment exceeds 30 MiB: " + path.name)
+            raise ValueError(
+                tr(
+                    "helper.composer.attachment-exceeds-30-mib-value0",
+                    "Attachment exceeds 30 MiB: {value0}",
+                    {"value0": path.name},
+                )
+            )
         if str(path) not in [r["path"] for r in result]:
             result.append(
                 dict(

@@ -2,6 +2,7 @@
 """Retire only the recognized private display-blanking power binding."""
 
 import datetime as dt
+from nacre_i18n import tr
 import os
 from pathlib import Path
 import tempfile
@@ -26,9 +27,11 @@ def prepare(home=None):
             continue
         if LEGACY not in text or path.is_symlink():
             raise RuntimeError(
-                "Private power binding differs; reconcile "
-                + str(path)
-                + " before deployment"
+                tr(
+                    "helper.power-button-policy.private-power-binding-differs-reconcile-value0-before-deployment",
+                    "Private power binding differs; reconcile {value0} before deployment",
+                    {"value0": str(path)},
+                )
             )
         clean = text.replace(LEGACY, "").replace(
             "-- Local preference: manual display blanking, keyboard/mouse wake, no idle lock.",

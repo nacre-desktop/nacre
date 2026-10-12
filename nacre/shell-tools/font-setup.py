@@ -77,15 +77,33 @@ def entries(home, manifest):
                 )
             target = canonical / name
             if target.is_symlink():
-                raise ValueError(f"Font asset is a symlink: {name}")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.font-asset-is-a-symlink-value0",
+                        "Font asset is a symlink: {value0}",
+                        {"value0": f"{name}"},
+                    )
+                )
             current = digest(target)
             if target.exists() and not target.is_file():
-                raise ValueError(f"Font asset is not a file: {name}")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.font-asset-is-not-a-file-value0",
+                        "Font asset is not a file: {value0}",
+                        {"value0": f"{name}"},
+                    )
+                )
             owned = known.get("files", {}).get(name)
             if current not in (None, row["sha256"], owned) or (
                 current is not None and owned is None and current != row["sha256"]
             ):
-                raise ValueError(f"Local font edit preserved: {name}")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.local-font-edit-preserved-value0",
+                        "Local font edit preserved: {value0}",
+                        {"value0": f"{name}"},
+                    )
+                )
             selected.append(
                 dict(
                     row,
@@ -109,7 +127,13 @@ def download(row):
     with urllib.request.urlopen(row["url"], timeout=30) as response:
         raw = response.read(row["size"] + 1)
     if len(raw) != row["size"] or hashlib.sha256(raw).hexdigest() != row["sha256"]:
-        raise ValueError(f"Upstream font checksum mismatch: {row['name']}")
+        raise ValueError(
+            tr(
+                "helper.font-setup.upstream-font-checksum-mismatch-value0",
+                "Upstream font checksum mismatch: {value0}",
+                {"value0": f"{row['name']}"},
+            )
+        )
     return raw
 
 
@@ -150,7 +174,13 @@ def restore_locked(home, transaction, refresh=True):
             operation["after"],
             operation["before"],
         ):
-            raise ValueError(f"Later font edit preserved: {path.name}")
+            raise ValueError(
+                tr(
+                    "helper.font-setup.later-font-edit-preserved-value0",
+                    "Later font edit preserved: {value0}",
+                    {"value0": f"{path.name}"},
+                )
+            )
         if operation["before"] is not None:
             raw = (transaction / "before" / relative).read_bytes()
             if hashlib.sha256(raw).hexdigest() != operation["before"]:
@@ -208,11 +238,23 @@ def apply(home, manifest, fetch=download, refresh=True):
                 len(raw) != row["size"]
                 or hashlib.sha256(raw).hexdigest() != row["sha256"]
             ):
-                raise ValueError(f"Font asset checksum mismatch: {row['name']}")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.font-asset-checksum-mismatch-value0",
+                        "Font asset checksum mismatch: {value0}",
+                        {"value0": f"{row['name']}"},
+                    )
+                )
             payloads[row["name"]] = raw
         for row in selected:
             if digest(row["target"]) != row["current"]:
-                raise ValueError(f"Font changed during staging: {row['name']}")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.font-changed-during-staging-value0",
+                        "Font changed during staging: {value0}",
+                        {"value0": f"{row['name']}"},
+                    )
+                )
         transaction = state / "backups" / uuid.uuid4().hex
         transaction.mkdir(parents=True, mode=0o700)
         operations = []

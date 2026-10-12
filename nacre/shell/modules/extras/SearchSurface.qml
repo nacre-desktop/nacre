@@ -15,7 +15,7 @@ Item {
             visibilities.launcher = false;
     }
     property string title
-    property string placeholder: "Search"
+    property string placeholder: NacreI18n.tr("extras.search-surface.placeholder.search", "Search")
     property int bodyHeight: 450
     property alias query: search.text
     default property alias contents: body.data

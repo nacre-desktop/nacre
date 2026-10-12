@@ -6,7 +6,7 @@ import qs.services
 
 FloatingWindow {
     id: root
-    title: NacreSettingsApp.windowTitle
+    title: NacreSettingsApp.nativeTitle
     objectName: "nacreSettingsWindow"
     readonly property var view: content.item
     readonly property string searchQuery: view?.query ?? content.savedState?.query ?? ""

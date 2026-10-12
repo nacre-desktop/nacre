@@ -5,6 +5,8 @@ import Quickshell.Io
 
 Singleton {
     id: root
+    // Canonical native metadata is used by compositor rules; visible captions localize separately.
+    readonly property string nativeTitle: "Nacre Welcome"
     readonly property string windowTitle: NacreI18n.tr("applications.welcome.title", "Nacre Welcome")
     property bool created: false
     property bool visible: false
@@ -34,7 +36,7 @@ Singleton {
     property var queue: []
     property int focusAttempts: 0
     readonly property bool busy: worker.running
-    readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Welcome" && c.wmClass === "org.quickshell") || null
+    readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === root.nativeTitle && c.wmClass === "org.quickshell") || null
     readonly property bool active: visible && !!window && !window.minimized && (NacreCompositor.capabilities?.perOutputWorkspaces === true || (client?.workspace?.id ?? 1) > 0)
     function prepareDemo() {
         if (demoStarting || demoSnapshot || NacreWallpapers.themeBusy || NacreWallpapers.selectedPath || NacreWallpapers.queuedPath)

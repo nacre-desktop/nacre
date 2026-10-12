@@ -270,8 +270,17 @@ NacreSettingsPage {
             width: parent.width
             text: {
                 const fixed = root.prefs.palettePreset && root.prefs.palettePreset !== "wallpaper";
-                const name = fixed ? NacreWallpapers.palettePresets.find(p => p.id === root.prefs.palettePreset)?.name : NacreWallpapers.paletteOptions.find(p => p.accent === NacreWallpapers.selectedAccent)?.name;
-                return NacreI18n.tr("ui.appearance-page.text.in-use", "In use: ") + (name || (fixed ? NacreI18n.tr("ui.appearance-page.text.fixed-palette", "Fixed palette") : NacreI18n.tr("ui.appearance-page.text.wallpaper-colors", "Wallpaper colors"))) + " · " + (root.prefs.paletteMode === "light" ? NacreI18n.tr("ui.appearance-page.text.light", "Light") : NacreI18n.tr("ui.appearance-page.text.dark", "Dark")) + (fixed ? "" : " · " + ((root.prefs.palettePersonality || (root.prefs.paletteHarmony ? "harmony" : "natural")).replace(/^./, s => s.toUpperCase())));
+                const rawName = fixed ? NacreWallpapers.palettePresets.find(p => p.id === root.prefs.palettePreset)?.name : NacreWallpapers.paletteOptions.find(p => p.accent === NacreWallpapers.selectedAccent)?.name;
+                const name = rawName ? NacreI18n.option("palette-name", rawName) : fixed ? NacreI18n.tr("ui.appearance-page.text.fixed-palette", "Fixed palette") : NacreI18n.tr("ui.appearance-page.text.wallpaper-colors", "Wallpaper colors");
+                const mode = NacreI18n.option("mode", root.prefs.paletteMode === "light" ? "light" : "dark");
+                return fixed ? NacreI18n.tr("palette.summary.fixed", "In use: {name} · {mode}", {
+                    name: name,
+                    mode: mode
+                }) : NacreI18n.tr("palette.summary.wallpaper", "In use: {name} · {mode} · {style}", {
+                    name: name,
+                    mode: mode,
+                    style: NacreI18n.option("personality", root.prefs.palettePersonality || (root.prefs.paletteHarmony ? "harmony" : "natural"))
+                });
             }
             wrapMode: Text.Wrap
             font.pointSize: 11

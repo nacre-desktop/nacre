@@ -122,7 +122,13 @@ def preflight():
     if result.returncode not in (0, 2) and not (
         command[0] == "pacman" and result.returncode == 1 and not result.stderr.strip()
     ):
-        raise RuntimeError("Update preflight failed: " + result.stderr.strip())
+        raise RuntimeError(
+            tr(
+                "helper.updates.update-preflight-failed-value0",
+                "Update preflight failed: {value0}",
+                {"value0": result.stderr.strip()},
+            )
+        )
     return qt_update_status(result.stdout)
 
 

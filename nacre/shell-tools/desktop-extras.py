@@ -609,9 +609,11 @@ def main():
             json.dumps(
                 dict(
                     action=args.action,
-                    error="Could not complete "
-                    + args.action
-                    + ". Check the selected item or try again.",
+                    error=tr(
+                        "helper.desktop-extras.could-not-complete-value0-check-the-selected-item-or-try-again",
+                        "Could not complete {value0}. Check the selected item or try again.",
+                        {"value0": args.action},
+                    ),
                     query=payload.get("query", ""),
                 )
             )

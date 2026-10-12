@@ -189,7 +189,7 @@ Flickable {
                 spacing: 14
                 NacreText {
                     Layout.preferredWidth: 90
-                    text: Qt.formatDate(new Date(parent.modelData.date + "T12:00:00"), "ddd d")
+                    text: NacreI18n.date(new Date(parent.modelData.date + "T12:00:00"), "ddd d")
                     font.pointSize: 10
                 }
                 NacreIcon {

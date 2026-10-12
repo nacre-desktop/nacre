@@ -73,7 +73,7 @@ NacreSettingsPage {
                     model: [1, 1.25, 1.5, 1.75, 2, 2.5, 3]
                     ActionButton {
                         required property real modelData
-                        text: Math.round(modelData * 100) + "%"
+                        text: NacreI18n.number(Math.round(modelData * 100)) + "%"
                         selected: monitor.modelData.scale === modelData
                         enabled: !root.blocked
                         onClicked: root.edit(monitor.modelData.name, modelData, "")

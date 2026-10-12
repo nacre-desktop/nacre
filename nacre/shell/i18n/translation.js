@@ -39,17 +39,17 @@ function pseudo(text) {
     });
     return "[" + result + " " + "~".repeat(Math.ceil(length * .4)) + "]";
 }
-function format(text, args) {
-    return text.replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (match, key) => Object.prototype.hasOwnProperty.call(args, key) ? String(args[key]) : match);
+function format(text, args, numberFormatter) {
+    return text.replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (match, key) => Object.prototype.hasOwnProperty.call(args, key) ? (numberFormatter && typeof args[key] === "number" ? numberFormatter(args[key]) : String(args[key])) : match);
 }
-function translate(messages, language, id, fallback, args) {
+function translate(messages, language, id, fallback, args, numberFormatter) {
     args = args || {};
     let message = messages[id] === undefined ? fallback : messages[id];
     if (message && typeof message === "object")
         message = Number(args.count) === 1 ? message.one ?? message.other : message.other;
     if (typeof message !== "string")
         message = typeof fallback === "string" ? fallback : fallback?.other || "";
-    return format(language === "pseudo" ? pseudo(message) : message, args);
+    return format(language === "pseudo" ? pseudo(message) : message, args, numberFormatter);
 }
 function localize(value, tr) {
     if (Array.isArray(value))

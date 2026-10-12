@@ -65,7 +65,7 @@ NacreWindow {
             anchors.right: parent.right
             anchors.rightMargin: 18
             y: 12
-            text: root.muted ? NacreI18n.tr("osd.level-notice.text.muted", "Muted") : Math.round(root.value * 100) + "%"
+            text: root.muted ? NacreI18n.tr("osd.level-notice.text.muted", "Muted") : NacreI18n.number(Math.round(root.value * 100)) + "%"
             font.pointSize: 11
             color: NacreTokens.mutedInk
         }

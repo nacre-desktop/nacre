@@ -6,11 +6,14 @@ import QtQuick
 import qs.services
 
 ShellRoot {
+    id: root
+    // Compositor rule identifier; Nacre UI surfaces translate this caption.
+    readonly property string nativeTitle: "Nacre lock screen preview"
     FloatingWindow {
         id: window
         objectName: "lockPreviewWindow"
         visible: true
-        title: NacreI18n.tr("shell.lock-preview.title.nacre-lock-screen-preview", "Nacre lock screen preview")
+        title: root.nativeTitle
         implicitWidth: 1280
         implicitHeight: 800
         color: NacreColours.palette.m3surface

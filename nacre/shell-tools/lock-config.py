@@ -11,15 +11,19 @@ import compositor
 
 
 def block(widget, monitor="", **options):
-    return (
-        widget
-        + " {\n    monitor = "
-        + monitor
-        + "\n"
-        + "".join(
-            "    " + key + " = " + str(value) + "\n" for key, value in options.items()
-        )
-        + "}\n"
+    return tr(
+        "helper.lock-config.value0-monitor-value1-value2",
+        "{value0} {\n    monitor = {value1}\n{value2}}\n",
+        {
+            "value0": widget,
+            "value1": monitor,
+            "value2": "".join(
+                (
+                    "    " + key + " = " + str(value) + "\n"
+                    for key, value in options.items()
+                )
+            ),
+        },
     )
 
 
@@ -87,7 +91,11 @@ def render(
             return str(round((x - 720) * scale)) + ", " + str(round((405 - y) * scale))
 
         def rgba(key, alpha="ff"):
-            return "rgba(" + colors[key] + alpha + ")"
+            return tr(
+                "helper.lock-config.rgba-value0-value1",
+                "rgba({value0}{value1})",
+                {"value0": colors[key], "value1": alpha},
+            )
 
         def label(text, x, y, size, role="onSurface", name=name, scale=scale, **extra):
             return block(

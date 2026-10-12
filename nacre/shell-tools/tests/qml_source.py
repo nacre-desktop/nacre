@@ -82,9 +82,18 @@ QtObject {
     property var options: OPTIONS
     function option(domain, key) { const row = options[domain]?.[key]; return row ? tr(row.id, row.fallback) : key; }
     function modelLabel(row, key) { return row[key + "Id"] ? tr(row[key + "Id"], row[key]) : row[key]; }
+    function applicationName(name) { const row=options["application-name"]?.[name]; return row?tr(row.id,row.fallback):name; }
+    function applicationRow(row) { const copy=Object.assign({},row);if(row.brand&&/^nacre-/.test(row.id)){copy.name=applicationName(row.name);copy.label=copy.name}return copy; }
+    function windowCaption(value, className) {
+        if(className!=="org.quickshell"&&!String(className||"").startsWith("nacre-"))return value;
+        const pearl=/^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) ([0-9]+)$/.exec(value);
+        return pearl?tr("pearl.window.title","Nacre Pearl {panel} {number}",{panel:tr("pearl.kind."+pearl[1].toLowerCase(),pearl[1]),number:pearl[2]}):applicationName(value);
+    }
     function tr(id, fallback, args = {}) { return Translation.translate(messages, language, id, fallback, args); }
     function localize(value) { return Translation.localize(value, tr); }
     function number(value, decimals = 0) { return Number(value).toLocaleString(locale, "f", decimals); }
+    function displayValue(value) { return language === "pseudo" && /[A-Za-z]/.test(value) ? Translation.pseudo(value) : value; }
+    function dayName(day, format = Locale.ShortFormat) { return displayValue(locale.dayName(day, format)); }
     function dateTime(value, format = Locale.ShortFormat) { return new Date(value).toLocaleString(locale, format); }
     function date(value, format = Locale.ShortFormat) { return new Date(value).toLocaleDateString(locale, format); }
     function time(value, format = Locale.ShortFormat) { return new Date(value).toLocaleTimeString(locale, format); }

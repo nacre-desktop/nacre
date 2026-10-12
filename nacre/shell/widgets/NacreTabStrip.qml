@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 
 Row {
     id: root
@@ -17,7 +18,7 @@ Row {
             NacreText {
                 id: label
                 anchors.centerIn: parent
-                text: tab.modelData.name
+                text: NacreI18n.modelLabel(tab.modelData, "name")
                 font.pointSize: 11
                 color: root.current === tab.modelData.id ? NacreTokens.ink : NacreTokens.mutedInk
             }
@@ -32,7 +33,7 @@ Row {
             }
             NacreInteraction {
                 radius: 4
-                accessibleName: tab.modelData.name
+                accessibleName: NacreI18n.modelLabel(tab.modelData, "name")
                 function onClicked() {
                     root.chosen(tab.modelData.id);
                 }

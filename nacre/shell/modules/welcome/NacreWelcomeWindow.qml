@@ -6,7 +6,7 @@ import qs.services
 
 FloatingWindow {
     id: root
-    title: NacreWelcomeApp.windowTitle
+    title: NacreWelcomeApp.nativeTitle
     visible: NacreWelcomeApp.visible
     minimumSize: Qt.size(720, 540)
     implicitWidth: Math.min(1020, Math.max(720, (screen?.width || 1920) * .64))

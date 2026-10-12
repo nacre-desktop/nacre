@@ -87,7 +87,9 @@ Singleton {
     readonly property real rotationAnchorMs: Math.max(media.appliedAtMs || 0, NacrePresentation.active.changedAtMs || 0, preferences.rotationAnchorMs || 0) || rotationStartupMs
     readonly property real rotationDueMs: Math.max(rotationAnchorMs + rotationIntervalMs, rotationRetryMs)
     readonly property string rotationPauseReason: WallpaperPlayback.sleeping ? "asleep" : WallpaperPlayback.locked ? "locked" : pickerOpen ? "wallpaper picker open" : appearanceOpen ? "Settings open" : welcomeDemoOpen ? "Welcome demo open" : rotationPool.length < 2 ? "fewer than two wallpapers" : !rotationReady ? "applying changes" : ""
-    readonly property string rotationStatus: !preferences.rotationEnabled ? "Rotation is off" : rotationPauseReason ? "Paused: " + rotationPauseReason + ". The scheduled change is preserved." : "Next wallpaper at " + Qt.formatTime(new Date(rotationDueMs), "hh:mm")
+    readonly property string rotationStatus: !preferences.rotationEnabled ? NacreI18n.tr("wallpaper.rotation.off", "Rotation is off") : rotationPauseReason ? NacreI18n.option("rotation-pause", rotationPauseReason) : NacreI18n.tr("wallpaper.rotation.next", "Next wallpaper at {time}", {
+        time: NacreI18n.time(new Date(rotationDueMs), "hh:mm")
+    })
 
     function localPath(value) {
         return typeof value === "string" && value.startsWith("/") && !value.includes("\0") && value.length <= 16384;
