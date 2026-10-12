@@ -7,7 +7,7 @@ wallpaper fixtures, compositor, cache state, and completion predicates afterward
 Do not benchmark by changing a maintainer's private profile or preferences.
 
 `tools/performance.py --pid SHELL_PID --output /tmp/before.json` samples for five
-minutes at 50 ms intervals. It records each process's CPU and RSS, distributions
+minutes at 50 ms intervals. It records each process's CPU and resident memory, distributions
 for the shell and aggregate, and Python launches in each minute. The default scope
 is that shell's descendants plus same-user detached workers under the deployed
 Nacre shell and brain directories. `--descendants-only` isolates a test shell.
@@ -16,9 +16,22 @@ reuse; a shell restart invalidates the run.
 
 CPU is percent of **one core**: 100% means one fully occupied core, not the whole
 machine. `/proc/PID/stat` user/system ticks are divided by `SC_CLK_TCK` and elapsed
-monotonic seconds. RSS is resident pages times `SC_PAGE_SIZE`, in MiB (2^20 bytes).
+monotonic seconds. RSS uses `smaps_rollup` where available and falls back to resident pages times
+`SC_PAGE_SIZE`, in MiB (2^20 bytes).
 Summing RSS counts shared pages in each process; it is not exclusive physical
-memory. Short-lived helpers may be missed by sampling, including their CPU; the
+memory.
+
+Report version 2 also records PSS (proportional set size), USS (unique set size),
+and proportional swap from `/proc/PID/smaps_rollup`. PSS apportions shared pages
+between their users; USS sums `Private_Clean` and `Private_Dirty`. These resident
+metrics exclude swapped pages, unmapped GPU allocations and hugetlb accounting.
+See the [kernel proc documentation](https://docs.kernel.org/filesystems/proc.html).
+Permission errors, malformed rollups and vanished processes produce unknown
+values, never zero. Aggregate PSS/USS is unknown if any selected process lacks a
+rollup; `memory_valid_samples` supplies coverage. Process start time is checked
+again after the rollup to reject PID reuse. Rollups are read only for the selected
+processes; use a 250 ms interval for memory scenarios to reduce sampling overhead.
+ Short-lived helpers may be missed by sampling, including their CPU; the
 live spawn count is explicitly a lower bound. Use a tracer when available, or the
 launch logger below, for a complete count of the covered interpreter launches.
 
@@ -275,3 +288,33 @@ need its pinned Orient and Pillow packages; the remaining migrated helpers use
 the standard library. A system `python3` can successfully serve other requests
 while failing artwork extraction, so media equivalence tests use a fresh isolated
 runtime with the candidate Orient source and no inherited `PYTHONPATH`.
+
+## Phase C: panel and wallpaper memory (2026-10-12)
+
+The ~555 MiB Phase A RSS figure is a warmed process on a different output setup.
+It must not be treated as 555 MiB of exclusive RAM or compared with a fresh shell.
+This investigation uses PSS/USS and a sequential panel matrix in a disposable
+home, with both a private writable mode-0700 XDG runtime directory and a private
+D-Bus session. No live settings, account permissions or wallpaper were changed.
+
+`NacreIdleLoader` now retains the launcher content for five seconds after its
+closing animation. Rapid reopening reuses the shell and delegates; idle content
+is destroyed. Launcher reset still runs on each open. Floating Settings, Colors
+and Welcome keep their window identity, position and size, but release content
+five seconds after closing. Search, page, scroll, expansion and color-inspection
+state are captured and restored; backend operations and unsaved options keep
+existing service owners. Dashboard pages already unload and AI session/draft
+ownership is intentionally retained.
+
+The previous full-screen wallpaper poster gets the same five-second reverse
+navigation window and is then released. The current poster and the old poster
+needed for an active crossfade remain intact. Wallpaper decodes already target
+output dimensions; ordinary preview/icon decodes already use bounded sourceSize.
+Video implementations are separate files loaded by URL only while video is
+needed, so a fresh static shell avoids Qt Multimedia registration. After video
+has been used, library mappings may remain; this is not a promise to unload DSOs.
+
+Native tests cover reuse, cancellation of an idle release on reopen, real Loader
+destruction, view state restoration without Apply, changing video without
+reopening, muted first frames, crossfade/reverse navigation and expired poster
+slots. No layout, colors, visible strings or private preferences change.

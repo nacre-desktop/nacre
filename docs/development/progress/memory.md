@@ -2,25 +2,29 @@
 
 ## Done
 
-- Isolated branch `perf/shell-memory` based on main `5483399`.
-- Inspected lifecycle and image paths; baseline RSS figure was warmed, not fresh.
-- Imported the measurement tool/documentation from open PR #4; helper migration
-  is outside this branch. Extending rollup accounting before optimizations.
+- Final branch `perf/shell-memory-budget`, isolated worktree, rebased on merged
+  main `fa37a28` (helper/compositor/hardware work included). Normal push guard
+  passes; no hook or history changes. Earlier `perf/shell-memory` is a checkpoint.
+- Added tested rollup PSS/USS/SwapPss accounting and sample coverage; retained
+  merged performance tests/documentation during the add/add rebase.
+- Five-second launcher reuse, floating-app content unloading with saved view
+  state, old-poster idle trimming, and lazy video file loading implemented.
+- Floating window identity/geometry and backend ownership stay intact. Search
+  IPC remains safe after content release. No visual/private preference changes.
+- Full local `tools/check.py` passes 621 tests plus lint/format/native checks.
+- Exploratory matched run: all-panels idle 359.5 -> 342.7 MiB PSS; launcher
+  acknowledged median 64.3 -> 48.0 ms. Final matching main-based runs underway.
 
 ## Next
 
-- Test PSS/USS accounting and record fresh/panel/static/video/output scenarios in
-  a disposable nested compositor and HOME.
-- Candidate implements five-second launcher/content reuse, idle poster trimming,
-  and lazy video-file loading. Floating window geometry/identity and view state
-  are retained. Native lifetime/poster/video tests pass.
-- Finish comparable richer-fixture measurements and validate actual view reopening.
-- Compare before/after, run source/native tests and CI, rebase and merge one PR.
+- Finish final main-based static/video/two-output matrix and valid launcher
+  component/catalog/icon breakdown; profile remaining native allocations.
+- Record final tables and a scoped memory budget in performance.md.
+- Push documentation milestone, create one PR, verify CI, rebase and merge.
 
 ## Open questions
 
-- How much of ~555 MiB RSS is private versus shared library/renderer memory?
-- What is the memory/latency tradeoff of a short launcher reuse window?
-- Does lazy video file loading avoid Qt Multimedia on a fresh static shell?
+- How much native allocator/renderer memory remains after video destruction?
+- What memory cost does five-second launcher reuse have under a populated catalog?
 
-No live settings or personal preferences have been changed.
+All raw fixtures/logs are private disposable artifacts; no live deployment.
