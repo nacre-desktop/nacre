@@ -417,7 +417,7 @@ NacreSettingsPage {
     }
     NacreSettingsSection {
         title: "Workspace bar"
-        description: "Quiet window symbols beside each pearl. Turn them off for a pearls-only bar."
+        description: "Window symbols beside the active pearl. Turn them off for a numbered pearls-only bar."
         NacreSettingToggle {
             label: "Show window symbols"
             setting: "workspaceWindowHints"

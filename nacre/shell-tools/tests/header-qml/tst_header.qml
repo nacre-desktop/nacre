@@ -14,6 +14,10 @@ TestCase {
         NacreWorkspaceRow {}
     }
     Component {
+        id: pearlView
+        NacreWorkspacePearl {}
+    }
+    Component {
         id: symbolIcon
         NacreWorkspaceAppIcon {}
     }
@@ -58,6 +62,18 @@ TestCase {
         verify(!view.activate(8));
         verify(!view.activate(NaN));
         compare(NacreHyprland.requests.length, 1);
+    }
+    function test_numbered_pearls_use_readable_ink_for_dark_and_pale_accents() {
+        const pearl = createTemporaryObject(pearlView, test, {
+            workspaceId: 12,
+            occupied: true,
+            accent: "#000000"
+        });
+        const number = findChild(pearl, "workspaceNumber");
+        compare(number.text, "12");
+        compare(number.color, Qt.color("#ffffff"));
+        pearl.accent = "#ffffff";
+        compare(number.color, Qt.color("#000000"));
     }
     function test_symbol_classification_and_pearls_only_toggle() {
         for (const sample of [
@@ -124,8 +140,11 @@ TestCase {
         const selected = findChild(view, "nacreWorkspace2");
         tryVerify(() => view.activeCell === selected);
         verify(findChild(view, "activeWorkspacePearl").visible);
-        compare(findChild(view, "activeWorkspacePearl").width, 20);
-        compare(findChild(findChild(view, "nacreWorkspace1"), "workspacePearl").width, 10);
+        compare(findChild(view, "activeWorkspacePearl").width, 22);
+        const empty = findChild(findChild(view, "nacreWorkspace1"), "workspacePearl");
+        compare(empty.width, 18);
+        compare(findChild(empty, "workspaceNumber").text, "1");
+        compare(findChild(findChild(view, "activeWorkspacePearl"), "workspaceNumber").text, "2");
         NacreHyprland.clients = [
             {
                 workspace: {
@@ -151,6 +170,7 @@ TestCase {
         NacreHyprland.activeWsId = 8;
         tryVerify(() => !!findChild(view, "nacreWorkspace8"));
         verify(findChild(view, "nacreWorkspace8").selected);
+        tryCompare(findChild(findChild(view, "activeWorkspacePearl"), "workspaceNumber"), "text", "8");
         NacreHyprland.activeWsId = 1;
         tryCompare(view, "workspaceIds", [1, 2, 3, 4, 5]);
         NacreBar.workspaceIcons = ["language"];
@@ -169,16 +189,16 @@ TestCase {
                     title: "Window " + index
                 }));
         tryVerify(() => !!view.activeCell);
-        compare(view.activeCell.shownWindows.length, 5);
-        compare(view.activeCell.overflow, 0);
-        verify(!findChild(view.activeCell, "workspaceOverflow").visible);
+        compare(view.activeCell.shownWindows.length, 3);
+        compare(view.activeCell.overflow, 2);
+        verify(findChild(view.activeCell, "workspaceOverflow").visible);
         const stable = findChild(view, "nacreWorkspace1");
         NacreHyprland.activeWsId = 4;
         tryVerify(() => view.activeCell?.workspaceId === 4);
         compare(findChild(view, "nacreWorkspace1"), stable);
         compare(view.activeCell.shownWindows.length, 0);
-        compare(findChild(view, "nacreWorkspace2").shownWindows.length, 5);
-        verify(findChild(findChild(view, "nacreWorkspace2"), "workspaceApps").visible);
+        compare(findChild(view, "nacreWorkspace2").shownWindows.length, 0);
+        verify(!findChild(findChild(view, "nacreWorkspace2"), "workspaceApps").visible);
         verify(view.scroll(-60));
         compare(NacreHyprland.requests.length, 0);
         verify(view.scroll(-60));
@@ -232,9 +252,12 @@ TestCase {
         compare(capsule.x, view.activeCell.x);
         NacreHyprland.activeWsId = 2;
         tryVerify(() => view.activeCell?.workspaceId === 2);
-        const inactive = findChild(view, "nacreWorkspace3");
-        mouseClick(inactive, 41, 15);
-        compare(NacreHyprland.requests[0], "focus 0x20");
+        const active = findChild(view, "nacreWorkspace2");
+        tryCompare(active, "width", 54);
+        wait(250);
+        compare(findChild(view, "nacreWorkspace3").x, active.x + active.width + 2);
+        mouseClick(active, 41, 15);
+        compare(NacreHyprland.requests[0], "focus 0x10");
     }
     function test_header_display_no_commands_and_status_geometry() {
         const view = createTemporaryObject(header, test);

@@ -14,32 +14,18 @@ Item {
     readonly property bool showWindowHints: DesktopSettings.data.workspaceWindowHints !== false
     readonly property bool customIcons: NacreBar.workspaceIcons.some(icon => !!icon)
     readonly property var iconAllocation: {
-        if (!showWindowHints) {
-            const empty = {};
-            for (const id of displayIds)
-                empty[id] = 0;
-            return empty;
-        }
-        const counts = displayIds.map(id => NacreHyprland.clients.filter(client => client.workspace?.id === id).length);
-        const base = displayIds.length * 32 + Math.max(0, displayIds.length - 1) * 2 + counts.filter(count => count > 0).length * 4;
-        const capacity = Math.max(0, Math.floor((availableWidth - base) / 18));
-        const shown = counts.map(count => Math.min(count, capacity));
-        function width() {
-            return base + shown.reduce((sum, count, index) => sum + count * 18 + (count < counts[index] ? 20 : 0), 0);
-        }
-        while (width() > availableWidth) {
-            let largest = -1;
-            for (let index = 0; index < shown.length; index++) {
-                if (shown[index] > 0 && (largest < 0 || shown[index] > shown[largest] || (shown[index] === shown[largest] && displayIds[largest] === NacreHyprland.activeWsId)))
-                    largest = index;
-            }
-            if (largest < 0)
-                break;
-            shown[largest]--;
-        }
         const result = {};
-        for (let index = 0; index < displayIds.length; index++)
-            result[displayIds[index]] = shown[index];
+        for (const id of displayIds)
+            result[id] = 0;
+        if (!showWindowHints)
+            return result;
+        const active = NacreHyprland.activeWsId;
+        const count = NacreHyprland.clients.filter(client => client.workspace?.id === active).length;
+        const base = displayIds.length * 32 + Math.max(0, displayIds.length - 1) * 2 + (count ? 4 : 0);
+        let shown = Math.min(3, count, Math.max(0, Math.floor((availableWidth - base) / 18)));
+        while (shown > 0 && base + shown * 18 + (shown < count ? 20 : 0) > availableWidth)
+            shown--;
+        result[active] = shown;
         return result;
     }
     readonly property int iconLimit: Math.max(0, ...Object.values(iconAllocation))
@@ -121,7 +107,7 @@ Item {
         width: Math.max(0, beads.width - 32)
         height: 1
         visible: !root.customIcons
-        opacity: .28
+        opacity: .12
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop {
@@ -157,13 +143,13 @@ Item {
                 readonly property bool occupied: windowCount > 0
                 readonly property bool urgent: windows.some(client => client.urgent === true)
                 readonly property var shownWindows: windows.slice(0, root.iconAllocation[workspaceId] ?? 0)
-                readonly property int overflow: root.showWindowHints ? Math.max(0, windowCount - shownWindows.length) : 0
+                readonly property int overflow: selected && root.showWindowHints ? Math.max(0, windowCount - shownWindows.length) : 0
                 readonly property color accent: root.tint(index, workspaceId)
                 objectName: "nacreWorkspace" + workspaceId
                 function settleMotion() {
                     cellResize.complete();
                 }
-                width: root.customIcons ? 46 : 32 + shownWindows.length * 18 + (overflow ? 20 : 0) + (windowCount && root.showWindowHints ? 4 : 0)
+                width: root.customIcons ? 46 : 32 + shownWindows.length * 18 + (overflow ? 20 : 0) + (selected && windowCount && root.showWindowHints ? 4 : 0)
                 height: 30
                 radius: 15
                 color: root.customIcons && selected ? accent : pointer.hovered ? Qt.alpha(accent, .10) : "transparent"
@@ -184,6 +170,7 @@ Item {
                     y: (cell.height - height) / 2
                     visible: !root.customIcons && !cell.selected
                     accent: cell.accent
+                    workspaceId: cell.workspaceId
                     occupied: cell.occupied
                     urgent: cell.urgent
                 }
@@ -222,7 +209,7 @@ Item {
                 Row {
                     x: 33
                     objectName: "workspaceApps"
-                    visible: !root.customIcons && root.showWindowHints
+                    visible: !root.customIcons && cell.selected && root.showWindowHints
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 3
                     Repeater {
@@ -279,7 +266,7 @@ Item {
         radius: 14
         color: Qt.tint(NacreColours.palette.m3surfaceContainer, Qt.alpha(root.activeCell?.accent ?? NacreColours.palette.m3primary, .15))
         border.width: 1
-        border.color: Qt.alpha(root.activeCell?.accent ?? NacreColours.palette.m3primary, .5)
+        border.color: Qt.alpha(root.activeCell?.accent ?? NacreColours.palette.m3primary, .24)
         Behavior on x {
             enabled: root.motion
             NumberAnimation {
@@ -298,8 +285,9 @@ Item {
         }
         NacreWorkspacePearl {
             objectName: "activeWorkspacePearl"
-            x: 6
+            x: 5
             anchors.verticalCenter: parent.verticalCenter
+            workspaceId: root.activeCell?.workspaceId ?? 0
             current: true
             occupied: true
             urgent: root.activeCell?.urgent ?? false
