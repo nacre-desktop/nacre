@@ -114,27 +114,13 @@ class CompositorCompatibilityTests(unittest.TestCase):
     def test_performance_options_and_reset_keep_existing_values(self):
         service = Mock()
         compat.main(["performance", "true"], service)
-        service.set_options.assert_called_once_with(
-            {
-                "animations": {"enabled": False},
-                "decoration": {
-                    "shadow": {"enabled": False},
-                    "blur": {"enabled": False},
-                    "active_opacity": 1,
-                    "inactive_opacity": 1,
-                    "fullscreen_opacity": 1,
-                    "rounding": 0,
-                },
-                "general": {"gaps_in": 0, "gaps_out": 0, "border_size": 1},
-            }
-        )
+        service.set_performance.assert_called_once_with(True)
         service.reset_mock()
         compat.main(["performance", "false"], service)
-        service.reload.assert_called_once_with()
-        service.set_options.assert_not_called()
+        service.set_performance.assert_called_once_with(False)
         service.reset_mock()
         compat.main(["animations", "true"], service)
-        service.set_options.assert_called_once_with({"animations": {"enabled": True}})
+        service.set_animations.assert_called_once_with(True)
 
     def test_bad_boolean_unknown_command_and_service_errors_are_not_executed(self):
         for args in (

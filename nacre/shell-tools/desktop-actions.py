@@ -8,6 +8,8 @@ from pathlib import Path
 import re
 import subprocess
 
+import compositor
+
 HOME = Path.home()
 PROFILE_SPEC = importlib.util.spec_from_file_location(
     "desktop_profile_policy", Path(__file__).with_name("profile-policy.py")
@@ -23,6 +25,22 @@ def run(command, default=None, timeout=10):
             return default
         raise RuntimeError(result.stderr.strip() or "Desktop command failed")
     return result.stdout.strip()
+
+
+def compositor_windows():
+    try:
+        return compositor.query("windows", timeout=10)
+    except subprocess.CalledProcessError:
+        return []
+
+
+def compositor_action(name, *args, **options):
+    try:
+        return getattr(compositor, name)(*args, timeout=10, **options)
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(
+            (error.stderr or "").strip() or "Desktop command failed"
+        ) from error
 
 
 def launch(command):
@@ -98,7 +116,7 @@ def action(name, value=""):
     }
     if name in actions:
         if name == "tasks":
-            clients = json.loads(run(["hyprctl", "clients", "-j"], "[]"))
+            clients = compositor_windows()
             old = next((c for c in clients if c["class"] == "nacre-ai-dashboard"), None)
             if old:
                 return action("focus", old["address"])
@@ -136,24 +154,12 @@ def action(name, value=""):
         num = int(value)
         if num not in range(1, 11):
             raise ValueError("Invalid workspace")
-        run(
-            [
-                "hyprctl",
-                "eval",
-                f"hl.dispatch(hl.dsp.focus({{workspace={num},on_current_monitor=true}}))",
-            ]
-        )
+        compositor_action("switch_workspace", num, current_monitor=True)
         return
     if name == "focus":
         if not re.fullmatch(r"0x[0-9a-fA-F]+", value):
             raise ValueError("Invalid window")
-        run(
-            [
-                "hyprctl",
-                "eval",
-                'hl.dispatch(hl.dsp.focus({window="address:' + value + '"}))',
-            ]
-        )
+        compositor_action("focus_window", value)
         return
     if name == "app-windows":
         ids = json.loads(value)
@@ -161,7 +167,7 @@ def action(name, value=""):
             isinstance(i, str) and re.fullmatch(r"0x[0-9a-fA-F]+", i) for i in ids
         ):
             raise ValueError("Invalid window group")
-        clients = json.loads(run(["hyprctl", "clients", "-j"], "[]"))
+        clients = compositor_windows()
         windows = sorted(
             (c for c in clients if c["address"] in ids),
             key=lambda c: (c["workspace"]["id"], c["title"]),

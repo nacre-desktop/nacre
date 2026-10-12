@@ -15,6 +15,8 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import compositor
+
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre/shell/extras"
 
@@ -123,20 +125,12 @@ def resume(key, terminal=False):
     item = records[key]
     if not terminal:
         helper = runpy.run_path(str(Path(__file__).with_name("window-chat-title.py")))
-        for client in json.loads(run(["hyprctl", "clients", "-j"], text=True).stdout):
+        for client in compositor.query("windows", timeout=12):
             if (
                 client["class"] == "nacre-ai-task"
                 and helper["resolve_info"](client["pid"]).get("threadId") == item["id"]
             ):
-                run(
-                    [
-                        "hyprctl",
-                        "eval",
-                        "hl.dispatch(hl.dsp.focus({window="
-                        + json.dumps("address:" + client["address"])
-                        + "}))",
-                    ]
-                )
+                compositor.focus_window(client["address"], timeout=12)
                 return
         launch(
             [
@@ -433,7 +427,7 @@ def bindings():
             source[(record["submap"], key)] = desc
             source_routes[(record["submap"], key)] = menu_route(command)
     result = []
-    for b in json.loads(run(["hyprctl", "binds", "-j"], text=True).stdout):
+    for b in compositor.query("bindings", timeout=12):
         parts = [
             name
             for flag, name in [(64, "SUPER"), (4, "CTRL"), (8, "ALT"), (1, "SHIFT")]
