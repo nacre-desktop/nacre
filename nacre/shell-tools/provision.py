@@ -4,6 +4,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -69,8 +70,13 @@ def main():
         raise RuntimeError(
             "Initialize Orient with git submodule update --init --recursive"
         )
+    pillow = json.loads((ROOT.parents[1] / "dependencies.lock.json").read_text())[
+        "python"
+    ]["pillow"]
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", pillow):
+        raise ValueError("Invalid locked Pillow version")
     identity = hashlib.sha256(
-        (source_digest(source) + source_digest(engine)).encode()
+        (source_digest(source) + source_digest(engine) + pillow).encode()
     ).hexdigest()
     marker = RUNTIME / "orient-build.json"
     if marker.exists() and json.loads(marker.read_text()).get("source") == identity:
@@ -86,7 +92,14 @@ def main():
         venv = candidate / "venv"
         subprocess.run(["/usr/bin/python3", "-m", "venv", str(venv)], check=True)
         subprocess.run(
-            [str(venv / "bin/pip"), "install", str(engine), str(source)], check=True
+            [
+                str(venv / "bin/pip"),
+                "install",
+                str(engine),
+                str(source),
+                "pillow==" + pillow,
+            ],
+            check=True,
         )
         subprocess.run(
             [

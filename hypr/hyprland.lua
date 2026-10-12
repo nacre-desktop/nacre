@@ -43,6 +43,8 @@ end
 
 -- Precedence is deliberate: the user's host override is the final owner.
 load_private("monitor")
+-- First-install system keyboard choice, preserved on updates.
+load_private("keyboard")
 -- Nacre committed wallpaper palette
 load_private("palette")
 -- Nacre desktop settings

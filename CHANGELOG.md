@@ -1,11 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-dev.2
+
+Use the system keyboard layout at first install, with US as the fallback. Smaller
+4K demo wallpapers, neutral example data, clearer install/contributor guides and
+public screenshots improve the development preview. The desktop pins Pillow while
+Orient supports Pillow 11–12 for library users.
 
 Nacre system notifications use a palette-aware shell-and-bell mark. Third-party
 apps retain their own icons, and the mark is reusable in future panel headers.
 
-Use MIT-licensed Orient 0.1.0-dev.3. Nacre remains GPL-3.0-only; palette and template
+Use MIT-licensed Orient 0.1.0-dev.4. Nacre remains GPL-3.0-only; palette and template
 behavior are unchanged.
 
 ## 0.1.0-dev.1
