@@ -13,15 +13,15 @@ from pathlib import Path
 HOME = Path.home()
 
 
-def plan(clients, profile=None):
-    import importlib.util
+PROFILE_SPEC = importlib.util.spec_from_file_location(
+    "startup_profile_policy", Path(__file__).with_name("profile-policy.py")
+)
+POLICY = importlib.util.module_from_spec(PROFILE_SPEC)
+PROFILE_SPEC.loader.exec_module(POLICY)
 
-    spec = importlib.util.spec_from_file_location(
-        "profile_policy", Path(__file__).with_name("profile-policy.py")
-    )
-    policy = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(policy)
-    profile = policy.load(HOME) if profile is None else policy.validate(profile)
+
+def plan(clients, profile=None):
+    profile = POLICY.load(HOME) if profile is None else POLICY.validate(profile)
     classes = {c["class"].casefold() for c in clients}
     return [
         (
@@ -39,6 +39,9 @@ def plan(clients, profile=None):
 
 
 def main():
+    profile = POLICY.load(HOME)
+    if not profile["startup"]:
+        return
     lock = (
         Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
         / "nacre-startup-apps.lock"
@@ -55,7 +58,7 @@ def main():
         spec.loader.exec_module(session)
         session.readiness()
         clients = json.loads(subprocess.check_output(["hyprctl", "clients", "-j"]))
-        for label, workspace, argv, exists in plan(clients):
+        for label, workspace, argv, exists in plan(clients, profile):
             if exists or not shutil.which(argv[0]):
                 continue
             subprocess.run(
@@ -81,7 +84,11 @@ def main():
                 )
                 if (
                     next(
-                        (entry[3] for entry in plan(current) if entry[0] == label),
+                        (
+                            entry[3]
+                            for entry in plan(current, profile)
+                            if entry[0] == label
+                        ),
                         False,
                     )
                     or label == "Brain"

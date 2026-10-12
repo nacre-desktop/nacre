@@ -20,3 +20,18 @@ After updates, check the shell service and `hyprctl configerrors`. Actual cold
 login, lock/suspend/resume and physical display/device acceptance need testing on
 real hardware; a manual health check cannot establish those paths. General
 installation guidance is in [installation](installation.md).
+
+## Refresh only managed window rules
+
+If you previously used a personal app-to-workspace map, refresh these two managed
+files without replacing your keyboard, host overrides or app wrappers:
+
+```sh
+python3 tools/configure.py --only .config/hypr/conf/windowrule.lua \
+  --only .config/hypr/conf/brain.lua --apply
+hyprctl reload
+```
+
+This keeps a private backup and refuses to overwrite unrecorded local edits.
+Choose the default profile separately if you also want to clear profile-based
+startup apps and routes; see [configuration](configuration.md).

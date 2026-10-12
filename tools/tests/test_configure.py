@@ -123,6 +123,44 @@ class ConfigurationTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "Local edit preserved"):
                 module.plan(home, root)
 
+    def test_explicit_scope_updates_rules_without_replacing_unrelated_edits(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, home = Path(directory) / "repo", Path(directory) / "home"
+            (root / "hypr/conf").mkdir(parents=True)
+            source = root / "hypr/conf/windowrule.lua"
+            source.write_text("old managed rules")
+            other = root / "hypr/conf/keyboard.lua"
+            other.write_text("managed keyboard")
+            module.apply(home, root)
+            manifest = home / ".local/state/nacre/configuration.json"
+            previous = json.loads(manifest.read_text())[
+                ".config/hypr/conf/keyboard.lua"
+            ]
+            keyboard = home / ".config/hypr/conf/keyboard.lua"
+            keyboard.write_text("private keyboard")
+            source.write_text("general rules")
+            scope = [".config/hypr/conf/windowrule.lua"]
+            backup = module.apply(home, root, only=scope)
+            self.assertEqual((backup / scope[0]).read_text(), "old managed rules")
+            self.assertEqual((home / scope[0]).read_text(), "general rules")
+            self.assertEqual(keyboard.read_text(), "private keyboard")
+            self.assertEqual(
+                json.loads(manifest.read_text())[".config/hypr/conf/keyboard.lua"],
+                previous,
+            )
+            self.assertIsNone(module.apply(home, root, only=scope))
+            self.assertEqual(
+                json.loads(manifest.read_text())[".config/hypr/conf/keyboard.lua"],
+                previous,
+            )
+            (home / scope[0]).write_text("private rules")
+            with self.assertRaisesRegex(RuntimeError, "Local edit preserved"):
+                module.plan(home, root, only=scope)
+            with self.assertRaises(ValueError):
+                module.plan(home, root, only=["../outside"])
+            with self.assertRaises(ValueError):
+                module.plan(home, root, app_routes_only=True, only=scope)
+
     def test_owned_symlink_migration_preserves_private_monitors_and_backup(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

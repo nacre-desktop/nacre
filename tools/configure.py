@@ -180,23 +180,33 @@ LEGACY_SYNC = {
 }
 
 
-def plan(home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=False):
-    if not app_routes_only:
+def configuration_scope(app_routes_only=False, only=()):
+    if app_routes_only and only:
+        raise ValueError("Choose app routes or explicit configuration files")
+    return (
+        {Path(".local/bin/nacre-app"), Path(".local/bin/xdg-open")}
+        if app_routes_only
+        else {Path(path) for path in only}
+    )
+
+
+def plan(
+    home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=False, only=()
+):
+    scope = configuration_scope(app_routes_only, only)
+    if not scope:
         idle_policy(home, root, migrate_idle)
         power_policy(home, root, migrate_idle)
     manifest = home / ".local/state/nacre/configuration.json"
     known = json.loads(manifest.read_text()) if manifest.exists() else {}
     desired = files(root)
-    if app_routes_only:
-        desired = {
-            path: source
-            for path, source in desired.items()
-            if path.parent == Path(".local/bin")
-            and path.name in ("nacre-app", "xdg-open")
-        }
+    if only and scope - desired.keys():
+        raise ValueError("Requested file is not managed by this configuration")
+    if scope:
+        desired = {path: source for path, source in desired.items() if path in scope}
     links = {}
     for name in (*ACTIVE_DIRS, *RETIRED_DIRS):
-        if app_routes_only:
+        if scope:
             continue
         path = home / ".config" / name
         if path.is_symlink():
@@ -263,10 +273,7 @@ def plan(home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=Fal
             ".config/systemd/user/nacre-session-watch.service",
         }:
             continue  # The shell installer owns these services independently.
-        if app_routes_only and Path(relative).name not in (
-            "nacre-app",
-            "xdg-open",
-        ):
+        if scope and Path(relative) not in scope:
             continue
         if Path(relative) in desired:
             continue
@@ -279,16 +286,21 @@ def plan(home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=Fal
     return changed, links, known
 
 
-def apply(home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=False):
-    changed, links, known = plan(home, root, migrate, app_routes_only, migrate_idle)
-    if not app_routes_only:
+def apply(
+    home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=False, only=()
+):
+    scope = configuration_scope(app_routes_only, only)
+    changed, links, known = plan(
+        home, root, migrate, app_routes_only, migrate_idle, only
+    )
+    if not scope:
         from keyboard import seed
 
         seed(home)
-    host_policy = None if app_routes_only else power_policy(home, root, migrate_idle)
+    host_policy = None if scope else power_policy(home, root, migrate_idle)
     if host_policy is not None:
         atomic(home / ".config/nacre/host.lua", host_policy, 0o600)
-    policy = None if app_routes_only else idle_policy(home, root, migrate_idle)
+    policy = None if scope else idle_policy(home, root, migrate_idle)
     if policy is not None:
         atomic(home / ".config/nacre/hypridle.local.conf", policy, 0o600)
     if not changed and not links:
@@ -298,14 +310,9 @@ def apply(home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=Fa
                 (
                     {
                         **known,
-                        **{
-                            str(p): digest(home / p)
-                            for p in files(root)
-                            if p.parent == Path(".local/bin")
-                            and p.name in ("nacre-app", "xdg-open")
-                        },
+                        **{str(p): digest(home / p) for p in files(root) if p in scope},
                     }
-                    if app_routes_only
+                    if scope
                     else {str(p): digest(home / p) for p in files(root)}
                 ),
                 indent=2,
@@ -385,6 +392,13 @@ def main():
         help="deploy native app launch routes without touching compositor config",
     )
     p.add_argument(
+        "--only",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="update only this managed path relative to home; repeat for multiple files",
+    )
+    p.add_argument(
         "--migrate-idle-override",
         action="store_true",
         help="preserve the current full idle policy as a private override",
@@ -395,6 +409,7 @@ def main():
         migrate=args.migrate_owned,
         app_routes_only=args.app_routes_only,
         migrate_idle=args.migrate_idle_override,
+        only=args.only,
     )
     print(
         f"{len(changed)} configuration files to deploy; {len(links)} source symlinks to migrate"
@@ -407,6 +422,7 @@ def main():
                 migrate=args.migrate_owned,
                 app_routes_only=args.app_routes_only,
                 migrate_idle=args.migrate_idle_override,
+                only=args.only,
             )
             or "no changes",
         )
