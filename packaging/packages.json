@@ -41,7 +41,10 @@
       "rofi",
       "kwallet-pam",
       "polkit-gnome",
-      "cliphist"
+      "cliphist",
+      "qt6-base",
+      "glibc",
+      "gcc-libs"
     ],
     "ai": [
       "python",
@@ -65,10 +68,6 @@
       "python-build",
       "python-installer",
       "python-hatchling",
-      "qt6-base",
-      "kconfig",
-      "kcolorscheme",
-      "gtk3",
       "nodejs"
     ],
     "check": [
