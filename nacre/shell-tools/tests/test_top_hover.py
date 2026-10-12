@@ -24,7 +24,7 @@ class TopHoverTests(unittest.TestCase):
             install_foundation_interaction(fixtures, SHELL / "widgets")
             definitions = {
                 "NacreFrame": "property int left:10;property int right:10;property int headerHeight:50",
-                "NacreHyprland": 'property var focusedMonitor:({name:"test"});property var activeClient:null',
+                "NacreCompositor": 'property var focusedMonitor:({name:"test"});property var activeWindow:null',
                 "Environment": 'property var screens:[{name:"test"}]',
             }
             for name, text in definitions.items():
@@ -74,7 +74,7 @@ TestCase {
   NacreFrameLips {id:lips;anchors.fill:parent;screen:parent.screen;visibilities:flags;controller:controller}
   Component.onCompleted: {NacrePanelState.screens={test:flags};NacrePanelState.panels={test:{popouts:{hasCurrent:false,pinned:false}}}}
  }}
- function init(){NacrePanelState.hidden=false;DesktopSettings.data={animations:false,clickEdgeMenus:false};NacreHyprland.activeClient=null;NacreHoverIntent.blocked=({});NacreHoverIntent.lipRegions=({});}
+ function init(){NacrePanelState.hidden=false;DesktopSettings.data={animations:false,clickEdgeMenus:false};NacreCompositor.activeWindow=null;NacreHoverIntent.blocked=({});NacreHoverIntent.lipRegions=({});}
  function test_only_marked_regions_open_and_explicit_dismissal_rearms(){
   const view=createTemporaryObject(scene,this);wait(30);
   mouseMove(view,100,25);verify(!view.flags.dashboard);
@@ -175,10 +175,10 @@ TestCase {
   DesktopSettings.data={animations:false,clickEdgeMenus:false};
   const left=findChild(view,"frameLeftLip");
   view.lips.approach("left",left,Qt.LeftButton);verify(!view.flags.left);
-  NacreHyprland.activeClient={lastIpcObject:{fullscreen:2}};
+  NacreCompositor.activeWindow={fullscreenMode:2};
   verify(!view.lips.available);
   view.lips.approach("left",left,Qt.NoButton);verify(!view.flags.left);
-  NacreHyprland.activeClient=null;
+  NacreCompositor.activeWindow=null;
  }
 }
 """)

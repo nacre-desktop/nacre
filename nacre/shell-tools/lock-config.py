@@ -6,6 +6,8 @@ import shlex
 import subprocess
 from pathlib import Path
 
+import compositor
+
 
 def block(widget, monitor="", **options):
     return (
@@ -211,9 +213,7 @@ def monitor_layout(home=None):
     home = Path.home() if home is None else Path(home)
     cache = home / ".cache/nacre/lock-outputs.json"
     try:
-        monitors = json.loads(
-            subprocess.check_output(["hyprctl", "-j", "monitors"], text=True, timeout=2)
-        )
+        monitors = compositor.query("monitors", timeout=2)
         if not isinstance(monitors, list) or not monitors:
             raise ValueError("No current lock outputs")
         cache.parent.mkdir(parents=True, exist_ok=True)

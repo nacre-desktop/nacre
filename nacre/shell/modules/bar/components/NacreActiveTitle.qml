@@ -10,7 +10,7 @@ Item {
     property bool horizontal: false
     property color colour: NacreColours.palette.m3primary
     readonly property Item child: caption
-    readonly property var client: NacreHyprland.activeClient
+    readonly property var client: NacreCompositor.activeWindow
     readonly property string displayTitle: String(client?.title || client?.wmClass || "Desktop")
     implicitWidth: glyph.width + caption.implicitWidth + row.spacing
     implicitHeight: 30

@@ -34,11 +34,11 @@ TestCase {
         }
     }
     function init() {
-        NacreHyprland.requests = [];
+        NacreCompositor.requests = [];
         NacrePanelState.calls = [];
         AppLaunch.calls = [];
-        NacreHyprland.activeWsId = 2;
-        NacreHyprland.clients = [];
+        NacreCompositor.activeWsId = 2;
+        NacreCompositor.windows = [];
         NacreBar.workspaceIcons = [];
         NacreBar.workspaceCount = 5;
         DesktopSettings.data = {
@@ -47,9 +47,9 @@ TestCase {
     }
     function test_workspace_readonly_state_and_explicit_activation() {
         const view = createTemporaryObject(row, test);
-        compare(NacreHyprland.requests.length, 0);
+        compare(NacreCompositor.requests.length, 0);
         verify(findChild(view, "nacreWorkspace2").selected);
-        NacreHyprland.clients = [
+        NacreCompositor.windows = [
             {
                 workspace: {
                     id: 3
@@ -58,10 +58,10 @@ TestCase {
         ];
         verify(findChild(view, "nacreWorkspace3").occupied);
         verify(view.activate(5));
-        compare(NacreHyprland.requests[0], "workspace 5");
+        compare(NacreCompositor.requests[0], "workspace 5");
         verify(!view.activate(8));
         verify(!view.activate(NaN));
-        compare(NacreHyprland.requests.length, 1);
+        compare(NacreCompositor.requests.length, 1);
     }
     function test_numbered_pearls_use_readable_ink_for_dark_and_pale_accents() {
         const pearl = createTemporaryObject(pearlView, test, {
@@ -120,7 +120,7 @@ TestCase {
             compare(icon.symbol, sample.glyph);
         }
         const view = createTemporaryObject(row, test);
-        NacreHyprland.clients = [
+        NacreCompositor.windows = [
             {
                 workspace: {
                     id: 2
@@ -151,7 +151,7 @@ TestCase {
         compare(empty.width, 18);
         compare(findChild(empty, "workspaceNumber").text, "1");
         compare(findChild(findChild(view, "activeWorkspacePearl"), "workspaceNumber").text, "2");
-        NacreHyprland.clients = [
+        NacreCompositor.windows = [
             {
                 workspace: {
                     id: 8
@@ -172,12 +172,12 @@ TestCase {
         tryVerify(() => !!findChild(view, "nacreWorkspace8"));
         compare(findChild(view, "nacreWorkspace8").windowCount, 2);
         verify(view.activate(8));
-        NacreHyprland.clients = [];
-        NacreHyprland.activeWsId = 8;
+        NacreCompositor.windows = [];
+        NacreCompositor.activeWsId = 8;
         tryVerify(() => !!findChild(view, "nacreWorkspace8"));
         verify(findChild(view, "nacreWorkspace8").selected);
         tryCompare(findChild(findChild(view, "activeWorkspacePearl"), "workspaceNumber"), "text", "8");
-        NacreHyprland.activeWsId = 1;
+        NacreCompositor.activeWsId = 1;
         tryCompare(view, "workspaceIds", [1, 2, 3, 4, 5]);
         NacreBar.workspaceIcons = ["language"];
         verify(view.customIcons);
@@ -185,7 +185,7 @@ TestCase {
     }
     function test_capsule_icons_overflow_click_and_scroll_are_bounded() {
         const view = createTemporaryObject(row, test);
-        NacreHyprland.clients = Array.from({
+        NacreCompositor.windows = Array.from({
             length: 5
         }, (_, index) => ({
                     workspace: {
@@ -199,32 +199,32 @@ TestCase {
         compare(view.activeCell.overflow, 2);
         verify(findChild(view.activeCell, "workspaceOverflow").visible);
         const stable = findChild(view, "nacreWorkspace1");
-        NacreHyprland.activeWsId = 4;
+        NacreCompositor.activeWsId = 4;
         tryVerify(() => view.activeCell?.workspaceId === 4);
         compare(findChild(view, "nacreWorkspace1"), stable);
         compare(view.activeCell.shownWindows.length, 0);
         compare(findChild(view, "nacreWorkspace2").shownWindows.length, 0);
         verify(!findChild(findChild(view, "nacreWorkspace2"), "workspaceApps").visible);
         verify(view.scroll(-60));
-        compare(NacreHyprland.requests.length, 0);
+        compare(NacreCompositor.requests.length, 0);
         verify(view.scroll(-60));
-        compare(NacreHyprland.requests[0], "workspace 5");
-        NacreHyprland.activeWsId = 5;
+        compare(NacreCompositor.requests[0], "workspace 5");
+        NacreCompositor.activeWsId = 5;
         verify(!view.step(1));
         verify(!view.step(0));
-        compare(NacreHyprland.requests.length, 1);
-        NacreHyprland.activeWsId = 2;
+        compare(NacreCompositor.requests.length, 1);
+        NacreCompositor.activeWsId = 2;
         wait(250);
         const cell = findChild(view, "nacreWorkspace2");
         mouseClick(cell, 16, 15);
-        compare(NacreHyprland.requests[1], "workspace 2");
+        compare(NacreCompositor.requests[1], "workspace 2");
         view.availableWidth = 200;
         tryVerify(() => view.iconLimit === 0);
         compare(view.activeCell.overflow, 5);
     }
     function test_attention_reduced_motion_and_icon_focus() {
         const view = createTemporaryObject(row, test);
-        NacreHyprland.clients = [
+        NacreCompositor.windows = [
             {
                 workspace: {
                     id: 3
@@ -232,7 +232,7 @@ TestCase {
                 urgent: true,
                 wmClass: "editor",
                 title: "Attention",
-                address: "0x20"
+                windowId: "0x20"
             },
             {
                 workspace: {
@@ -240,7 +240,7 @@ TestCase {
                 },
                 wmClass: "editor",
                 title: "Editor",
-                address: "0x10"
+                windowId: "0x10"
             }
         ];
         const pearl = findChild(findChild(view, "nacreWorkspace3"), "workspacePearl");
@@ -252,18 +252,18 @@ TestCase {
         };
         tryCompare(pulse, "running", false);
         verify(findChild(pearl, "workspaceAttentionRing").visible);
-        NacreHyprland.activeWsId = 3;
+        NacreCompositor.activeWsId = 3;
         tryVerify(() => view.activeCell?.workspaceId === 3);
         const capsule = findChild(view, "activeWorkspaceCapsule");
         compare(capsule.x, view.activeCell.x);
-        NacreHyprland.activeWsId = 2;
+        NacreCompositor.activeWsId = 2;
         tryVerify(() => view.activeCell?.workspaceId === 2);
         const active = findChild(view, "nacreWorkspace2");
         tryCompare(active, "width", 54);
         wait(250);
         compare(findChild(view, "nacreWorkspace3").x, active.x + active.width + 2);
         mouseClick(active, 41, 15);
-        compare(NacreHyprland.requests[0], "focus 0x10");
+        compare(NacreCompositor.requests[0], "focus 0x10");
     }
     function test_header_display_no_commands_and_status_geometry() {
         const view = createTemporaryObject(header, test);

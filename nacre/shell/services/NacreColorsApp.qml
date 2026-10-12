@@ -8,7 +8,7 @@ Singleton {
     property bool created: false
     property bool visible: false
     property var window: null
-    readonly property var client: (NacreHyprland.clients || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Colors" && c.wmClass === "org.quickshell") || null
+    readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Colors" && c.wmClass === "org.quickshell") || null
     readonly property bool active: visible && !!window && !window.minimized && (client?.workspace?.id ?? 1) > 0
     property var options: ({
             mode: "dark",
@@ -205,7 +205,7 @@ Singleton {
     function minimize() {
         if (!client || minJob.running)
             return;
-        minJob.command = ["python3", Quickshell.env("HOME") + "/.config/hypr/scripts/window-hide.py", "hide", "--window", client.address, "--quiet"];
+        minJob.command = NacreCompositor.hideWindowCommand(client.windowId);
         minJob.running = true;
     }
     property int focusAttempts: 0
@@ -221,10 +221,10 @@ Singleton {
             if (minJob.running)
                 return;
             const client = root.client;
-            if (client && /^0x[0-9a-f]+$/i.test(client.address)) {
+            if (client && client.windowId) {
                 if ((client.workspace?.id ?? 1) < 0)
-                    NacreHyprland.dispatch('hl.dsp.window.move({window="address:' + client.address + '",workspace="' + Math.max(1, NacreHyprland.activeWsId) + '",follow=false})');
-                NacreHyprland.dispatch('hl.dsp.focus({window="address:' + client.address + '"})');
+                    NacreCompositor.moveWindowToWorkspace(client.windowId, Math.max(1, NacreCompositor.activeWsId));
+                NacreCompositor.focusWindow(client.windowId);
                 stop();
             }
         }

@@ -1,181 +1,97 @@
--- Nacre shortcut composition; private routes load afterwards.
-local function construct(row)
-    local factory = hl.dsp
-    for part in row[2]:gmatch("[^.]+") do
-        factory = factory[part]
-    end
-    if row[3] == nil then
-        return factory()
-    end
-    return factory(row[3])
-end
-
--- Public action metadata is attached to the actual registrations for discovery.
-local descriptions = {
-    ["~/.local/bin/nacre-shell launcher"] = "launcher",
-    ["~/.local/bin/nacre-shell wallpaper"] = "wallpaper",
-    ["~/.local/bin/nacre-settings"] = "settings",
-    ["~/.local/bin/nacre-app files"] = "files",
-    ["uwsm app -- kitty"] = "terminal",
-    ["~/.config/hypr/scripts/window-trash.sh trash"] = "put-away",
-    ["~/.config/hypr/scripts/window-trash.sh restore-last"] = "restore",
-    ["~/.config/hypr/scripts/window-close.sh"] = "close",
-    ["~/.local/bin/nacre-shell clipboard"] = "clipboard",
-    ["loginctl lock-session"] = "lock",
-    ["~/.config/hypr/scripts/window-trash.sh restore-all"] = "restore-all",
-    ["~/.config/hypr/scripts/window-close.sh force"] = "force-close",
-    ["~/.config/hypr/scripts/window-minimize.sh hide"] = "hide",
-    ["~/.config/hypr/scripts/window-minimize.sh restore-last"] = "unhide",
-    ["~/.local/bin/nacre-menu actions.emoji"] = "emoji",
-    ["wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"] = "mute",
-    ["wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"] = "mic-mute",
-    ["wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"] = "volume-down",
-    ["wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"] = "volume-up",
-    ["~/.local/bin/nacre-shell brightness down"] = "brightness-down",
-    ["~/.local/bin/nacre-shell brightness up"] = "brightness-up",
-    ["~/.local/bin/nacre-shell keyboard-light down"] = "keyboard-down",
-    ["~/.local/bin/nacre-shell keyboard-light up"] = "keyboard-up",
-}
-local function install(rows)
-    for _, row in ipairs(rows) do
-        local options = {}
-        for key, value in pairs(row[4] or {}) do options[key] = value end
-        local label = row[2] == "exec_cmd" and descriptions[row[3]] or nil
-        if row[2] == "focus" and type(row[3]) == "table" then
-            if type(row[3].workspace) == "number" then label = "workspace" end
-            if row[3].direction then label = "focus" end
-        elseif row[2] == "window.move" and type(row[3]) == "table" and type(row[3].workspace) == "number" then
-            label = "move-workspace"
-        elseif row[2] == "exec_cmd" and row[3]:match("^grim %-g") then
-            label = "screenshot"
-        elseif row[2] == "exec_cmd" and row[3]:match("^grim ~/") then
-            label = "save-screenshot"
-        end
-        if row[2] == "window.fullscreen" then
-            label = row[3].mode == "maximized" and "maximize" or "fullscreen"
-        elseif row[2] == "window.float" then label = "float"
-        elseif row[2] == "window.pin" then label = "pin"
-        elseif row[2] == "window.cycle_next" then label = "cycle-window"
-        elseif row[2] == "group.toggle" then label = "group"
-        elseif row[2] == "group.prev" or row[2] == "group.next" then label = "group-cycle"
-        elseif row[2] == "layout" and row[3] == "togglesplit" then label = "split" end
-        if label and not options.description then options.description = "Nacre:" .. label end
-        hl.bind(row[1], construct(row), options)
-    end
-end
-
--- Device keys and capture routes.
-install({
-    { "XF86AudioMute", "exec_cmd", "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle", { locked = true } },
-    { "XF86AudioLowerVolume", "exec_cmd", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-", { locked = true, repeating = true } },
-    { "XF86AudioRaiseVolume", "exec_cmd", "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+", { locked = true, repeating = true } },
-    { "XF86AudioMicMute", "exec_cmd", "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle" },
-    { "XF86PowerOff", "exec_cmd", "loginctl lock-session", { locked = true } },
-    { "XF86MonBrightnessDown", "exec_cmd", "~/.local/bin/nacre-shell brightness down" },
-    { "XF86MonBrightnessUp", "exec_cmd", "~/.local/bin/nacre-shell brightness up" },
-    { "XF86KbdBrightnessUp", "exec_cmd", "~/.local/bin/nacre-shell keyboard-light up" },
-    { "XF86KbdBrightnessDown", "exec_cmd", "~/.local/bin/nacre-shell keyboard-light down" },
-    { "SUPER + period", "exec_cmd", "~/.local/bin/nacre-menu actions.emoji" },
-    {
-        "Print", "exec_cmd",
-        "grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\"",
-    },
-    {
-        "SUPER + Print", "exec_cmd",
-        "grim ~/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S).png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Saved to Pictures/Screenshots\"",
-    },
-})
-
--- Window lifetime helpers preserve the current trash/restore behavior.
-install({
-    { "SUPER + Q", "exec_cmd", "~/.config/hypr/scripts/window-trash.sh trash" },
-    { "SUPER + SHIFT + Q", "exec_cmd", "~/.config/hypr/scripts/window-trash.sh restore-last" },
-    { "SUPER + ALT + Q", "exec_cmd", "~/.config/hypr/scripts/window-trash.sh restore-all" },
-    { "SUPER + CTRL + Q", "exec_cmd", "~/.config/hypr/scripts/window-close.sh" },
-    { "SUPER + CTRL + SHIFT + Q", "exec_cmd", "~/.config/hypr/scripts/window-close.sh force" },
-    { "SUPER + H", "exec_cmd", "~/.config/hypr/scripts/window-minimize.sh hide" },
-    { "SUPER + SHIFT + H", "exec_cmd", "~/.config/hypr/scripts/window-minimize.sh restore-last" },
-    { "SUPER + ALT + H", "exec_cmd", "~/.config/hypr/scripts/window-minimize.sh restore-current" },
-    { "SUPER + F", "window.fullscreen", { mode = "fullscreen" } },
-    { "SUPER + M", "window.fullscreen", { mode = "maximized" } },
-    { "SUPER + T", "window.float", { action = "toggle" } },
-    { "SUPER + P", "window.pin" },
-    { "SUPER + SHIFT + P", "window.pseudo" },
-    { "SUPER + G", "group.toggle" },
-    { "SUPER + bracketleft", "group.prev" },
-    { "SUPER + bracketright", "group.next" },
-    { "SUPER + J", "layout", "togglesplit" },
-    { "SUPER + mouse:273", "window.resize", nil, { mouse = true } },
-    { "ALT + TAB", "window.cycle_next", { next = true } },
-    { "ALT + SHIFT + TAB", "window.cycle_next", { next = false } },
-})
-
--- Numbered workspaces have matching focus and move combinations.
-for workspace = 1, 7 do
-    install({
-        { "SUPER + " .. workspace, "focus", { workspace = workspace, on_current_monitor = true } },
-        { "SUPER + SHIFT + " .. workspace, "window.move", { workspace = workspace } },
-    })
-end
-install({
-    { "SUPER + TAB", "focus", { workspace = "m+1", on_current_monitor = true } },
-    { "SUPER + SHIFT + TAB", "focus", { workspace = "m-1", on_current_monitor = true } },
-    { "SUPER + mouse_down", "focus", { workspace = "e+1", on_current_monitor = true } },
-    { "SUPER + mouse_up", "focus", { workspace = "e-1", on_current_monitor = true } },
-    { "SUPER + CTRL + SHIFT + left", "window.move", { workspace = "r-1" } },
-    { "SUPER + CTRL + SHIFT + right", "window.move", { workspace = "r+1" } },
-    { "SUPER + grave", "workspace.toggle_special", "" },
-    { "SUPER + SHIFT + grave", "window.move", { workspace = "special" } },
-})
-
-local directions = {
-    { "left", -30, 0 }, { "right", 30, 0 }, { "up", 0, -30 }, { "down", 0, 30 },
-}
-for _, direction in ipairs(directions) do
-    install({
-        { "SUPER + " .. direction[1], "focus", { direction = direction[1] } },
-        { "SUPER + SHIFT + " .. direction[1], "window.move", { direction = direction[1] } },
-        { "SUPER + ALT + " .. direction[1], "window.resize", { x = direction[2], y = direction[3], relative = true }, { repeating = true } },
-    })
-end
-install({ { "SUPER + R", "submap", "resize" } })
+-- Generated by tools/generate_compositor_config.py; edit compositor-contract.json.
+hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), {description="Nacre:mute",locked=true})
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), {description="Nacre:volume-down",locked=true,repeating=true})
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"), {description="Nacre:volume-up",locked=true,repeating=true})
+hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), {description="Nacre:mic-mute"})
+hl.bind("XF86PowerOff", hl.dsp.exec_cmd("loginctl lock-session"), {description="Nacre:lock",locked=true})
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("~/.local/bin/nacre-shell brightness down"), {description="Nacre:brightness-down"})
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("~/.local/bin/nacre-shell brightness up"), {description="Nacre:brightness-up"})
+hl.bind("XF86KbdBrightnessUp", hl.dsp.exec_cmd("~/.local/bin/nacre-shell keyboard-light up"), {description="Nacre:keyboard-up"})
+hl.bind("XF86KbdBrightnessDown", hl.dsp.exec_cmd("~/.local/bin/nacre-shell keyboard-light down"), {description="Nacre:keyboard-down"})
+hl.bind("SUPER + period", hl.dsp.exec_cmd("~/.local/bin/nacre-menu actions.emoji"), {description="Nacre:emoji"})
+hl.bind("Print", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""), {description="Nacre:screenshot"})
+hl.bind("SUPER + Print", hl.dsp.exec_cmd("grim ~/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S).png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Saved to Pictures/Screenshots\""), {description="Nacre:save-screenshot"})
+hl.bind("SUPER + Q", hl.dsp.exec_cmd("~/.config/hypr/scripts/window-trash.sh trash"), {description="Nacre:put-away"})
+hl.bind("SUPER + SHIFT + Q", hl.dsp.exec_cmd("~/.config/hypr/scripts/window-trash.sh restore-last"), {description="Nacre:restore"})
+hl.bind("SUPER + ALT + Q", hl.dsp.exec_cmd("~/.config/hypr/scripts/window-trash.sh restore-all"), {description="Nacre:restore-all"})
+hl.bind("SUPER + CTRL + Q", hl.dsp.exec_cmd("~/.config/hypr/scripts/window-close.sh"), {description="Nacre:close"})
+hl.bind("SUPER + CTRL + SHIFT + Q", hl.dsp.exec_cmd("~/.config/hypr/scripts/window-close.sh force"), {description="Nacre:force-close"})
+hl.bind("SUPER + H", hl.dsp.exec_cmd("~/.config/hypr/scripts/window-minimize.sh hide"), {description="Nacre:hide"})
+hl.bind("SUPER + SHIFT + H", hl.dsp.exec_cmd("~/.config/hypr/scripts/window-minimize.sh restore-last"), {description="Nacre:unhide"})
+hl.bind("SUPER + ALT + H", hl.dsp.exec_cmd("~/.config/hypr/scripts/window-minimize.sh restore-current"), {})
+hl.bind("SUPER + F", hl.dsp.window.fullscreen({mode="fullscreen"}), {description="Nacre:fullscreen"})
+hl.bind("SUPER + M", hl.dsp.window.fullscreen({mode="maximized"}), {description="Nacre:maximize"})
+hl.bind("SUPER + T", hl.dsp.window.float({action="toggle"}), {description="Nacre:float"})
+hl.bind("SUPER + P", hl.dsp.window.pin(), {description="Nacre:pin"})
+hl.bind("SUPER + SHIFT + P", hl.dsp.window.pseudo(), {})
+hl.bind("SUPER + G", hl.dsp.group.toggle(), {description="Nacre:group"})
+hl.bind("SUPER + bracketleft", hl.dsp.group.prev(), {description="Nacre:group-cycle"})
+hl.bind("SUPER + bracketright", hl.dsp.group.next(), {description="Nacre:group-cycle"})
+hl.bind("SUPER + J", hl.dsp.layout("togglesplit"), {description="Nacre:split"})
+hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), {mouse=true})
+hl.bind("ALT + TAB", hl.dsp.window.cycle_next({next=true}), {description="Nacre:cycle-window"})
+hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({next=false}), {description="Nacre:cycle-window"})
+hl.bind("SUPER + 1", hl.dsp.focus({workspace=1,on_current_monitor=true}), {description="Nacre:workspace"})
+hl.bind("SUPER + SHIFT + 1", hl.dsp.window.move({workspace=1}), {description="Nacre:move-workspace"})
+hl.bind("SUPER + 2", hl.dsp.focus({workspace=2,on_current_monitor=true}), {description="Nacre:workspace"})
+hl.bind("SUPER + SHIFT + 2", hl.dsp.window.move({workspace=2}), {description="Nacre:move-workspace"})
+hl.bind("SUPER + 3", hl.dsp.focus({workspace=3,on_current_monitor=true}), {description="Nacre:workspace"})
+hl.bind("SUPER + SHIFT + 3", hl.dsp.window.move({workspace=3}), {description="Nacre:move-workspace"})
+hl.bind("SUPER + 4", hl.dsp.focus({workspace=4,on_current_monitor=true}), {description="Nacre:workspace"})
+hl.bind("SUPER + SHIFT + 4", hl.dsp.window.move({workspace=4}), {description="Nacre:move-workspace"})
+hl.bind("SUPER + 5", hl.dsp.focus({workspace=5,on_current_monitor=true}), {description="Nacre:workspace"})
+hl.bind("SUPER + SHIFT + 5", hl.dsp.window.move({workspace=5}), {description="Nacre:move-workspace"})
+hl.bind("SUPER + 6", hl.dsp.focus({workspace=6,on_current_monitor=true}), {description="Nacre:workspace"})
+hl.bind("SUPER + SHIFT + 6", hl.dsp.window.move({workspace=6}), {description="Nacre:move-workspace"})
+hl.bind("SUPER + 7", hl.dsp.focus({workspace=7,on_current_monitor=true}), {description="Nacre:workspace"})
+hl.bind("SUPER + SHIFT + 7", hl.dsp.window.move({workspace=7}), {description="Nacre:move-workspace"})
+hl.bind("SUPER + TAB", hl.dsp.focus({workspace="m+1",on_current_monitor=true}), {})
+hl.bind("SUPER + SHIFT + TAB", hl.dsp.focus({workspace="m-1",on_current_monitor=true}), {})
+hl.bind("SUPER + mouse_down", hl.dsp.focus({workspace="e+1",on_current_monitor=true}), {})
+hl.bind("SUPER + mouse_up", hl.dsp.focus({workspace="e-1",on_current_monitor=true}), {})
+hl.bind("SUPER + CTRL + SHIFT + left", hl.dsp.window.move({workspace="r-1"}), {})
+hl.bind("SUPER + CTRL + SHIFT + right", hl.dsp.window.move({workspace="r+1"}), {})
+hl.bind("SUPER + grave", hl.dsp.workspace.toggle_special(""), {})
+hl.bind("SUPER + SHIFT + grave", hl.dsp.window.move({workspace="special"}), {})
+hl.bind("SUPER + left", hl.dsp.focus({direction="left"}), {description="Nacre:focus"})
+hl.bind("SUPER + SHIFT + left", hl.dsp.window.move({direction="left"}), {})
+hl.bind("SUPER + ALT + left", hl.dsp.window.resize({relative=true,x=-30,y=0}), {repeating=true})
+hl.bind("SUPER + right", hl.dsp.focus({direction="right"}), {description="Nacre:focus"})
+hl.bind("SUPER + SHIFT + right", hl.dsp.window.move({direction="right"}), {})
+hl.bind("SUPER + ALT + right", hl.dsp.window.resize({relative=true,x=30,y=0}), {repeating=true})
+hl.bind("SUPER + up", hl.dsp.focus({direction="up"}), {description="Nacre:focus"})
+hl.bind("SUPER + SHIFT + up", hl.dsp.window.move({direction="up"}), {})
+hl.bind("SUPER + ALT + up", hl.dsp.window.resize({relative=true,x=0,y=-30}), {repeating=true})
+hl.bind("SUPER + down", hl.dsp.focus({direction="down"}), {description="Nacre:focus"})
+hl.bind("SUPER + SHIFT + down", hl.dsp.window.move({direction="down"}), {})
+hl.bind("SUPER + ALT + down", hl.dsp.window.resize({relative=true,x=0,y=30}), {repeating=true})
+hl.bind("SUPER + R", hl.dsp.submap("resize"), {})
 hl.define_submap("resize", function()
-    for _, direction in ipairs(directions) do
-        install({
-            { direction[1], "window.resize", { x = direction[2], y = direction[3], relative = true }, { repeating = true } },
-        })
-    end
-    install({
-        { "escape", "submap", "reset" },
-        { "return", "submap", "reset" },
-        { "SUPER + R", "submap", "reset" },
-    })
+hl.bind("left", hl.dsp.window.resize({relative=true,x=-30,y=0}), {repeating=true})
+hl.bind("right", hl.dsp.window.resize({relative=true,x=30,y=0}), {repeating=true})
+hl.bind("up", hl.dsp.window.resize({relative=true,x=0,y=-30}), {repeating=true})
+hl.bind("down", hl.dsp.window.resize({relative=true,x=0,y=30}), {repeating=true})
+hl.bind("escape", hl.dsp.submap("reset"), {})
+hl.bind("return", hl.dsp.submap("reset"), {})
+hl.bind("SUPER + R", hl.dsp.submap("reset"), {})
 end)
-
--- Desktop surfaces and explicit session actions.
-install({
-    { "SUPER + A", "exec_cmd", "~/.local/bin/nacre-shell launcher" },
-    { "SUPER + D", "exec_cmd", "~/.local/bin/nacre-shell overview" },
-    { "SUPER + V", "exec_cmd", "~/.local/bin/nacre-shell clipboard" },
-    { "SUPER + W", "exec_cmd", "~/.local/bin/nacre-shell wallpaper" },
-    { "SUPER + Z", "exec_cmd", "~/.local/bin/nacre-shell hide" },
-    { "SUPER + O", "exec_cmd", "~/.local/bin/nacre-shell toggle" },
-    { "SUPER + S", "exec_cmd", "~/.local/bin/nacre-settings" },
-    { "SUPER + CTRL + C", "exec_cmd", "~/.local/bin/nacre-menu actions.capture" },
-    { "SUPER + X", "exec_cmd", "~/.local/bin/nacre-menu power" },
-    { "SUPER + ESCAPE", "exec_cmd", "loginctl lock-session" },
-    { "SUPER + SHIFT + R", "exec_cmd", "hyprctl reload" },
-    { "SUPER + CTRL + M", "exec_cmd", "~/.config/hypr/scripts/matrix-rest.sh" },
-    { "SUPER + ALT + C", "exec_cmd", "~/.config/hypr/scripts/startup-apps.sh" },
-})
-
--- Personal application choices remain separate from the desktop's UI routes.
-install({
-    { "SUPER + SHIFT + T", "exec_cmd", "uwsm app -- kitty" },
-    { "SUPER + SHIFT + B", "exec_cmd", "uwsm app -- google-chrome-stable" },
-    { "SUPER + SHIFT + C", "exec_cmd", "uwsm app -- code" },
-    { "SUPER + SHIFT + V", "exec_cmd", "uwsm app -- cursor" },
-    { "SUPER + SHIFT + D", "exec_cmd", "uwsm app -- discord" },
-    { "SUPER + SHIFT + S", "exec_cmd", "uwsm app -- spotify" },
-    { "SUPER + SHIFT + F", "exec_cmd", "~/.local/bin/nacre-app files" },
-})
+hl.bind("SUPER + A", hl.dsp.exec_cmd("~/.local/bin/nacre-shell launcher"), {description="Nacre:launcher"})
+hl.bind("SUPER + D", hl.dsp.exec_cmd("~/.local/bin/nacre-shell overview"), {})
+hl.bind("SUPER + V", hl.dsp.exec_cmd("~/.local/bin/nacre-shell clipboard"), {description="Nacre:clipboard"})
+hl.bind("SUPER + W", hl.dsp.exec_cmd("~/.local/bin/nacre-shell wallpaper"), {description="Nacre:wallpaper"})
+hl.bind("SUPER + Z", hl.dsp.exec_cmd("~/.local/bin/nacre-shell hide"), {})
+hl.bind("SUPER + O", hl.dsp.exec_cmd("~/.local/bin/nacre-shell toggle"), {})
+hl.bind("SUPER + S", hl.dsp.exec_cmd("~/.local/bin/nacre-settings"), {description="Nacre:settings"})
+hl.bind("SUPER + CTRL + C", hl.dsp.exec_cmd("~/.local/bin/nacre-menu actions.capture"), {})
+hl.bind("SUPER + X", hl.dsp.exec_cmd("~/.local/bin/nacre-menu power"), {})
+hl.bind("SUPER + ESCAPE", hl.dsp.exec_cmd("loginctl lock-session"), {description="Nacre:lock"})
+hl.bind("SUPER + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"), {})
+hl.bind("SUPER + CTRL + M", hl.dsp.exec_cmd("~/.config/hypr/scripts/matrix-rest.sh"), {})
+hl.bind("SUPER + ALT + C", hl.dsp.exec_cmd("~/.config/hypr/scripts/startup-apps.sh"), {})
+hl.bind("SUPER + SHIFT + T", hl.dsp.exec_cmd("uwsm app -- kitty"), {description="Nacre:terminal"})
+hl.bind("SUPER + SHIFT + B", hl.dsp.exec_cmd("uwsm app -- google-chrome-stable"), {})
+hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("uwsm app -- code"), {})
+hl.bind("SUPER + SHIFT + V", hl.dsp.exec_cmd("uwsm app -- cursor"), {})
+hl.bind("SUPER + SHIFT + D", hl.dsp.exec_cmd("uwsm app -- discord"), {})
+hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd("uwsm app -- spotify"), {})
+hl.bind("SUPER + SHIFT + F", hl.dsp.exec_cmd("~/.local/bin/nacre-app files"), {description="Nacre:files"})

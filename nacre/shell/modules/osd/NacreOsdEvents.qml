@@ -16,7 +16,7 @@ Item {
     property bool shown: false
     property string channel: "volume"
     function show(kind = "volume") {
-        if (!armed || visibilities.osd || visibilities.session || WallpaperPlayback.locked || screen.name !== NacreHyprland.focusedMonitor?.name)
+        if (!armed || visibilities.osd || visibilities.session || WallpaperPlayback.locked || screen.name !== NacreCompositor.focusedMonitor?.name)
             return;
         channel = kind;
         shown = true;

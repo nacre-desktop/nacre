@@ -2,50 +2,32 @@
 
 set -euo pipefail
 
+compositor() {
+    python3 "$(dirname "$(realpath "$0")")/compositor-compat.py" "$@"
+}
+
 notify() {
     command -v notify-send >/dev/null 2>&1 && notify-send -a "Nacre Windows" -i nacre-notifications -t 2000 "$@" || true
 }
 
-lua_quote() {
-    local value="$1"
-
-    value="${value//\\/\\\\}"
-    value="${value//\"/\\\"}"
-    printf '"%s"' "$value"
-}
-
-window_selector() {
-    printf 'address:%s' "$1"
-}
-
 active_address() {
-    hyprctl activewindow -j | jq -r '.address // empty'
+    compositor query active_window | jq -r '.address // empty'
 }
 
 window_exists() {
     local address="$1"
 
-    hyprctl clients -j | jq -e --arg address "$address" '
+    compositor query windows | jq -e --arg address "$address" '
         any(.[]; .address == $address)
     ' >/dev/null
 }
 
 close_window() {
-    local address="$1"
-    local selector
-
-    selector="$(window_selector "$address")"
-    hyprctl eval "hl.dispatch(hl.dsp.window.close({ window = $(lua_quote "$selector") }))" \
-        >/dev/null 2>&1 || true
+    compositor close-window "$1" >/dev/null 2>&1 || true
 }
 
 force_window() {
-    local address="$1"
-    local selector
-
-    selector="$(window_selector "$address")"
-    hyprctl eval "hl.dispatch(hl.dsp.window.kill({ window = $(lua_quote "$selector") }))" \
-        >/dev/null 2>&1 || true
+    compositor kill-window "$1" >/dev/null 2>&1 || true
 }
 
 main() {

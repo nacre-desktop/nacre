@@ -1,7 +1,7 @@
 pragma Singleton
 import Quickshell
+import qs.widgets
 import Quickshell.Io
-import Quickshell.Hyprland
 import Quickshell.Services.Mpris
 
 Singleton {
@@ -62,22 +62,22 @@ Singleton {
             root.control("stop");
         }
     }
-    GlobalShortcut {
+    NacreShortcut {
         appid: "nacre_shell"
         name: "mediaToggle"
         onPressed: root.control("playPause")
     }
-    GlobalShortcut {
+    NacreShortcut {
         appid: "nacre_shell"
         name: "mediaNext"
         onPressed: root.control("next")
     }
-    GlobalShortcut {
+    NacreShortcut {
         appid: "nacre_shell"
         name: "mediaPrev"
         onPressed: root.control("previous")
     }
-    GlobalShortcut {
+    NacreShortcut {
         appid: "nacre_shell"
         name: "mediaStop"
         onPressed: root.control("stop")

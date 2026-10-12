@@ -2,15 +2,29 @@
 """Hide windows without closing them; restore from private compatible records."""
 
 import argparse
+import importlib
 import fcntl
-import json
 import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 
 HIDDEN = "special:hidden"
+
+
+def compositor():
+    """Load the common facade from a source checkout or the installed shell."""
+    for directory in (
+        Path(__file__).resolve().parents[2] / "nacre/shell-tools",
+        Path.home() / ".local/share/nacre/shell/tools",
+    ):
+        if (directory / "compositor.py").is_file():
+            if str(directory) not in sys.path:
+                sys.path.insert(0, str(directory))
+            return importlib.import_module("compositor")
+    raise RuntimeError("The Nacre compositor service is not installed")
 
 
 def cache_directory():
@@ -21,34 +35,23 @@ def cache_directory():
 
 
 def query(name):
-    result = subprocess.run(
-        ["hyprctl", name, "-j"], capture_output=True, text=True, check=True, timeout=5
-    )
-    if len(result.stdout) > 4 * 1024 * 1024:
-        raise ValueError("Compositor response exceeds the limit")
-    return json.loads(result.stdout)
+    return compositor().query(name, timeout=5, max_bytes=4 * 1024 * 1024)
 
 
 def address(value):
-    return isinstance(value, str) and re.fullmatch(r"0x[0-9a-fA-F]+", value) is not None
+    return compositor().valid_window_id(value)
 
 
 def dispatch(method, window, **options):
     if not address(window):
         raise ValueError("Invalid window address")
-    values = {"window": "address:" + window, **options}
-    fields = ",".join(
-        key + "=" + json.dumps(value, ensure_ascii=False)
-        for key, value in values.items()
-    )
-    expression = f"hl.dispatch(hl.dsp.{method}({{{fields}}}))"
-    result = subprocess.run(
-        ["hyprctl", "eval", expression],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=5,
-    )
+    service = compositor()
+    if method == "window.move":
+        result = service.move_window(window, timeout=5, **options)
+    elif method == "focus":
+        result = service.focus_window(window, timeout=5)
+    else:
+        raise ValueError("Unknown window action")
     if result.stdout.strip() != "ok":
         raise RuntimeError("The compositor did not accept the window action")
 
@@ -128,11 +131,11 @@ def action(name, folder=None, window=None, quiet=False):
         if name == "hide":
             client = (
                 next(
-                    (row for row in query("clients") if row.get("address") == window),
+                    (row for row in query("windows") if row.get("address") == window),
                     {},
                 )
                 if window
-                else query("activewindow")
+                else query("active_window")
             )
             ident = client.get("address")
             workspace = client.get("workspace", {})
@@ -153,11 +156,11 @@ def action(name, folder=None, window=None, quiet=False):
                 raise
             announce("Window hidden")
             return
-        candidates = records(folder, query("clients"))
+        candidates = records(folder, query("windows"))
         if window:
             candidates = [row for row in candidates if row[1].name == window]
         if name == "restore-current":
-            current = query("activeworkspace").get("id")
+            current = query("active_workspace").get("id")
             candidates = [row for row in candidates if row[2] == current]
         else:
             candidates = candidates[:1]

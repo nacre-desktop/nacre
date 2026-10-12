@@ -5,6 +5,20 @@ QtObject {
     required property var nativeWindow
     required property var owner
     required property string address
+    readonly property string windowId: address
+    readonly property string appId: wmClass
+    readonly property var workspaceId: workspace?.id ?? null
+    readonly property string outputId: owner.monitors.values.find(monitor => monitor.id === Number(lastIpcObject.monitor))?.name || ""
+    readonly property var captureHandle: nativeWindow?.wayland || null
+    readonly property bool hidden: lastIpcObject.hidden === true
+    readonly property bool pinned: lastIpcObject.pinned === true
+    readonly property int fullscreenMode: Number(lastIpcObject.fullscreen || 0)
+    readonly property var geometry: ({
+            x: x,
+            y: y,
+            width: width,
+            height: height
+        })
     readonly property var lastIpcObject: nativeWindow?.lastIpcObject || ({})
     readonly property string wmClass: lastIpcObject.class || nativeWindow?.wayland?.appId || ""
     readonly property string title: nativeWindow?.title || lastIpcObject.title || ""

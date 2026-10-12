@@ -2,7 +2,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import Quickshell.Hyprland as Native
 
 Singleton {
     id: root
@@ -34,7 +33,7 @@ Singleton {
     property var queue: []
     property int focusAttempts: 0
     readonly property bool busy: worker.running
-    readonly property var client: (NacreHyprland.clients || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Welcome" && c.wmClass === "org.quickshell") || null
+    readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Welcome" && c.wmClass === "org.quickshell") || null
     readonly property bool active: visible && !!window && !window.minimized && (client?.workspace?.id ?? 1) > 0
     function prepareDemo() {
         if (demoStarting || demoSnapshot || NacreWallpapers.themeBusy || NacreWallpapers.selectedPath || NacreWallpapers.queuedPath)
@@ -106,9 +105,9 @@ Singleton {
             Qt.callLater(root.prepareDemo);
     }
     Connections {
-        target: Native.Hyprland
-        function onRawEvent(event) {
-            if (event.name === "configreloaded" && root.active && root.page === "shortcuts")
+        target: NacreCompositor
+        function onConfigurationReloaded() {
+            if (root.active && root.page === "shortcuts")
                 root.refresh();
         }
     }
@@ -238,10 +237,10 @@ Singleton {
                 stop();
                 return;
             }
-            if (client && /^0x[0-9a-f]+$/i.test(client.address)) {
+            if (client && client.windowId) {
                 if ((client.workspace?.id ?? 1) < 0)
-                    NacreHyprland.dispatch('hl.dsp.window.move({window="address:' + client.address + '",workspace="' + Math.max(1, NacreHyprland.activeWsId) + '",follow=false})');
-                NacreHyprland.dispatch('hl.dsp.focus({window="address:' + client.address + '"})');
+                    NacreCompositor.moveWindowToWorkspace(client.windowId, Math.max(1, NacreCompositor.activeWsId));
+                NacreCompositor.focusWindow(client.windowId);
                 stop();
             }
         }

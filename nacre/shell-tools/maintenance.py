@@ -10,6 +10,8 @@ import sys
 import time
 from pathlib import Path
 
+import compositor
+
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre"
 SERVICES = [
@@ -32,6 +34,13 @@ def run(args, default="", timeout=5):
         ).strip()
     except (OSError, subprocess.SubprocessError):
         return default
+
+
+def configuration_errors():
+    try:
+        return compositor.config_errors(timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return ""
 
 
 def service_health():
@@ -95,7 +104,7 @@ def state():
     versions = {
         name: run(args)
         for name, args in {
-            "Hyprland": ["Hyprland", "--version"],
+            compositor.backend_display_name: compositor.version_command(),
             "Python": [sys.executable, "--version"],
         }.items()
     }
@@ -111,7 +120,7 @@ def state():
             ["systemctl", "--user", "--failed", "--no-legend", "--plain"]
         ).splitlines(),
         drift=drift,
-        configErrors=run(["hyprctl", "configerrors"]),
+        configErrors=configuration_errors(),
         updatesAgeSeconds=int(time.time() - cache.stat().st_mtime)
         if cache.exists()
         else None,

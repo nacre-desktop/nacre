@@ -24,7 +24,7 @@ class ResponsiveServiceTests(unittest.TestCase):
             shutil.copytree(TOOLS / "tests/qml/fixtures", fixtures)
             definitions = {
                 "NacrePanelState": "property bool settingsVisible:false;property QtObject view:QtObject{};function getForActive(){return view;}function closeTransient(view){}",
-                "NacreHyprland": "property var clients:[];property int activeWsId:1;function dispatch(command){}",
+                "NacreCompositor": "property var windows:[];property int activeWsId:1;function moveWindowToWorkspace(id,workspace){}function hideWindowCommand(id){return [id]}function focusWindow(id){}signal configurationReloaded()",
                 "NacrePresentation": 'property var active:({mode:"light"})',
                 "NacreWallpapers": 'property string actualCurrent:"scene";property string current:"scene";property var preferences:({paletteMode:"auto"});property var appearancePreferences:({});function refresh(){}function preference(value){}',
                 "NacreTime": "property int hours:12",

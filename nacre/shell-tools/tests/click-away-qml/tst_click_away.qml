@@ -19,19 +19,15 @@ TestCase {
         NacreHoverIntent.observe(screen, 250, 40);
         verify(NacreHoverIntent.canOpen("dashboard", screen, Qt.NoButton));
         verify(!NacreHoverIntent.canOpen("dashboard", screen, Qt.LeftButton));
-        NacreHyprland.activeClient = {
-            "lastIpcObject": {
-                "fullscreen": 2
-            }
+        NacreCompositor.activeWindow = {
+            "fullscreenMode": 2
         };
         verify(!NacreHoverIntent.canOpen("dashboard", screen, Qt.NoButton));
-        NacreHyprland.activeClient = {
-            "lastIpcObject": {
-                "fullscreen": 1
-            }
+        NacreCompositor.activeWindow = {
+            "fullscreenMode": 1
         };
         verify(NacreHoverIntent.canOpen("dashboard", screen, Qt.NoButton));
-        NacreHyprland.activeClient = null;
+        NacreCompositor.activeWindow = null;
     }
 
     function test_modal_header_hover_loss_keeps_geometric_dismiss_guard() {

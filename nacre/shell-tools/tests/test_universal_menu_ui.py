@@ -96,7 +96,7 @@ def stage(target):
         "NacrePlayers": """property var active:({canTogglePlaying:true,canGoNext:true,canGoPrevious:true});property var actions:[];function control(value){actions=[...actions,value];return true;}""",
         "NacreNetwork": """property bool wifiAvailable:true;property bool wifiEnabled:true;property var visibleNetworks:[]""",
         "NacreBluetooth": """property bool available:true;property QtObject adapter:QtObject{property bool enabled:true};readonly property bool powered:adapter.enabled;property var devices:[]""",
-        "NacreHyprland": """property var clients:[];property var calls:[];function dispatch(value){calls=[...calls,value]}""",
+        "NacreCompositor": """property var windows:[];property var calls:[];function focusWindow(id){calls=[...calls,"focus "+id]}function logout(){calls=[...calls,"logout"]}""",
         "DesktopExtras": """property var notes:[];property string notesQuery:"";property string brainQuery:"";property var clips:[];property var keys:[];property var requests:[];function request(action,payload){requests=[...requests,[action,payload]];}""",
         "Maintenance": """property var data:({services:{desktop:"active"}});function refresh(){}""",
         "Updates": """property int count:12""",
