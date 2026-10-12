@@ -66,11 +66,18 @@ def stage(root, destination, component, build):
             "xdg-open",
         ):
             copy(root / "bin" / name, shared / "bin" / name)
+            public = destination / "usr/bin" / name
+            public.parent.mkdir(parents=True, exist_ok=True)
+            if name != "xdg-open":
+                public.symlink_to("../share/nacre/bin/" + name)
         for source in (root / "nacre/desktop").glob("*.desktop"):
             if "brain" not in source.name and "ai" not in source.name:
                 copy(source, shared / "nacre/desktop" / source.name)
         for name, source in (("nacre-shell", "control.sh"), ("nacre-menu", "menu.sh")):
             copy(tools / source, deploy / ".local/bin" / name)
+            public = destination / "usr/bin" / name
+            public.parent.mkdir(parents=True, exist_ok=True)
+            public.symlink_to("../share/nacre/nacre/shell-tools/" + source)
         text(
             ".local/bin/nacre",
             '#!/bin/sh\nexec python3 /usr/share/nacre/tools/releases.py "$@"\n',
@@ -153,6 +160,9 @@ def stage(root, destination, component, build):
         (application / "bin").symlink_to("../../bin")
         for source in (root / "bin").glob("nacre-ai*"):
             copy(source, shared / "bin" / source.name)
+            public = destination / "usr/bin" / source.name
+            public.parent.mkdir(parents=True, exist_ok=True)
+            public.symlink_to("../share/nacre/bin/" + source.name)
             text(
                 ".local/bin/" + source.name,
                 f'#!/bin/sh\nexec /usr/share/nacre/bin/{source.name} "$@"\n',
@@ -172,12 +182,18 @@ def stage(root, destination, component, build):
         copy(root / "ai/brain", shared / "ai/brain")
         for source in (root / "bin").glob("nacre-brain*"):
             copy(source, shared / "bin" / source.name)
+            public = destination / "usr/bin" / source.name
+            public.parent.mkdir(parents=True, exist_ok=True)
+            public.symlink_to("../share/nacre/bin/" + source.name)
             text(
                 ".local/bin/" + source.name,
                 f'#!/bin/sh\nexec /usr/share/nacre/bin/{source.name} "$@"\n',
                 True,
             )
         copy(root / "brain/launch.sh", deploy / ".local/bin/nacre-brain-ui")
+        (destination / "usr/bin/nacre-brain-ui").symlink_to(
+            "../share/nacre/brain/launch.sh"
+        )
         copy(
             root / "brain/brain.service",
             deploy / ".config/systemd/user/nacre-brain.service",
