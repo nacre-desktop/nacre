@@ -10,6 +10,7 @@ Singleton {
     property real reveal: hidden ? 0 : 1
     property var screens: ({})
     property var panels: ({})
+    readonly property var providerViews: Object.values(screens).concat(NacrePearls.views)
     readonly property var modes: ["apps", "wallpaper", "palette", "legacy", "overview", "clipboard", "keys"]
     readonly property var pages: ["appearance", "desktop", "displays", "sound", "network", "bluetooth", "notifications", "workflows", "lock", "time", "ai", "maintenance"]
     function activeName() {
@@ -81,8 +82,8 @@ Singleton {
         hidden = false;
         return true;
     }
-    function openMode(mode, query = "", preview = false) {
-        const view = getForActive();
+    function openMode(mode, query = "", preview = false, screenName = "", forceOpen = false) {
+        const view = screenName ? screens[screenName] : getForActive();
         if (!view || !modes.includes(mode) || typeof query !== "string")
             return false;
         const same = view.launcher && view.launcherMode === mode && view.launcherQuery === query && view.previewOnly === preview;
@@ -94,7 +95,7 @@ Singleton {
             view.launcherRoute = "home";
         view.launcherQuery = query;
         view.launcherRequest = (view.launcherRequest || 0) + 1;
-        view.launcher = !same;
+        view.launcher = forceOpen || !same;
         hidden = false;
         return true;
     }
@@ -114,7 +115,7 @@ Singleton {
         hidden = false;
         return true;
     }
-    function openControls(section = "home", screenName = "") {
+    function openControls(section = "home", screenName = "", forceOpen = false) {
         const view = screenName ? screens[screenName] : getForActive();
         if (!view || !["home", "audio", "network", "bluetooth", "battery", "notifications"].includes(section))
             return false;
@@ -123,7 +124,7 @@ Singleton {
         closeTransient(view);
         view.previewOnly = false;
         view.controlSection = section;
-        view.osd = !wasOpen;
+        view.osd = forceOpen || !wasOpen;
         view.edgeMenu = view.osd ? "osd" : "";
         hidden = false;
         return true;

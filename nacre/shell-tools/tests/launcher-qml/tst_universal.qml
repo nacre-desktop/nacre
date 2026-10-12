@@ -344,19 +344,19 @@ TestCase {
 
     function test_notes_never_show_results_from_a_previous_query() {
         const value = view(), field = findChild(value, "launcherSearch");
-        DesktopExtras.notes = [
+        NacreMenu.notes = [
             {
                 "path": "old.md",
                 "title": "Old result",
                 "preview": "Old"
             }
         ];
-        DesktopExtras.notesQuery = "old";
+        NacreMenu.brainQuery = "old";
         field.text = "# current";
         wait(20);
         compare(value.entries.length, 0);
-        DesktopExtras.notesQuery = "current";
-        DesktopExtras.notes = [
+        NacreMenu.brainQuery = "current";
+        NacreMenu.notes = [
             {
                 "path": "new.md",
                 "title": "Current result",

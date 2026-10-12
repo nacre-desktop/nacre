@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+Edge panels can detach into ordinary Nacre windows and dock again. Launcher and
+dashboard navigation is independent; data and samplers stay shared. Optional AI
+conversations move between views with draft and ownership recovery. Pearl grips,
+pop-out controls and Super+Ctrl+D support the feature; Settings can disable it.
+
 ## 0.1.0-dev.2
 
 Use the system keyboard layout at first install, with US as the fallback. Smaller

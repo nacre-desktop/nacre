@@ -10,6 +10,8 @@ import qs.modules.notifications
 
 FocusScope {
     id: root
+    property bool detached: false
+    property bool hostActive: true
     required property var screen
     required property bool visibility
     property bool keyboardActive: false
@@ -88,6 +90,12 @@ FocusScope {
                             text: "Controls"
                             font.pointSize: 18
                             Layout.fillWidth: true
+                        }
+                        NacreDetachControls {
+                            kind: "controls"
+                            host: root
+                            screenName: root.screen.name
+                            visible: !root.detached && NacrePearls.enabled
                         }
                         ActionButton {
                             text: "Settings"

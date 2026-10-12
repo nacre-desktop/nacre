@@ -22,3 +22,6 @@ Stay awake temporarily inhibits idle actions. Quick controls show their state.
 AI and Brain are optional. Core Nacre works without either. Installing their code
 does not sign into providers, download models or populate your memory vault.
 See their [setup guide](optional-apps.md).
+
+Panels can [open as ordinary windows](detachable-panels.md). Use the pop-out button
+or pearl grip in any panel; Super+Ctrl+D detaches the open edge panel.

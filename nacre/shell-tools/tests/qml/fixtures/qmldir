@@ -9,3 +9,7 @@ FastScroll 1.0 FastScroll.qml
 
 singleton NacreAppearance 1.0 NacreAppearance.qml
 NacreInteraction 1.0 NacreInteraction.qml
+
+singleton NacrePearls 1.0 NacrePearls.qml
+singleton NacreAiViews 1.0 NacreAiViews.qml
+NacreDetachControls 1.0 NacreDetachControls.qml

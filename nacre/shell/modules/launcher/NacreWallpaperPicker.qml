@@ -7,6 +7,7 @@ import qs.services
 
 Item {
     id: root
+    property bool detached: false
     required property PersistentProperties visibilities
     readonly property string kind: NacreWallpapers.preferences.kind || "static"
     readonly property string layout: NacreWallpapers.preferences.layout || "carousel"
@@ -120,7 +121,8 @@ Item {
     }
     MouseArea {
         anchors.fill: parent
-        onClicked: root.visibilities.launcher = false
+        onClicked: if (!root.detached)
+            root.visibilities.launcher = false
     }
     Column {
         id: toolbar
@@ -215,7 +217,12 @@ Item {
             onTextChanged: root.reconcile()
             Keys.onLeftPressed: root.move(-1)
             Keys.onRightPressed: root.move(1)
-            Keys.onEscapePressed: root.visibilities.launcher = false
+            Keys.onEscapePressed: {
+                if (root.detached) {
+                    query.text = "";
+                } else
+                    root.visibilities.launcher = false;
+            }
             onAccepted: root.choose()
         }
     }
@@ -360,7 +367,12 @@ Item {
             onClicked: root.move(1)
         }
     }
-    Keys.onEscapePressed: root.visibilities.launcher = false
+    Keys.onEscapePressed: {
+        if (root.detached) {
+            query.text = "";
+        } else
+            root.visibilities.launcher = false;
+    }
     Keys.onLeftPressed: root.move(-1)
     Keys.onRightPressed: root.move(1)
     Keys.onReturnPressed: root.choose()

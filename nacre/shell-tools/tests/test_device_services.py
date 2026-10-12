@@ -23,7 +23,7 @@ class DeviceServiceTests(unittest.TestCase):
             fixtures.mkdir()
             definitions = {
                 "NacreWelcomeApp": 'property bool active:false;property string page:"home";property var demoEntries:[]',
-                "NacrePanelState": 'property bool settingsVisible:false;property var screens:({});property var panels:({});property string settingsPage:"notifications";property int closes:0;function close(){closes++}',
+                "NacrePanelState": 'property bool settingsVisible:false;property var screens:({});readonly property var providerViews:Object.values(screens);property var panels:({});property string settingsPage:"notifications";property int closes:0;function close(){closes++}',
                 "Hyprland": "property var toplevels: QtObject {property var values:[]};property var workspaces:({values:[]});property var monitors:({values:[]});property var focusedMonitor:null;property var focusedWorkspace:null;property var activeToplevel:null;property bool usingLua:true;property var requests:[];property int refreshes:0;signal rawEvent(var event);function dispatch(value){requests=[...requests,value]}function refreshToplevels(){refreshes++}function refreshMonitors(){}function refreshWorkspaces(){}",
                 "NacrePresentation": "property var pending:({});property var active:({});property bool available:false;function accept(record){pending=record;return true}",
                 "NacrePaths": 'property string state:"file:///fixture";property string pictures:"file:///fixture"',

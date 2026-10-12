@@ -23,6 +23,7 @@ class ShellStateTests(unittest.TestCase):
             fixtures = target / "fixtures"
             fixtures.mkdir()
             definitions = {
+                "NacrePearls": "property var views:[]",
                 "NacreHyprland": 'property var focusedMonitor:({name:"one"});property int activeWsId:2;property var clients:[];property var workspaces:({values:[{},{}]});property var calls:[];function dispatch(command){calls=[...calls,command]}',
                 "NacreHoverIntent": "property var dismissed:[];function dismiss(screen){dismissed=[...dismissed,screen.name]}",
                 "DesktopSettings": "property var data:({animations:false,clickEdgeMenus:false})",

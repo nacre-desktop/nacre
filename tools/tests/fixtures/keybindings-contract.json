@@ -1274,5 +1274,16 @@
     "flags": {},
     "keys": "SUPER + CTRL + C",
     "submap": ""
+  },
+  {
+    "action": {
+      "args": [
+        "~/.local/bin/nacre-shell detach"
+      ],
+      "method": "exec_cmd"
+    },
+    "flags": {},
+    "keys": "SUPER + CTRL + D",
+    "submap": ""
   }
 ]

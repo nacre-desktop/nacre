@@ -7,6 +7,13 @@ import Quickshell.Io
 Item {
     id: root
     required property PersistentProperties visibilities
+    property bool detached: false
+    function dismiss() {
+        if (detached)
+            query = "";
+        else
+            visibilities.launcher = false;
+    }
     property string title
     property string placeholder: "Search"
     property int bodyHeight: 450
@@ -17,7 +24,7 @@ Item {
     implicitWidth: 860
     implicitHeight: bodyHeight + 112
     IpcHandler {
-        target: "featureSearch"
+        target: root.detached ? "featureSearchWindow" + root.visibilities.windowKey : "featureSearch"
         function query(text: string): void {
             root.query = text;
         }
@@ -46,7 +53,8 @@ Item {
         ActionButton {
             text: "Close"
             icon: "close"
-            onClicked: root.visibilities.launcher = false
+            visible: !root.detached
+            onClicked: root.dismiss()
         }
     }
     NacreTextField {
@@ -67,7 +75,7 @@ Item {
         Keys.onUpPressed: root.moved(-1)
         Keys.onReturnPressed: root.chosen()
         Keys.onEnterPressed: root.chosen()
-        Keys.onEscapePressed: root.visibilities.launcher = false
+        Keys.onEscapePressed: root.dismiss()
         Component.onCompleted: forceActiveFocus()
         Connections {
             target: root.visibilities

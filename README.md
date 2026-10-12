@@ -102,6 +102,7 @@ opens AI when installed. Enter opens a search result; Ctrl+D toggles its favorit
 
 - [Installation](docs/installation.md)
 - [Using Nacre](docs/usage.md)
+- [Detachable panels](docs/detachable-panels.md)
 - [Configuration and profiles](docs/configuration.md)
 - [Optional AI and Brain](docs/optional-apps.md)
 - [Updates and recovery](docs/recovery.md)

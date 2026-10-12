@@ -62,7 +62,7 @@ class RotationTests(unittest.TestCase):
                 "NacrePresentation": "property var pending:({});property var active:({})",
                 "WallpaperPlayback": "property bool sleeping:false;property bool locked:false;property bool paused:false",
                 "NacrePanelState": (
-                    "property var screens:({});"
+                    "property var screens:({});readonly property var providerViews:Object.values(screens);"
                     "property bool settingsVisible:false;"
                     'property string settingsPage:"appearance"'
                 ),

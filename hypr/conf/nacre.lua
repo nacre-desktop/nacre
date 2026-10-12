@@ -84,3 +84,9 @@ hl.window_rule({
     float = true,
     center = true,
 })
+
+-- Detached panels are ordinary windows; users can toggle tiling as usual.
+hl.window_rule({
+    match = { title = "^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$" },
+    float = true,
+})

@@ -5,6 +5,7 @@ import qs.services
 
 NacreSurface {
     id: root
+    property bool detached: false
     required property PersistentProperties visibilities
     property alias query: search.text
     readonly property bool commands: query.trim().startsWith(">")
@@ -18,7 +19,8 @@ NacreSurface {
         const entry = entries[index];
         if (!entry)
             return;
-        visibilities.launcher = false;
+        if (!root.detached)
+            visibilities.launcher = false;
         if (commands)
             DesktopActions.execute(entry.action, entry.value);
         else
@@ -54,7 +56,12 @@ NacreSurface {
             list.currentIndex = Math.max(0, list.currentIndex);
         }
         onAccepted: root.activate(Math.max(0, list.currentIndex))
-        Keys.onEscapePressed: root.visibilities.launcher = false
+        Keys.onEscapePressed: {
+            if (root.detached) {
+                search.text = "";
+            } else
+                root.visibilities.launcher = false;
+        }
     }
     ListView {
         id: list
@@ -69,7 +76,12 @@ NacreSurface {
         boundsBehavior: Flickable.StopAtBounds
         keyNavigationEnabled: true
         Keys.onReturnPressed: root.activate(currentIndex)
-        Keys.onEscapePressed: root.visibilities.launcher = false
+        Keys.onEscapePressed: {
+            if (root.detached) {
+                search.text = "";
+            } else
+                root.visibilities.launcher = false;
+        }
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Backspace || event.text && !(event.modifiers & Qt.ControlModifier)) {
                 if (event.key === Qt.Key_Backspace)

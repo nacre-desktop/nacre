@@ -36,7 +36,7 @@ class LauncherPanelTests(unittest.TestCase):
                 )
                 (target / (name + ".qml")).write_text(source)
             (target / "extras").mkdir()
-            stub = "import QtQuick\nItem {required property var visibilities;property string kind:KIND;property real viewportWidth:0;property real viewportHeight:0;implicitWidth:800;implicitHeight:300}"
+            stub = "import QtQuick\nItem {required property var visibilities;property bool detached:false;property bool closeAfterLaunch:false;property var menu:null;signal closeRequested;signal queryChanged;signal routeChanged;property string kind:KIND;property real viewportWidth:0;property real viewportHeight:0;implicitWidth:800;implicitHeight:300}"
             for mode, name in [
                 ("apps", "NacreAppBrowser"),
                 ("legacy", "NacreSearchPanel"),
@@ -63,9 +63,10 @@ class LauncherPanelTests(unittest.TestCase):
                 )
             )
             (target / "NacreWallpaperPicker.qml").write_text(
-                "import QtQuick\nItem {required property var visibilities;property real viewportWidth:0;property real viewportHeight:0;property int count:3;property int currentIndex:0;implicitWidth:800;implicitHeight:360;function move(delta){currentIndex=Math.max(0,Math.min(2,currentIndex+delta))}}"
+                "import QtQuick\nItem {required property var visibilities;property bool detached:false;property real viewportWidth:0;property real viewportHeight:0;property int count:3;property int currentIndex:0;implicitWidth:800;implicitHeight:360;function move(delta){currentIndex=Math.max(0,Math.min(2,currentIndex+delta))}}"
             )
             helpers = {
+                "NacreMenu": "",
                 "NacreTokens": "property bool motionEnabled:true",
                 "NacreWallpapers": "property var preferences:({layout:'carousel'})",
                 "NacreApps": "property string last:'';function fuzzyQuery(q){return [{id:'editor',name:'Editor',comment:'Code'}].filter(a=>a.name.toLowerCase().includes(q.toLowerCase()))}function launch(a){last=a.id}",

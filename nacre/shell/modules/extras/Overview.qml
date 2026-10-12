@@ -22,7 +22,8 @@ SearchSurface {
     readonly property var workspaces: [...new Set([1, 2, 3, 4, 5, 6, 7, ...windows.map(c => c.workspace?.id).filter(id => id > 0)])].sort((a, b) => a - b)
     function focusWindow(client) {
         if (client) {
-            visibilities.launcher = false;
+            if (!root.detached)
+                visibilities.launcher = false;
             NacreHyprland.dispatch('hl.dsp.focus({window=' + JSON.stringify('address:' + client.address) + '})');
         }
     }
@@ -79,7 +80,8 @@ SearchSurface {
                         height: 38
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            root.visibilities.launcher = false;
+                            if (!root.detached)
+                                visibilities.launcher = false;
                             NacreHyprland.dispatch("workspace " + workspace.modelData);
                         }
                     }

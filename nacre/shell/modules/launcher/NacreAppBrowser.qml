@@ -10,6 +10,10 @@ import "calculator.js" as Calculator
 NacreSurface {
     id: root
     required property var visibilities
+    property var menu: NacreMenu
+    property bool detached: false
+    property bool closeAfterLaunch: false
+    signal closeRequested
     property real viewportWidth: Quickshell.screens[0].width
     property real viewportHeight: Quickshell.screens[0].height
     property string route: "home"
@@ -34,7 +38,7 @@ NacreSurface {
         const basic = Calculator.evaluate(scope.text);
         if (basic.ok || !/\b(to|in)\b/.test(scope.text))
             return basic;
-        return NacreMenu.conversionQuery === scope.text ? NacreMenu.conversion : {
+        return root.menu.conversionQuery === scope.text ? root.menu.conversion : {
             ok: false,
             error: "Converting…"
         };
@@ -65,12 +69,12 @@ NacreSurface {
                     value: calculationResult.value
                 }
             ] : [];
-        return NacreMenu.content(route, query);
+        return root.menu.content(route, query);
     }
     readonly property bool hasSelection: keyboardSelection || !!scope.text || picker
     readonly property var selectedEntry: hasSelection && selection >= 0 ? entries[selection] || null : null
     readonly property var previewEntry: controlsPinned ? null : selectedEntry || hoveredEntry
-    readonly property var breadcrumb: Menu.trail(route, NacreMenu.rows)
+    readonly property var breadcrumb: Menu.trail(route, root.menu.rows)
     readonly property real contentX: picker ? 20 : 182
     readonly property real contentWidth: width - contentX - (showDetails ? 270 : 20)
     readonly property real bodyHeight: height - 184
@@ -80,13 +84,43 @@ NacreSurface {
     color: "transparent"
     border.width: 0
 
+    function focusExplicit() {
+        search.forceActiveFocus();
+    }
+    function captureState() {
+        return {
+            route: route,
+            query: query,
+            history: history,
+            selection: selection,
+            keyboardSelection: keyboardSelection,
+            scroll: {
+                grid: grid.contentY,
+                results: results.contentY,
+                details: detailScroll.contentY
+            }
+        };
+    }
+    function restoreState(data) {
+        route = data.route || "home";
+        history = data.history || [];
+        search.text = data.query || "";
+        selection = data.selection ?? -1;
+        keyboardSelection = data.keyboardSelection === true;
+        Qt.callLater(() => {
+            grid.contentY = data.scroll?.grid || 0;
+            results.contentY = data.scroll?.results || 0;
+            detailScroll.contentY = data.scroll?.details || 0;
+        });
+        root.menu.prepare(route, query, true);
+    }
     function navigate(value, remember = true) {
-        const resolved = value === "hidden" ? value : NacreMenu.resolve(value);
+        const resolved = value === "hidden" ? value : root.menu.resolve(value);
         if (!resolved) {
-            NacreMenu.message = "That section is not available";
+            root.menu.message = "That section is not available";
             return;
         }
-        const node = NacreMenu.node(resolved);
+        const node = root.menu.node(resolved);
         if (remember && route !== resolved)
             history = [...history, route];
         route = node?.kind === "action" ? Menu.parentOf(resolved) || "home" : resolved;
@@ -94,7 +128,7 @@ NacreSurface {
         keyboardSelection = false;
         selection = -1;
         hoveredEntry = null;
-        NacreMenu.prepare(route, "", true);
+        root.menu.prepare(route, "", true);
         if (node?.kind === "action") {
             selection = entries.findIndex(entry => entry.id === resolved);
             keyboardSelection = selection >= 0;
@@ -106,10 +140,10 @@ NacreSurface {
                 favorites: "home",
                 all: "apps",
                 hidden: "hidden"
-            })[name] || (NacreMenu.resolve(name) ? name : "apps"));
+            })[name] || (root.menu.resolve(name) ? name : "apps"));
     }
     function resolveLeafRoute() {
-        const node = NacreMenu.node(route);
+        const node = root.menu.node(route);
         if (node?.kind !== "action")
             return;
         const selected = node.id;
@@ -121,7 +155,7 @@ NacreSurface {
         activePrompt = NacreMenuPrompt.active && NacreMenuPrompt.ownerView === visibilities ? NacreMenuPrompt.request : null;
         history = [];
         route = visibilities.launcherRoute || "home";
-        if (NacreMenu.rows.length && !NacreMenu.resolve(route) && route !== "hidden")
+        if (root.menu.rows.length && !root.menu.resolve(route) && route !== "hidden")
             route = "home";
         form = null;
         confirmation = null;
@@ -132,7 +166,7 @@ NacreSurface {
         search.text = visibilities.launcherQuery || "";
         selection = picker ? Menu.firstEnabled(entries) : scope.text ? Menu.firstEnabled(entries) : -1;
         resolveLeafRoute();
-        NacreMenu.prepare(route, query, true);
+        root.menu.prepare(route, query, true);
         if (inputPicker) {
             form = {
                 kind: "input",
@@ -256,12 +290,19 @@ NacreSurface {
         }
         if (entry.kind === "calculation") {
             AppLaunch.run(["wl-copy", "--", entry.value]);
-            visibilities.launcher = false;
+            if (!detached || closeAfterLaunch) {
+                visibilities.launcher = false;
+                if (detached)
+                    closeRequested();
+            }
             return;
         }
-        if (!NacreMenu.keepOpen(entry))
+        if (!root.menu.keepOpen(entry) && (!detached || closeAfterLaunch)) {
             visibilities.launcher = false;
-        NacreMenu.execute(entry, confirmed);
+            if (detached)
+                closeRequested();
+        }
+        root.menu.execute(entry, confirmed);
     }
     function activate(index) {
         if (hasSelection)
@@ -274,7 +315,7 @@ NacreSurface {
         const point = target.mapToItem(root, 0, 0);
         contextAnchor = Qt.rect(point.x, point.y, target.width, target.height);
         contextEntry = entry;
-        NacreMenu.inspectApp(entry);
+        root.menu.inspectApp(entry);
         context.open();
     }
     function hoverEntry(entry, inside) {
@@ -377,7 +418,12 @@ NacreSurface {
             cancelForm();
         else if (picker)
             NacreMenuPrompt.finish("", true);
-        else
+        else if (detached) {
+            if (query)
+                search.text = "";
+            else if (route !== "home")
+                navigate("home", false);
+        } else
             visibilities.launcher = false;
     }
     function cancelForm() {
@@ -390,7 +436,7 @@ NacreSurface {
         if (inputPicker)
             NacreMenuPrompt.finish(values.value || "", false);
         else
-            NacreMenu.work(form.kind === "webapp" ? "webapp-create" : "reminder", "", values);
+            root.menu.work(form.kind === "webapp" ? "webapp-create" : "reminder", "", values);
         form = null;
         search.forceActiveFocus();
     }
@@ -422,7 +468,7 @@ NacreSurface {
         }
     }
     Connections {
-        target: NacreMenu
+        target: root.menu
         function onCatalogChanged() {
             if (root.visibilities.launcher && !root.query)
                 root.resolveLeafRoute();
@@ -438,7 +484,7 @@ NacreSurface {
     Timer {
         id: queryDelay
         interval: 180
-        onTriggered: NacreMenu.prepare(root.route, root.query, false)
+        onTriggered: root.menu.prepare(root.route, root.query, false)
     }
 
     Item {
@@ -467,14 +513,14 @@ NacreSurface {
             width: parent.width
             height: parent.height - y - 38
             clip: true
-            model: NacreMenu.navigation
+            model: root.menu.navigation
             spacing: 3
-            currentIndex: Math.max(0, NacreMenu.navigation.findIndex(entry => root.route.split(".")[0] === entry.id))
+            currentIndex: Math.max(0, root.menu.navigation.findIndex(entry => root.route.split(".")[0] === entry.id))
             delegate: NacreSurface {
                 required property var modelData
                 required property int index
                 width: rail.width
-                height: Math.min(37, Math.max(28, (rail.height - (NacreMenu.navigation.length - 1) * 3) / Math.max(1, NacreMenu.navigation.length)))
+                height: Math.min(37, Math.max(28, (rail.height - (root.menu.navigation.length - 1) * 3) / Math.max(1, root.menu.navigation.length)))
                 radius: 9
                 color: root.route.split(".")[0] === modelData.id ? Qt.tint(NacreColours.palette.m3surface, Qt.alpha(NacreColours.palette.m3onSurface, .12)) : "transparent"
                 border.width: root.route.split(".")[0] === modelData.id ? 1 : 0
@@ -595,7 +641,7 @@ NacreSurface {
     NacreText {
         x: root.contentX
         y: root.picker ? 16 : 55
-        text: root.picker ? root.activePrompt.title : root.calculation ? "Calculator" : root.scope.kind === "brain" ? "Nacre Brain" : root.scope.kind === "ai" ? "Nacre AI" : root.scope.kind === "help" ? "Search scopes" : root.scope.text ? "Search everything" : root.route === "home" ? "Favorites" : root.route === "hidden" ? "Hidden applications" : NacreMenu.node(root.route)?.description || ""
+        text: root.picker ? root.activePrompt.title : root.calculation ? "Calculator" : root.scope.kind === "brain" ? "Nacre Brain" : root.scope.kind === "ai" ? "Nacre AI" : root.scope.kind === "help" ? "Search scopes" : root.scope.text ? "Search everything" : root.route === "home" ? "Favorites" : root.route === "hidden" ? "Hidden applications" : root.menu.node(root.route)?.description || ""
         font.pointSize: root.picker ? 15 : 10
         color: NacreColours.palette.m3onSurfaceVariant
         textFormat: Text.PlainText
@@ -799,7 +845,7 @@ NacreSurface {
         y: root.picker ? 80 : 120
         width: root.contentWidth - 28
         visible: !root.entries.length && !root.form
-        text: root.calculation ? root.calculationResult.error || "Type an expression after =" : root.scope.kind === "files" ? NacreMenu.fileMessage || "Type : and a filename to search your folders" : root.scope.kind === "brain" ? (root.scope.text ? "Looking in your private notes…" : "Type # and a few words to search Nacre Brain") : root.scope.kind === "ai" ? "Type ? and your question" : root.route === "home" && !root.query ? "Add apps and menu items to Favorites with Ctrl+D or their item actions." : root.route === "software.packages" ? NacreMenu.packageMessage || "Type two or more characters to search packages" : "No matches. Try a different word, > for actions, or / for search scopes."
+        text: root.calculation ? root.calculationResult.error || "Type an expression after =" : root.scope.kind === "files" ? root.menu.fileMessage || "Type : and a filename to search your folders" : root.scope.kind === "brain" ? (root.scope.text ? "Looking in your private notes…" : "Type # and a few words to search Nacre Brain") : root.scope.kind === "ai" ? "Type ? and your question" : root.route === "home" && !root.query ? "Add apps and menu items to Favorites with Ctrl+D or their item actions." : root.route === "software.packages" ? root.menu.packageMessage || "Type two or more characters to search packages" : "No matches. Try a different word, > for actions, or / for search scopes."
         wrapMode: Text.Wrap
         textFormat: Text.PlainText
         color: NacreColours.palette.m3onSurfaceVariant
@@ -909,10 +955,10 @@ NacreSurface {
                 NacreText {
                     text: "Recent"
                     font.pointSize: 10
-                    visible: !root.previewEntry && NacreMenu.recent().length > 0
+                    visible: !root.previewEntry && root.menu.recent().length > 0
                 }
                 Repeater {
-                    model: root.previewEntry ? [] : NacreMenu.recent().slice(0, 3)
+                    model: root.previewEntry ? [] : root.menu.recent().slice(0, 3)
                     delegate: NacreMenuButton {
                         required property var modelData
                         width: detailColumn.width
@@ -930,7 +976,7 @@ NacreSurface {
                     model: root.previewEntry ? [] : ["actions.controls.dnd", "actions.controls.night-light", "actions.controls.stay-awake"]
                     delegate: NacreMenuButton {
                         required property string modelData
-                        readonly property var item: NacreMenu.node(modelData)
+                        readonly property var item: root.menu.node(modelData)
                         objectName: "launcherToggle_" + modelData.split(".").pop()
                         toggle: true
                         description: item?.reason || ({
@@ -941,11 +987,11 @@ NacreSurface {
                         stateText: item?.disabled ? "—" : ""
                         width: detailColumn.width
                         compact: true
-                        selected: !!item && NacreMenu.stateFor(item)
+                        selected: !!item && root.menu.stateFor(item)
                         enabled: !!item && !item.disabled && (modelData !== "actions.controls.night-light" || !NacreControlTools.busy)
                         icon: selected ? "check" : item?.icon || ""
                         text: item?.label || ""
-                        onClicked: NacreMenu.execute(item)
+                        onClicked: root.menu.execute(item)
                     }
                 }
                 NacreMenuButton {
@@ -954,7 +1000,7 @@ NacreSurface {
                     compact: true
                     text: Updates.count ? Updates.count + " updates" : "Up to date"
                     icon: "system_update"
-                    onClicked: root.run(NacreMenu.node("health.updates"))
+                    onClicked: root.run(root.menu.node("health.updates"))
                 }
             }
             FastScroll {
@@ -967,12 +1013,12 @@ NacreSurface {
         x: 20
         y: parent.height - 88
         width: parent.width - 40
-        text: NacreMenu.catalog.error || NacreMenu.message || (root.calculation ? "Enter copies the result" : root.picker ? "Enter chooses · Escape cancels" : "Enter opens · Tab item actions · Ctrl+D favorite")
+        text: root.menu.catalog.error || root.menu.message || (root.calculation ? "Enter copies the result" : root.picker ? "Enter chooses · Escape cancels" : "Enter opens · Tab item actions · Ctrl+D favorite")
         textFormat: Text.PlainText
         font.pointSize: 9
         color: NacreColours.palette.m3onSurfaceVariant
         elide: Text.ElideRight
-        visible: !root.form && !root.confirmation && (!!root.selectedEntry || root.picker || !!NacreMenu.catalog.error || !!NacreMenu.message)
+        visible: !root.form && !root.confirmation && (!!root.selectedEntry || root.picker || !!root.menu.catalog.error || !!root.menu.message)
     }
     NacreTextField {
         id: search
@@ -1161,13 +1207,13 @@ NacreSurface {
                 NacreMenuButton {
                     width: parent.width
                     compact: true
-                    visible: (!!root.contextEntry?.package && root.contextEntry?.checked) || (!!root.contextEntry && !!NacreMenu.ownership[root.contextEntry.id])
+                    visible: (!!root.contextEntry?.package && root.contextEntry?.checked) || (!!root.contextEntry && !!root.menu.ownership[root.contextEntry.id])
                     text: "Remove package"
                     onClicked: {
                         const entry = Object.assign({}, root.contextEntry, {
                             disabled: false,
                             operation: "remove-package",
-                            value: root.contextEntry.package || NacreMenu.ownership[root.contextEntry.id]
+                            value: root.contextEntry.package || root.menu.ownership[root.contextEntry.id]
                         });
                         context.close();
                         root.run(entry);
@@ -1179,7 +1225,7 @@ NacreSurface {
                     visible: root.contextEntry?.webapp === true
                     text: "Remove web app"
                     onClicked: {
-                        NacreMenu.execute(Object.assign({}, root.contextEntry, {
+                        root.menu.execute(Object.assign({}, root.contextEntry, {
                             operation: "webapp-remove"
                         }));
                         context.close();
@@ -1188,10 +1234,10 @@ NacreSurface {
                 NacreMenuButton {
                     width: parent.width
                     compact: true
-                    visible: !!NacreMenu.supportPackage(root.contextEntry) && !!root.contextEntry?.disabled
+                    visible: !!root.menu.supportPackage(root.contextEntry) && !!root.contextEntry?.disabled
                     text: "Install support"
                     onClicked: {
-                        const pkg = NacreMenu.supportPackage(root.contextEntry);
+                        const pkg = root.menu.supportPackage(root.contextEntry);
                         context.close();
                         root.run({
                             id: "software.support",
@@ -1222,7 +1268,7 @@ NacreSurface {
     }
 
     IpcHandler {
-        target: "appBrowser"
+        target: root.detached ? "appBrowserWindow" + root.visibilities.windowKey : "appBrowser"
         function selectCategory(id: string): void {
             root.select(id);
         }

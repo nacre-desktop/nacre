@@ -7,6 +7,7 @@ import qs.modules.background
 import qs.modules.extras
 import qs.modules.settings
 import qs.modules.colors
+import qs.modules.pearls
 import qs.modules.welcome
 
 ShellRoot {
@@ -21,5 +22,6 @@ ShellRoot {
     NacreSettingsHost {}
     NacreColorsHost {}
     NacreWelcomeHost {}
+    NacrePearlDragPreview {}
     Component.onCompleted: ChatWindowTitle.scan()
 }

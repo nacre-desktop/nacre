@@ -70,6 +70,7 @@ Item {
     }
     Dashboard.NacreDashboardPanel {
         id: dashboard
+        screenName: root.screen.name
         enabled: root.visibilities.dashboard
         visibilities: root.visibilities
         x: root.dashboardPosition.x
@@ -94,6 +95,7 @@ Item {
     }
     Launcher.NacreLauncherPanel {
         id: launcher
+        screenName: root.screen.name
         enabled: root.visibilities.launcher
         visibilities: root.visibilities
         x: root.launcherPosition.x

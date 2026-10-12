@@ -8,7 +8,8 @@ to the edge without creating a window.
 Launcher and dashboard windows have independent navigation, searches and scrolling.
 Their application catalogue, favorites, media and system readings stay shared.
 A launcher window stays open after launching by default, so it can serve as a
-calculator, clipboard browser or command companion. Controls use one shared window.
+calculator, clipboard browser or command companion. Its header lets you switch
+between **Stay open** and **Auto close**. Controls use one shared window.
 
 With optional AI enabled, detaching moves the current conversation into its window.
 The sidebar gets a fresh conversation. Selecting a conversation already in a window
@@ -22,7 +23,8 @@ Outside clicks do not close these windows; Escape backs out of a local search or
 dialog. Standard window close and workspace/tiling shortcuts continue to work.
 
 The motion is finite: a restrained iridescent tether, a translucent preview and a
-short reveal/return. Reduced motion removes decorative sweeps and spring effects.
+short reveal/return. Window tabs, searches and AI ownership recover after a shell
+reload; layout and drafts are private user state. Reduced motion removes decorative sweeps and spring effects.
 Background services are shared, and hidden/minimized windows do not keep visualizers
 or resource sampling running. Features live in general Nacre; personal profiles
 consume the tested upstream revision.

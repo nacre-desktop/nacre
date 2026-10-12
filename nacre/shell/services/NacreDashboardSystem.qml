@@ -5,7 +5,7 @@ import Quickshell.Io
 
 Singleton {
     id: root
-    readonly property bool shown: NacrePanelState.hidden !== true && Object.values(NacrePanelState.screens).some(view => view.dashboard && view.dashboardTab === 3)
+    readonly property bool shown: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard && view.dashboardTab === 3))
     property var processes: []
     property var disks: []
     property var network: []

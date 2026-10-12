@@ -101,6 +101,18 @@ NacreSettingsPage {
             }
         }
     }
+    NacreSettingsSection {
+        title: "Panel windows"
+        description: "Open any edge panel as a movable, resizable window. Drag its pearl grip away from the edge; use Dock to return it. Launcher windows stay open after launching apps."
+        NacreSettingToggle {
+            label: "Allow detachable panels"
+            setting: "detachablePanels"
+        }
+        NacreSettingToggle {
+            label: "Drag pearl grips to detach and dock"
+            setting: "dragPanels"
+        }
+    }
     NacreText {
         width: parent.width
         text: DesktopSettings.message || ""

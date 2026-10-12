@@ -13,7 +13,7 @@ Singleton {
     readonly property var popups: dnd ? [] : list.filter(entry => entry.popup)
     readonly property bool dnd: DesktopSettings.data.dnd === true
     readonly property bool suppressed: Object.values(NacrePanelState.screens).some(view => view.launcher || view.dashboard || view.session) || Object.values(NacrePanelState.panels).some(panel => panel.notifications?.suppressed === true)
-    readonly property bool historyVisible: (NacrePanelState.settingsVisible && NacrePanelState.settingsPage === "notifications") || Object.values(NacrePanelState.screens).some(view => view.osd && ["home", "notifications"].includes(view.controlSection || "home")) || Object.values(NacrePanelState.panels).some(panel => panel.popouts?.hasCurrent && panel.popouts.currentName === "notifications")
+    readonly property bool historyVisible: (NacrePanelState.settingsVisible && NacrePanelState.settingsPage === "notifications") || NacrePanelState.providerViews.some(view => view.osd && ["home", "notifications"].includes(view.controlSection || "home")) || Object.values(NacrePanelState.panels).some(panel => panel.popouts?.hasCurrent && panel.popouts.currentName === "notifications")
     onHistoryVisibleChanged: if (historyVisible)
         clock = new Date()
     readonly property bool expire: NacreNotifications.expire

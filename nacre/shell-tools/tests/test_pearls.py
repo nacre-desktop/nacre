@@ -1,0 +1,212 @@
+"""Owned compositor operations, private recovery and real docking geometry."""
+
+import importlib.util
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+TOOLS = Path(__file__).resolve().parents[1]
+SHELL = TOOLS.parent / "shell"
+
+
+def module(name):
+    spec = importlib.util.spec_from_file_location(
+        name.replace("-", "_"), TOOLS / (name + ".py")
+    )
+    result = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(result)
+    return result
+
+
+class PearlTests(unittest.TestCase):
+    def test_layout_writer_finishes_one_request_without_waiting_for_pipe_eof(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "state.json"
+            process = subprocess.Popen(
+                [sys.executable, str(TOOLS / "pearl-state.py"), "save"],
+                env={**os.environ, "NACRE_PEARL_STATE": str(path)},
+                stdin=subprocess.PIPE,
+                text=True,
+            )
+            try:
+                process.stdin.write(json.dumps({"version": 1, "windows": []}) + "\n")
+                process.stdin.flush()
+                self.assertEqual(process.wait(timeout=3), 0)
+                self.assertEqual(json.loads(path.read_text())["windows"], [])
+            finally:
+                process.stdin.close()
+                if process.poll() is None:
+                    process.kill()
+                process.wait()
+
+    def test_actual_ai_view_lease_moves_chat_and_preserves_other_draft(self):
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Qt Quick Test unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            (target / "NacreChatSession.qml").write_text("""import QtQuick
+Item {
+ property string channel:""
+ property string draft:""
+ property string title:"Draft"
+ property string threadId:""
+ property string provider:"codex"
+ property string account:"Default"
+ property bool busy:false
+ property bool parked:false
+ property int saves:0
+ property int starts:0
+ function saveDraft(){saves++;}
+ function start(){starts++;}
+ function load(key){}
+}""")
+            (target / "SidebarChat.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nNacreChatSession {}"
+            )
+            (target / "NacrePearls.qml").write_text("""pragma Singleton
+import QtQuick
+QtObject {property var entries:[];property int writes:0;function saveSoon(){writes++;}}""")
+            (target / "DesktopExtras.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject {property var chats:[]}"
+            )
+            (target / "qmldir").write_text(
+                "singleton SidebarChat 1.0 SidebarChat.qml\nsingleton NacrePearls 1.0 NacrePearls.qml\nsingleton DesktopExtras 1.0 DesktopExtras.qml\nNacreChatSession 1.0 NacreChatSession.qml\n"
+            )
+            source = (
+                (SHELL / "services/NacreAiViews.qml")
+                .read_text()
+                .replace("pragma Singleton", "")
+                .replace("import Quickshell", 'import "."')
+                .replace("Singleton {", "Item {")
+            )
+            (target / "Views.qml").write_text(source)
+            (target / "tst_views.qml").write_text("""import QtQuick
+import QtTest
+import "."
+TestCase {
+ name:"AssistantPanelOwnership"
+ Views {id:views}
+ function test_move_focus_and_dock_without_duplicating_or_losing_drafts(){
+  const original=views.edge;original.draft="first draft";original.busy=true;
+  compare(views.take(),original);verify(views.edge!==original);
+  const next=views.edge;compare(next.draft,"");next.draft="second draft";
+  let focused=0;
+  NacrePearls.entries=[{kind:"ai",chat:original,window:{activate:()=>focused++}}];
+  views.select(original);compare(focused,1);compare(views.edge,next);
+  compare(original.draft,"first draft");verify(original.busy);
+  NacrePearls.entries=[];views.dock(original);
+  compare(views.edge,original);verify(views.parked.includes(next));
+  compare(next.draft,"second draft");verify(next.parked);verify(!original.parked);
+  verify(original.busy);verify(original.saves>0);verify(next.saves>0);
+  const state=views.snapshot();compare(state.edge,"");compare(state.channels.length,2);
+  views.restore(state);compare(views.sessions.length,2);compare(views.edge,original);
+ }
+}""")
+            result = subprocess.run(
+                [str(runner), "-input", str(target)],
+                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+                text=True,
+                capture_output=True,
+                timeout=20,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_window_identity_requires_both_owned_title_and_process(self):
+        window = module("pearl-window")
+        clients = [{"title": "Nacre Pearl Launcher 1", "pid": 45, "address": "0xabc"}]
+        self.assertEqual(
+            window.owned("Nacre Pearl Launcher 1", 45, clients)["address"], "0xabc"
+        )
+        self.assertIsNone(window.owned("Nacre Pearl Launcher 1", 46, clients))
+        for title in ("Google Chrome", "Nacre Pearl Launcher 1;exec", "Nacre Settings"):
+            with self.assertRaises(ValueError):
+                window.owned(title, 45, clients)
+        with patch.object(window.subprocess, "run") as run:
+            with self.assertRaises(ValueError):
+                window.dispatch("move", "not-an-address", x=0, y=0)
+            run.assert_not_called()
+
+    def test_private_layout_atomic_permissions_and_corruption_preservation(self):
+        state = module("pearl-state")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "private" / "pearls.json"
+            self.assertEqual(state.load(path)["windows"], [])
+            value = {
+                "version": 1,
+                "windows": [
+                    {"kind": "launcher", "initial": {"query": "private search"}}
+                ],
+                "ai": {"edge": "pfirst", "channels": ["", "pfirst"]},
+            }
+            state.save(path, value)
+            self.assertEqual(state.load(path), value)
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(path.parent.stat().st_mode & 0o777, 0o700)
+            path.write_text("bad saved data")
+            with self.assertRaises(ValueError):
+                state.load(path)
+            self.assertEqual(path.read_text(), "bad saved data")
+
+    def test_ai_namespaces_preserve_default_and_reject_path_injection(self):
+        sidebar = module("sidebar-chat")
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            with patch.multiple(
+                sidebar,
+                DEFAULT_STATE=base / "state",
+                DEFAULT_SOCKET=base / "default.sock",
+            ):
+                sidebar.configure_channel("pfirst")
+                self.assertEqual(sidebar.STATE, base / "state/views/pfirst")
+                self.assertEqual(sidebar.SOCKET.name, "nacre-chat-pfirst.sock")
+                for value in ("../escape", "/absolute", "p;bad", "x" * 49):
+                    with self.assertRaises(ValueError):
+                        sidebar.configure_channel(value)
+                sidebar.configure_channel("")
+                self.assertEqual(sidebar.STATE, base / "state")
+                self.assertEqual(sidebar.SOCKET, base / "default.sock")
+
+    def test_actual_geometry_matching_edges_and_negative_monitor_origins(self):
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Qt Quick Test unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            (target / "geometry.js").write_text(
+                (SHELL / "modules/pearls/geometry.js").read_text()
+            )
+            (target / "tst_pearl.qml").write_text("""import QtQuick
+import QtTest
+import "geometry.js" as Geometry
+TestCase {
+ name:"PearlDockGeometry"
+ function test_matching_edge_only(){
+  const screens=[{name:"left",x:-1920,y:0,width:1920,height:1080},{name:"laptop",x:0,y:0,width:1920,height:1200}];
+  compare(Geometry.docking("ai",{x:-1910,y:500},screens).screen,"left");
+  compare(Geometry.docking("dashboard",{x:800,y:12},screens).screen,"laptop");
+  compare(Geometry.docking("launcher",{x:800,y:1190},screens).edge,"bottom");
+  compare(Geometry.docking("controls",{x:1910,y:500},screens).edge,"right");
+  compare(Geometry.docking("ai",{x:800,y:12},screens),null);
+  compare(Geometry.docking("launcher",{x:2200,y:1200},screens),null);
+ }
+ function test_pull_and_placement(){
+  compare(Geometry.outward("ai",70,0),70);compare(Geometry.outward("controls",70,0),-70);
+  compare(Geometry.outward("launcher",0,-70),70);
+  const result=Geometry.place({x:-1910,y:0},{width:1000,height:700},{x:-1920,y:0,width:1920,height:1080});
+  compare(result.x,-1908);compare(result.y,12);
+ }
+}""")
+            result = subprocess.run(
+                [str(runner), "-input", str(target)],
+                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+                text=True,
+                capture_output=True,
+                timeout=20,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

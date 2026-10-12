@@ -30,12 +30,12 @@ class SidebarServiceTests(unittest.TestCase):
             (fixtures / "qmldir").write_text(
                 "\n".join(f"{name} 1.0 {name}.qml" for name in definitions)
             )
-            source = (ROOT.parent / "shell/services/SidebarChat.qml").read_text()
+            source = (ROOT.parent / "shell/services/NacreChatSession.qml").read_text()
             source = (
                 source.replace("pragma Singleton", "")
                 .replace("import Quickshell.Io", 'import "fixtures"')
                 .replace("import Quickshell", "")
-                .replace("Singleton {", "Item {")
+                .replace("Scope {", "Item {")
                 .replace('Quickshell.env("HOME")', '"/isolated"')
             )
             (target / "SidebarService.qml").write_text(source)

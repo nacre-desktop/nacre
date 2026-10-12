@@ -6,7 +6,7 @@ import "resource-data.js" as Data
 
 Singleton {
     id: root
-    readonly property bool visibleDashboard: NacrePanelState.hidden !== true && Object.values(NacrePanelState.screens).some(view => view.dashboard && [0, 3].includes(view.dashboardTab ?? 0))
+    readonly property bool visibleDashboard: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard && [0, 3].includes(view.dashboardTab ?? 0)))
     property string kernel: ""
     property string loadAverage: ""
     property real cpuPerc: NaN
