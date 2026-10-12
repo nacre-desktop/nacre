@@ -278,9 +278,12 @@ def redact(value, identities=()):
         source = re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", "", source)
         # Whole lines with a named secret/SSID may contain spaces and punctuation.
         source = re.sub(
-            r"(?im)\b(?:authorization|bearer|token|secret|password|passwd|api[_-]?key|ssid|user(?:name)?|host(?:name)?|wi-?fi (?:name|network))\b\s*[:= ]+[^\n]+",
+            r"(?im)\b(?:[\w.-]*(?:authorization|token|secret|password|passwd|api[_-]?key|cookie|private[_-]?key)[\w.-]*|bearer|ssid|user(?:name)?|host(?:name)?|wi-?fi (?:name|network))\b[\"']?\s*[:= ]+[^\n]+",
             "[redacted sensitive value]",
             source,
+        )
+        source = re.sub(
+            r"\b[A-Za-z][A-Za-z0-9+.-]*://[^\s]*@[^\s]+", "[redacted URL]", source
         )
         source = re.sub(r"[\w.+-]+@[\w.-]+", "[account]", source)
         source = re.sub(r"(?i)https?://[^\s]+", "[redacted URL]", source)
