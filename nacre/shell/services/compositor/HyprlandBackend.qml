@@ -100,7 +100,7 @@ Singleton {
         refreshCount++;
         Native.Hyprland.refreshToplevels();
     }
-    function reload() {
+    function refreshState() {
         Native.Hyprland.refreshMonitors();
         Native.Hyprland.refreshWorkspaces();
         refreshToplevels();
@@ -131,6 +131,15 @@ Singleton {
         Native.Hyprland.dispatch(Native.Hyprland.usingLua ? "hl.dsp.focus({window=" + JSON.stringify("address:" + clean) + "})" : "focuswindow address:" + clean);
         return true;
     }
+    function createShortcut(owner, params) {
+        return owner && params ? shortcutFactory.createObject(owner, {
+            params: params
+        }) : null;
+    }
+    Component {
+        id: shortcutFactory
+        HyprlandShortcut {}
+    }
     function switchWorkspace(id) {
         return Number.isInteger(Number(id)) && Number(id) > 0 ? dispatch("workspace " + Number(id)) : false;
     }
@@ -155,9 +164,12 @@ Singleton {
             return false;
         return dispatch(Native.Hyprland.usingLua ? "hl.dsp.workspace.move({workspace=" + JSON.stringify(String(workspace)) + ",monitor=" + JSON.stringify(monitor) + "})" : "moveworkspacetomonitor " + Number(workspace) + " " + monitor);
     }
-    function reloadConfiguration() {
+    function reload() {
         reloadConfig.running = true;
         return true;
+    }
+    function reloadConfiguration() {
+        return reload();
     }
     Process {
         id: reloadConfig
@@ -247,7 +259,7 @@ Singleton {
         target: Native.Hyprland
         function onUsingLuaChanged() {
             if (Native.Hyprland.usingLua)
-                root.reload();
+                root.refreshState();
         }
         function onRawEvent(event) {
             const name = event.name;
