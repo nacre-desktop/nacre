@@ -65,12 +65,12 @@ end
 -- after crossing outside the popup, even if Super was released first.
 assert(down().pass_event and moves==0)
 cursor={x=900,y=900};up()
-active={pid=45,title="Nacre Pearl Dashboard 12"}
+active={pid=45,title="Nacre Pearl Dashboard 12",at={x=100,y=200},size={x=900,y=700}}
 -- Immediately after detaching, the FIRST native pull must move and end/dock.
 assert(down().ok and moves==1 and timer.enabled and #events==1)
 cursor={x=800,y=10};timer.callback();assert(#events==2)
 up();assert(moves==1 and #events==3)
-assert(events[3]=="nacre_pearl_drag,end,Nacre Pearl Dashboard 12,800,10")
+assert(events[3]=="nacre_pearl_drag,end,Nacre Pearl Dashboard 12,800,10,100,200,900,700")
 -- No fresh key press/reset between pulls: each must re-arm and finish once.
 for i=1,3 do
  local count=#events
@@ -325,6 +325,165 @@ TestCase {
             self.assertEqual(window.main(), 0)
             dispatch.assert_not_called()
 
+    def test_shared_magnetic_film_renders_and_respects_reduced_motion(self):
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Qt Quick Test unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder)
+            (target / "NacreDockFilm.qml").write_text(
+                (SHELL / "widgets/NacreDockFilm.qml")
+                .read_text()
+                .replace("import qs.services", 'import "."')
+            )
+            (target / "NacreTokens.qml").write_text("""pragma Singleton
+import QtQuick
+QtObject {property bool motionEnabled:true;property color accent:"#85b8c9";property color orientSecondary:"#d48dbc";property color orientHighlight:"#e9e5f7"}
+""")
+            (target / "qmldir").write_text(
+                "singleton NacreTokens 1.0 NacreTokens.qml\n"
+            )
+            (target / "tst_film.qml").write_text("""import QtQuick
+import QtTest
+import "."
+TestCase {
+ name:"MagneticFilm";width:640;height:480;visible:true;when:windowShown
+ Rectangle {id:scene;width:640;height:480;color:"#101419"
+  NacreDockFilm {id:film;anchors.fill:parent;origin:Qt.point(200,50);tip:Qt.point(230,110);armed:true}
+ }
+ function test_painted_membrane_and_reduced_motion(){
+  wait(180);verify(film.visible);
+  const image=grabImage(scene);
+  verify(image.pixel(220,80).g>image.pixel(10,10).g+.05);
+  compare(image.pixel(10,10),Qt.rgba(16/255,20/255,25/255,1));
+  NacreTokens.motionEnabled=false;film.tip=Qt.point(300,150);film.armed=false;
+  compare(film.stretch,100/170);compare(film.opacity,.6);
+  film.tip=Qt.point(200,50);verify(!film.visible);
+ }
+}
+""")
+            result = subprocess.run(
+                [str(runner), "-input", str(target), "-o", "-,txt"],
+                env={
+                    **os.environ,
+                    "QT_QPA_PLATFORM": "offscreen",
+                    "QT_QUICK_BACKEND": "rhi",
+                    "QSG_RHI_BACKEND": "opengl",
+                },
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("QWARN", result.stdout + result.stderr)
+
+    def test_actual_service_shares_snap_zone_and_preserves_release_lifecycle(self):
+        from qml_source import remove_objects
+
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Qt Quick Test unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder)
+            fixtures = {
+                "DesktopSettings": "property var data:({dragPanels:true})",
+                "Environment": 'property var screens:[{name:"test",x:0,y:0,width:1920,height:1200}]',
+                "NacreFrame": "property int headerHeight:50;property int bottom:10;property int left:10;property int right:10",
+                "NacreCompositor": "property int refreshes:0;function refreshWindows(){refreshes++}",
+                "NacrePearls": "property var views:[]",
+                "NacreHyprland": 'property var focusedMonitor:({name:"test"})',
+            }
+            manifest = ""
+            for name, body in fixtures.items():
+                (target / (name + ".qml")).write_text(
+                    "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}\n"
+                )
+                manifest += f"singleton {name} 1.0 {name}.qml\n"
+            source = (
+                (SHELL / "services/NacrePanelState.qml")
+                .read_text()
+                .replace("import Quickshell", "")
+                .replace("Singleton {", "Item {")
+            )
+            (target / "NacrePanelState.qml").write_text(
+                source.replace("Quickshell.screens", "Environment.screens")
+            )
+            manifest += "singleton NacrePanelState 1.0 NacrePanelState.qml\n"
+            (target / "qmldir").write_text(manifest)
+            source = (
+                (SHELL / "services/NacrePearls.qml")
+                .read_text()
+                .replace("pragma Singleton", "")
+                .replace("import Quickshell.Io", "")
+                .replace("import Quickshell", "")
+                .replace("import qs.modules.pearls as Pearl", "")
+                .replace("import qs.config", 'import "."')
+                .replace("Singleton {", "Item {")
+                .replace(
+                    'import "../modules/pearls/geometry.js" as Geometry',
+                    'import "geometry.js" as Geometry',
+                )
+            )
+            source = remove_objects(
+                source, r"\b(Component|Process|IpcHandler|Connections)\s*\{"
+            )
+            source = source.replace("Quickshell.screens", "Environment.screens")
+            (target / "Controller.qml").write_text(source)
+            (target / "geometry.js").write_text(
+                (SHELL / "modules/pearls/geometry.js").read_text()
+            )
+            (target / "tst_magnet.qml").write_text("""import QtQuick
+import QtTest
+import "."
+TestCase {
+ name:"MagneticDockLifecycle";when:windowShown
+ Controller {id:controller}
+ property var view:({dashboard:false,dashboardPinned:false,left:false,leftPinned:false,launcher:false,osd:false,session:false,previewOnly:false,hoverDocked:false,edgeMenu:"",dashboardTab:0})
+ property int destroyed:0
+ function init(){controller.entries=[];controller.drag=null;controller.nativeDrag=null;destroyed=0;NacrePanelState.hidden=false;NacrePanelState.screens={test:view};}
+ function addEntry(){const e={kind:"dashboard",title:"Nacre Pearl Dashboard 12",origin:"test",window:{visible:true,captureState(){return {dashboardTab:2}},destroy(){destroyed++}},destroy(){destroyed++}};controller.entries=[e];return e;}
+ function packet(phase,x,y){return "nacre_pearl_drag,"+phase+",Nacre Pearl Dashboard 12,"+x+","+y+",400,300,984,740";}
+ function test_native_grab_middle_docks_before_pointer_reaches_edge(){
+  for(let i=0;i<2;i++){
+   addEntry();controller.nativeGesture(packet("begin",900,600));
+   controller.nativeGesture(packet("move",900,390));
+   verify(controller.nativeDrag.destination.armed);compare(controller.nativeDrag.body.y,90);
+   controller.nativeGesture(packet("end",900,390));
+   compare(controller.nativeDrag,null);compare(controller.entries.length,0);
+   verify(view.dashboard);compare(view.dashboardTab,2);verify(view.hoverDocked);
+   wait(1);
+  }
+  compare(destroyed,4);
+ }
+ function test_hidden_frame_has_no_magnetic_target(){
+  addEntry();NacrePanelState.hidden=true;
+  controller.nativeGesture(packet("begin",900,600));controller.nativeGesture(packet("move",900,390));
+  compare(controller.magneticCue,null);compare(controller.nativeDrag.destination,null);
+  controller.nativeGesture(packet("end",900,390));compare(controller.entries.length,1);
+ }
+ function test_click_without_pull_does_not_dock(){
+  addEntry();controller.nativeGesture(packet("begin",900,600));controller.nativeGesture(packet("end",900,600));
+  compare(controller.entries.length,1);compare(controller.nativeDrag,null);
+ }
+ function test_first_pull_returns_to_same_magnet(){
+  const body={x:400,y:50,width:984,height:740};
+  controller.drag={kind:"dashboard",host:{},screen:"test",start:{x:900,y:300},body:body,ready:false,released:false,magnet:{screen:"test",edge:"top",armed:true}};
+  controller.update({x:900,y:370});verify(controller.drag.magnet.armed);verify(controller.magneticCue.armed);
+  controller.finish();verify(controller.drag.released);compare(controller.drag.dy,0);
+  wait(230);compare(controller.drag,null);compare(controller.entries.length,0);
+ }
+}
+""")
+            result = subprocess.run(
+                [str(runner), "-input", str(target), "-o", "-,txt"],
+                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("QWARN", result.stdout + result.stderr)
+
     def test_private_layout_atomic_permissions_and_corruption_preservation(self):
         state = module("pearl-state")
         with tempfile.TemporaryDirectory() as directory:
@@ -379,14 +538,26 @@ import QtTest
 import "geometry.js" as Geometry
 TestCase {
  name:"PearlDockGeometry"
- function test_matching_edge_only(){
-  const screens=[{name:"left",x:-1920,y:0,width:1920,height:1080},{name:"laptop",x:0,y:0,width:1920,height:1200}];
-  compare(Geometry.docking("ai",{x:-1910,y:500},screens).screen,"left");
-  compare(Geometry.docking("dashboard",{x:800,y:12},screens).screen,"laptop");
-  compare(Geometry.docking("launcher",{x:800,y:1190},screens).edge,"bottom");
-  compare(Geometry.docking("controls",{x:1910,y:500},screens).edge,"right");
-  compare(Geometry.docking("ai",{x:800,y:12},screens),null);
-  compare(Geometry.docking("launcher",{x:2200,y:1200},screens),null);
+ function test_panel_edge_magnet_and_hysteresis(){
+  const screens=[{name:"left",x:-1920,y:0,width:1920,height:1080,frame:{top:50,bottom:10,left:10,right:10}}, {name:"laptop",x:0,y:0,width:1920,height:1200,frame:{top:50,bottom:10,left:10,right:10}}];
+  const body={x:400,y:112,width:1000,height:600};
+  const point={x:900,y:412}; // pointer far from the edge; panel is 62px away
+  const cue=Geometry.magnet("dashboard",body,point,screens);
+  verify(cue.armed);compare(cue.distance,62);compare(cue.origin.y,50);
+  verify(!Geometry.magnet("dashboard",{x:400,y:140,width:1000,height:600},point,screens).armed);
+  verify(Geometry.magnet("dashboard",{x:400,y:140,width:1000,height:600},point,screens,cue).armed);
+  verify(!Geometry.magnet("dashboard",{x:400,y:160,width:1000,height:600},point,screens,cue).armed);
+  compare(Geometry.magnet("dashboard",{x:400,y:221,width:1000,height:600},point,screens),null);
+  verify(Geometry.magnet("launcher",{x:400,y:500,width:1000,height:630},{x:900,y:800},screens).armed);
+  verify(Geometry.magnet("controls",{x:1400,y:300,width:450,height:600},{x:1500,y:500},screens).armed);
+  const left=Geometry.magnet("ai",{x:-1860,y:200,width:450,height:600},{x:-1700,y:500},screens);
+  verify(left.armed);compare(left.origin.x,-1910);
+  compare(Geometry.magnet("ai",{x:800,y:20,width:450,height:600},point,screens),null);
+  compare(Geometry.magnet("dashboard",{x:0,y:0,width:0,height:10},point,screens),null);
+  compare(Geometry.magnet("dashboard",body,{x:NaN,y:0},screens),null);
+  // A shared monitor seam selects one output, rather than flickering between two.
+  const seam=Geometry.magnet("dashboard",{x:-200,y:100,width:400,height:600},{x:0,y:400},screens);
+  compare(seam.screen,"laptop");
  }
  function test_pull_and_placement(){
   compare(Geometry.outward("ai",70,0),70);compare(Geometry.outward("controls",70,0),-70);

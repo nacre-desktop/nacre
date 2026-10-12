@@ -30,17 +30,52 @@ function place(point, size, monitor) {
     };
 }
 
-function docking(kind, point, monitors, band = 42) {
+// One magnetic target for layer lifts and native windows. Distances are logical
+// pixels from the panel edge to the frame, independent of where it was grabbed.
+function magnet(kind, body, point, monitors, previous = null, anchor = body) {
+    const side = edge(kind);
+    if (!side || !point || !Number.isFinite(point.x) || !Number.isFinite(point.y) || !body || ![body.x, body.y, body.width, body.height].every(Number.isFinite) || body.width <= 0 || body.height <= 0)
+        return null;
     for (const monitor of monitors) {
-        if (point.x < monitor.x || point.y < monitor.y || point.x > monitor.x + monitor.width || point.y > monitor.y + monitor.height)
+        if (point.x < monitor.x || point.y < monitor.y || point.x >= monitor.x + monitor.width || point.y >= monitor.y + monitor.height)
             continue;
-        const side = edge(kind);
-        const near = side === "top" ? point.y - monitor.y <= band : side === "bottom" ? monitor.y + monitor.height - point.y <= band : side === "left" ? point.x - monitor.x <= band : monitor.x + monitor.width - point.x <= band;
-        if (near)
-            return {
-                screen: monitor.name,
-                edge: side
-            };
+        const horizontal = side === "top" || side === "bottom";
+        const low = horizontal ? monitor.x : monitor.y;
+        const high = low + (horizontal ? monitor.width : monitor.height);
+        const panelLow = horizontal ? body.x : body.y;
+        const span = horizontal ? body.width : body.height;
+        if (Math.min(high, panelLow + span) - Math.max(low, panelLow) < Math.min(96, span / 3))
+            continue;
+        const frame = monitor.frame || {};
+        const across = side === "top" ? monitor.y + (frame.top || 0) : side === "bottom" ? monitor.y + monitor.height - (frame.bottom || 0) : side === "left" ? monitor.x + (frame.left || 0) : monitor.x + monitor.width - (frame.right || 0);
+        const leading = side === "top" ? body.y : side === "bottom" ? body.y + body.height : side === "left" ? body.x : body.x + body.width;
+        const distance = Math.abs(leading - across);
+        if (distance > 170)
+            continue;
+        const armedBefore = previous?.armed && previous.screen === monitor.name && previous.edge === side;
+        const along = clamp(panelLow + span / 2, low + 24, high - 24);
+        const anchorAlong = horizontal ? anchor.x + anchor.width / 2 : anchor.y + anchor.height / 2;
+        const originAlong = clamp(anchorAlong, Math.max(low + 24, along - 96), Math.min(high - 24, along + 96));
+        return {
+            screen: monitor.name,
+            edge: side,
+            armed: distance <= (armedBefore ? 104 : 72),
+            distance: distance,
+            origin: horizontal ? {
+                x: originAlong,
+                y: across
+            } : {
+                x: across,
+                y: originAlong
+            },
+            tip: horizontal ? {
+                x: along,
+                y: leading
+            } : {
+                x: leading,
+                y: along
+            }
+        };
     }
     return null;
 }
