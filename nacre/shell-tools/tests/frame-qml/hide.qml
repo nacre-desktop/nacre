@@ -26,7 +26,7 @@ ShellRoot {
                 launcher: true
             })
         property var inputController: ({
-                modal: !NacrePanelState.hidden
+                modal: false
             })
         keyboardFocus: WlrKeyboardFocus.None // production focus binding
     }
