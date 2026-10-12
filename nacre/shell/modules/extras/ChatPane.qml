@@ -413,7 +413,7 @@ Item {
                     input.text = root.chat.draft;
             }
         }
-        Row {
+        Flow {
             objectName: "sidebarActions"
             width: parent.width
             spacing: 6

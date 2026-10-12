@@ -706,6 +706,8 @@ NacreSurface {
                 textFormat: Text.PlainText
                 font.pointSize: 10
                 wrapMode: Text.Wrap
+                fontSizeMode: Text.Fit
+                minimumPointSize: 8
                 maximumLineCount: tile.compactTile ? 1 : 2
                 elide: Text.ElideRight
                 horizontalAlignment: tile.compactTile ? Text.AlignLeft : Text.AlignHCenter
