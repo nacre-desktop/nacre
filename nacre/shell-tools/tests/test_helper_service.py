@@ -25,7 +25,7 @@ def request(ident, tool="launcher-preferences", arguments=None, payload=None):
     return {
         "id": ident,
         "tool": tool,
-        "arguments": arguments or ["load"],
+        "arguments": ["load"] if arguments is None else arguments,
         "input": payload,
     }
 
@@ -40,6 +40,65 @@ def packets(values, helpers=None):
 
 
 class HelperServiceTests(unittest.TestCase):
+    def test_pending_limit_rejects_excess_work_and_output_is_bounded(self):
+        released = threading.Event()
+
+        class Helpers:
+            def execute(self, item):
+                released.wait(2)
+                return "{}"
+
+        output = io.StringIO()
+        with patch.object(service, "MAX_PENDING", 2):
+            source = io.BytesIO(
+                b"".join(json.dumps(request(i)).encode() + b"\n" for i in (1, 2, 3))
+            )
+            thread = threading.Thread(
+                target=service.serve, args=(source, output, Helpers())
+            )
+            thread.start()
+            try:
+                deadline = time.monotonic() + 1
+                while (
+                    "Helper queue is full" not in output.getvalue()
+                    and time.monotonic() < deadline
+                ):
+                    time.sleep(0.01)
+                replies = [json.loads(line) for line in output.getvalue().splitlines()]
+                rejected = next(row for row in replies if row.get("id") == 3)
+                self.assertEqual(rejected["code"], 1)
+            finally:
+                released.set()
+                thread.join(3)
+            self.assertFalse(thread.is_alive())
+
+        class LargeReply:
+            def execute(self, item):
+                return "x" * 1000
+
+        with patch.object(service, "MAX_RESPONSE", 256):
+            code, replies = packets([request(1)], LargeReply())
+        self.assertEqual(code, 0)
+        self.assertEqual(replies[1]["code"], 1)
+        self.assertIn("too large", replies[1]["output"])
+
+    def test_network_dispatch_preserves_read_only_snapshot_and_failure(self):
+        helpers = service.Helpers()
+        module = helpers.module("network-state")
+        with patch.object(
+            module, "snapshot", return_value={"wifiEnabled": False}
+        ) as snapshot:
+            self.assertEqual(
+                json.loads(helpers.execute(request(1, "network-state", []))),
+                {"wifiEnabled": False},
+            )
+            snapshot.assert_called_once_with()
+        with patch.object(
+            module, "snapshot", side_effect=module.SnapshotError("Unavailable")
+        ):
+            with self.assertRaises(module.SnapshotError):
+                helpers.execute(request(2, "network-state", []))
+
     def test_bad_packets_and_exception_fail_only_their_request(self):
         class Helpers:
             def execute(self, item):
