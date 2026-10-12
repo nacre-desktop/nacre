@@ -10,7 +10,7 @@ Item {
         fillMode: VideoOutput.PreserveAspectCrop
     }
     MediaPlayer {
-        source: "file://" + encodeURIComponent(root.path).replace(/%2F/g, "/")
+        source: root.path ? "file://" + encodeURIComponent(root.path).replace(/%2F/g, "/") : ""
         videoOutput: output
         audioOutput: null
         activeAudioTrack: -1

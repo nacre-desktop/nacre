@@ -10,7 +10,7 @@ Item {
         autoPlay: true
         onMediaStatusChanged: if (mediaStatus === MediaPlayer.LoadedMedia)
             play()
-        source: "file://" + root.path
+        source: root.path ? "file://" + root.path : ""
         loops: MediaPlayer.Infinite
         videoOutput: videoSurface
     }
