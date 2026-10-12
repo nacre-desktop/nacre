@@ -119,15 +119,18 @@ Item {
         }
     }
     function captureState() {
+        const ui = chatPane.captureUiState();
+        delete ui.draft;
+        delete ui.attachments;
         return {
             section: section,
-            chatUi: chatPane.captureUiState()
+            chatUi: ui
         };
     }
     function restoreState(value) {
         section = value.section || "chat";
         if (value.chatUi)
-            chatPane.restoreUiState(value.chatUi);
+            chatPane.restoreUiState(value.chatUi, false);
     }
     ChatPane {
         id: chatPane
