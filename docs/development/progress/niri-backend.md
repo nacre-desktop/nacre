@@ -38,6 +38,20 @@
 - Current fixture checks: 18 backend/QML harness tests plus 8 config tests pass;
   common generator and facade tests pass. Full source check is being rerun.
 
+- Independent review fixes: preserve wallpaper workspace identity (`var`, not
+  integer), clear queued actions and guard execution when disconnected, and honor
+  source helper/QS config overrides in generated compositor/shortcut bindings.
+  Wallpaper image/provider code is unchanged; the memory agent was notified.
+- Real Quickshell + real Python helper integration passes on a private fake Unix
+  socket with no compositor/windows: initial state, exact large ID, focus and close
+  roundtrip. Native-Qt fixtures also cover actual wallpaper/app predicates.
+- First complete source check passed 642 tests and all lint/format/native-source/
+  boundary/generator checks. Final review fixes and new integration/event tests
+  require a final rerun and final-head CI. PR #12 is draft; previous head CI passed.
+- Operator requires preserving the running Hyprland session. The PC agent's real
+  login/phase-2 UI acceptance is deferred; no session change is needed for this
+  task's fixture/CI completion criteria and no live Wayland claim is made.
+
 ## Next
 
 4. Push each tested milestone; give the PC agent an exact revision for live checks.

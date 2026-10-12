@@ -170,8 +170,38 @@ reviewed top-level includes **before** user settings so later user bindings and
 properties win. Included files contain full top-level sections; includes inside
 `binds` or `layout` are invalid. See the upstream
 [include merge rules](https://niri-wm.github.io/niri/Configuration:-Include.html).
-Validate a temporary wrapper containing these includes with
-`niri validate -c /path/to/test/config.kdl`; validation does not start a session.
+Validate without a session or a user-config write:
+
+```sh
+test_config_dir=$(mktemp -d)
+cp niri/bindings.kdl niri/window-rules.kdl "$test_config_dir/"
+printf 'include "bindings.kdl"\ninclude "window-rules.kdl"\n' > "$test_config_dir/config.kdl"
+niri validate -c "$test_config_dir/config.kdl"
+```
+
+The generator, validator and `capabilities` command above are offline. The
+`query workspaces` command requires the intended session's live `NIRI_SOCKET`.
+Generated compositor-action commands honor `NACRE_COMPOSITOR_TOOLS`; shortcut
+commands can target a source instance through `NACRE_QS_CONFIG` and optional
+`NACRE_QS_BIN`. With the PC agent's isolated nested Wayland display and DBus
+session already selected, source-shell invocation is:
+
+```sh
+export NACRE_COMPOSITOR=niri
+export NACRE_COMPOSITOR_TOOLS="$PWD/nacre/shell-tools"
+export NACRE_PEARL_TOOLS="$NACRE_COMPOSITOR_TOOLS"
+export NACRE_QS_CONFIG="$PWD/nacre/shell/shell.qml"
+export NACRE_QS_BIN=$(command -v quickshell)
+"$NACRE_QS_BIN" -p "$NACRE_QS_CONFIG"
+```
+
+Do not run that full shell alongside the daily shell on its display/DBus session:
+notification/clipboard ownership must remain isolated. Inherited application
+launch commands still target installed app/controller scripts; helper overrides
+alone do not make those application bindings source-isolated. Source acceptance
+can test facade/shortcut IPC directly; full application-bind acceptance needs the
+PC/packaging agent's matching isolated runtime. No installed-script rewrite or
+session file edit is performed by the generator.
 
 `compositor_config.supported_backends()`, `backend_capabilities(name)`,
 `render(contract, backend=...)`, `render_keyboard(values, backend=...)` and
@@ -191,8 +221,10 @@ converted. Floating pearls are emitted as floating window rules, with final
 placement owned by IPC and the verified title+PID helper.
 
 Python socket/event/action fixtures and native Qt tests exercise the actual QML
-backend. Generator tests enforce unchanged Hyprland bytes and validate includes,
-keyboard/profile APIs and user precedence. The native KDL parse test runs when
+backend. Generator tests enforce unchanged Hyprland bytes and validate include parsing,
+keyboard/profile APIs and unchanged user wrapper files. The effective later-user
+binding/color precedence follows upstream documented merge semantics; the parse
+test does not inspect niri's resolved configuration. The native KDL parse test runs when
 `niri` is installed; CI always runs deterministic source/output checks and the
 fixture tests. Full real-session multi-output, native pointer movement, fullscreen,
 layer-shell focus, capture and suspend/resume remain separate acceptance checks.

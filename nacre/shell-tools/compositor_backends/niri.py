@@ -87,9 +87,28 @@ class State:
         self.overview_open = False
 
     def apply(self, event):
+        if isinstance(event, str):
+            return {"type": "other"}
         if not isinstance(event, dict) or len(event) != 1:
             raise ValueError("Malformed niri event")
         name, payload = next(iter(event.items()))
+        known = {
+            "WorkspacesChanged",
+            "WindowsChanged",
+            "WorkspaceActivated",
+            "WorkspaceUrgencyChanged",
+            "WorkspaceActiveWindowChanged",
+            "WindowOpenedOrChanged",
+            "WindowClosed",
+            "WindowFocusChanged",
+            "WindowUrgencyChanged",
+            "WindowLayoutsChanged",
+            "WindowFocusTimestampChanged",
+            "ConfigLoaded",
+            "OverviewOpenedOrClosed",
+        }
+        if name not in known:
+            return {"type": "other"}
         if not isinstance(payload, dict):
             raise ValueError("Malformed niri event payload")
         result = {"type": "other"}
@@ -129,13 +148,27 @@ class State:
             if not isinstance(row, dict):
                 raise ValueError("Malformed window event")
             key = identity(row["id"], "window")
-            existed = key in self.windows
+            previous = self.windows.get(key)
+            changes = [
+                name
+                for field, name in (
+                    ("title", "window-title"),
+                    ("workspace_id", "window-workspace"),
+                    ("is_floating", "window-floating"),
+                )
+                if previous is not None and previous.get(field) != row.get(field)
+            ]
             self.windows[key] = dict(row)
             if row.get("is_focused"):
                 for other in self.windows.values():
                     other["is_focused"] = other["id"] == row["id"]
             result = {
-                "type": "window-changed" if existed else "window-open",
+                "type": changes[0]
+                if changes
+                else "window-changed"
+                if previous is not None
+                else "window-open",
+                "changes": changes,
                 "windowId": key,
             }
         elif name == "WindowClosed":
@@ -415,7 +448,13 @@ class Backend:
         response = self._request(name, timeout=timeout, max_bytes=max_bytes)
         if not isinstance(response, dict) or name not in response:
             raise ValueError("Unexpected niri response")
-        return response[name]
+        result = response[name]
+        if name == "Outputs" and (
+            not isinstance(result, dict)
+            or any(not isinstance(row, dict) for row in result.values())
+        ):
+            raise ValueError("Malformed niri output records")
+        return result
 
     def _action(self, name, values=None, *, timeout=10):
         response = self._request({"Action": {name: values or {}}}, timeout=timeout)
@@ -778,14 +817,24 @@ class Backend:
                         raise ValueError("Truncated or oversized niri event")
                     event = json.loads(line)
                     normalized = state.apply(event)
+                    outputs_changed = False
                     if "WorkspacesChanged" in event or "ConfigLoaded" in event:
                         # Outputs are not a niri event variant; hotplug/config updates
                         # change workspace membership, so refresh output metadata then.
-                        state.outputs = self._response("Outputs")
+                        outputs = self._response("Outputs")
+                        outputs_changed = outputs != state.outputs
+                        state.outputs = outputs
                     if state.ready == {"window", "workspace"}:
                         if normalized["type"] != "other":
                             yield state.snapshot()
                             yield normalized
+                            for event_type in normalized.get("changes", [])[1:]:
+                                yield {
+                                    "type": event_type,
+                                    "windowId": normalized["windowId"],
+                                }
+                            if outputs_changed:
+                                yield {"type": "outputs-changed"}
         finally:
             connection.close()
 
