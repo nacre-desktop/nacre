@@ -81,6 +81,19 @@ class DiagnosticsTests(unittest.TestCase):
             m.redact("GPU 0% / 42 C kernel 6.12.4"), "GPU 0% / 42 C kernel 6.12.4"
         )
 
+    def test_short_named_credentials_in_logs_are_redacted(self):
+        raw = 'OPENAI_API_KEY=short-synthetic\naccess_token":"tiny"\nclientSecret: abc123\ncookie=\'short-cookie\'\npostgres://other:otherpass@db.example/test'
+        result = m.redact(raw)
+        for secret in (
+            "short-synthetic",
+            "tiny",
+            "abc123",
+            "short-cookie",
+            "otherpass",
+            "db.example",
+        ):
+            self.assertNotIn(secret, result)
+
     def test_probes_are_bounded_read_only_and_do_not_return_sensitive_stderr(self):
         with patch.object(
             m.subprocess,
