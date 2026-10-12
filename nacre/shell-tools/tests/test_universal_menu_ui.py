@@ -50,7 +50,7 @@ def stage(target):
     source = source.replace(
         '"../modules/launcher/menu-model.js"', '"../menu-model.js"'
     ).replace('"../modules/launcher/app-browser.js"', '"../app-browser.js"')
-    for kind in ("Process", "Timer", "FileView"):
+    for kind in ("Process", "NacreHelperTask", "Timer", "FileView"):
         source = remove_objects(source, r"\b" + kind + r"\s*\{")
     source = source.replace(
         'property string defaultText: ""',

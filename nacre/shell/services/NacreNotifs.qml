@@ -187,20 +187,18 @@ Singleton {
         interval: 100
         onTriggered: root.save()
     }
-    Process {
+    NacreHelperTask {
         id: reader
         objectName: "noticeHistoryReader"
         command: ["python3", root.helper, "load"]
         running: true
-        stdout: StdioCollector {
-            onStreamFinished: root.restore(text)
-        }
+        onOutput: text => root.restore(text)
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0)
                 root.error = "Notification history could not be read; its file is protected from overwrite.";
         }
     }
-    Process {
+    NacreHelperTask {
         id: writer
         objectName: "noticeHistoryWriter"
         stdinEnabled: true

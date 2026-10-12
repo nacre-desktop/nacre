@@ -51,6 +51,9 @@ class DeviceServiceTests(unittest.TestCase):
             (fixtures / "Process.qml").write_text(
                 "import QtQuick\nQtObject {property var command:[];property var environment:({});property bool running:false;property QtObject stdout;property QtObject stderr;signal exited(int exitCode,int exitStatus);signal started();property bool stdinEnabled:false;property var writes:[];function write(text){writes=[...writes,text]}property int starts:0;onRunningChanged:if(running){starts++;Qt.callLater(()=>{if(running)started()})}}"
             )
+            (fixtures / "NacreHelperTask.qml").write_text(
+                "import QtQuick\nProcess {signal output(string text)}"
+            )
             if name == "NacreWallpapers":
                 (fixtures / "NacrePaletteTask.qml").write_text(
                     "import QtQuick\nProcess {property var transport:null;stdout:SplitParser{}}"
@@ -64,7 +67,7 @@ class DeviceServiceTests(unittest.TestCase):
                 "import QtQuick\nQtObject {signal read(string data)}"
             )
             (fixtures / "qmldir").write_text(
-                "singleton NacreWelcomeApp 1.0 NacreWelcomeApp.qml\nsingleton NacrePresentation 1.0 NacrePresentation.qml\nsingleton NacrePaths 1.0 NacrePaths.qml\nsingleton Environment 1.0 Environment.qml\nsingleton NacreBrightness 1.0 NacreBrightness.qml\nsingleton NacreHyprland 1.0 NacreHyprland.qml\nsingleton Hyprland 1.0 Hyprland.qml\nsingleton DesktopEntries 1.0 DesktopEntries.qml\nsingleton LauncherPreferences 1.0 LauncherPreferences.qml\nsingleton AppLaunch 1.0 AppLaunch.qml\nsingleton DesktopSettings 1.0 DesktopSettings.qml\nsingleton NacreNotifications 1.0 NacreNotifications.qml\nsingleton NacrePanelState 1.0 NacrePanelState.qml\nsingleton Mpris 1.0 Mpris.qml\nsingleton Pipewire 1.0 Pipewire.qml\nsingleton Bluetooth 1.0 Bluetooth.qml\nPwObjectTracker 1.0 PwObjectTracker.qml\nProcess 1.0 Process.qml\nStdioCollector 1.0 StdioCollector.qml\nSplitParser 1.0 SplitParser.qml\n"
+                "singleton NacreWelcomeApp 1.0 NacreWelcomeApp.qml\nsingleton NacrePresentation 1.0 NacrePresentation.qml\nsingleton NacrePaths 1.0 NacrePaths.qml\nsingleton Environment 1.0 Environment.qml\nsingleton NacreBrightness 1.0 NacreBrightness.qml\nsingleton NacreHyprland 1.0 NacreHyprland.qml\nsingleton Hyprland 1.0 Hyprland.qml\nsingleton DesktopEntries 1.0 DesktopEntries.qml\nsingleton LauncherPreferences 1.0 LauncherPreferences.qml\nsingleton AppLaunch 1.0 AppLaunch.qml\nsingleton DesktopSettings 1.0 DesktopSettings.qml\nsingleton NacreNotifications 1.0 NacreNotifications.qml\nsingleton NacrePanelState 1.0 NacrePanelState.qml\nsingleton Mpris 1.0 Mpris.qml\nsingleton Pipewire 1.0 Pipewire.qml\nsingleton Bluetooth 1.0 Bluetooth.qml\nPwObjectTracker 1.0 PwObjectTracker.qml\nProcess 1.0 Process.qml\nNacreHelperTask 1.0 NacreHelperTask.qml\nStdioCollector 1.0 StdioCollector.qml\nSplitParser 1.0 SplitParser.qml\n"
             )
             (fixtures / "FileView.qml").write_text(
                 'import QtQuick\nQtObject {property string path:"";property bool printErrors:false;property bool watchChanges:false;signal loadFailed(int error);signal fileChanged();signal loaded();function text(){return ""}function reload(){}}'

@@ -90,22 +90,26 @@ def change(action, value):
         return data
 
 
+def initialize():
+    if not PATH.exists():
+        PATH.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with PATH.open("x") as stream:
+                json.dump({"favorites": [], "hidden": []}, stream)
+            PATH.chmod(0o600)
+        except FileExistsError:
+            pass
+    return load()
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("action", choices=["load", "favorite", "hide", "record"])
     a = p.parse_args()
     try:
-        if a.action == "load" and not PATH.exists():
-            PATH.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                with PATH.open("x") as stream:
-                    json.dump({"favorites": [], "hidden": []}, stream)
-                PATH.chmod(0o600)
-            except FileExistsError:
-                pass
         print(
             json.dumps(
-                load()
+                initialize()
                 if a.action == "load"
                 else change(a.action, json.loads(sys.stdin.readline()))
             )
