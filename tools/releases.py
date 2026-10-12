@@ -195,6 +195,9 @@ def restore(release, record=None, force=False):
         for e in record["entries"]:
             if "after" in e and fingerprint(Path(e["path"])) != e["after"]:
                 raise RuntimeError("Later edit preserved: " + e["path"])
+    # Keep the active backend loaded while restoring an older shell that may
+    # predate the facade files themselves.
+    desktop = compositor()
     for service in (
         "nacre-shell.service",
         "nacre-brain.service",
@@ -222,7 +225,7 @@ def restore(release, record=None, force=False):
         elif e["kind"] == "file":
             shutil.copy2(e["backup"], path)
     subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
-    compositor().reload()
+    desktop.reload()
     subprocess.run(
         [
             "systemctl",
