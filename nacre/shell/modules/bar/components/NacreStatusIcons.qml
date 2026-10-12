@@ -17,7 +17,7 @@ Item {
     readonly property Item battery: batteryItem
     readonly property Item notificationsItem: notices
     readonly property var device: UPower.displayDevice
-    readonly property bool batteryAvailable: device.ready && device.isLaptopBattery && Number.isFinite(device.percentage) && device.percentage >= 0 && device.percentage <= 1
+    readonly property bool batteryAvailable: !!device && device.ready && device.isPresent !== false && device.isLaptopBattery && Number.isFinite(device.percentage) && device.percentage >= 0 && device.percentage <= 1
     readonly property int batteryPercent: batteryAvailable ? Math.round(device.percentage * 100) : -1
     implicitWidth: Math.max(speaker.implicitWidth, wifi.implicitWidth, bluetooth.implicitWidth, batteryItem.implicitWidth, notices.implicitWidth)
     implicitHeight: speaker.implicitHeight + wifi.implicitHeight + bluetooth.implicitHeight + batteryItem.implicitHeight + notices.implicitHeight + NacreAppearance.spacing.small * 4
@@ -35,14 +35,14 @@ Item {
             id: wifi
             objectName: "nacreStatusNetwork"
             icon: NacreNetwork.active ? NacreIcons.getNetworkIcon(NacreNetwork.active.strength || 0) : "wifi_off"
-            label: NacreNetwork.active ? "Wi-Fi connected" : "Wi-Fi disconnected"
+            label: NacreNetwork.wifiAvailable === false ? "No Wi-Fi adapter" : NacreNetwork.active ? "Wi-Fi connected" : "Wi-Fi disconnected"
             ink: root.colour
         }
         StatusTarget {
             id: bluetooth
             objectName: "nacreStatusBluetooth"
             icon: NacreBluetooth.powered ? "bluetooth" : "bluetooth_disabled"
-            label: NacreBluetooth.powered ? "Bluetooth on" : "Bluetooth off"
+            label: NacreBluetooth.available === false ? "No Bluetooth adapter" : NacreBluetooth.powered ? "Bluetooth on" : "Bluetooth off"
             ink: root.colour
         }
         StatusTarget {

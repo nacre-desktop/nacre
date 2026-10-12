@@ -6,27 +6,28 @@ NacreSettingsPage {
     id: root
     property string page: "bluetooth"
     function power() {
-        if (!DeviceActions.busy)
+        if (!DeviceActions.busy && NacreBluetooth.available)
             DeviceActions.request(["bluetooth-power", NacreBluetooth.powered ? "off" : "on"]);
     }
     function deviceAction(device, action) {
-        if (DeviceActions.busy || !NacreBluetooth.devices.includes(device) || !["connect", "disconnect", "trust", "untrust"].includes(action))
+        if (DeviceActions.busy || !NacreBluetooth.available || !NacreBluetooth.devices.includes(device) || !["connect", "disconnect", "trust", "untrust"].includes(action))
             return;
         DeviceActions.request(["bluetooth-" + action, device.address]);
     }
     NacreSettingsSection {
         title: "Bluetooth"
-        description: NacreBluetooth.powered ? "Bluetooth is on" : "Bluetooth is off"
+        description: !NacreBluetooth.available ? "No Bluetooth adapter" : NacreBluetooth.powered ? "Bluetooth is on" : "Bluetooth is off"
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
                 text: NacreBluetooth.powered ? "Turn Bluetooth off" : "Turn Bluetooth on"
-                enabled: !DeviceActions.busy
+                enabled: !DeviceActions.busy && NacreBluetooth.available
                 onClicked: root.power()
             }
             ActionButton {
                 text: "Pair a device"
+                enabled: NacreBluetooth.available
                 onClicked: DesktopActions.execute("bluetooth")
             }
         }
@@ -61,7 +62,7 @@ NacreSettingsPage {
                     }
                     ActionButton {
                         text: parent.parent.modelData.trusted ? "Remove trust" : "Trust"
-                        enabled: !DeviceActions.busy
+                        enabled: !DeviceActions.busy && NacreBluetooth.available
                         onClicked: root.deviceAction(parent.parent.modelData, parent.parent.modelData.trusted ? "untrust" : "trust")
                     }
                 }
@@ -70,7 +71,7 @@ NacreSettingsPage {
         NacreText {
             width: parent.width
             visible: NacreBluetooth.devices.length === 0
-            text: "No devices saved. Open the Bluetooth manager to pair one."
+            text: !NacreBluetooth.available ? "No Bluetooth adapter" : "No devices saved. Open the Bluetooth manager to pair one."
             wrapMode: Text.Wrap
             color: NacreTokens.mutedInk
         }

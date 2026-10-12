@@ -175,6 +175,44 @@ TestCase {
         secondAP.active = true;
     }
 
+    function test_no_battery_popup_explains_unavailable() {
+        const prior = UPower.displayDevice;
+        UPower.displayDevice = {
+            ready: true,
+            isLaptopBattery: false,
+            isPresent: false,
+            percentage: 0
+        };
+        const popup = createTemporaryObject(assembly, test);
+        popup.currentName = "battery";
+        popup.hasCurrent = true;
+        verify(popup.currentItem !== null);
+        verify(!popup.currentItem.available);
+        compare(popup.currentItem.percent, -1);
+        compare(popup.currentItem.estimate, "Battery unavailable");
+        popup.hasCurrent = false;
+        UPower.displayDevice = prior;
+    }
+    function test_absent_radios_disable_actions_without_errors() {
+        NacreNetwork.wifiAvailable = false;
+        NacreNetwork.wifiEnabled = false;
+        NacreBluetooth.available = false;
+        NacreBluetooth.powered = false;
+        const wifi = createTemporaryObject(network, test);
+        const blue = createTemporaryObject(bluetooth, test);
+        verify(!findChild(wifi, "quickWifiPower").enabled);
+        verify(!findChild(blue, "quickBluetoothPower").enabled);
+        DeviceActions.lastRequest = [];
+        findChild(wifi, "quickWifiPower").clicked();
+        findChild(blue, "quickBluetoothPower").clicked();
+        compare(DeviceActions.lastRequest.length, 0);
+        verify(!wifi.activate(wifi.nearby[0]));
+        verify(!blue.activate(blue.known[0]));
+        NacreNetwork.wifiAvailable = true;
+        NacreNetwork.wifiEnabled = true;
+        NacreBluetooth.available = true;
+        NacreBluetooth.powered = true;
+    }
     function test_wifi_deduplicates_and_opens_network_settings() {
         const popup = createTemporaryObject(network, test);
         compare(popup.nearby.length, 2);
