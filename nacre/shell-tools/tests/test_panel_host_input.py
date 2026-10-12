@@ -107,6 +107,18 @@ TestCase {
   QtObject {id:input;property bool hovered:false;property bool popoutHovered:false;property bool dashboardHovered:false}
   NacrePanelHost {id:host;anchors.fill:parent;screen:({name:"test"});visibilities:flags;input:input}
  }}
+ function test_top_dashboard_does_not_hide_corner_notifications(){
+  const view=createTemporaryObject(scene,this);
+  view.host.popouts.height=0;view.host.session.width=0;view.flags.launcher=false;
+  verify(!view.host.notifications.suppressed);verify(view.host.notifications.enabled);
+  view.flags.dashboard=true;view.host.dashboard.height=240;
+  verify(!view.host.notifications.suppressed);verify(view.host.notifications.enabled);
+  view.flags.dashboard=false;view.host.dashboard.height=15;
+  verify(!view.host.notifications.suppressed);
+  view.flags.osd=true;verify(view.host.notifications.suppressed);verify(!view.host.notifications.enabled);
+  view.flags.osd=false;view.host.popouts.height=100;verify(view.host.notifications.suppressed);
+  view.host.popouts.height=0;view.host.session.width=200;verify(view.host.notifications.suppressed);
+ }
  function test_stale_painted_launcher_does_not_receive_press(){
   const view=createTemporaryObject(scene,this);wait(30);
   mouseClick(view.host.launcher,10,10);compare(view.host.launcher.presses,1);

@@ -209,7 +209,7 @@ Item {
     Notifications.NacreNotificationStack {
         id: notifications
         enabled: !suppressed
-        suppressed: popouts.height > 0.1 || session.width > 0.1 || dashboard.height > 0.1 || root.visibilities.osd
+        suppressed: popouts.height > 0.1 || session.width > 0.1 || root.visibilities.osd
         anchors.right: parent.right
         anchors.top: parent.top
     }

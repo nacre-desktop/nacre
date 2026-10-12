@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Corner notifications stay visible while the top dashboard is open.
+
 An empty startup profile performs no process launches or workspace changes. AI
 launch actions use the current workspace unless a profile explicitly assigns one.
 
