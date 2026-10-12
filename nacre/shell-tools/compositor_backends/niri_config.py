@@ -35,8 +35,14 @@ SKIPPED_LAUNCHES = {
 def quoted(value):
     if not isinstance(value, str) or "\0" in value:
         raise ValueError("Invalid KDL string")
-    return re.sub(
-        r"\\u([0-9a-fA-F]{4})", r"\\u{\1}", json.dumps(value, ensure_ascii=False)
+    escapes = {"\\": "\\\\", '"': '\\"', "\n": "\\n", "\r": "\\r", "\t": "\\t"}
+    return (
+        '"'
+        + "".join(
+            escapes.get(char, f"\\u{{{ord(char):x}}}" if ord(char) < 32 else char)
+            for char in value
+        )
+        + '"'
     )
 
 
@@ -66,7 +72,7 @@ def keys(value):
 
 def action_command(name, arguments=()):
     return (
-        'exec env NACRE_COMPOSITOR=niri python3 "$HOME/.local/share/nacre/shell/tools/compositor.py" action '
+        'exec env NACRE_COMPOSITOR=niri python3 "${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py" action '
         + shlex.join([name, *map(str, arguments)])
     )
 
@@ -111,8 +117,11 @@ def binding_command(row):
         return command
     if action == "shell.shortcut":
         return (
-            'exec "$HOME/.local/share/nacre/shell/bin/qs" -c nacre ipc call nacreCompositor shortcut '
+            'if [ -n "${NACRE_QS_CONFIG:-}" ]; then exec "${NACRE_QS_BIN:-$HOME/.local/share/nacre/shell/bin/qs}" -p "$NACRE_QS_CONFIG" ipc call nacreCompositor shortcut '
             + shlex.quote(params["name"])
+            + '; else exec "${NACRE_QS_BIN:-$HOME/.local/share/nacre/shell/bin/qs}" -c nacre ipc call nacreCompositor shortcut '
+            + shlex.quote(params["name"])
+            + "; fi"
         )
     if action == "compositor.reload":
         return action_command("reload")

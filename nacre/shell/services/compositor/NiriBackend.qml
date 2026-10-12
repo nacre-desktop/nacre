@@ -147,6 +147,7 @@ Singleton {
         }
         onExited: (exitCode, exitStatus) => {
             root.connected = false;
+            root.pendingActions = [];
             root.error = qsTr("Niri IPC disconnected; reconnecting.");
             root.activeWindowId = "";
             reconnect.restart();
@@ -170,7 +171,7 @@ Singleton {
         return true;
     }
     function runNext() {
-        if (worker.running || !pendingActions.length)
+        if (!connected || worker.running || !pendingActions.length)
             return;
         worker.command = pendingActions[0];
         pendingActions = pendingActions.slice(1);

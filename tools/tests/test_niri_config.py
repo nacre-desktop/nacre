@@ -36,6 +36,7 @@ class NiriConfigTests(unittest.TestCase):
         text = generated["niri/bindings.kdl"]
         self.assertIn("NACRE_COMPOSITOR=niri", text)
         self.assertIn("compositor.py", text)
+        self.assertIn("NACRE_COMPOSITOR_TOOLS", text)
         self.assertIn("switch_workspace --workspace 2", text)
         self.assertIn("move_window --workspace 2", text)
         self.assertIn("focus_direction --direction left", text)
@@ -76,6 +77,19 @@ class NiriConfigTests(unittest.TestCase):
             "SUPER + 8",
             config.render(contract, backend="hyprland")["hypr/conf/keybinding.lua"],
         )
+
+    def test_source_shortcuts_honor_explicit_config_and_binary_overrides(self):
+        text = niri.binding_command(
+            {
+                "kind": "binding",
+                "action": "shell.shortcut",
+                "parameters": {"name": "nacre_shell:test"},
+            }
+        )
+        self.assertIn("NACRE_QS_CONFIG", text)
+        self.assertIn("NACRE_QS_BIN", text)
+        self.assertIn('-p "$NACRE_QS_CONFIG"', text)
+        self.assertIn("nacreCompositor shortcut", text)
 
     def test_profile_workspace_rules_require_explicit_names_on_niri(self):
         rule = {
@@ -123,6 +137,8 @@ class NiriConfigTests(unittest.TestCase):
             }
         )
         self.assertIn('name\\"\\n} binds {', text)
+        self.assertEqual(niri.quoted(r"literal\u0041"), '"literal\\\\u0041"')
+        self.assertEqual(niri.quoted("\x01"), '"\\u{1}"')
         with self.assertRaises(ValueError):
             niri.quoted("nul\0")
         with self.assertRaises(ValueError):

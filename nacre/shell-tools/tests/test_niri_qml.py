@@ -48,7 +48,7 @@ class NiriQmlTests(unittest.TestCase):
                 'import QtQuick\nQtObject {property string target:""}'
             )
             (fixtures / "NacreCompositor.qml").write_text(
-                "pragma Singleton\nimport QtQuick\nQtObject {property var capabilities:({perOutputWorkspaces:true})}"
+                "pragma Singleton\nimport QtQuick\nQtObject {property var capabilities:({perOutputWorkspaces:true});property var windows:[];property int activeWsId:1}"
             )
             with (fixtures / "qmldir").open("a") as manifest:
                 manifest.write("singleton NacreCompositor 1.0 NacreCompositor.qml\n")
@@ -63,6 +63,29 @@ class NiriQmlTests(unittest.TestCase):
                     'property var client:({workspace:{id:"niri-workspace:9007199254740993"}});'
                     "readonly property bool active:" + expression + "}"
                 )
+            (fixtures / "WallpaperPlayback.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject {property bool pauseCovered:true}"
+            )
+            with (fixtures / "qmldir").open("a") as manifest:
+                manifest.write(
+                    "singleton WallpaperPlayback 1.0 WallpaperPlayback.qml\n"
+                )
+            wallpaper = (
+                ROOT.parent / "shell/modules/background/NacreWallpaperScene.qml"
+            ).read_text()
+            identity = re.search(
+                r"readonly property \w+ workspaceId: [^\n]+", wallpaper
+            ).group(0)
+            coverage = re.search(
+                r"readonly property bool covered: [^\n]+", wallpaper
+            ).group(0)
+            (target / "WallpaperCoverage.qml").write_text(
+                'import QtQuick\nimport "fixtures"\nQtObject {property var monitor:({activeWorkspace:{id:"niri-workspace:9007199254740993"}});'
+                + identity
+                + ";"
+                + coverage
+                + "}"
+            )
             source = (
                 (BACKENDS / "NiriBackend.qml")
                 .read_text()
@@ -88,6 +111,7 @@ import "session.js" as Session
 import "snapshots.js" as Snapshots
 import "fixtures"
 Item {
+ Component {id: wallpaperCoverage; WallpaperCoverage {}}
  Component {id: settingsActivity; NacreSettingsAppActivity {}}
  Component {id: colorsActivity; NacreColorsAppActivity {}}
  Component {id: welcomeActivity; NacreWelcomeAppActivity {}}
@@ -119,7 +143,10 @@ Item {
   }
   function test_stream_disconnect_blocks_actions_and_reconnects(){
    const stream=findChild(backend,"niriEventStream");verify(stream)
+   verify(backend.focusWindow("niri-window:1"));verify(backend.closeWindow("niri-window:1"));compare(backend.pendingActions.length,1)
+   const worker=findChild(backend,"niriActionWorker")
    stream.running=false;stream.exited(1,0);verify(!backend.connected);compare(backend.activeClient,null)
+   compare(backend.pendingActions.length,0);worker.running=false;worker.exited(0,0);wait(1);verify(!worker.running)
    verify(!backend.focusWindow("niri-window:1"));tryCompare(stream,"running",true)
    verify(backend.accept(Snapshots.initial));verify(backend.connected)
   }
@@ -144,6 +171,17 @@ Item {
     NacreCompositor.capabilities={perOutputWorkspaces:true}
     activity.destroy()
    }
+  }
+  function test_wallpaper_coverage_preserves_both_workspace_identity_types(){
+   const scene=wallpaperCoverage.createObject(null)
+   NacreCompositor.windows=[{workspace:{id:"niri-workspace:9007199254740993"},fullscreen:false,floating:false}]
+   verify(scene.covered);compare(scene.workspaceId,"niri-workspace:9007199254740993")
+   NacreCompositor.windows=[{workspace:{id:"niri-workspace:other"},fullscreen:false,floating:false}]
+   verify(!scene.covered)
+   scene.monitor={activeWorkspace:{id:2}}
+   NacreCompositor.windows=[{workspace:{id:2},fullscreen:false,floating:false}]
+   verify(scene.covered);compare(scene.workspaceId,2)
+   NacreCompositor.windows=[];scene.destroy()
   }
   function test_selection_preserves_hyprland_and_niri_is_explicit(){
    compare(Session.selectBackend({}),"hyprland")

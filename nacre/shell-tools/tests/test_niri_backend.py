@@ -1,5 +1,6 @@
 """Niri transport, real event schema and shared facade action semantics."""
 
+import copy
 import importlib.util
 import json
 import os
@@ -75,6 +76,46 @@ class NiriStateTests(unittest.TestCase):
         )
         self.assertEqual(window["at"], [44, 64])
         self.assertTrue(window["urgent"])
+
+    def test_incremental_window_updates_use_shared_canonical_event_names(self):
+        value = state()
+        previous = FIXTURE["events"][1]["WindowsChanged"]["windows"][0]
+        result = value.apply(
+            {
+                "WindowOpenedOrChanged": {
+                    "window": {
+                        **previous,
+                        "title": "Changed",
+                        "workspace_id": 202,
+                        "is_floating": True,
+                    }
+                }
+            }
+        )
+        self.assertEqual(result["type"], "window-title")
+        self.assertEqual(
+            result["changes"], ["window-title", "window-workspace", "window-floating"]
+        )
+        row = next(
+            row
+            for row in value.snapshot()["windows"]
+            if row["windowId"] == "niri-window:1"
+        )
+        self.assertEqual(row["workspaceId"], "niri-workspace:202")
+        self.assertTrue(row["floating"])
+
+    def test_unknown_future_event_shapes_are_harmless(self):
+        value = state()
+        initial = value.snapshot()
+        for event in (
+            "FutureUnit",
+            {"FutureTuple": [1, 2]},
+            {"FutureRecord": {"extra": True}},
+        ):
+            self.assertEqual(value.apply(event), {"type": "other"})
+            self.assertEqual(value.snapshot(), initial)
+        with self.assertRaises(ValueError):
+            value.apply({"WindowClosed": []})
 
     def test_config_failure_remains_in_snapshots_until_successful_reload(self):
         value = state()
@@ -346,6 +387,35 @@ class NiriTransportTests(unittest.TestCase):
             )
             self.assertEqual(len(final["windows"]), 2)
             self.assertIsNone(final["activeWindow"])
+        self.assertEqual(client.fileno(), -1)
+
+    def test_output_metadata_changes_emit_the_shared_outputs_event(self):
+        client, server = socket.socketpair()
+        source = [*FIXTURE["events"][:2], {"ConfigLoaded": {"failed": False}}]
+        server.sendall(
+            b"".join((json.dumps(event) + "\n").encode() for event in source)
+        )
+        server.close()
+        changed = copy.deepcopy(FIXTURE["outputs"])
+        changed["DP-2"]["logical"]["x"] = 200
+        backend = niri.Backend()
+        with (
+            patch.object(backend, "event_socket", return_value=client),
+            patch.object(
+                backend,
+                "_response",
+                side_effect=[FIXTURE["outputs"], FIXTURE["outputs"], changed],
+            ),
+        ):
+            values = []
+            with self.assertRaises(ConnectionError):
+                for value in backend.events():
+                    values.append(value)
+        self.assertIn({"type": "outputs-changed"}, values)
+        final = next(value for value in reversed(values) if value["type"] == "snapshot")
+        self.assertEqual(
+            next(row for row in final["monitors"] if row["name"] == "DP-2")["x"], 200
+        )
         self.assertEqual(client.fileno(), -1)
 
     def test_selection_is_explicit_and_import_starts_no_process_or_socket(self):
