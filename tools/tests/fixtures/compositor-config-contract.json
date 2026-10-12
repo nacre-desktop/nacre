@@ -1,0 +1,1914 @@
+{
+  "hypr/conf/keybinding.lua": [
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:mute",
+          "locked": true
+        },
+        "keys": "XF86AudioMute",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:volume-down",
+          "locked": true,
+          "repeating": true
+        },
+        "keys": "XF86AudioLowerVolume",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:volume-up",
+          "locked": true,
+          "repeating": true
+        },
+        "keys": "XF86AudioRaiseVolume",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:mic-mute"
+        },
+        "keys": "XF86AudioMicMute",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "loginctl lock-session"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:lock",
+          "locked": true
+        },
+        "keys": "XF86PowerOff",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell brightness down"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:brightness-down"
+        },
+        "keys": "XF86MonBrightnessDown",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell brightness up"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:brightness-up"
+        },
+        "keys": "XF86MonBrightnessUp",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell keyboard-light up"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:keyboard-up"
+        },
+        "keys": "XF86KbdBrightnessUp",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell keyboard-light down"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:keyboard-down"
+        },
+        "keys": "XF86KbdBrightnessDown",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-menu actions.emoji"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:emoji"
+        },
+        "keys": "SUPER + period",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:screenshot"
+        },
+        "keys": "Print",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "grim ~/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S).png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Saved to Pictures/Screenshots\""
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:save-screenshot"
+        },
+        "keys": "SUPER + Print",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.config/hypr/scripts/window-trash.sh trash"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:put-away"
+        },
+        "keys": "SUPER + Q",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.config/hypr/scripts/window-trash.sh restore-last"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:restore"
+        },
+        "keys": "SUPER + SHIFT + Q",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.config/hypr/scripts/window-trash.sh restore-all"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:restore-all"
+        },
+        "keys": "SUPER + ALT + Q",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.config/hypr/scripts/window-close.sh"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:close"
+        },
+        "keys": "SUPER + CTRL + Q",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.config/hypr/scripts/window-close.sh force"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:force-close"
+        },
+        "keys": "SUPER + CTRL + SHIFT + Q",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.config/hypr/scripts/window-minimize.sh hide"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:hide"
+        },
+        "keys": "SUPER + H",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.config/hypr/scripts/window-minimize.sh restore-last"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:unhide"
+        },
+        "keys": "SUPER + SHIFT + H",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.config/hypr/scripts/window-minimize.sh restore-current"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + ALT + H",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "mode": "fullscreen"
+            }
+          ],
+          "method": "window.fullscreen"
+        },
+        "flags": {
+          "description": "Nacre:fullscreen"
+        },
+        "keys": "SUPER + F",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "mode": "maximized"
+            }
+          ],
+          "method": "window.fullscreen"
+        },
+        "flags": {
+          "description": "Nacre:maximize"
+        },
+        "keys": "SUPER + M",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "action": "toggle"
+            }
+          ],
+          "method": "window.float"
+        },
+        "flags": {
+          "description": "Nacre:float"
+        },
+        "keys": "SUPER + T",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": {},
+          "method": "window.pin"
+        },
+        "flags": {
+          "description": "Nacre:pin"
+        },
+        "keys": "SUPER + P",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": {},
+          "method": "window.pseudo"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + P",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": {},
+          "method": "group.toggle"
+        },
+        "flags": {
+          "description": "Nacre:group"
+        },
+        "keys": "SUPER + G",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": {},
+          "method": "group.prev"
+        },
+        "flags": {
+          "description": "Nacre:group-cycle"
+        },
+        "keys": "SUPER + bracketleft",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": {},
+          "method": "group.next"
+        },
+        "flags": {
+          "description": "Nacre:group-cycle"
+        },
+        "keys": "SUPER + bracketright",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "togglesplit"
+          ],
+          "method": "layout"
+        },
+        "flags": {
+          "description": "Nacre:split"
+        },
+        "keys": "SUPER + J",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": {},
+          "method": "window.resize"
+        },
+        "flags": {
+          "mouse": true
+        },
+        "keys": "SUPER + mouse:273",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "next": true
+            }
+          ],
+          "method": "window.cycle_next"
+        },
+        "flags": {
+          "description": "Nacre:cycle-window"
+        },
+        "keys": "ALT + TAB",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "next": false
+            }
+          ],
+          "method": "window.cycle_next"
+        },
+        "flags": {
+          "description": "Nacre:cycle-window"
+        },
+        "keys": "ALT + SHIFT + TAB",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "on_current_monitor": true,
+              "workspace": 1
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {
+          "description": "Nacre:workspace"
+        },
+        "keys": "SUPER + 1",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "workspace": 1
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {
+          "description": "Nacre:move-workspace"
+        },
+        "keys": "SUPER + SHIFT + 1",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "on_current_monitor": true,
+              "workspace": 2
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {
+          "description": "Nacre:workspace"
+        },
+        "keys": "SUPER + 2",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "workspace": 2
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {
+          "description": "Nacre:move-workspace"
+        },
+        "keys": "SUPER + SHIFT + 2",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "on_current_monitor": true,
+              "workspace": 3
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {
+          "description": "Nacre:workspace"
+        },
+        "keys": "SUPER + 3",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "workspace": 3
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {
+          "description": "Nacre:move-workspace"
+        },
+        "keys": "SUPER + SHIFT + 3",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "on_current_monitor": true,
+              "workspace": 4
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {
+          "description": "Nacre:workspace"
+        },
+        "keys": "SUPER + 4",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "workspace": 4
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {
+          "description": "Nacre:move-workspace"
+        },
+        "keys": "SUPER + SHIFT + 4",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "on_current_monitor": true,
+              "workspace": 5
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {
+          "description": "Nacre:workspace"
+        },
+        "keys": "SUPER + 5",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "workspace": 5
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {
+          "description": "Nacre:move-workspace"
+        },
+        "keys": "SUPER + SHIFT + 5",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "on_current_monitor": true,
+              "workspace": 6
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {
+          "description": "Nacre:workspace"
+        },
+        "keys": "SUPER + 6",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "workspace": 6
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {
+          "description": "Nacre:move-workspace"
+        },
+        "keys": "SUPER + SHIFT + 6",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "on_current_monitor": true,
+              "workspace": 7
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {
+          "description": "Nacre:workspace"
+        },
+        "keys": "SUPER + 7",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "workspace": 7
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {
+          "description": "Nacre:move-workspace"
+        },
+        "keys": "SUPER + SHIFT + 7",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "on_current_monitor": true,
+              "workspace": "m+1"
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {},
+        "keys": "SUPER + TAB",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "on_current_monitor": true,
+              "workspace": "m-1"
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + TAB",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "on_current_monitor": true,
+              "workspace": "e+1"
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {},
+        "keys": "SUPER + mouse_down",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "on_current_monitor": true,
+              "workspace": "e-1"
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {},
+        "keys": "SUPER + mouse_up",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "workspace": "r-1"
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {},
+        "keys": "SUPER + CTRL + SHIFT + left",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "workspace": "r+1"
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {},
+        "keys": "SUPER + CTRL + SHIFT + right",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            ""
+          ],
+          "method": "workspace.toggle_special"
+        },
+        "flags": {},
+        "keys": "SUPER + grave",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "workspace": "special"
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + grave",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "direction": "left"
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {
+          "description": "Nacre:focus"
+        },
+        "keys": "SUPER + left",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "direction": "left"
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + left",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "relative": true,
+              "x": -30,
+              "y": 0
+            }
+          ],
+          "method": "window.resize"
+        },
+        "flags": {
+          "repeating": true
+        },
+        "keys": "SUPER + ALT + left",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "direction": "right"
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {
+          "description": "Nacre:focus"
+        },
+        "keys": "SUPER + right",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "direction": "right"
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + right",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "relative": true,
+              "x": 30,
+              "y": 0
+            }
+          ],
+          "method": "window.resize"
+        },
+        "flags": {
+          "repeating": true
+        },
+        "keys": "SUPER + ALT + right",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "direction": "up"
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {
+          "description": "Nacre:focus"
+        },
+        "keys": "SUPER + up",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "direction": "up"
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + up",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "relative": true,
+              "x": 0,
+              "y": -30
+            }
+          ],
+          "method": "window.resize"
+        },
+        "flags": {
+          "repeating": true
+        },
+        "keys": "SUPER + ALT + up",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "direction": "down"
+            }
+          ],
+          "method": "focus"
+        },
+        "flags": {
+          "description": "Nacre:focus"
+        },
+        "keys": "SUPER + down",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "direction": "down"
+            }
+          ],
+          "method": "window.move"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + down",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "relative": true,
+              "x": 0,
+              "y": 30
+            }
+          ],
+          "method": "window.resize"
+        },
+        "flags": {
+          "repeating": true
+        },
+        "keys": "SUPER + ALT + down",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "resize"
+          ],
+          "method": "submap"
+        },
+        "flags": {},
+        "keys": "SUPER + R",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "relative": true,
+              "x": -30,
+              "y": 0
+            }
+          ],
+          "method": "window.resize"
+        },
+        "flags": {
+          "repeating": true
+        },
+        "keys": "left",
+        "submap": "resize"
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "relative": true,
+              "x": 30,
+              "y": 0
+            }
+          ],
+          "method": "window.resize"
+        },
+        "flags": {
+          "repeating": true
+        },
+        "keys": "right",
+        "submap": "resize"
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "relative": true,
+              "x": 0,
+              "y": -30
+            }
+          ],
+          "method": "window.resize"
+        },
+        "flags": {
+          "repeating": true
+        },
+        "keys": "up",
+        "submap": "resize"
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            {
+              "relative": true,
+              "x": 0,
+              "y": 30
+            }
+          ],
+          "method": "window.resize"
+        },
+        "flags": {
+          "repeating": true
+        },
+        "keys": "down",
+        "submap": "resize"
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "reset"
+          ],
+          "method": "submap"
+        },
+        "flags": {},
+        "keys": "escape",
+        "submap": "resize"
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "reset"
+          ],
+          "method": "submap"
+        },
+        "flags": {},
+        "keys": "return",
+        "submap": "resize"
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "reset"
+          ],
+          "method": "submap"
+        },
+        "flags": {},
+        "keys": "SUPER + R",
+        "submap": "resize"
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell launcher"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:launcher"
+        },
+        "keys": "SUPER + A",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell overview"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + D",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell clipboard"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:clipboard"
+        },
+        "keys": "SUPER + V",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell wallpaper"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:wallpaper"
+        },
+        "keys": "SUPER + W",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell hide"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + Z",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell toggle"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + O",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-settings"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:settings"
+        },
+        "keys": "SUPER + S",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-menu actions.capture"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + CTRL + C",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-menu power"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + X",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "loginctl lock-session"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:lock"
+        },
+        "keys": "SUPER + ESCAPE",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "hyprctl reload"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + R",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.config/hypr/scripts/matrix-rest.sh"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + CTRL + M",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.config/hypr/scripts/startup-apps.sh"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + ALT + C",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "uwsm app -- kitty"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:terminal"
+        },
+        "keys": "SUPER + SHIFT + T",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "uwsm app -- google-chrome-stable"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + B",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "uwsm app -- code"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + C",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "uwsm app -- cursor"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + V",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "uwsm app -- discord"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + D",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "uwsm app -- spotify"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + SHIFT + S",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-app files"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:files"
+        },
+        "keys": "SUPER + SHIFT + F",
+        "submap": ""
+      }
+    }
+  ],
+  "hypr/conf/windowrule.lua": [
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "class": "^([Tt]hunar)$"
+        },
+        "name": "nacre-thunar-files",
+        "size": "70% 75%"
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "class": "^(org[.]kde[.]dolphin|[Dd]olphin)$"
+        },
+        "name": "nacre-dolphin-files",
+        "size": [
+          "monitor_w*0.6",
+          "monitor_h*0.75"
+        ]
+      }
+    }
+  ],
+  "hypr/conf/nacre.lua": [
+    {
+      "kind": "layer_rule",
+      "value": {
+        "blur": true,
+        "ignore_alpha": 0.5,
+        "match": {
+          "namespace": "^nacre-(drawers|topbar|lock-preview|left-menu-handle|right-menu-handle)$"
+        },
+        "name": "nacre-overlay-glass",
+        "no_anim": true
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "class": "^org.quickshell$",
+          "title": "^Nacre lock screen preview$"
+        },
+        "name": "nacre-lock-preview",
+        "size": "70% 70%"
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "class": "^org\\.pulseaudio\\.pavucontrol$"
+        },
+        "name": "nacre-audio-mixer",
+        "pin": true,
+        "size": "700 600"
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "class": "^blueman-manager$"
+        },
+        "name": "nacre-bluetooth-manager",
+        "size": "800 600"
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "class": "^nm-connection-editor$"
+        },
+        "name": "nacre-network-editor",
+        "size": "800 700"
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "class": "^hyprland-share-picker$"
+        },
+        "name": "nacre-share-picker",
+        "pin": true,
+        "size": "600 400"
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "title": "^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$"
+        },
+        "name": "nacre-picture-in-picture",
+        "pin": true
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "class": "^nacre-control$"
+        },
+        "name": "nacre-native-controls",
+        "size": "720 500"
+      }
+    },
+    {
+      "kind": "config",
+      "value": {
+        "xwayland": {
+          "force_zero_scaling": true
+        }
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "class": "^org[.]quickshell$",
+          "title": "^Nacre Settings$"
+        },
+        "name": "nacre-settings-app"
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "class": "^org[.]quickshell$",
+          "title": "^Nacre Colors$"
+        },
+        "name": "nacre-colors-app"
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "center": true,
+        "float": true,
+        "match": {
+          "class": "^org[.]quickshell$",
+          "title": "^Nacre Welcome$"
+        },
+        "name": "nacre-welcome"
+      }
+    }
+  ],
+  "hypr/conf/brain.lua": [
+    {
+      "kind": "window_rule",
+      "value": {
+        "fullscreen_state": "0 0",
+        "match": {
+          "class": "^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$"
+        },
+        "name": "nacre-brain",
+        "suppress_event": "fullscreen maximize"
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "fullscreen_state": "0 0",
+        "match": {
+          "class": "^chrome-127[.]0[.]0[.]1__-Default$"
+        },
+        "name": "nacre-brain-chrome",
+        "suppress_event": "fullscreen maximize"
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "match": {
+          "class": "^([Oo]bsidian)$"
+        },
+        "name": "nacre-obsidian"
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-brain open"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + B",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-brain capture"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + N",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "float": true,
+        "match": {
+          "class": "^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$"
+        },
+        "name": "brain-auth-handoff",
+        "no_initial_focus": true,
+        "size": "80 80"
+      }
+    }
+  ],
+  "nacre/shell-tools/shortcuts.lua": [
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell palette"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + SPACE",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-menu learn.shortcuts"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {},
+        "keys": "SUPER + K",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell left"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:ai-sidebar"
+        },
+        "keys": "SUPER + CTRL + B",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "nacre_shell:dismissHoverEdges"
+          ],
+          "method": "global"
+        },
+        "flags": {
+          "non_consuming": true
+        },
+        "keys": "Escape",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": [
+            "~/.local/bin/nacre-shell detach"
+          ],
+          "method": "exec_cmd"
+        },
+        "flags": {
+          "description": "Nacre:detach-panel"
+        },
+        "keys": "SUPER + CTRL + D",
+        "submap": ""
+      }
+    },
+    {
+      "kind": "window_rule",
+      "value": {
+        "float": true,
+        "match": {
+          "class": "^org[.]quickshell$",
+          "title": "^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$"
+        },
+        "no_anim": true
+      }
+    },
+    {
+      "kind": "unbind",
+      "value": "SUPER + mouse:272"
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": {},
+          "method": "callback"
+        },
+        "flags": {
+          "description": "Nacre:move-panel-or-window"
+        },
+        "keys": "SUPER + mouse:272",
+        "submap": ""
+      }
+    }
+  ],
+  "hypr/conf/cursor.lua": [
+    {
+      "kind": "event",
+      "value": {
+        "callback": "callback",
+        "event": "hyprland.start"
+      }
+    }
+  ]
+}

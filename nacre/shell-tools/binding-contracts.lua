@@ -1,4 +1,5 @@
 local records = {}
+local declarations = {}
 local captured_rules = {}
 local submap = ""
 local function json(value)
@@ -33,17 +34,25 @@ local stub = {
         assert(type(keys) == "string", "Binding keys must be a string")
         if type(action) == "function" then action = {method="callback", args={}} end
         assert(type(action) == "table" and action.method, "Unsupported binding constructor")
-        records[#records+1] = { keys=keys, action=action, flags=flags or {}, submap=(flags and flags.submap) or submap }
+        local row = { keys=keys, action=action, flags=flags or {}, submap=(flags and flags.submap) or submap }
+        records[#records+1] = row
+        declarations[#declarations+1] = {kind="binding", value=row}
     end,
-    unbind = function() end,
+    unbind = function(keys) declarations[#declarations+1] = {kind="unbind", value=keys} end,
     define_submap = function(name, callback)
         local previous = submap; submap=name; callback(); submap=previous
     end,
 }
-stub.window_rule = function(rule) captured_rules[#captured_rules+1] = rule end
-stub.layer_rule = function() end
-stub.config = function() end
-stub.on = function() end
+stub.window_rule = function(rule)
+    captured_rules[#captured_rules+1] = rule
+    declarations[#declarations+1] = {kind="window_rule", value=rule}
+end
+stub.layer_rule = function(rule) declarations[#declarations+1] = {kind="layer_rule", value=rule} end
+stub.config = function(value) declarations[#declarations+1] = {kind="config", value=value} end
+stub.on = function(event, callback)
+    assert(type(callback) == "function", "Event callback required")
+    declarations[#declarations+1] = {kind="event", value={event=event, callback="callback"}}
+end
 local environment = {
     hl=stub, assert=assert, error=error, ipairs=ipairs, pairs=pairs,
     tonumber=tonumber, tostring=tostring, type=type, select=select,
@@ -52,4 +61,4 @@ local environment = {
 local source, failure = loadfile(arg[1], "t", environment)
 assert(source, failure)
 source()
-io.write(json(arg[2] == "rules" and captured_rules or records))
+io.write(json(arg[2] == "declarations" and declarations or (arg[2] == "rules" and captured_rules or records)))
