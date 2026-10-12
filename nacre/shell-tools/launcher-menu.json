@@ -866,6 +866,15 @@
       "description": "Show the current services and release"
     },
     {
+      "id": "health.support-report",
+      "kind": "action",
+      "label": "Copy support report",
+      "icon": "content_copy",
+      "operation": "tool",
+      "value": "support-report",
+      "description": "Copy redacted hardware, software and recent errors"
+    },
+    {
       "id": "health.logs",
       "kind": "action",
       "label": "Desktop logs",

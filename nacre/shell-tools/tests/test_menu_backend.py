@@ -14,6 +14,29 @@ spec.loader.exec_module(menu)
 
 
 class MenuBackendTests(unittest.TestCase):
+    def test_support_report_copies_only_the_redacted_markdown(self):
+        import sys
+        from types import SimpleNamespace
+
+        with (
+            patch.dict(
+                sys.modules,
+                {
+                    "diagnostics": SimpleNamespace(
+                        support_report=lambda: "# Redacted fixture\n"
+                    )
+                },
+            ),
+            patch.object(menu.subprocess, "run") as run,
+        ):
+            self.assertEqual(menu.tool("support-report"), "Support report copied")
+        self.assertEqual(
+            run.call_args.args[0], ["wl-copy", "--type", "text/plain;charset=utf-8"]
+        )
+        self.assertEqual(run.call_args.kwargs["input"], "# Redacted fixture\n")
+        self.assertTrue(run.call_args.kwargs["check"])
+        self.assertEqual(run.call_args.kwargs["timeout"], 5)
+
     def test_files_are_scoped_and_query_is_literal(self):
         import subprocess
 

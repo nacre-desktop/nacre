@@ -94,7 +94,7 @@ def stage(target):
         "NacreControlTools": """property bool busy:false;property var data:({nightLightSupported:true,nightLightEnabled:false,nightLightExternal:false});function refresh(){}function toggleNightLight(){data=Object.assign({},data,{nightLightEnabled:!data.nightLightEnabled});}""",
         "NacreAudio": """property var outputs:[];property var sink:null;function chooseOutput(id){return true;}property bool available:true;property bool micAvailable:true;property bool muted:false;property bool micMuted:false;function toggleMute(){muted=!muted;}function toggleMic(){micMuted=!micMuted;}""",
         "NacrePlayers": """property var active:({canTogglePlaying:true,canGoNext:true,canGoPrevious:true});property var actions:[];function control(value){actions=[...actions,value];return true;}""",
-        "NacreNetwork": """property bool wifiEnabled:true;property var visibleNetworks:[]""",
+        "NacreNetwork": """property bool wifiAvailable:true;property bool wifiEnabled:true;property var visibleNetworks:[]""",
         "NacreBluetooth": """property bool available:true;property QtObject adapter:QtObject{property bool enabled:true};readonly property bool powered:adapter.enabled;property var devices:[]""",
         "NacreCompositor": """property var windows:[];property var calls:[];function focusWindow(id){calls=[...calls,"focus "+id]}function logout(){calls=[...calls,"logout"]}""",
         "DesktopExtras": """property var notes:[];property string notesQuery:"";property string brainQuery:"";property var clips:[];property var keys:[];property var requests:[];function request(action,payload){requests=[...requests,[action,payload]];}""",

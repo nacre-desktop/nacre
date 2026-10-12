@@ -419,6 +419,33 @@ TestCase {
         };
         Pipewire.preferredDefaultAudioSource = null;
     }
+    function test_absent_radios_are_readonly_in_settings() {
+        DeviceActions.requests = [];
+        DeviceActions.connectedSSID = "";
+        NacreNetwork.wifiAvailable = false;
+        NacreBluetooth.available = false;
+        const view = createTemporaryObject(settings, test);
+        view.open("network");
+        wait(20);
+        const wifi = findChild(view, "settingsPage").item;
+        wifi.request("wifi-radio", "on");
+        wifi.request("wifi-scan");
+        wifi.connect({
+            ssid: "Fixture",
+            active: false
+        });
+        view.open("bluetooth");
+        wait(20);
+        const blue = findChild(view, "settingsPage").item;
+        blue.power();
+        blue.deviceAction({
+            address: "00:11:22:33:44:55"
+        }, "connect");
+        compare(DeviceActions.requests.length, 0);
+        compare(DeviceActions.connectedSSID, "");
+        NacreNetwork.wifiAvailable = true;
+        NacreBluetooth.available = true;
+    }
     function test_connections_are_explicit_busy_and_stale_safe() {
         DeviceActions.requests = [];
         DeviceActions.connectedSSID = "";

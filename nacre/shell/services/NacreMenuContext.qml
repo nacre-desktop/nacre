@@ -173,6 +173,10 @@ Scope {
             result.disabled = !NacreAudio.available;
         if (row.value === "mic-mute")
             result.disabled = !NacreAudio.micAvailable;
+        if (row.operation === "toggle" && row.value === "wifi") {
+            result.disabled = NacreNetwork.wifiAvailable === false;
+            result.reason = result.disabled ? "No Wi-Fi adapter" : "";
+        }
         if (row.value === "bluetooth")
             result.disabled = !NacreBluetooth.available;
         return result;
@@ -658,7 +662,7 @@ Scope {
                 NacreAudio.toggleMic();
             else if (value === "bluetooth" && NacreBluetooth.available)
                 NacreBluetooth.adapter.enabled = !NacreBluetooth.powered;
-            else if (value === "wifi")
+            else if (value === "wifi" && NacreNetwork.wifiAvailable !== false)
                 AppLaunch.run(["nmcli", "radio", "wifi", NacreNetwork.wifiEnabled ? "off" : "on"]);
             return true;
         }

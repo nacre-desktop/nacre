@@ -122,17 +122,29 @@ def snapshot():
     if radio not in ("enabled", "disabled"):
         raise SnapshotError("NetworkManager returned an unknown Wi-Fi radio state.")
     devices = query("--fields", "DEVICE,TYPE,STATE", "device", "status")
-    points = query(
-        "--fields",
-        "IN-USE,SSID,BSSID,SIGNAL,FREQ,DEVICE",
-        "device",
-        "wifi",
-        "list",
-        "--rescan",
-        "no",
+    wifi_available = False
+    for line in devices.splitlines():
+        try:
+            row = fields(line)
+            wifi_available |= len(row) == 3 and row[1] == "wifi"
+        except ValueError:
+            continue
+    points = (
+        query(
+            "--fields",
+            "IN-USE,SSID,BSSID,SIGNAL,FREQ,DEVICE",
+            "device",
+            "wifi",
+            "list",
+            "--rescan",
+            "no",
+        )
+        if wifi_available
+        else ""
     )
     return {
-        "wifiEnabled": radio == "enabled",
+        "wifiEnabled": wifi_available and radio == "enabled",
+        "wifiAvailable": wifi_available,
         "wifiInterface": connected_interface(devices),
         "networks": access_points(points),
     }
