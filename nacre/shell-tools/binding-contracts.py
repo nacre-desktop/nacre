@@ -1,26 +1,11 @@
-"""Capture declarative Lua bind contracts in a restricted, process-free environment."""
+"""Compatibility contract reader; native declaration parsing belongs to the backend."""
 
-import json
+import importlib.util
 from pathlib import Path
-import shutil
-import subprocess
 
-
-def capture(path, kind="bindings"):
-    if kind not in ("bindings", "rules", "declarations"):
-        raise ValueError("Unsupported declaration kind")
-    lua = shutil.which("lua")
-    if not lua:
-        raise RuntimeError("Lua required for declarative binding checks")
-    result = subprocess.run(
-        [lua, str(Path(__file__).with_suffix(".lua")), str(path), kind],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    if result.returncode:
-        raise RuntimeError(
-            "Cannot capture bindings in " + path.name + ": " + result.stderr
-        )
-    records = json.loads(result.stdout)
-    return records if isinstance(records, list) else []
+spec = importlib.util.spec_from_file_location(
+    "nacre_compositor_contract_reader", Path(__file__).with_name("compositor.py")
+)
+compositor = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(compositor)
+capture = compositor.capture_bindings

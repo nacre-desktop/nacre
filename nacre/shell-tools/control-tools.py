@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Explicit capture/night-light actions and read-only optional tool discovery."""
 
+import compositor
+
 import argparse
 import json
 import os
 from pathlib import Path
 import shutil
-import socket
 import time
 import subprocess
 import tempfile
@@ -67,34 +68,17 @@ def save(data, home=None):
 
 
 def configured_elsewhere(home=None):
-    home = home or Path.home()
-    return (home / ".config/hypr/hyprsunset.conf").exists()
+    return compositor.night_light_configured_elsewhere(home or Path.home())
 
 
 def unmanaged_socket(active):
-    signature = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
-    runtime = os.environ.get("XDG_RUNTIME_DIR", "")
-    if active or not signature or not runtime:
-        return False
-    path = Path(runtime) / "hypr" / signature / ".hyprsunset.sock"
-    if not path.exists():
-        return False
-    try:
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
-            connection.settimeout(0.15)
-            connection.connect(str(path))
-        return True
-    except (ConnectionRefusedError, FileNotFoundError):
-        return False
-    except OSError:
-        # Ambiguous or inaccessible listeners retain external ownership.
-        return True
+    return compositor.night_light_external_socket(active)
 
 
-def apply_temperature(command, owner, starting):
+def apply_temperature(enabled, owner, starting):
     for attempt in range(12 if starting else 1):
         try:
-            subprocess.run(command, check=True, capture_output=True, timeout=1)
+            compositor.set_night_light_temperature(enabled, timeout=1)
             return
         except subprocess.SubprocessError:
             if not starting or attempt == 11 or service()[1] != owner:
@@ -147,13 +131,8 @@ def night_light(enabled, home=None):
         # Claim only the service this action started; never another running owner.
         save({"owner": owner, "enabled": False}, home)
     if active:
-        command = (
-            ["hyprctl", "hyprsunset", "temperature", "4500"]
-            if enabled
-            else ["hyprctl", "hyprsunset", "identity"]
-        )
         try:
-            apply_temperature(command, owner, started)
+            apply_temperature(enabled, owner, started)
         except subprocess.SubprocessError:
             # Undo a partial startup, but only while the invocation still belongs to us.
             if started and service()[1] == owner:

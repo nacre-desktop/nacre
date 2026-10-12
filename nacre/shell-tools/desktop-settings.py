@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Validated desktop preferences and reversible connected-display arrangement."""
 
+import compositor
+
 import argparse
 import fcntl
 import json
@@ -16,7 +18,7 @@ palette = module_from_spec(spec)
 spec.loader.exec_module(palette)
 HOME = Path.home()
 STATE = HOME / ".config/nacre/desktop.json"
-LUA = STATE.with_name("desktop.lua")
+LUA = compositor.config_path(HOME, "desktop")
 PENDING = STATE.with_name("display-pending.json")
 DEFAULTS = dict(
     animations=True,
@@ -56,17 +58,8 @@ DEFAULTS = dict(
 PRESET_KEYS = [
     key for key in DEFAULTS if not key.startswith(("lock", "weather", "interface"))
 ]
-OPTIONS = {
-    "animations": "animations.enabled",
-    "blur": "decoration.blur.enabled",
-    "shadow": "decoration.shadow.enabled",
-    "followMouse": "input.follow_mouse",
-    "naturalScroll": "input.touchpad.natural_scroll",
-    "gapsIn": "general.gaps_in",
-    "gapsOut": "general.gaps_out",
-    "borderSize": "general.border_size",
-    "rounding": "decoration.rounding",
-}
+OPTIONS = set(compositor.desktop_option_keys())
+
 RANGES = {
     "gapsIn": (0, 30),
     "gapsOut": (0, 80),
@@ -75,17 +68,6 @@ RANGES = {
     "frameWidth": (0, 30),
     "frameRounding": (0, 40),
 }
-
-
-def hypr(*args):
-    result = subprocess.run(
-        ["hyprctl", *args], capture_output=True, text=True, timeout=8
-    )
-    if result.returncode:
-        raise RuntimeError(
-            result.stderr.strip() or result.stdout.strip() or "Hyprland command failed"
-        )
-    return result.stdout
 
 
 def monitor_state():
@@ -106,26 +88,23 @@ def monitor_state():
                 "availableModes",
             )
         }
-        for m in json.loads(hypr("monitors", "all", "-j"))
+        for m in compositor.query("all_monitors", timeout=8)
         if not m.get("disabled")
     ]
 
 
 def initial():
     data = dict(DEFAULTS)
-    for key, option in OPTIONS.items():
+    for key in OPTIONS:
         try:
-            value = json.loads(hypr("getoption", option, "-j"))
-            data[key] = (
-                value["bool"]
-                if "bool" in value
-                else value["int"]
-                if "int" in value
-                else int(value["css"].split()[0])
-            )
-            if key == "followMouse":
-                data[key] = data[key] != 0
-        except (RuntimeError, ValueError, KeyError):
+            data[key] = compositor.get_desktop_option(key, timeout=8)
+        except (
+            OSError,
+            subprocess.SubprocessError,
+            RuntimeError,
+            ValueError,
+            KeyError,
+        ):
             pass
     return data
 
@@ -159,52 +138,12 @@ def validate(key, value):
     return value
 
 
-def lua_value(value):
-    return (
-        "true"
-        if value is True
-        else "false"
-        if value is False
-        else json.dumps(value, ensure_ascii=True)
-    )
-
-
 def monitor_lua(monitors):
-    lines = []
-    for m in monitors:
-        name = m["name"]
-        mode = f"{int(m['width'])}x{int(m['height'])}@{float(m['refreshRate']):.3f}"
-        mirror = m.get("mirrorOf") or ""
-        if mirror == "none":
-            mirror = ""
-        lines.append(
-            "hl.monitor({output="
-            + lua_value(name)
-            + ",mode="
-            + lua_value(mode)
-            + ",scale="
-            + str(float(m["scale"]))
-            + ",position="
-            + lua_value(f"{int(m['x'])}x{int(m['y'])}")
-            + ",transform="
-            + str(int(m.get("transform") or 0))
-            + ",mirror="
-            + lua_value(mirror)
-            + "})"
-        )
-    return "\n".join(lines)
+    return compositor.render_monitors(monitors)
 
 
 def config_lua(data):
-    entries = []
-    for key, option in OPTIONS.items():
-        entries.append(
-            "["
-            + lua_value(option)
-            + "]="
-            + lua_value(int(data[key]) if key == "followMouse" else data[key])
-        )
-    return "hl.config({" + ",".join(entries) + "})\n"
+    return compositor.render_desktop_options(data)
 
 
 def persist(data):
@@ -215,13 +154,7 @@ def persist(data):
 
 
 def ensure_include():
-    path = HOME / ".config/hypr/hyprland.lua"
-    text = path.read_text()
-    marker = "-- Nacre desktop settings"
-    if marker not in text or 'load_private("desktop")' not in text:
-        raise RuntimeError(
-            "Managed desktop loader missing; run ./install.sh --apply from the repository"
-        )
+    compositor.ensure_desktop_loader(HOME)
 
 
 def display_plan(monitors, primary, mode):
@@ -260,7 +193,7 @@ def revert(token=None):
     saved = json.loads(PENDING.read_text())
     if token and token != saved["token"]:
         return
-    hypr("eval", monitor_lua(saved["monitors"]))
+    compositor.configure_monitors(saved["monitors"], timeout=8)
     data = load()
     data["displays"] = saved["previous"]
     persist(data)
@@ -313,14 +246,7 @@ def main():
                 data = load()
                 data[key] = value
                 if key in OPTIONS:
-                    hypr(
-                        "eval",
-                        "hl.config({["
-                        + lua_value(OPTIONS[key])
-                        + "]="
-                        + lua_value(int(value) if key == "followMouse" else value)
-                        + "})",
-                    )
+                    compositor.set_desktop_options({key: value}, timeout=8)
                 persist(data)
                 if key.startswith("lock"):
                     spec = spec_from_file_location(
@@ -383,7 +309,7 @@ def main():
                 data.update(overrides[name])
                 data["preset"] = name
                 data["normalSnapshot"] = baseline
-                hypr("eval", config_lua(data))
+                compositor.set_desktop_options(data, timeout=8)
                 persist(data)
                 import importlib.util
 
@@ -460,7 +386,7 @@ def main():
                     start_new_session=True,
                 )
                 try:
-                    hypr("eval", monitor_lua(plan))
+                    compositor.configure_monitors(plan, timeout=8)
                     persist(data)
                 except Exception:  # noqa: BLE001 — Restore pending display transaction or report failure to the settings client.
                     revert(token)
