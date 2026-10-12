@@ -129,6 +129,8 @@ class CoverageTests(unittest.TestCase):
             'el("span", "New caption", "class-name")',
             'button("New action", callback)',
             'element.textContent = "New content";',
+            'form.button = "Create app";',
+            'Item {section: {help:"Getting help"}[page]}',
         ):
             with self.subTest(source=source):
                 self.assertTrue(list(uncovered(source)))
@@ -138,6 +140,18 @@ class CoverageTests(unittest.TestCase):
             ),
             [],
         )
+
+    def test_shortcut_protocol_names_are_not_messages(self):
+        self.assertEqual(list(uncovered('NacreShortcut {name:"mediaToggle"}')), [])
+
+    def test_python_catalog_companion_ids_are_references(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.fixture(root, {"test.title": "Open"}, "Item {}")
+            (root / "nacre/shell-tools/catalog.py").write_text(
+                'ROWS = {"action":{"titleId":"test.title"}}'
+            )
+            self.assertEqual(guard.references(root), {"test.title"})
 
 
 if __name__ == "__main__":

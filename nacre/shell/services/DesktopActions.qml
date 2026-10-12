@@ -222,7 +222,7 @@ Singleton {
             "launcher": false
         },
         {
-            name: DesktopSettings.data.animations === false ? "Enable animations" : "Disable animations",
+            name: DesktopSettings.data.animations === false ? NacreI18n.tr("ui.desktop-actions.name.enable-animations", "Enable animations") : NacreI18n.tr("ui.desktop-actions.name.disable-animations", "Disable animations"),
             "description": NacreI18n.tr("ui.desktop-actions.description.change-desktop-animations", "Change desktop animations"),
             "icon": "animation",
             "action": "toggle-setting",
@@ -230,7 +230,7 @@ Singleton {
             "launcher": false
         },
         {
-            name: DesktopSettings.data.blur === false ? "Enable blur" : "Disable blur",
+            name: DesktopSettings.data.blur === false ? NacreI18n.tr("ui.desktop-actions.name.enable-blur", "Enable blur") : NacreI18n.tr("ui.desktop-actions.name.disable-blur", "Disable blur"),
             "description": NacreI18n.tr("ui.desktop-actions.description.change-desktop-blur", "Change desktop blur"),
             "icon": "blur_on",
             "action": "toggle-setting",
@@ -238,7 +238,7 @@ Singleton {
             "launcher": false
         },
         {
-            name: DesktopSettings.data.shadow === false ? "Enable shadows" : "Disable shadows",
+            name: DesktopSettings.data.shadow === false ? NacreI18n.tr("ui.desktop-actions.name.enable-shadows", "Enable shadows") : NacreI18n.tr("ui.desktop-actions.name.disable-shadows", "Disable shadows"),
             "description": NacreI18n.tr("ui.desktop-actions.description.change-desktop-shadows", "Change desktop shadows"),
             "icon": "shadow",
             "action": "toggle-setting",

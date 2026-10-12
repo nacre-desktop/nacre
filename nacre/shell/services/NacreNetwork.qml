@@ -108,7 +108,7 @@ Singleton {
         onStarted: stable.start()
         onExited: {
             stable.stop();
-            root.monitorError = "Network monitoring paused; retrying shortly.";
+            root.monitorError = NacreI18n.tr("ui.network.monitorError.network-monitoring-paused-retrying-shortly", "Network monitoring paused; retrying shortly.");
             retry.interval = root.retrySeconds * 1000;
             root.retrySeconds = Math.min(60, root.retrySeconds * 2);
             retry.start();

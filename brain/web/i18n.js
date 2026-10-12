@@ -3,7 +3,9 @@
   const requested = document.documentElement.dataset.nacreLanguage || "system";
   const language = requested === "pseudo" ? "pseudo" : "en";
   const locale =
-    requested === "system" || requested === "pseudo" ? undefined : requested;
+    requested === "system" || requested === "pseudo"
+      ? undefined
+      : requested.replace(/_/g, "-");
   function tr(id, fallback, args = {}) {
     return window.NacreTranslation.translate(
       window.NacreEnglish,

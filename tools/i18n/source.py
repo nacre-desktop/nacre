@@ -39,6 +39,16 @@ VISIBLE = {
     "profileName",
     "rotationStatus",
     "textContent",
+    "name",
+    "button",
+    "section",
+    "note",
+    "range",
+    "displayTemperature",
+    "hoverHint",
+    "monitorError",
+    "captured",
+    "failure",
 }
 ICONS = {"NacreIcon", "MaterialIcon", "IconImage", "BrandLogo"}
 
@@ -128,6 +138,7 @@ def human(text):
         and not re.fullmatch(r"T\d{2}:\d{2}:\d{2}", text)
         and re.search(r"[A-Za-z]", text)
         and not re.fullmatch(r"[a-z0-9_./:#-]+", text)
+        and not re.fullmatch(r"[a-z][A-Za-z0-9]*[A-Z][A-Za-z0-9]*", text)
         and not re.fullmatch(r"(?:[yMdHhmsAP]+|[ ·:/,\-])+", text)
     )
 
@@ -160,6 +171,13 @@ def bindings(source):
             and next((name for name in reversed(stack) if name), "") in ICONS
         ):
             continue
+        if field == "name" and next((name for name in reversed(stack) if name), "") in (
+            "GlobalShortcut",
+            "Shortcut",
+            "NacreShortcut",
+            "IpcHandler",
+        ):
+            continue
         previous = stream[max(0, index - 4) : index]
         if any(item.text == field + "Id" for item in previous):
             continue
@@ -190,7 +208,7 @@ def bindings(source):
     # Known rendering factories carry messages in arguments rather than bindings.
     for index, token in enumerate(stream):
         if (
-            token.text not in ("valueRow", "el", "button")
+            token.text not in ("valueRow", "el", "button", "failed")
             or index + 1 >= len(stream)
             or stream[index + 1].text != "("
         ):
@@ -201,7 +219,14 @@ def bindings(source):
             if depth == 0 and value.text in (",", ")"):
                 if (
                     argument
-                    in ({"valueRow": (2, 6), "el": (1,), "button": (0,)}[token.text])
+                    in (
+                        {
+                            "valueRow": (2, 6),
+                            "el": (1,),
+                            "button": (0,),
+                            "failed": (0,),
+                        }[token.text]
+                    )
                     and current > start
                 ):
                     yield (

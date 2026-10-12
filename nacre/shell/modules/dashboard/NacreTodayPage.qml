@@ -139,7 +139,7 @@ Flickable {
                     }
                 }
                 NacreText {
-                    text: (NacreWallpapers.preferences.palettePersonality || "natural") + " · " + (NacreColours.light ? NacreI18n.tr("dashboard.today-page.text.light", "Light") : NacreI18n.tr("dashboard.today-page.text.dark", "Dark"))
+                    text: NacreI18n.option("personality-value", NacreWallpapers.preferences.palettePersonality || "natural") + " · " + (NacreColours.light ? NacreI18n.tr("dashboard.today-page.text.light", "Light") : NacreI18n.tr("dashboard.today-page.text.dark", "Dark"))
                     color: "#fffdfa"
                     font.pointSize: 10
                     anchors.verticalCenter: parent.verticalCenter

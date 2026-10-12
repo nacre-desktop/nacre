@@ -193,7 +193,7 @@ Item {
                                     x: 14
                                     y: 12
                                     width: parent.width * .43 - 20
-                                    text: modelData.title
+                                    text: NacreI18n.modelLabel(modelData, "title")
                                     font.pointSize: 10.5
                                     wrapMode: Text.Wrap
                                 }

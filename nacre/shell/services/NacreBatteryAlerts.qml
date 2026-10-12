@@ -67,7 +67,9 @@ Singleton {
         if (busy)
             return;
         current = request;
-        sender.command = ["notify-send", "--app-name", "Nacre Battery", "--icon", "nacre-notifications", "--urgency", request.level === 2 ? "critical" : "normal", "Battery Low", "Remaining: " + request.percent + "%"];
+        sender.command = ["notify-send", "--app-name", "Nacre Battery", "--icon", "nacre-notifications", "--urgency", request.level === 2 ? "critical" : "normal", NacreI18n.tr("battery.low.title", "Battery Low"), NacreI18n.tr("battery.low.body", "Remaining: {percent}%", {
+                percent: request.percent
+            })];
         sender.running = true;
     }
     function finish(success) {

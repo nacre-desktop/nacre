@@ -35,6 +35,22 @@ def references(root):
         result.update(re.findall(r'nacre_message\s+"([^"]+)"', text))
         if path.suffix == ".py" or path.name == "nacre-ai":
             for node in ast.walk(ast.parse(text)):
+                if isinstance(node, ast.Dict):
+                    for key, value in zip(node.keys, node.values, strict=True):
+                        if (
+                            isinstance(key, ast.Constant)
+                            and key.value
+                            in (
+                                "labelId",
+                                "titleId",
+                                "nameId",
+                                "detailId",
+                                "descriptionId",
+                            )
+                            and isinstance(value, ast.Constant)
+                            and isinstance(value.value, str)
+                        ):
+                            result.add(value.value)
                 if (
                     isinstance(node, ast.Call)
                     and isinstance(node.func, ast.Name)

@@ -51,7 +51,7 @@ Singleton {
         if (action === "pin" || action === "delete")
             request("clips", {});
         if (action === "capture")
-            captured = "Saved to your brain";
+            captured = NacreI18n.tr("ui.desktop-extras.captured.saved-to-your-brain", "Saved to your brain");
     }
     Component {
         id: job

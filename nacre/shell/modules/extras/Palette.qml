@@ -12,8 +12,9 @@ SearchSurface {
         if (q.startsWith("brain:"))
             return [
                 {
-                    nameId: "ui.palette.name.search-brain-for",
-                    name: "Search brain for " + query.slice(6).trim(),
+                    name: NacreI18n.tr("ui.palette.name.search-brain-for", "Search brain for {query}", {
+                        query: query.slice(6).trim()
+                    }),
                     description: NacreI18n.tr("extras.palette.description.open-the-brain-drawer", "Open the brain drawer"),
                     icon: "neurology",
                     action: "brain-query",

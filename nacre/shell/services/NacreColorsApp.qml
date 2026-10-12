@@ -307,7 +307,7 @@ Singleton {
                     else
                         actionJob.output = line;
                 } catch (failure) {
-                    actionJob.failure = "Could not read the action result";
+                    actionJob.failure = NacreI18n.tr("ui.colors-app.failure.could-not-read-the-action-result", "Could not read the action result");
                 }
             }
         }

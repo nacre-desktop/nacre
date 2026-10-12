@@ -1,586 +1,620 @@
 {
-  "personality": {
-    "natural": {
-      "id": "options.personality.natural",
-      "fallback": "Natural"
-    },
-    "pigment": {
-      "id": "options.personality.pigment",
-      "fallback": "Pigment"
-    },
-    "harmony": {
-      "id": "options.personality.harmony",
-      "fallback": "Harmony"
-    },
-    "pop": {
-      "id": "options.personality.pop",
-      "fallback": "Pop"
-    },
-    "mist": {
-      "id": "options.personality.mist",
-      "fallback": "Mist"
-    },
-    "vivid": {
-      "id": "options.personality.vivid",
-      "fallback": "Vivid"
-    },
-    "pearl": {
-      "id": "options.personality.pearl",
-      "fallback": "Pearl"
-    },
-    "tide": {
-      "id": "options.personality.tide",
-      "fallback": "Tide"
-    }
-  },
-  "personality-lower": {
-    "natural": {
-      "id": "options.personality-lower.natural",
-      "fallback": "natural"
-    },
-    "pigment": {
-      "id": "options.personality-lower.pigment",
-      "fallback": "pigment"
-    },
-    "harmony": {
-      "id": "options.personality-lower.harmony",
-      "fallback": "harmony"
-    },
-    "pop": {
-      "id": "options.personality-lower.pop",
-      "fallback": "pop"
-    },
-    "mist": {
-      "id": "options.personality-lower.mist",
-      "fallback": "mist"
-    },
-    "vivid": {
-      "id": "options.personality-lower.vivid",
-      "fallback": "vivid"
-    },
-    "pearl": {
-      "id": "options.personality-lower.pearl",
-      "fallback": "pearl"
-    },
-    "tide": {
-      "id": "options.personality-lower.tide",
-      "fallback": "tide"
-    }
-  },
-  "workflow": {
-    "normal": {
-      "id": "options.workflow.normal",
-      "fallback": "Normal"
-    },
-    "focused": {
-      "id": "options.workflow.focused",
-      "fallback": "Focused"
-    },
-    "presentation": {
-      "id": "options.workflow.presentation",
-      "fallback": "Presentation"
-    },
-    "minimal": {
-      "id": "options.workflow.minimal",
-      "fallback": "Minimal"
-    },
-    "meeting": {
-      "id": "options.workflow.meeting",
-      "fallback": "Meeting"
-    },
-    "music": {
-      "id": "options.workflow.music",
-      "fallback": "Music"
-    },
-    "docked": {
-      "id": "options.workflow.docked",
-      "fallback": "Docked"
-    }
-  },
-  "workflow-role": {
-    "Browser": {
-      "id": "options.workflow-role.browser",
-      "fallback": "Browser"
-    },
+  "application-name": {
     "Nacre AI": {
-      "id": "options.workflow-role.nacre-ai",
-      "fallback": "Nacre AI"
+      "fallback": "Nacre AI",
+      "id": "applications.ai.title"
     },
-    "Discord": {
-      "id": "options.workflow-role.discord",
-      "fallback": "Discord"
+    "Nacre Brain": {
+      "fallback": "Nacre Brain",
+      "id": "applications.brain.title"
     },
-    "Spotify": {
-      "id": "options.workflow-role.spotify",
-      "fallback": "Spotify"
+    "Nacre Colors": {
+      "fallback": "Nacre Colors",
+      "id": "applications.colors.title"
     },
-    "Mail": {
-      "id": "options.workflow-role.mail",
-      "fallback": "Mail"
+    "Nacre Settings": {
+      "fallback": "Nacre Settings",
+      "id": "applications.settings.title"
     },
-    "Brain": {
-      "id": "options.workflow-role.brain",
-      "fallback": "Brain"
-    }
-  },
-  "vision": {
-    "normal": {
-      "id": "options.vision.normal",
-      "fallback": "normal"
+    "Nacre Welcome": {
+      "fallback": "Nacre Welcome",
+      "id": "applications.welcome.title"
     },
-    "protan": {
-      "id": "options.vision.protan",
-      "fallback": "protan"
-    },
-    "deutan": {
-      "id": "options.vision.deutan",
-      "fallback": "deutan"
-    },
-    "tritan": {
-      "id": "options.vision.tritan",
-      "fallback": "tritan"
+    "Nacre lock screen preview": {
+      "fallback": "Nacre lock screen preview",
+      "id": "applications.lock-preview.title"
     }
   },
   "dashboard-tab": {
-    "weather": {
-      "id": "options.dashboard-tab.weather",
-      "fallback": "Weather"
+    "focus": {
+      "fallback": "Focus",
+      "id": "options.dashboard-tab.focus"
     },
     "media": {
-      "id": "options.dashboard-tab.media",
-      "fallback": "Media"
+      "fallback": "Media",
+      "id": "options.dashboard-tab.media"
     },
     "system": {
-      "id": "options.dashboard-tab.system",
-      "fallback": "System"
+      "fallback": "System",
+      "id": "options.dashboard-tab.system"
     },
-    "focus": {
-      "id": "options.dashboard-tab.focus",
-      "fallback": "Focus"
-    }
-  },
-  "shortcut-group": {
-    "Apps and panels": {
-      "id": "options.shortcut-group.apps-and-panels",
-      "fallback": "Apps and panels"
-    },
-    "Windows": {
-      "id": "options.shortcut-group.windows",
-      "fallback": "Windows"
-    },
-    "Workspaces and focus": {
-      "id": "options.shortcut-group.workspaces-and-focus",
-      "fallback": "Workspaces and focus"
-    },
-    "Capture and clipboard": {
-      "id": "options.shortcut-group.capture-and-clipboard",
-      "fallback": "Capture and clipboard"
-    },
-    "Sound, display and locking": {
-      "id": "options.shortcut-group.sound-display-and-locking",
-      "fallback": "Sound, display and locking"
-    }
-  },
-  "prefix-hint": {
-    "> Actions": {
-      "id": "options.prefix-hint.actions",
-      "fallback": "> Actions"
-    },
-    "= Calculate": {
-      "id": "options.prefix-hint.calculate",
-      "fallback": "= Calculate"
-    },
-    "# Brain": {
-      "id": "options.prefix-hint.brain",
-      "fallback": "# Brain"
-    },
-    ": Files": {
-      "id": "options.prefix-hint.files",
-      "fallback": ": Files"
-    },
-    "? AI": {
-      "id": "options.prefix-hint.ai",
-      "fallback": "? AI"
+    "weather": {
+      "fallback": "Weather",
+      "id": "options.dashboard-tab.weather"
     }
   },
   "mode": {
     "dark": {
-      "id": "options.mode.dark",
-      "fallback": "Dark"
+      "fallback": "Dark",
+      "id": "options.mode.dark"
     },
     "light": {
-      "id": "options.mode.light",
-      "fallback": "Light"
-    }
-  },
-  "application-name": {
-    "Nacre Settings": {
-      "id": "applications.settings.title",
-      "fallback": "Nacre Settings"
-    },
-    "Nacre Colors": {
-      "id": "applications.colors.title",
-      "fallback": "Nacre Colors"
-    },
-    "Nacre Welcome": {
-      "id": "applications.welcome.title",
-      "fallback": "Nacre Welcome"
-    },
-    "Nacre AI": {
-      "id": "applications.ai.title",
-      "fallback": "Nacre AI"
-    },
-    "Nacre Brain": {
-      "id": "applications.brain.title",
-      "fallback": "Nacre Brain"
-    },
-    "Nacre lock screen preview": {
-      "id": "applications.lock-preview.title",
-      "fallback": "Nacre lock screen preview"
-    }
-  },
-  "weather-description": {
-    "Clear": {
-      "id": "weather.condition.clear",
-      "fallback": "Clear"
-    },
-    "Mostly clear": {
-      "id": "weather.condition.mostly-clear",
-      "fallback": "Mostly clear"
-    },
-    "Partly cloudy": {
-      "id": "weather.condition.partly-cloudy",
-      "fallback": "Partly cloudy"
-    },
-    "Overcast": {
-      "id": "weather.condition.overcast",
-      "fallback": "Overcast"
-    },
-    "Fog": {
-      "id": "weather.condition.fog",
-      "fallback": "Fog"
-    },
-    "Freezing fog": {
-      "id": "weather.condition.freezing-fog",
-      "fallback": "Freezing fog"
-    },
-    "Light drizzle": {
-      "id": "weather.condition.light-drizzle",
-      "fallback": "Light drizzle"
-    },
-    "Drizzle": {
-      "id": "weather.condition.drizzle",
-      "fallback": "Drizzle"
-    },
-    "Heavy drizzle": {
-      "id": "weather.condition.heavy-drizzle",
-      "fallback": "Heavy drizzle"
-    },
-    "Freezing drizzle": {
-      "id": "weather.condition.freezing-drizzle",
-      "fallback": "Freezing drizzle"
-    },
-    "Light rain": {
-      "id": "weather.condition.light-rain",
-      "fallback": "Light rain"
-    },
-    "Rain": {
-      "id": "weather.condition.rain",
-      "fallback": "Rain"
-    },
-    "Heavy rain": {
-      "id": "weather.condition.heavy-rain",
-      "fallback": "Heavy rain"
-    },
-    "Freezing rain": {
-      "id": "weather.condition.freezing-rain",
-      "fallback": "Freezing rain"
-    },
-    "Light snow": {
-      "id": "weather.condition.light-snow",
-      "fallback": "Light snow"
-    },
-    "Snow": {
-      "id": "weather.condition.snow",
-      "fallback": "Snow"
-    },
-    "Heavy snow": {
-      "id": "weather.condition.heavy-snow",
-      "fallback": "Heavy snow"
-    },
-    "Snow grains": {
-      "id": "weather.condition.snow-grains",
-      "fallback": "Snow grains"
-    },
-    "Rain showers": {
-      "id": "weather.condition.rain-showers",
-      "fallback": "Rain showers"
-    },
-    "Heavy showers": {
-      "id": "weather.condition.heavy-showers",
-      "fallback": "Heavy showers"
-    },
-    "Snow showers": {
-      "id": "weather.condition.snow-showers",
-      "fallback": "Snow showers"
-    },
-    "Heavy snow showers": {
-      "id": "weather.condition.heavy-snow-showers",
-      "fallback": "Heavy snow showers"
-    },
-    "Thunderstorm": {
-      "id": "weather.condition.thunderstorm",
-      "fallback": "Thunderstorm"
-    },
-    "Thunderstorm with hail": {
-      "id": "weather.condition.thunderstorm-with-hail",
-      "fallback": "Thunderstorm with hail"
-    }
-  },
-  "pearl-kind": {
-    "launcher": {
-      "id": "pearl.kind.launcher",
-      "fallback": "Launcher"
-    },
-    "dashboard": {
-      "id": "pearl.kind.dashboard",
-      "fallback": "Dashboard"
-    },
-    "ai": {
-      "id": "pearl.kind.ai",
-      "fallback": "AI"
-    },
-    "controls": {
-      "id": "pearl.kind.controls",
-      "fallback": "Controls"
-    },
-    "media": {
-      "id": "pearl.kind.media",
-      "fallback": "Media"
-    }
-  },
-  "rotation-pause": {
-    "asleep": {
-      "id": "wallpaper.rotation.paused.asleep",
-      "fallback": "Paused: asleep. The scheduled change is preserved."
-    },
-    "locked": {
-      "id": "wallpaper.rotation.paused.locked",
-      "fallback": "Paused: locked. The scheduled change is preserved."
-    },
-    "wallpaper picker open": {
-      "id": "wallpaper.rotation.paused.wallpaper-picker-open",
-      "fallback": "Paused: wallpaper picker open. The scheduled change is preserved."
-    },
-    "Settings open": {
-      "id": "wallpaper.rotation.paused.settings-open",
-      "fallback": "Paused: Settings open. The scheduled change is preserved."
-    },
-    "Welcome demo open": {
-      "id": "wallpaper.rotation.paused.welcome-demo-open",
-      "fallback": "Paused: Welcome demo open. The scheduled change is preserved."
-    },
-    "fewer than two wallpapers": {
-      "id": "wallpaper.rotation.paused.fewer-than-two-wallpapers",
-      "fallback": "Paused: fewer than two wallpapers. The scheduled change is preserved."
-    },
-    "applying changes": {
-      "id": "wallpaper.rotation.paused.applying-changes",
-      "fallback": "Paused: applying changes. The scheduled change is preserved."
+      "fallback": "Light",
+      "id": "options.mode.light"
     }
   },
   "palette-name": {
     "Acid Lime": {
-      "id": "palette.name.acid-lime",
-      "fallback": "Acid Lime"
+      "fallback": "Acid Lime",
+      "id": "palette.name.acid-lime"
     },
     "Amethyst": {
-      "id": "palette.name.amethyst",
-      "fallback": "Amethyst"
+      "fallback": "Amethyst",
+      "id": "palette.name.amethyst"
     },
     "Apricot": {
-      "id": "palette.name.apricot",
-      "fallback": "Apricot"
+      "fallback": "Apricot",
+      "id": "palette.name.apricot"
     },
     "Blue": {
-      "id": "palette.name.blue",
-      "fallback": "Blue"
+      "fallback": "Blue",
+      "id": "palette.name.blue"
     },
     "Blue tone": {
-      "id": "palette.name.blue-tone",
-      "fallback": "Blue tone"
+      "fallback": "Blue tone",
+      "id": "palette.name.blue-tone"
     },
     "Blush Red": {
-      "id": "palette.name.blush-red",
-      "fallback": "Blush Red"
+      "fallback": "Blush Red",
+      "id": "palette.name.blush-red"
     },
     "Butter Yellow": {
-      "id": "palette.name.butter-yellow",
-      "fallback": "Butter Yellow"
+      "fallback": "Butter Yellow",
+      "id": "palette.name.butter-yellow"
     },
     "Candy Pink": {
-      "id": "palette.name.candy-pink",
-      "fallback": "Candy Pink"
+      "fallback": "Candy Pink",
+      "id": "palette.name.candy-pink"
     },
     "Cobalt Blue": {
-      "id": "palette.name.cobalt-blue",
-      "fallback": "Cobalt Blue"
+      "fallback": "Cobalt Blue",
+      "id": "palette.name.cobalt-blue"
     },
     "Copper": {
-      "id": "palette.name.copper",
-      "fallback": "Copper"
+      "fallback": "Copper",
+      "id": "palette.name.copper"
     },
     "Copper tone": {
-      "id": "palette.name.copper-tone",
-      "fallback": "Copper tone"
+      "fallback": "Copper tone",
+      "id": "palette.name.copper-tone"
     },
     "Cornflower": {
-      "id": "palette.name.cornflower",
-      "fallback": "Cornflower"
+      "fallback": "Cornflower",
+      "id": "palette.name.cornflower"
     },
     "Deep Teal": {
-      "id": "palette.name.deep-teal",
-      "fallback": "Deep Teal"
+      "fallback": "Deep Teal",
+      "id": "palette.name.deep-teal"
     },
     "Electric Cyan": {
-      "id": "palette.name.electric-cyan",
-      "fallback": "Electric Cyan"
+      "fallback": "Electric Cyan",
+      "id": "palette.name.electric-cyan"
     },
     "Electric Yellow": {
-      "id": "palette.name.electric-yellow",
-      "fallback": "Electric Yellow"
+      "fallback": "Electric Yellow",
+      "id": "palette.name.electric-yellow"
     },
     "Ember": {
-      "id": "palette.name.ember",
-      "fallback": "Ember"
+      "fallback": "Ember",
+      "id": "palette.name.ember"
     },
     "Emerald": {
-      "id": "palette.name.emerald",
-      "fallback": "Emerald"
+      "fallback": "Emerald",
+      "id": "palette.name.emerald"
     },
     "Flame Orange": {
-      "id": "palette.name.flame-orange",
-      "fallback": "Flame Orange"
+      "fallback": "Flame Orange",
+      "id": "palette.name.flame-orange"
     },
     "Forest": {
-      "id": "palette.name.forest",
-      "fallback": "Forest"
+      "fallback": "Forest",
+      "id": "palette.name.forest"
     },
     "Glacier": {
-      "id": "palette.name.glacier",
-      "fallback": "Glacier"
+      "fallback": "Glacier",
+      "id": "palette.name.glacier"
     },
     "Gold": {
-      "id": "palette.name.gold",
-      "fallback": "Gold"
+      "fallback": "Gold",
+      "id": "palette.name.gold"
     },
     "Gold tone": {
-      "id": "palette.name.gold-tone",
-      "fallback": "Gold tone"
+      "fallback": "Gold tone",
+      "id": "palette.name.gold-tone"
     },
     "Green": {
-      "id": "palette.name.green",
-      "fallback": "Green"
+      "fallback": "Green",
+      "id": "palette.name.green"
     },
     "Green tone": {
-      "id": "palette.name.green-tone",
-      "fallback": "Green tone"
+      "fallback": "Green tone",
+      "id": "palette.name.green-tone"
     },
     "Honey": {
-      "id": "palette.name.honey",
-      "fallback": "Honey"
+      "fallback": "Honey",
+      "id": "palette.name.honey"
     },
     "Hot Pink": {
-      "id": "palette.name.hot-pink",
-      "fallback": "Hot Pink"
+      "fallback": "Hot Pink",
+      "id": "palette.name.hot-pink"
     },
     "Indigo": {
-      "id": "palette.name.indigo",
-      "fallback": "Indigo"
+      "fallback": "Indigo",
+      "id": "palette.name.indigo"
     },
     "Indigo tone": {
-      "id": "palette.name.indigo-tone",
-      "fallback": "Indigo tone"
+      "fallback": "Indigo tone",
+      "id": "palette.name.indigo-tone"
     },
     "Lilac": {
-      "id": "palette.name.lilac",
-      "fallback": "Lilac"
+      "fallback": "Lilac",
+      "id": "palette.name.lilac"
     },
     "Lilac tone": {
-      "id": "palette.name.lilac-tone",
-      "fallback": "Lilac tone"
+      "fallback": "Lilac tone",
+      "id": "palette.name.lilac-tone"
     },
     "Neutral": {
-      "id": "palette.name.neutral",
-      "fallback": "Neutral"
+      "fallback": "Neutral",
+      "id": "palette.name.neutral"
     },
     "Neutral tone": {
-      "id": "palette.name.neutral-tone",
-      "fallback": "Neutral tone"
+      "fallback": "Neutral tone",
+      "id": "palette.name.neutral-tone"
     },
     "Ocean": {
-      "id": "palette.name.ocean",
-      "fallback": "Ocean"
+      "fallback": "Ocean",
+      "id": "palette.name.ocean"
     },
     "Olive": {
-      "id": "palette.name.olive",
-      "fallback": "Olive"
+      "fallback": "Olive",
+      "id": "palette.name.olive"
     },
     "Olive tone": {
-      "id": "palette.name.olive-tone",
-      "fallback": "Olive tone"
+      "fallback": "Olive tone",
+      "id": "palette.name.olive-tone"
     },
     "Pear": {
-      "id": "palette.name.pear",
-      "fallback": "Pear"
+      "fallback": "Pear",
+      "id": "palette.name.pear"
     },
     "Periwinkle": {
-      "id": "palette.name.periwinkle",
-      "fallback": "Periwinkle"
+      "fallback": "Periwinkle",
+      "id": "palette.name.periwinkle"
     },
     "Rose": {
-      "id": "palette.name.rose",
-      "fallback": "Rose"
+      "fallback": "Rose",
+      "id": "palette.name.rose"
     },
     "Rose tone": {
-      "id": "palette.name.rose-tone",
-      "fallback": "Rose tone"
+      "fallback": "Rose tone",
+      "id": "palette.name.rose-tone"
     },
     "Royal Indigo": {
-      "id": "palette.name.royal-indigo",
-      "fallback": "Royal Indigo"
+      "fallback": "Royal Indigo",
+      "id": "palette.name.royal-indigo"
     },
     "Sage": {
-      "id": "palette.name.sage",
-      "fallback": "Sage"
+      "fallback": "Sage",
+      "id": "palette.name.sage"
     },
     "Sea Glass": {
-      "id": "palette.name.sea-glass",
-      "fallback": "Sea Glass"
+      "fallback": "Sea Glass",
+      "id": "palette.name.sea-glass"
     },
     "Slate": {
-      "id": "palette.name.slate",
-      "fallback": "Slate"
+      "fallback": "Slate",
+      "id": "palette.name.slate"
     },
     "Solar Gold": {
-      "id": "palette.name.solar-gold",
-      "fallback": "Solar Gold"
+      "fallback": "Solar Gold",
+      "id": "palette.name.solar-gold"
     },
     "Super Red": {
-      "id": "palette.name.super-red",
-      "fallback": "Super Red"
+      "fallback": "Super Red",
+      "id": "palette.name.super-red"
     },
     "Teal": {
-      "id": "palette.name.teal",
-      "fallback": "Teal"
+      "fallback": "Teal",
+      "id": "palette.name.teal"
     },
     "Teal tone": {
-      "id": "palette.name.teal-tone",
-      "fallback": "Teal tone"
+      "fallback": "Teal tone",
+      "id": "palette.name.teal-tone"
     },
     "Violet": {
-      "id": "palette.name.violet",
-      "fallback": "Violet"
+      "fallback": "Violet",
+      "id": "palette.name.violet"
+    }
+  },
+  "pearl-kind": {
+    "ai": {
+      "fallback": "AI",
+      "id": "pearl.kind.ai"
+    },
+    "controls": {
+      "fallback": "Controls",
+      "id": "pearl.kind.controls"
+    },
+    "dashboard": {
+      "fallback": "Dashboard",
+      "id": "pearl.kind.dashboard"
+    },
+    "launcher": {
+      "fallback": "Launcher",
+      "id": "pearl.kind.launcher"
+    },
+    "media": {
+      "fallback": "Media",
+      "id": "pearl.kind.media"
+    }
+  },
+  "personality": {
+    "harmony": {
+      "fallback": "Harmony",
+      "id": "options.personality.harmony"
+    },
+    "mist": {
+      "fallback": "Mist",
+      "id": "options.personality.mist"
+    },
+    "natural": {
+      "fallback": "Natural",
+      "id": "options.personality.natural"
+    },
+    "pearl": {
+      "fallback": "Pearl",
+      "id": "options.personality.pearl"
+    },
+    "pigment": {
+      "fallback": "Pigment",
+      "id": "options.personality.pigment"
+    },
+    "pop": {
+      "fallback": "Pop",
+      "id": "options.personality.pop"
+    },
+    "tide": {
+      "fallback": "Tide",
+      "id": "options.personality.tide"
+    },
+    "vivid": {
+      "fallback": "Vivid",
+      "id": "options.personality.vivid"
+    }
+  },
+  "personality-lower": {
+    "harmony": {
+      "fallback": "harmony",
+      "id": "options.personality-lower.harmony"
+    },
+    "mist": {
+      "fallback": "mist",
+      "id": "options.personality-lower.mist"
+    },
+    "natural": {
+      "fallback": "natural",
+      "id": "options.personality-lower.natural"
+    },
+    "pearl": {
+      "fallback": "pearl",
+      "id": "options.personality-lower.pearl"
+    },
+    "pigment": {
+      "fallback": "pigment",
+      "id": "options.personality-lower.pigment"
+    },
+    "pop": {
+      "fallback": "pop",
+      "id": "options.personality-lower.pop"
+    },
+    "tide": {
+      "fallback": "tide",
+      "id": "options.personality-lower.tide"
+    },
+    "vivid": {
+      "fallback": "vivid",
+      "id": "options.personality-lower.vivid"
+    }
+  },
+  "personality-value": {
+    "harmony": {
+      "fallback": "harmony",
+      "id": "options.personality-value.harmony"
+    },
+    "mist": {
+      "fallback": "mist",
+      "id": "options.personality-value.mist"
+    },
+    "natural": {
+      "fallback": "natural",
+      "id": "options.personality-value.natural"
+    },
+    "pearl": {
+      "fallback": "pearl",
+      "id": "options.personality-value.pearl"
+    },
+    "pigment": {
+      "fallback": "pigment",
+      "id": "options.personality-value.pigment"
+    },
+    "pop": {
+      "fallback": "pop",
+      "id": "options.personality-value.pop"
+    },
+    "tide": {
+      "fallback": "tide",
+      "id": "options.personality-value.tide"
+    },
+    "vivid": {
+      "fallback": "vivid",
+      "id": "options.personality-value.vivid"
+    }
+  },
+  "prefix-hint": {
+    "# Brain": {
+      "fallback": "# Brain",
+      "id": "options.prefix-hint.brain"
+    },
+    ": Files": {
+      "fallback": ": Files",
+      "id": "options.prefix-hint.files"
+    },
+    "= Calculate": {
+      "fallback": "= Calculate",
+      "id": "options.prefix-hint.calculate"
+    },
+    "> Actions": {
+      "fallback": "> Actions",
+      "id": "options.prefix-hint.actions"
+    },
+    "? AI": {
+      "fallback": "? AI",
+      "id": "options.prefix-hint.ai"
+    }
+  },
+  "rotation-pause": {
+    "Settings open": {
+      "fallback": "Paused: Settings open. The scheduled change is preserved.",
+      "id": "wallpaper.rotation.paused.settings-open"
+    },
+    "Welcome demo open": {
+      "fallback": "Paused: Welcome demo open. The scheduled change is preserved.",
+      "id": "wallpaper.rotation.paused.welcome-demo-open"
+    },
+    "applying changes": {
+      "fallback": "Paused: applying changes. The scheduled change is preserved.",
+      "id": "wallpaper.rotation.paused.applying-changes"
+    },
+    "asleep": {
+      "fallback": "Paused: asleep. The scheduled change is preserved.",
+      "id": "wallpaper.rotation.paused.asleep"
+    },
+    "fewer than two wallpapers": {
+      "fallback": "Paused: fewer than two wallpapers. The scheduled change is preserved.",
+      "id": "wallpaper.rotation.paused.fewer-than-two-wallpapers"
+    },
+    "locked": {
+      "fallback": "Paused: locked. The scheduled change is preserved.",
+      "id": "wallpaper.rotation.paused.locked"
+    },
+    "wallpaper picker open": {
+      "fallback": "Paused: wallpaper picker open. The scheduled change is preserved.",
+      "id": "wallpaper.rotation.paused.wallpaper-picker-open"
+    }
+  },
+  "shortcut-group": {
+    "Apps and panels": {
+      "fallback": "Apps and panels",
+      "id": "options.shortcut-group.apps-and-panels"
+    },
+    "Capture and clipboard": {
+      "fallback": "Capture and clipboard",
+      "id": "options.shortcut-group.capture-and-clipboard"
+    },
+    "Sound, display and locking": {
+      "fallback": "Sound, display and locking",
+      "id": "options.shortcut-group.sound-display-and-locking"
+    },
+    "Windows": {
+      "fallback": "Windows",
+      "id": "options.shortcut-group.windows"
+    },
+    "Workspaces and focus": {
+      "fallback": "Workspaces and focus",
+      "id": "options.shortcut-group.workspaces-and-focus"
+    }
+  },
+  "vision": {
+    "deutan": {
+      "fallback": "deutan",
+      "id": "options.vision.deutan"
+    },
+    "normal": {
+      "fallback": "normal",
+      "id": "options.vision.normal"
+    },
+    "protan": {
+      "fallback": "protan",
+      "id": "options.vision.protan"
+    },
+    "tritan": {
+      "fallback": "tritan",
+      "id": "options.vision.tritan"
+    }
+  },
+  "weather-description": {
+    "Clear": {
+      "fallback": "Clear",
+      "id": "weather.condition.clear"
+    },
+    "Drizzle": {
+      "fallback": "Drizzle",
+      "id": "weather.condition.drizzle"
+    },
+    "Fog": {
+      "fallback": "Fog",
+      "id": "weather.condition.fog"
+    },
+    "Freezing drizzle": {
+      "fallback": "Freezing drizzle",
+      "id": "weather.condition.freezing-drizzle"
+    },
+    "Freezing fog": {
+      "fallback": "Freezing fog",
+      "id": "weather.condition.freezing-fog"
+    },
+    "Freezing rain": {
+      "fallback": "Freezing rain",
+      "id": "weather.condition.freezing-rain"
+    },
+    "Heavy drizzle": {
+      "fallback": "Heavy drizzle",
+      "id": "weather.condition.heavy-drizzle"
+    },
+    "Heavy rain": {
+      "fallback": "Heavy rain",
+      "id": "weather.condition.heavy-rain"
+    },
+    "Heavy showers": {
+      "fallback": "Heavy showers",
+      "id": "weather.condition.heavy-showers"
+    },
+    "Heavy snow": {
+      "fallback": "Heavy snow",
+      "id": "weather.condition.heavy-snow"
+    },
+    "Heavy snow showers": {
+      "fallback": "Heavy snow showers",
+      "id": "weather.condition.heavy-snow-showers"
+    },
+    "Light drizzle": {
+      "fallback": "Light drizzle",
+      "id": "weather.condition.light-drizzle"
+    },
+    "Light rain": {
+      "fallback": "Light rain",
+      "id": "weather.condition.light-rain"
+    },
+    "Light snow": {
+      "fallback": "Light snow",
+      "id": "weather.condition.light-snow"
+    },
+    "Mostly clear": {
+      "fallback": "Mostly clear",
+      "id": "weather.condition.mostly-clear"
+    },
+    "Overcast": {
+      "fallback": "Overcast",
+      "id": "weather.condition.overcast"
+    },
+    "Partly cloudy": {
+      "fallback": "Partly cloudy",
+      "id": "weather.condition.partly-cloudy"
+    },
+    "Rain": {
+      "fallback": "Rain",
+      "id": "weather.condition.rain"
+    },
+    "Rain showers": {
+      "fallback": "Rain showers",
+      "id": "weather.condition.rain-showers"
+    },
+    "Snow": {
+      "fallback": "Snow",
+      "id": "weather.condition.snow"
+    },
+    "Snow grains": {
+      "fallback": "Snow grains",
+      "id": "weather.condition.snow-grains"
+    },
+    "Snow showers": {
+      "fallback": "Snow showers",
+      "id": "weather.condition.snow-showers"
+    },
+    "Thunderstorm": {
+      "fallback": "Thunderstorm",
+      "id": "weather.condition.thunderstorm"
+    },
+    "Thunderstorm with hail": {
+      "fallback": "Thunderstorm with hail",
+      "id": "weather.condition.thunderstorm-with-hail"
+    }
+  },
+  "workflow": {
+    "docked": {
+      "fallback": "Docked",
+      "id": "options.workflow.docked"
+    },
+    "focused": {
+      "fallback": "Focused",
+      "id": "options.workflow.focused"
+    },
+    "meeting": {
+      "fallback": "Meeting",
+      "id": "options.workflow.meeting"
+    },
+    "minimal": {
+      "fallback": "Minimal",
+      "id": "options.workflow.minimal"
+    },
+    "music": {
+      "fallback": "Music",
+      "id": "options.workflow.music"
+    },
+    "normal": {
+      "fallback": "Normal",
+      "id": "options.workflow.normal"
+    },
+    "presentation": {
+      "fallback": "Presentation",
+      "id": "options.workflow.presentation"
+    }
+  },
+  "workflow-role": {
+    "Brain": {
+      "fallback": "Brain",
+      "id": "options.workflow-role.brain"
+    },
+    "Browser": {
+      "fallback": "Browser",
+      "id": "options.workflow-role.browser"
+    },
+    "Discord": {
+      "fallback": "Discord",
+      "id": "options.workflow-role.discord"
+    },
+    "Mail": {
+      "fallback": "Mail",
+      "id": "options.workflow-role.mail"
+    },
+    "Nacre AI": {
+      "fallback": "Nacre AI",
+      "id": "options.workflow-role.nacre-ai"
+    },
+    "Spotify": {
+      "fallback": "Spotify",
+      "id": "options.workflow-role.spotify"
     }
   }
 }
