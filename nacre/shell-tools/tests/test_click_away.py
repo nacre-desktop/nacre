@@ -43,8 +43,8 @@ class ClickAwayTests(unittest.TestCase):
                 .replace("Singleton {", "QtObject {")
             )
             (path / "fixtures/NacreHoverIntent.qml").write_text(intent)
-            (path / "fixtures/NacreHyprland.qml").write_text(
-                'pragma Singleton\nimport QtQuick\nQtObject { property var focusedMonitor:({name:"test"}); property var activeClient:null }'
+            (path / "fixtures/NacreCompositor.qml").write_text(
+                'pragma Singleton\nimport QtQuick\nQtObject { property var focusedMonitor:({name:"test"}); property var activeWindow:null }'
             )
             (path / "fixtures/DesktopSettings.qml").write_text(
                 "pragma Singleton\nimport QtQuick\nQtObject {property var data:({leftDrawer:true})}"
@@ -57,7 +57,7 @@ class ClickAwayTests(unittest.TestCase):
             )
             with (path / "fixtures/qmldir").open("a") as f:
                 f.write(
-                    "\nsingleton DesktopSettings 1.0 DesktopSettings.qml\nsingleton NacreFrame 1.0 NacreFrame.qml\nsingleton NacrePanelState 1.0 NacrePanelState.qml\nsingleton NacreHoverIntent 1.0 NacreHoverIntent.qml\nsingleton NacreHyprland 1.0 NacreHyprland.qml\n"
+                    "\nsingleton DesktopSettings 1.0 DesktopSettings.qml\nsingleton NacreFrame 1.0 NacreFrame.qml\nsingleton NacrePanelState 1.0 NacrePanelState.qml\nsingleton NacreHoverIntent 1.0 NacreHoverIntent.qml\nsingleton NacreCompositor 1.0 NacreCompositor.qml\n"
                 )
             shutil.copy2(
                 ROOT / "tests/click-away-qml/tst_click_away.qml",

@@ -19,8 +19,8 @@ Item {
             result[id] = 0;
         if (!showWindowHints)
             return result;
-        const active = NacreHyprland.activeWsId;
-        const count = NacreHyprland.clients.filter(client => client.workspace?.id === active).length;
+        const active = NacreCompositor.activeWsId;
+        const count = NacreCompositor.windows.filter(client => client.workspace?.id === active).length;
         const base = displayIds.length * 32 + Math.max(0, displayIds.length - 1) * 2 + (count ? 4 : 0);
         let shown = Math.min(3, count, Math.max(0, Math.floor((availableWidth - base) / 18)));
         while (shown > 0 && base + shown * 18 + (shown < count ? 20 : 0) > availableWidth)
@@ -42,7 +42,7 @@ Item {
         const ids = new Set(Array.from({
             length: NacreBar.workspaceCount
         }, (_, index) => index + 1));
-        for (const id of [NacreHyprland.activeWsId, ...NacreHyprland.clients.map(client => client.workspace?.id)]) {
+        for (const id of [NacreCompositor.activeWsId, ...NacreCompositor.windows.map(client => client.workspace?.id)]) {
             if (Number.isInteger(id) && id >= 1)
                 ids.add(id);
         }
@@ -51,7 +51,7 @@ Item {
     implicitWidth: beads.implicitWidth
     implicitHeight: 30
     function synchronize() {
-        activeCell = repeater.itemAt(displayIds.indexOf(NacreHyprland.activeWsId));
+        activeCell = repeater.itemAt(displayIds.indexOf(NacreCompositor.activeWsId));
     }
     function synchronizeIds() {
         if (workspaceIds.length !== displayIds.length || workspaceIds.some((id, index) => id !== displayIds[index]))
@@ -64,18 +64,18 @@ Item {
         Qt.callLater(() => ready = true);
     }
     Connections {
-        target: NacreHyprland
+        target: NacreCompositor
         function onActiveWsIdChanged() {
             Qt.callLater(root.synchronize);
         }
     }
     function activate(id) {
-        return Number.isInteger(id) && workspaceIds.includes(id) ? NacreHyprland.dispatch("workspace " + id) : false;
+        return Number.isInteger(id) && workspaceIds.includes(id) ? NacreCompositor.switchWorkspace(id) : false;
     }
     function step(direction) {
         if (!Number.isFinite(direction) || direction === 0)
             return false;
-        const index = workspaceIds.indexOf(NacreHyprland.activeWsId);
+        const index = workspaceIds.indexOf(NacreCompositor.activeWsId);
         const next = index + Math.sign(direction);
         return index >= 0 && next >= 0 && next < workspaceIds.length ? activate(workspaceIds[next]) : false;
     }
@@ -137,8 +137,8 @@ Item {
                 required property int index
                 required property int modelData
                 readonly property int workspaceId: modelData
-                readonly property bool selected: NacreHyprland.activeWsId === workspaceId
-                readonly property var windows: NacreHyprland.clients.filter(client => client.workspace?.id === workspaceId)
+                readonly property bool selected: NacreCompositor.activeWsId === workspaceId
+                readonly property var windows: NacreCompositor.windows.filter(client => client.workspace?.id === workspaceId)
                 readonly property int windowCount: windows.length
                 readonly property bool occupied: windowCount > 0
                 readonly property bool urgent: windows.some(client => client.urgent === true)
@@ -221,7 +221,7 @@ Item {
                             NacreInteraction {
                                 accessibleName: "Focus " + String(parent.client?.title || parent.client?.wmClass || "window")
                                 function onClicked() {
-                                    NacreHyprland.focusWindow(parent.client?.address);
+                                    NacreCompositor.focusWindow(parent.client?.windowId);
                                 }
                             }
                         }

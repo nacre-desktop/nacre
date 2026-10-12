@@ -93,10 +93,10 @@ TestCase {
                 }
             }
         };
-        NacreHyprland.focusedMonitor = {
+        NacreCompositor.focusedMonitor = {
             name: "one"
         };
-        NacreHyprland.calls = [];
+        NacreCompositor.calls = [];
         NacreHoverIntent.dismissed = [];
         DisplayRecovery.restores = [];
         NacrePanelState.hidden = false;
@@ -115,9 +115,9 @@ TestCase {
         compare(one.launcherRequest, requests + 1);
         verify(!NacrePanelState.openMode("invalid"));
         verify(!NacrePanelState.popout("calendar", NaN, "one"));
-        NacreHyprland.focusedMonitor = null;
+        NacreCompositor.focusedMonitor = null;
         compare(NacrePanelState.getForActive(), one);
-        NacreHyprland.focusedMonitor = {
+        NacreCompositor.focusedMonitor = {
             name: "two"
         };
         NacrePanelState.openMode("apps", "query", false);
@@ -139,12 +139,12 @@ TestCase {
         NacreSettingsApp.open();
         compare(window.minimized, false);
         compare(NacrePanelState.settingsPage, "network");
-        NacreHyprland.clients = [
+        NacreCompositor.windows = [
             {
                 pid: 0,
                 title: "Nacre Settings",
                 wmClass: "org.quickshell",
-                address: "0xabcd"
+                windowId: "0xabcd"
             }
         ];
         NacreSettingsApp.focusExisting();
@@ -157,13 +157,13 @@ TestCase {
         job.running = false;
         job.exited(0, 0);
         NacreSettingsApp.focusExisting();
-        verify(NacreHyprland.calls[NacreHyprland.calls.length - 1].includes("0xabcd"));
+        verify(NacreCompositor.calls[NacreCompositor.calls.length - 1].includes("0xabcd"));
         verify(!NacreSettingsApp.focusPending);
         NacreSettingsApp.close();
         verify(!NacrePanelState.settingsVisible && !NacreSettingsApp.visible);
         verify(NacreSettingsApp.created);
         NacreSettingsApp.window = null;
-        NacreHyprland.clients = [];
+        NacreCompositor.windows = [];
         window.destroy();
     }
     function test_settings_left_manual_pin_and_competing_transients() {
@@ -204,9 +204,9 @@ TestCase {
         compare(view.galleryData()[0].count, 20);
         compare(view.popupData()[0].open, false);
         view.workspace(7);
-        compare(NacreHyprland.calls[0], "workspace 7");
+        compare(NacreCompositor.calls[0], "workspace 7");
         view.workspace(-1);
-        compare(NacreHyprland.calls.length, 1);
+        compare(NacreCompositor.calls.length, 1);
         view.tab(4);
         verify(!NacreSettingsApp.visible);
         verify(one.dashboard && !one.dashboardPinned);

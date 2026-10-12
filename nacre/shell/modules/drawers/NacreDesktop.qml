@@ -15,7 +15,7 @@ Scope {
     IpcHandler {
         target: "leftEdge"
         function state(): string {
-            const name = NacreHyprland.focusedMonitor?.name ?? Object.keys(NacrePanelState.panels)[0];
+            const name = NacreCompositor.focusedMonitor?.name ?? Object.keys(NacrePanelState.panels)[0];
             const input = NacrePanelState.panels[name]?.input;
             return JSON.stringify({
                 registered: !!input,

@@ -1,0 +1,3 @@
+singleton HyprlandBackend 1.0 HyprlandBackend.qml
+HyprlandWindow 1.0 HyprlandWindow.qml
+HyprlandShortcut 1.0 HyprlandShortcut.qml

@@ -24,7 +24,7 @@ class ShellStateTests(unittest.TestCase):
             fixtures.mkdir()
             definitions = {
                 "NacrePearls": "property var views:[]",
-                "NacreHyprland": 'property var focusedMonitor:({name:"one"});property int activeWsId:2;property var clients:[];property var workspaces:({values:[{},{}]});property var calls:[];function dispatch(command){calls=[...calls,command]}',
+                "NacreCompositor": 'property var focusedMonitor:({name:"one"});property int activeWsId:2;property var windows:[];property var workspaces:({values:[{},{}]});property var calls:[];function switchWorkspace(id){calls=[...calls,"workspace "+id]}function focusWindow(id){calls=[...calls,"focus "+id]}function logout(){calls=[...calls,"logout"]}function hideWindowCommand(id){return ["python3","/fixture/window-hide.py","hide","--window",id,"--quiet"]}',
                 "NacreHoverIntent": "property var dismissed:[];function dismiss(screen){dismissed=[...dismissed,screen.name]}",
                 "DesktopSettings": "property var data:({animations:false,clickEdgeMenus:false})",
                 "DisplayRecovery": "property var restores:[];function restoreSaved(value){restores=[...restores,value]}",

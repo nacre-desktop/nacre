@@ -184,7 +184,7 @@ class QuickControlsTests(unittest.TestCase):
                 "NacreNetwork": 'property string error:"";property string monitorError:"";property bool busy:false;function refresh(){} property bool wifiEnabled:true;property string wifiInterface:"wlan0";property var active:({ssid:"ab"});property var networks:[{bssid:"AA:BB:CC:DD:EE:01",ssid:"ab",active:false,strength:90},{bssid:"AA:BB:CC:DD:EE:02",ssid:"Guest",active:false,strength:65},{bssid:"AA:BB:CC:DD:EE:03",ssid:"ab",active:true,strength:30}];readonly property var visibleNetworks:Wifi.group(networks)',
                 "NacreBluetooth": 'property bool powered:true;property var devices:[{name:"Headphones",alias:"Headphones",address:"AA:BB:CC:DD:EE:FF",connected:true,paired:true,trusted:true},{name:"Unpaired",alias:"Unpaired",address:"00:11:22:33:44:55",connected:false,paired:false,trusted:false}]',
                 "DeviceActions": 'property bool busy:false;property string message:"";property string lastAction:"";property var lastRequest:[];function request(a){lastRequest=a;lastAction=a[0]} function connectWifi(ssid){lastRequest=["wifi-connect",ssid]}',
-                "NacreHyprland": 'property var focusedMonitor:({name:"test"})',
+                "NacreCompositor": 'property var focusedMonitor:({name:"test"})',
                 "DesktopSettings": "property var data:({});property var writes:[];function set(key,value){writes=[...writes,[key,value]]}",
                 "NacreHoverIntent": "property int dismissed:0;function dismiss(screen){dismissed++}",
                 "NacreNotifs": "property var retained:[];property bool dnd:false;property bool historyReady:true;property int clears:0;function clearHistory(){clears++;retained=[]}",

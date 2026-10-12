@@ -11,8 +11,8 @@ Scope {
     function stateData() {
         const view = NacrePanelState.getForActive();
         return {
-            active: NacreHyprland.activeWsId,
-            workspaces: NacreHyprland.workspaces.values.length,
+            active: NacreCompositor.activeWsId,
+            workspaces: NacreCompositor.workspaces.values.length,
             dashboard: view?.dashboard ?? false,
             edgeMenu: view?.edgeMenu || "",
             clickEdgeMenus: DesktopSettings.data.clickEdgeMenus === true,
@@ -103,7 +103,7 @@ Scope {
     }
     function workspace(id) {
         if (Number.isInteger(id) && id > 0)
-            NacreHyprland.dispatch("workspace " + id);
+            NacreCompositor.switchWorkspace(id);
     }
     function tab(index) {
         const view = NacrePanelState.getForActive();

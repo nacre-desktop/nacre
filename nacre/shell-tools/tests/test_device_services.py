@@ -29,7 +29,7 @@ class DeviceServiceTests(unittest.TestCase):
                 "NacrePaths": 'property string state:"file:///fixture";property string pictures:"file:///fixture"',
                 "Environment": 'property var screens:[{name:"eDP-1"}]',
                 "NacreBrightness": "property bool controlsVisible:false;property var hardware:({keyboard:null})",
-                "NacreHyprland": 'property var focusedMonitor:({name:"eDP-1"})',
+                "NacreCompositor": 'property var focusedMonitor:({name:"eDP-1"})',
                 "DesktopEntries": "property var applications:({values:[]})",
                 "LauncherPreferences": "property var hidden:[]",
                 "AppLaunch": "property var calls:[];function run(command,cwd){calls=[...calls,{command:command,cwd:cwd}]}",
@@ -64,7 +64,7 @@ class DeviceServiceTests(unittest.TestCase):
                 "import QtQuick\nQtObject {signal read(string data)}"
             )
             (fixtures / "qmldir").write_text(
-                "singleton NacreWelcomeApp 1.0 NacreWelcomeApp.qml\nsingleton NacrePresentation 1.0 NacrePresentation.qml\nsingleton NacrePaths 1.0 NacrePaths.qml\nsingleton Environment 1.0 Environment.qml\nsingleton NacreBrightness 1.0 NacreBrightness.qml\nsingleton NacreHyprland 1.0 NacreHyprland.qml\nsingleton Hyprland 1.0 Hyprland.qml\nsingleton DesktopEntries 1.0 DesktopEntries.qml\nsingleton LauncherPreferences 1.0 LauncherPreferences.qml\nsingleton AppLaunch 1.0 AppLaunch.qml\nsingleton DesktopSettings 1.0 DesktopSettings.qml\nsingleton NacreNotifications 1.0 NacreNotifications.qml\nsingleton NacrePanelState 1.0 NacrePanelState.qml\nsingleton Mpris 1.0 Mpris.qml\nsingleton Pipewire 1.0 Pipewire.qml\nsingleton Bluetooth 1.0 Bluetooth.qml\nPwObjectTracker 1.0 PwObjectTracker.qml\nProcess 1.0 Process.qml\nStdioCollector 1.0 StdioCollector.qml\nSplitParser 1.0 SplitParser.qml\n"
+                "singleton NacreWelcomeApp 1.0 NacreWelcomeApp.qml\nsingleton NacrePresentation 1.0 NacrePresentation.qml\nsingleton NacrePaths 1.0 NacrePaths.qml\nsingleton Environment 1.0 Environment.qml\nsingleton NacreBrightness 1.0 NacreBrightness.qml\nsingleton NacreCompositor 1.0 NacreCompositor.qml\nsingleton Hyprland 1.0 Hyprland.qml\nsingleton DesktopEntries 1.0 DesktopEntries.qml\nsingleton LauncherPreferences 1.0 LauncherPreferences.qml\nsingleton AppLaunch 1.0 AppLaunch.qml\nsingleton DesktopSettings 1.0 DesktopSettings.qml\nsingleton NacreNotifications 1.0 NacreNotifications.qml\nsingleton NacrePanelState 1.0 NacrePanelState.qml\nsingleton Mpris 1.0 Mpris.qml\nsingleton Pipewire 1.0 Pipewire.qml\nsingleton Bluetooth 1.0 Bluetooth.qml\nPwObjectTracker 1.0 PwObjectTracker.qml\nProcess 1.0 Process.qml\nStdioCollector 1.0 StdioCollector.qml\nSplitParser 1.0 SplitParser.qml\n"
             )
             (fixtures / "FileView.qml").write_text(
                 'import QtQuick\nQtObject {property string path:"";property bool printErrors:false;property bool watchChanges:false;signal loadFailed(int error);signal fileChanged();signal loaded();function text(){return ""}function reload(){}}'
@@ -105,10 +105,10 @@ class DeviceServiceTests(unittest.TestCase):
                         "singleton NacreBrightness 1.0 NacreBrightness.qml\n", ""
                     )
                 )
-            if name == "NacreHyprland":
+            if name == "HyprlandBackend":
                 shutil.copy2(
-                    ROOT.parent / "shell/services/NacreClient.qml",
-                    target / "NacreClient.qml",
+                    ROOT.parent / "shell/services/compositor/HyprlandWindow.qml",
+                    target / "HyprlandWindow.qml",
                 )
             if name in ("NacreApps", "NacreWallpapers"):
                 shutil.copy2(
@@ -145,13 +145,19 @@ class DeviceServiceTests(unittest.TestCase):
                         ROOT.parent / "shell/utils/scripts/wallpaper-rotation.js"
                     ).read_text()
                 )
-            source = (ROOT.parent / "shell/services" / (name + ".qml")).read_text()
+            source = (
+                ROOT.parent
+                / "shell/services"
+                / ("compositor" if name == "HyprlandBackend" else "")
+                / (name + ".qml")
+            ).read_text()
             source = (
                 source.replace("pragma Singleton", "")
                 .replace("import Quickshell.Services.Pipewire", 'import "fixtures"')
                 .replace(
                     "import Quickshell.Bluetooth as Bluez", 'import "fixtures" as Bluez'
                 )
+                .replace("import qs.widgets", 'import "fixtures"')
                 .replace("import qs.utils", 'import "fixtures"')
                 .replace("Quickshell.screens", "Environment.screens")
                 .replace("target: Quickshell", "target: Environment")
@@ -177,7 +183,7 @@ class DeviceServiceTests(unittest.TestCase):
             if name == "NacreNotifs":
                 source = source.replace("notification.id", "notification.noticeId")
             source = remove_objects(source, r"\bIpcHandler\s*\{")
-            source = remove_objects(source, r"\bGlobalShortcut\s*\{")
+            source = remove_objects(source, r"\b(?:GlobalShortcut|NacreShortcut)\s*\{")
             (target / (name + ".qml")).write_text(source)
             shutil.copy2(
                 ROOT / "tests/device-qml" / ("tst_" + name + ".qml"),
@@ -224,7 +230,7 @@ class DeviceServiceTests(unittest.TestCase):
         self.run_service("NacreTime")
 
     def test_compositor_identity_metadata_focus_removal_and_lua_dispatch(self):
-        self.run_service("NacreHyprland")
+        self.run_service("HyprlandBackend")
 
     def test_palette_snapshot_aliases_authority_and_bad_data(self):
         self.run_service("NacreColours")

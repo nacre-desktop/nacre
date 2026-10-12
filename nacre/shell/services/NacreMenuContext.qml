@@ -233,7 +233,7 @@ Scope {
                         checked: DesktopSettings.data.interfaceFont === name
                     }))];
         if (node.provider === "windows")
-            return (NacreHyprland.clients || []).map(client => valueRow(route, client.address.slice(2), client.title || client.wmClass, "focus", client.address, "window", "Workspace " + client.workspace?.name));
+            return (NacreCompositor.windows || []).map(client => valueRow(route, String(client.windowId), client.title || client.wmClass, "focus", client.windowId, "window", "Workspace " + client.workspace?.name));
         if (node.provider === "wifi")
             return NacreNetwork.visibleNetworks.map(point => valueRow(route, point.bssid.replace(/:/g, ""), point.ssid || "Hidden network", "settings", "network", "wifi", point.strength + "% signal", {
                     checked: point.active,
@@ -678,10 +678,8 @@ Scope {
             });
             return true;
         }
-        if (operation === "focus" && /^0x[0-9a-f]+$/i.test(value)) {
-            NacreHyprland.dispatch('hl.dsp.focus({window="address:' + value + '"})');
-            return true;
-        }
+        if (operation === "focus")
+            return NacreCompositor.focusWindow(value);
         if (operation === "url" && /^https?:\/\//.test(value)) {
             AppLaunch.run(["xdg-open", value]);
             return true;
@@ -741,10 +739,11 @@ Scope {
             return true;
         }
         if (operation === "power") {
+            if (value === "logout")
+                return NacreCompositor.logout();
             const commands = {
                 lock: ["loginctl", "lock-session"],
                 suspend: ["systemctl", "suspend"],
-                logout: ["hyprctl", "eval", "hl.dispatch(hl.dsp.exit())"],
                 reboot: ["systemctl", "reboot"],
                 poweroff: ["systemctl", "poweroff"]
             };

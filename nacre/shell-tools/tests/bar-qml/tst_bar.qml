@@ -10,7 +10,7 @@ TestCase {
     visible: true
     when: windowShown
     function init() {
-        NacreHyprland.activeClient = null;
+        NacreCompositor.activeWindow = null;
         NacreAudio.volume = .5;
         NacreAudio.writes = [];
         NacreAudio.muted = false;
@@ -75,16 +75,16 @@ TestCase {
     function test_title_plain_elided_native_removed_and_bounded_wheel() {
         const view = createTemporaryObject(title, test);
         compare(view.displayTitle, "Desktop");
-        NacreHyprland.activeClient = {
+        NacreCompositor.activeWindow = {
             wmClass: "editor",
             title: "<b>Long title</b> " + "abc".repeat(100)
         };
-        compare(view.displayTitle, NacreHyprland.activeClient.title);
+        compare(view.displayTitle, NacreCompositor.activeWindow.title);
         const caption = findChild(view, "nacreActiveTitle");
         verify(caption.width < view.width);
         compare(caption.textFormat, Text.PlainText);
         compare(caption.elide, Text.ElideRight);
-        NacreHyprland.activeClient = null;
+        NacreCompositor.activeWindow = null;
         compare(view.displayTitle, "Desktop");
         view.adjustVolume(120);
         compare(NacreAudio.volume, .55);
@@ -103,7 +103,7 @@ TestCase {
             width: 650
         });
         for (const text of ["Files", "Terminal", "Desktop"]) {
-            NacreHyprland.activeClient = {
+            NacreCompositor.activeWindow = {
                 wmClass: "editor",
                 title: text
             };
@@ -132,7 +132,7 @@ TestCase {
             verify(row.x >= 0 && row.x + row.width <= view.width + 1);
             view.width = 650;
         }
-        NacreHyprland.activeClient = {
+        NacreCompositor.activeWindow = {
             wmClass: "editor",
             title: "A very long title ".repeat(50)
         };
