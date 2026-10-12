@@ -8,7 +8,7 @@ Singleton {
     property var sessions: [SidebarChat]
     property var parked: []
     property int counter: 0
-    readonly property var recent: parked.map(model => ({
+    readonly property var recent: parked.filter(model => meaningful(model)).map(model => ({
                 model: model,
                 title: model.title || "Draft",
                 threadId: model.threadId,
@@ -17,6 +17,12 @@ Singleton {
     Component {
         id: sessionFactory
         NacreChatSession {}
+    }
+    function meaningful(model) {
+        return !!(model.threadId || model.busy || model.draft.trim() || model.attachments?.length || model.messages?.count || model.outgoing?.length);
+    }
+    function retained(model) {
+        return model === edge || meaningful(model) || model.composerBusy || NacrePearls.entries.some(entry => entry.chat === model);
     }
     function fresh(savedChannel = "") {
         const channel = savedChannel || "p" + Qt.md5(Date.now().toString() + Math.random()).slice(0, 24);
@@ -69,7 +75,7 @@ Singleton {
     function snapshot() {
         return {
             edge: edge.channel,
-            channels: sessions.map(model => model.channel)
+            channels: sessions.filter(model => retained(model)).map(model => model.channel)
         };
     }
     function select(model) {
