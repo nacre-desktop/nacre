@@ -10,7 +10,8 @@ Floating panels keep their original content, with no added title strip. Hyprland
 provides the same inactive and focused borders as other windows. Use ordinary
 Super-drag to move, Super+right-drag to resize, and the normal tiling/pinning keys.
 Drag a floating panel back to its matching screen edge; the inset highlight and
-**Release to dock** hint appear on every pull. Release to reattach. **Super+Ctrl+D** docks the focused panel when no edge panel is open. **Ctrl+W**
+**Release to dock** hint appear on every pull. Release to reattach. Reattached panels return to hover mode and close when the
+pointer leaves; panels deliberately opened by click or shortcut still stay open. **Super+Ctrl+D** docks the focused panel when no edge panel is open. **Ctrl+W**
 closes its window. Outside clicks do not close floating panels; Escape backs out
 of a search or dialog.
 
