@@ -14,7 +14,7 @@ local native_ticks = 0
 local pearl_kinds = { Launcher = true, Dashboard = true, AI = true, Controls = true, Media = true }
 local function native_event(phase, cursor)
     if not native_peer then return end
-    hl.dispatch(hl.dsp.event("nacre_pearl_drag," .. phase .. "," .. native_peer.title .. "," .. cursor.x .. "," .. cursor.y))
+    hl.dispatch(hl.dsp.event("nacre_pearl_drag," .. phase .. "," .. native_peer.title .. "," .. cursor.x .. "," .. cursor.y .. "," .. native_peer.x .. "," .. native_peer.y .. "," .. native_peer.w .. "," .. native_peer.h))
 end
 local function watch_native_drag()
     if not native_peer or native_peer.pid ~= nacre_panel_pid or native_ticks >= 3600 then
@@ -34,7 +34,8 @@ local function start_native_drag()
     local window = hl.get_active_window()
     local kind = window and window.title:match("^Nacre Pearl (%a+) %d+$")
     if window and window.pid == nacre_panel_pid and pearl_kinds[kind] then
-        native_peer = { title = window.title, pid = window.pid }
+        local at, size = window.at, window.size
+        native_peer = { title = window.title, pid = window.pid, x = at.x, y = at.y, w = size.x, h = size.y }
         native_ticks = 0
         native_last_x, native_last_y = nil, nil
         native_event("begin", hl.get_cursor_pos())

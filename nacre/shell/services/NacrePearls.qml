@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import "../modules/pearls/geometry.js" as Geometry
 import qs.modules.pearls as Pearl
+import qs.config
 
 Singleton {
     id: root
@@ -18,6 +19,7 @@ Singleton {
     property var nativeDrag: null
     property var lastGesture: ({})
     property string error: ""
+    readonly property var magneticCue: !enabled || NacrePanelState.hidden ? null : drag && !drag.released ? drag.magnet : nativeDrag?.ready ? nativeDrag.magnet : null
     readonly property bool enabled: DesktopSettings.data.detachablePanels !== false
     Component {
         id: factory
@@ -37,7 +39,7 @@ Singleton {
         }
     }
     function nativeGesture(payload) {
-        const match = /^nacre_pearl_drag,(begin|move|end),(Nacre Pearl (?:Launcher|Dashboard|AI|Controls|Media) [0-9]+),(-?[0-9.]+),(-?[0-9.]+)$/.exec(payload);
+        const match = /^nacre_pearl_drag,(begin|move|end),(Nacre Pearl (?:Launcher|Dashboard|AI|Controls|Media) [0-9]+),([^,]+),([^,]+)(?:,([^,]+),([^,]+),([^,]+),([^,]+))?$/.exec(payload);
         if (!match)
             return;
         const entry = entries.find(value => value.title === match[2]);
@@ -47,10 +49,31 @@ Singleton {
         };
         if (!entry || !Number.isFinite(point.x) || !Number.isFinite(point.y))
             return;
-        const destination = enabled ? Geometry.docking(entry.kind, point, monitors()) : null;
+        const first = match[1] === "begin" || nativeDrag?.entry !== entry;
+        const start = first ? point : nativeDrag.start;
+        const anchor = first ? (match[5] !== undefined ? {
+                x: Number(match[5]),
+                y: Number(match[6]),
+                width: Number(match[7]),
+                height: Number(match[8])
+            } : entry.window.placement()) : nativeDrag.anchor;
+        if (anchor && (![anchor.x, anchor.y, anchor.width, anchor.height].every(Number.isFinite) || anchor.width <= 0 || anchor.height <= 0))
+            return;
+        const body = anchor ? Object.assign({}, anchor, {
+            x: anchor.x + point.x - start.x,
+            y: anchor.y + point.y - start.y
+        }) : null;
+        const ready = Math.hypot(point.x - start.x, point.y - start.y) >= 16;
+        const magnet = enabled && !NacrePanelState.hidden && body ? Geometry.magnet(entry.kind, body, point, monitors(), first ? null : nativeDrag.magnet, anchor) : null;
+        const destination = ready && magnet?.armed ? magnet : null;
         nativeDrag = {
             entry: entry,
             point: point,
+            start: start,
+            anchor: anchor,
+            body: body,
+            ready: ready,
+            magnet: magnet,
             destination: destination
         };
         if (match[1] === "end") {
@@ -168,7 +191,13 @@ Singleton {
                     x: item.x,
                     y: item.y,
                     width: item.width,
-                    height: item.height
+                    height: item.height,
+                    frame: {
+                        top: NacreFrame.headerHeight,
+                        bottom: NacreFrame.bottom,
+                        left: NacreFrame.left,
+                        right: NacreFrame.right
+                    }
                 }));
     }
     function open(kind, initial = {}, origin = "", point = null, chat = null) {
@@ -242,7 +271,8 @@ Singleton {
                 dy: 0,
                 ready: true,
                 released: true,
-                destination: entry
+                destination: entry,
+                dockTarget: value.magnet?.armed ? value.magnet.screen : ""
             };
             handoffTimeout.restart();
         }
@@ -275,6 +305,8 @@ Singleton {
     function remove(entry, park = true) {
         if (!entries.includes(entry))
             return;
+        if (nativeDrag?.entry === entry)
+            nativeDrag = null;
         if (park && entry.kind === "ai")
             NacreAiViews.park(entry.chat);
         entries = entries.filter(value => value !== entry);
@@ -346,7 +378,8 @@ Singleton {
             dy: 0,
             ready: false,
             released: false,
-            destination: null
+            destination: null,
+            magnet: Geometry.magnet(kind, bodyRect(host, name), point, monitors())
         };
         // Hover exits are suspended by the input controller; do not change the
         // layer's keyboard focus mode while it owns the pointer grab.
@@ -360,7 +393,11 @@ Singleton {
             point: point,
             dx: dx,
             dy: dy,
-            ready: Math.hypot(dx, dy) >= 16
+            ready: Math.hypot(dx, dy) >= 16,
+            magnet: Geometry.magnet(drag.kind, Object.assign({}, drag.body, {
+                x: drag.body.x + dx,
+                y: drag.body.y + dy
+            }), point, monitors(), drag.magnet, drag.body)
         });
     }
     function finish() {
@@ -373,7 +410,7 @@ Singleton {
             dy: drag.dy,
             ready: drag.ready
         };
-        if (!drag.ready) {
+        if (!drag.ready || drag.magnet?.armed && drag.magnet.screen === drag.screen) {
             drag = Object.assign({}, drag, {
                 dx: 0,
                 dy: 0,
@@ -397,7 +434,8 @@ Singleton {
             return;
         }
         drag = Object.assign({}, drag, {
-            destination: entry
+            destination: entry,
+            dockTarget: value.magnet?.armed ? value.magnet.screen : ""
         });
         handoffTimeout.restart();
         if (entry.window.ready)
@@ -412,11 +450,12 @@ Singleton {
     }
     function handedOff(entry) {
         if (drag?.destination === entry) {
+            const dockTarget = drag.dockTarget;
             drag.host.handoffHidden = true;
             finishEdge(drag.kind, drag.screen, entry.chat);
             cancel();
             // Activate after the layer releases its exclusive keyboard focus.
-            Qt.callLater(() => entry.window.activate());
+            Qt.callLater(() => dockTarget ? dock(entry, dockTarget) : entry.window.activate());
         }
     }
     function cancel() {
