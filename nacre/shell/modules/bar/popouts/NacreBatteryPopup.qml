@@ -59,7 +59,7 @@ Column {
     }
     NacreText {
         width: root.width
-        text: root.profilesEnabled ? root.profileName : "Power profiles unavailable"
+        text: root.profilesEnabled ? root.profileName : NacreI18n.tr("popouts.battery-popup.text.power-profiles-unavailable", "Power profiles unavailable")
         horizontalAlignment: Text.AlignHCenter
         font.pointSize: 11
     }
@@ -69,17 +69,17 @@ Column {
         ProfileButton {
             profile: PowerProfile.PowerSaver
             icon: "eco"
-            label: "Power saver"
+            label: NacreI18n.tr("popouts.battery-popup.label.power-saver", "Power saver")
         }
         ProfileButton {
             profile: PowerProfile.Balanced
             icon: "balance"
-            label: "Balanced"
+            label: NacreI18n.tr("popouts.battery-popup.label.balanced", "Balanced")
         }
         ProfileButton {
             profile: PowerProfile.Performance
             icon: "bolt"
-            label: "Performance"
+            label: NacreI18n.tr("popouts.battery-popup.label.performance", "Performance")
         }
     }
     NacreText {

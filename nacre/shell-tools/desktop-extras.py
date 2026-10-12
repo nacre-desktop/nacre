@@ -2,6 +2,7 @@
 """Private, on-demand data adapters for Nacre desktop panels."""
 
 import argparse
+from nacre_i18n import tr
 import hashlib
 import json
 import os
@@ -223,7 +224,7 @@ def open_note(path):
     ).resolve()
     file = (vault / path).resolve()
     if not file.is_relative_to(vault) or file.suffix != ".md" or not file.is_file():
-        raise ValueError("Invalid note")
+        raise ValueError(tr("helper.desktop-extras.invalid-note", "Invalid note"))
     launch(["xdg-open", str(file)])
 
 
@@ -236,7 +237,9 @@ def mime(data):
         return "image/gif"
     if data.startswith(b"RIFF") and data[8:12] == b"WEBP":
         return "image/webp"
-    return "text/plain;charset=utf-8"
+    return tr(
+        "helper.desktop-extras.text-plain-charset-utf-8", "text/plain;charset=utf-8"
+    )
 
 
 def label_digest(row):
@@ -323,11 +326,21 @@ def clips():
 
 def clip_action(action, ident):
     if not re.fullmatch(r"\d+", ident):
-        raise ValueError("Invalid clipboard entry")
+        raise ValueError(
+            tr(
+                "helper.desktop-extras.invalid-clipboard-entry",
+                "Invalid clipboard entry",
+            )
+        )
     rows = run(["cliphist", "list"]).stdout.decode(errors="replace").splitlines()
     row = next((r for r in rows if r.startswith(ident + "\t")), None)
     if row is None:
-        raise ValueError("Clipboard entry no longer exists")
+        raise ValueError(
+            tr(
+                "helper.desktop-extras.clipboard-entry-no-longer-exists",
+                "Clipboard entry no longer exists",
+            )
+        )
     if action == "copy":
         data = run(["cliphist", "decode"], input=row.encode()).stdout
         run(["wl-copy", "--type", mime(data)], input=data)
@@ -519,7 +532,9 @@ def main():
                 or not file.is_file()
                 or file.suffix != ".md"
             ):
-                raise ValueError("Invalid note")
+                raise ValueError(
+                    tr("helper.desktop-extras.invalid-note", "Invalid note")
+                )
             save(
                 STATE / "brain-focus.json",
                 dict(
@@ -538,7 +553,12 @@ def main():
         elif args.action == "capture":
             text = payload["text"].strip()
             if not text or len(text) > 16000:
-                raise ValueError("Capture must contain 1–16000 characters")
+                raise ValueError(
+                    tr(
+                        "helper.desktop-extras.capture-must-contain-1-16000-characters",
+                        "Capture must contain 1–16000 characters",
+                    )
+                )
             title = clean(text.splitlines()[0])[:80]
             run(
                 [
@@ -566,7 +586,12 @@ def main():
         elif args.action == "keys":
             result = bindings()
         else:
-            raise ValueError("Unknown desktop operation")
+            raise ValueError(
+                tr(
+                    "helper.desktop-extras.unknown-desktop-operation",
+                    "Unknown desktop operation",
+                )
+            )
         print(
             json.dumps(
                 dict(action=args.action, result=result, query=payload.get("query", ""))

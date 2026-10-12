@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Actual marked frame lips and shared state: hover, click, guards and rearming."""
 
 import os
@@ -182,6 +184,7 @@ TestCase {
  }
 }
 """)
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 capture_output=True,

@@ -1,0 +1,80 @@
+"""Nacre-owned helper messages, sharing the shell's English message catalog."""
+
+import json
+import os
+from pathlib import Path
+import re
+from functools import lru_cache
+
+ACCENTS = str.maketrans(
+    dict(
+        zip(
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            "áƀçďëƒğħïĵķľḿñöþɋŕšţüṽŵẋÿžÁɃÇĎËƑĞĦÏĴĶĽḾÑÖÞɊŔŠŢÜṼŴẊŸŽ",
+            strict=True,
+        )
+    )
+)
+
+
+@lru_cache(maxsize=1)
+def english():
+    paths = (
+        Path(__file__).resolve().parent.parent / "source/i18n/en.json",
+        Path(__file__).resolve().parent.parent / "shell/i18n/en.json",
+    )
+    for path in paths:
+        try:
+            value = json.loads(path.read_text())
+            if isinstance(value, dict):
+                return value
+        except (OSError, ValueError):
+            continue
+    return {}
+
+
+def language():
+    if os.environ.get("NACRE_LANGUAGE"):
+        return os.environ["NACRE_LANGUAGE"]
+    try:
+        value = json.loads((Path.home() / ".config/nacre/desktop.json").read_text())
+        return value.get("language", "system")
+    except (OSError, ValueError):
+        return "system"
+
+
+def pseudo(text):
+    parts = re.split(r"(<[^>]+>|\{[A-Za-z_][A-Za-z0-9_]*\})", text)
+    length = sum(
+        len(re.findall(r"[A-Za-z]", part))
+        for part in parts
+        if not part.startswith(("{", "<"))
+    )
+    return (
+        "["
+        + "".join(
+            part if part.startswith(("{", "<")) else part.translate(ACCENTS)
+            for part in parts
+        )
+        + " "
+        + "~" * ((length * 4 + 9) // 10)
+        + "]"
+    )
+
+
+def tr(identifier, fallback, args=None):
+    args = args or {}
+    message = english().get(identifier, fallback)
+    if isinstance(message, dict):
+        message = message.get(
+            "one" if args.get("count") == 1 else "other", message.get("other", fallback)
+        )
+    if not isinstance(message, str):
+        message = fallback.get("other", "") if isinstance(fallback, dict) else fallback
+    if language() == "pseudo":
+        message = pseudo(message)
+    return re.sub(
+        r"\{([A-Za-z_][A-Za-z0-9_]*)\}",
+        lambda match: str(args[match[1]]) if match[1] in args else match[0],
+        message,
+    )

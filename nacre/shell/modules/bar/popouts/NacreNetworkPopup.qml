@@ -29,13 +29,13 @@ Item {
             NacreText {
                 width: Math.max(0, parent.width - radioButton.width - parent.spacing)
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Wi-Fi"
+                text: NacreI18n.tr("popouts.network-popup.text.wi-fi", "Wi-Fi")
                 font.pointSize: 14
             }
             ActionButton {
                 id: radioButton
                 objectName: "quickWifiPower"
-                text: NacreNetwork.wifiEnabled ? "Turn off" : "Turn on"
+                text: NacreNetwork.wifiEnabled ? NacreI18n.tr("popouts.network-popup.text.turn-off", "Turn off") : NacreI18n.tr("popouts.network-popup.text.turn-on", "Turn on")
                 compact: true
                 enabled: !DeviceActions.busy && NacreNetwork.wifiAvailable
                 onClicked: if (enabled)
@@ -44,7 +44,7 @@ Item {
         }
         NacreText {
             width: parent.width
-            text: !NacreNetwork.wifiAvailable ? "No Wi-Fi adapter; wired connections remain available." : NacreNetwork.active?.ssid || (NacreNetwork.wifiEnabled ? "Not connected" : "Wi-Fi is off")
+            text: !NacreNetwork.wifiAvailable ? "No Wi-Fi adapter; wired connections remain available." : NacreNetwork.active?.ssid || (NacreNetwork.wifiEnabled ? NacreI18n.tr("popouts.network-popup.text.not-connected", "Not connected") : NacreI18n.tr("popouts.network-popup.text.wi-fi-is-off", "Wi-Fi is off"))
             elide: Text.ElideRight
             color: NacreTokens.mutedInk
         }
@@ -65,7 +65,7 @@ Item {
                             x: 10
                             width: Math.max(0, parent.width - connectionButton.width - 30)
                             height: parent.height
-                            text: parent.modelData.ssid || "Hidden network"
+                            text: parent.modelData.ssid || NacreI18n.tr("popouts.network-popup.text.hidden-network", "Hidden network")
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideRight
                         }
@@ -75,7 +75,7 @@ Item {
                             anchors.right: parent.right
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
-                            text: parent.modelData.active ? "Disconnect" : "Connect"
+                            text: parent.modelData.active ? NacreI18n.tr("popouts.network-popup.text.disconnect", "Disconnect") : NacreI18n.tr("popouts.network-popup.text.connect", "Connect")
                             compact: true
                             enabled: !DeviceActions.busy && NacreNetwork.wifiEnabled
                             onClicked: root.activate(parent.modelData)
@@ -87,7 +87,7 @@ Item {
         NacreText {
             width: parent.width
             visible: root.nearby.length === 0 && NacreNetwork.wifiEnabled
-            text: NacreNetwork.busy ? "Reading Wi-Fi state…" : "No nearby networks"
+            text: NacreNetwork.busy ? NacreI18n.tr("popouts.network-popup.text.reading-wi-fi-state", "Reading Wi-Fi state…") : NacreI18n.tr("popouts.network-popup.text.no-nearby-networks", "No nearby networks")
             color: NacreTokens.mutedInk
         }
         NacreText {

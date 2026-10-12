@@ -64,23 +64,23 @@ Scope {
     }
     NacreShortcut {
         name: "dismissHoverEdges"
-        description: "Dismiss passive hover menus"
+        description: NacreI18n.tr("modules.shell-shortcuts.description.dismiss-passive-hover-menus", "Dismiss passive hover menus")
         onPressed: root.dismissPassive()
     }
     NacreShortcut {
         name: "session"
-        description: "Toggle session menu"
+        description: NacreI18n.tr("modules.shell-shortcuts.description.toggle-session-menu", "Toggle session menu")
         onPressed: NacrePanelState.toggleSession()
     }
     NacreShortcut {
         name: "launcher"
-        description: "Toggle launcher"
+        description: NacreI18n.tr("modules.shell-shortcuts.description.toggle-launcher", "Toggle launcher")
         onPressed: root.launcherPress()
         onReleased: root.launcherRelease()
     }
     NacreShortcut {
         name: "launcherInterrupt"
-        description: "Interrupt launcher chord"
+        description: NacreI18n.tr("modules.shell-shortcuts.description.interrupt-launcher-chord", "Interrupt launcher chord")
         onPressed: root.launcherInterrupt()
     }
     IpcHandler {

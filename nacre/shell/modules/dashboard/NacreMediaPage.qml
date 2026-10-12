@@ -164,7 +164,7 @@ Item {
             NacreText {
                 objectName: "fullMediaTitle"
                 width: parent.width
-                text: root.player ? root.player.trackTitle || "Unknown track" : "No media playing"
+                text: root.player ? root.player.trackTitle || NacreI18n.tr("dashboard.media-page.text.unknown-track", "Unknown track") : NacreI18n.tr("dashboard.media-page.text.no-media-playing", "No media playing")
                 color: root.pagePrimary
                 font.pointSize: 17
                 elide: Text.ElideRight
@@ -181,7 +181,7 @@ Item {
             }
             NacreText {
                 width: parent.width
-                text: root.player ? root.player.trackArtist || root.player.identity : "Open a music or video app"
+                text: root.player ? root.player.trackArtist || root.player.identity : NacreI18n.tr("dashboard.media-page.text.open-a-music-or-video-app", "Open a music or video app")
                 color: root.pageSecondary
                 font.pointSize: 12
                 elide: Text.ElideRight
@@ -196,7 +196,7 @@ Item {
                     objectName: "fullPrevious"
                     anchors.verticalCenter: parent.verticalCenter
                     icon: "skip_previous"
-                    label: "Previous track"
+                    label: NacreI18n.tr("dashboard.media-page.label.previous-track", "Previous track")
                     available: !!(root.shouldUpdate && root.player?.canControl && root.player?.canGoPrevious)
                     onClicked: root.perform("previous")
                 }
@@ -208,7 +208,7 @@ Item {
                     height: 48
                     selected: true
                     icon: root.player?.isPlaying ? "pause" : "play_arrow"
-                    label: root.player?.isPlaying ? "Pause" : "Play"
+                    label: root.player?.isPlaying ? NacreI18n.tr("dashboard.media-page.label.pause", "Pause") : NacreI18n.tr("dashboard.media-page.label.play", "Play")
                     available: !!(root.shouldUpdate && root.player?.canControl && root.player?.canTogglePlaying)
                     onClicked: root.perform("toggle")
                 }
@@ -218,7 +218,7 @@ Item {
                     objectName: "fullNext"
                     anchors.verticalCenter: parent.verticalCenter
                     icon: "skip_next"
-                    label: "Next track"
+                    label: NacreI18n.tr("dashboard.media-page.label.next-track", "Next track")
                     available: !!(root.shouldUpdate && root.player?.canControl && root.player?.canGoNext)
                     onClicked: root.perform("next")
                 }
@@ -231,7 +231,7 @@ Item {
                 objectName: "fullSeek"
                 width: parent.width
                 enabled: root.canSeek
-                label: "Track position"
+                label: NacreI18n.tr("dashboard.media-page.label.track-position", "Track position")
                 progress: root.progress
                 onDragBegan: root.beginSeek()
                 onDragEnded: fraction => root.seekTo(fraction, root.seekOwner, root.seekTrack)
@@ -259,7 +259,7 @@ Item {
                     accent: root.pagePrimary
                     ink: root.pageInk
                     icon: "shuffle"
-                    label: "Shuffle"
+                    label: NacreI18n.tr("dashboard.media-page.label.shuffle", "Shuffle")
                     visible: root.player?.shuffleSupported === true
                     selected: root.player?.shuffle === true
                     available: !!(root.shouldUpdate && root.player?.canControl)
@@ -269,7 +269,7 @@ Item {
                     accent: root.pagePrimary
                     ink: root.pageInk
                     icon: root.player?.loopState === MprisLoopState.Track ? "repeat_one" : "repeat"
-                    label: "Cycle repeat mode"
+                    label: NacreI18n.tr("dashboard.media-page.label.cycle-repeat-mode", "Cycle repeat mode")
                     visible: root.player?.loopSupported === true
                     selected: !!root.player?.loopState
                     available: !!(root.shouldUpdate && root.player?.canControl)
@@ -277,7 +277,7 @@ Item {
                 }
                 ActionButton {
                     objectName: "fullRaise"
-                    text: root.player?.identity || "Player"
+                    text: root.player?.identity || NacreI18n.tr("dashboard.media-page.text.player", "Player")
                     icon: "open_in_new"
                     compact: true
                     enabled: !!(root.shouldUpdate && root.player?.canRaise)
@@ -298,7 +298,7 @@ Item {
                     track: Qt.alpha(root.pageInk, .14)
                     objectName: "fullVolume"
                     width: parent.width - 36
-                    label: "Player volume"
+                    label: NacreI18n.tr("dashboard.media-page.label.player-volume", "Player volume")
                     progress: Model.fraction(root.player?.volume)
                     enabled: !!(root.shouldUpdate && root.player?.canControl)
                     onDragBegan: root.volumeOwner = root.player
@@ -325,7 +325,7 @@ Item {
             NacreText {
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                text: root.lyricIndex >= 0 ? root.lyricLines[root.lyricIndex].text : NacreMediaDetails.message || (root.player ? "Loading track details…" : "")
+                text: root.lyricIndex >= 0 ? root.lyricLines[root.lyricIndex].text : NacreMediaDetails.message || (root.player ? NacreI18n.tr("dashboard.media-page.text.loading-track-details", "Loading track details…") : "")
                 font.pointSize: 15
                 color: root.pagePrimary
                 wrapMode: Text.Wrap
@@ -343,13 +343,13 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: 8
                 ActionButton {
-                    text: "Output device"
+                    text: NacreI18n.tr("dashboard.media-page.text.output-device", "Output device")
                     icon: "speaker"
                     compact: true
                     onClicked: NacrePanelState.openControls("audio")
                 }
                 ActionButton {
-                    text: "Album colors"
+                    text: NacreI18n.tr("dashboard.media-page.text.album-colors", "Album colors")
                     compact: true
                     selected: NacreDashboardState.preferences.albumPalette !== false
                     onClicked: NacreDashboardState.save("albumPalette", !NacreDashboardState.preferences.albumPalette)
@@ -358,7 +358,7 @@ Item {
             NacreText {
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                text: NacreMediaDetails.lines.length ? "Lyrics: LRCLIB" : ""
+                text: NacreMediaDetails.lines.length ? NacreI18n.tr("dashboard.media-page.text.lyrics-lrclib", "Lyrics: LRCLIB") : ""
                 font.pointSize: 8
                 color: root.pageInk
                 opacity: .6
@@ -376,7 +376,7 @@ Item {
                 model: NacrePlayers.list
                 delegate: ActionButton {
                     required property var modelData
-                    text: modelData.identity || "Media player"
+                    text: modelData.identity || NacreI18n.tr("dashboard.media-page.text.media-player", "Media player")
                     compact: true
                     selected: modelData === root.player
                     width: Math.min(implicitWidth, choices.width)

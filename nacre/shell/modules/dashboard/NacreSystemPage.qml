@@ -35,22 +35,22 @@ Flickable {
                 Repeater {
                     model: [
                         {
-                            label: "CPU",
+                            label: NacreI18n.tr("dashboard.system-page.label.cpu", "CPU"),
                             value: NacreSystemUsage.cpuPerc,
                             detail: Model.temperature(NacreSystemUsage.cpuTemp)
                         },
                         {
-                            label: "Memory",
+                            label: NacreI18n.tr("dashboard.system-page.label.memory", "Memory"),
                             value: NacreSystemUsage.memPerc,
                             detail: Model.size(NacreSystemUsage.memUsed)
                         },
                         {
-                            label: "GPU",
+                            label: NacreI18n.tr("dashboard.system-page.label.gpu", "GPU"),
                             value: NacreSystemUsage.gpuUsageAvailable ? NacreSystemUsage.gpuPerc : NaN,
                             detail: Model.temperature(NacreSystemUsage.gpuTemp)
                         },
                         {
-                            label: "Storage",
+                            label: NacreI18n.tr("dashboard.system-page.label.storage", "Storage"),
                             value: NacreSystemUsage.storagePerc,
                             detail: Model.size(NacreSystemUsage.storageUsed)
                         }
@@ -69,24 +69,26 @@ Flickable {
         RowLayout {
             width: parent.width
             NacreText {
-                text: Updates.count + " package updates"
+                text: NacreI18n.tr("ui.system-page.text.value0-package-updates", "{value0} package updates", {
+                    value0: Updates.count
+                })
                 font.pointSize: 14
                 color: NacreTokens.accent
                 Layout.fillWidth: true
             }
             ActionButton {
-                text: "Check"
+                text: NacreI18n.tr("dashboard.system-page.text.check", "Check")
                 compact: true
                 onClicked: Updates.refresh()
             }
             ActionButton {
-                text: "Update"
+                text: NacreI18n.tr("dashboard.system-page.text.update", "Update")
                 icon: "system_update"
                 compact: true
                 onClicked: Quickshell.execDetached([Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/control.sh", "updates"])
             }
             ActionButton {
-                text: "Maintenance"
+                text: NacreI18n.tr("dashboard.system-page.text.maintenance", "Maintenance")
                 compact: true
                 onClicked: NacrePanelState.openSettings("maintenance")
             }
@@ -100,7 +102,7 @@ Flickable {
             wrapMode: Text.Wrap
         }
         NacreText {
-            text: "Network"
+            text: NacreI18n.tr("dashboard.system-page.text.network", "Network")
             font.pointSize: 15
             color: NacreTokens.accent
         }
@@ -135,12 +137,15 @@ Flickable {
             }
         }
         NacreText {
-            text: NacreDashboardSystem.network.length ? "Down " + Model.size(NacreDashboardSystem.network[NacreDashboardSystem.network.length - 1].down / 1024) + "/s    Up " + Model.size(NacreDashboardSystem.network[NacreDashboardSystem.network.length - 1].up / 1024) + "/s" : "Waiting for a network sample"
+            text: NacreDashboardSystem.network.length ? NacreI18n.tr("ui.system-page.text.down-value0-s-up-value1-s", "Down {value0}/s    Up {value1}/s", {
+                value0: Model.size(NacreDashboardSystem.network[NacreDashboardSystem.network.length - 1].down / 1024),
+                value1: Model.size(NacreDashboardSystem.network[NacreDashboardSystem.network.length - 1].up / 1024)
+            }) : NacreI18n.tr("dashboard.system-page.text.waiting-for-a-network-sample", "Waiting for a network sample")
             font.pointSize: 10
             color: NacreTokens.mutedInk
         }
         NacreText {
-            text: "Drives"
+            text: NacreI18n.tr("dashboard.system-page.text.drives", "Drives")
             font.pointSize: 15
             color: NacreTokens.accent
         }
@@ -186,7 +191,7 @@ Flickable {
             }
         }
         NacreText {
-            text: "Processes · memory use"
+            text: NacreI18n.tr("dashboard.system-page.text.processes-memory-use", "Processes · memory use")
             font.pointSize: 15
             color: NacreTokens.accent
         }
@@ -208,7 +213,7 @@ Flickable {
                     color: NacreTokens.mutedInk
                 }
                 ActionButton {
-                    text: root.pendingPid === parent.modelData.pid && root.pendingStart === parent.modelData.start ? "Confirm end" : "End"
+                    text: root.pendingPid === parent.modelData.pid && root.pendingStart === parent.modelData.start ? NacreI18n.tr("dashboard.system-page.text.confirm-end", "Confirm end") : NacreI18n.tr("dashboard.system-page.text.end", "End")
                     compact: true
                     onClicked: {
                         if (root.pendingPid === parent.modelData.pid && root.pendingStart === parent.modelData.start) {
@@ -237,7 +242,10 @@ Flickable {
             wrapMode: Text.Wrap
         }
         NacreText {
-            text: "Kernel " + (NacreSystemUsage.kernel || "—") + "    Load " + (NacreSystemUsage.loadAverage || "—")
+            text: NacreI18n.tr("ui.system-page.text.kernel-value0-load-value1", "Kernel {value0}    Load {value1}", {
+                value0: (NacreSystemUsage.kernel || "—"),
+                value1: (NacreSystemUsage.loadAverage || "—")
+            })
             font.pointSize: 9
             color: NacreTokens.mutedInk
         }

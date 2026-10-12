@@ -20,7 +20,7 @@ Singleton {
         if (busy)
             return;
 
-        message = "Waiting for administrator authentication…";
+        message = NacreI18n.tr("ui.timezone-settings.message.waiting-for-administrator-authentication", "Waiting for administrator authentication…");
         action.command = ["pkexec", "/usr/bin/python3", status.installed && kind !== "install" ? (status.installedProgram || "/usr/local/libexec/nacre-timezone.py") : helper, kind, value];
         action.running = true;
     }
@@ -37,7 +37,7 @@ Singleton {
                 try {
                     root.status = JSON.parse(line);
                 } catch (e) {
-                    root.message = "Could not read time settings";
+                    root.message = NacreI18n.tr("ui.timezone-settings.message.could-not-read-time-settings", "Could not read time settings");
                 }
             }
         }
@@ -48,7 +48,7 @@ Singleton {
 
         onExited: code => {
             if (code !== 0)
-                root.message = "Time settings were not changed. Administrator authentication is required.";
+                root.message = NacreI18n.tr("ui.timezone-settings.message.time-settings-were-not-changed-administrator-authentica", "Time settings were not changed. Administrator authentication is required.");
 
             root.refresh();
         }
@@ -58,9 +58,9 @@ Singleton {
             onRead: line => {
                 try {
                     const data = JSON.parse(line);
-                    root.message = data.error ?? "Time settings updated";
+                    root.message = data.error ?? NacreI18n.tr("ui.timezone-settings.message.time-settings-updated", "Time settings updated");
                 } catch (e) {
-                    root.message = "Could not update time settings";
+                    root.message = NacreI18n.tr("ui.timezone-settings.message.could-not-update-time-settings", "Could not update time settings");
                 }
             }
         }

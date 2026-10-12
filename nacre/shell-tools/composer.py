@@ -2,6 +2,7 @@
 """Private drafts, user-selected local attachments, clipboard and area screenshots."""
 
 import argparse
+from nacre_i18n import tr
 import hashlib
 import json
 import os
@@ -20,7 +21,12 @@ def key_path(key):
 
 def attachments(values):
     if not isinstance(values, list) or len(values) > 8:
-        raise ValueError("Choose at most eight attachments")
+        raise ValueError(
+            tr(
+                "helper.composer.choose-at-most-eight-attachments",
+                "Choose at most eight attachments",
+            )
+        )
     result = []
     for value in values:
         value = value.get("path", "") if isinstance(value, dict) else str(value)
@@ -28,7 +34,12 @@ def attachments(values):
         if parsed.scheme and (
             parsed.scheme != "file" or parsed.netloc not in ("", "localhost")
         ):
-            raise ValueError("Attachments must be local files")
+            raise ValueError(
+                tr(
+                    "helper.composer.attachments-must-be-local-files",
+                    "Attachments must be local files",
+                )
+            )
         path = (
             Path(unquote(parsed.path) if parsed.scheme else value)
             .expanduser()

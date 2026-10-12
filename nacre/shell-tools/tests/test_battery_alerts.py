@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Exercise actual battery policy/owner without D-Bus, notifications or private files."""
 
 import os
@@ -84,6 +86,7 @@ Item {
             shutil.copy2(
                 ROOT / "tests/battery-qml/tst_battery.qml", target / "tst_battery.qml"
             )
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

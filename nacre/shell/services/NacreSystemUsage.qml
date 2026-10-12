@@ -59,7 +59,7 @@ Singleton {
             gpuPerc = NaN;
             gpuTemp = NaN;
             gpuFrequencyMHz = NaN;
-            error = "Some system readings are unavailable.";
+            error = NacreI18n.tr("ui.system-usage.error.some-system-readings-are-unavailable", NacreI18n.tr("ui.system-usage.error.some-system-readings-are-unavailable", "Some system readings are unavailable."));
         }
     }
     function fastRefresh() {
@@ -151,7 +151,7 @@ Singleton {
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0 && root.visibleDashboard) {
                 root.slowSample("{}");
-                root.error = "Some system readings are unavailable.";
+                root.error = NacreI18n.tr("ui.system-usage.error.some-system-readings-are-unavailable", NacreI18n.tr("ui.system-usage.error.some-system-readings-are-unavailable", "Some system readings are unavailable."));
             }
         }
     }

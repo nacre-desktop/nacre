@@ -96,7 +96,7 @@ QtObject {
             error = "";
             return true;
         } catch (failure) {
-            error = "Could not read light control status.";
+            error = NacreI18n.tr("ui.light-channel.error.could-not-read-light-control-status", "Could not read light control status.");
             return false;
         }
     }
@@ -112,7 +112,7 @@ QtObject {
         onLoaded: root.parseCurrent(text())
         onLoadFailed: {
             root.readable = false;
-            root.error = "Light device is unavailable.";
+            root.error = NacreI18n.tr("ui.light-channel.error.light-device-is-unavailable", "Light device is unavailable.");
         }
     }
     readonly property FileView maximumFile: FileView {
@@ -136,7 +136,7 @@ QtObject {
         }
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0 && root.inFlightEpoch === root.epoch)
-                root.error = "Light change failed; the current value will be restored.";
+                root.error = NacreI18n.tr("ui.light-channel.error.light-change-failed-the-current-value-will-be-restored", "Light change failed; the current value will be restored.");
             if (root.pending >= 0)
                 delay.restart();
             else

@@ -5,6 +5,7 @@ import Quickshell.Io
 
 Singleton {
     id: root
+    readonly property string windowTitle: NacreI18n.tr("applications.welcome.title", "Nacre Welcome")
     property bool created: false
     property bool visible: false
     property var window: null
@@ -266,7 +267,7 @@ Singleton {
                         root.error = "";
                     }
                 } catch (e) {
-                    root.error = "Could not read Welcome preferences. Reopen Welcome to try again.";
+                    root.error = NacreI18n.tr("ui.welcome-app.error.could-not-read-welcome-preferences-reopen-welcome-to-tr", "Could not read Welcome preferences. Reopen Welcome to try again.");
                 }
             }
         }
@@ -274,7 +275,7 @@ Singleton {
             if (worker.job[0] === "demo-start" && Number(worker.job[1]) === root.demoGeneration)
                 root.demoStarting = false;
             if (exitCode !== 0 && !root.error)
-                root.error = "Welcome could not save its preference. Try reopening the app.";
+                root.error = NacreI18n.tr("ui.welcome-app.error.welcome-could-not-save-its-preference-try-reopening-the", "Welcome could not save its preference. Try reopening the app.");
             root.next();
         }
     }

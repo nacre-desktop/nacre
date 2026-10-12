@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Production notification cards and stack with service-owned fixture entries."""
 
 import os
@@ -56,6 +58,7 @@ class NotificationUITests(unittest.TestCase):
                 ROOT / "tests/notification-qml/tst_notifications.qml",
                 target / "tst_notifications.qml",
             )
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

@@ -27,10 +27,12 @@ NacreSettingsPage {
             Maintenance.recover(action);
     }
     NacreSettingsSection {
-        title: "Desktop health"
+        title: NacreI18n.tr("ui.maintenance-page.title.desktop-health", "Desktop health")
         NacreText {
             width: parent.width
-            text: "Installed release: " + (root.state.release?.revision?.slice(0, 12) || "Unknown")
+            text: NacreI18n.tr("ui.maintenance-page.text.installed-release-value0", "Installed release: {value0}", {
+                value0: (root.state.release?.revision?.slice(0, 12) || NacreI18n.tr("ui.maintenance-page.text.unknown", "Unknown"))
+            })
             font.pointSize: 11
             wrapMode: Text.Wrap
         }
@@ -49,34 +51,47 @@ NacreSettingsPage {
         }
         NacreText {
             width: parent.width
-            text: root.state.configErrors ? "Compositor errors: " + root.state.configErrors : "Compositor configuration is valid"
+            text: root.state.configErrors ? NacreI18n.tr("ui.maintenance-page.text.compositor-errors-value0", "Compositor errors: {value0}", {
+                value0: root.state.configErrors
+            }) : NacreI18n.tr("ui.maintenance-page.text.compositor-configuration-is-valid", "Compositor configuration is valid")
             font.pointSize: 11
             wrapMode: Text.Wrap
         }
         NacreText {
             width: parent.width
-            text: (root.state.drift || []).length + " locally changed managed files"
+            text: NacreI18n.tr("ui.maintenance-page.text.value0-locally-changed-managed-files", "{value0} locally changed managed files", {
+                value0: (root.state.drift || []).length
+            })
             font.pointSize: 10
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap
         }
         NacreText {
             width: parent.width
-            text: "Knowledge sync: " + (root.state.brainSync?.message || root.state.brainSync?.state || "Not recorded")
+            text: NacreI18n.tr("ui.maintenance-page.text.knowledge-sync-value0", "Knowledge sync: {value0}", {
+                value0: (root.state.brainSync?.message || root.state.brainSync?.state || NacreI18n.tr("ui.maintenance-page.text.not-recorded", "Not recorded"))
+            })
             font.pointSize: 10
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap
         }
         NacreText {
             width: parent.width
-            text: root.state.performance?.cpuCorePercent !== undefined ? "Last sample: " + root.state.performance.cpuCorePercent + "% of one core · " + root.state.performance.memoryMiB + " MiB (" + (root.state.performance.label || "manual") + ")" : "No resource sample recorded"
+            text: root.state.performance?.cpuCorePercent !== undefined ? NacreI18n.tr("ui.maintenance-page.text.last-sample-value0-of-one-core-value1-mib-value2", "Last sample: {value0}% of one core · {value1} MiB ({value2})", {
+                value0: root.state.performance.cpuCorePercent,
+                value1: root.state.performance.memoryMiB,
+                value2: (root.state.performance.label || "manual")
+            }) : NacreI18n.tr("ui.maintenance-page.text.no-resource-sample-recorded", "No resource sample recorded")
             font.pointSize: 10
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap
         }
         NacreText {
             width: parent.width
-            text: "Session: " + (root.state.session?.event || "Not recorded") + " · Update cache: " + (root.state.updatesAgeSeconds === null || root.state.updatesAgeSeconds === undefined ? "not recorded" : Math.floor(root.state.updatesAgeSeconds / 60) + " minutes old")
+            text: NacreI18n.tr("ui.maintenance-page.text.session-value0-update-cache-value1", "Session: {value0} · Update cache: {value1}", {
+                value0: (root.state.session?.event || NacreI18n.tr("ui.maintenance-page.text.not-recorded", "Not recorded")),
+                value1: (root.state.updatesAgeSeconds === null || root.state.updatesAgeSeconds === undefined ? NacreI18n.tr("ui.maintenance-page.text.not-recorded-ea80f8", "not recorded") : Math.floor(root.state.updatesAgeSeconds / 60) + NacreI18n.tr("ui.maintenance-page.text.minutes-old", " minutes old"))
+            })
             font.pointSize: 10
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap
@@ -85,37 +100,37 @@ NacreSettingsPage {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Refresh status"
+                text: NacreI18n.tr("ui.maintenance-page.text.refresh-status", "Refresh status")
                 enabled: !Maintenance.busy
                 onClicked: Maintenance.refresh()
             }
             ActionButton {
-                text: "Sample resource use"
+                text: NacreI18n.tr("ui.maintenance-page.text.sample-resource-use", "Sample resource use")
                 enabled: !Maintenance.busy
                 onClicked: root.act("profile")
             }
             ActionButton {
-                text: "Check session"
+                text: NacreI18n.tr("ui.maintenance-page.text.check-session", "Check session")
                 enabled: !Maintenance.busy
                 onClicked: root.act("session")
             }
             ActionButton {
-                text: "Retry knowledge sync"
+                text: NacreI18n.tr("ui.maintenance-page.text.retry-knowledge-sync", "Retry knowledge sync")
                 enabled: !Maintenance.busy
                 onClicked: root.act("sync-now")
             }
             ActionButton {
-                text: "Repair failed portals"
+                text: NacreI18n.tr("ui.maintenance-page.text.repair-failed-portals", "Repair failed portals")
                 enabled: !Maintenance.busy
                 onClicked: root.act("repair-portals")
             }
             ActionButton {
-                text: "Restart desktop"
+                text: NacreI18n.tr("ui.maintenance-page.text.restart-desktop", "Restart desktop")
                 enabled: !Maintenance.busy
                 onClicked: root.recovery("restart")
             }
             ActionButton {
-                text: "Restore previous release"
+                text: NacreI18n.tr("ui.maintenance-page.text.restore-previous-release", "Restore previous release")
                 enabled: !Maintenance.busy
                 onClicked: root.recovery("rollback")
             }
@@ -129,7 +144,9 @@ NacreSettingsPage {
         }
         NacreText {
             width: parent.width
-            text: root.state.checked ? "Checked " + new Date(root.state.checked).toLocaleString() : ""
+            text: root.state.checked ? NacreI18n.tr("ui.maintenance-page.text.checked-value0", "Checked {value0}", {
+                value0: new Date(root.state.checked).toLocaleString()
+            }) : ""
             font.pointSize: 9
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap

@@ -5,12 +5,15 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import sys
 import os
 from pathlib import Path
 import shutil
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
+# Standalone helpers share the translation runtime during source-tree tooling.
+sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
 ACTIVE_DIRS = (
     "uwsm",
     "hypr",

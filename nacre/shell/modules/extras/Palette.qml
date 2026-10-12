@@ -5,15 +5,16 @@ import QtQuick.Controls
 
 SearchSurface {
     id: root
-    title: "Commands"
+    title: NacreI18n.tr("extras.palette.title.commands", "Commands")
     placeholder: "Actions, apps, windows, or brain: something"
     readonly property var entries: {
         const q = query.toLowerCase().replace(/^>\s*/, "").trim();
         if (q.startsWith("brain:"))
             return [
                 {
+                    nameId: "ui.palette.name.search-brain-for",
                     name: "Search brain for " + query.slice(6).trim(),
-                    description: "Open the brain drawer",
+                    description: NacreI18n.tr("extras.palette.description.open-the-brain-drawer", "Open the brain drawer"),
                     icon: "neurology",
                     action: "brain-query",
                     value: query.slice(6).trim()
@@ -25,13 +26,15 @@ SearchSurface {
             return actions;
         const windows = NacreCompositor.windows.map(c => ({
                     name: c.title,
-                    description: "Window · workspace " + c.workspace?.id,
+                    description: NacreI18n.tr("ui.palette.description.window-workspace-value0", "Window · workspace {value0}", {
+                        value0: c.workspace?.id
+                    }),
                     icon: "window",
                     window: c
                 })).filter(matches);
         const apps = NacreApps.fuzzyQuery(query).slice(0, 8).map(a => ({
                     name: a.name,
-                    description: "Application",
+                    description: NacreI18n.tr("extras.palette.description.application", "Application"),
                     icon: "apps",
                     app: a
                 }));

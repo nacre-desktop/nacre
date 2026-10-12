@@ -2,6 +2,7 @@
 """Launch with current display state and recover a validated desktop after bad updates."""
 
 import json
+from nacre_i18n import tr
 import os
 import shutil
 import signal
@@ -38,7 +39,12 @@ def environment():
             break
         time.sleep(0.2)
     else:
-        raise RuntimeError("Wayland display is not ready")
+        raise RuntimeError(
+            tr(
+                "helper.shell-supervisor.wayland-display-is-not-ready",
+                "Wayland display is not ready",
+            )
+        )
     env.update(compositor.environment_updates(env))
     env.setdefault("XDG_SESSION_TYPE", "wayland")
     return env

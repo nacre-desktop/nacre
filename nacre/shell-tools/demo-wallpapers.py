@@ -2,6 +2,7 @@
 """Validate and cache the offline, public-domain Welcome wallpaper collection."""
 
 import hashlib
+from nacre_i18n import tr
 import json
 import os
 from pathlib import Path
@@ -16,7 +17,10 @@ def collection():
     manifest = json.loads((ASSETS / "manifest.json").read_text())
     if manifest.get("version") != 1 or len(manifest.get("wallpapers", [])) != 4:
         raise ValueError(
-            "The bundled wallpaper manifest is incomplete. Reinstall the shell."
+            tr(
+                "helper.demo-wallpapers.the-bundled-wallpaper-manifest-is-incomplete-reinstall-the-shell",
+                "The bundled wallpaper manifest is incomplete. Reinstall the shell.",
+            )
         )
     entries = manifest["wallpapers"]
     for item in entries:
@@ -26,7 +30,12 @@ def collection():
             ".png",
             ".webp",
         ):
-            raise ValueError("Invalid bundled wallpaper filename")
+            raise ValueError(
+                tr(
+                    "helper.demo-wallpapers.invalid-bundled-wallpaper-filename",
+                    "Invalid bundled wallpaper filename",
+                )
+            )
         source = ASSETS / name
         if hashlib.sha256(source.read_bytes()).hexdigest() != item["sha256"]:
             raise ValueError(
@@ -39,7 +48,10 @@ def collection():
                 or image.height < 2000
             ):
                 raise ValueError(
-                    "Bundled wallpaper resolution does not match its manifest"
+                    tr(
+                        "helper.demo-wallpapers.bundled-wallpaper-resolution-does-not-match-its-manifest",
+                        "Bundled wallpaper resolution does not match its manifest",
+                    )
                 )
             image.verify()
         if (
@@ -47,7 +59,12 @@ def collection():
             or not item.get("artist")
             or not item.get("source")
         ):
-            raise ValueError("Bundled wallpaper source information is incomplete")
+            raise ValueError(
+                tr(
+                    "helper.demo-wallpapers.bundled-wallpaper-source-information-is-incomplete",
+                    "Bundled wallpaper source information is incomplete",
+                )
+            )
     return entries
 
 

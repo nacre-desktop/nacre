@@ -24,13 +24,13 @@ Item {
             NacreText {
                 width: Math.max(0, parent.width - radioButton.width - parent.spacing)
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Bluetooth"
+                text: NacreI18n.tr("popouts.bluetooth-popup.text.bluetooth", "Bluetooth")
                 font.pointSize: 14
             }
             ActionButton {
                 id: radioButton
                 objectName: "quickBluetoothPower"
-                text: NacreBluetooth.powered ? "Turn off" : "Turn on"
+                text: NacreBluetooth.powered ? NacreI18n.tr("popouts.bluetooth-popup.text.turn-off", "Turn off") : NacreI18n.tr("popouts.bluetooth-popup.text.turn-on", "Turn on")
                 compact: true
                 enabled: !DeviceActions.busy && NacreBluetooth.available
                 onClicked: if (enabled)
@@ -54,7 +54,7 @@ Item {
                             x: 10
                             width: Math.max(0, parent.width - connectionButton.width - 30)
                             height: parent.height
-                            text: parent.modelData.alias || parent.modelData.name || "Bluetooth device"
+                            text: parent.modelData.alias || parent.modelData.name || NacreI18n.tr("popouts.bluetooth-popup.text.bluetooth-device", "Bluetooth device")
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideRight
                         }
@@ -64,7 +64,7 @@ Item {
                             anchors.right: parent.right
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
-                            text: parent.modelData.connected ? "Disconnect" : "Connect"
+                            text: parent.modelData.connected ? NacreI18n.tr("popouts.bluetooth-popup.text.disconnect", "Disconnect") : NacreI18n.tr("popouts.bluetooth-popup.text.connect", "Connect")
                             compact: true
                             enabled: !DeviceActions.busy && NacreBluetooth.powered
                             onClicked: root.activate(parent.modelData)
@@ -76,7 +76,7 @@ Item {
         NacreText {
             width: parent.width
             visible: !NacreBluetooth.powered || root.known.length === 0
-            text: !NacreBluetooth.available ? "No Bluetooth adapter" : NacreBluetooth.powered ? "No known devices" : "Bluetooth is off"
+            text: !NacreBluetooth.available ? "No Bluetooth adapter" : NacreBluetooth.powered ? NacreI18n.tr("popouts.bluetooth-popup.text.no-known-devices", "No known devices") : NacreI18n.tr("popouts.bluetooth-popup.text.bluetooth-is-off", "Bluetooth is off")
             color: NacreTokens.mutedInk
         }
         NacreText {

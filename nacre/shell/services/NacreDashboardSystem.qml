@@ -88,7 +88,7 @@ Singleton {
                         root.disks = data.disks || [];
                     }
                 } catch (error) {
-                    root.message = "System details unavailable";
+                    root.message = NacreI18n.tr("ui.dashboard-system.message.system-details-unavailable", "System details unavailable");
                 }
             }
         }

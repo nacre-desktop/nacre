@@ -10,7 +10,7 @@ Singleton {
     property int counter: 0
     readonly property var recent: parked.filter(model => meaningful(model)).map(model => ({
                 model: model,
-                title: model.title || "Draft",
+                title: model.title || NacreI18n.tr("ui.ai-views.title.draft", "Draft"),
                 threadId: model.threadId,
                 busy: model.busy
             }))

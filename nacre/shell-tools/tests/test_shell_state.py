@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Actual root routing, IPC helpers, compatibility maps and shortcut methods."""
 
 import os
@@ -97,6 +99,7 @@ class ShellStateTests(unittest.TestCase):
             shutil.copy2(
                 ROOT / "tests/state-qml/tst_state.qml", target / "tst_state.qml"
             )
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

@@ -123,7 +123,7 @@ Singleton {
                     root.hardware = data;
                     root.error = "";
                 } catch (failure) {
-                    root.error = "Could not read display light devices.";
+                    root.error = NacreI18n.tr("ui.brightness.error.could-not-read-display-light-devices", "Could not read display light devices.");
                 }
             }
         }

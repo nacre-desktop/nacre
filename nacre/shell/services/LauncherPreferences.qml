@@ -39,7 +39,7 @@ Singleton {
                 return;
             }
             if (!Array.isArray(data.favorites ?? []) || !Array.isArray(data.hidden ?? [])) {
-                error = "Invalid launcher preferences; original file preserved";
+                error = NacreI18n.tr("ui.launcher-preferences.error.invalid-launcher-preferences-original-file-preserved", "Invalid launcher preferences; original file preserved");
                 return;
             }
             if (JSON.stringify(favorites) !== JSON.stringify(data.favorites ?? []))
@@ -56,7 +56,7 @@ Singleton {
 
             error = "";
         } catch (e) {
-            error = "Could not read launcher preferences";
+            error = NacreI18n.tr("ui.launcher-preferences.error.could-not-read-launcher-preferences", "Could not read launcher preferences");
         }
     }
 

@@ -2,6 +2,7 @@
 """Read-only lock widgets and an allowlist of media actions. No authentication data."""
 
 import argparse
+from nacre_i18n import tr
 import fcntl
 import html
 import json
@@ -37,7 +38,9 @@ def ipc(target, action):
         timeout=2,
     )
     if result.returncode:
-        raise RuntimeError("Desktop data unavailable")
+        raise RuntimeError(
+            tr("helper.lock-info.desktop-data-unavailable", "Desktop data unavailable")
+        )
     return result.stdout
 
 
@@ -128,7 +131,10 @@ def label(kind, data, settings):
             return ""
         m = data.get("media")
         if not m:
-            return "<b>Media</b>\n\nNothing playing"
+            return tr(
+                "helper.lock-info.b-media-b-nothing-playing",
+                "<b>Media</b>\n\nNothing playing",
+            )
         return (
             "<b>"
             + plain(m.get("title") or "Untitled track")
@@ -210,15 +216,27 @@ def artwork(data):
         elif parsed.scheme == "https":
             with urllib.request.urlopen(url, timeout=4) as response:
                 if urllib.parse.urlparse(response.url).scheme != "https":
-                    raise ValueError("Unsupported artwork redirect")
+                    raise ValueError(
+                        tr(
+                            "helper.lock-info.unsupported-artwork-redirect",
+                            "Unsupported artwork redirect",
+                        )
+                    )
                 raw = response.read(4000001)
         else:
-            raise ValueError("No artwork")
+            raise ValueError(tr("helper.lock-info.no-artwork", "No artwork"))
         if len(raw) > 4000000:
-            raise ValueError("Artwork too large")
+            raise ValueError(
+                tr("helper.lock-info.artwork-too-large", "Artwork too large")
+            )
         with Image.open(io.BytesIO(raw)) as picture:
             if picture.width * picture.height > 20000000:
-                raise ValueError("Artwork dimensions too large")
+                raise ValueError(
+                    tr(
+                        "helper.lock-info.artwork-dimensions-too-large",
+                        "Artwork dimensions too large",
+                    )
+                )
             picture.thumbnail((512, 512))
             temporary = output.with_suffix(".next")
             picture.convert("RGBA").save(temporary, format="PNG")

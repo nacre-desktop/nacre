@@ -2,6 +2,7 @@
 """Visible-only disk/process snapshot and identity-checked explicit termination."""
 
 import json
+from nacre_i18n import tr
 import os
 from pathlib import Path
 import signal
@@ -65,7 +66,12 @@ def snapshot(proc=Path("/proc")):
 def terminate(pid, start, proc=Path("/proc")):
     item = process_info(pid, proc)
     if not item or item["start"] != str(start) or item["uid"] != os.getuid():
-        raise ValueError("Process changed; refresh before ending it")
+        raise ValueError(
+            tr(
+                "helper.dashboard-system.process-changed-refresh-before-ending-it",
+                "Process changed; refresh before ending it",
+            )
+        )
     ancestors = {os.getpid()}
     parent = os.getppid()
     for _ in range(20):
@@ -75,14 +81,21 @@ def terminate(pid, start, proc=Path("/proc")):
             break
         parent = info["parent"]
     if pid <= 1 or pid in ancestors:
-        raise ValueError("Cannot end the dashboard or its session")
+        raise ValueError(
+            tr(
+                "helper.dashboard-system.cannot-end-the-dashboard-or-its-session",
+                "Cannot end the dashboard or its session",
+            )
+        )
     # Recheck identity immediately before signaling; Linux may recycle PIDs.
     # pidfd binds the request to the exact process even if it exits concurrently.
     descriptor = os.pidfd_open(pid)
     try:
         current = process_info(pid, proc)
         if not current or current["start"] != str(start):
-            raise ValueError("Process changed")
+            raise ValueError(
+                tr("helper.dashboard-system.process-changed", "Process changed")
+            )
         signal.pidfd_send_signal(descriptor, signal.SIGTERM)
     finally:
         os.close(descriptor)
@@ -92,7 +105,9 @@ if __name__ == "__main__":
     try:
         if len(sys.argv) > 1:
             if sys.argv[1] != "end":
-                raise ValueError("Unknown action")
+                raise ValueError(
+                    tr("helper.dashboard-system.unknown-action", "Unknown action")
+                )
             terminate(int(sys.argv[2]), sys.argv[3])
         print(json.dumps(snapshot()))
     except (OSError, ValueError, KeyError, TypeError, IndexError) as error:

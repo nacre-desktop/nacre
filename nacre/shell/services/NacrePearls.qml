@@ -111,7 +111,7 @@ Singleton {
     }
     function restoreLayout(value) {
         if (value.error) {
-            error = "Panel layout could not be restored; existing file preserved";
+            error = NacreI18n.tr("ui.pearls.error.panel-layout-could-not-be-restored-existing-file-preser", "Panel layout could not be restored; existing file preserved");
             return;
         }
         restoring = true;
@@ -156,7 +156,7 @@ Singleton {
                 try {
                     root.restoreLayout(JSON.parse(text));
                 } catch (e) {
-                    root.error = "Could not read saved panel layout";
+                    root.error = NacreI18n.tr("ui.pearls.error.could-not-read-saved-panel-layout", "Could not read saved panel layout");
                 }
             }
         }
@@ -169,7 +169,7 @@ Singleton {
         onStarted: write(JSON.stringify(value) + "\n")
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0)
-                root.error = "Could not save panel layout";
+                root.error = NacreI18n.tr("ui.pearls.error.could-not-save-panel-layout", "Could not save panel layout");
             root.writeLayout();
         }
     }
@@ -212,12 +212,12 @@ Singleton {
         const entry = entryFactory.createObject(root, {
             key: Date.now().toString(36) + "-" + serial,
             kind: kind,
-            title: "Nacre Pearl " + ({
-                    launcher: "Launcher",
-                    dashboard: "Dashboard",
-                    ai: "AI",
-                    controls: "Controls",
-                    media: "Media"
+            title: NacreI18n.tr("ui.pearls.title.nacre-pearl", "Nacre Pearl ") + ({
+                    launcher: NacreI18n.tr("ui.pearls.title.launcher", "Launcher"),
+                    dashboard: NacreI18n.tr("ui.pearls.title.dashboard", "Dashboard"),
+                    ai: NacreI18n.tr("ui.pearls.title.ai", "AI"),
+                    controls: NacreI18n.tr("ui.pearls.title.controls", "Controls"),
+                    media: NacreI18n.tr("ui.pearls.title.media", "Media")
                 })[kind] + " " + serial,
             origin: origin || NacrePanelState.activeName(),
             initial: initial,
@@ -230,7 +230,7 @@ Singleton {
         });
         if (!win) {
             entries = entries.filter(value => value !== entry);
-            error = "Could not open panel window";
+            error = NacreI18n.tr("ui.pearls.error.could-not-open-panel-window", "Could not open panel window");
             entry.destroy();
             return null;
         }
@@ -321,7 +321,7 @@ Singleton {
         const name = destination || entry.window.screen?.name || entry.origin;
         const view = NacrePanelState.screens[name] || NacrePanelState.getForActive();
         if (!view) {
-            error = "No desktop edge is available";
+            error = NacreI18n.tr("ui.pearls.error.no-desktop-edge-is-available", "No desktop edge is available");
             return;
         }
         const data = entry.window.captureState();
@@ -443,7 +443,7 @@ Singleton {
     }
     function handoffFailed(entry) {
         if (drag?.destination === entry) {
-            error = "Panel could not be positioned; it remains attached";
+            error = NacreI18n.tr("ui.pearls.error.panel-could-not-be-positioned-it-remains-attached", "Panel could not be positioned; it remains attached");
             cancel();
             remove(entry, false);
         }

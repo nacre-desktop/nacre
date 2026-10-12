@@ -58,14 +58,14 @@ NacreWindow {
         NacreText {
             x: 18
             y: 12
-            text: root.channel === "display" ? "Display brightness" : root.channel === "keyboard" ? "Keyboard brightness" : root.channel === "microphone" ? "Microphone" : "Volume"
+            text: root.channel === "display" ? NacreI18n.tr("osd.level-notice.text.display-brightness", "Display brightness") : root.channel === "keyboard" ? NacreI18n.tr("osd.level-notice.text.keyboard-brightness", "Keyboard brightness") : root.channel === "microphone" ? NacreI18n.tr("osd.level-notice.text.microphone", "Microphone") : NacreI18n.tr("osd.level-notice.text.volume", "Volume")
             font.pointSize: 11
         }
         NacreText {
             anchors.right: parent.right
             anchors.rightMargin: 18
             y: 12
-            text: root.muted ? "Muted" : Math.round(root.value * 100) + "%"
+            text: root.muted ? NacreI18n.tr("osd.level-notice.text.muted", "Muted") : Math.round(root.value * 100) + "%"
             font.pointSize: 11
             color: NacreTokens.mutedInk
         }

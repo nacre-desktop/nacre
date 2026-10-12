@@ -35,13 +35,13 @@ Item {
     }
     MonthButton {
         x: 0
-        label: "Previous month"
+        label: NacreI18n.tr("popouts.calendar-popup.label.previous-month", "Previous month")
         icon: "chevron_left"
         onActivated: root.changeMonth(-1)
     }
     MonthButton {
         x: root.width - width
-        label: "Next month"
+        label: NacreI18n.tr("popouts.calendar-popup.label.next-month", "Next month")
         icon: "chevron_right"
         onActivated: root.changeMonth(1)
     }

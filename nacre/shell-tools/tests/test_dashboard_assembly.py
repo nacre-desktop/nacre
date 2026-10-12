@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Production dashboard assembly/navigation with explicitly pending page contracts."""
 
 import os
@@ -77,6 +79,7 @@ class DashboardAssemblyTests(unittest.TestCase):
                 ROOT / "tests/dashboard-qml/tst_dashboard.qml",
                 target / "tst_dashboard.qml",
             )
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

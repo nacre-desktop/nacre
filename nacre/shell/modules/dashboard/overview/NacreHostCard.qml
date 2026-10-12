@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.widgets
 import "overview.js" as Overview
+import qs.services
 
 NacreOverviewCard {
     id: root
@@ -26,7 +27,7 @@ NacreOverviewCard {
         },
         {
             icon: "desktop_windows",
-            text: "Hyprland"
+            text: NacreI18n.tr("overview.host-card.text.hyprland", "Hyprland")
         },
         {
             icon: "timer",
@@ -36,7 +37,9 @@ NacreOverviewCard {
     ].concat(updateCount >= 0 ? [
         {
             icon: "system_update",
-            text: updateCount + " updates",
+            text: NacreI18n.tr("ui.host-card.text.value0-updates", "{value0} updates", {
+                value0: updateCount
+            }),
             action: "updates"
         }
     ] : []).concat(kernel ? [
@@ -109,7 +112,7 @@ NacreOverviewCard {
                     objectName: parent.modelData.action ? "hostAction_" + parent.modelData.action : ""
                     visible: !!parent.modelData.action
                     disabled: !parent.modelData.action
-                    accessibleName: parent.modelData.action === "system" ? "Open System tab" : "Open package updates"
+                    accessibleName: parent.modelData.action === "system" ? NacreI18n.tr("overview.host-card.accessibleName.open-system-tab", "Open System tab") : NacreI18n.tr("overview.host-card.accessibleName.open-package-updates", "Open package updates")
                     function onClicked() {
                         if (parent.modelData.action === "system")
                             root.systemRequested();

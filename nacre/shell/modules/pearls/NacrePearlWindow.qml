@@ -178,7 +178,7 @@ FloatingWindow {
     function geometry(callback) {
         if (worker.running) {
             callback({
-                error: "Window operation in progress"
+                error: NacreI18n.tr("pearls.pearl-window.error.window-operation-in-progress", "Window operation in progress")
             });
             return;
         }
@@ -210,7 +210,7 @@ FloatingWindow {
                 try {
                     const value = JSON.parse(text);
                     if (value.error)
-                        root.error = "Could not position this window. You can still move it normally.";
+                        root.error = NacreI18n.tr("pearls.pearl-window.error.could-not-position-this-window-you-can-still-move-it-no", "Could not position this window. You can still move it normally.");
                     else {
                         root.clientAddress = value.address;
                         root.error = "";
@@ -221,7 +221,7 @@ FloatingWindow {
                         callback(value);
                     }
                 } catch (failure) {
-                    root.error = "Could not read window position";
+                    root.error = NacreI18n.tr("pearls.pearl-window.error.could-not-read-window-position", "Could not read window position");
                 }
             }
         }

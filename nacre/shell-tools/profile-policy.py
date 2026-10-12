@@ -1,6 +1,7 @@
 """Validated profile composition. No accounts, vault content or device writes."""
 
 import argparse
+from nacre_i18n import tr
 import copy
 import json
 import importlib.util
@@ -26,21 +27,38 @@ COMPONENTS = {"configs", "apps", "shell", "brain", "ai"}
 
 def validate(value):
     if not isinstance(value, dict) or set(value) - set(DEFAULT):
-        raise ValueError("Unknown profile fields")
+        raise ValueError(
+            tr("helper.profile-policy.unknown-profile-fields", "Unknown profile fields")
+        )
     result = {**copy.deepcopy(DEFAULT), **value}
     if result["version"] != 1 or not re.fullmatch(
         r"[a-z0-9][a-z0-9-]{0,39}", str(result["id"])
     ):
-        raise ValueError("Unsupported profile identity/version")
+        raise ValueError(
+            tr(
+                "helper.profile-policy.unsupported-profile-identity-version",
+                "Unsupported profile identity/version",
+            )
+        )
     count = result["workspaceCount"]
     if type(count) is not int or not 1 <= count <= 10:
-        raise ValueError("Workspace count must be 1–10")
+        raise ValueError(
+            tr(
+                "helper.profile-policy.workspace-count-must-be-1-10",
+                "Workspace count must be 1–10",
+            )
+        )
     if (
         not isinstance(result["components"], list)
         or set(result["components"]) - COMPONENTS
         or len(set(result["components"])) != len(result["components"])
     ):
-        raise ValueError("Invalid optional component list")
+        raise ValueError(
+            tr(
+                "helper.profile-policy.invalid-optional-component-list",
+                "Invalid optional component list",
+            )
+        )
     for name in ("workspaceNames", "workspaceIcons"):
         if (
             not isinstance(result[name], list)
@@ -50,17 +68,37 @@ def validate(value):
                 for v in result[name]
             )
         ):
-            raise ValueError("Invalid workspace labels/icons")
+            raise ValueError(
+                tr(
+                    "helper.profile-policy.invalid-workspace-labels-icons",
+                    "Invalid workspace labels/icons",
+                )
+            )
     for name in ("brainWorkspace", "aiWorkspace"):
         if result[name] is not None and (
             type(result[name]) is not int or not 1 <= result[name] <= count
         ):
-            raise ValueError("Invalid optional app workspace")
+            raise ValueError(
+                tr(
+                    "helper.profile-policy.invalid-optional-app-workspace",
+                    "Invalid optional app workspace",
+                )
+            )
     if type(result["aiFullAccess"]) is not bool:
-        raise ValueError("Invalid assistant permission preference")
+        raise ValueError(
+            tr(
+                "helper.profile-policy.invalid-assistant-permission-preference",
+                "Invalid assistant permission preference",
+            )
+        )
     for name in ("startup", "routes"):
         if not isinstance(result[name], list) or len(result[name]) > 64:
-            raise ValueError("Invalid profile routes/startup list")
+            raise ValueError(
+                tr(
+                    "helper.profile-policy.invalid-profile-routes-startup-list",
+                    "Invalid profile routes/startup list",
+                )
+            )
         for item in result[name]:
             expected = (
                 {"label", "workspace", "argv", "classes"}
@@ -73,7 +111,12 @@ def validate(value):
                 or type(item["workspace"]) is not int
                 or not 1 <= item["workspace"] <= count
             ):
-                raise ValueError("Invalid profile entry")
+                raise ValueError(
+                    tr(
+                        "helper.profile-policy.invalid-profile-entry",
+                        "Invalid profile entry",
+                    )
+                )
             for key in ("label",) if name == "startup" else ("name", "match"):
                 if (
                     not isinstance(item[key], str)
@@ -81,18 +124,33 @@ def validate(value):
                     or len(item[key]) > 200
                     or any(c in item[key] for c in "\x00\n\r")
                 ):
-                    raise ValueError("Invalid profile entry text")
+                    raise ValueError(
+                        tr(
+                            "helper.profile-policy.invalid-profile-entry-text",
+                            "Invalid profile entry text",
+                        )
+                    )
             if name == "startup":
                 if (
                     not isinstance(item["argv"], list)
                     or not 1 <= len(item["argv"]) <= 32
                     or any(not isinstance(v, str) or "\x00" in v for v in item["argv"])
                 ):
-                    raise ValueError("Invalid startup arguments")
+                    raise ValueError(
+                        tr(
+                            "helper.profile-policy.invalid-startup-arguments",
+                            "Invalid startup arguments",
+                        )
+                    )
                 if not isinstance(item["classes"], list) or any(
                     not isinstance(v, str) or len(v) > 200 for v in item["classes"]
                 ):
-                    raise ValueError("Invalid startup class list")
+                    raise ValueError(
+                        tr(
+                            "helper.profile-policy.invalid-startup-class-list",
+                            "Invalid startup class list",
+                        )
+                    )
     return result
 
 

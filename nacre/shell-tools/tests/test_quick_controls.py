@@ -1,3 +1,4 @@
+from qml_source import install_i18n
 from qml_source import install_foundation_interaction
 
 """Real popup controls and navigation, with fake devices to preserve live connections."""
@@ -261,6 +262,7 @@ class QuickControlsTests(unittest.TestCase):
             )
             with (target / "fixtures/qmldir").open("a") as manifest:
                 manifest.write("\nNacreScrollBar 1.0 NacreScrollBar.qml\n")
+            install_i18n(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env=dict(os.environ, QT_QPA_PLATFORM="offscreen"),

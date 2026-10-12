@@ -41,9 +41,9 @@ Item {
     property bool active: true
     property string page: NacrePanelState.settingsPage
     property string query: ""
-    readonly property var pages: Catalog.pages
-    readonly property var current: Catalog.find(page)
-    readonly property var matches: Catalog.search(query)
+    readonly property var pages: Catalog.localize(Catalog.pages, NacreI18n.tr)
+    readonly property var current: Catalog.find(page, NacreI18n.tr)
+    readonly property var matches: Catalog.search(query, NacreI18n.tr)
     readonly property bool narrow: width < 760
     implicitWidth: 1120
     implicitHeight: 740
@@ -86,7 +86,7 @@ Item {
             height: 40
             padding: 10
             text: root.query
-            placeholderText: "Search settings"
+            placeholderText: NacreI18n.tr("settings.settings-view.placeholderText.search-settings", "Search settings")
             onTextEdited: root.query = text
             onAccepted: if (root.matches.length)
                 root.open(root.matches[0].id)
@@ -157,14 +157,16 @@ Item {
             spacing: 20
             NacreText {
                 width: parent.width
-                text: root.query.trim() ? "Search results" : root.current.label
+                text: root.query.trim() ? NacreI18n.tr("settings.settings-view.text.search-results", "Search results") : root.current.label
                 font.pointSize: 21
                 color: NacreTokens.accent
                 wrapMode: Text.Wrap
             }
             NacreText {
                 width: parent.width
-                text: root.query.trim() ? root.matches.length + " matching sections" : root.current.detail
+                text: root.query.trim() ? NacreI18n.tr("ui.settings-view.text.value0-matching-sections", "{value0} matching sections", {
+                    value0: root.matches.length
+                }) : root.current.detail
                 font.pointSize: 11
                 color: NacreTokens.mutedInk
                 wrapMode: Text.Wrap

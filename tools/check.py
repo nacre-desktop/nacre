@@ -12,6 +12,8 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
+# Standalone helpers share the translation runtime during source-tree tooling.
+sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
 RETIRED = (
     "nacre/login/issue",
     "nacre/shell/run.fish",

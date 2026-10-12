@@ -10,37 +10,37 @@ NacreSettingsPage {
             TimezoneSettings.change(kind, value || "");
     }
     NacreSettingsSection {
-        title: TimezoneSettings.status.localTime || "Local time"
-        description: TimezoneSettings.status.timezone || "Reading timezone…"
+        title: TimezoneSettings.status.localTime || NacreI18n.tr("ui.time-page.title.local-time", "Local time")
+        description: TimezoneSettings.status.timezone || NacreI18n.tr("ui.time-page.description.reading-timezone", "Reading timezone…")
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Refresh"
+                text: NacreI18n.tr("ui.time-page.text.refresh", "Refresh")
                 enabled: !TimezoneSettings.busy
                 onClicked: TimezoneSettings.refresh()
             }
             ActionButton {
-                text: TimezoneSettings.status.installed ? "Update location now" : "Set up automatic timezone"
+                text: TimezoneSettings.status.installed ? NacreI18n.tr("ui.time-page.text.update-location-now", "Update location now") : NacreI18n.tr("ui.time-page.text.set-up-automatic-timezone", "Set up automatic timezone")
                 enabled: !TimezoneSettings.busy
                 onClicked: root.change(TimezoneSettings.status.installed ? "update" : "install")
             }
         }
     }
     NacreSettingsSection {
-        title: "Automatic timezone"
-        description: "Uses device location when available, with your confirmed timezone as a fallback. Network location alone never changes the clock."
+        title: NacreI18n.tr("ui.time-page.title.automatic-timezone", "Automatic timezone")
+        description: NacreI18n.tr("ui.time-page.description.uses-device-location-when-available-with-your-confirmed", "Uses device location when available, with your confirmed timezone as a fallback. Network location alone never changes the clock.")
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "On"
+                text: NacreI18n.tr("ui.time-page.text.on", "On")
                 selected: TimezoneSettings.status.automatic === true
                 enabled: !TimezoneSettings.busy && TimezoneSettings.status.installed === true
                 onClicked: root.change("automatic", "on")
             }
             ActionButton {
-                text: "Off"
+                text: NacreI18n.tr("ui.time-page.text.off", "Off")
                 selected: TimezoneSettings.status.automatic !== true
                 enabled: !TimezoneSettings.busy && TimezoneSettings.status.installed === true
                 onClicked: root.change("automatic", "off")
@@ -48,7 +48,9 @@ NacreSettingsPage {
         }
         NacreText {
             width: parent.width
-            text: "Confirmed timezone: " + (TimezoneSettings.status.confirmedTimezone || "Not set")
+            text: NacreI18n.tr("ui.time-page.text.confirmed-timezone-value0", "Confirmed timezone: {value0}", {
+                value0: (TimezoneSettings.status.confirmedTimezone || NacreI18n.tr("ui.time-page.text.not-set", "Not set"))
+            })
             wrapMode: Text.Wrap
         }
         NacreText {
@@ -59,25 +61,25 @@ NacreSettingsPage {
         }
     }
     NacreSettingsSection {
-        title: "Choose a timezone"
-        description: "For example, Europe/Oslo or America/Chicago. Confirming keeps automatic mode; setting manually turns it off."
+        title: NacreI18n.tr("ui.time-page.title.choose-a-timezone", "Choose a timezone")
+        description: NacreI18n.tr("ui.time-page.description.for-example-europe-oslo-or-america-chicago-confirming-k", "For example, Europe/Oslo or America/Chicago. Confirming keeps automatic mode; setting manually turns it off.")
         NacreTextField {
             id: zone
             objectName: "timezoneEntry"
             width: parent.width
             text: TimezoneSettings.status.timezone || ""
-            placeholderText: "Area/City"
+            placeholderText: NacreI18n.tr("ui.time-page.placeholderText.area-city", "Area/City")
         }
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Confirm timezone"
+                text: NacreI18n.tr("ui.time-page.text.confirm-timezone", "Confirm timezone")
                 enabled: !TimezoneSettings.busy && !!zone.text.trim()
                 onClicked: root.change("confirm", zone.text.trim())
             }
             ActionButton {
-                text: "Set manually"
+                text: NacreI18n.tr("ui.time-page.text.set-manually", "Set manually")
                 enabled: !TimezoneSettings.busy && !!zone.text.trim()
                 onClicked: root.change("manual", zone.text.trim())
             }

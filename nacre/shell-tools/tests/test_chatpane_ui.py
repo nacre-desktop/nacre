@@ -1,3 +1,4 @@
+from qml_source import install_i18n
 from qml_source import install_foundation_interaction
 
 """Exercise the production composer with a fixture backend and Qt Quick controls."""
@@ -58,6 +59,7 @@ class ChatPaneUITests(unittest.TestCase):
             install_foundation_interaction(
                 target / "fixtures", ROOT.parent / "shell/widgets"
             )
+            install_i18n(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env=dict(os.environ, QT_QPA_PLATFORM="offscreen"),

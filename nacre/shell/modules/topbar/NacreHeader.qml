@@ -154,7 +154,7 @@ Item {
         BrandLogo {
             compact: true
             NacreInteraction {
-                accessibleName: "Open applications"
+                accessibleName: NacreI18n.tr("topbar.header.accessibleName.open-applications", "Open applications")
                 function onClicked() {
                     NacrePanelState.openMode("apps", "", false);
                 }

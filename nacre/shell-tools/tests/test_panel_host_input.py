@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Actual panel host disables old controls while their closing geometry remains."""
 
 import os
@@ -127,6 +129,7 @@ TestCase {
  }
 }
 """)
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(root), "-o", "-,txt"],
                 capture_output=True,

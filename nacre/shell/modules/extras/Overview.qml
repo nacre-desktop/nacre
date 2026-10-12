@@ -9,7 +9,7 @@ import QtQuick.Controls
 
 SearchSurface {
     id: root
-    title: "Windows"
+    title: NacreI18n.tr("extras.overview.title.windows", "Windows")
     placeholder: "Search windows or applications"
     implicitWidth: 1020
     bodyHeight: Math.min(690, Quickshell.screens[0].height - 230)
@@ -67,7 +67,7 @@ SearchSurface {
                             color: NacreColours.palette.m3primary
                         }
                         NacreText {
-                            text: workspace.modelData + " · " + (NacreBar.workspaceNames[workspace.modelData - 1] ?? "Workspace")
+                            text: workspace.modelData + " · " + (NacreBar.workspaceNames[workspace.modelData - 1] ?? NacreI18n.tr("extras.overview.text.workspace", "Workspace"))
                             color: NacreColours.palette.m3primary
                         }
                     }
@@ -176,7 +176,7 @@ SearchSurface {
                     NacreText {
                         anchors.centerIn: tiles
                         visible: workspace.windows.length === 0
-                        text: "Empty"
+                        text: NacreI18n.tr("extras.overview.text.empty", "Empty")
                         color: NacreColours.palette.m3onSurfaceVariant
                         font.pointSize: 11
                     }
@@ -211,7 +211,7 @@ SearchSurface {
         Drag.hotSpot.y: 30
         NacreText {
             anchors.centerIn: parent
-            text: "Move window"
+            text: NacreI18n.tr("extras.overview.text.move-window", "Move window")
             color: NacreColours.palette.m3onPrimaryContainer
         }
     }

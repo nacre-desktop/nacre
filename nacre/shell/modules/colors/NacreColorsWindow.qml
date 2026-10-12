@@ -6,7 +6,7 @@ import qs.services
 
 FloatingWindow {
     id: root
-    title: "Nacre Colors"
+    title: NacreColorsApp.windowTitle
     readonly property var view: content.item
     visible: NacreColorsApp.visible
     minimumSize: Qt.size(760, 560)
@@ -31,20 +31,23 @@ FloatingWindow {
     onClosed: NacreColorsApp.close()
     NacreAppHeader {
         id: header
-        title: "Nacre Colors"
+        title: NacreColorsApp.windowTitle
         app: "colors"
         width: parent.width
         tabs: [
             {
                 id: "studio",
+                nameId: "ui.nacrecolorswindow.name.studio",
                 name: "Studio"
             },
             {
                 id: "compare",
+                nameId: "ui.nacrecolorswindow.name.compare",
                 name: "Compare"
             },
             {
                 id: "accessibility",
+                nameId: "ui.nacrecolorswindow.name.accessibility",
                 name: "Accessibility"
             }
         ]
