@@ -7,6 +7,12 @@
 - Decision: split package base (`nacre`, optional `nacre-ai`, `nacre-brain`), shared code/native artifacts owned by pacman; per-user setup uses configuration preflight and release snapshots without starting a desktop before login.
 - Existing source/live deployment remains supported.
 
+- Implemented package runtime file/link planning, terminal setup and offline release transaction with failure rollback.
+- Added 8 setup regressions covering conflicts, rollback, repeated setup, keyboard/palette preservation and unavailable optional packages.
+- Tools suite: 80 tests passed; changed Python files pass Ruff format/lint.
+- Stock Arch chroot created using official mirror and separate cache. Orient candidate f96fecd builds there (57 tests + wheel smoke); namcap has one entry-point parser warning, no errors.
+- Added package build/staging/recipe generation and installation/AUR maintainer documentation.
+
 ## Next
 
 - Implement mapping, package staging/build, terminal setup and regression tests.
@@ -21,4 +27,4 @@
 
 ## Validation
 
-No package build or fresh-user test performed yet. AUR publication explicitly excluded.
+Orient dependency built in clean chroot. Nacre package build and fresh-user verification remain pending. Local full CI cannot use Xvfb (not installed); complete native checks will run inside package chroot. AUR publication explicitly excluded.
