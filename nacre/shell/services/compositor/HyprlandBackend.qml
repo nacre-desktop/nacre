@@ -12,10 +12,11 @@ Singleton {
     readonly property string backendName: "hyprland"
     readonly property var capabilities: ({
             globalWorkspaces: true,
-            dynamicWorkspaces: false,
+            stableWorkspaceIndices: true,
+            perOutputWorkspaces: false,
             scrollingLayout: false,
             floatingPlacement: true,
-            pinWindows: true,
+            pinWindow: true,
             windowCapture: true
         })
     property var clients: []
@@ -160,6 +161,7 @@ Singleton {
     }
     Process {
         id: reloadConfig
+        objectName: "compositorConfigurationReload"
         command: ["hyprctl", "reload"]
     }
     function hideWindowCommand(id) {
