@@ -320,3 +320,182 @@ destruction, view state restoration without Apply, changing video without
 reopening, muted first frames, crossfade/reverse navigation and expired poster
 slots. No layout, colors, visible strings or private preferences change.
 
+
+### Matched panel matrix
+
+The controlled baseline is `fa37a28`; the candidate is that same immutable source
+copy plus the performance QML changes from `9e29f43`. Unrelated subsequent main
+changes (Orient pin, pointer/focus and shell-hide behavior) are held constant in
+this pair. All performance QML files were hash-checked against the final code;
+final source/native checks additionally run on current main with Orient dev5.
+Quickshell 0.3.2, Qt 6.12, Hyprland 0.56.2 and Python 3.14 were used.
+
+Both processes use a disposable HOME and explicit private config/cache/state/data
+homes, a writable private mode-0700 runtime directory and private D-Bus session.
+XDG_DATA_DIRS lists only public system directories. The fixtures are generated
+3840×2160 PNGs, a 1920×1080 H.264/24 fps clip, 48 demo desktop entries and 12 demo
+favorites with local 128×128 PNG icons. Shell-owned checks verified actual IDs,
+12 visible favorites and ready icon images; no personal catalog was copied.
+On-disk caches are warm for both processes. Initial captures with an inherited
+XDG data path and absent favorites were discarded and superseded.
+
+A headless labwc GLES2 parent supports nested Hyprland with an explicitly created
+1920×1080 headless output, scale 1. Production session configuration/window rules
+are not inherited. PipeWire and hardware behavior are outside this lab. Each
+surface is opened for two seconds, sampled for two seconds at 250 ms intervals,
+closed and allowed six seconds to settle, then sampled again. Rows are sequential,
+so later rows include earlier activity. Values are shell median **RSS / PSS / USS**,
+in MiB; the companion JSON retains distributions. These short endpoint captures
+are not five-minute idle-CPU measurements or measurements of unmapped GPU memory.
+
+| Scenario | Before RSS / PSS / USS | After RSS / PSS / USS |
+| --- | ---: | ---: |
+| Fresh start; nothing opened | 292.9 / 211.7 / 194.7 | 291.1 / 215.1 / 194.9 |
+| Launcher closed | 325.8 / 241.4 / 225.0 | 325.0 / 244.9 / 227.2 |
+| Today closed | 334.0 / 252.2 / 233.7 | 340.6 / 260.5 / 242.5 |
+| Weather closed | 335.8 / 255.1 / 235.2 | 344.6 / 266.9 / 246.2 |
+| Media closed | 334.6 / 251.9 / 233.5 | 344.9 / 263.6 / 245.9 |
+| System closed | 335.7 / 255.6 / 234.5 | 342.4 / 264.8 / 244.3 |
+| Focus closed | 335.6 / 252.1 / 234.3 | 342.2 / 261.0 / 243.6 |
+| Settings closed | 348.6 / 262.9 / 244.6 | 357.7 / 274.7 / 257.3 |
+| Colors closed | 377.9 / 294.8 / 273.4 | 382.8 / 301.8 / 280.8 |
+| Welcome closed on first tour page | 448.1 / 360.5 / 341.2 | 400.4 / 317.6 / 296.5 |
+| Wallpaper picker closed | 447.4 / 361.1 / 341.4 | 393.3 / 311.1 / 290.0 |
+| AI sidebar closed; whole cycle | 446.7 / 359.0 / 340.8 | 387.9 / 305.7 / 284.6 |
+
+Whole-cycle PSS falls **53.3 MiB (14.8%)**, USS 56.2 MiB and RSS 58.8 MiB in
+this matched capture. The largest useful change is avoiding four full-screen
+Welcome posters before their color-demo page is visible. Four 1920×1080 32-bit
+pixel buffers alone would be 31.6 MiB; that is an allocation estimate, not a
+separate heap measurement. The demo retains the existing full-size preload and
+transition behavior when shown. A real floating-window regression test verifies
+zero preloads on welcome/help, four on colors, and zero when inactive.
+
+This is one paired capture, not a statistical confidence interval. Small row
+changes and exact totals vary with shared-page apportionment, allocator high-water
+marks and renderer activity. Earlier experiments showed that object unloading
+alone gave only modest static savings. Fresh memory is not substantially reduced;
+the former ~555 MiB RSS observation had different warming/output conditions and
+must not be presented as a direct before value for this matrix.
+
+### Static, video and output cost
+
+The first table continues the full panel cycle: select the second still, wait for
+paired presentation readiness, compare two seconds after transition and after
+six idle seconds, add/remove a second identical output, play the generated clip,
+then return to the first still. Endpoints are three-second 250 ms captures.
+Both video decoders reported playing, first-frame readiness, no error and audio
+disabled. Returning to static destroys the decoder item; it does not force the
+platform's libraries or allocation pools to leave RSS.
+
+| Scenario | Before RSS / PSS / USS | After RSS / PSS / USS |
+| --- | ---: | ---: |
+| Static, one output after panel cycle | 464.0 / 378.9 / 357.4 | 398.7 / 315.9 / 294.9 |
+| Second still, two seconds after transition | 463.3 / 378.3 / 356.7 | 401.9 / 320.5 / 299.5 |
+| Second still, after idle trim | 458.5 / 374.6 / 353.1 | 401.9 / 320.5 / 299.5 |
+| Static, two outputs | 498.9 / 412.7 / 391.1 | 443.9 / 360.2 / 339.1 |
+| 1080p video, one output | 645.1 / 542.9 / 514.6 | 596.3 / 497.0 / 465.5 |
+| Static again after video and idle trim | 624.3 / 522.7 / 494.3 | 563.3 / 460.5 / 432.3 |
+
+A separate matched restart sequence warms Settings, Colors and Welcome, then
+measures one video output and adds a second. This isolates the output increment;
+its absolute totals should not be mixed with the preceding cumulative table.
+
+| Video output sequence | Before RSS / PSS / USS | After RSS / PSS / USS |
+| --- | ---: | ---: |
+| One output | 640.4 / 542.9 / 511.6 | 572.0 / 474.7 / 443.5 |
+| Two outputs | 762.8 / 663.9 / 632.5 | 687.9 / 589.1 / 557.8 |
+
+The second video output adds 114.4 MiB PSS in the candidate sequence. Each output
+still has its own decoder/rendering resources; sharing decoded video across
+outputs is a larger redesign and was not introduced here. The previous-poster
+state check changes from two resident slots to one after the five-second idle
+period, while current/transition slots and reverse navigation remain verified.
+
+Fresh smaps mapping attribution in this fixture put about 176 MiB PSS in anonymous
+mappings, 12 MiB in mapped display/shared-memory buffers, about 20 MiB in Qt/Mesa
+mappings and 8 MiB in other file-backed mappings. Anonymous memory combines QML,
+C++/image and renderer allocations; smaps cannot assign it to individual objects.
+Fresh static candidates had no Qt Multimedia mapping. Library registration was
+a small cost compared with panel/image warming and video resources.
+
+No shell-owned unbounded thumbnail/icon map was found; app/search arrays track
+the desktop catalog and the ordinary Image/icon source sizes are bounded. Qt's
+shared image cache and native high-water marks are separate from object lifetime
+([Image documentation](https://doc.qt.io/qt-6/qml-qtquick-image.html)). An instrumented
+forced JavaScript collection reclaimed only 2.5 MiB and paused the GUI thread for
+6 ms; forcing hidden-window graphics-cache release reclaimed only 3.6 MiB in its
+separate probe. Neither workaround ships. A heaptrack launch stalled before a
+usable warmed capture, and the QML trace was incomplete on disconnect, so no exact
+native allocation-stack attribution is claimed. PNG/H.264 budgets do not cover
+large animated-GIF frame caches or HDR/4K video.
+
+### Launcher choice and timing breakdown
+
+The native timing boundary is a temporary IPC handler around the actual production
+`NacrePanelState.openMode` call. QML Date.now measures synchronous state/component
+work with 1 ms resolution; it excludes CLI startup, async image readiness, animation
+completion and displayed frames. Separate component/catalog/icon log markers were
+added only to copied benchmark sources. Twenty opens use identical demo catalogs;
+each records 12 entries and at least 12 ready icons. Local PNG icons measure image
+decode/reuse, not every installed icon-theme lookup path.
+
+| Timing boundary | Before median / p95 (ms) | After median / p95 (ms) |
+| --- | ---: | ---: |
+| Synchronous shell open, 19 warmed repetitions | 54.0 / 102.0 | 4.0 / 7.0 |
+| Command IPC, same repetitions | 76.0 / 123.4 | 26.4 / 33.9 |
+| Acknowledged open including readiness IPC, 20 runs | 131.2 / 143.6 | 46.2 / 49.1 |
+
+Initial synchronous construction measured 73 ms before and 59 ms after in the
+native run; no first-open speedup is claimed. After the long closed interval, the
+baseline rebuilt in 60 ms and the kept-warm candidate reopened in
+3 ms. The 20-run acknowledged series includes one first-open outlier
+(116.4 ms after); it is retained in the JSON/max, rather than silently dropped.
+Version 2 uses nearest-rank p95; this corrects the old sampler's off-by-one at
+integer percentile ranks such as 20 samples.
+- Before creation marker: median / p95 53.0 / 89.0 ms, 20 events.
+- Before catalog marker: median / p95 2.0 / 6.0 ms, 83 events.
+- Before icon marker: median / p95 5.0 / 32.0 ms, 493 events.
+- After creation marker: median / p95 57.0 / 57.0 ms, 1 events.
+- After catalog marker: median / p95 2.0 / 6.0 ms, 52 events.
+- After icon marker: median / p95 40.0 / 62.0 ms, 24 events.
+
+Catalog work is a few milliseconds; repeated UI creation dominates the original
+synchronous path. Keeping data alone warm would leave most of that cost. A
+five-second launcher trial reopened quickly inside the window but paid creation
+again after expiry, so it was rejected for the apps mode. The chosen policy keeps
+that small view after first use, adding approximately **5.6 MiB PSS** at the closed
+endpoint of this dedicated profile. This is a noisy process-level estimate, not
+a per-object byte count. There is no startup preloading. Other modes release after
+five seconds, and switching to/from them can still require app-view construction.
+The normal search/selection/prompt reset runs on every open; backend ownership,
+settings, focus visibility and palette publication are unchanged.
+
+### Proposed budget and validation
+
+Use PSS as the main resident-memory budget and USS as a private-memory cross-check.
+For 1920×1080, scale 1, the initial **shell-process** ceilings are:
+
+| State | PSS budget (MiB) |
+| --- | ---: |
+| Fresh static, one output | 250 |
+| Closed panels after ordinary static use, one output | 350 |
+| Static after video use, one output | 500 |
+| Active 1080p H.264 video, one output | 550 |
+| Active 1080p H.264 video, two outputs | 650 |
+
+Allow about 50 MiB additional static PSS per equivalent output and reserve up to
+10 MiB per warmed apps view. In this lab shell descendants add about 45 MiB PSS;
+account for helpers separately, and do not call the aggregate a whole-desktop
+budget. These are proposed regression ceilings, not portable hard limits or GPU
+budgets. Higher pixel counts, codec reference frames, scale factors, real hardware
+and user catalog/history sizes need separate calibration. Track post-use plateaus
+and repeated growth as well as peaks; unloading need not return native pools
+immediately ([Qt memory management](https://doc.qt.io/qt-6/qtqml-javascript-memory.html)).
+
+The complete source/native gate covers Python lint/format, QML/JS parsing/format,
+shell/Lua/compositor integrity, unit suites and real Qt/Quickshell lifecycle,
+state-restoration, preload, muted-video and transition tests. CI uses the pinned
+engine. The benchmark source hash evidence and distributions are summarized in
+[performance-memory-results.json](performance-memory-results.json). Performance
+work changes no visible strings, geometry, AI permissions or live user settings.

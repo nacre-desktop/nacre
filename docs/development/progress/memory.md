@@ -2,33 +2,37 @@
 
 ## Done
 
-- Final branch `perf/shell-memory-budget`, isolated worktree, rebased on merged
-  main `fa37a28` (helper/compositor/hardware work included). Normal push guard
-  passes; no hook or history changes. Earlier `perf/shell-memory` is a checkpoint.
-- Added tested rollup PSS/USS/SwapPss accounting and sample coverage; retained
-  merged performance tests/documentation during the add/add rebase.
-- Five-second launcher reuse, floating-app content unloading with saved view
-  state, old-poster idle trimming, and lazy video file loading implemented.
-- Floating window identity/geometry and backend ownership stay intact. Search
-  IPC remains safe after content release. No visual/private preference changes.
-- Full local `tools/check.py` passes 621 tests plus lint/format/native checks.
-- An isolation audit found inherited XDG_DATA_HOME made demo favorites absent.
-  No live preferences were changed. Superseded captures are retained privately;
-  public draft tables explicitly marked superseded until corrected runs finish.
-- Now explicitly set private XDG_DATA_HOME and public system XDG_DATA_DIRS.
-  Shell-owned fixtureCheck verified 48 demo IDs and 12 visible favorites.
-  Corrected before/after panel/static/video/output matrix running.
+- Isolated `perf/shell-memory-budget`; rebased on main `4ee5346`, preserving
+  compositor/focus/shell-hide work. No live deployment or private preference edits.
+- PSS/USS/SwapPss, unknown-rollup coverage, PID identity recheck and nearest-rank
+  percentiles added to tools/performance.py, with regression tests.
+- Settings/Colors/Welcome content and non-app launcher modes unload after five
+  seconds; window identity/geometry and view state survive. App launcher is kept
+  warm after its first use; search/selection/prompt reset still runs on open.
+- Previous poster trims after five seconds. Video files load on demand. Welcome
+  preloads four output-sized stills only on its visible colors tour page.
+- Native tests cover lifetimes, state, real Welcome preload model, muted video,
+  crossfade/reverse navigation and warm mode switching. Local full gate passes
+  624 tests plus lint/format/native/parser checks; CI passed on the source head.
+- Final matched measurements and sanitized JSON documented in performance.md:
+  closed full cycle RSS/PSS/USS 446.7/359.0/340.8 -> 387.9/305.7/284.6 MiB.
+  Apps synchronous warmed open ~54 -> 4 ms, after long idle 60 -> 3 ms; warm
+  retained cost ~5.6 MiB PSS in the dedicated profile. First creation still costs.
+- Static/video and one/two-output comparisons complete. Two active 1080p video
+  outputs add ~114 MiB PSS in the candidate video-output sequence. Budget proposed.
+- Captures with inherited XDG data paths were discarded. The final fixture is
+  fully explicit, with 48 actual demo IDs, 12 favorites and ready local icons.
+  Diagnostic GC/cache-release probes were small and are not shipped.
 
 ## Next
 
-- Finish final main-based static/video/two-output matrix and valid launcher
-  component/catalog/icon breakdown; profile remaining native allocations.
-- Record final tables and a scoped memory budget in performance.md.
-- Push documentation milestone, create one PR, verify CI, rebase and merge.
+- Push final docs/result milestone and update PR #10 from draft.
+- Verify required CI on final head, check main for new changes, then merge one PR.
+- Stop only task-owned benchmark sessions and save final private handoff/evidence.
 
-## Open questions
+## Open questions / limits
 
-- How much native allocator/renderer memory remains after video destruction?
-- What memory cost does five-second launcher reuse have under a populated catalog?
-
-All raw fixtures/logs are private disposable artifacts; no live deployment.
+- PSS excludes unmapped GPU allocations. Anonymous native allocation stacks remain
+  unclassified; partial tracing is not claimed as evidence.
+- PNG/H.264 budgets need calibration for real output/scale/codec/catalog sizes;
+  large GIF frame caches and 4K/HDR video were not measured.
