@@ -1,14 +1,12 @@
 pragma Singleton
 import QtQuick
 import Quickshell
-import Quickshell.Io
-import Quickshell.Hyprland as Native
 
 Singleton {
     id: root
     // An event-driven geometry lease. No timer or process runs while idle, and no
     // IPC/IO happens inside Hyprland's pointer binding.
-    readonly property string regions: {
+    readonly property var regions: {
         const result = [];
         if (NacrePearls.enabled && DesktopSettings.data.dragPanels !== false && !NacrePanelState.hidden) {
             for (const [name, host] of Object.entries(NacrePanelState.panels)) {
@@ -27,13 +25,12 @@ Singleton {
                         width: panel.width,
                         height: panel.height
                     };
-                    result.push("{x=" + Math.round(rect.x) + ",y=" + Math.round(rect.y) + ",w=" + Math.round(rect.width) + ",h=" + Math.round(rect.height) + "}");
+                    result.push(rect);
                 }
             }
         }
-        return "{" + result.join(",") + "}";
+        return result;
     }
-    property string pending: ""
     onRegionsChanged: {
         // Throttle rather than debounce: an opening animation must not postpone
         // its pointer route until the final frame (and make the first pull miss).
@@ -42,33 +39,17 @@ Singleton {
     }
     Component.onCompleted: delay.restart()
     function publish() {
-        pending = "nacre_panel_pid=" + Quickshell.processId + ";nacre_panel_regions=" + regions;
-        if (!writer.running)
-            writeNext();
-    }
-    function writeNext() {
-        if (!pending)
-            return;
-        writer.value = pending;
-        pending = "";
-        writer.running = true;
+        NacreCompositor.publishPanelRegions(Quickshell.processId, regions);
     }
     Connections {
-        target: Native.Hyprland
-        function onRawEvent(event) {
-            if (event.name === "configreloaded")
-                delay.restart();
+        target: NacreCompositor
+        function onConfigurationReloaded() {
+            delay.restart();
         }
     }
     Timer {
         id: delay
         interval: 16
         onTriggered: root.publish()
-    }
-    Process {
-        id: writer
-        property string value: ""
-        command: ["hyprctl", "eval", value]
-        onExited: root.writeNext()
     }
 }

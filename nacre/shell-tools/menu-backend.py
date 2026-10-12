@@ -20,6 +20,8 @@ from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 import uuid
 
+import compositor
+
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre/menu"
 CACHE = HOME / ".cache/nacre/menu"
@@ -443,7 +445,7 @@ def cancel_reminder(unit):
 
 
 def capture_window():
-    current = json.loads(run(["hyprctl", "activewindow", "-j"], check=True).stdout)
+    current = compositor.query("active_window", timeout=5)
     position = current.get("at", [])
     size = current.get("size", [])
     if (
@@ -629,6 +631,17 @@ def stay_awake():
 
 
 def tool(value):
+    if value == "support-report":
+        from diagnostics import support_report
+
+        subprocess.run(
+            ["wl-copy", "--type", "text/plain;charset=utf-8"],
+            input=support_report(),
+            text=True,
+            check=True,
+            timeout=5,
+        )
+        return "Support report copied"
     if value in ("capture-area", "capture-screen"):
         import screenshot
 

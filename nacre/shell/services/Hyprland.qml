@@ -2,22 +2,21 @@ pragma Singleton
 import Quickshell
 
 Singleton {
-    readonly property var clients: NacreHyprland.clients
-    readonly property var workspaces: NacreHyprland.workspaces
-    readonly property var monitors: NacreHyprland.monitors
-    readonly property var activeClient: NacreHyprland.activeClient
-    readonly property var activeWorkspace: NacreHyprland.activeWorkspace
-    readonly property var focusedMonitor: NacreHyprland.focusedMonitor
-    readonly property int activeWsId: NacreHyprland.activeWsId
-    readonly property point cursorPos: NacreHyprland.cursorPos
-    readonly property var toplevels: NacreHyprland.toplevels
+    readonly property var clients: NacreCompositor.windows
+    readonly property var workspaces: NacreCompositor.workspaces
+    readonly property var monitors: NacreCompositor.monitors
+    readonly property var activeClient: NacreCompositor.activeWindow
+    readonly property var activeWorkspace: NacreCompositor.activeWorkspace
+    readonly property var focusedMonitor: NacreCompositor.focusedMonitor
+    readonly property int activeWsId: NacreCompositor.activeWsId
+    readonly property point cursorPos: NacreCompositor.cursorPos
     function reload() {
-        NacreHyprland.reload();
+        NacreCompositor.refreshState();
     }
     function refreshToplevels() {
-        NacreHyprland.refreshToplevels();
+        NacreCompositor.refreshWindows();
     }
-    function dispatch(request) {
-        return NacreHyprland.dispatch(request);
+    function focusWindow(id) {
+        return NacreCompositor.focusWindow(id);
     }
 }

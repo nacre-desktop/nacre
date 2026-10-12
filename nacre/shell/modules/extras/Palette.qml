@@ -23,7 +23,7 @@ SearchSurface {
         const actions = DesktopActions.list.filter(item => item.launcher !== false && matches(item));
         if (!q)
             return actions;
-        const windows = NacreHyprland.clients.map(c => ({
+        const windows = NacreCompositor.windows.map(c => ({
                     name: c.title,
                     description: "Window · workspace " + c.workspace?.id,
                     icon: "window",
@@ -48,7 +48,7 @@ SearchSurface {
         } else if (e.window) {
             if (!root.detached)
                 visibilities.launcher = false;
-            NacreHyprland.dispatch('hl.dsp.focus({window=' + JSON.stringify('address:' + e.window.address) + '})');
+            NacreCompositor.focusWindow(e.window.windowId);
         } else if (e.action === "brain-query") {
             DesktopExtras.brainQuery = e.value;
             DesktopActions.execute("left");

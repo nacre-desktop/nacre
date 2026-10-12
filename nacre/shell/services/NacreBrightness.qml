@@ -1,8 +1,8 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import qs.widgets
 import Quickshell.Io
-import Quickshell.Hyprland
 
 Singleton {
     id: root
@@ -59,7 +59,7 @@ Singleton {
         return monitors.find(monitor => monitor.modelData === screen || monitor.modelData.name === screen?.name) || null;
     }
     function focused() {
-        const name = NacreHyprland.focusedMonitor?.name;
+        const name = NacreCompositor.focusedMonitor?.name;
         return monitors.find(monitor => monitor.modelData.name === name) || monitors[0] || null;
     }
     function step(direction) {
@@ -134,12 +134,12 @@ Singleton {
             }
         }
     }
-    GlobalShortcut {
+    NacreShortcut {
         appid: "nacre_shell"
         name: "brightnessUp"
         onPressed: root.increaseBrightness()
     }
-    GlobalShortcut {
+    NacreShortcut {
         appid: "nacre_shell"
         name: "brightnessDown"
         onPressed: root.decreaseBrightness()

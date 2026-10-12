@@ -223,14 +223,21 @@ class IndexTests(unittest.TestCase):
                 module, "brain_window", side_effect=[None, {"address": "0x123"}]
             ),
             patch.object(module, "brain_browser_running", return_value=False),
-            patch.object(module, "run", return_value='{"id":2}') as run,
+            patch.object(module, "compositor") as service,
             patch.object(module, "launch") as launch,
         ):
+            service.return_value.query.return_value = {"id": 2}
             module.ensure_brain(focus=False)
             launch.assert_called_once()
-            calls = [c.args[0] for c in run.call_args_list]
-            self.assertTrue(any('workspace="6"' in str(c) for c in calls))
-            self.assertTrue(any("workspace=2" in str(c) for c in calls))
+            service.return_value.fullscreen_state.assert_called_once_with(
+                "0x123", internal=0, client=0, timeout=3
+            )
+            service.return_value.move_window.assert_called_once_with(
+                "0x123", workspace="6", follow=False, timeout=3
+            )
+            service.return_value.switch_workspace.assert_called_once_with(
+                2, current_monitor=True, timeout=3
+            )
 
 
 if __name__ == "__main__":
@@ -300,8 +307,9 @@ class BrainStartupTests(unittest.TestCase):
         ]
         with (
             patch.object(module, "browser_profile_pids", return_value={123}),
-            patch.object(module, "run", return_value=json.dumps(windows)),
+            patch.object(module, "compositor") as service,
         ):
+            service.return_value.query.return_value = windows
             self.assertEqual(module.brain_window()["address"], "0x222")
         with (
             tempfile.TemporaryDirectory() as tmp,
@@ -310,9 +318,10 @@ class BrainStartupTests(unittest.TestCase):
             patch.object(module, "preferred_workspace", return_value=6),
             patch.object(module, "bootstrap_existing_browser"),
             patch.object(module, "browser_profile_pids", return_value={123}),
-            patch.object(module, "run", return_value=json.dumps(windows)),
+            patch.object(module, "compositor") as service,
             patch.object(module, "launch") as launch,
         ):
+            service.return_value.query.return_value = windows
             for _ in range(3):
                 module.ensure_brain()
             launch.assert_not_called()
@@ -326,9 +335,15 @@ class BrainStartupTests(unittest.TestCase):
                 patch.object(module, "preferred_workspace", return_value=6),
                 patch.object(module, "bootstrap_existing_browser"),
                 patch.object(module, "browser_profile_pids", return_value={123}),
-                patch.object(module, "run", return_value=response),
+                patch.object(module, "compositor") as service,
                 patch.object(module, "launch") as launch,
             ):
+                if response in ("", "broken"):
+                    service.return_value.query.side_effect = ValueError(
+                        "Invalid compositor response"
+                    )
+                else:
+                    service.return_value.query.return_value = {}
                 with self.assertRaises(RuntimeError):
                     module.ensure_brain()
                 launch.assert_not_called()
@@ -348,3 +363,17 @@ class BrainStartupTests(unittest.TestCase):
             for _ in range(10):
                 module.ensure_brain(focus=False)
             launch.assert_not_called()
+
+
+class BrainCompositorFailureTests(unittest.TestCase):
+    def test_housekeeping_uses_common_facade_and_keeps_transient_failure_policy(self):
+        with patch.object(module, "compositor") as service:
+            service.return_value.fullscreen_state.side_effect = OSError("offline")
+            self.assertIsNone(
+                module.compositor_action(
+                    "fullscreen_state", "0x123", internal=0, client=0
+                )
+            )
+            service.return_value.fullscreen_state.assert_called_once_with(
+                "0x123", internal=0, client=0, timeout=3
+            )

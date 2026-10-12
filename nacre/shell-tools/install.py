@@ -12,6 +12,8 @@ import subprocess
 import time
 from pathlib import Path
 
+import compositor
+
 HOME = Path.home()
 ROOT = Path(__file__).resolve().parent
 SHELL = ROOT.parent / "shell"
@@ -395,7 +397,7 @@ def deploy(code_only=False):
         check=True,
         capture_output=True,
     )
-    subprocess.run(["hyprctl", "reload"], check=True, capture_output=True)
+    compositor.reload(timeout=None)
     subprocess.run(["python3", str(ROOT / "isolate-apps.py")], check=True)
     subprocess.run(
         ["systemctl", "--user", "restart", "nacre-shell.service"], check=True
@@ -465,7 +467,7 @@ def restore():
         elif e["type"] == "file":
             shutil.copy2(e["backup"], path)
     subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
-    subprocess.run(["hyprctl", "reload"], check=True, capture_output=True)
+    compositor.reload(timeout=None)
     print("Previous configuration restored; restart its shell service or launcher.")
 
 

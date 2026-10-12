@@ -12,6 +12,26 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_doctor_forwards_export_mode_without_an_extra_json_prefix(self):
+        import io
+        import sys
+        from contextlib import redirect_stdout
+
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.object(m, "STATE", Path(folder)),
+            patch.object(m.subprocess, "run") as run,
+        ):
+            for flag in ("--report", "--json"):
+                with (
+                    patch.object(sys, "argv", ["nacre", "doctor", flag]),
+                    redirect_stdout(io.StringIO()) as output,
+                ):
+                    m.main()
+                self.assertEqual(output.getvalue(), "")
+                self.assertEqual(run.call_args.args[0][-2:], ["doctor", flag])
+                self.assertTrue(run.call_args.kwargs["check"])
+
     def test_failed_release_restores_complete_software_and_preserves_account_state(
         self,
     ):
@@ -29,13 +49,45 @@ class ReleaseTests(unittest.TestCase):
                 patch.object(m, "HOME", home),
                 patch.object(m, "STATE", home / "releases"),
                 patch.object(m.subprocess, "run"),
+                patch.object(m, "compositor") as service,
             ):
                 release, record = m.capture(repo, "new")
                 (source / "shell.qml").write_text("broken")
                 self.assertFalse(any(".codex" in e["path"] for e in record["entries"]))
                 m.restore(release, record, force=True)
+                service.return_value.reload.assert_called_once_with()
                 self.assertEqual((source / "shell.qml").read_text(), "before")
                 self.assertEqual(account.read_text(), "fixture never snapshot")
+
+    def test_rollback_loads_backend_before_restoring_a_pre_facade_shell(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            repo = home / "repo"
+            repo.mkdir()
+            shell = home / ".local/share/nacre/shell"
+            shell.mkdir(parents=True)
+            (shell / "old.qml").write_text("old release")
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m, "STATE", home / "releases"),
+                patch.object(m.subprocess, "run"),
+                patch.object(m, "compositor") as service,
+            ):
+                release, record = m.capture(repo, "new")
+                facade = shell / "tools/compositor.py"
+                facade.parent.mkdir()
+                facade.write_text("new facade")
+                desktop = service.return_value
+
+                def load_before_restore():
+                    self.assertTrue(facade.exists())
+                    return desktop
+
+                service.side_effect = load_before_restore
+                m.restore(release, record, force=True)
+                self.assertFalse(facade.exists())
+                service.assert_called_once_with()
+                desktop.reload.assert_called_once_with()
 
     def test_controller_is_part_of_the_snapshot(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -152,12 +204,14 @@ class OrientRuntimeSnapshotTests(unittest.TestCase):
                 patch.object(m, "HOME", home),
                 patch.object(m, "STATE", home / "releases"),
                 patch.object(m.subprocess, "run"),
+                patch.object(m, "compositor") as service,
             ):
                 release, record = m.capture(repo, "orient")
                 entry = next(e for e in record["entries"] if e["path"] == str(runtime))
                 self.assertEqual(entry["kind"], "runtime")
                 (target / "venv/keep").unlink()
                 m.restore(release, record, force=True)
+                service.return_value.reload.assert_called_once_with()
                 self.assertEqual(
                     (runtime / "venv/keep").read_text(), "known-good-engine"
                 )

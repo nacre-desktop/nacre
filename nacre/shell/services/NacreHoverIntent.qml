@@ -38,7 +38,7 @@ Singleton {
         return markedContains("dashboard", point);
     }
     function fullscreenFor(name) {
-        return NacreHyprland.focusedMonitor?.name === name && Number(NacreHyprland.activeClient?.lastIpcObject?.fullscreen) === 2;
+        return NacreCompositor.focusedMonitor?.name === name && Number(NacreCompositor.activeWindow?.fullscreenMode) === 2;
     }
     function canAuto(screen, buttons) {
         return validScreen(screen) && buttons === Qt.NoButton && !fullscreenFor(screen.name);

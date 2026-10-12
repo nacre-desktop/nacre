@@ -4,7 +4,6 @@ import qs.config
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import Quickshell.Hyprland as Native
 import QtQuick
 import QtQuick.Controls
 
@@ -18,23 +17,22 @@ SearchSurface {
     property int previews: 0
     property bool dragging: false
     property string draggedAddress: ""
-    readonly property var windows: NacreHyprland.clients.filter(c => !c.lastIpcObject.hidden && (c.title + " " + c.wmClass).toLowerCase().includes(query.toLowerCase()))
+    readonly property var windows: NacreCompositor.windows.filter(c => !c.hidden && (c.title + " " + c.wmClass).toLowerCase().includes(query.toLowerCase()))
     readonly property var workspaces: [...new Set([1, 2, 3, 4, 5, 6, 7, ...windows.map(c => c.workspace?.id).filter(id => id > 0)])].sort((a, b) => a - b)
     function focusWindow(client) {
         if (client) {
             if (!root.detached)
                 visibilities.launcher = false;
-            NacreHyprland.dispatch('hl.dsp.focus({window=' + JSON.stringify('address:' + client.address) + '})');
+            NacreCompositor.focusWindow(client.windowId);
         }
     }
     function moveWindow(address, workspace) {
-        if (/^0x[0-9a-f]+$/i.test(address))
-            NacreHyprland.dispatch('hl.dsp.window.move({window=' + JSON.stringify('address:' + address) + ',workspace=' + workspace + ',follow=false})');
+        NacreCompositor.moveWindowToWorkspace(address, workspace);
     }
     onChosen: focusWindow(windows[selection])
     onMoved: delta => selection = Math.max(0, Math.min(windows.length - 1, selection + delta))
     onQueryChanged: selection = 0
-    Component.onCompleted: Native.Hyprland.refreshToplevels()
+    Component.onCompleted: NacreCompositor.refreshWindows()
     Flickable {
         id: viewport
         FastScroll {
@@ -82,7 +80,7 @@ SearchSurface {
                         onClicked: {
                             if (!root.detached)
                                 visibilities.launcher = false;
-                            NacreHyprland.dispatch("workspace " + workspace.modelData);
+                            NacreCompositor.switchWorkspace(workspace.modelData);
                         }
                     }
                     GridView {
@@ -100,18 +98,18 @@ SearchSurface {
                             required property var modelData
                             width: tiles.cellWidth - 5
                             height: tiles.cellHeight - 4
-                            readonly property var nativeWindow: Native.Hyprland.toplevels.values.find(t => t.address.replace(/^0x/, "") === modelData.address.replace(/^0x/, ""))
+                            readonly property var captureHandle: modelData.captureHandle
                             NacreSurface {
                                 id: preview
                                 width: tile.width
                                 height: tile.height - 22
                                 radius: 8
-                                color: root.windows[root.selection]?.address === tile.modelData.address ? NacreColours.palette.m3secondaryContainer : NacreColours.palette.m3surfaceContainerHigh
+                                color: root.windows[root.selection]?.windowId === tile.modelData.windowId ? NacreColours.palette.m3secondaryContainer : NacreColours.palette.m3surfaceContainerHigh
                                 ScreencopyView {
                                     id: copy
                                     anchors.centerIn: parent
                                     constraintSize: Qt.size(preview.width - 8, preview.height - 8)
-                                    captureSource: root.visibilities.launcher ? tile.nativeWindow?.wayland ?? null : null
+                                    captureSource: root.visibilities.launcher ? tile.captureHandle ?? null : null
                                     live: false
                                     onHasContentChanged: root.previews += hasContent ? 1 : -1
                                     Component.onDestruction: if (hasContent)
@@ -147,7 +145,7 @@ SearchSurface {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 drag.target: dragProxy
-                                onEntered: root.selection = root.windows.findIndex(c => c.address === tile.modelData.address)
+                                onEntered: root.selection = root.windows.findIndex(c => c.windowId === tile.modelData.windowId)
                                 onPositionChanged: event => {
                                     if (drag.active) {
                                         const p = mapToItem(root, event.x, event.y);
@@ -167,7 +165,7 @@ SearchSurface {
                                     target: mouse.drag
                                     function onActiveChanged() {
                                         if (mouse.drag.active) {
-                                            root.draggedAddress = tile.modelData.address;
+                                            root.draggedAddress = tile.modelData.windowId;
                                             root.dragging = true;
                                         }
                                     }
@@ -187,7 +185,7 @@ SearchSurface {
                         anchors.fill: parent
                         keys: ["nacre-window"]
                         onDropped: drop => {
-                            root.moveWindow(drop.source.address, workspace.modelData);
+                            root.moveWindow(drop.source.windowId, workspace.modelData);
                             drop.acceptProposedAction();
                         }
                     }
@@ -205,7 +203,7 @@ SearchSurface {
         radius: 12
         color: NacreColours.palette.m3primaryContainer
         opacity: .9
-        property string address: root.draggedAddress
+        property string windowId: root.draggedAddress
         Drag.active: root.dragging
         Drag.keys: ["nacre-window"]
         Drag.source: ghost
@@ -224,8 +222,8 @@ SearchSurface {
                 windows: root.windows.length,
                 workspaces: root.workspaces.length,
                 previews: root.previews,
-                matches: Native.Hyprland.toplevels.values.filter(t => root.windows.some(c => c.address.replace(/^0x/, "") === t.address.replace(/^0x/, ""))).length,
-                previewHandles: Native.Hyprland.toplevels.values.filter(t => t.wayland).length
+                matches: root.windows.length,
+                previewHandles: NacreCompositor.windows.filter(t => t.captureHandle).length
             });
         }
         function move(address: string, workspace: int): void {

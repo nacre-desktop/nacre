@@ -1,8 +1,8 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import qs.widgets
 import Quickshell.Io
-import Quickshell.Hyprland
 import Quickshell.Services.Notifications
 import qs.config
 
@@ -220,7 +220,7 @@ Singleton {
         bodyMarkupSupported: false
         onNotification: notification => root.receive(notification)
     }
-    GlobalShortcut {
+    NacreShortcut {
         appid: "nacre_shell"
         name: "clearNotifs"
         onPressed: root.hidePopups()

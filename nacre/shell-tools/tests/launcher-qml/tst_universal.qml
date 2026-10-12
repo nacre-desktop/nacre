@@ -113,6 +113,19 @@ TestCase {
         verify(popup.y >= 8);
         verify(popup.y + popup.height <= value.height - 86);
     }
+    function test_ethernet_only_launcher_radio_action_is_unavailable() {
+        NacreNetwork.wifiAvailable = false;
+        const row = NacreMenu.node("actions.controls.wifi");
+        verify(row.disabled);
+        compare(row.reason, "No Wi-Fi adapter");
+        verify(!NacreMenu.execute(row));
+        compare(AppLaunch.commands.length, 0);
+        // A stale row must also be harmless after hardware disappears.
+        row.disabled = false;
+        NacreMenu.execute(row);
+        compare(AppLaunch.commands.length, 0);
+        NacreNetwork.wifiAvailable = true;
+    }
     function test_controls_can_be_restored_and_show_authoritative_state() {
         const value = view();
         value.hoveredEntry = NacreMenu.apps[0];

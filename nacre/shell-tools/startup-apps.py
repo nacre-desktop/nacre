@@ -2,13 +2,14 @@
 """Idempotent selected-profile startup; ordinary terminals stay unrestricted."""
 
 import fcntl
-import json
 import os
 import subprocess
 import time
 import shutil
 import importlib.util
 from pathlib import Path
+
+import compositor
 
 HOME = Path.home()
 
@@ -57,19 +58,11 @@ def main():
         session = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(session)
         session.readiness()
-        clients = json.loads(subprocess.check_output(["hyprctl", "clients", "-j"]))
+        clients = compositor.query("windows", timeout=None)
         for label, workspace, argv, exists in plan(clients, profile):
             if exists or not shutil.which(argv[0]):
                 continue
-            subprocess.run(
-                [
-                    "hyprctl",
-                    "eval",
-                    f"hl.dispatch(hl.dsp.focus({{workspace={workspace},on_current_monitor=true}}))",
-                ],
-                stdout=subprocess.DEVNULL,
-                check=True,
-            )
+            compositor.switch_workspace(workspace, current_monitor=True, timeout=None)
             subprocess.Popen(
                 ["systemd-run", "--user", "--scope", "--collect", "--quiet", *argv],
                 start_new_session=True,
@@ -79,9 +72,7 @@ def main():
             # Wait for a real window/service acknowledgement; never relaunch a slow app.
             deadline = time.monotonic() + 8
             while time.monotonic() < deadline:
-                current = json.loads(
-                    subprocess.check_output(["hyprctl", "clients", "-j"])
-                )
+                current = compositor.query("windows", timeout=None)
                 if (
                     next(
                         (
@@ -95,15 +86,7 @@ def main():
                 ):
                     break
                 time.sleep(0.2)
-        subprocess.run(
-            [
-                "hyprctl",
-                "eval",
-                "hl.dispatch(hl.dsp.focus({workspace=1,on_current_monitor=true}))",
-            ],
-            check=True,
-            stdout=subprocess.DEVNULL,
-        )
+        compositor.switch_workspace(1, current_monitor=True, timeout=None)
 
 
 if __name__ == "__main__":

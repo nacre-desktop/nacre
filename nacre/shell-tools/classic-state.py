@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Commit one wallpaper palette to the shell, window frame and native choosers."""
 
+import compositor
+
 import fcntl
 import json
 import os
@@ -305,7 +307,14 @@ def render_template(home, name, colors):
     spec = importlib.util.spec_from_file_location("orient_templates", source)
     renderer = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(renderer)
-    return renderer.render_values(here.joinpath(name).read_text(), colors)
+    return renderer.render_values(
+        (
+            compositor.palette_template_path()
+            if name == "compositor-palette"
+            else here.joinpath(name)
+        ).read_text(),
+        colors,
+    )
 
 
 def apply_palette(home, wallpaper=None, live=True):
@@ -681,9 +690,7 @@ def _reload_desktop_consumers(data, icon_theme, lua, live):
                 ],
                 capture_output=True,
             )
-        result = subprocess.run(
-            ["hyprctl", "eval", lua], capture_output=True, text=True
-        )
+        result = compositor.apply_config(lua, check=False, timeout=None)
         if result.returncode:
             print(
                 "Palette saved; live window-border update failed: "
@@ -739,8 +746,8 @@ def _apply_palette(home, wallpaper=None, live=True):
         state / "scheme/current.txt",
         "\n".join(k + " " + v for k, v in colors.items()) + "\n",
     )
-    lua = render_template(home, "hypr-palette.lua.in", colors)
-    atomic_write(home / ".config/nacre/palette.lua", lua)
+    lua = render_template(home, "compositor-palette", colors)
+    atomic_write(compositor.config_path(home, "palette"), lua)
     atomic_write(
         home / ".config/nacre/rofi.rasi",
         render_template(home, "rofi-colors.rasi.in", colors),

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Finite compositor operations scoped to a Nacre-owned pearl window."""
 
+import compositor
+
 import argparse
 import json
 import re
@@ -11,8 +13,8 @@ TITLE = re.compile(r"Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+")
 
 
 def read(kind):
-    return json.loads(
-        subprocess.check_output(["hyprctl", "-j", kind], text=True, timeout=3)
+    return compositor.query(
+        {"clients": "windows", "monitors": "monitors"}[kind], timeout=3
     )
 
 
@@ -29,25 +31,30 @@ def owned(title, pid, clients):
     )
 
 
-def dispatch(method, address, **values):
-    if not re.fullmatch(r"0x[0-9a-fA-F]+", address):
-        raise ValueError("Invalid owned window address")
-    fields = {"window": "address:" + address, **values}
-    params = ",".join(
-        key
-        + "="
-        + (str(value).lower() if isinstance(value, bool) else json.dumps(value))
-        for key, value in fields.items()
-    )
-    expression = (
-        ("hl.dsp.focus" if method == "focus" else "hl.dsp.window." + method)
-        + "({"
-        + params
-        + "})"
-    )
-    subprocess.run(
-        ["hyprctl", "dispatch", expression], check=True, capture_output=True, timeout=3
-    )
+def dispatch(method, window_id, **values):
+    if method == "focus":
+        return compositor.focus_window(window_id, timeout=3)
+    if method == "float":
+        return compositor.float_window(window_id, action=values["action"], timeout=3)
+    if method == "resize":
+        return compositor.resize_window(
+            window_id,
+            values["x"],
+            values["y"],
+            relative=values.get("relative", False),
+            timeout=3,
+        )
+    if method == "move":
+        return compositor.move_window(
+            window_id,
+            x=values["x"],
+            y=values["y"],
+            relative=values.get("relative", False),
+            timeout=3,
+        )
+    if method == "pin":
+        return compositor.pin_window(window_id, timeout=3)
+    raise ValueError("Unsupported pearl action")
 
 
 def main():
@@ -70,7 +77,7 @@ def main():
             time.sleep(0.025)
         if not client:
             raise ValueError("Pearl window not mapped")
-        address = client["address"]
+        address = client.get("windowId", client.get("address"))
         if args.action == "place":
             dispatch("float", address, action="enable")
             if args.width > 0 and args.height > 0:

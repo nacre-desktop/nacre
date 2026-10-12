@@ -386,7 +386,7 @@ Item {
                     color: NacreColours.palette.m3primary
                 }
                 Repeater {
-                    model: NacreHyprland.clients.filter(c => c.wmClass === "nacre-ai-task")
+                    model: NacreCompositor.windows.filter(c => c.wmClass === "nacre-ai-task")
                     ChatCard {
                         required property var modelData
                         label: ChatWindowTitle.titles[modelData.pid] || modelData.title
@@ -394,7 +394,7 @@ Item {
                         onClicked: {
                             root.visibilities.left = false;
                             root.visibilities.leftPinned = false;
-                            NacreHyprland.dispatch('hl.dsp.focus({window=' + JSON.stringify('address:' + modelData.address) + '})');
+                            NacreCompositor.focusWindow(modelData.windowId);
                         }
                     }
                 }

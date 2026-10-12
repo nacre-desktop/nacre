@@ -3,7 +3,6 @@ import QtQuick
 import QtQuick.Window
 import Quickshell
 import Quickshell.Io
-import Quickshell.Hyprland as Native
 import "../modules/pearls/geometry.js" as Geometry
 import qs.modules.pearls as Pearl
 
@@ -59,16 +58,15 @@ Singleton {
             if (destination)
                 dock(entry, destination.screen);
             else {
-                NacreHyprland.refreshToplevels();
+                NacreCompositor.refreshWindows();
                 saveSoon();
             }
         }
     }
     Connections {
-        target: Native.Hyprland
-        function onRawEvent(event) {
-            if (event.name === "custom")
-                root.nativeGesture(event.data);
+        target: NacreCompositor
+        function onPanelGesture(data) {
+            root.nativeGesture(data);
         }
     }
     function saveSoon() {
@@ -452,8 +450,8 @@ Singleton {
             return;
         const kind = view.launcher ? "launcher" : view.dashboard ? "dashboard" : view.osd ? "controls" : view.left ? "ai" : "";
         if (!kind) {
-            const focused = NacreHyprland.activeClient;
-            const entry = entries.find(value => value.title === focused?.title && focused?.lastIpcObject?.pid === Quickshell.processId);
+            const focused = NacreCompositor.activeWindow;
+            const entry = entries.find(value => value.title === focused?.title && focused?.pid === Quickshell.processId);
             if (entry)
                 dock(entry);
             return;

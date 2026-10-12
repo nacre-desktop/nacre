@@ -37,7 +37,7 @@ class DesktopWrappersTests(unittest.TestCase):
                 "NacreBrightness": 'property QtObject device:QtObject {property bool available:true;property real brightness:.8;property string error:"";property var writes:[];signal adjusted();function setBrightness(v){writes=[...writes,v];brightness=v}}function getMonitorForScreen(screen){return device}',
                 "NacreOsd": "property int hideDelay:80",
                 "WallpaperPlayback": "property bool locked:false;property bool sleeping:false;property bool paused:false;property bool batteryPaused:false;property bool pauseCovered:true",
-                "NacreHyprland": 'property var focusedMonitor:({name:"test"});property var monitors:({values:[]});property var clients:[];property int activeWsId:1',
+                "NacreCompositor": 'property var focusedMonitor:({name:"test"});property var monitors:({values:[]});property var windows:[];property int activeWsId:1',
                 "NacrePanelState": "property var screens:({});readonly property var providerViews:Object.values(screens);property bool hidden:false",
                 "AppLaunch": "property var calls:[];function run(command){calls=[...calls,command]}",
                 "NacreWallpapers": 'property string pendingPoster:"";property bool displayDynamic:false;property bool displayAnimated:false;property string displayPath:""',

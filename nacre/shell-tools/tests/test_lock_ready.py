@@ -26,26 +26,18 @@ class LockReadyTests(unittest.TestCase):
         colors = json.loads((ROOT / "reference-style.json").read_text())["colours"]
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder)
-            output = json.dumps(
-                [dict(name="eDP-1", width=2880, height=1800, scale=1.5)]
-            )
-            real_check_output = config.subprocess.check_output
-
-            def fetch(command, **kwargs):
-                return (
-                    output
-                    if command[0] == "hyprctl"
-                    else real_check_output(command, **kwargs)
-                )
-
-            with patch.object(config.subprocess, "check_output", side_effect=fetch):
+            monitors = [dict(name="eDP-1", width=2880, height=1800, scale=1.5)]
+            with patch.object(
+                config.compositor, "query", return_value=monitors
+            ) as query:
                 text = config.prepare_config(
                     colors, "/tmp/wall.jpg", {}, ROOT / "lock-info.py", home
                 )
+            query.assert_called_once_with("monitors", timeout=2)
             self.assertIn("monitor = eDP-1", text)
             self.assertIn("position = -678, -397", text)
             self.assertNotIn("position = -452, -280", text)
-            with patch.object(config.subprocess, "check_output", side_effect=OSError):
+            with patch.object(config.compositor, "query", side_effect=OSError):
                 self.assertEqual(
                     config.prepare_config(
                         colors, "/tmp/wall.jpg", {}, ROOT / "lock-info.py", home

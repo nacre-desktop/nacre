@@ -1,6 +1,7 @@
 """Compatible palette/wallpaper CLI, newly implemented from consumer contracts."""
 
 import argparse
+import importlib
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,19 @@ from .palette import VARIANTS, PERSONALITIES, background_policy, validate
 from .storage import atomic, commit_lock, link, read, roots, write_json
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".tif", ".tiff"}
+
+
+def compositor():
+    """Load the common facade from a source checkout or the installed shell."""
+    for directory in (
+        Path(__file__).resolve().parents[3] / "shell-tools",
+        Path.home() / ".local/share/nacre/shell/tools",
+    ):
+        if (directory / "compositor.py").is_file():
+            if str(directory) not in sys.path:
+                sys.path.insert(0, str(directory))
+            return importlib.import_module("compositor")
+    raise RuntimeError("The Nacre compositor service is not installed")
 
 
 def parser():
@@ -238,11 +252,10 @@ def suitable_images(directory, threshold, no_filter):
     if not 0 < threshold <= 1:
         raise ValueError("Wallpaper size threshold must be above 0 and at most 1")
     try:
-        result = subprocess.run(["hyprctl", "-j", "monitors"], capture_output=True, text=True, timeout=3, check=True)
-        monitors = json.loads(result.stdout)
+        monitors = compositor().query("monitors", timeout=3)
         width = max(m["width"] for m in monitors)
         height = max(m["height"] for m in monitors)
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+    except (OSError, RuntimeError, ValueError, KeyError, subprocess.SubprocessError):
         width, height = 1920, 1080
     valid = []
     for path in paths:

@@ -22,10 +22,10 @@ TestCase {
         WallpaperPlayback.sleeping = false;
         WallpaperPlayback.paused = false;
         WallpaperPlayback.batteryPaused = false;
-        NacreHyprland.focusedMonitor = {
+        NacreCompositor.focusedMonitor = {
             name: "test"
         };
-        NacreHyprland.clients = [];
+        NacreCompositor.windows = [];
         NacrePanelState.screens = ({});
         NacreWallpapers.displayDynamic = false;
         NacreWallpapers.displayAnimated = false;
@@ -108,12 +108,12 @@ TestCase {
         verify(view.shown);
         view.hovered = false;
         tryCompare(view, "shown", false, 200);
-        NacreHyprland.focusedMonitor = {
+        NacreCompositor.focusedMonitor = {
             name: "other"
         };
         NacreBrightness.device.adjusted();
         verify(!view.shown);
-        NacreHyprland.focusedMonitor = {
+        NacreCompositor.focusedMonitor = {
             name: "test"
         };
         NacreKeyboardLight.adjusted();
@@ -208,7 +208,7 @@ TestCase {
         verify(!view.motionAllowed);
         WallpaperPlayback.batteryPaused = false;
         NacrePanelState.screens = ({});
-        NacreHyprland.clients = [
+        NacreCompositor.windows = [
             {
                 workspace: {
                     id: 1
