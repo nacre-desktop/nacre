@@ -32,14 +32,18 @@ jobs:
           PY
       - name: Publish prerelease
         run: |
-          cat > /tmp/release-notes.md <<'EOF'
-          Development preview. Installation and packaging are still being refined.
-
-          See the README for setup instructions, features and user guides. This is
-          a prerelease, not a stable 1.0 release.
-          EOF
+          python - <<'PYTHON'
+          import os, pathlib, re
+          version = os.environ["RELEASE_TAG"].removeprefix("v")
+          changelog = pathlib.Path("CHANGELOG.md").read_text()
+          match = re.search(r"^## " + re.escape(version) + r"\s*\n(.*?)(?=^## |\Z)", changelog, re.M | re.S)
+          if not match or not match.group(1).strip():
+              raise SystemExit("Changelog entry missing for " + version)
+          notes = "Development preview; installation and packaging are still being refined.\n\n" + match.group(1).strip() + "\n"
+          pathlib.Path("/tmp/release-notes.md").write_text(notes)
+          PYTHON
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Release already exists"
+            gh release edit "$RELEASE_TAG" --notes-file /tmp/release-notes.md
           else
             gh release create "$RELEASE_TAG" --verify-tag --prerelease --latest=false --title "$RELEASE_TAG" --notes-file /tmp/release-notes.md
           fi
