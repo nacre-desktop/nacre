@@ -2,8 +2,8 @@
 
 import importlib.util
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -96,7 +96,7 @@ class WindowHideTests(unittest.TestCase):
             def query(name):
                 return (
                     {"id": 3}
-                    if name == "activeworkspace"
+                    if name == "active_workspace"
                     else [
                         client("0xaaa", -99, hide.HIDDEN),
                         client("0xbbb", -99, hide.HIDDEN),
@@ -144,29 +144,38 @@ class WindowHideTests(unittest.TestCase):
             self.assertEqual(hide.records(folder, []), [])
             self.assertFalse(record.exists())
 
-    def test_special_workspace_resolution_and_lua_target_escaping(self):
+    def test_special_workspace_resolution_and_service_target_arguments(self):
         with patch.object(
             hide, "query", return_value=[{"id": -2, "name": "special:notes"}]
         ):
             self.assertEqual(hide.destination(-2), "special:notes")
-        with patch.object(
-            hide.subprocess,
-            "run",
-            return_value=subprocess.CompletedProcess([], 0, stdout="ok\n"),
-        ) as run:
+        with patch.object(hide, "compositor") as service:
+            service.return_value.move_window.return_value = subprocess.CompletedProcess(
+                [], 0, "ok\n"
+            )
             hide.dispatch(
                 "window.move", "0xaaa", workspace='name:quote"\\ø', follow=False
             )
-        expression = run.call_args.args[0][-1]
-        self.assertIn('window="address:0xaaa"', expression)
-        self.assertIn('workspace="name:quote\\"\\\\ø"', expression)
-        self.assertIn("follow=false", expression)
-        with patch.object(
-            hide.subprocess,
-            "run",
-            return_value=subprocess.CompletedProcess(
-                [], 0, stdout="warning: invalid window"
-            ),
-        ):
+        service.return_value.move_window.assert_called_once_with(
+            "0xaaa", workspace='name:quote"\\ø', follow=False, timeout=5
+        )
+        with patch.object(hide, "compositor") as service:
+            service.return_value.focus_window.side_effect = RuntimeError(
+                "invalid window"
+            )
             with self.assertRaises(RuntimeError):
                 hide.dispatch("focus", "0xaaa")
+
+    def test_query_uses_canonical_service_with_bounded_timeout(self):
+        with patch.object(hide, "compositor") as service:
+            service.return_value.query.return_value = {"address": "0x123"}
+            self.assertEqual(hide.query("active_window"), {"address": "0x123"})
+        service.return_value.query.assert_called_once_with(
+            "active_window", timeout=5, max_bytes=4 * 1024 * 1024
+        )
+
+    def test_invalid_address_does_not_reach_the_service(self):
+        with patch.object(hide, "compositor") as service:
+            with self.assertRaises(ValueError):
+                hide.dispatch("focus", "0x123;bad")
+            service.assert_not_called()

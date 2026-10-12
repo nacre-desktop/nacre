@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+compositor() {
+    python3 "$(dirname "$(realpath "$0")")/compositor-compat.py" "$@"
+}
+
 STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/hypr-trash"
 TRASH_WORKSPACE="special:trash"
 TTL_SECONDS=30
@@ -12,46 +16,20 @@ notify() {
     command -v notify-send >/dev/null 2>&1 && notify-send -a "Nacre Windows" -i nacre-notifications -t 2500 "$@" || true
 }
 
-lua_quote() {
-    local value="$1"
-
-    value="${value//\\/\\\\}"
-    value="${value//\"/\\\"}"
-    printf '"%s"' "$value"
-}
-
-window_selector() {
-    printf 'address:%s' "$1"
-}
-
 dispatch_close() {
-    local selector
-
-    selector="$(window_selector "$1")"
-    hyprctl eval "hl.dispatch(hl.dsp.window.close({ window = $(lua_quote "$selector") }))"
+    compositor close-window "address:$1"
 }
 
 dispatch_kill() {
-    local selector
-
-    selector="$(window_selector "$1")"
-    hyprctl eval "hl.dispatch(hl.dsp.window.kill({ window = $(lua_quote "$selector") }))"
+    compositor kill-window "address:$1"
 }
 
 dispatch_move() {
-    local address="$1"
-    local workspace="$2"
-    local selector
-
-    selector="$(window_selector "$address")"
-    hyprctl eval "hl.dispatch(hl.dsp.window.move({ workspace = $(lua_quote "$workspace"), window = $(lua_quote "$selector"), follow = false }))"
+    compositor move-window "$2" "address:$1" false
 }
 
 dispatch_focus() {
-    local selector
-
-    selector="$(window_selector "$1")"
-    hyprctl eval "hl.dispatch(hl.dsp.focus({ window = $(lua_quote "$selector") }))"
+    compositor focus-window "address:$1"
 }
 
 state_file() {
@@ -61,7 +39,7 @@ state_file() {
 client_workspace() {
     local address="$1"
 
-    hyprctl clients -j | jq -r --arg address "$address" '
+    compositor query windows | jq -r --arg address "$address" '
         .[] | select(.address == $address) | .workspace.name
     '
 }
@@ -69,7 +47,7 @@ client_workspace() {
 client_exists() {
     local address="$1"
 
-    hyprctl clients -j | jq -e --arg address "$address" '
+    compositor query windows | jq -e --arg address "$address" '
         any(.[]; .address == $address)
     ' >/dev/null
 }
@@ -190,7 +168,7 @@ trash_active() {
 
     purge_expired
 
-    window_json="$(hyprctl activewindow -j)"
+    window_json="$(compositor query active_window)"
     address="$(jq -r '.address // empty' <<< "$window_json")"
 
     if [[ -z "$address" || "$address" == "null" ]]; then

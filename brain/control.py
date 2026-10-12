@@ -7,6 +7,7 @@ import datetime as dt
 import hashlib
 import json
 import math
+import importlib
 import importlib.util
 import threading
 import os
@@ -109,6 +110,27 @@ THEMES = {
     ),
     "general": ("Mixed knowledge", "#a2b8c4", []),
 }
+
+
+def compositor():
+    """Load the common facade from a source checkout or the installed shell."""
+    for directory in (
+        ROOT.parent / "nacre/shell-tools",
+        Path.home() / ".local/share/nacre/shell/tools",
+    ):
+        if (directory / "compositor.py").is_file():
+            if str(directory) not in sys.path:
+                sys.path.insert(0, str(directory))
+            return importlib.import_module("compositor")
+    raise RuntimeError("The Nacre compositor service is not installed")
+
+
+def compositor_action(name, *args, **options):
+    # Optional window housekeeping had always ignored transient IPC failures.
+    try:
+        return getattr(compositor(), name)(*args, timeout=3, **options)
+    except (OSError, subprocess.SubprocessError):
+        return None
 
 
 def slug(value):
@@ -880,8 +902,8 @@ def brain_window():
     # A failed query is not evidence that the window is absent. In particular,
     # resume/startup may briefly make the compositor unavailable.
     try:
-        clients = json.loads(run(["hyprctl", "clients", "-j"]))
-    except ValueError as exc:
+        clients = compositor().query("windows", timeout=3)
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
         raise RuntimeError("Cannot query Brain windows yet") from exc
     if not isinstance(clients, list):
         raise RuntimeError("Invalid compositor window list")
@@ -957,9 +979,10 @@ def ensure_brain(focus=False):
         if not window:
             if not focus and brain_browser_running():
                 return
-            previous = json.loads(run(["hyprctl", "activeworkspace", "-j"], "{}")).get(
-                "id"
-            )
+            try:
+                previous = compositor().query("active_workspace", timeout=3).get("id")
+            except (OSError, subprocess.SubprocessError):
+                previous = None
             launch(browser_command(STATE / "auth/open.html"))
             for _ in range(100):
                 window = brain_window()
@@ -967,35 +990,18 @@ def ensure_brain(focus=False):
                     break
                 time.sleep(0.1)
             if window and re.fullmatch(r"0x[0-9a-fA-F]+", window["address"]):
-                run(
-                    [
-                        "hyprctl",
-                        "eval",
-                        'hl.dispatch(hl.dsp.window.fullscreen_state({internal=0,client=0,action="set",window="address:'
-                        + window["address"]
-                        + '"}))',
-                    ]
+                compositor_action(
+                    "fullscreen_state", window["address"], internal=0, client=0
                 )
                 if target_workspace is not None:
-                    run(
-                        [
-                            "hyprctl",
-                            "eval",
-                            'hl.dispatch(hl.dsp.window.move({workspace="'
-                            + str(target_workspace)
-                            + '",window="address:'
-                            + window["address"]
-                            + '",follow=false}))',
-                        ]
+                    compositor_action(
+                        "move_window",
+                        window["address"],
+                        workspace=str(target_workspace),
+                        follow=False,
                     )
             if not focus and isinstance(previous, int) and previous > 0:
-                run(
-                    [
-                        "hyprctl",
-                        "eval",
-                        f"hl.dispatch(hl.dsp.focus({{workspace={previous},on_current_monitor=true}}))",
-                    ]
-                )
+                compositor_action("switch_workspace", previous, current_monitor=True)
         if window:
             bootstrap_existing_browser()
         if focus:
@@ -1028,9 +1034,9 @@ def watch_brain():
             # A missing compositor is a session boundary, not a reason to open
             # browser windows outside the desktop session.
             try:
-                if run(["hyprctl", "activeworkspace", "-j"]):
+                if compositor().query("active_workspace", timeout=3):
                     ensure_brain(focus=False)
-            except RuntimeError:
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
                 pass  # Retry next poll, without opening another window.
             time.sleep(3)
 

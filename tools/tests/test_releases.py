@@ -29,11 +29,13 @@ class ReleaseTests(unittest.TestCase):
                 patch.object(m, "HOME", home),
                 patch.object(m, "STATE", home / "releases"),
                 patch.object(m.subprocess, "run"),
+                patch.object(m, "compositor") as service,
             ):
                 release, record = m.capture(repo, "new")
                 (source / "shell.qml").write_text("broken")
                 self.assertFalse(any(".codex" in e["path"] for e in record["entries"]))
                 m.restore(release, record, force=True)
+                service.return_value.reload.assert_called_once_with()
                 self.assertEqual((source / "shell.qml").read_text(), "before")
                 self.assertEqual(account.read_text(), "fixture never snapshot")
 
@@ -152,12 +154,14 @@ class OrientRuntimeSnapshotTests(unittest.TestCase):
                 patch.object(m, "HOME", home),
                 patch.object(m, "STATE", home / "releases"),
                 patch.object(m.subprocess, "run"),
+                patch.object(m, "compositor") as service,
             ):
                 release, record = m.capture(repo, "orient")
                 entry = next(e for e in record["entries"] if e["path"] == str(runtime))
                 self.assertEqual(entry["kind"], "runtime")
                 (target / "venv/keep").unlink()
                 m.restore(release, record, force=True)
+                service.return_value.reload.assert_called_once_with()
                 self.assertEqual(
                     (runtime / "venv/keep").read_text(), "known-good-engine"
                 )
