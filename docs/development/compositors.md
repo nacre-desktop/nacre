@@ -164,3 +164,9 @@ Wayland interfaces. Niri's [gamma-control announcement](https://github.com/niri-
 identifies wlsunset/gammastep compatibility. No replacements are made by this task.
 Legacy helper script names remain compatibility entrypoints that delegate to the
 Python interface; they do not contain native transport or selector logic.
+
+Support diagnostics obtain bounded native version/output/config-error probes and
+required executable names from the backend, retaining the report collector's
+redaction and timeout policy. Panel dragging declares an explicit, modifier-free
+left-button release callback in the neutral contract so release cleanup also runs
+after Super is released. Its Lua extension preserves the native drag lifecycle.

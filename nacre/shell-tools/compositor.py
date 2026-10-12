@@ -64,6 +64,8 @@ for _name in (
     "valid_window_id",
     "window_job_token",
     "version_command",
+    "required_commands",
+    "diagnostic_commands",
     "binding_source_files",
     "capture_bindings",
     "events",

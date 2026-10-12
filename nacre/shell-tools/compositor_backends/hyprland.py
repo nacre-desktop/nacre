@@ -164,6 +164,17 @@ class Backend:
 
     display_name = "Hyprland"
 
+    def required_commands(self):
+        return ("Hyprland", "hyprctl")
+
+    def diagnostic_commands(self):
+        return {
+            "runningVersion": ["hyprctl", "version"],
+            "installedVersion": self.version_command(),
+            "allMonitors": ["hyprctl", "-j", "monitors", "all"],
+            "configErrors": ["hyprctl", "configerrors"],
+        }
+
     def version_command(self):
         return ["Hyprland", "--version"]
 

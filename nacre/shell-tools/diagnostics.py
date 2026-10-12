@@ -1,5 +1,7 @@
 """Bounded, read-only support facts with one recursive export redaction boundary."""
 
+import compositor
+
 import datetime as dt
 import getpass
 import importlib.util
@@ -51,8 +53,7 @@ REQUIRED_PACKAGES = (
     "fontconfig",
 )
 REQUIRED_COMMANDS = (
-    "Hyprland",
-    "hyprctl",
+    *compositor.required_commands(),
     "uwsm",
     "python3",
     "quickshell",
@@ -376,9 +377,12 @@ def collect(root=Path("/sys"), etc=Path("/etc"), proc=Path("/proc"), home=None):
             key, value = line.split("=", 1)
             if key in {"ID", "VERSION_ID", "PRETTY_NAME"}:
                 distro[key] = value.strip('"')
+    compositor_commands = compositor.diagnostic_commands()
     versions = {
-        "compositor": probe(["hyprctl", "version"]),
-        "HyprlandInstalled": probe(["Hyprland", "--version"]),
+        "compositor": probe(compositor_commands["runningVersion"]),
+        compositor.backend_display_name + "Installed": probe(
+            compositor_commands["installedVersion"]
+        ),
         "Quickshell": probe(["quickshell", "--version"]),
         "Qt": probe(
             [shutil.which("qtpaths6") or "/usr/lib/qt6/bin/qtpaths", "--qt-version"]
@@ -394,7 +398,7 @@ def collect(root=Path("/sys"), etc=Path("/etc"), proc=Path("/proc"), home=None):
                 probe(["modinfo", "-F", "version", record["driver"]]).get("value")
                 or platform.release()
             )
-    monitor_probe = probe(["hyprctl", "-j", "monitors", "all"])
+    monitor_probe = probe(compositor_commands["allMonitors"])
     audio_probe = probe(["pw-dump"])
     installed = probe(["pacman", "-Q"])
     packages = {
@@ -447,7 +451,7 @@ def collect(root=Path("/sys"), etc=Path("/etc"), proc=Path("/proc"), home=None):
     shell_log = probe(
         ["quickshell", "log", "--config", "nacre", "--no-color", "--tail", "60"]
     )
-    config = probe(["hyprctl", "configerrors"])
+    config = probe(compositor_commands["configErrors"])
     release_path = home / ".local/state/nacre/releases/current.json"
     try:
         release = json.loads(read(release_path))
@@ -461,7 +465,7 @@ def collect(root=Path("/sys"), etc=Path("/etc"), proc=Path("/proc"), home=None):
             distro=distro,
             kernel=platform.release(),
             architecture=platform.machine(),
-            compositor="Hyprland"
+            compositor=compositor.backend_display_name
             if versions["compositor"]["status"] == "ok"
             else "unavailable",
             versions=versions,
