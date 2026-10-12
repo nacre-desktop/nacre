@@ -138,7 +138,7 @@ def paths(repo):
     return sorted(set(result), key=str)
 
 
-def capture(repo, revision, extra=()):
+def capture(repo, revision, extra=(), package=False):
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     release = STATE / dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     release.mkdir(mode=0o700)
@@ -164,7 +164,8 @@ def capture(repo, revision, extra=()):
         backup = Path(entry["backup"])
         backup.parent.mkdir(parents=True, exist_ok=True)
         if (
-            path.is_symlink()
+            not package
+            and path.is_symlink()
             and path.name in ("shell-runtime", "palette-runtime")
             and path.resolve().is_dir()
         ):
@@ -534,7 +535,7 @@ def deploy_package(repo, profile, keyboard, compositor):
         desired = package_plan(repo, profile)
         extra = desired + [HOME / ".local/state/nacre/package-links.json"]
         revision = package_runtime.metadata(repo)["revision"]
-        release, record = capture(repo, revision, extra)
+        release, record = capture(repo, revision, extra, package=True)
         record.update(deployment="package", compositor=compositor, release=str(release))
         original = configure.selected_profile
         configure.selected_profile = lambda root=repo: profile
