@@ -6,16 +6,16 @@ to detach; a shorter pull returns smoothly. Super reserves the gesture, so it do
 not need the longer distance used by an ordinary pull grip. **Super+Ctrl+D**
 lifts the open panel in place, retaining its dimensions and position.
 
-The floating header has **Dock**, **Pin**, **Maximize/restore** and **Close** at
-its upper right. Drag the header, or use ordinary Super-drag, to move the window.
-Dock returns it to its matching edge. Outside clicks do not close floating panels;
-Escape backs out of a search or dialog. Ordinary tiling and workspace shortcuts
-continue to work.
+Floating panels keep their original content, with no added title strip. Hyprland
+provides the same inactive and focused borders as other windows. Use ordinary
+Super-drag to move, Super+right-drag to resize, and the normal tiling/pinning keys.
+**Super+Ctrl+D** docks the focused panel when no edge panel is open. **Ctrl+W**
+closes its window. Outside clicks do not close floating panels; Escape backs out
+of a search or dialog.
 
 Launcher and dashboard windows have independent navigation, searches and scrolling.
 Their application catalogue, favorites, media and system readings stay shared.
-A launcher stays open after launching by default; its header switches between
-**Stay open** and **Auto close**. Controls use one shared window.
+A launcher stays open after launching by default. Controls use one shared window.
 
 With optional AI enabled, detaching moves the current conversation into its window.
 The sidebar gets a fresh conversation. Selecting a conversation already in a window

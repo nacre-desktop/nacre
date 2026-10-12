@@ -312,14 +312,9 @@ Singleton {
             released: false,
             destination: null
         };
-        const view = NacrePanelState.screens[name];
-        if (view)
-            view.edgeMenu = ({
-                    ai: "left",
-                    controls: "osd",
-                    dashboard: "dashboard",
-                    launcher: "launcher"
-                })[kind];
+        // Hover exits are suspended by the input controller; do not change the
+        // layer's keyboard focus mode while it owns the pointer grab.
+
     }
     function update(point) {
         if (!drag || drag.released)
@@ -369,6 +364,8 @@ Singleton {
             destination: entry
         });
         handoffTimeout.restart();
+        if (entry.window.ready)
+            Qt.callLater(() => handedOff(entry));
     }
     function handoffFailed(entry) {
         if (drag?.destination === entry) {
@@ -417,6 +414,13 @@ Singleton {
         if (!view || !panels)
             return;
         const kind = view.launcher ? "launcher" : view.dashboard ? "dashboard" : view.osd ? "controls" : view.left ? "ai" : "";
+        if (!kind) {
+            const focused = NacreHyprland.activeClient;
+            const entry = entries.find(value => value.title === focused?.title && focused?.lastIpcObject?.pid === Quickshell.processId);
+            if (entry)
+                dock(entry);
+            return;
+        }
         if (kind)
             detach(kind, ({
                     launcher: panels.launcher,
@@ -449,7 +453,9 @@ Singleton {
                 root.remove(entry);
         }
         function gesture(): string {
-            return JSON.stringify(root.lastGesture);
+            return JSON.stringify(Object.assign({}, root.lastGesture, {
+                error: root.error
+            }));
         }
         function state(): string {
             return JSON.stringify(root.entries.map(value => ({

@@ -34,22 +34,22 @@ FloatingWindow {
     readonly property alias providerView: lease
     readonly property alias bodyItem: body
     title: entry.title
-    color: "transparent"
-    implicitWidth: dropPoint?.exact ? dropPoint.width + 2 : ({
+    color: ready ? NacreTokens.body : "transparent"
+    implicitWidth: dropPoint?.exact ? dropPoint.width : ({
             launcher: 1000,
             dashboard: 984,
             ai: 520,
             controls: 440,
             media: 330
         })[entry.kind]
-    implicitHeight: dropPoint?.exact ? dropPoint.height + 42 : ({
+    implicitHeight: dropPoint?.exact ? dropPoint.height : ({
             launcher: 700,
             dashboard: 740,
             ai: 850,
             controls: 840,
             media: 370
         })[entry.kind]
-    minimumSize: dropPoint?.exact ? Qt.size(Math.min(dropPoint.width + 2, 400), Math.min(dropPoint.height + 42, 300)) : entry.kind === "launcher" ? Qt.size(600, 460) : entry.kind === "media" ? Qt.size(260, 280) : Qt.size(400, 400)
+    minimumSize: dropPoint?.exact ? Qt.size(Math.min(dropPoint.width, 400), Math.min(dropPoint.height, 300)) : entry.kind === "launcher" ? Qt.size(600, 460) : entry.kind === "media" ? Qt.size(260, 280) : Qt.size(400, 400)
     // Qt/compositor occlusion stops painting; provider leases gate background work.
     Timer {
         interval: 60
@@ -113,8 +113,8 @@ FloatingWindow {
             y: monitor.y + (monitor.height - height) / 2 + 24
         };
         const position = point?.exact ? {
-            x: point.x - 1,
-            y: point.y - 40
+            x: point.x,
+            y: point.y
         } : Geometry.place(target, {
             width: width,
             height: height
@@ -136,10 +136,10 @@ FloatingWindow {
         if (data?.at && data?.size && data.floating)
             return {
                 exact: true,
-                x: data.at[0] + 1,
-                y: data.at[1] + 40,
-                width: data.size[0] - 2,
-                height: data.size[1] - 42
+                x: data.at[0],
+                y: data.at[1],
+                width: data.size[0],
+                height: data.size[1]
             };
         return dropPoint;
     }
@@ -237,39 +237,15 @@ FloatingWindow {
                 easing.type: Easing.OutCubic
             }
         }
-        Rectangle {
-            anchors.fill: parent
-            radius: 18
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop {
-                    position: 0
-                    color: Qt.alpha(NacreTokens.accent, .65)
-                }
-                GradientStop {
-                    position: .5
-                    color: Qt.alpha(NacreTokens.orientSecondary, .65)
-                }
-                GradientStop {
-                    position: 1
-                    color: Qt.alpha(NacreTokens.accent, .65)
-                }
-            }
+        Shortcut {
+            sequence: "Ctrl+W"
+            context: Qt.WindowShortcut
+            onActivated: NacrePearls.remove(root.entry)
         }
         NacreSurface {
             anchors.fill: parent
-            anchors.margins: 1
-            radius: 17
+            radius: 18
             color: NacreTokens.body
-        }
-        NacrePearlHeader {
-            id: header
-            entry: root.entry
-            window: root
-            width: parent.width
-            onDockRequested: NacrePearls.dock(root.entry)
-            onCloseRequested: NacrePearls.remove(root.entry)
-            onPinRequested: root.pin()
         }
         NacreText {
             anchors.bottom: parent.bottom
@@ -282,10 +258,7 @@ FloatingWindow {
         }
         Loader {
             id: body
-            x: 1
-            y: header.height
-            width: Math.max(0, parent.width - 2)
-            height: Math.max(0, parent.height - y - 2)
+            anchors.fill: parent
             focus: true
             sourceComponent: ({
                     dashboard: dashboard,

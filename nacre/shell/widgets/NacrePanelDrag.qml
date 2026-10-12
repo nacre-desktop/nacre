@@ -15,6 +15,8 @@ Item {
     DragHandler {
         id: gesture
         enabled: NacrePearls.enabled && DesktopSettings.data.dragPanels !== false && root.host.visible && root.host.enabled
+        onEnabledChanged: if (!enabled && NacrePearls.drag?.host === root.host && !NacrePearls.drag.released)
+            NacrePearls.cancel()
         acceptedModifiers: Qt.MetaModifier
         acceptedButtons: Qt.LeftButton
         grabPermissions: PointerHandler.CanTakeOverFromItems
@@ -25,15 +27,23 @@ Item {
                 NacrePearls.begin(root.kind, root.host, root.screen.name, root.globalPoint(point));
                 if (NacrePearls.drag)
                     NacrePearls.update(Qt.point(NacrePearls.drag.start.x + activeTranslation.x, NacrePearls.drag.start.y + activeTranslation.y));
-            } else if (NacrePearls.drag?.host === root.host)
-                NacrePearls.finish();
+            }
         }
         onActiveTranslationChanged: {
             const drag = NacrePearls.drag;
             if (active && drag?.host === root.host)
                 NacrePearls.update(Qt.point(drag.start.x + activeTranslation.x, drag.start.y + activeTranslation.y));
         }
-        onCanceled: if (NacrePearls.drag?.host === root.host)
+        // Losing a grab (e.g. focus/surface changes) is not a mouse release.
+        onGrabChanged: (transition, point) => {
+            if (transition === PointerDevice.UngrabExclusive && NacrePearls.drag?.host === root.host) {
+                if (point.state === EventPoint.Released)
+                    NacrePearls.finish();
+                else if (!NacrePearls.drag.released)
+                    NacrePearls.cancel();
+            }
+        }
+        onCanceled: if (NacrePearls.drag?.host === root.host && !NacrePearls.drag.released)
             NacrePearls.cancel()
     }
 }

@@ -44,6 +44,11 @@ Item {
         const sensor = drag?.sensorBody || drag?.body;
         return drag?.host === item ? Qt.point(sensor.x - screen.x - x, sensor.y - screen.y - y) : position;
     }
+    NacrePeelFilm {
+        anchors.fill: parent
+        host: root
+        z: -1
+    }
     // Keep the actual popup alive during the native-window handoff.
     readonly property var movingPanel: NacrePearls.drag?.screen === screen.name ? NacrePearls.drag.host : null
     Rectangle {

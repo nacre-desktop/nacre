@@ -53,6 +53,10 @@ class PanelHostInputTests(unittest.TestCase):
                     "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
                 )
                 manifest.append("singleton " + name + " 1.0 " + name + ".qml")
+            (fixtures / "NacrePeelFilm.qml").write_text(
+                "import QtQuick\nItem {property var host}"
+            )
+            manifest.append("NacrePeelFilm 1.0 NacrePeelFilm.qml")
             (fixtures / "NacreSurface.qml").write_text("import QtQuick\nRectangle {}")
             manifest.append("NacreSurface 1.0 NacreSurface.qml")
             (fixtures / "NacrePanelDrag.qml").write_text(

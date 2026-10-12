@@ -22,14 +22,20 @@ Elsewhere it dispatches normal Hyprland window movement. Geometry is throttled t
 panel changes (never debounced until an opening animation ends); no subprocess or IPC executes inside the pointer callback.
 
 A Qt DragHandler reserves Super and moves the original live item within its existing
-layer surface. The sensor is a stationary sibling, not a child of the moving panel;
+layer surface. The layer retains its keyboard focus mode while dragging. Hover exit timers pause
+instead of converting a passive panel to an exclusive keyboard grab. Only an
+UngrabExclusive event with EventPoint.Released completes the transaction; canceled
+or disabled grabs return without creating a window. The sensor is a stationary sibling, not a child of the moving panel;
 its press geometry is frozen so translations never feed back through parent movement.
 Opening motion finishes before capturing body dimensions. At handoff the old view is
 suppressed rather than replaying its closing animation at the edge. Its footprint is excluded from the joined frame while lifted. On
 release, an ordinary window is created with the same body dimensions and exact
-logical coordinates; its 40-pixel header extends above the body. The original stays
+logical coordinates, with no added header or body inset. Hyprland owns its normal
+inactive/focused border. The original stays
 painted until placement completes and the destination has had two frame intervals
-to render. There is no screenshot ghost or second miniature panel. This respects
+to render. There is no screenshot ghost or second miniature panel. A finite, input-free
+iridescent film stretches from the frame to the moving panel, thins, and breaks
+by 90 logical pixels. Reduced motion omits it. This respects
 the distinction between Wayland layer-shell and xdg-shell surfaces: their protocol
 roles cannot be changed during a mouse grab. A finite fallback releases the lift if
 placement fails. The deliberate Super gesture needs only 16 logical pixels in any direction.
