@@ -19,6 +19,9 @@ def benchmark(services, tools, count):
         home = root / "home"
         target = root / "services"
         target.mkdir()
+        runtime = home / ".local/share/nacre/palette-runtime/venv/bin/python"
+        runtime.parent.mkdir(parents=True)
+        runtime.symlink_to(sys.executable)
         installed = home / ".local/share/nacre/shell/tools"
         installed.parent.mkdir(parents=True)
         shutil.copytree(

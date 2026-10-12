@@ -11,6 +11,7 @@ import tempfile
 import threading
 import time
 import unittest
+import venv
 from unittest.mock import patch
 
 TOOLS = Path(__file__).parents[1]
@@ -40,6 +41,110 @@ def packets(values, helpers=None):
 
 
 class HelperServiceTests(unittest.TestCase):
+    def test_renderer_worker_uses_managed_palette_interpreter(self):
+        source = (TOOLS.parent / "shell/services/NacreHelpers.qml").read_text()
+        self.assertIn(
+            'command: [Quickshell.env("HOME") + "/.local/share/nacre/palette-runtime/venv/bin/python",',
+            source,
+        )
+
+    def test_media_art_service_matches_cli_with_candidate_runtime_without_pythonpath(
+        self,
+    ):
+        try:
+            import PIL
+        except ImportError:
+            self.skipTest("Pinned Pillow unavailable")
+        candidate = TOOLS.parents[1] / "deps/orient/src"
+        if not (candidate / "orient/engine.py").is_file():
+            self.fail("Initialize the pinned Orient engine before running tests")
+        with tempfile.TemporaryDirectory(prefix="nacre-media-rpc-") as directory:
+            root = Path(directory)
+            home = root / "home"
+            runtime = home / ".local/share/nacre/palette-runtime/venv"
+            venv.EnvBuilder(with_pip=False).create(runtime)
+            python = runtime / "bin/python"
+            # Use the exact candidate engine and installed Pillow through this
+            # isolated environment's site directory, not inherited PYTHONPATH.
+            site = Path(
+                subprocess.check_output(
+                    [
+                        str(python),
+                        "-c",
+                        "import site; print(site.getsitepackages()[0])",
+                    ],
+                    text=True,
+                ).strip()
+            )
+            (site / "candidate-runtime.pth").write_text(
+                str(candidate)
+                + "\n"
+                + str(Path(PIL.__file__).resolve().parent.parent)
+                + "\n"
+            )
+            environment = {
+                **os.environ,
+                "HOME": str(home),
+                "XDG_CONFIG_HOME": str(home / ".config"),
+                "XDG_STATE_HOME": str(home / ".local/state"),
+                "XDG_CACHE_HOME": str(home / ".cache"),
+            }
+            for name in ("PYTHONPATH", "PYTHONHOME", "NACRE_DASHBOARD_TOOLS"):
+                environment.pop(name, None)
+            probe = json.loads(
+                subprocess.check_output(
+                    [
+                        str(python),
+                        "-c",
+                        "import json,orient,PIL;print(json.dumps({'source':orient.__file__,'version':orient.__version__,'pillow':PIL.__version__}))",
+                    ],
+                    env=environment,
+                    text=True,
+                )
+            )
+            self.assertEqual(
+                Path(probe["source"]).resolve(),
+                (candidate / "orient/__init__.py").resolve(),
+            )
+            self.assertEqual(probe["pillow"], PIL.__version__)
+            self.assertIn(
+                '"' + probe["version"] + '"',
+                (candidate / "orient/__init__.py").read_text(),
+            )
+            art = root / "art.ppm"
+            art.write_text("P3\n2 1\n255\n35 90 170 240 170 45\n")
+            metadata = json.dumps(
+                {"lyrics": False, "palette": True, "art": art.as_uri(), "mode": "dark"}
+            )
+            reply = subprocess.run(
+                [str(python), str(TOOLS / "helper-service.py")],
+                input=json.dumps(request(1, "dashboard-media", [metadata])) + "\n",
+                env=environment,
+                text=True,
+                capture_output=True,
+                timeout=20,
+                check=True,
+            )
+            packets = [json.loads(line) for line in reply.stdout.splitlines()]
+            self.assertEqual(packets[0], {"ready": True, "version": 1})
+            self.assertEqual(packets[1]["code"], 0, packets[1])
+            actual = json.loads(packets[1]["output"])
+            self.assertEqual(
+                set(actual["palette"]),
+                {"surface", "onSurface", "primary", "secondary", "tertiary"},
+            )
+            for cache in (home / ".cache/nacre/dashboard-media").glob("*.json"):
+                cache.unlink()
+            cli = subprocess.run(
+                [str(python), str(TOOLS / "dashboard-media.py"), metadata],
+                env=environment,
+                text=True,
+                capture_output=True,
+                timeout=20,
+                check=True,
+            )
+            self.assertEqual(actual, json.loads(cli.stdout))
+
     def test_pending_limit_rejects_excess_work_and_output_is_bounded(self):
         released = threading.Event()
 

@@ -93,7 +93,7 @@ Singleton {
     Process {
         id: server
         objectName: "helperService"
-        command: ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/helper-service.py"]
+        command: [Quickshell.env("HOME") + "/.local/share/nacre/palette-runtime/venv/bin/python", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/helper-service.py"]
         stdinEnabled: true
         running: true
         stdout: SplitParser {

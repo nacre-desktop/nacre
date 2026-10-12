@@ -30,6 +30,9 @@ class HelperTransportTests(unittest.TestCase):
             home = root / "home"
             tools = home / ".local/share/nacre/shell/tools"
             tools.mkdir(parents=True)
+            runtime = home / ".local/share/nacre/palette-runtime/venv/bin/python"
+            runtime.parent.mkdir(parents=True)
+            runtime.symlink_to(sys.executable)
             services = root / "services"
             services.mkdir()
             for name in ("NacreHelpers", "NacreHelperTask"):

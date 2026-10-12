@@ -263,3 +263,12 @@ source is replacing the five helper transport blocks in NacreMenuContext; its
 window dispatch, logout, keybinding sources and menu-backend.py were not changed.
 Remaining launches and first-frame latency require separate work with their
 owners rather than claiming this migration removes every Python process.
+
+### Shared helper runtime
+
+The shared worker runs with Nacre's managed palette interpreter at
+`~/.local/share/nacre/palette-runtime/venv/bin/python`. Media artwork requests
+need its pinned Orient and Pillow packages; the remaining migrated helpers use
+the standard library. A system `python3` can successfully serve other requests
+while failing artwork extraction, so media equivalence tests use a fresh isolated
+runtime with the candidate Orient source and no inherited `PYTHONPATH`.
