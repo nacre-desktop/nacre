@@ -39,6 +39,9 @@ class DesktopSettingsTests(unittest.TestCase):
                 desktop.validate(key, value)
         self.assertEqual(desktop.validate("frameWidth", 0), 0)
         self.assertIs(desktop.validate("frameSheen", False), False)
+        self.assertIs(desktop.validate("workspaceWindowHints", False), False)
+        with self.assertRaises(ValueError):
+            desktop.validate("workspaceWindowHints", "false")
 
     def test_scaled_portrait_display_extends_without_overlap(self):
         monitors = [screen("eDP-1", 2880, 1800, 1.5), screen("DP-1", 2560, 1440, 1, 1)]

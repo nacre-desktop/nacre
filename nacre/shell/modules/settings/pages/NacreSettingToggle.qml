@@ -6,7 +6,8 @@ Item {
     id: root
     property string label: ""
     property string setting: ""
-    readonly property bool checked: DesktopSettings.data[setting] === true
+    property bool defaultChecked: false
+    readonly property bool checked: (DesktopSettings.data[setting] ?? defaultChecked) === true
     implicitHeight: Math.max(34, caption.implicitHeight)
     implicitWidth: 300
     width: parent?.width ?? implicitWidth

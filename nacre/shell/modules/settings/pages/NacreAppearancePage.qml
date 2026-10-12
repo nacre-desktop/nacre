@@ -416,6 +416,15 @@ NacreSettingsPage {
         }
     }
     NacreSettingsSection {
+        title: "Workspace bar"
+        description: "Quiet window symbols beside each pearl. Turn them off for a pearls-only bar."
+        NacreSettingToggle {
+            label: "Show window symbols"
+            setting: "workspaceWindowHints"
+            defaultChecked: true
+        }
+    }
+    NacreSettingsSection {
         title: "Desktop frame"
         NacreSettingToggle {
             label: "Frame sheen"

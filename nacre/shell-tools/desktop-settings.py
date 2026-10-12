@@ -31,6 +31,7 @@ DEFAULTS = dict(
     frameWidth=10,
     frameRounding=25,
     frameSheen=True,
+    workspaceWindowHints=True,
     detachablePanels=True,
     dragPanels=True,
     topEdge=True,

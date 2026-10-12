@@ -6,7 +6,7 @@ const pages = [
         label: "Appearance",
         icon: "palette",
         detail: "Wallpaper, colors and desktop frame",
-        terms: "wallpaper palette colors harmony rotation theme light dark",
+        terms: "wallpaper palette colors harmony rotation theme light dark workspace pearls symbols icons hints",
         kind: "appearance"
     },
     {
