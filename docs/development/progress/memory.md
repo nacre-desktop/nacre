@@ -12,8 +12,12 @@
 - Floating window identity/geometry and backend ownership stay intact. Search
   IPC remains safe after content release. No visual/private preference changes.
 - Full local `tools/check.py` passes 621 tests plus lint/format/native checks.
-- Exploratory matched run: all-panels idle 359.5 -> 342.7 MiB PSS; launcher
-  acknowledged median 64.3 -> 48.0 ms. Final matching main-based runs underway.
+- An isolation audit found inherited XDG_DATA_HOME made demo favorites absent.
+  No live preferences were changed. Superseded captures are retained privately;
+  public draft tables explicitly marked superseded until corrected runs finish.
+- Now explicitly set private XDG_DATA_HOME and public system XDG_DATA_DIRS.
+  Shell-owned fixtureCheck verified 48 demo IDs and 12 visible favorites.
+  Corrected before/after panel/static/video/output matrix running.
 
 ## Next
 

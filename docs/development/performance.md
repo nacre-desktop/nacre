@@ -319,7 +319,12 @@ destruction, view state restoration without Apply, changing video without
 reopening, muted first frames, crossfade/reverse navigation and expired poster
 slots. No layout, colors, visible strings or private preferences change.
 
-### Matched panel matrix
+### Superseded exploratory panel matrix
+
+**Draft checkpoint only:** the table below used an inherited XDG data path and
+had an empty favorites route. It is being replaced by a fully isolated run with
+48 verified demo entries and 12 verified visible favorites. Do not use this table
+as the populated-launcher baseline.
 
 Baseline `fa37a28`, candidate runtime `221a9a3`, Quickshell 0.3.2, Qt 6.12,
 Hyprland 0.56.2. Both source trees are immutable copies and use the same generated
