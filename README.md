@@ -8,11 +8,14 @@ A desktop for Hyprland, built with Quickshell. Pick a wallpaper and Nacre carrie
 its colors through the bar, windows, launcher and apps. Keep the wallpaper's own
 balance, bring a small detail forward with Pop, or choose a softer style.
 
-**Development preview · 0.1.0-dev.1.** Nacre is in its 0.x series while installation
+**Development preview · 0.1.0-dev.2.** Nacre is in its 0.x series while installation
 and packaging settle. The current setup is source-based for an existing compatible
 CachyOS/Arch desktop. A guided installer and video tour will come later.
 
-<!-- Replace this comment with a desktop video once the launch clip is ready. -->
+<p align="center"><img src="assets/screenshots/colors.png" alt="Nacre Colors studio, rendered with a bundled wallpaper and its palette"></p>
+<p align="center"><img src="assets/screenshots/welcome.png" alt="Nacre Welcome wallpaper demo with four bundled scenes"></p>
+
+<!-- Add the desktop video here once the launch clip is ready. -->
 
 ## Your desktop, in its colors
 
@@ -38,8 +41,9 @@ Read the [installation guide](docs/installation.md) for the supported Hyprland,
 Qt and Quickshell versions and required packages, then clone the pinned source:
 
 ```sh
-git clone --recurse-submodules https://github.com/nacre-desktop/nacre.git
+git clone --recurse-submodules --branch v0.1.0-dev.2 https://github.com/nacre-desktop/nacre.git
 cd nacre
+npm ci --ignore-scripts
 ./install.sh --profile default
 ```
 

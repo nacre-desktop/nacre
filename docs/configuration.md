@@ -17,3 +17,7 @@ are user data, outside the source repository. Profile selection never distribute
 or recreates those data. Use a separate test user/accelerated VM to try general
 first-install defaults. Do not run two full Nacre shells simultaneously in one
 session: notifications and palette publication have one owner.
+
+The base keyboard layout is US. First installation reads the system X11 layout
+with `localectl`, then preserves your `~/.config/nacre/keyboard.lua` override on
+updates. Desktop/host overrides load afterwards.

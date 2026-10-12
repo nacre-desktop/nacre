@@ -18,7 +18,11 @@ jobs:
       - name: Install the pinned palette engine in an isolated environment
         run: |
           python -m venv /tmp/check-env
-          /tmp/check-env/bin/pip install ./deps/orient ./nacre/shell-cli ruff==0.16.10
+          python - <<'PY'
+          import json, subprocess
+          pins = json.load(open("dependencies.lock.json"))["python"]
+          subprocess.run(["/tmp/check-env/bin/pip", "install", "./deps/orient", "./nacre/shell-cli", "ruff==0.16.10", *[name + "==" + version for name, version in pins.items()]], check=True)
+          PY
       - name: Install development-only JavaScript formatter
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Source and native UI regression checks

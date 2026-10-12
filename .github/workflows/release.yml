@@ -1,0 +1,45 @@
+name: Publish development preview
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tested development tag
+        required: true
+        type: string
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ inputs.tag }}
+          submodules: recursive
+      - name: Verify version tag
+        run: |
+          python - <<'PY'
+          import os, pathlib, re
+          tag = os.environ["RELEASE_TAG"]
+          if not re.fullmatch(r"v0[.][0-9]+[.][0-9]+-dev[.][0-9]+", tag):
+              raise SystemExit("Only development-preview tags can be published")
+          if tag != "v" + pathlib.Path("VERSION").read_text().strip():
+              raise SystemExit("Tag and source VERSION disagree")
+          PY
+      - name: Publish prerelease
+        run: |
+          cat > /tmp/release-notes.md <<'EOF'
+          Development preview. Installation and packaging are still being refined.
+
+          See the README for setup instructions, features and user guides. This is
+          a prerelease, not a stable 1.0 release.
+          EOF
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release already exists"
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --prerelease --latest=false --title "$RELEASE_TAG" --notes-file /tmp/release-notes.md
+          fi

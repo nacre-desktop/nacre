@@ -281,6 +281,10 @@ def plan(home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=Fal
 
 def apply(home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=False):
     changed, links, known = plan(home, root, migrate, app_routes_only, migrate_idle)
+    if not app_routes_only:
+        from keyboard import seed
+
+        seed(home)
     host_policy = None if app_routes_only else power_policy(home, root, migrate_idle)
     if host_policy is not None:
         atomic(home / ".config/nacre/host.lua", host_policy, 0o600)

@@ -52,11 +52,11 @@ def collection():
 
 
 def ensure(home, fast=False):
-    """Copy original bytes once by content hash, with no network or library writes.
+    """Copy bundled bytes once by content hash, with no network or library writes.
 
-    Immutable cached originals keep an active wallpaper valid across software
+    Immutable cached images keep an active wallpaper valid across software
     upgrades. A missing/corrupt cache copy is repaired from the public-domain bundle.
-    Only the separate thumbnail owner resizes viewing previews.
+    The bundle is optimized for 4K displays; the thumbnail owner creates smaller previews.
     """
     manifest = (ASSETS / "manifest.json").read_bytes()
     identity = hashlib.sha256(manifest).hexdigest()[:16]

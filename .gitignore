@@ -37,3 +37,7 @@ node_modules/
 
 .ruff_cache/
 .pytest_cache/
+
+# Reviewed public documentation screenshots.
+!/assets/screenshots/
+!/assets/screenshots/*.png

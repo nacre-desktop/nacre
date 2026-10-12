@@ -152,7 +152,7 @@ def deploy(code_only=False):
     # The release transaction snapshots this tree before activation.
     (DEST / "tools/demo-wallpapers.LICENSE").unlink(missing_ok=True)
     # Licensed demo artwork is ready offline on fresh installs. Validate/cache the
-    # original bytes; never resize or import into/overwrite the private library.
+    # bundled bytes; never import into or overwrite the private library.
     subprocess.run(
         [str(runtime / "venv/bin/python"), str(DEST / "tools/demo-wallpapers.py")],
         check=True,
