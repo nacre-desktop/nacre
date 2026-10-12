@@ -7,6 +7,7 @@ import qs.modules.background
 import qs.modules.extras
 import qs.modules.settings
 import qs.modules.colors
+import qs.modules.pearls
 import qs.modules.welcome
 
 ShellRoot {
@@ -16,6 +17,7 @@ ShellRoot {
     property var displayRecovery: DisplayRecovery
     NacreBackground {}
     NacreDesktop {}
+    NacreDockGuide {}
     NacreShellShortcuts {}
     NacreShellIpc {}
     NacreSettingsHost {}

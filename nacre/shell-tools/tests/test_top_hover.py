@@ -78,10 +78,10 @@ TestCase {
  function test_only_marked_regions_open_and_explicit_dismissal_rearms(){
   const view=createTemporaryObject(scene,this);wait(30);
   mouseMove(view,100,25);verify(!view.flags.dashboard);
-  mouseMove(view,500,51);verify(view.flags.dashboard);
+  mouseMove(view,500,25);verify(view.flags.dashboard);
   NacreHoverIntent.dismiss(view.screen);view.flags.dashboard=false;
-  mouseMove(view,501,52);verify(!view.flags.dashboard);
-  mouseMove(view,500,180);NacreHoverIntent.observe(view.screen,500,180);mouseMove(view,500,51);verify(view.flags.dashboard);
+  mouseMove(view,501,25);verify(!view.flags.dashboard);
+  mouseMove(view,500,180);NacreHoverIntent.observe(view.screen,500,180);mouseMove(view,500,25);verify(view.flags.dashboard);
   mouseMove(view,1,90);verify(!view.flags.left);
   mouseMove(view,8,350);verify(view.flags.left);verify(!view.flags.leftPinned);
   mouseMove(view,995,620);verify(!view.flags.osd);
@@ -105,10 +105,10 @@ TestCase {
   const topY=top.y;const leftX=left.x;const rightX=right.x;
   view.controller.panels={dashboard:{height:240},leftDrawer:{width:320},osd:{width:424}};
   view.flags.dashboard=true;view.flags.left=true;view.flags.osd=true;
-  compare(top.y,topY+240);compare(left.x,leftX+320);compare(right.x,rightX-424);
-  compare(top.height,7);compare(left.width-NacreFrame.left,5);
+  compare(top.y,topY);compare(left.x,leftX);compare(right.x,rightX);
+  compare(top.height,NacreFrame.headerHeight);compare(left.width,NacreFrame.left);
   const column=NacreHoverIntent.lipRegions.test.dashboard;
-  compare(column.x,396);compare(column.y,0);compare(column.width,208);compare(column.height,56);
+  compare(column.x,396);compare(column.y,0);compare(column.width,208);compare(column.height,50);
   verify(top.visible);verify(left.visible);verify(right.visible);
   view.flags.dashboard=false;view.flags.left=false;view.flags.osd=false;
   verify(top.visible);verify(left.visible);verify(right.visible);
@@ -121,10 +121,10 @@ TestCase {
   view.controller.panels={dashboard:{height:0},leftDrawer:{width:0},osd:{width:0},launcher:{fullScreenGallery:true}};
   view.flags.launcher=true;
   verify(top.visible);verify(left.visible);verify(right.visible);
-  compare(view.lips.rimHandles.length,3);
+  compare(view.lips.rimHandles.length,0);
   mouseMove(view,8,350);verify(view.flags.launcher);verify(!view.flags.left);
   mouseMove(view,990,350);verify(view.flags.launcher);verify(!view.flags.osd);
-  mouseMove(view,500,53);verify(view.flags.launcher);verify(!view.flags.dashboard);
+  mouseMove(view,500,25);verify(view.flags.launcher);verify(!view.flags.dashboard);
   view.flags.launcher=false;view.flags.dashboard=true;view.flags.dashboardPinned=true;
   verify(top.visible);verify(left.visible);verify(right.visible);
   view.flags.dashboard=false;view.flags.dashboardPinned=false;view.flags.session=true;
@@ -151,16 +151,16 @@ TestCase {
   NacreHoverIntent.observe(view.screen,800,350);
   verify(NacreHoverIntent.canOpen("osd",view.screen,Qt.NoButton));
  }
- function test_sheen_is_finite_and_reduce_motion_stops_it(){
+ function test_flat_targets_never_run_decorative_sheen(){
   mouseMove(this,800,500);
   DesktopSettings.data={animations:true,clickEdgeMenus:false};
   const view=createTemporaryObject(scene,this);wait(30);
   const lip=findChild(view,"frameTopLip");
   view.flags.dashboard=true;
-  tryCompare(lip,"sheenRunning",true);
+  compare(lip.sheenRunning,false);
   wait(350);compare(lip.sheenRunning,false);
   view.flags.dashboard=false;view.flags.dashboard=true;
-  tryCompare(lip,"sheenRunning",true);
+  compare(lip.sheenRunning,false);
   DesktopSettings.data={animations:true,reduceMotion:true,clickEdgeMenus:false};
   tryCompare(lip,"sheenRunning",false);
   view.flags.dashboard=false;view.flags.dashboard=true;wait(30);

@@ -8,7 +8,10 @@ Flickable {
     id: root
     required property bool shouldUpdate
     required property var visibilities
-    readonly property bool narrow: width < 650
+    readonly property real canvasWidth: Math.min(width, 1700)
+    readonly property bool narrow: canvasWidth < 650
+    readonly property real summaryHeight: Math.max(288, Math.min(420, height * .38))
+    readonly property real heroHeight: Math.max(220, Math.min(640, canvasWidth * .34, height - summaryHeight - 18))
     readonly property string heroVideoPath: /\.(mp4|webm|mkv|mov|m4v)$/i.test(NacreWallpapers.displayPreview) ? NacreWallpapers.displayPreview : NacreWallpapers.displayPath
     implicitWidth: 940
     implicitHeight: 550
@@ -22,12 +25,14 @@ Flickable {
     }
     Column {
         id: sections
-        width: root.width
+        width: root.canvasWidth
+        x: (root.width - width) / 2
         spacing: 18
         NacreDashboardHero {
             id: hero
+            objectName: "dashboardWallpaperHero"
             width: parent.width
-            height: 254
+            height: root.heroHeight
             Image {
                 anchors.fill: parent
                 source: NacreWallpapers.poster ? "file://" + NacreWallpapers.poster : ""
@@ -90,7 +95,7 @@ Flickable {
                 spacing: 10
                 NacreText {
                     text: NacreTime.format("HH:mm")
-                    font.pointSize: 44
+                    font.pointSize: Math.max(44, Math.min(64, 44 * hero.height / 254))
                     font.weight: Font.Light
                     color: "#fffdfa"
                 }
@@ -222,7 +227,7 @@ Flickable {
         NacreDashboardSummary {
             objectName: "dashboardSummary"
             width: parent.width
-            height: root.narrow ? implicitHeight : Math.max(288, root.height - hero.height - sections.spacing)
+            height: root.narrow ? implicitHeight : root.summaryHeight
             active: root.shouldUpdate
             onSystemRequested: root.visibilities.dashboardTab = 3
         }

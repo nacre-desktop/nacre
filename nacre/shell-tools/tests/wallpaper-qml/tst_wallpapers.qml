@@ -76,6 +76,32 @@ TestCase {
         compare(NacreWallpapers.browsed, "two");
         verify(view.visibilities.launcher);
     }
+    function test_detached_layout_switch_fits_actual_window_and_keeps_selection() {
+        const view = createTemporaryObject(picker, test, {
+            detached: true,
+            width: 700,
+            height: 520
+        });
+        view.select(1);
+        for (const size of [[700, 520], [1200, 800], [1900, 1100]]) {
+            view.width = size[0];
+            view.height = size[1];
+            for (const layout of ["spotlight", "hexagons", "carousel"]) {
+                NacreWallpapers.preference({
+                    layout: layout
+                });
+                wait(30);
+                compare(view.currentEntry.path, "two");
+                if (layout === "spotlight") {
+                    const strip = findChild(view, "spotlightStrip");
+                    verify(strip.height > 100);
+                    verify(strip.y + strip.height < view.height);
+                    verify(strip.width <= view.width);
+                }
+                verify(view.visibilities.launcher);
+            }
+        }
+    }
     function test_preview_navigation_does_not_apply_wallpaper() {
         const view = createTemporaryObject(picker, test);
         view.visibilities.previewOnly = true;

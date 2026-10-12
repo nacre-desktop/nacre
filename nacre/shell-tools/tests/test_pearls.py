@@ -26,16 +26,20 @@ def module(name):
 class PearlTests(unittest.TestCase):
     def test_super_drag_routes_only_live_owned_panels_and_preserves_release(self):
         script = r"""
-local binds, moves, unbound = {}, 0, nil
+local binds, moves, unbound, active, timer = {}, 0, nil, nil, nil
+local events = {}
 local cursor, layers = {x=120,y=220}, {{namespace="nacre-drawers",mapped=true,pid=45}}
 nacre_panel_pid=45
 nacre_panel_regions={{x=100,y=200,w=500,h=300}}
-local proxy
-proxy=setmetatable({}, {__index=function()return proxy end,__call=function()return {} end})
-hl={dsp=proxy,window_rule=function()end,unbind=function(key)unbound=key end,
+local function proxy(path)
+ return setmetatable({}, {__index=function(_,key)return proxy(path=="" and key or path.."."..key) end,__call=function(_,...)return {method=path,args={...}} end})
+end
+hl={dsp=proxy(""),window_rule=function()end,unbind=function(key)unbound=key end,
  bind=function(key,fn)binds[key]=fn end,
  get_cursor_pos=function()return cursor end,get_layers=function()return layers end,
- dispatch=function()moves=moves+1;return {ok=true,request_release=true} end}
+ get_active_window=function()return active end,
+ timer=function(fn,options) timer={callback=fn,enabled=true,set_enabled=function(self,value)self.enabled=value end};assert(options.timeout==33);return timer end,
+ dispatch=function(request)if request.method=="event" then events[#events+1]=request.args[1];return {ok=true} end;moves=moves+1;return {ok=true,request_release=true} end}
 dofile(arg[1])
 assert(unbound=="SUPER + mouse:272")
 local drag=binds["SUPER + mouse:272"]
@@ -52,6 +56,15 @@ layers[1].pid=45;layers[1].mapped=false
 assert(drag().request_release and moves==5);drag()
 layers[1].mapped=true;nacre_panel_regions={}
 assert(drag().request_release and moves==7);drag()
+active={pid=45,title="Nacre Pearl Dashboard 12"}
+drag();assert(timer.enabled and #events==1)
+cursor={x=800,y=10};timer.callback();assert(#events==2)
+drag();assert(not timer.enabled and #events==3)
+assert(events[3]=="nacre_pearl_drag,end,Nacre Pearl Dashboard 12,800,10")
+-- Every new pull re-arms the watch; it is never left running while idle.
+drag();assert(timer.enabled);drag();assert(not timer.enabled)
+active={pid=99,title="Nacre Pearl Dashboard 12"};local count=#events
+drag();drag();assert(#events==count and not timer.enabled)
 print("PANEL_ROUTING_OK")
 """
         result = subprocess.run(
@@ -242,6 +255,50 @@ TestCase {
             with self.assertRaises(ValueError):
                 window.dispatch("move", "not-an-address", x=0, y=0)
             run.assert_not_called()
+
+    def test_gallery_fit_respects_logical_screen_and_maximized_windows(self):
+        window = module("pearl-window")
+        client = {
+            "title": "Nacre Pearl Launcher 1",
+            "pid": 45,
+            "address": "0xabc",
+            "at": [100, 880],
+            "size": [1360, 320],
+            "monitor": 0,
+            "fullscreen": 0,
+        }
+        monitors = [
+            {
+                "id": 0,
+                "x": 0,
+                "y": 0,
+                "width": 2880,
+                "height": 1800,
+                "scale": 1.5,
+                "reserved": [10, 50, 10, 10],
+            }
+        ]
+
+        def read(kind):
+            return monitors if kind == "monitors" else [client]
+
+        with (
+            patch.object(window, "read", side_effect=read),
+            patch.object(window, "dispatch") as dispatch,
+            patch.object(
+                sys,
+                "argv",
+                ["pearl-window", "fit", client["title"], "45", "0", "0", "640", "820"],
+            ),
+            patch("builtins.print"),
+        ):
+            self.assertEqual(window.main(), 0)
+            dispatch.assert_any_call("resize", "0xabc", x=1360, y=820, relative=False)
+            dispatch.assert_any_call("move", "0xabc", x=100, y=370, relative=False)
+            client["fullscreen"] = 1
+            dispatch.reset_mock()
+            self.assertEqual(window.main(), 0)
+            dispatch.assert_not_called()
 
     def test_private_layout_atomic_permissions_and_corruption_preservation(self):
         state = module("pearl-state")

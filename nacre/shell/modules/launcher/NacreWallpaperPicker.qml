@@ -128,7 +128,7 @@ Item {
         id: toolbar
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.topMargin: root.layout === "spotlight" ? Math.max(18, (root.height - toolbar.height - spotlight.height - navigation.height - 32) / 2) : root.fullScreen ? 18 : 12
+        anchors.topMargin: root.fullScreen ? 18 : 12
         spacing: 8
         GridLayout {
             anchors.horizontalCenter: parent.horizontalCenter
@@ -271,7 +271,7 @@ Item {
         objectName: "spotlightStrip"
         x: 24
         readonly property real topInset: toolbar.y + toolbar.height + 24
-        readonly property real availableHeight: Math.max(0, root.height - toolbar.height - navigation.height - 64)
+        readonly property real availableHeight: Math.max(0, root.height - toolbar.y - toolbar.height - navigation.height - 42)
         y: toolbar.y + toolbar.height + 16
         width: Math.max(0, root.width - 48)
         height: Math.min(availableHeight, heroWidth * .625)

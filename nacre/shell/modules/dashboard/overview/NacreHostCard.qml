@@ -67,7 +67,7 @@ NacreOverviewCard {
         id: logo
         x: 18
         anchors.verticalCenter: parent.verticalCenter
-        width: root.width >= 320 ? 124 : 54
+        width: root.width >= 320 ? Math.min(156, Math.max(124, root.width * .28)) : 54
         height: width
         NacreSurface {
             anchors.fill: parent
@@ -102,7 +102,7 @@ NacreOverviewCard {
                     x: 25
                     width: Math.max(0, parent.width - 25)
                     text: parent.modelData.text
-                    font.pointSize: root.width >= 320 ? 12 : 10
+                    font.pointSize: root.width >= 320 ? Math.min(14, Math.max(12, root.width / 44)) : 10
                     elide: Text.ElideRight
                 }
                 NacreInteraction {

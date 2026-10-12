@@ -9,7 +9,8 @@ lifts the open panel in place, retaining its dimensions and position.
 Floating panels keep their original content, with no added title strip. Hyprland
 provides the same inactive and focused borders as other windows. Use ordinary
 Super-drag to move, Super+right-drag to resize, and the normal tiling/pinning keys.
-**Super+Ctrl+D** docks the focused panel when no edge panel is open. **Ctrl+W**
+Drag a floating panel back to its matching screen edge; the inset highlight and
+**Release to dock** hint appear on every pull. Release to reattach. **Super+Ctrl+D** docks the focused panel when no edge panel is open. **Ctrl+W**
 closes its window. Outside clicks do not close floating panels; Escape backs out
 of a search or dialog.
 
@@ -28,3 +29,9 @@ there is no permanent pointer polling. Reduced motion disables decorative motion
 Reload recovery retains floating placement, navigation and conversation ownership.
 Drafts and window layouts remain private. Hidden/minimized panels do not keep
 visualizers or resource sampling running.
+
+Maximized dashboards enlarge their wallpaper area while keeping calendar and
+system cards bounded. App tiles retain their spacing as a launcher grows. Detached
+wallpaper pickers fit their current window, and grow within the monitor's usable
+area when switching to Spotlight or Hexagons. No decorative frame bumps are drawn;
+the flat top-center and side-center hover targets remain available.

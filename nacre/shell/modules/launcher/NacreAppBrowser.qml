@@ -657,7 +657,7 @@ NacreSurface {
         width: root.contentWidth
         height: root.bodyHeight
         cellWidth: width / Math.max(1, Math.floor(width / 116))
-        cellHeight: height / 5
+        cellHeight: Math.max(72, Math.min(100, height / 5))
         model: root.entries
         currentIndex: root.selection
         keyNavigationEnabled: false

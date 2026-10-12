@@ -37,7 +37,7 @@ Item {
     }
     function moved(item, position) {
         const drag = NacrePearls.drag;
-        return drag?.host === item ? Qt.point(drag.body.x - screen.x - x + drag.dx, drag.body.y - screen.y - y + drag.dy) : position;
+        return drag?.host === item ? Qt.point(Math.round(drag.body.x + drag.dx) - screen.x - x, Math.round(drag.body.y + drag.dy) - screen.y - y) : position;
     }
     function sensorPosition(item, position) {
         const drag = NacrePearls.drag;

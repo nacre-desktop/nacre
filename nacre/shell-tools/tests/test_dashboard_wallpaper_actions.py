@@ -86,6 +86,12 @@ import "fixtures"
 TestCase {
  name:"DashboardWallpaperActions";width:1000;height:650;visible:true;when:windowShown
  Component {id:page;NacreTodayPage {width:940;height:562;shouldUpdate:true;visibilities:({})}}
+ function test_maximized_page_allocates_space_to_wallpaper_not_stretched_cards(){
+  const view=createTemporaryObject(page,this);view.width=1900;view.height=1100;wait(30);
+  const hero=findChild(view,"dashboardWallpaperHero"),summary=findChild(view,"dashboardSummary");
+  verify(hero.height>=450);verify(hero.height<=640);verify(summary.height<=420);
+  verify(hero.height+summary.height+18<=view.height);
+ }
  function test_manual_next_and_controls(){
   const view=createTemporaryObject(page,this);wait(40);
   const next=findChild(view,"dashboardNextWallpaper"),colors=findChild(view,"dashboardColors"),picker=findChild(view,"dashboardWallpapers");
