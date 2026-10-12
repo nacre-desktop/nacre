@@ -145,8 +145,11 @@ These four workloads started 404 Python processes, including cold requests.
 
 `NacreHelpers` starts one `helper-service.py` child with JSON lines over its private
 stdin/stdout pipes. Request IDs route replies to `NacreHelperTask` owners. The
-service imports supported helpers once, runs at most four requests concurrently,
-and serializes operations within each helper. It bounds pending work to 64,
+service imports supported helpers once and gives each of its six supported helpers
+one serial execution lane. Threads start lazily, with at most one active request
+per helper and six active requests overall. Same-helper requests run in arrival
+order; queued menu searches cannot occupy the workers needed by network or
+notification requests. It bounds pending work across all lanes to 64,
 requests to 4 MiB, and responses to 8 MiB. Only explicit operations are supported;
 there is no arbitrary script, shell command, menu tool, or process-kill dispatch.
 

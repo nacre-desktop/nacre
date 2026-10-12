@@ -253,7 +253,15 @@ class HelperServiceTests(unittest.TestCase):
 
         with patch.object(service, "MAX_PENDING", 2):
             source = io.BytesIO(
-                b"".join(json.dumps(request(i)).encode() + b"\n" for i in (1, 2, 3))
+                b"".join(
+                    json.dumps(
+                        request(
+                            i, "network-state" if i == 2 else "launcher-preferences"
+                        )
+                    ).encode()
+                    + b"\n"
+                    for i in (1, 2, 3)
+                )
             )
             thread = threading.Thread(
                 target=service.serve, args=(source, output, Helpers())
@@ -274,6 +282,66 @@ class HelperServiceTests(unittest.TestCase):
             self.assertFalse(thread.is_alive())
         replies = [json.loads(line) for line in output.getvalue().splitlines()]
         self.assertEqual({row["id"] for row in replies[1:]}, {1, 2, 3})
+
+    def test_same_tool_burst_is_fifo_without_starving_independent_helper(self):
+        released = threading.Event()
+        started = threading.Event()
+        independent = threading.Event()
+        order = []
+
+        class Helpers(service.Helpers):
+            def module(self, name):
+                return None
+
+            def dispatch(self, module, name, arguments, payload):
+                if name == "menu-backend":
+                    order.append(int(arguments[0]))
+                    started.set()
+                    if not released.wait(2):
+                        raise RuntimeError("Test did not release blocked tool")
+                else:
+                    independent.set()
+                return {}
+
+        values = [request(i, "menu-backend", [str(i)]) for i in range(1, 5)]
+        values.append(request(5, "notification-history", ["load"]))
+        source = io.BytesIO(
+            b"".join(json.dumps(value).encode() + b"\n" for value in values)
+        )
+        output = io.StringIO()
+        thread = threading.Thread(
+            target=service.serve, args=(source, output, Helpers())
+        )
+        thread.start()
+        try:
+            self.assertTrue(started.wait(1))
+            self.assertTrue(
+                independent.wait(1), "Unrelated helper waited behind busy menu lane"
+            )
+            replies = [json.loads(line) for line in output.getvalue().splitlines()]
+            deadline = time.monotonic() + 1
+            while (
+                not any(row.get("id") == 5 for row in replies)
+                and time.monotonic() < deadline
+            ):
+                time.sleep(0.005)
+                replies = [json.loads(line) for line in output.getvalue().splitlines()]
+            self.assertEqual(
+                next(row for row in replies if row.get("id") == 5)["code"], 0
+            )
+            self.assertFalse(any(row.get("id") in (1, 2, 3, 4) for row in replies))
+            self.assertEqual(order, [1])
+        finally:
+            released.set()
+            thread.join(3)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(order, [1, 2, 3, 4])
+        replies = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(
+            [row["id"] for row in replies if row.get("id") in (1, 2, 3, 4)],
+            [1, 2, 3, 4],
+        )
+        self.assertEqual({row["id"] for row in replies[1:]}, {1, 2, 3, 4, 5})
 
     def test_explicit_dispatch_cannot_launch_a_menu_tool(self):
         helpers = service.Helpers()
