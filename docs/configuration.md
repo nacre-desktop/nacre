@@ -7,8 +7,10 @@ See `profiles/default.json` for the format. Profiles have `version:1` and are
 validated before installation. Supply one with `./install.sh --profile PATH`.
 
 Pearls run left to right from workspace 1, connected by a fine palette-colored
-thread. Empty workspaces are hollow rings; occupied ones have filled pearls.
-Numbers inside the pearls match the workspace shortcuts. Only the active workspace
+thread, flowing from primary through secondary to tertiary. Empty workspaces are
+hollow rings; occupied ones have filled pearls.
+Numbers inside the pearls match the workspace shortcuts, with softer ink on pale
+pearls and stronger contrast where needed. Only the active workspace
 opens into a capsule with up to three quiet window-category symbols; extra windows
 show as a count. Click a symbol to focus its window. The glossy pearl and its
 highlight slide to the active group. When space is tight, fewer symbols appear to

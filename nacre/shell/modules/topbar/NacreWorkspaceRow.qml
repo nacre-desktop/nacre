@@ -97,7 +97,7 @@ Item {
         if (NacrePresentation.active.workspaceColors)
             return palette["m3" + ["primary", "secondary", "tertiary"][(id - 1) % 3]];
         const position = Math.min(1, index / Math.max(1, NacreBar.workspaceCount - 1));
-        return position <= .5 ? Qt.tint(palette.m3tertiary, Qt.alpha(palette.m3secondary, position * 2)) : Qt.tint(palette.m3secondary, Qt.alpha(palette.m3primary, (position - .5) * 2));
+        return position <= .5 ? Qt.tint(palette.m3primary, Qt.alpha(palette.m3secondary, position * 2)) : Qt.tint(palette.m3secondary, Qt.alpha(palette.m3tertiary, (position - .5) * 2));
     }
     Rectangle {
         objectName: "workspaceThread"
@@ -112,7 +112,7 @@ Item {
             orientation: Gradient.Horizontal
             GradientStop {
                 position: 0
-                color: NacreColours.palette.m3tertiary
+                color: NacreColours.palette.m3primary
             }
             GradientStop {
                 position: .5
@@ -120,7 +120,7 @@ Item {
             }
             GradientStop {
                 position: 1
-                color: NacreColours.palette.m3primary
+                color: NacreColours.palette.m3tertiary
             }
         }
     }

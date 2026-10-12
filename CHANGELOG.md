@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-Workspace pearls show their numbers and window occupancy. Only the active pearl
+Workspace pearls flow from primary through secondary to tertiary, with softened
+number ink. They show their numbers and window occupancy. Only the active pearl
 expands with up to three quiet window symbols and an overflow count. The
 pearls-only preference keeps numbers, hover details and workspace switching.
 
