@@ -69,7 +69,7 @@ TestCase {
   property alias lips: lips
   property alias controller: controller
   property var screen:({name:"test",width:1000,height:700})
-  QtObject {id:flags;property bool launcher:false;property bool session:false;property bool dashboard:false;property bool dashboardPinned:false;property bool left:false;property bool leftPinned:false;property bool osd:false;property bool previewOnly:false;property string controlSection:"home";property string edgeMenu:""}
+  QtObject {id:flags;property bool launcher:false;property bool session:false;property bool dashboard:false;property bool dashboardPinned:false;property bool left:false;property bool leftPinned:false;property bool osd:false;property bool previewOnly:false;property bool hoverDocked:false;property string controlSection:"home";property string edgeMenu:""}
   QtObject {id:controller;property bool modal:false;property var panels:({dashboard:{height:0},leftDrawer:{width:0},osd:{width:0}});function settleHover(){}}
   NacreFrameLips {id:lips;anchors.fill:parent;screen:parent.screen;visibilities:flags;controller:controller}
   Component.onCompleted: {NacrePanelState.screens={test:flags};NacrePanelState.panels={test:{popouts:{hasCurrent:false,pinned:false}}}}

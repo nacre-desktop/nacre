@@ -18,13 +18,14 @@ NacreWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     visible: !NacreHoverIntent.fullscreenFor(outputName) || inputController.modal
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.keyboardFocus: inputController.modal ? WlrKeyboardFocus.Exclusive : (flags.left || flags.osd || flags.dashboard) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: inputController.modal ? WlrKeyboardFocus.Exclusive : (flags.left || flags.osd || flags.dashboard || flags.launcher) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     readonly property string dragRegions: NacrePanelDragRouting.regions
     property string registeredName: ""
     PersistentProperties {
         id: flags
         reloadableId: "nacre-view-" + root.screen.name
         property bool previewOnly: false
+        property bool hoverDocked: false
         property bool osd: false
         property bool session: false
         property bool launcher: false

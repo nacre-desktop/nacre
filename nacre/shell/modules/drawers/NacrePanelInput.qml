@@ -16,7 +16,9 @@ Item {
     }
     property bool hidden: NacrePanelState.hidden
     readonly property real padding: Math.max(12, NacreFrame.rounding / 2)
-    readonly property bool modal: !hidden && !visibilities.previewOnly && (visibilities.launcher || visibilities.session || visibilities.dashboard && visibilities.dashboardPinned || panels.popouts.pinned && panels.popouts.hasCurrent || visibilities.edgeMenu === "dashboard" && visibilities.dashboard || visibilities.edgeMenu === "left" && visibilities.left && !visibilities.leftPinned || visibilities.edgeMenu === "osd" && visibilities.osd)
+    readonly property bool dockedHover: visibilities.hoverDocked === true
+    onDockedHoverChanged: settleHover()
+    readonly property bool modal: !hidden && !visibilities.previewOnly && (visibilities.launcher && !dockedHover || visibilities.session || visibilities.dashboard && visibilities.dashboardPinned || panels.popouts.pinned && panels.popouts.hasCurrent || visibilities.edgeMenu === "dashboard" && visibilities.dashboard || visibilities.edgeMenu === "left" && visibilities.left && !visibilities.leftPinned || visibilities.edgeMenu === "osd" && visibilities.osd)
     readonly property bool autoEdges: !hidden && !modal && DesktopSettings.data.clickEdgeMenus !== true && !visibilities.launcher && !visibilities.session && !NacreHoverIntent.fullscreenFor(screen.name)
     readonly property bool lipsAvailable: !hidden && !modal && !visibilities.launcher && !visibilities.session && !visibilities.dashboardPinned && !NacreHoverIntent.fullscreenFor(screen.name)
     readonly property bool leftEdgeAvailable: lipsAvailable && DesktopSettings.data.leftDrawer !== false && !visibilities.left
@@ -36,6 +38,7 @@ Item {
     readonly property var regions: hidden ? [] : modal ? [Qt.rect(0, 0, width, height)] : [headerRect, launcherRect, dashboardRect, leftRect, osdRect, sessionRect, popoutRect, notificationRect, leftEdgeAvailable ? leftEdgeRect : Qt.rect(0, 0, 0, 0), rightEdgeAvailable ? rightEdgeRect : Qt.rect(0, 0, 0, 0), topEdgeAvailable ? topEdgeRect : Qt.rect(0, 0, 0, 0)].filter(r => r.width > 0 && r.height > 0)
     readonly property bool hovered: hover.hovered
     readonly property point pointer: hover.point.position
+    readonly property bool launcherHovered: hovered && inside(expand(launcherRect), pointer)
     readonly property bool dashboardHovered: hovered && inside(expand(dashboardRect), pointer)
     readonly property bool leftHovered: hovered && inside(expand(leftRect), pointer)
     readonly property bool osdHovered: hovered && inside(expand(osdRect), pointer)
@@ -75,13 +78,24 @@ Item {
         if (!ready || !panels || !visibilities)
             return;
         if (hidden || modal || NacrePearls.drag?.screen === screen.name) {
+            launcherExit.stop();
             leftExit.stop();
             dashboardExit.stop();
             popoutExit.stop();
             osdExit.stop();
             return;
         }
-        if (visibilities.left && leftWasHovered && !visibilities.leftPinned && !leftHovered) {
+        if (dockedHover && visibilities.launcher && !launcherHovered) {
+            if (!launcherExit.running)
+                launcherExit.start();
+        } else
+            launcherExit.stop();
+        if (visibilities.osd && !osdHovered) {
+            if (!osdExit.running)
+                osdExit.start();
+        } else
+            osdExit.stop();
+        if (visibilities.left && (leftWasHovered || dockedHover) && !visibilities.leftPinned && !leftHovered) {
             if (!leftExit.running)
                 leftExit.start();
         } else
@@ -105,6 +119,8 @@ Item {
         }
     }
     onModalChanged: settleHover()
+    onLauncherRectChanged: settleHover()
+    onLauncherHoveredChanged: settleHover()
     onLeftRectChanged: settleHover()
     onOsdRectChanged: settleHover()
     onDashboardRectChanged: settleHover()
@@ -115,12 +131,7 @@ Item {
     }
     onDashboardHoveredChanged: settleHover()
     onPopoutHoveredChanged: settleHover()
-    onOsdHoveredChanged: {
-        if (osdHovered)
-            osdExit.stop();
-        else if (!modal && visibilities.osd)
-            osdExit.restart();
-    }
+    onOsdHoveredChanged: settleHover()
     Connections {
         target: NacrePearls
         function onDragChanged() {
@@ -148,6 +159,12 @@ Item {
         acceptedButtons: Qt.AllButtons
         onPressed: event => root.outsideClick(Qt.point(event.x, event.y))
         onDoubleClicked: event => root.outsideClick(Qt.point(event.x, event.y))
+    }
+    Timer {
+        id: launcherExit
+        interval: 140
+        onTriggered: if (root.dockedHover && !root.launcherHovered && !root.modal)
+            root.visibilities.launcher = false
     }
     Timer {
         id: leftExit

@@ -310,6 +310,7 @@ Singleton {
             const panel = NacrePanelState.panels[name]?.launcher;
             Qt.callLater(() => panel?.restoreState(data));
         }
+        NacrePanelState.dockAsHover(view);
         remove(entry, false);
     }
     function bodyRect(host, name) {
