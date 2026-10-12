@@ -1,0 +1,78 @@
+// Generated from compositor-contract.json; edit the neutral source.
+// Include before user bindings/rules so user-owned choices take precedence.
+binds {
+    XF86AudioMute repeat=false allow-when-locked=true hotkey-overlay-title="Nacre:mute" { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
+    XF86AudioLowerVolume repeat=true allow-when-locked=true hotkey-overlay-title="Nacre:volume-down" { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"; }
+    XF86AudioRaiseVolume repeat=true allow-when-locked=true hotkey-overlay-title="Nacre:volume-up" { spawn-sh "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"; }
+    XF86AudioMicMute repeat=false hotkey-overlay-title="Nacre:mic-mute" { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
+    XF86PowerOff repeat=false allow-when-locked=true hotkey-overlay-title="Nacre:lock" { spawn-sh "loginctl lock-session"; }
+    XF86MonBrightnessDown repeat=false hotkey-overlay-title="Nacre:brightness-down" { spawn-sh "~/.local/bin/nacre-shell brightness down"; }
+    XF86MonBrightnessUp repeat=false hotkey-overlay-title="Nacre:brightness-up" { spawn-sh "~/.local/bin/nacre-shell brightness up"; }
+    XF86KbdBrightnessUp repeat=false hotkey-overlay-title="Nacre:keyboard-up" { spawn-sh "~/.local/bin/nacre-shell keyboard-light up"; }
+    XF86KbdBrightnessDown repeat=false hotkey-overlay-title="Nacre:keyboard-down" { spawn-sh "~/.local/bin/nacre-shell keyboard-light down"; }
+    Super+period repeat=false hotkey-overlay-title="Nacre:emoji" { spawn-sh "~/.local/bin/nacre-menu actions.emoji"; }
+    Print repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""; }
+    Super+Print repeat=false hotkey-overlay-title="Nacre:save-screenshot" { spawn-sh "grim ~/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S).png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Saved to Pictures/Screenshots\""; }
+    Super+Ctrl+Q repeat=false hotkey-overlay-title="Nacre:close" { spawn-sh "~/.config/hypr/scripts/window-close.sh"; }
+    Super+F repeat=false hotkey-overlay-title="Nacre:fullscreen" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action fullscreen_window --mode fullscreen"; }
+    Super+M repeat=false hotkey-overlay-title="Nacre:maximize" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action fullscreen_window --mode maximized"; }
+    Super+T repeat=false hotkey-overlay-title="Nacre:float" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action float_window --action toggle"; }
+    Super+1 repeat=false hotkey-overlay-title="Nacre:workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action switch_workspace --workspace 1"; }
+    Super+Shift+1 repeat=false hotkey-overlay-title="Nacre:move-workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_window --workspace 1"; }
+    Super+2 repeat=false hotkey-overlay-title="Nacre:workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action switch_workspace --workspace 2"; }
+    Super+Shift+2 repeat=false hotkey-overlay-title="Nacre:move-workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_window --workspace 2"; }
+    Super+3 repeat=false hotkey-overlay-title="Nacre:workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action switch_workspace --workspace 3"; }
+    Super+Shift+3 repeat=false hotkey-overlay-title="Nacre:move-workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_window --workspace 3"; }
+    Super+4 repeat=false hotkey-overlay-title="Nacre:workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action switch_workspace --workspace 4"; }
+    Super+Shift+4 repeat=false hotkey-overlay-title="Nacre:move-workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_window --workspace 4"; }
+    Super+5 repeat=false hotkey-overlay-title="Nacre:workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action switch_workspace --workspace 5"; }
+    Super+Shift+5 repeat=false hotkey-overlay-title="Nacre:move-workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_window --workspace 5"; }
+    Super+6 repeat=false hotkey-overlay-title="Nacre:workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action switch_workspace --workspace 6"; }
+    Super+Shift+6 repeat=false hotkey-overlay-title="Nacre:move-workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_window --workspace 6"; }
+    Super+7 repeat=false hotkey-overlay-title="Nacre:workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action switch_workspace --workspace 7"; }
+    Super+Shift+7 repeat=false hotkey-overlay-title="Nacre:move-workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_window --workspace 7"; }
+    Super+TAB repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action switch_workspace --workspace '{\"relative\": 1}'"; }
+    Super+Shift+TAB repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action switch_workspace --workspace '{\"relative\": -1}'"; }
+    Super+WheelScrollDown repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action switch_workspace --workspace '{\"relative\": 1}'"; }
+    Super+WheelScrollUp repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action switch_workspace --workspace '{\"relative\": -1}'"; }
+    Super+Ctrl+Shift+Left repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_window --workspace '{\"relative\": -1}'"; }
+    Super+Ctrl+Shift+Right repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_window --workspace '{\"relative\": 1}'"; }
+    Super+Left repeat=false hotkey-overlay-title="Nacre:focus" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action focus_direction --direction left"; }
+    Super+Shift+Left repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_direction --direction left"; }
+    Super+Alt+Left repeat=true { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action resize_window --width -30 --height 0 --relative true"; }
+    Super+Right repeat=false hotkey-overlay-title="Nacre:focus" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action focus_direction --direction right"; }
+    Super+Shift+Right repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_direction --direction right"; }
+    Super+Alt+Right repeat=true { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action resize_window --width 30 --height 0 --relative true"; }
+    Super+Up repeat=false hotkey-overlay-title="Nacre:focus" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action focus_direction --direction up"; }
+    Super+Shift+Up repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_direction --direction up"; }
+    Super+Alt+Up repeat=true { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action resize_window --width 0 --height -30 --relative true"; }
+    Super+Down repeat=false hotkey-overlay-title="Nacre:focus" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action focus_direction --direction down"; }
+    Super+Shift+Down repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action move_direction --direction down"; }
+    Super+Alt+Down repeat=true { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action resize_window --width 0 --height 30 --relative true"; }
+    Super+A repeat=false hotkey-overlay-title="Nacre:launcher" { spawn-sh "~/.local/bin/nacre-shell launcher"; }
+    Super+D repeat=false { spawn-sh "~/.local/bin/nacre-shell overview"; }
+    Super+V repeat=false hotkey-overlay-title="Nacre:clipboard" { spawn-sh "~/.local/bin/nacre-shell clipboard"; }
+    Super+W repeat=false hotkey-overlay-title="Nacre:wallpaper" { spawn-sh "~/.local/bin/nacre-shell wallpaper"; }
+    Super+Z repeat=false { spawn-sh "~/.local/bin/nacre-shell hide"; }
+    Super+O repeat=false { spawn-sh "~/.local/bin/nacre-shell toggle"; }
+    Super+S repeat=false hotkey-overlay-title="Nacre:settings" { spawn-sh "~/.local/bin/nacre-settings"; }
+    Super+Ctrl+C repeat=false { spawn-sh "~/.local/bin/nacre-menu actions.capture"; }
+    Super+X repeat=false { spawn-sh "~/.local/bin/nacre-menu power"; }
+    Super+ESCAPE repeat=false hotkey-overlay-title="Nacre:lock" { spawn-sh "loginctl lock-session"; }
+    Super+Shift+R repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"$HOME/.local/share/nacre/shell/tools/compositor.py\" action reload"; }
+    Super+Ctrl+M repeat=false { spawn-sh "~/.config/hypr/scripts/matrix-rest.sh"; }
+    Super+Alt+C repeat=false { spawn-sh "~/.config/hypr/scripts/startup-apps.sh"; }
+    Super+Shift+T repeat=false hotkey-overlay-title="Nacre:terminal" { spawn-sh "uwsm app -- kitty"; }
+    Super+Shift+B repeat=false { spawn-sh "uwsm app -- google-chrome-stable"; }
+    Super+Shift+C repeat=false { spawn-sh "uwsm app -- code"; }
+    Super+Shift+V repeat=false { spawn-sh "uwsm app -- cursor"; }
+    Super+Shift+D repeat=false { spawn-sh "uwsm app -- discord"; }
+    Super+Shift+S repeat=false { spawn-sh "uwsm app -- spotify"; }
+    Super+Shift+F repeat=false hotkey-overlay-title="Nacre:files" { spawn-sh "~/.local/bin/nacre-app files"; }
+    Super+B repeat=false { spawn-sh "~/.local/bin/nacre-brain open"; }
+    Super+N repeat=false { spawn-sh "~/.local/bin/nacre-brain capture"; }
+    Super+SPACE repeat=false { spawn-sh "~/.local/bin/nacre-shell palette"; }
+    Super+K repeat=false { spawn-sh "~/.local/bin/nacre-menu learn.shortcuts"; }
+    Super+Ctrl+B repeat=false hotkey-overlay-title="Nacre:ai-sidebar" { spawn-sh "~/.local/bin/nacre-shell left"; }
+    Super+Ctrl+D repeat=false hotkey-overlay-title="Nacre:detach-panel" { spawn-sh "~/.local/bin/nacre-shell detach"; }
+}

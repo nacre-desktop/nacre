@@ -26,14 +26,7 @@ QUERIES = dict.fromkeys(
         "bindings",
     )
 )
-DESKTOP_OPTIONS = {
-    "animations": "animations",
-    "gapsOut": "gaps",
-    "borderSize": "border",
-    "rounding": "rounding",
-    "naturalScroll": "natural-scroll",
-    "followMouse": "focus-follows-mouse",
-}
+DESKTOP_OPTIONS = {}
 CAPABILITIES = {
     "stableWorkspaceIndices": False,
     "globalWorkspaces": False,
@@ -47,6 +40,9 @@ CAPABILITIES = {
     "windowHide": False,
     "fullscreenState": False,
     "shortcutRelease": False,
+    "desktopOptions": [],
+    "monitorConfiguration": False,
+    "nightLightController": False,
 }
 
 
@@ -491,7 +487,21 @@ class Backend:
         output = state["focusedMonitor"]
         output = output["name"] if output else None
         if isinstance(value, dict):
-            if "id" in value:
+            if "relative" in value:
+                offset = value["relative"]
+                active = state["activeWorkspace"]
+                if type(offset) is not int or offset not in (-1, 1) or not active:
+                    raise ValueError("Invalid relative workspace reference")
+                match = next(
+                    (
+                        row
+                        for row in rows
+                        if row["outputId"] == active["outputId"]
+                        and row["index"] == active["index"] + offset
+                    ),
+                    None,
+                )
+            elif "id" in value:
                 key = value["id"]
                 native_id(key, "workspace")
                 match = next((row for row in rows if row["id"] == key), None)
@@ -547,6 +557,28 @@ class Backend:
             {"reference": self.workspace_reference(workspace, timeout=timeout)},
             timeout=timeout,
         )
+
+    def focus_direction(self, direction, *, timeout=10):
+        names = {
+            "left": "FocusColumnLeft",
+            "right": "FocusColumnRight",
+            "up": "FocusWindowUp",
+            "down": "FocusWindowDown",
+        }
+        if direction not in names:
+            raise ValueError("Invalid focus direction")
+        return self._action(names[direction], timeout=timeout)
+
+    def move_direction(self, direction, *, timeout=10):
+        names = {
+            "left": "MoveColumnLeft",
+            "right": "MoveColumnRight",
+            "up": "MoveWindowUp",
+            "down": "MoveWindowDown",
+        }
+        if direction not in names:
+            raise ValueError("Invalid move direction")
+        return self._action(names[direction], timeout=timeout)
 
     def focus_window(self, window="", *, timeout=10):
         return self._action(

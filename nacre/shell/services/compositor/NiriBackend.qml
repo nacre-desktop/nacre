@@ -18,7 +18,10 @@ Singleton {
             nativePanelDrag: false,
             shortcutRelease: false,
             fullscreenState: false,
-            windowHide: false
+            windowHide: false,
+            desktopOptions: [],
+            monitorConfiguration: false,
+            nightLightController: false
         })
     readonly property string toolsPath: Quickshell.env("NACRE_COMPOSITOR_TOOLS") || Quickshell.env("NACRE_PEARL_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools"
     readonly property var workspaces: ({
