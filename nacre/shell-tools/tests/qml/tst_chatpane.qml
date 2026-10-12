@@ -16,6 +16,15 @@ TestCase {
         SidebarChat.replies = 0;
     }
 
+    function test_layout_recovery_does_not_overwrite_newer_owned_draft() {
+        const view = createTemporaryObject(pane, test);
+        SidebarChat.draft = "Newest draft";
+        const stale = view.captureUiState();
+        stale.draft = "Older layout snapshot";
+        view.restoreUiState(stale, false);
+        compare(SidebarChat.draft, "Newest draft");
+    }
+
     function test_long_draft_scrolls_and_cursor_stays_visible() {
         const view = createTemporaryObject(pane, test);
         verify(view);

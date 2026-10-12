@@ -46,6 +46,15 @@ Item {
  SidebarService {id:service}
  TestCase {
   name:"ComposerOwnership";when:windowShown
+  function test_first_connection_preserves_early_typing() {
+   const worker=findChild(service,"composerWorker");
+   worker.running=false;service.composerQueue=[];
+   service.composerKey="";service.draft="Typed before connection";
+   service.accept({type:"state",composerKey:"new-chat",features:[]});
+   compare(service.draft,"Typed before connection");
+   compare(worker.action,"save");compare(worker.payload.text,"Typed before connection");
+   worker.running=false;worker.exited(0,0);
+  }
   function test_stale_attachment_result_is_ignored() {
    service.composerKey="first";service.attachmentsSupported=true;
    service.addFiles(["/first/file.png"]);

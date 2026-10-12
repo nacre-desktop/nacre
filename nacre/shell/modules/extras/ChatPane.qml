@@ -20,8 +20,9 @@ Item {
         };
     }
     property var pendingRecovery: null
-    function restoreUiState(data) {
-        root.chat.restoreComposer(data);
+    function restoreUiState(data, restoreDraft = true) {
+        if (restoreDraft)
+            root.chat.restoreComposer(data);
         pendingRecovery = data;
         if (!data.threadId || (root.chat.threadId === data.threadId && root.chat.messages.count > 0))
             finishRecovery();

@@ -267,17 +267,22 @@ Scope {
             attachmentsSupported = (event.features ?? []).includes("attachments");
             const key = event.composerKey ?? event.threadId ?? "";
             if (key && key !== composerKey) {
+                const carry = !composerKey && (draft.length > 0 || attachments.length > 0);
+                const typed = draft, files = attachments;
                 saveDraft();
                 loadingDraft = true;
                 composerKey = key;
-                draft = "";
-                attachments = [];
+                draft = carry ? typed : "";
+                attachments = carry ? files : [];
                 loadingDraft = false;
                 applyRecoveryComposer();
-                composer("load", {
-                    key: key,
-                    revision: draftRevision
-                });
+                if (carry)
+                    saveDraft();
+                else
+                    composer("load", {
+                        key: key,
+                        revision: draftRevision
+                    });
             }
             defaultProvider = event.defaultProvider ?? defaultProvider;
             inWorkspace = event.inWorkspace ?? false;
