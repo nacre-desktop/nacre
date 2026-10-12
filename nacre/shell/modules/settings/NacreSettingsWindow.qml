@@ -8,7 +8,7 @@ FloatingWindow {
     id: root
     title: "Nacre Settings"
     objectName: "nacreSettingsWindow"
-    readonly property alias view: view
+    readonly property var view: content.item
     visible: NacreSettingsApp.visible
     minimumSize: Qt.size(720, 540)
     implicitWidth: Math.min(1100, Math.max(720, (screen?.width || 1920) * .75))
@@ -20,7 +20,7 @@ FloatingWindow {
         const native = contentItem.Window.window;
         if (native)
             native.requestActivate();
-        view.focusContent();
+        view?.focusContent();
     }
     Component.onCompleted: {
         NacreSettingsApp.window = root;
@@ -37,7 +37,7 @@ FloatingWindow {
         title: "Nacre Settings"
         app: "settings"
         width: parent.width
-        section: view.current?.name || view.current?.title || ""
+        section: view?.current?.name || view?.current?.title || ""
         onMoveRequested: root.contentItem.Window.window.startSystemMove()
     }
     NacreText {
@@ -49,14 +49,18 @@ FloatingWindow {
         color: NacreColours.palette.m3error
         wrapMode: Text.Wrap
     }
-    NacreSettingsView {
-        id: view
+    NacreIdleLoader {
+        id: content
+        wanted: NacreSettingsApp.visible
+        preserveState: true
         x: 16
         y: header.height + (NacreSettingsApp.error ? 48 : 16)
         width: Math.max(0, parent.width - 32)
         height: Math.max(0, parent.height - y - 16)
-        active: NacreSettingsApp.active
-        onCloseRequested: NacreSettingsApp.close()
+        sourceComponent: NacreSettingsView {
+            active: NacreSettingsApp.active
+            onCloseRequested: NacreSettingsApp.close()
+        }
     }
     Shortcut {
         sequence: "Ctrl+W"
@@ -66,6 +70,6 @@ FloatingWindow {
     Shortcut {
         sequence: "Ctrl+F"
         context: Qt.WindowShortcut
-        onActivated: view.focusSearch()
+        onActivated: view?.focusSearch()
     }
 }

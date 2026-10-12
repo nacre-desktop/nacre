@@ -7,6 +7,7 @@ import qs.services
 FloatingWindow {
     id: root
     title: "Nacre Colors"
+    readonly property var view: content.item
     visible: NacreColorsApp.visible
     minimumSize: Qt.size(760, 560)
     implicitWidth: Math.min(1100, Math.max(760, (screen?.width || 1920) * .68))
@@ -16,7 +17,7 @@ FloatingWindow {
     function activate() {
         minimized = false;
         contentItem.Window.window?.requestActivate();
-        view.forceActiveFocus();
+        view?.forceActiveFocus();
     }
     Component.onCompleted: {
         NacreColorsApp.window = root;
@@ -47,21 +48,27 @@ FloatingWindow {
                 name: "Accessibility"
             }
         ]
-        currentTab: view.page
+        currentTab: view?.page || content.savedState?.page || "studio"
         mode: NacreColorsApp.options.mode
-        onNavigate: name => view.page = name
+        onNavigate: name => {
+            if (view)
+                view.page = name;
+        }
         onModeChangedByUser: name => NacreColorsApp.change({
                 mode: name,
                 autoMode: false
             })
         onMoveRequested: root.contentItem.Window.window.startSystemMove()
     }
-    NacreColorsView {
-        id: view
+    NacreIdleLoader {
+        id: content
+        wanted: NacreColorsApp.visible
+        preserveState: true
         x: 16
         y: 80
         width: parent.width - 32
         height: parent.height - 96
+        sourceComponent: NacreColorsView {}
     }
     Shortcut {
         sequence: "Ctrl+W"
@@ -76,6 +83,6 @@ FloatingWindow {
     Shortcut {
         sequence: "Ctrl+F"
         context: Qt.WindowShortcut
-        onActivated: view.search()
+        onActivated: view?.search()
     }
 }

@@ -10,6 +10,21 @@ Item {
     id: root
     signal closeRequested
     focus: true
+    function captureState() {
+        return {
+            page: page,
+            query: query,
+            scroll: scroll.contentY,
+            categories: categories.contentY
+        };
+    }
+    function restoreState(data) {
+        query = data.page === page ? data.query || "" : "";
+        Qt.callLater(() => {
+            scroll.contentY = data.page === page ? data.scroll || 0 : 0;
+            categories.contentY = data.categories || 0;
+        });
+    }
     function focusContent() {
         forceActiveFocus(Qt.OtherFocusReason);
     }

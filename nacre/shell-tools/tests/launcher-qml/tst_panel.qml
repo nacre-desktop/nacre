@@ -33,6 +33,7 @@ TestCase {
         const view = createTemporaryObject(scene, this), panel = view.panel;
         const page = findChild(panel, "launcherPage");
         verify(!page.active);
+        page.releaseDelay = 100;
         panel.state.launcher = true;
         wait(400);
         compare(panel.height, 300);
@@ -49,7 +50,7 @@ TestCase {
         panel.state.launcher = false;
         wait(400);
         compare(panel.height, 0);
-        verify(!page.active);
+        tryCompare(page, "active", false, 500);
         verify(!page.item);
     }
     function test_modes_and_full_gallery_contracts() {

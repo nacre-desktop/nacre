@@ -11,7 +11,10 @@
 
 - Test PSS/USS accounting and record fresh/panel/static/video/output scenarios in
   a disposable nested compositor and HOME.
-- Attribute memory and launcher time; implement measured lifecycle/media wins.
+- Candidate implements five-second launcher/content reuse, idle poster trimming,
+  and lazy video-file loading. Floating window geometry/identity and view state
+  are retained. Native lifetime/poster/video tests pass.
+- Finish comparable richer-fixture measurements and validate actual view reopening.
 - Compare before/after, run source/native tests and CI, rebase and merge one PR.
 
 ## Open questions
