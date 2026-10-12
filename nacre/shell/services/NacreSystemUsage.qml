@@ -14,6 +14,8 @@ Singleton {
     property bool gpuUsageAvailable: false
     property real gpuPerc: NaN
     property real gpuTemp: NaN
+    property real gpuFrequencyMHz: NaN
+    property var gpus: []
     property real memUsed: 0
     property real memTotal: 0
     readonly property real memPerc: memTotal > 0 ? memUsed / memTotal : NaN
@@ -40,6 +42,8 @@ Singleton {
     function slowSample(text) {
         try {
             const value = JSON.parse(text);
+            gpus = Array.isArray(value.gpus) ? value.gpus : [];
+            gpuFrequencyMHz = Number.isFinite(value.gpuFrequencyMHz) ? value.gpuFrequencyMHz : NaN;
             cpuTemp = Number.isFinite(value.cpuTemp) ? value.cpuTemp : NaN;
             gpuTemp = Number.isFinite(value.gpuTemp) ? value.gpuTemp : NaN;
             gpuUsageAvailable = value.gpuUsageAvailable === true && Number.isFinite(value.gpuPerc) && value.gpuPerc >= 0 && value.gpuPerc <= 1;
@@ -50,6 +54,11 @@ Singleton {
             }
             error = "";
         } catch (failure) {
+            gpus = [];
+            gpuUsageAvailable = false;
+            gpuPerc = NaN;
+            gpuTemp = NaN;
+            gpuFrequencyMHz = NaN;
             error = "Some system readings are unavailable.";
         }
     }
@@ -60,7 +69,7 @@ Singleton {
         loadFile.reload();
     }
     function slowRefresh() {
-        if (!slow.running) {
+        if (visibleDashboard && !slow.running) {
             slowReads++;
             slow.running = true;
         }
@@ -81,9 +90,11 @@ Singleton {
         fastRefresh();
         warm.restart();
         slowRefresh();
-    } else
-        warm.stop()
-    Component.onCompleted: {
+    } else {
+        warm.stop();
+        slow.running = false;
+    }
+    Component.onCompleted: if (visibleDashboard) {
         fastRefresh();
         slowRefresh();
     }
@@ -138,8 +149,10 @@ Singleton {
             onStreamFinished: root.slowSample(text)
         }
         onExited: (exitCode, exitStatus) => {
-            if (exitCode !== 0)
+            if (exitCode !== 0 && root.visibleDashboard) {
+                root.slowSample("{}");
                 root.error = "Some system readings are unavailable.";
+            }
         }
     }
     IpcHandler {
@@ -154,6 +167,9 @@ Singleton {
                 storage: root.storagePerc,
                 cpuTemperature: root.cpuTemp,
                 gpuAvailable: root.gpuUsageAvailable,
+                gpuTemperature: root.gpuTemp,
+                gpuFrequencyMHz: root.gpuFrequencyMHz,
+                gpus: root.gpus,
                 error: root.error
             });
         }

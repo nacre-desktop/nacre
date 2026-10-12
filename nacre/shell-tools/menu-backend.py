@@ -629,6 +629,17 @@ def stay_awake():
 
 
 def tool(value):
+    if value == "support-report":
+        from diagnostics import support_report
+
+        subprocess.run(
+            ["wl-copy", "--type", "text/plain;charset=utf-8"],
+            input=support_report(),
+            text=True,
+            check=True,
+            timeout=5,
+        )
+        return "Support report copied"
     if value in ("capture-area", "capture-screen"):
         import screenshot
 

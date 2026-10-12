@@ -12,6 +12,26 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_doctor_forwards_export_mode_without_an_extra_json_prefix(self):
+        import io
+        import sys
+        from contextlib import redirect_stdout
+
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.object(m, "STATE", Path(folder)),
+            patch.object(m.subprocess, "run") as run,
+        ):
+            for flag in ("--report", "--json"):
+                with (
+                    patch.object(sys, "argv", ["nacre", "doctor", flag]),
+                    redirect_stdout(io.StringIO()) as output,
+                ):
+                    m.main()
+                self.assertEqual(output.getvalue(), "")
+                self.assertEqual(run.call_args.args[0][-2:], ["doctor", flag])
+                self.assertTrue(run.call_args.kwargs["check"])
+
     def test_failed_release_restores_complete_software_and_preserves_account_state(
         self,
     ):

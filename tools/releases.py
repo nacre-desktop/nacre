@@ -481,16 +481,24 @@ def main():
     )
     p.add_argument("--keyboard")
     p.add_argument("--migrate-owned", action="store_true")
+    output = p.add_mutually_exclusive_group()
+    output.add_argument(
+        "--report", action="store_true", help="Redacted Markdown support report"
+    )
+    output.add_argument(
+        "--json", action="store_true", help="Redacted JSON support report"
+    )
     a = p.parse_args()
+    if (a.report or a.json) and a.action != "doctor":
+        p.error("--report and --json are only valid for doctor")
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     if a.action in ("doctor", "profile", "check", "session", "restart"):
-        if a.action == "doctor":
-            print(json.dumps({"releaseDiskBytes": release_disk_usage()}), flush=True)
         subprocess.run(
             [
                 sys.executable,
                 str(HOME / ".local/share/nacre/shell/tools/maintenance.py"),
-                "state" if a.action == "doctor" else a.action,
+                a.action,
+                *(["--report"] if a.report else ["--json"] if a.json else []),
             ],
             check=True,
         )

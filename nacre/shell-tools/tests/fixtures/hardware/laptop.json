@@ -1,0 +1,11 @@
+{
+  "files": {
+    "class/dmi/id/chassis_type": "10",
+    "class/power_supply/BAT0/type": "Battery",
+    "class/backlight/intel_backlight/brightness": "500",
+    "class/bluetooth/hci0/name": "fixture",
+    "class/net/wlan0/wireless/status": ""
+  },
+  "expected": {"formFactor": "laptop", "battery": true, "backlight": true, "bluetooth": true, "wifi": true, "ethernet": false},
+  "monitors": [{"name": "eDP-1", "width": 2880, "height": 1800, "scale": 2, "refreshRate": 90}]
+}

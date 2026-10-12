@@ -54,6 +54,10 @@ TestCase {
         };
         const state = createTemporaryObject(service, test);
         verify(!state.visibleDashboard);
+        compare(state.slowReads, 0);
+        verify(!findChild(state, "resourceReader").running);
+        state.slowRefresh();
+        compare(state.slowReads, 0);
         verify(!findChild(state, "resourceFastTimer").running);
         verify(!findChild(state, "resourceSlowTimer").running);
         const reads = state.fastReads;
@@ -67,7 +71,9 @@ TestCase {
         verify(state.visibleDashboard);
         compare(state.previousCpu, null);
         verify(findChild(state, "resourceFastTimer").running);
+        verify(findChild(state, "resourceReader").running);
         view.dashboardTab = 1;
+        verify(!findChild(state, "resourceReader").running);
         verify(!state.visibleDashboard);
         verify(!findChild(state, "resourceFastTimer").running);
         view.dashboardTab = 3;

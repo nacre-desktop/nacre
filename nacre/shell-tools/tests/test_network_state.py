@@ -85,7 +85,13 @@ class NetworkStateTests(unittest.TestCase):
     def test_disabled_radio_and_failures_are_reported_without_sensitive_output(self):
         with patch.object(state, "query", side_effect=["disabled", "", ""]):
             self.assertEqual(
-                state.snapshot(), dict(wifiEnabled=False, wifiInterface="", networks=[])
+                state.snapshot(),
+                dict(
+                    wifiAvailable=False,
+                    wifiEnabled=False,
+                    wifiInterface="",
+                    networks=[],
+                ),
             )
         with patch.object(state, "query", return_value="unknown"):
             with self.assertRaises(state.SnapshotError):
@@ -99,6 +105,19 @@ class NetworkStateTests(unittest.TestCase):
                 with self.assertRaises(state.SnapshotError) as caught:
                     state.query("radio", "wifi")
                 self.assertNotIn("sensitive", str(caught.exception))
+
+    def test_ethernet_only_does_not_query_wifi_points_or_offer_radio(self):
+        with patch.object(
+            state,
+            "query",
+            side_effect=["enabled", "eth0:ethernet:connected\ninvalid\\\n"],
+        ) as query:
+            result = state.snapshot()
+        self.assertEqual(
+            result,
+            dict(wifiAvailable=False, wifiEnabled=False, wifiInterface="", networks=[]),
+        )
+        self.assertEqual(query.call_count, 2)
 
     def test_oversized_snapshot_is_rejected(self):
         with patch.object(

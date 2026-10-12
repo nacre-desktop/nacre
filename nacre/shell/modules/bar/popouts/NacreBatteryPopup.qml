@@ -8,7 +8,7 @@ Column {
     id: root
     property var device: UPower.displayDevice
     property bool profilesEnabled: true
-    readonly property bool available: device.ready && device.isLaptopBattery && Number.isFinite(device.percentage) && device.percentage >= 0 && device.percentage <= 1
+    readonly property bool available: !!device && device.ready && device.isPresent !== false && device.isLaptopBattery && Number.isFinite(device.percentage) && device.percentage >= 0 && device.percentage <= 1
     readonly property int percent: available ? Math.round(device.percentage * 100) : -1
     readonly property string estimate: available ? formatSeconds(UPower.onBattery ? device.timeToEmpty : device.timeToFull, UPower.onBattery ? "Remaining time unavailable" : "Connected to power") : "Battery unavailable"
     readonly property string profileName: PowerProfiles.profile === PowerProfile.PowerSaver ? "Power saver" : PowerProfiles.profile === PowerProfile.Performance ? "Performance" : "Balanced"
