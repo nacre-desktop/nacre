@@ -54,7 +54,7 @@ Flickable {
                             value: NacreSystemUsage.storagePerc,
                             detail: Model.size(NacreSystemUsage.storageUsed)
                         }
-                    ]
+                    ].filter(metric => Number.isFinite(metric.value))
                     NacreChamberGauge {
                         required property var modelData
                         width: parent.width / parent.columns
