@@ -65,7 +65,7 @@ class PerformanceTests(unittest.TestCase):
             for pid in (10, 11, 12, 20):
                 (root / str(pid)).mkdir()
             rows = {
-                pid: {"pid": pid, "ppid": parent, "uid": 1000, "args": []}
+                pid: {"pid": pid, "ppid": parent, "uid": 1000, "args": [], "start": 1}
                 for pid, parent in ((10, 1), (11, 10), (12, 11), (20, 1))
             }
             with patch.object(
