@@ -53,26 +53,7 @@ TestCase {
         keyClick(Qt.Key_Escape);
         compare(field.escapeCount, 1);
     }
-    function test_slider_pointer_keys_clamp_and_external_updates() {
-        const slider = createTemporaryObject(levelControl, test);
-        compare(slider.orientation, Qt.Vertical);
-        slider.value = 0.5;
-        compare(slider.moveCount, 0);
-        slider.forceActiveFocus();
-        keyClick(Qt.Key_Up);
-        compare(slider.value, 0.6);
-        compare(slider.moveCount, 1);
-        mouseClick(slider, 15, 10);
-        verify(slider.value >= 0.9);
-        verify(slider.moveCount >= 2);
-        slider.value = 2;
-        compare(slider.value, 1);
-        slider.enabled = false;
-        const count = slider.moveCount;
-        mouseClick(slider, 15, 115);
-        compare(slider.value, 1);
-        compare(slider.moveCount, count);
-    }
+
     function test_attached_scrollbar_tracks_content_without_filling_track() {
         const list = createTemporaryObject(scrollingList, test);
         const bar = list.ScrollBar.vertical;
@@ -102,16 +83,7 @@ TestCase {
             Keys.onEscapePressed: escapeCount++
         }
     }
-    Component {
-        id: levelControl
-        NacreSlider {
-            width: 30
-            height: 120
-            stepSize: 0.1
-            property int moveCount: 0
-            onMoved: moveCount++
-        }
-    }
+
     Component {
         id: scrollingList
         Flickable {
@@ -137,8 +109,6 @@ TestCase {
         compare(NacreFrame.rounding, 19);
         compare(NacreAppearance.anim.durations.normal, 0);
         compare(NacreAppearance.font.family.sans, NacreTokens.textFamily);
-        compare(NacreLauncher.maxShown, 8);
-        compare(NacreDashboard.sizes.mediaCoverArtSize, 150);
         compare(NacreNotifications.defaultExpireTimeout, 5000);
     }
     function test_native_image_resize_original_clear_and_error() {

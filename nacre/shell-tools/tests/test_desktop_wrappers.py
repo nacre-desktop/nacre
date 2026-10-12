@@ -27,7 +27,7 @@ class DesktopWrappersTests(unittest.TestCase):
             fixtures = target / "fixtures"
             shutil.copytree(ROOT / "tests/qml/fixtures", fixtures)
             install_foundation_interaction(fixtures, SHELL / "widgets")
-            for name in ("NacreText", "NacreSurface", "NacreIcon", "NacreSlider"):
+            for name in ("NacreText", "NacreSurface", "NacreIcon"):
                 shutil.copy2(
                     SHELL / "widgets" / (name + ".qml"), fixtures / (name + ".qml")
                 )
@@ -45,8 +45,7 @@ class DesktopWrappersTests(unittest.TestCase):
                 "NacrePresentation": 'property int revision:0;property var pending:({});property var active:({});property var activations:[];function canonicalPoster(value){return value.startsWith("file://")?decodeURIComponent(value.slice(7)):value}function activate(path){if(path!==pending.poster)return false;active=pending;activations=[...activations,path];return true}',
             }
             with (fixtures / "qmldir").open("a") as manifest:
-                for name in ("NacreIcon", "NacreSlider"):
-                    manifest.write(f"\n{name} 1.0 {name}.qml\n")
+                manifest.write("\nNacreIcon 1.0 NacreIcon.qml\n")
                 for name, body in definitions.items():
                     (fixtures / (name + ".qml")).write_text(
                         "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}\n"

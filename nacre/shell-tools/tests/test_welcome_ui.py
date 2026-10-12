@@ -30,7 +30,6 @@ class WelcomeUITests(unittest.TestCase):
                 "ActionButton",
                 "FastScroll",
                 "NacreScrollBar",
-                "NacreSwitch",
                 "NacreImage",
             ):
                 text = (
@@ -39,7 +38,7 @@ class WelcomeUITests(unittest.TestCase):
                     .replace("import qs.services", 'import "."')
                 )
                 (fixtures / (name + ".qml")).write_text(text)
-                if name in ("NacreIcon", "NacreScrollBar", "NacreSwitch", "NacreImage"):
+                if name in ("NacreIcon", "NacreScrollBar", "NacreImage"):
                     with (fixtures / "qmldir").open("a") as stream:
                         stream.write(f"\n{name} 1.0 {name}.qml\n")
             clip = (

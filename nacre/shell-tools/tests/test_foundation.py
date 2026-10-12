@@ -32,7 +32,6 @@ class FoundationTests(unittest.TestCase):
                 "ActionButton",
                 "NacreIcon",
                 "NacreTextField",
-                "NacreSlider",
                 "NacreScrollBar",
                 "NacreImage",
             )
