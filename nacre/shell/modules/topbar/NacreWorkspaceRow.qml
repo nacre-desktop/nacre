@@ -254,7 +254,7 @@ Item {
                     }, {
                         workspace: cell.workspaceId,
                         count: cell.windowCount,
-                        titles: cell.windowCount ? "\n" + cell.windows.slice(0, 5).map(client => String(client.title || client.wmClass || NacreI18n.tr("workspaces.window.fallback", "Window")).slice(0, 80)).join("\n") : "",
+                        titles: cell.windowCount ? "\n" + cell.windows.slice(0, 5).map(client => NacreI18n.windowCaption(String(client.title || client.wmClass || NacreI18n.tr("workspaces.window.fallback", "Window")), client.wmClass).slice(0, 80)).join("\n") : "",
                         more: cell.windowCount > 5 ? NacreI18n.tr("workspaces.tooltip.more", "\n+{count} more", {
                             count: cell.windowCount - 5
                         }) : ""

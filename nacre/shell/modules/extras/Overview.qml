@@ -10,7 +10,7 @@ import QtQuick.Controls
 SearchSurface {
     id: root
     title: NacreI18n.tr("extras.overview.title.windows", "Windows")
-    placeholder: "Search windows or applications"
+    placeholder: NacreI18n.tr("extras.overview.placeholder.search-windows-or-applications", "Search windows or applications")
     implicitWidth: 1020
     bodyHeight: Math.min(690, Quickshell.screens[0].height - 230)
     property int selection: 0
@@ -134,7 +134,7 @@ SearchSurface {
                                 width: tile.width
                                 font.pointSize: 9
                                 elide: Text.ElideRight
-                                text: ChatWindowTitle.titles[tile.modelData.pid] || tile.modelData.title
+                                text: ChatWindowTitle.titles[tile.modelData.pid] || NacreI18n.windowCaption(tile.modelData.title, tile.modelData.wmClass)
                             }
                             Item {
                                 id: dragProxy

@@ -118,13 +118,18 @@ def label(kind, data, settings):
             return ""
         w = data.get("weather", {})
         desc = w.get("description")
-        return (
-            "<b>"
-            + plain(w.get("location") or "Weather", lines=1, font=16)
-            + "</b>\n\n"
-            + plain(w.get("temperature", "") if desc else "", lines=1, font=16)
-            + "\n"
-            + plain(desc or w.get("error") or "Weather unavailable", font=16)
+        return tr(
+            "helper.lock-info.b-value0-b-value1-value2",
+            "<b>{value0}</b>\n\n{value1}\n{value2}",
+            {
+                "value0": plain(w.get("location") or "Weather", lines=1, font=16),
+                "value1": plain(
+                    w.get("temperature", "") if desc else "", lines=1, font=16
+                ),
+                "value2": plain(
+                    desc or w.get("error") or "Weather unavailable", font=16
+                ),
+            },
         )
     if kind == "media":
         if not settings.get("lockMedia", True):
@@ -135,13 +140,14 @@ def label(kind, data, settings):
                 "helper.lock-info.b-media-b-nothing-playing",
                 "<b>Media</b>\n\nNothing playing",
             )
-        return (
-            "<b>"
-            + plain(m.get("title") or "Untitled track")
-            + "</b>\n"
-            + plain(m.get("artist"))
-            + "\n\n"
-            + ("Playing" if m.get("playing") else "Paused")
+        return tr(
+            "helper.lock-info.b-value0-b-value1-value2",
+            "<b>{value0}</b>\n{value1}\n\n{value2}",
+            {
+                "value0": plain(m.get("title") or "Untitled track"),
+                "value1": plain(m.get("artist")),
+                "value2": "Playing" if m.get("playing") else "Paused",
+            },
         )
     if kind == "notifications":
         if not settings.get("lockNotifications", True):
@@ -150,7 +156,11 @@ def label(kind, data, settings):
         count = data.get("count", len(rows))
         output = ["<b>Notifications · " + str(count) + "</b>"]
         if not rows:
-            return output[0] + "\n\nYou are all caught up"
+            return tr(
+                "helper.lock-info.value0-you-are-all-caught-up",
+                "{value0}\n\nYou are all caught up",
+                {"value0": output[0]},
+            )
         if settings.get("lockNotificationContents", False):
             for n in rows[:3]:
                 output += [

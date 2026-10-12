@@ -6,6 +6,10 @@ compositor() {
     python3 "$(dirname "$(realpath "$0")")/compositor-compat.py" "$@"
 }
 
+nacre_message() {
+    python3 "$HOME/.local/share/nacre/shell/tools/nacre_i18n.py" "$@" 2>/dev/null || printf '%s' "$2"
+}
+
 notify() {
     command -v notify-send >/dev/null 2>&1 && notify-send -a "Nacre Windows" -i nacre-notifications -t 2000 "$@" || true
 }
@@ -36,7 +40,7 @@ main() {
 
     address="$(active_address)"
     if [[ -z "$address" || "$address" == "null" ]]; then
-        notify "No active window to close"
+        notify "$(nacre_message "windows.notification.no-active-window-to-close" "No active window to close")"
         return 0
     fi
 
@@ -49,7 +53,7 @@ main() {
     sleep 1
 
     if window_exists "$address"; then
-        notify "Window did not close" "Press SUPER+CTRL+SHIFT+Q to force quit it"
+        notify "$(nacre_message "windows.notification.window-did-not-close" "Window did not close")" "$(nacre_message "windows.notification.press-shortcut-to-force-quit-it" "Press {shortcut} to force quit it" '{"shortcut": "SUPER+CTRL+SHIFT+Q"}')"
     fi
 }
 

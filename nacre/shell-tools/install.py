@@ -116,10 +116,14 @@ def deploy(code_only=False):
             )
             if result.returncode:
                 raise RuntimeError(
-                    "QML validation failed: "
-                    + str(file.relative_to(SHELL))
-                    + " "
-                    + result.stderr.strip()
+                    tr(
+                        "helper.install.qml-validation-failed-value0-value1",
+                        "QML validation failed: {value0} {value1}",
+                        {
+                            "value0": str(file.relative_to(SHELL)),
+                            "value1": result.stderr.strip(),
+                        },
+                    )
                 )
     runtime = HOME / ".local/share/nacre/palette-runtime"
     if (
@@ -470,7 +474,13 @@ def restore():
             digest(path) != e["after_hash"]
             or (os.readlink(path) if path.is_symlink() else None) != e["after_link"]
         ):
-            raise RuntimeError("Later edit preserved: " + str(path))
+            raise RuntimeError(
+                tr(
+                    "helper.install.later-edit-preserved-value0",
+                    "Later edit preserved: {value0}",
+                    {"value0": str(path)},
+                )
+            )
     subprocess.run(["systemctl", "--user", "stop", "nacre-shell"], check=True)
     for e in reversed(entries):
         path = Path(e["target"])

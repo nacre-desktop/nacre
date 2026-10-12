@@ -1,8 +1,9 @@
+from qml_source import install_i18n
+
 """Decoded preview lifetime, bounded sizes and encoded local-file paths."""
 
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
 import unittest
@@ -18,7 +19,12 @@ class ImageLifetimeTests(unittest.TestCase):
             self.skipTest("Native Qt Quick Test unavailable")
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
-            shutil.copy2(SHELL / "widgets/NacreImage.qml", target)
+            (target / "NacreImage.qml").write_text(
+                (SHELL / "widgets/NacreImage.qml")
+                .read_text()
+                .replace("import qs.services", 'import "."')
+            )
+            install_i18n(target)
             (target / "percent % hash # image.svg").write_text(
                 '<svg xmlns="http://www.w3.org/2000/svg" width="3840" '
                 'height="2160"><rect width="3840" height="2160" '

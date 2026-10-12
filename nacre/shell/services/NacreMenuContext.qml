@@ -45,7 +45,7 @@ Scope {
     property bool refreshing: stateWorker.running
     readonly property var rows: NacreI18n.localize(catalog.rows)
     readonly property var navigation: Model.rail(rows)
-    readonly property var apps: NacreApps.list.map(entry => Model.application(entry))
+    readonly property var apps: NacreApps.list.map(entry => NacreI18n.applicationRow(Model.application(entry)))
     readonly property var legacy: Legacy.actions(DesktopActions.list).map(entry => Object.assign({}, entry, {
             operation: "legacy-action",
             label: entry.name,
@@ -147,7 +147,12 @@ Scope {
         result.shortcut = DesktopExtras.keys.find(item => item.menu === row.id)?.key || "";
         const checked = stateFor(row);
         result.checked = checked === true;
-        result.status = row.state === "updates" ? (Updates.count ? Updates.count + NacreI18n.tr("ui.menu-context.status.available", " available") : NacreI18n.tr("ui.menu-context.status.up-to-date", "Up to date")) : typeof checked === "boolean" ? (["setting", "dnd", "night-light", "stay-awake", "mute", "mic-mute", "wifi", "bluetooth"].includes(row.state) ? (checked ? NacreI18n.tr("ui.menu-context.status.on", "On") : NacreI18n.tr("ui.menu-context.status.off", "Off")) : checked ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : "") : "";
+        result.status = row.state === "updates" ? (Updates.count ? NacreI18n.tr("launcher.updates.available", {
+                one: "{count} available",
+                other: "{count} available"
+            }, {
+                count: Updates.count
+            }) : NacreI18n.tr("ui.menu-context.status.up-to-date", "Up to date")) : typeof checked === "boolean" ? (["setting", "dnd", "night-light", "stay-awake", "mute", "mic-mute", "wifi", "bluetooth"].includes(row.state) ? (checked ? NacreI18n.tr("ui.menu-context.status.on", "On") : NacreI18n.tr("ui.menu-context.status.off", "Off")) : checked ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : "") : "";
         result.disabled = !!row.capability && snapshot.capabilities[row.capability] !== true;
         result.reason = result.disabled ? "Optional tool is not installed" : "";
         if (row.operation === "media") {
@@ -246,7 +251,9 @@ Scope {
                         checked: DesktopSettings.data.interfaceFont === name
                     }))];
         if (node.provider === "windows")
-            return (NacreCompositor.windows || []).map(client => valueRow(route, String(client.windowId), client.title || client.wmClass, "focus", client.windowId, "window", NacreI18n.tr("launcher.provider.workspace", "Workspace {workspace}", {workspace: client.workspace?.name})));
+            return (NacreCompositor.windows || []).map(client => valueRow(route, String(client.windowId), NacreI18n.windowCaption(client.title || client.wmClass, client.wmClass), "focus", client.windowId, "window", NacreI18n.tr("launcher.provider.workspace", "Workspace {workspace}", {
+                    workspace: client.workspace?.name
+                })));
         if (node.provider === "wifi")
             return NacreNetwork.visibleNetworks.map(point => valueRow(route, point.bssid.replace(/:/g, ""), point.ssid || NacreI18n.tr("launcher.provider.hidden-network", "Hidden network"), "settings", "network", "wifi", NacreI18n.tr("launcher.provider.signal", "{strength}% signal", {
                     strength: NacreI18n.number(point.strength)
@@ -275,7 +282,7 @@ Scope {
         if (node.provider === "timers")
             return (snapshot.reminders || []).map(entry => valueRow(route, entry.unit.slice(0, -6), entry.label, "timer-cancel", entry.unit, "timer", NacreI18n.tr("launcher.provider.cancel-this-reminder", "Cancel this reminder"), {
                     status: NacreI18n.tr("ui.menu-context.status.until-value0", "Until {value0}", {
-                        value0: Qt.formatTime(new Date(entry.due * 1000), "hh:mm")
+                        value0: NacreI18n.time(new Date(entry.due * 1000), "hh:mm")
                     })
                 }));
         if (node.provider === "webapps")

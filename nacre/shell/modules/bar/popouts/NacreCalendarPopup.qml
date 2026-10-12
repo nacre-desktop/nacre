@@ -28,7 +28,7 @@ Item {
         x: 38
         width: root.width - 76
         height: 34
-        text: Qt.formatDate(root.displayed, "MMMM yyyy")
+        text: NacreI18n.date(root.displayed, "MMMM yyyy")
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight

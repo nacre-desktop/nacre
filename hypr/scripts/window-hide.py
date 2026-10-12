@@ -10,6 +10,17 @@ import re
 import subprocess
 import sys
 import tempfile
+import importlib.util
+
+_translation_dir = Path(__file__).resolve().parents[2] / "nacre/shell-tools"
+if not _translation_dir.is_dir():
+    _translation_dir = Path.home() / ".local/share/nacre/shell/tools"
+_translation_spec = importlib.util.spec_from_file_location(
+    "window_translations", _translation_dir / "nacre_i18n.py"
+)
+_translation = importlib.util.module_from_spec(_translation_spec)
+_translation_spec.loader.exec_module(_translation)
+tr = _translation.tr
 
 HIDDEN = "special:hidden"
 
@@ -141,7 +152,12 @@ def action(name, folder=None, window=None, quiet=False):
             workspace = client.get("workspace", {})
             number = workspace.get("id")
             if not address(ident) or type(number) is not int:
-                announce("No active window to hide")
+                announce(
+                    tr(
+                        "windows.notification.no-active-window-to-hide",
+                        "No active window to hide",
+                    )
+                )
                 return
             if workspace.get("name") == HIDDEN:
                 return
@@ -154,7 +170,7 @@ def action(name, folder=None, window=None, quiet=False):
             except Exception:  # noqa: BLE001 — Rollback must run for any failure before the original exception is re-raised.
                 path.unlink(missing_ok=True)
                 raise
-            announce("Window hidden")
+            announce(tr("windows.notification.window-hidden", "Window hidden"))
             return
         candidates = records(folder, query("windows"))
         if window:
@@ -178,7 +194,12 @@ def action(name, folder=None, window=None, quiet=False):
                 else "Window restored to current workspace"
             )
         else:
-            announce("No hidden windows to restore")
+            announce(
+                tr(
+                    "windows.notification.no-hidden-windows-to-restore",
+                    "No hidden windows to restore",
+                )
+            )
 
 
 def main():

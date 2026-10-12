@@ -37,7 +37,7 @@ NacreSurface {
         y: 44
         width: parent.width - 20
         height: 36
-        text: root.entry.name || NacreI18n.tr("ui.palette-tile.text.color", "Color")
+        text: NacreI18n.option("palette-name", root.entry.name) || NacreI18n.tr("ui.palette-tile.text.color", "Color")
         font.pointSize: 10
         wrapMode: Text.Wrap
         maximumLineCount: 2

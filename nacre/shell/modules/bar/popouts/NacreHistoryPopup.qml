@@ -29,7 +29,7 @@ Item {
                 id: dndToggle
                 objectName: "quickDnd"
                 text: NacreI18n.tr("popouts.history-popup.text.dnd", "DND")
-                Accessible.name: NacreNotifs.dnd ? "Disable do not disturb" : "Enable do not disturb"
+                Accessible.name: NacreNotifs.dnd ? NacreI18n.tr("popouts.history-popup.name.disable-do-not-disturb", "Disable do not disturb") : NacreI18n.tr("popouts.history-popup.name.enable-do-not-disturb", "Enable do not disturb")
                 icon: NacreNotifs.dnd ? "do_not_disturb_on" : "notifications_active"
                 compact: true
                 selected: NacreNotifs.dnd

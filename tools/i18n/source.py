@@ -12,6 +12,16 @@ VISIBLE = {
     "detail",
     "heading",
     "placeholderText",
+    "placeholder",
+    "subtitle",
+    "hint",
+    "tooltipText",
+    "loadingText",
+    "errorText",
+    "statusText",
+    "footerText",
+    "displayTitle",
+    "caption",
     "accessibleName",
     "accessibleLabel",
     "tooltip",
@@ -109,6 +119,7 @@ def literal(token):
 def human(text):
     return bool(
         text
+        and not re.match(r"(?:https?|file)://", text)
         and not re.fullmatch(r"T\d{2}:\d{2}:\d{2}", text)
         and re.search(r"[A-Za-z]", text)
         and not re.fullmatch(r"[a-z0-9_./:#-]+", text)
@@ -126,7 +137,14 @@ def bindings(source):
         elif token.text == "}":
             if stack:
                 stack.pop()
-        if token.text not in VISIBLE or index + 1 >= len(stream):
+        if (
+            token.text not in VISIBLE
+            and not (
+                token.text == "name"
+                and index >= 2
+                and stream[index - 2].text == "Accessible"
+            )
+        ) or index + 1 >= len(stream):
             continue
         if stream[index + 1].text not in (":", "="):
             continue

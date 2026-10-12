@@ -1,8 +1,14 @@
 import QtQuick
+import "translation.js" as Translation
+import "messages.js" as Messages
 import "LogoData.js" as LogoData
 
 Item {
     id: root
+    property string language: "system"
+    function tr(id, fallback, args = {}) {
+        return Translation.translate(Messages.english, language, id, fallback, args);
+    }
     implicitWidth: 30
     implicitHeight: 30
     readonly property bool ready: image.loadedOnce
@@ -19,7 +25,7 @@ Item {
     property color background: "#151310"
     property color foreground: "#f4f1ef"
     property bool motionEnabled: false
-    Accessible.name: root.ai ? "Nacre AI" : root.brain ? "Nacre Brain" : root.settings ? "Nacre Settings" : root.colorsApp ? "Nacre Colors" : root.notifications ? "Nacre Notifications" : "Nacre"
+    Accessible.name: root.ai ? root.tr("ui.brand-logo.name.nacre-ai", "Nacre AI") : root.brain ? root.tr("ui.brand-logo.name.nacre-brain", "Nacre Brain") : root.settings ? root.tr("ui.brand-logo.name.nacre-settings", "Nacre Settings") : root.colorsApp ? root.tr("ui.brand-logo.name.nacre-colors", "Nacre Colors") : root.notifications ? root.tr("ui.brand-logo.name.nacre-notifications", "Nacre Notifications") : root.tr("ui.brand-logo.name.nacre", "Nacre")
     Accessible.role: Accessible.Graphic
     Image {
         id: image

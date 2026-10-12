@@ -14,7 +14,7 @@ Singleton {
     property string requestLocation: ""
     readonly property string desiredLocation: String(DesktopSettings.data.weatherLocation || "").trim()
     readonly property bool busy: reader.running
-    readonly property string description: reading.description || ""
+    readonly property string description: reading.description ? NacreI18n.option("weather-description", reading.description) : ""
     readonly property string location: reading.location || ""
     readonly property string icon: description ? NacreIcons.getWeatherIcon(reading.code) : "cloud_off"
     readonly property real temperature: reading.temperature ?? NaN

@@ -63,7 +63,11 @@ def main():
     result = subprocess.run(["pacman", "-Q", *PACKAGES], capture_output=True, text=True)
     if result.returncode:
         raise RuntimeError(
-            "Install desktop dependencies with pacman first:\n" + result.stderr
+            tr(
+                "helper.provision.install-desktop-dependencies-with-pacman-first-value0",
+                "Install desktop dependencies with pacman first:\n{value0}",
+                {"value0": result.stderr},
+            )
         )
     source = ROOT.parent / "shell-cli"
     engine = ROOT.parents[1] / "deps/orient"

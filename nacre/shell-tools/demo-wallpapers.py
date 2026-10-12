@@ -39,7 +39,11 @@ def collection():
         source = ASSETS / name
         if hashlib.sha256(source.read_bytes()).hexdigest() != item["sha256"]:
             raise ValueError(
-                "Bundled wallpaper checksum failed: " + name + ". Reinstall the shell."
+                tr(
+                    "helper.demo-wallpapers.bundled-wallpaper-checksum-failed-value0-reinstall-the-shell",
+                    "Bundled wallpaper checksum failed: {value0}. Reinstall the shell.",
+                    {"value0": name},
+                )
             )
         with Image.open(source) as image:
             if (

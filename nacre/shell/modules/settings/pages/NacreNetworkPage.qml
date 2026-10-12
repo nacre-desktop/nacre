@@ -59,7 +59,7 @@ NacreSettingsPage {
                 }
                 NacreText {
                     width: 40
-                    text: Math.round(parent.modelData.strength) + "%"
+                    text: NacreI18n.number(Math.round(parent.modelData.strength)) + "%"
                     font.pointSize: 10
                     anchors.verticalCenter: parent.verticalCenter
                 }

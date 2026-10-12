@@ -24,7 +24,7 @@ SearchSurface {
     }
 
     title: NacreI18n.tr("extras.clipboard.title.clipboard", "Clipboard")
-    placeholder: "Search copied text or images"
+    placeholder: NacreI18n.tr("extras.clipboard.placeholder.search-copied-text-or-images", "Search copied text or images")
     Component.onCompleted: DesktopExtras.request("clips", {})
     onChosen: copy(list.currentIndex)
     onQueryChanged: list.currentIndex = 0

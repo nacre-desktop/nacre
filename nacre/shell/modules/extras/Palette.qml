@@ -6,7 +6,7 @@ import QtQuick.Controls
 SearchSurface {
     id: root
     title: NacreI18n.tr("extras.palette.title.commands", "Commands")
-    placeholder: "Actions, apps, windows, or brain: something"
+    placeholder: NacreI18n.tr("extras.palette.placeholder.actions-apps-windows-or-brain-something", "Actions, apps, windows, or brain: something")
     readonly property var entries: {
         const q = query.toLowerCase().replace(/^>\s*/, "").trim();
         if (q.startsWith("brain:"))

@@ -78,3 +78,19 @@ def tr(identifier, fallback, args=None):
         lambda match: str(args[match[1]]) if match[1] in args else match[0],
         message,
     )
+
+
+def main():
+    """Small notification-message bridge for compositor shell scripts."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description=main.__doc__)
+    parser.add_argument("identifier")
+    parser.add_argument("fallback")
+    parser.add_argument("arguments", nargs="?", default="{}")
+    values = parser.parse_args()
+    print(tr(values.identifier, values.fallback, json.loads(values.arguments)))
+
+
+if __name__ == "__main__":
+    main()

@@ -200,6 +200,16 @@ Singleton {
                     }
                 }));
     }
+    // Controller identity, never render this metadata directly as a user caption.
+    function nativeTitle(kind, serial) {
+        return "Nacre Pearl " + ({
+                launcher: "Launcher",
+                dashboard: "Dashboard",
+                ai: "AI",
+                controls: "Controls",
+                media: "Media"
+            })[kind] + " " + serial;
+    }
     function open(kind, initial = {}, origin = "", point = null, chat = null) {
         if (!enabled || !["launcher", "dashboard", "ai", "controls", "media"].includes(kind))
             return null;
@@ -212,13 +222,7 @@ Singleton {
         const entry = entryFactory.createObject(root, {
             key: Date.now().toString(36) + "-" + serial,
             kind: kind,
-            title: NacreI18n.tr("ui.pearls.title.nacre-pearl", "Nacre Pearl ") + ({
-                    launcher: NacreI18n.tr("ui.pearls.title.launcher", "Launcher"),
-                    dashboard: NacreI18n.tr("ui.pearls.title.dashboard", "Dashboard"),
-                    ai: NacreI18n.tr("ui.pearls.title.ai", "AI"),
-                    controls: NacreI18n.tr("ui.pearls.title.controls", "Controls"),
-                    media: NacreI18n.tr("ui.pearls.title.media", "Media")
-                })[kind] + " " + serial,
+            title: nativeTitle(kind, serial),
             origin: origin || NacrePanelState.activeName(),
             initial: initial,
             chat: chat

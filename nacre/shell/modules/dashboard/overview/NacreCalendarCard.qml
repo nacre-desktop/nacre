@@ -16,7 +16,7 @@ NacreOverviewCard {
         x: 44
         y: 14
         width: parent.width - 88
-        text: Qt.formatDate(root.displayed, "MMMM yyyy")
+        text: NacreI18n.date(root.displayed, "MMMM yyyy")
         font.pointSize: Math.min(14, Math.max(11, root.width / 40))
         horizontalAlignment: Text.AlignHCenter
         elide: Text.ElideRight
@@ -46,7 +46,7 @@ NacreOverviewCard {
                 required property int index
                 width: parent.width / 7
                 height: 28
-                text: Qt.locale().dayName(((root.firstWeekday + index) % 7) || 7, Locale.ShortFormat)
+                text: NacreI18n.dayName(((root.firstWeekday + index) % 7) || 7, Locale.ShortFormat)
                 font.pointSize: 10
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
@@ -69,7 +69,7 @@ NacreOverviewCard {
                 }
                 NacreText {
                     anchors.fill: parent
-                    text: parent.modelData.day
+                    text: NacreI18n.number(parent.modelData.day)
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     color: parent.modelData.key === root.todayKey ? NacreColours.palette.m3onPrimary : parent.modelData.inMonth ? NacreColours.palette.m3onSurface : NacreColours.palette.m3onSurfaceVariant

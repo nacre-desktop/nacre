@@ -397,10 +397,16 @@ def build():
     for target in [root / "shell/branding/LogoData.js", root / "login/LogoData.js"]:
         target.write_text(data)
     common = (HERE / "logo-widget.qml.in").read_text()
+    login_i18n = """property string language: "system"
+    function tr(id, fallback, args = {}) {
+        return Translation.translate(Messages.english, language, id, fallback, args);
+    }"""
     widget = root / "shell/widgets/BrandLogo.qml"
     widget.write_text(
         'import QtQuick\nimport qs.services\nimport "../branding/LogoData.js" as LogoData\n'
-        + common.replace("DEFAULT_PRIMARY", "NacreColours.palette.m3primary")
+        + common.replace("I18N_HELPER", "")
+        .replace("I18N_TR", "NacreI18n.tr")
+        .replace("DEFAULT_PRIMARY", "NacreColours.palette.m3primary")
         .replace("DEFAULT_SECONDARY", "NacreColours.palette.m3secondary")
         .replace("DEFAULT_TERTIARY", "NacreColours.palette.m3tertiary || secondary")
         .replace("DEFAULT_HIGHLIGHT", "NacreColours.palette.m3primaryFixed || primary")
@@ -413,8 +419,10 @@ def build():
     )
     login = root / "login/Logo.qml"
     login.write_text(
-        'import QtQuick\nimport "LogoData.js" as LogoData\n'
-        + common.replace("DEFAULT_PRIMARY", '"#dda1ba"')
+        'import QtQuick\nimport "LogoData.js" as LogoData\nimport "translation.js" as Translation\nimport "messages.js" as Messages\n'
+        + common.replace("I18N_HELPER", login_i18n)
+        .replace("I18N_TR", "root.tr")
+        .replace("DEFAULT_PRIMARY", '"#dda1ba"')
         .replace("DEFAULT_SECONDARY", '"#afa2df"')
         .replace("DEFAULT_TERTIARY", '"#8cc9cd"')
         .replace("DEFAULT_HIGHLIGHT", '"#eee9f4"')
