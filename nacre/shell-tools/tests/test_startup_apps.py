@@ -22,12 +22,14 @@ class StartupTests(unittest.TestCase):
                 patch.object(
                     m.Path, "open", side_effect=AssertionError("Unexpected lock")
                 ),
-                patch.object(m.subprocess, "check_output") as query,
+                patch.object(m.compositor, "query") as query,
+                patch.object(m.compositor, "switch_workspace") as workspace,
                 patch.object(m.subprocess, "run") as dispatch,
                 patch.object(m.subprocess, "Popen") as launch,
             ):
                 m.main()
                 query.assert_not_called()
+                workspace.assert_not_called()
                 dispatch.assert_not_called()
                 launch.assert_not_called()
 

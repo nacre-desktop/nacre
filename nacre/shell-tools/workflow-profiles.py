@@ -5,6 +5,8 @@ import json
 import subprocess
 from pathlib import Path
 
+import compositor
+
 HOME = Path.home()
 PATH = HOME / ".config/nacre/workflows.json"
 
@@ -50,7 +52,7 @@ def save(name, roles):
     profiles[name] = dict(
         sink=run(["pactl", "get-default-sink"]),
         source=run(["pactl", "get-default-source"]),
-        displays=json.loads(run(["hyprctl", "monitors", "-j"])),
+        displays=compositor.query("monitors", timeout=None),
         roles=roles,
     )
     PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -67,19 +69,10 @@ def apply(name):
         if profile.get(key) in {d["name"] for d in available[kind]}:
             subprocess.run(["pactl", "set-default-" + key, profile[key]], check=True)
     # Preserve saved layouts only for currently connected outputs; do not disable or invent displays.
-    current = {m["name"] for m in json.loads(run(["hyprctl", "monitors", "-j"]))}
+    current = {m["name"] for m in compositor.query("monitors", timeout=None)}
     saved = [m for m in profile.get("displays", []) if m["name"] in current]
     if saved:
-        import importlib.util
-
-        spec = importlib.util.spec_from_file_location(
-            "settings", Path(__file__).with_name("desktop-settings.py")
-        )
-        m = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(m)
-        subprocess.run(
-            ["hyprctl", "eval", m.monitor_lua(saved)], check=True, capture_output=True
-        )
+        compositor.configure_monitors(saved, timeout=None)
     # Apps are opt-in; matching windows prevent duplicates and working chats are not closed.
     if profile.get("roles"):
         import importlib.util
@@ -89,7 +82,7 @@ def apply(name):
         )
         m = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(m)
-        clients = json.loads(run(["hyprctl", "clients", "-j"]))
+        clients = compositor.query("windows", timeout=None)
         for label, _workspace, argv, exists in m.plan(clients):
             if label in profile["roles"] and not exists:
                 subprocess.Popen(

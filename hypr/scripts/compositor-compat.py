@@ -77,25 +77,9 @@ def main(argv=None, service=None):
                 record["mirror"] = args[4]
         service.configure_monitors([record])
     elif command == "animations":
-        service.set_options({"animations": {"enabled": boolean(args[0])}})
+        service.set_animations(boolean(args[0]))
     elif command == "performance":
-        if boolean(args[0]):
-            service.set_options(
-                {
-                    "animations": {"enabled": False},
-                    "decoration": {
-                        "shadow": {"enabled": False},
-                        "blur": {"enabled": False},
-                        "active_opacity": 1,
-                        "inactive_opacity": 1,
-                        "fullscreen_opacity": 1,
-                        "rounding": 0,
-                    },
-                    "general": {"gaps_in": 0, "gaps_out": 0, "border_size": 1},
-                }
-            )
-        else:
-            service.reload()
+        service.set_performance(boolean(args[0]))
     elif command == "toggle-all-float":
         service.toggle_workspace_floating()
     elif command == "exit":

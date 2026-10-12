@@ -20,6 +20,8 @@ from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 import uuid
 
+import compositor
+
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre/menu"
 CACHE = HOME / ".cache/nacre/menu"
@@ -443,7 +445,7 @@ def cancel_reminder(unit):
 
 
 def capture_window():
-    current = json.loads(run(["hyprctl", "activewindow", "-j"], check=True).stdout)
+    current = compositor.query("active_window", timeout=5)
     position = current.get("at", [])
     size = current.get("size", [])
     if (

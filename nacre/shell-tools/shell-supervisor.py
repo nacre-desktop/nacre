@@ -10,6 +10,8 @@ import subprocess
 import time
 from pathlib import Path
 
+import compositor
+
 HOME = Path.home()
 ROOT = HOME / ".local/share/nacre/shell"
 GOOD = ROOT / "source.good"
@@ -37,14 +39,7 @@ def environment():
         time.sleep(0.2)
     else:
         raise RuntimeError("Wayland display is not ready")
-    result = subprocess.run(
-        ["hyprctl", "instances", "-j"], capture_output=True, text=True
-    )
-    if result.returncode == 0:
-        instances = json.loads(result.stdout)
-        if len(instances) == 1:
-            env["HYPRLAND_INSTANCE_SIGNATURE"] = instances[0]["instance"]
-    env.setdefault("XDG_CURRENT_DESKTOP", "Hyprland")
+    env.update(compositor.environment_updates(env))
     env.setdefault("XDG_SESSION_TYPE", "wayland")
     return env
 
