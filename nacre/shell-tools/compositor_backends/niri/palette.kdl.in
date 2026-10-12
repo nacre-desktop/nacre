@@ -1,0 +1,13 @@
+// Orient colors only: preserve user-owned ring/border enabled state and widths.
+layout {
+    focus-ring {
+        active-color "#{{primary}}"
+        inactive-color "#{{outlineVariant}}"
+        urgent-color "#{{error}}"
+    }
+    border {
+        active-color "#{{primary}}"
+        inactive-color "#{{outlineVariant}}"
+        urgent-color "#{{error}}"
+    }
+}

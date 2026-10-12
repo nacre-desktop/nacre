@@ -90,6 +90,8 @@ for _name in (
     "reload",
     "switch_workspace",
     "focus_window",
+    "focus_direction",
+    "move_direction",
     "move_window",
     "move_workspace",
     "close_window",
@@ -142,6 +144,8 @@ def main():
             "logout",
             "switch_workspace",
             "focus_window",
+            "focus_direction",
+            "move_direction",
             "close_window",
             "kill_window",
             "move_window",
@@ -160,6 +164,7 @@ def main():
         ),
     )
     for name in (
+        "direction",
         "window",
         "workspace",
         "monitor",
@@ -174,6 +179,7 @@ def main():
         actions.add_argument("--" + name)
     for name in ("width", "height", "x", "y", "size", "icon", "timeout-ms"):
         actions.add_argument("--" + name, type=int)
+    actions.add_argument("--relative", choices=("true", "false"), default="false")
     actions.add_argument("--follow", choices=("true", "false"), default="false")
     actions.add_argument("--current-monitor", choices=("true", "false"), default="true")
     args = parser.parse_args()
@@ -208,7 +214,11 @@ def main():
     elif args.name == "fullscreen_window":
         method(args.window or "", mode=args.mode or "fullscreen")
     elif args.name == "resize_window":
-        method(args.window or "", args.width, args.height)
+        method(
+            args.window or "", args.width, args.height, relative=args.relative == "true"
+        )
+    elif args.name in ("focus_direction", "move_direction"):
+        method(args.direction)
     elif args.name == "place_window":
         method(
             args.window or "", x=args.x, y=args.y, width=args.width, height=args.height

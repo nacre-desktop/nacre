@@ -18,8 +18,11 @@ def main():
         action="store_true",
         help="Fail on generated output drift without writing files",
     )
+    parser.add_argument("--backend", choices=("hyprland", "niri", "all"), default="all")
     args = parser.parse_args()
-    generated = render(load())
+    generated = {}
+    for name in ("hyprland", "niri") if args.backend == "all" else (args.backend,):
+        generated.update(render(load(), backend=name))
     different = [
         path
         for path, text in generated.items()
@@ -34,6 +37,7 @@ def main():
         )
     if not args.check:
         for path in different:
+            (ROOT / path).parent.mkdir(parents=True, exist_ok=True)
             (ROOT / path).write_text(generated[path])
     print(
         "Compositor configuration matches its neutral source."

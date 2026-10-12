@@ -1,9 +1,10 @@
 # Compositor interface
 
-Nacre currently supports Hyprland only. The shell and helpers consume a shared
-compositor contract so a second backend can be added without copying the desktop.
-This refactor changes transport ownership, not the layout, shortcuts, window
-rules, profile choices or optional assistant permissions.
+The shell and helpers consume a shared compositor contract. Hyprland retains its
+existing behavior; the niri backend targets niri 26.04 using JSON IPC. Backend
+selection does not alter layout, profile choices or optional assistant permissions.
+Niri's differences and source-session validation steps are documented below;
+packaged niri setup remains gated separately from backend implementation.
 
 ## Ownership
 
@@ -16,6 +17,8 @@ rules, profile choices or optional assistant permissions.
   toplevels, capture handles, global shortcuts and compositor event translation.
 - `nacre/shell-tools/compositor_backends/` owns native commands, socket framing,
   validation, configuration lowering, declaration capture and session variables.
+- `niri/` contains generated niri bindings, rules and an unsupported-declaration
+  report. Its palette template is backend-owned and uses Orient roles.
 - `hypr/` is the Hyprland backend configuration tree. The six generated files
   below are backend output, not a second editable source of bindings and rules.
 
@@ -58,7 +61,9 @@ syntax. Likewise `NacreHyprland` is a forwarding compatibility shim;
 A workspace reference distinguishes stable identity, a name, and an index on an
 output. Hyprland has global, stable numeric workspace indices; its Python adapter
 rejects an unsupported output-relative index rather than silently focusing the
-wrong global workspace. Niri will resolve an output-relative index at action time.
+wrong global workspace. Niri resolves an output-relative index at action time, then dispatches the stable
+native ID. The necklace shows only the focused output's dynamic workspaces,
+including its empty trailing workspace. Display numbers never identify windows.
 Never use a changing display index as a window/workspace object's identity.
 
 Event types include `window-focus`, `window-urgent`, `window-open`, `window-close`,
@@ -113,23 +118,84 @@ assistant access. Existing private overrides still load after managed config.
 
 ## Hyprland to niri mapping
 
-The future backend belongs in this repository behind the same facade. These are
-implementation requirements, not claims that niri is supported today.
+`NiriBackend.qml` consumes the Python backend's canonical stream through one
+persistent process. The Python reducer waits for both initial window/workspace
+snapshots before publishing state, then applies native deltas. Output metadata is
+queried initially and on workspace/configuration changes because niri does not
+provide an output event variant. No periodic poller starts on import or while idle.
+Disconnects block QML actions and trigger bounded-backoff reconnection. Requests
+are JSON-framed on the local `NIRI_SOCKET`; niri errors remain explicit failures.
 
-| Current Hyprland concept | Niri implementation requirement |
+Niri u64 IDs become `niri-window:<decimal>` and `niri-workspace:<decimal>` strings
+before reaching JavaScript, preserving values beyond its exact-integer range.
+The opaque ID validator accepts native zero and rejects malformed/out-of-range
+IDs. The fixture suite exercises multiple outputs, focus clearing, urgency,
+workspace reordering/removal, stale windows and incremental geometry changes.
+
+| Concept | Niri behavior / capability |
 |---|---|
-| Global numbered workspaces | Dynamic workspaces per output; keep stable IDs separate from changing indices. |
-| Native toplevel addresses | Convert niri numeric window IDs into opaque interface IDs; publish compatible window records. |
-| Reactive native metadata | Maintain an event-driven cache from niri's JSON event stream, including its initial state. |
-| Directional tiled focus/move | Map to columns, windows within columns, and scrolling layout operations according to context. |
-| Floating placement | Use floating-mode, width/height and floating-position actions; verify output-relative/logical-coordinate conversion. |
-| Fullscreen / maximize | Distinguish full-width columns, maximize-to-edges and true fullscreen. |
-| Pin/sticky windows | Advertise only after a supported implementation exists; do not silently substitute floating. |
-| Native global shortcuts | Compile niri bindings into shell IPC triggers; define press/release behavior where required. |
-| Layer-shell panels | Retain top/overlay/background roles; test fullscreen, overview and exclusive keyboard focus. |
-| Lua config and rules | Add a KDL compiler for the same semantic source; report unsupported effects or backend extensions. |
-| Monitor settings | Translate current connected-output records and mode/scale/transform transactions; preserve rollback. |
-| Native drag hook | Implement equivalent panel handoff or report the unsupported backend extension explicitly. |
+| Workspaces | Per-output dynamic indices, stable opaque IDs; `perOutputWorkspaces=true`, `stableWorkspaceIndices=false`. Numeric shortcuts resolve on the focused output. Named or `{id}` and `{output,index}` references are explicit. |
+| Directional focus/move | Left/right use columns, up/down use windows within columns; niri owns floating-layout interpretation. |
+| Floating pearls | Keep title+PID ownership checks. Enable floating, resize, then use measured global geometry and relative movement; cross-output moves requery geometry. Unknown geometry fails rather than assuming a coordinate. |
+| Floating coordinates | Native fixed positions include working-area offsets; measured relative deltas avoid guessing reservations, border offsets or scale. All geometry is in logical pixels. |
+| Docking | Existing application-owned lift/release and `pearls detach/dock` IPC remain. Niri-native Mod+mouse moves do not emit Hyprland's drag-end hook; `nativePanelDrag=false`. Use the existing detach toggle on a focused pearl to dock. |
+| Shortcuts | Generated binds invoke the facade/helper or shell IPC. Registration activation emits a pulse, never a claim of physical key holding; `shortcutRelease=false`. Non-consuming and Hyprland submap/pointer hooks are not generated. |
+| Fullscreen/maximize | Fullscreen and maximize-to-edges are distinct actions. The 26.04 window record has no fullscreen bit; `fullscreenState=false` and `fullscreenKnown=false` make that limitation explicit. |
+| Pin / hide / force-kill | Unsupported and fail explicitly; `pinWindow=false`, `windowHide=false`. Do not substitute floating for sticky windows or signals for owned force-kill. |
+| Cursor / per-window capture | No global cursor-position query or unambiguous niri-ID-to-Quickshell capture mapping; `cursorPosition=false`, `windowCapture=false`. No fabricated native handle. |
+| Settings / night light | The niri backend does not expose runtime desktop-option writes, monitor transactions or a night-light controller; capabilities advertise these limits. Session/controller integration belongs to its own task. |
+
+## Niri configuration and source testing
+
+Select `NACRE_COMPOSITOR=niri` explicitly, or let `XDG_CURRENT_DESKTOP=niri`
+select it. Otherwise an existing Hyprland session signature wins over a leftover
+niri socket; a lone `NIRI_SOCKET` selects niri. An unknown explicit backend is an
+error. Both QML and Python use the same precedence. Source checks can override
+`NACRE_COMPOSITOR_TOOLS` and `NACRE_PEARL_TOOLS` with this checkout's
+`nacre/shell-tools` path; installed paths remain untouched. The PC/session agent
+owns package installation, UWSM/session files and live acceptance; do not deploy
+this branch into a daily session as a test shortcut.
+
+```sh
+python3 tools/generate_compositor_config.py --backend niri
+python3 tools/generate_compositor_config.py --check
+NACRE_COMPOSITOR=niri python3 nacre/shell-tools/compositor.py capabilities
+NACRE_COMPOSITOR=niri python3 nacre/shell-tools/compositor.py query workspaces
+```
+
+The generator writes `niri/bindings.kdl`, `niri/window-rules.kdl` and
+`niri/unsupported.json`, never the user-owned `niri/config.kdl`. Includes are
+supported since niri 25.11; home-directory include paths require 26.04. Add
+reviewed top-level includes **before** user settings so later user bindings and
+properties win. Included files contain full top-level sections; includes inside
+`binds` or `layout` are invalid. See the upstream
+[include merge rules](https://niri-wm.github.io/niri/Configuration:-Include.html).
+Validate a temporary wrapper containing these includes with
+`niri validate -c /path/to/test/config.kdl`; validation does not start a session.
+
+`compositor_config.supported_backends()`, `backend_capabilities(name)`,
+`render(contract, backend=...)`, `render_keyboard(values, backend=...)` and
+`render_profile(profile, backend=..., workspace_names=...)` are the public setup
+API. Hyprland rendering is unchanged. Niri custom initial workspace routes require
+an explicit number-to-name map because a config rule cannot pin a changing
+per-output index. Default profiles still emit no routes. The independent
+`setup_ready` gate is false for niri until packaged offline deployment is complete;
+the backend alone does not promise installer/session support.
+
+The palette template sets focus-ring and border colors from Orient `primary`,
+`outlineVariant` and `error` roles, leaving enabled state and widths to the user.
+The unsupported report lists pin/center/size effects, native layer extensions,
+submaps and actions without exact niri equivalents. Unknown declaration kinds
+fail generation; unsupported known semantics are reported rather than silently
+converted. Floating pearls are emitted as floating window rules, with final
+placement owned by IPC and the verified title+PID helper.
+
+Python socket/event/action fixtures and native Qt tests exercise the actual QML
+backend. Generator tests enforce unchanged Hyprland bytes and validate includes,
+keyboard/profile APIs and user precedence. The native KDL parse test runs when
+`niri` is installed; CI always runs deterministic source/output checks and the
+fixture tests. Full real-session multi-output, native pointer movement, fullscreen,
+layer-shell focus, capture and suspend/resume remain separate acceptance checks.
 
 Niri's [IPC documentation](https://niri-wm.github.io/niri/IPC.html) describes JSON
 requests and a stream that supplies initial state followed by updates. Its
@@ -141,8 +207,8 @@ indices. Floating behavior and available actions are described in the
 Before enabling a backend, test multiple outputs, output removal, stale IDs,
 workspace reordering, native app focus, fullscreen/overview layering, detached
 panel drag/docking, screen capture, keyboard registration and suspend/resume.
-Then add session startup, portals, dependency selection and backend-specific
-settings capabilities. A backend must not read another backend's private state
+Session startup, portals, dependency selection and backend-specific settings
+capabilities remain separately owned integration work. A backend must not read another backend's private state
 or start a second shell that competes for notification/clipboard ownership.
 
 ## Remaining ecosystem tools

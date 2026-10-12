@@ -144,6 +144,23 @@ class NiriActionTests(unittest.TestCase):
             {"Id": 9007199254740993},
         )
 
+    def test_relative_indices_and_scrolling_direction_actions(self):
+        self.backend.switch_workspace({"relative": 1})
+        self.assertEqual(
+            self.request.call_args.args[0]["Action"]["FocusWorkspace"]["reference"],
+            {"Id": 202},
+        )
+        with self.assertRaises(ValueError):
+            self.backend.switch_workspace({"relative": -1})
+        self.backend.focus_direction("left")
+        self.assertEqual(
+            self.request.call_args.args[0], {"Action": {"FocusColumnLeft": {}}}
+        )
+        self.backend.move_direction("down")
+        self.assertEqual(
+            self.request.call_args.args[0], {"Action": {"MoveWindowDown": {}}}
+        )
+
     def test_missing_workspace_and_invalid_ids_cannot_dispatch(self):
         for value in (
             True,

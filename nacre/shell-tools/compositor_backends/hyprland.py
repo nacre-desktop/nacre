@@ -314,6 +314,16 @@ class Backend:
             timeout=timeout,
         )
 
+    def focus_direction(self, direction, *, timeout=10):
+        if direction not in ("left", "right", "up", "down"):
+            raise ValueError("Invalid focus direction")
+        return self._action("focus", {"direction": direction}, timeout=timeout)
+
+    def move_direction(self, direction, *, timeout=10):
+        if direction not in ("left", "right", "up", "down"):
+            raise ValueError("Invalid move direction")
+        return self._action("window.move", {"direction": direction}, timeout=timeout)
+
     def focus_window(self, window="", *, timeout=10):
         return self._action(
             "focus", {"window": window_selector(window)}, timeout=timeout

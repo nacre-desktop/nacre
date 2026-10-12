@@ -1,0 +1,293 @@
+{
+  "backend": "niri",
+  "unsupported": [
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + Q",
+      "reason": "Hyprland hide/trash/force-kill operation is not available"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + SHIFT + Q",
+      "reason": "Hyprland hide/trash/force-kill operation is not available"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + ALT + Q",
+      "reason": "Hyprland hide/trash/force-kill operation is not available"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + CTRL + SHIFT + Q",
+      "reason": "Hyprland hide/trash/force-kill operation is not available"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + H",
+      "reason": "Hyprland hide/trash/force-kill operation is not available"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + SHIFT + H",
+      "reason": "Hyprland hide/trash/force-kill operation is not available"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + ALT + H",
+      "reason": "Hyprland hide/trash/force-kill operation is not available"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + P",
+      "reason": "No equivalent niri capability for window.pin"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + SHIFT + P",
+      "reason": "No equivalent niri capability for window.pseudo"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + G",
+      "reason": "No equivalent niri capability for group.toggle"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + bracketleft",
+      "reason": "No equivalent niri capability for group.previous"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + bracketright",
+      "reason": "No equivalent niri capability for group.next"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + J",
+      "reason": "No equivalent niri capability for layout.toggle-split"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + mouse:273",
+      "reason": "Keep niri's native move/resize gestures; no pointer-hook substitution"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "ALT + TAB",
+      "reason": "No equivalent niri capability for window.cycle"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "ALT + SHIFT + TAB",
+      "reason": "No equivalent niri capability for window.cycle"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + grave",
+      "reason": "No equivalent niri capability for workspace.scratchpad"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + SHIFT + grave",
+      "reason": "Niri has no Hyprland special/scratchpad workspaces"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + R",
+      "reason": "No equivalent niri capability for keymap.switch"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "left",
+      "reason": "No equivalent niri capability for window.resize"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "right",
+      "reason": "No equivalent niri capability for window.resize"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "up",
+      "reason": "No equivalent niri capability for window.resize"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "down",
+      "reason": "No equivalent niri capability for window.resize"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "escape",
+      "reason": "No equivalent niri capability for keymap.switch"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "return",
+      "reason": "No equivalent niri capability for keymap.switch"
+    },
+    {
+      "source": "hypr/conf/keybinding.lua",
+      "kind": "binding",
+      "id": "SUPER + R",
+      "reason": "No equivalent niri capability for keymap.switch"
+    },
+    {
+      "source": "hypr/conf/windowrule.lua",
+      "kind": "window-rule",
+      "id": "nacre-thunar-files",
+      "reason": "Unmapped window effects: centered, size"
+    },
+    {
+      "source": "hypr/conf/windowrule.lua",
+      "kind": "window-rule",
+      "id": "nacre-dolphin-files",
+      "reason": "Unmapped window effects: centered, size"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "layer-rule",
+      "id": "nacre-overlay-glass",
+      "reason": "Backend-specific layer-rule is not emitted for niri"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "window-rule",
+      "id": "nacre-lock-preview",
+      "reason": "Unmapped window effects: centered, size"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "window-rule",
+      "id": "nacre-audio-mixer",
+      "reason": "Unmapped window effects: centered, pinned, size"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "window-rule",
+      "id": "nacre-bluetooth-manager",
+      "reason": "Unmapped window effects: centered, size"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "window-rule",
+      "id": "nacre-network-editor",
+      "reason": "Unmapped window effects: centered, size"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "window-rule",
+      "id": "nacre-share-picker",
+      "reason": "Unmapped window effects: centered, pinned, size"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "window-rule",
+      "id": "nacre-picture-in-picture",
+      "reason": "Unmapped window effects: centered, pinned"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "window-rule",
+      "id": "nacre-native-controls",
+      "reason": "Unmapped window effects: centered, size"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "backend-config",
+      "id": "",
+      "reason": "Backend-specific backend-config is not emitted for niri"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "window-rule",
+      "id": "nacre-settings-app",
+      "reason": "Unmapped window effects: centered"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "window-rule",
+      "id": "nacre-colors-app",
+      "reason": "Unmapped window effects: centered"
+    },
+    {
+      "source": "hypr/conf/nacre.lua",
+      "kind": "window-rule",
+      "id": "nacre-welcome",
+      "reason": "Unmapped window effects: centered"
+    },
+    {
+      "source": "hypr/conf/brain.lua",
+      "kind": "window-rule",
+      "id": "brain-auth-handoff",
+      "reason": "Unmapped window effects: size"
+    },
+    {
+      "source": "nacre/shell-tools/shortcuts.lua",
+      "kind": "binding",
+      "id": "Escape",
+      "reason": "Niri bindings consume input; non-consuming hooks are unsupported"
+    },
+    {
+      "source": "nacre/shell-tools/shortcuts.lua",
+      "kind": "unbind",
+      "id": "SUPER + mouse:272",
+      "reason": "Backend-specific unbind is not emitted for niri"
+    },
+    {
+      "source": "nacre/shell-tools/shortcuts.lua",
+      "kind": "extension",
+      "id": "panel.drag",
+      "reason": "Backend-specific extension is not emitted for niri"
+    },
+    {
+      "source": "nacre/shell-tools/shortcuts.lua",
+      "kind": "binding",
+      "id": "SUPER + mouse:272",
+      "reason": "No equivalent niri action for panel.drag"
+    },
+    {
+      "source": "nacre/shell-tools/shortcuts.lua",
+      "kind": "binding",
+      "id": "mouse:272",
+      "reason": "No equivalent niri capability for panel.drag.finish"
+    },
+    {
+      "source": "hypr/conf/cursor.lua",
+      "kind": "extension",
+      "id": "cursor.session",
+      "reason": "Backend-specific extension is not emitted for niri"
+    },
+    {
+      "source": "hypr/conf/cursor.lua",
+      "kind": "event",
+      "id": "",
+      "reason": "Backend-specific event is not emitted for niri"
+    }
+  ]
+}
