@@ -206,11 +206,9 @@ Singleton {
         running: root.shown
         onTriggered: root.refresh()
     }
-    Process {
+    NacreHelperTask {
         id: worker
-        stdout: StdioCollector {
-            onStreamFinished: root.publish(text)
-        }
+        onOutput: text => root.publish(text)
         onExited: Qt.callLater(root.next)
     }
     IpcHandler {
