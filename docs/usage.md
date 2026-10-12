@@ -13,6 +13,10 @@ pearl or time-aware palettes. Dark/light and background tint are separate choice
 Wallpaper selection preserves dynamic playback; motion/battery preferences live in
 Settings. Welcome introduces colors, shortcuts and optional apps on first use.
 
+Super+Z hides or shows the shell frame and panels. The wallpaper stays visible,
+and tiled windows expand into the space freed by the frame. Toggling it back
+restores the frame reservation without changing your configured window gaps.
+
 Use Super+Q to put a window away; Super+M follows the desktop maximize shortcut.
 The launcher can show the current key bindings under Learn. Actual keys can differ
 with private overrides. Notifications expire and can be reviewed in history;
