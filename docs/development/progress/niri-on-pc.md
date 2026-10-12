@@ -35,8 +35,10 @@ belong to the separate `feature/niri-backend` task.
   auth/geometry and other fingerprints match. Preserve current presentation and
   original backup; palette/wallpaper update is consistent with the timestamps,
   but exact trigger attribution remains unverified.
-- Coordinated target version 26.04 with the niri backend agent. Its branch is
-  stacked on compositor PR3; wait for its tested revision before phase 2.
+- Backend source/fixture readiness is now verified at PR12 head
+  `c37401543cf98043fe4e79fe2e0b1f5c4def2cdf`, based on `9a38ff0`.
+  Exact desktop CI run `38257405006` passes: 650 reported tests, three skips.
+  This resolves the source-revision dependency; live/setup readiness remains false.
 
 ## Next
 
@@ -47,14 +49,49 @@ belong to the separate `feature/niri-backend` task.
    appearance drift rather than silently resetting current preferences.
 4. Only after phase-1 acceptance: consume the backend agent's confirmed ready
    revision, isolated source/personal generated config, manual lock/unlock, then
-   idle and protocol-based night light. Backend milestone `504d308` is not yet a
-   full-ready declaration; ask for the latest tested revision at resume.
+   idle and protocol-based night light. Use the verified backend revision below,
+   then recheck its current PR/CI state at resume.
+
+## Verified backend handoff (2026-10-12)
+
+[PR12](https://github.com/nacre-desktop/nacre/pull/12) at
+`c37401543cf98043fe4e79fe2e0b1f5c4def2cdf` has
+[passing exact-head CI](https://github.com/nacre-desktop/nacre/actions/runs/38257405006).
+Read its `docs/development/progress/niri-backend.md` and compositor guide before
+consuming it. Full Wayland/UI/pearl acceptance is still deferred by the operator.
+
+For a future isolated probe, export these **before starting nested niri** so spawned
+shortcuts inherit them; configuring only Quickshell does not isolate key bindings:
+
+```sh
+export NACRE_COMPOSITOR=niri
+export NACRE_COMPOSITOR_TOOLS="$PWD/nacre/shell-tools"
+export NACRE_PEARL_TOOLS="$NACRE_COMPOSITOR_TOOLS"
+export NACRE_QS_CONFIG="$PWD/nacre/shell/shell.qml"
+export NACRE_QS_BIN=$(command -v quickshell)
+```
+
+These commands describe the backend source worktree and are not a live deployment.
+Inherited app-launch scripts still resolve installed paths; matching isolated
+runtime belongs to this task/packaging work. Never start the full second shell on
+the daily display/DBus session. Generator:
+`python3 tools/generate_compositor_config.py --backend niri`; generated fragments
+are `niri/bindings.kdl` and `niri/window-rules.kdl`. Personal keyboard/profile and
+named workspace routes require the backend's public render APIs and explicit name
+mapping, with private source/preferences kept out of Git.
+
+Known unsupported capabilities include global cursor query, window capture,
+native drag-end/physical shortcut release, pin, runtime monitor/desktop settings
+and backend night-light control. Test existing focused-pearl detach toggle and
+`pearls dock` instead of inventing a timer-based drag completion. Lock/idle and a
+protocol-based night-light owner remain this task's later phase.
 
 ## Open questions / limits
 
 - Phase-1 SDDM login/logout and TTY recovery are not yet physically verified;
   the operator explicitly deferred logout to preserve the active desktop.
-- Backend revision/generator command are pending the backend agent's milestone.
+- Backend PR12 is source/fixture-ready, not a completed live or packaged session.
+  Preserve `setup_ready=false` until packaging/config/runtime integration passes.
 - Never store authentication values in this note, commands or logs. Use normal
   authenticated system actions; leave account password and private AI policy intact.
 - Do not restart SDDM or stop the working Hyprland session during preparation.
