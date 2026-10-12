@@ -9,6 +9,7 @@ from pathlib import Path
 import shlex
 import shutil
 import subprocess
+import sys
 
 
 def load(path, name):
@@ -20,6 +21,8 @@ def load(path, name):
 
 def build(root, output, sources):
     tools = root / "nacre/shell-tools"
+    sys.path.insert(0, str(tools))
+    sys.path.insert(0, str(root / "nacre/shell-cli/src"))
     output.mkdir(parents=True, exist_ok=True)
     (output / "revision").write_text(
         subprocess.check_output(
