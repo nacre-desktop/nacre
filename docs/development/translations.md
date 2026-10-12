@@ -251,3 +251,10 @@ same strict leakage, truncation and painted-boundary checks.
 143 states pass with DejaVu Sans plus the pinned icon font. The full 633-test check,
 coverage and generated-asset checks pass again after the fitting/flow changes.
 These font-aware commands supersede the earlier CI run that lacked runtime fonts.
+
+2026-10-12 current review baseline: carried the finished branch onto `4ee5346`,
+including Orient dev5 (`6ee1784`), reattachment/focus and shell-hide/wallpaper fixes.
+The rebase was conflict-free and the isolated check environment was rebuilt for
+the current pin. Coverage still contains 2,025 messages and generated assets match.
+The prior revision passed CI; the same required suite and font-aware galleries run
+again on the current PR revision. Translation deployment remains deferred.
