@@ -39,6 +39,36 @@ class ReleaseTests(unittest.TestCase):
                 self.assertEqual((source / "shell.qml").read_text(), "before")
                 self.assertEqual(account.read_text(), "fixture never snapshot")
 
+    def test_rollback_loads_backend_before_restoring_a_pre_facade_shell(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            repo = home / "repo"
+            repo.mkdir()
+            shell = home / ".local/share/nacre/shell"
+            shell.mkdir(parents=True)
+            (shell / "old.qml").write_text("old release")
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m, "STATE", home / "releases"),
+                patch.object(m.subprocess, "run"),
+                patch.object(m, "compositor") as service,
+            ):
+                release, record = m.capture(repo, "new")
+                facade = shell / "tools/compositor.py"
+                facade.parent.mkdir()
+                facade.write_text("new facade")
+                desktop = service.return_value
+
+                def load_before_restore():
+                    self.assertTrue(facade.exists())
+                    return desktop
+
+                service.side_effect = load_before_restore
+                m.restore(release, record, force=True)
+                self.assertFalse(facade.exists())
+                service.assert_called_once_with()
+                desktop.reload.assert_called_once_with()
+
     def test_controller_is_part_of_the_snapshot(self):
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder)
