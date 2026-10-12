@@ -1,0 +1,11 @@
+{
+  "files": {
+    "class/dmi/id/chassis_type": "3",
+    "class/net/eth0/type": "1"
+  },
+  "expected": {"formFactor": "desktop", "battery": false, "backlight": false, "bluetooth": false, "wifi": false, "ethernet": true},
+  "monitors": [
+    {"name": "DP-1", "width": 2560, "height": 1440, "scale": 1, "refreshRate": 144, "x": 0, "y": 0},
+    {"name": "HDMI-A-1", "width": 3840, "height": 2160, "scale": 1.5, "refreshRate": 60, "x": 2560, "y": 0}
+  ]
+}

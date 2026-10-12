@@ -20,6 +20,19 @@ TestCase {
             interface: "wlan0"
         };
     }
+    function test_ethernet_only_snapshot_is_successful_and_has_no_radio() {
+        const state = createTemporaryObject(service, test);
+        verify(state.publish(JSON.stringify({
+            wifiAvailable: false,
+            wifiEnabled: false,
+            wifiInterface: "",
+            networks: []
+        })));
+        verify(!state.wifiAvailable);
+        verify(!state.wifiEnabled);
+        compare(state.error, "");
+        compare(state.visibleNetworks.length, 0);
+    }
     function test_atomic_publish_grouped_active_preference_and_failed_refresh() {
         const state = createTemporaryObject(service, test);
         const reader = findChild(state, "networkReader");

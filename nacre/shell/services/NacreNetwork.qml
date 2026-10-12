@@ -6,6 +6,7 @@ import Quickshell.Io
 Singleton {
     id: root
     property var snapshot: ({
+            wifiAvailable: false,
             wifiEnabled: false,
             wifiInterface: "",
             networks: []
@@ -17,6 +18,7 @@ Singleton {
     property int snapshotReads: 0
     property int retrySeconds: 2
     readonly property bool busy: reader.running
+    readonly property bool wifiAvailable: snapshot.wifiAvailable !== false
     readonly property bool wifiEnabled: snapshot.wifiEnabled
     readonly property string wifiInterface: snapshot.wifiInterface
     readonly property var networks: snapshot.networks
@@ -40,7 +42,7 @@ Singleton {
                 error = String(result.error).slice(0, 240);
                 return false;
             }
-            if (typeof result.wifiEnabled !== "boolean" || typeof result.wifiInterface !== "string" || (result.wifiInterface && !/^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$/.test(result.wifiInterface)) || !Array.isArray(result.networks) || result.networks.length > 4096)
+            if ((result.wifiAvailable !== undefined && typeof result.wifiAvailable !== "boolean") || typeof result.wifiEnabled !== "boolean" || typeof result.wifiInterface !== "string" || (result.wifiInterface && !/^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$/.test(result.wifiInterface)) || !Array.isArray(result.networks) || result.networks.length > 4096)
                 throw new Error();
             for (const point of result.networks) {
                 if (!point || typeof point.ssid !== "string" || point.ssid.length > 32 || typeof point.bssid !== "string" || !/^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$/.test(point.bssid) || typeof point.active !== "boolean" || !Number.isInteger(point.strength) || point.strength < 0 || point.strength > 100 || !Number.isInteger(point.frequency) || point.frequency <= 0 || point.frequency > 100000)
