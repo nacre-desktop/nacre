@@ -105,22 +105,6 @@ def stage(root, destination, component, build):
             ".config/systemd/user/hypridle.service.d/nacre.conf",
             "[Service]\nExecStartPre=/usr/bin/python3 %h/.local/share/nacre/shell/tools/idle-policy.py\n",
         )
-        for name in (
-            "nacre-shell",
-            "nacre-session-watch",
-            "nacre-power-key",
-            "hypridle",
-        ):
-            source = (
-                tools / (name + ".service")
-                if name != "hypridle"
-                else Path("/usr/lib/systemd/user/hypridle.service")
-            )
-            copy(
-                source,
-                deploy
-                / f".config/systemd/user/graphical-session.target.wants/{name}.service",
-            )
         for source in (build / "defaults").rglob("*"):
             if not source.is_file() or (
                 ".cache" in source.relative_to(build / "defaults").parts
