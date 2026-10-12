@@ -143,7 +143,7 @@ Item {
                 readonly property var windows: NacreCompositor.capabilities?.perOutputWorkspaces ? NacreCompositor.windowsForWorkspace(workspaceId) : NacreCompositor.windows.filter(client => client.workspace?.id === workspaceId)
                 readonly property int windowCount: windows.length
                 readonly property bool occupied: windowCount > 0
-                readonly property bool urgent: windows.some(client => client.urgent === true) || (NacreCompositor.capabilities?.perOutputWorkspaces && NacreCompositor.workspaceUrgent(workspaceId))
+                readonly property bool urgent: windows.some(client => client.urgent === true) || (NacreCompositor.capabilities?.perOutputWorkspaces === true && NacreCompositor.workspaceUrgent(workspaceId))
                 readonly property var shownWindows: windows.slice(0, root.iconAllocation[workspaceId] ?? 0)
                 readonly property int overflow: selected && root.showWindowHints ? Math.max(0, windowCount - shownWindows.length) : 0
                 readonly property color accent: root.tint(index, workspaceId)

@@ -26,6 +26,18 @@
 - Current main baseline is `fa37a28`; QML milestone is pushed as `9cf7807`.
   The scoped pre-push guard is honored; no hook/settings edits by this task.
 
+- Caller audit fixed opaque-ID numeric assumptions in Settings/Colors/Welcome
+  activity and focused-output overview grouping. Hyprland branches are retained.
+  Native-Qt tests execute the actual app activity predicates for both ID models.
+- Full-check pass 1 found stale single-backend generator-test assumptions; updated
+  fixture output maps and the unknown-backend assertion, keeping strict validation.
+- Full-check pass 2 reached all shell tests; only the facade harness lacked the
+  new session script. It now verifies lazy backend creation, niri index/ID split,
+  output grouping and invalid selection without warnings. A transient alias-type
+  warning was fixed by reading active workspace and capabilities from one backend.
+- Current fixture checks: 18 backend/QML harness tests plus 8 config tests pass;
+  common generator and facade tests pass. Full source check is being rerun.
+
 ## Next
 
 4. Push each tested milestone; give the PC agent an exact revision for live checks.

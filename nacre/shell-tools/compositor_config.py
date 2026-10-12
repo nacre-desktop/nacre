@@ -35,7 +35,8 @@ def backend_capabilities(name):
         "backendReady": name == "hyprland",
         "setup_ready": name == "hyprland",
         "managedIncludes": name == "niri",
-        "minimumVersion": "25.11" if name == "niri" else None,
+        "minimumVersion": "26.04" if name == "niri" else None,
+        "includeMinimumVersion": "25.11" if name == "niri" else None,
         "testedVersion": "26.04" if name == "niri" else None,
         "generatedFiles": list(niri.OUTPUTS if name == "niri" else OUTPUTS),
     }
@@ -43,6 +44,9 @@ def backend_capabilities(name):
 
 def render(contract, directory=DIRECTORY, backend="hyprland"):
     if backend == "niri":
+        # Reuse the existing strict declaration validation. Compiling data does
+        # not execute callbacks or write the discarded Hyprland output.
+        hyprland.render(contract, directory)
         return niri.render(contract, directory)
     if backend != "hyprland":
         raise ValueError("Unsupported compositor backend: " + backend)

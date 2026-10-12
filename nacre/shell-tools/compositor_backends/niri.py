@@ -286,7 +286,9 @@ class State:
                     "class": row.get("app_id") or "",
                     "title": row.get("title") or "",
                     "pid": row.get("pid") or 0,
-                    "workspaceId": workspace["id"] if workspace else None,
+                    "workspaceId": identity(row["workspace_id"], "workspace")
+                    if row.get("workspace_id") is not None
+                    else None,
                     "workspace": workspace
                     or {
                         "id": identity(row["workspace_id"], "workspace")
@@ -320,6 +322,7 @@ class State:
             "activeWorkspace": focused,
             "focusedMonitor": next((row for row in monitors if row["focused"]), None),
             "overviewOpen": self.overview_open,
+            "configFailed": self.config_failed,
         }
 
 
