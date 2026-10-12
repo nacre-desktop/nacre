@@ -2,6 +2,7 @@
 """Reject missing/unused message IDs and untranslated owned UI literals."""
 
 import json
+import ast
 from pathlib import Path
 import re
 import sys
@@ -22,6 +23,7 @@ def references(root):
         + list((root / "hypr/scripts").glob("*.sh"))
         + list((root / "brain/web").glob("*.js"))
         + list((root / "brain/web").glob("*.html"))
+        + ([root / "bin/nacre-ai"] if (root / "bin/nacre-ai").exists() else [])
     )
     for path in files:
         text = path.read_text()
@@ -31,6 +33,19 @@ def references(root):
             )
         )
         result.update(re.findall(r'nacre_message\s+"([^"]+)"', text))
+        if path.suffix == ".py" or path.name == "nacre-ai":
+            for node in ast.walk(ast.parse(text)):
+                if (
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Name)
+                    and node.func.id in ("tr", "ui_label")
+                    and node.args
+                ):
+                    if isinstance(node.args[0], ast.Constant) and isinstance(
+                        node.args[0].value, str
+                    ):
+                        result.add(node.args[0].value)
+            continue
         stream = tokens(text)
         for index, token in enumerate(stream):
             if (

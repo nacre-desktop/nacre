@@ -31,6 +31,56 @@ def agent_full_access():
         return False
 
 
+def _translation_runtime():
+    import importlib.util
+
+    candidates = (
+        Path(__file__).resolve().parents[1] / "nacre/shell-tools/nacre_i18n.py",
+        Path.home() / ".local/share/nacre/shell/tools/nacre_i18n.py",
+    )
+    for path in candidates:
+        if path.is_file():
+            spec = importlib.util.spec_from_file_location("nacre_ai_messages", path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module.tr
+    # The controller remains usable before optional desktop assets are installed.
+    return lambda identifier, fallback, args=None: re.sub(
+        r"\{([A-Za-z_][A-Za-z0-9_]*)\}",
+        lambda match: str((args or {}).get(match[1], match[0])),
+        fallback,
+    )
+
+
+tr = _translation_runtime()
+
+
+class UiLabel(str):
+    """Keep canonical dispatch values separate from localized terminal captions."""
+
+    def __new__(cls, identifier, fallback, args=None):
+        raw = re.sub(
+            r"\{([A-Za-z_][A-Za-z0-9_]*)\}",
+            lambda match: str((args or {}).get(match[1], match[0])),
+            fallback,
+        )
+        value = super().__new__(cls, raw)
+        value.identifier, value.fallback, value.arguments = identifier, fallback, args
+        return value
+
+
+def ui_label(identifier, fallback, args=None):
+    return UiLabel(identifier, fallback, args)
+
+
+def display_label(value):
+    return (
+        tr(value.identifier, value.fallback, value.arguments)
+        if isinstance(value, UiLabel)
+        else value
+    )
+
+
 def settings_path():
     return Path(
         os.environ.get(
@@ -125,25 +175,28 @@ def settings_menu():
         choice = select(
             [
                 "Assistant · " + names[default_assistant()],
-                "Usage",
-                "Accounts",
-                "Projects",
-                "Check setup",
+                ui_label("ai.ui.usage", "Usage"),
+                ui_label("ai.ui.accounts", "Accounts"),
+                ui_label("ai.ui.projects", "Projects"),
+                ui_label("ai.ui.check-setup", "Check setup"),
             ],
-            "Settings",
+            ui_label("ai.ui.settings", "Settings"),
         )
         if choice is None:
             return
         if choice == "Accounts":
             account_settings()
         elif choice == "Check setup":
-            select(setup_status(), "Setup status")
+            select(setup_status(), ui_label("ai.ui.setup-status", "Setup status"))
         elif choice == "Usage":
             usage_menu()
         elif choice == "Projects":
             project_settings()
         else:
-            chosen = select(list(names.values()), "Default assistant")
+            chosen = select(
+                list(names.values()),
+                ui_label("ai.ui.default-assistant", "Default assistant"),
+            )
             if chosen is not None:
                 set_default_assistant(next(k for k, v in names.items() if v == chosen))
 
@@ -175,20 +228,33 @@ def usage_menu():
                 rows.extend(data["rows"])
             except (OSError, ValueError, subprocess.TimeoutExpired):
                 rows.append(agent.title() + ": usage unavailable")
-        choice = select(["Refresh"], "Usage", header="\n".join(rows))
+        choice = select(
+            [ui_label("ai.ui.refresh", "Refresh")],
+            ui_label("ai.ui.usage", "Usage"),
+            header="\n".join(rows),
+        )
         if choice is None:
             return
 
 
 def project_settings():
     while True:
-        choice = select(["Registered projects", "Add project"], "Projects")
+        choice = select(
+            [
+                ui_label("ai.ui.registered-projects", "Registered projects"),
+                ui_label("ai.ui.add-project", "Add project"),
+            ],
+            ui_label("ai.ui.projects", "Projects"),
+        )
         if choice is None:
             return
         if choice == "Add project":
             project_wizard()
         else:
-            select([p.get("label", p["id"]) for p in projects()], "Registered projects")
+            select(
+                [p.get("label", p["id"]) for p in projects()],
+                ui_label("ai.ui.registered-projects", "Registered projects"),
+            )
 
 
 def select_account(agent, account):
@@ -255,7 +321,9 @@ def account_settings():
             + (effective_account(agent) or "Default"): agent
             for agent in ("codex", "claude")
         }
-        selected = select(list(labels), "Settings · Accounts")
+        selected = select(
+            list(labels), ui_label("ai.ui.settings-accounts", "Settings · Accounts")
+        )
         if selected is None:
             return
         agent = labels[selected]
@@ -266,8 +334,20 @@ def account_settings():
                 for name in account_choices(agent)
             }
             chosen = select(
-                [*options, "Add account", "Sign in to selected account"],
-                ("Codex" if agent == "codex" else "Claude Code") + " accounts",
+                [
+                    *options,
+                    ui_label("ai.ui.add-account", "Add account"),
+                    ui_label(
+                        "ai.ui.sign-in-to-selected-account",
+                        "Sign in to selected account",
+                    ),
+                ],
+                (
+                    ui_label("ai.ui.codex", "Codex")
+                    if agent == "codex"
+                    else ui_label("ai.ui.claude-code", "Claude Code")
+                )
+                + ui_label("ai.ui.accounts", " accounts"),
             )
             if chosen is None:
                 break
@@ -286,7 +366,11 @@ def account_settings():
                         )
                     open_account_login(agent, name)
                 except ValueError as error:
-                    select(["Back"], "Account name", str(error))
+                    select(
+                        [ui_label("ai.ui.back", "Back")],
+                        ui_label("ai.ui.account-name", "Account name"),
+                        str(error),
+                    )
             elif chosen == "Sign in to selected account":
                 open_account_login(agent, active)
             else:
@@ -309,15 +393,29 @@ def account_login(args):
         # Native sign-in succeeded; activate only this assistant's account.
         select_account(args.agent, account)
         print(
-            "Signed in. Active "
-            + ("Codex" if args.agent == "codex" else "Claude Code")
-            + " account: "
-            + (account or "Default")
+            tr("ai.ui.signed-in-active", "Signed in. Active ")
+            + (
+                tr("ai.ui.codex", "Codex")
+                if args.agent == "codex"
+                else tr("ai.ui.claude-code", "Claude Code")
+            )
+            + tr("ai.ui.account", " account: ")
+            + (account or tr("ai.ui.default", "Default"))
         )
     else:
-        print("Sign-in did not finish. Your selected account is unchanged.")
+        print(
+            tr(
+                "ai.ui.sign-in-did-not-finish-your-selected-account-is-unchanged",
+                "Sign-in did not finish. Your selected account is unchanged.",
+            )
+        )
     try:
-        input("Press Enter to close this sign-in window. ")
+        input(
+            tr(
+                "ai.ui.press-enter-to-close-this-sign-in-window",
+                "Press Enter to close this sign-in window. ",
+            )
+        )
     except (EOFError, KeyboardInterrupt):
         pass
 
@@ -399,7 +497,7 @@ def select(lines, prompt, header="", back=True, details=None):
         )
         index = 0
         query = ""
-        title = clean_label(prompt.replace(">", "")).upper()
+        title = clean_label(display_label(prompt).replace(">", "")).upper()
         while True:
             screen.erase()
             height, width = screen.getmaxyx()
@@ -412,6 +510,7 @@ def select(lines, prompt, header="", back=True, details=None):
                         pass
 
             labels = [clean_label(line) for line in lines]
+            display_labels = [clean_label(display_label(line)) for line in lines]
             matches = [
                 i
                 for i, label in enumerate(labels)
@@ -433,14 +532,21 @@ def select(lines, prompt, header="", back=True, details=None):
             if len(logo) > 1:
                 logo[1] += "   Nacre AI"
             if graphic:
-                put(y + 1, x + 12, "Nacre AI", accent | curses.A_BOLD)
+                put(
+                    y + 1,
+                    x + 12,
+                    tr("ai.ui.nacre-ai", "Nacre AI"),
+                    accent | curses.A_BOLD,
+                )
             else:
                 for offset, line in enumerate(logo):
                     put(y + offset, x, line, accent | curses.A_BOLD)
             put(y + 4, x, "─" * box_width, accent | curses.A_DIM)
             put(y + 6, x + 2, title, curses.A_DIM)
             headers = (
-                str(header).splitlines()[: max(1, height - y - 14)] if header else []
+                str(display_label(header)).splitlines()[: max(1, height - y - 14)]
+                if header
+                else []
             )
             for offset, line in enumerate(headers):
                 put(y + 7 + offset, x + 2, clean_label(line), curses.A_DIM)
@@ -452,7 +558,7 @@ def select(lines, prompt, header="", back=True, details=None):
                 selected = start + row == index
                 if labels[original] in ("Back", "← Back"):
                     continue
-                text = ("  ›  " if selected else "     ") + labels[original]
+                text = ("  ›  " if selected else "     ") + display_labels[original]
                 style = (
                     curses.color_pair(2) | curses.A_BOLD
                     if selected
@@ -463,7 +569,7 @@ def select(lines, prompt, header="", back=True, details=None):
                     put(
                         top + row * row_height + 1,
                         x + 5,
-                        clean_label(details.get(lines[original], "")),
+                        clean_label(display_label(details.get(lines[original], ""))),
                         curses.A_DIM,
                     )
             if back:
@@ -474,11 +580,17 @@ def select(lines, prompt, header="", back=True, details=None):
                 put(
                     height - 4,
                     x,
-                    ("  ›  " if back_selected else "     ") + "← Back",
+                    ("  ›  " if back_selected else "     ")
+                    + tr("ai.ui.back", "← Back"),
                     curses.color_pair(2) if back_selected else curses.A_DIM,
                 )
             if not matches:
-                put(top, x + 2, "No matching tasks", curses.A_DIM)
+                put(
+                    top,
+                    x + 2,
+                    tr("ai.ui.no-matching-tasks", "No matching tasks"),
+                    curses.A_DIM,
+                )
             if len(lines) > 10 or query:
                 put(height - 2, x + 2, "⌕ " + query, accent)
             screen.refresh()
@@ -543,7 +655,12 @@ def worker_window(args):
             child += ["--account", args.account]
         result = subprocess.run(child)
         if result.returncode:
-            input("Could not open the task. Press Enter to return. ")
+            input(
+                tr(
+                    "ai.ui.could-not-open-the-task-press-enter-to-return",
+                    "Could not open the task. Press Enter to return. ",
+                )
+            )
         return
     project = (
         general_chat()
@@ -557,23 +674,32 @@ def worker_window(args):
     if args.worker_command == "shell":
         print(f"Project terminal · {label} · {location}", flush=True)
         print(
-            "This is a command prompt, not an AI chat. Type exit or press Ctrl+D to close it.",
+            tr(
+                "ai.ui.this-is-a-command-prompt-not-an-ai-chat-type-exit-or-press-ctrl-d-to-close-it",
+                "This is a command prompt, not an AI chat. Type exit or press Ctrl+D to close it.",
+            ),
             flush=True,
         )
     else:
         print(
-            "Nacre AI · New chat"
+            tr("ai.ui.nacre-ai-new-chat", "Nacre AI · New chat")
             if project.get("chat_directory")
             else f"AI workspace · {label} · {location}",
             flush=True,
         )
         print(
-            "Type your request when the selected assistant opens. The dashboard stays in its own window.",
+            tr(
+                "ai.ui.type-your-request-when-the-selected-assistant-opens-the-dashboard-stays-in-its-own-wi",
+                "Type your request when the selected assistant opens. The dashboard stays in its own window.",
+            ),
             flush=True,
         )
         if project.get("host"):
             print(
-                "To leave a running task: Ctrl+B, then D. Return with Resume latest chat or Load chat.",
+                tr(
+                    "ai.ui.to-leave-a-running-task-ctrl-b-then-d-return-with-resume-latest-chat-or-load-chat",
+                    "To leave a running task: Ctrl+B, then D. Return with Resume latest chat or Load chat.",
+                ),
                 flush=True,
             )
     child = [
@@ -594,11 +720,19 @@ def worker_window(args):
             flush=True,
         )
         print(
-            "The error is above. Your dashboard and other tasks are still open.",
+            tr(
+                "ai.ui.the-error-is-above-your-dashboard-and-other-tasks-are-still-open",
+                "The error is above. Your dashboard and other tasks are still open.",
+            ),
             flush=True,
         )
         try:
-            input("Press Enter to close this window. ")
+            input(
+                tr(
+                    "ai.ui.press-enter-to-close-this-window",
+                    "Press Enter to close this window. ",
+                )
+            )
         except (EOFError, KeyboardInterrupt):
             pass
 
@@ -619,21 +753,25 @@ def launch_background(argv):
                 start_new_session=True,
             )
         except OSError as error:
-            select(["Back to dashboard"], "Launch failed > ", str(error))
+            select(
+                [ui_label("ai.ui.back-to-dashboard", "Back to dashboard")],
+                ui_label("ai.ui.launch-failed", "Launch failed > "),
+                str(error),
+            )
             return None
 
 
 def dashboard(args):
     actions = [
-        "New chat",
-        "Resume latest chat",
-        "Load chat",
-        "Open brain",
-        "Settings",
-        "Close",
+        ui_label("ai.ui.new-chat", "New chat"),
+        ui_label("ai.ui.resume-latest-chat", "Resume latest chat"),
+        ui_label("ai.ui.load-chat", "Load chat"),
+        ui_label("ai.ui.open-brain", "Open brain"),
+        ui_label("ai.ui.settings", "Settings"),
+        ui_label("ai.ui.close", "Close"),
     ]
     while True:
-        choice = select(actions, "Workspace", back=False)
+        choice = select(actions, ui_label("ai.ui.workspace", "Workspace"), back=False)
         if choice is None:
             continue
         if choice == "Close":
@@ -710,14 +848,24 @@ def project_name(title="New project", folder=True):
                         pass
 
             put(2, title.upper())
-            put(4, "Name: " + value + ("" if back else " ▏"))
+            put(4, tr("ai.ui.name", "Name: ") + value + ("" if back else " ▏"))
             put(
                 6,
-                ("Folder: ~/Projects/" if folder else "Account: ")
-                + re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-"),
+                (
+                    tr("ai.ui.folder-projects", "Folder: ~/Projects/")
+                    if folder
+                    else tr("ai.ui.account", "Account: ")
+                )
+                + re.sub("[^a-z0-9]+", "-", value.lower()).strip("-"),
             )
-            put(8, ("› " if back else "  ") + "← Back")
-            put(10, "Enter continue · Tab switch · Esc back")
+            put(8, ("› " if back else "  ") + tr("ai.ui.back", "← Back"))
+            put(
+                10,
+                tr(
+                    "ai.ui.enter-continue-tab-switch-esc-back",
+                    "Enter continue · Tab switch · Esc back",
+                ),
+            )
             screen.refresh()
             key = screen.get_wch()
             if key == "\x1b":
@@ -783,14 +931,22 @@ def project_wizard():
         if name is None:
             return None
         if (
-            select(["Create project"], "New local project", name + " · ~/Projects")
+            select(
+                [ui_label("ai.ui.create-project", "Create project")],
+                ui_label("ai.ui.new-local-project", "New local project"),
+                name + ui_label("ai.ui.projects", " · ~/Projects"),
+            )
             is None
         ):
             continue
         try:
             return create_project(name)
         except (ValueError, OSError, subprocess.SubprocessError) as error:
-            select(["Back"], "Could not create project", str(error))
+            select(
+                [ui_label("ai.ui.back", "Back")],
+                ui_label("ai.ui.could-not-create-project", "Could not create project"),
+                str(error),
+            )
 
 
 def project_for(identifier, include_general=False):
@@ -801,7 +957,12 @@ def project_for(identifier, include_general=False):
         options = {
             f"{i + 1}. {p.get('label', p['id'])}": p["id"] for i, p in enumerate(values)
         }
-        selected = select(list(options), "New task" if include_general else "Projects")
+        selected = select(
+            list(options),
+            ui_label("ai.ui.new-task", "New task")
+            if include_general
+            else ui_label("ai.ui.projects", "Projects"),
+        )
         if selected is None:
             return None
         identifier = options[selected]
@@ -972,8 +1133,10 @@ def load_task(args):
     records.sort(key=lambda item: item.get("updated_at", 0), reverse=True)
     if not records:
         select(
-            ["Back"],
-            "History unavailable" if errors else "No saved tasks yet",
+            [ui_label("ai.ui.back", "Back")],
+            ui_label("ai.ui.history-unavailable", "History unavailable")
+            if errors
+            else ui_label("ai.ui.no-saved-tasks-yet", "No saved tasks yet"),
             header="; ".join(errors) if errors else None,
         )
         return
@@ -998,9 +1161,14 @@ def load_task(args):
         }
         chosen = select(
             list(choices),
-            "Load chat",
+            ui_label("ai.ui.load-chat", "Load chat"),
             details=details,
-            header="Some history sources unavailable" if errors else None,
+            header=ui_label(
+                "ai.ui.some-history-sources-unavailable",
+                "Some history sources unavailable",
+            )
+            if errors
+            else None,
         )
         if chosen is None:
             return
@@ -1094,7 +1262,13 @@ def prepare_local_codex(executable, env):
                 "Codex could not prepare its shared server. Run codex doctor for diagnostics; existing tasks were left running."
             )
         if attempt < 2:
-            print("Codex server is reconnecting; retrying startup…", flush=True)
+            print(
+                tr(
+                    "ai.ui.codex-server-is-reconnecting-retrying-startup",
+                    "Codex server is reconnecting; retrying startup…",
+                ),
+                flush=True,
+            )
             time.sleep(1)
     raise ValueError(
         "Codex's shared server is still transitioning. Existing tasks were left running; retry shortly or inspect codex doctor."
@@ -1347,7 +1521,10 @@ def main():
                 subprocess.run([sync], timeout=50, check=False)
             except subprocess.TimeoutExpired:
                 print(
-                    "Brain sync timed out; opening the available local notes",
+                    tr(
+                        "ai.ui.brain-sync-timed-out-opening-the-available-local-notes",
+                        "Brain sync timed out; opening the available local notes",
+                    ),
                     file=sys.stderr,
                 )
         obsidian = shutil.which("obsidian")
