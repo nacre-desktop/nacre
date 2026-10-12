@@ -50,6 +50,16 @@ TestCase {
         verify(loader.item);
         compare(loader.item.query, "unchanged draft");
     }
+    function test_created_while_already_open_keeps_its_warm_period() {
+        const loader = createTemporaryObject(holder, test, {
+            wanted: true
+        });
+        verify(loader.item);
+        loader.wanted = false;
+        wait(30);
+        verify(loader.item);
+        tryCompare(loader, "active", false, 500);
+    }
     function test_reset_content_when_preservation_disabled() {
         const loader = createTemporaryObject(holder, test, {
             preserveState: false

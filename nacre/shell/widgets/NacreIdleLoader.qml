@@ -15,6 +15,8 @@ Loader {
         } else if (retained)
             release.restart();
     }
+    Component.onCompleted: if (wanted)
+        retained = true
     onLoaded: if (preserveState && savedState && item?.restoreState)
         item.restoreState(savedState)
     Timer {
