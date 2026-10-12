@@ -122,11 +122,18 @@ class CompositorBackendTests(unittest.TestCase):
             focus = run.call_args.args[0][1]
             compositor.set_options({"example": {"value": "line\n9-ø"}})
             options = run.call_args.args[0][1]
+            compositor.configure_monitors(
+                [{"output": "DP-1", 'strange; error("injected")': "value"}]
+            )
+            monitor = run.call_args.args[0][1]
         source = (
             'hl={dispatch=function(value)end,dsp={focus=function(value)assert(value.workspace==arg[1]);return value end},config=function(value)assert(value.example.value=="line\\n9-ø")end}\n'
             + focus
             + "\n"
             + options
+        )
+        source += (
+            '\nhl.monitor=function(value)assert(value.output=="DP-1")end\n' + monitor
         )
         result = subprocess.run(
             ["lua", "-", 'workspace-ø"; error("injection")--'],
