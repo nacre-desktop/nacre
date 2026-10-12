@@ -37,7 +37,7 @@ the [Colors studio](assets/screenshots/colors.png) and [Welcome tour](assets/scr
 - **Optional AI and Brain.** Add an assistant workspace and private knowledge
   browser when you want them. Core Nacre works without either.
 
-The default has seven numbered workspaces. Choose your own applications, startup
+The default has five pearl workspace indicators. Choose your own applications, startup
 behavior and workspace names through [configuration](docs/configuration.md).
 
 ## Get started

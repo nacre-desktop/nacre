@@ -57,7 +57,7 @@ Item {
             definitions = {
                 "NacrePresentation": "property var active:({workspaceColors:false})",
                 "NacreHyprland": 'property int activeWsId:2;property var clients:[];property var focusedMonitor:({name:"test"});property var activeClient:null;property var requests:[];function dispatch(value){requests=[...requests,value];return true}',
-                "NacreBar": 'property int workspaceCount:7;property var workspaceNames:["Browse","Work","Chat","Music","Mail","Brain","Other"];property var workspaceIcons:["language","terminal","forum","music_note","mail","neurology","apps"]',
+                "NacreBar": "property int workspaceCount:5;property var workspaceNames:[];property var workspaceIcons:[]",
                 "NacreBrightness": "function getMonitorForScreen(screen){return null}",
                 "NacreTime": 'function format(value){return "12:34"}',
                 "Updates": 'property int count:3;property string message:""',

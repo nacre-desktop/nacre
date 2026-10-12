@@ -31,6 +31,8 @@ TestCase {
         AppLaunch.calls = [];
         NacreHyprland.activeWsId = 2;
         NacreHyprland.clients = [];
+        NacreBar.workspaceIcons = [];
+        NacreBar.workspaceCount = 5;
     }
     function test_workspace_readonly_state_and_explicit_activation() {
         const view = createTemporaryObject(row, test);
@@ -44,11 +46,49 @@ TestCase {
             }
         ];
         verify(findChild(view, "nacreWorkspace3").occupied);
-        verify(view.activate(7));
-        compare(NacreHyprland.requests[0], "workspace 7");
+        verify(view.activate(5));
+        compare(NacreHyprland.requests[0], "workspace 5");
         verify(!view.activate(8));
         verify(!view.activate(NaN));
         compare(NacreHyprland.requests.length, 1);
+    }
+    function test_pearls_keep_extra_windows_accessible_and_follow_active_workspace() {
+        const view = createTemporaryObject(row, test);
+        compare(view.workspaceIds.join(","), "1,2,3,4,5");
+        const selected = findChild(view, "nacreWorkspace2");
+        verify(findChild(selected, "workspacePearl").visible);
+        compare(findChild(selected, "workspacePearl").width, 17);
+        compare(findChild(findChild(view, "nacreWorkspace1"), "workspacePearl").width, 8);
+        NacreHyprland.clients = [
+            {
+                workspace: {
+                    id: 8
+                }
+            },
+            {
+                workspace: {
+                    id: 8
+                }
+            },
+            {
+                workspace: {
+                    id: -99
+                }
+            }
+        ];
+        tryCompare(view, "workspaceIds", [1, 2, 3, 4, 5, 8]);
+        tryVerify(() => !!findChild(view, "nacreWorkspace8"));
+        compare(findChild(view, "nacreWorkspace8").windowCount, 2);
+        verify(view.activate(8));
+        NacreHyprland.clients = [];
+        NacreHyprland.activeWsId = 8;
+        tryVerify(() => !!findChild(view, "nacreWorkspace8"));
+        verify(findChild(view, "nacreWorkspace8").selected);
+        NacreHyprland.activeWsId = 1;
+        tryCompare(view, "workspaceIds", [1, 2, 3, 4, 5]);
+        NacreBar.workspaceIcons = ["language"];
+        verify(view.customIcons);
+        verify(!findChild(findChild(view, "nacreWorkspace1"), "workspacePearl").visible);
     }
     function test_header_display_no_commands_and_status_geometry() {
         const view = createTemporaryObject(header, test);
