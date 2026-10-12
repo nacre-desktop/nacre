@@ -72,9 +72,19 @@ def lua_value(value):
 
 
 def lua_table(values):
+    if any(not isinstance(key, str) for key in values):
+        raise ValueError("Invalid compositor field")
+
+    def field(key):
+        return (
+            key
+            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key)
+            else "[" + lua_value(key) + "]"
+        )
+
     return (
         "{"
-        + ",".join(key + "=" + lua_value(value) for key, value in values.items())
+        + ",".join(field(key) + "=" + lua_value(value) for key, value in values.items())
         + "}"
     )
 
