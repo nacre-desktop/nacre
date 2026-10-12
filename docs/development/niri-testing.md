@@ -86,10 +86,10 @@ Do not enable automatic locking on niri before successful manual lock and unlock
 | UWSM selection | Dry run passed | `niri.desktop` resolves to `niri-session` with the installed `niri_session` plugin. No live second UWSM session started. |
 | Startup/idle isolation | Fixture tests passed | ExecCondition skips shared shell/observer and automatic idle in plain niri, permits unchanged Hyprland path. |
 | Nested compositor | Passed, preflight only | Real output/workspace/window IPC and clean exit; display/socket activation environment unchanged. |
-| TTY keyboard/login/recovery | Pending operator test | Do not confuse a documented command with a physically verified fallback. |
-| niri login and logout | Pending | Must be an actual SDDM login and clean logout. |
-| Return login to Hyprland | Pending | Confirm original configuration fingerprints and working shell after return. |
-| UWSM environment cleanup | Pending | Check session targets, display socket and NIRI_SOCKET after logout. |
+| TTY keyboard/login/recovery | Deferred by operator | Do not confuse a documented command with a physically verified fallback. |
+| niri login and logout | Deferred by operator | Must be an actual SDDM login and clean logout. |
+| Return login to Hyprland | Deferred by operator | Confirm original configuration fingerprints and working shell after return. |
+| UWSM environment cleanup | Deferred by operator | Check session targets, display socket and NIRI_SOCKET after logout. |
 
 ### Protocol observations
 
@@ -115,6 +115,55 @@ it applies to service startup rather than only a particular menu alias.
 activation variables and forced GDK backend only in the niri session. The shared
 `uwsm/env` and `env-hyprland` bytes remain unchanged. No original unit file was
 replaced, and daemon-reload did not request a service or compositor restart.
+
+### Acceptance recorder and deferred session test
+
+The operator requested that the working Hyprland session remain running. Actual
+TTY/SDDM switching and phase 2 are therefore deferred; the prepared niri alias
+currently opens plain niri, not the new Nacre backend. The task remains incomplete
+until the real cycle and phase-2 checklist pass.
+
+A bounded private recorder is provided in `uwsm/tools/niri-acceptance-monitor.py`.
+It observes actual UWSM compositor units and activation booleans, rejecting a nested
+socket as evidence of a real niri login. It runs as the normal user in a temporary
+system service, outside the graphical lifecycle. It does not change linger, claim
+password unlock, or write a backend-readiness marker. The preparation instance was
+stopped when session testing was deferred.
+
+Before a later test, start it from a normal terminal with administrator authentication:
+
+```sh
+sudo systemd-run --unit=nacre-niri-acceptance-monitor --collect \
+  --property=User="$(id -u)" --property=Group="$(id -g)" \
+  --property=RuntimeMaxSec=7200 \
+  --setenv=XDG_RUNTIME_DIR="/run/user/$(id -u)" \
+  --setenv=DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus" \
+  /usr/bin/python3 "$HOME/.local/share/nacre/niri-on-pc/niri-acceptance-monitor.py" \
+  --seconds 7200
+```
+
+Save all work, log out, select **Nacre (niri)**, log in, open Kitty with **Super+T**
+and check the desktop. Use **Super+Shift+E** to exit; select **Nacre (Hyprland)**
+and return. Resume this same task and inspect the private recorder's
+`acceptance-observed.json` and `acceptance-events.jsonl` in the backup directory.
+Separately report actual greeter selection, keyboard/TTY recovery and visual
+results. Do not mark a physical test passed just because unit observation succeeds.
+
+The strict fingerprint check detected only a generated lock-appearance change:
+background image and color values, with authentication and geometry unchanged.
+Scheme, wallpaper-state and lock-config timestamps coincide, and the existing
+writer derives lock appearance from those state files. This is consistent with
+ambient wallpaper/palette updates; the exact triggering action was not recorded.
+The current generated file and original backup were both preserved, without
+rewriting current presentation or private preferences to force a byte-equality
+pass. Keep this drift visible during acceptance and review its cause separately
+from the protected static configuration.
+
+Repository validation on the rebased prerequisite main passes: **625 local tests**,
+Ruff lint/format, native Qt/QML parsing and regression tests, compositor boundary
+and generated-config checks, palette CLI, and browser formatting. GitHub's desktop
+job also passes; its shell suite reports two skips while the local gate reports
+none. Startup and observation additions have nine focused tests.
 
 ## Phase 2: backend branch and personal preferences
 
