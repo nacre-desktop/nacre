@@ -109,10 +109,7 @@ class TerminalBrandingTests(unittest.TestCase):
             for name in (
                 "logo-data.js.in",
                 "logo-widget.qml.in",
-                "ai-label.svg.in",
-                "brain-label.svg.in",
-                "settings-label.svg.in",
-                "colors-label.svg.in",
+                *(app + "-label.svg.in" for app in branding.APPLICATIONS),
             ):
                 shutil.copyfile(Path(branding.__file__).with_name(name), tools / name)
             shutil.copyfile(
@@ -130,6 +127,9 @@ class TerminalBrandingTests(unittest.TestCase):
                 root / "nacre/shell/branding/nacre-ai.svg",
                 root / "nacre/shell/branding/nacre-ai-compact.svg",
                 root / "nacre/shell/branding/nacre-ai-symbolic.svg",
+                root / "nacre/shell/branding/nacre-notifications.svg",
+                root / "nacre/shell/branding/nacre-notifications-compact.svg",
+                root / "nacre/shell/branding/nacre-notifications-symbolic.svg",
             ]
             subprocess.run(
                 [sys.executable, str(script), "--build"],

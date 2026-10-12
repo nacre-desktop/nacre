@@ -124,7 +124,7 @@ TestCase {
         UPower.displayDevice.percentage = 0.20;
         const view = setup();
         tryCompare(part(view, "Sender"), "running", true, 500);
-        compare(part(view, "Sender").command, ["notify-send", "--app-name", "Battery", "--urgency", "normal", "Battery Low", "Remaining: 20%"]);
+        compare(part(view, "Sender").command, ["notify-send", "--app-name", "Nacre Battery", "--icon", "nacre-notifications", "--urgency", "normal", "Battery Low", "Remaining: 20%"]);
         compare(part(view, "Policy").severity, 0);
         finish(view);
         compare(part(view, "Policy").severity, 1);
@@ -138,7 +138,8 @@ TestCase {
         compare(part(restart, "Sender").running, false);
         UPower.displayDevice.percentage = 0.15;
         tryCompare(part(view, "Sender"), "running", true, 500);
-        compare(part(view, "Sender").command[4], "critical");
+        const command = part(view, "Sender").command;
+        compare(command[command.indexOf("--urgency") + 1], "critical");
         finish(view);
         compare(part(view, "Policy").severity, 2);
         UPower.displayDevice.percentage = 0.19;

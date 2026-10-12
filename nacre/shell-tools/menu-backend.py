@@ -409,7 +409,7 @@ def set_reminder(minutes, message):
             "-a",
             "Nacre Reminders",
             "-i",
-            "nacre",
+            "nacre-notifications",
             "Reminder",
             message.strip(),
         ],
@@ -885,7 +885,7 @@ def main():
                         or args.value == "color-picker"
                         else "Nacre",
                         "-i",
-                        "nacre",
+                        "nacre-notifications",
                         "Nacre",
                         message,
                     ],

@@ -9,7 +9,15 @@ import subprocess
 
 def notify(message):
     subprocess.run(
-        ["notify-send", "-a", "Nacre Capture", "-i", "nacre", "Screenshot", message],
+        [
+            "notify-send",
+            "-a",
+            "Nacre Capture",
+            "-i",
+            "nacre-notifications",
+            "Screenshot",
+            message,
+        ],
         check=False,
     )
 

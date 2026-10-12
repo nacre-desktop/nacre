@@ -151,7 +151,7 @@
   {
     "action": {
       "args": [
-        "grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre \"Screenshot\" \"Copied to clipboard\""
+        "grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""
       ],
       "method": "exec_cmd"
     },
@@ -164,7 +164,7 @@
   {
     "action": {
       "args": [
-        "grim ~/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S).png && notify-send -a \"Nacre Capture\" -i nacre \"Screenshot\" \"Saved to Pictures/Screenshots\""
+        "grim ~/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S).png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Saved to Pictures/Screenshots\""
       ],
       "method": "exec_cmd"
     },

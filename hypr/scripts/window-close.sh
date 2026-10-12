@@ -3,7 +3,7 @@
 set -euo pipefail
 
 notify() {
-    command -v notify-send >/dev/null 2>&1 && notify-send -t 2000 "$@" || true
+    command -v notify-send >/dev/null 2>&1 && notify-send -a "Nacre Windows" -i nacre-notifications -t 2000 "$@" || true
 }
 
 lua_quote() {

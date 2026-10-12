@@ -9,7 +9,7 @@ TTL_SECONDS=30
 mkdir -p "$STATE_DIR"
 
 notify() {
-    command -v notify-send >/dev/null 2>&1 && notify-send -t 2500 "$@" || true
+    command -v notify-send >/dev/null 2>&1 && notify-send -a "Nacre Windows" -i nacre-notifications -t 2500 "$@" || true
 }
 
 lua_quote() {
