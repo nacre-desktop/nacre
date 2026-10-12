@@ -14,6 +14,12 @@ SPEC.loader.exec_module(performance)
 
 
 class MemoryTests(unittest.TestCase):
+    def test_nearest_rank_p95_does_not_promote_a_single_twentieth_outlier(self):
+        result = performance.summarize([*range(1, 20), 1000])
+        self.assertEqual(result["p95"], 19)
+        self.assertEqual(result["max"], 1000)
+        self.assertIsNone(performance.summarize([]))
+
     def test_rollup_counts_shared_pages_proportionally_and_private_pages_once(self):
         with tempfile.TemporaryDirectory() as directory:
             proc = Path(directory)

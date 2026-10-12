@@ -4,6 +4,7 @@
 import argparse
 from collections import Counter
 import json
+import math
 import os
 from pathlib import Path
 import statistics
@@ -117,7 +118,7 @@ def summarize(values):
     return {
         "mean": statistics.mean(values),
         "median": statistics.median(values),
-        "p95": ordered[min(len(values) - 1, int(len(values) * 0.95))],
+        "p95": ordered[min(len(values) - 1, math.ceil(len(values) * 0.95) - 1)],
         "max": max(values),
     }
 
