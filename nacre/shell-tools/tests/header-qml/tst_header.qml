@@ -106,14 +106,16 @@ TestCase {
                     title: "Window " + index
                 }));
         tryVerify(() => !!view.activeCell);
-        compare(view.activeCell.shownWindows.length, 3);
-        compare(view.activeCell.overflow, 2);
-        compare(findChild(view, "workspaceOverflow").text, "+2");
+        compare(view.activeCell.shownWindows.length, 5);
+        compare(view.activeCell.overflow, 0);
+        verify(!findChild(view.activeCell, "workspaceOverflow").visible);
         const stable = findChild(view, "nacreWorkspace1");
         NacreHyprland.activeWsId = 4;
         tryVerify(() => view.activeCell?.workspaceId === 4);
         compare(findChild(view, "nacreWorkspace1"), stable);
         compare(view.activeCell.shownWindows.length, 0);
+        compare(findChild(view, "nacreWorkspace2").shownWindows.length, 5);
+        verify(findChild(findChild(view, "nacreWorkspace2"), "workspaceApps").visible);
         verify(view.scroll(-60));
         compare(NacreHyprland.requests.length, 0);
         verify(view.scroll(-60));
@@ -125,7 +127,7 @@ TestCase {
         NacreHyprland.activeWsId = 2;
         wait(250);
         const cell = findChild(view, "nacreWorkspace2");
-        mouseClick(cell, cell.width - 8, 15);
+        mouseClick(cell, 16, 15);
         compare(NacreHyprland.requests[1], "workspace 2");
         view.availableWidth = 200;
         tryVerify(() => view.iconLimit === 0);
@@ -167,8 +169,9 @@ TestCase {
         compare(capsule.x, view.activeCell.x);
         NacreHyprland.activeWsId = 2;
         tryVerify(() => view.activeCell?.workspaceId === 2);
-        mouseClick(capsule, 41, 14);
-        compare(NacreHyprland.requests[0], "focus 0x10");
+        const inactive = findChild(view, "nacreWorkspace3");
+        mouseClick(inactive, 41, 15);
+        compare(NacreHyprland.requests[0], "focus 0x20");
     }
     function test_header_display_no_commands_and_status_geometry() {
         const view = createTemporaryObject(header, test);
