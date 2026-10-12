@@ -23,11 +23,11 @@ window_exists() {
 }
 
 close_window() {
-    compositor close-window "address:$1" >/dev/null 2>&1 || true
+    compositor close-window "$1" >/dev/null 2>&1 || true
 }
 
 force_window() {
-    compositor kill-window "address:$1" >/dev/null 2>&1 || true
+    compositor kill-window "$1" >/dev/null 2>&1 || true
 }
 
 main() {

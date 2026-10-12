@@ -39,7 +39,7 @@ def query(name):
 
 
 def address(value):
-    return isinstance(value, str) and re.fullmatch(r"0x[0-9a-fA-F]+", value) is not None
+    return compositor().valid_window_id(value)
 
 
 def dispatch(method, window, **options):

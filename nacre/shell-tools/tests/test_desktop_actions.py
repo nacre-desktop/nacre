@@ -95,3 +95,22 @@ class DesktopActionTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(RuntimeError, "offline"):
                 m.action("focus", "0x123")
+
+    def test_backend_owned_opaque_window_id_is_not_rejected_by_consumers(self):
+        with (
+            patch.object(
+                m.compositor,
+                "valid_window_id",
+                side_effect=lambda value: value == "window-42",
+            ),
+            patch.object(
+                m.compositor,
+                "query",
+                return_value=[
+                    {"address": "window-42", "workspace": {"id": 2}, "title": "Editor"}
+                ],
+            ),
+            patch.object(m.compositor, "focus_window") as focus,
+        ):
+            m.action("app-windows", '["window-42"]')
+        focus.assert_called_once_with("window-42", timeout=10)

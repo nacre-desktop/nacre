@@ -380,17 +380,9 @@ DESCRIPTIONS = {
 def bindings():
     source = {}
     source_routes = {}
-    capture = runpy.run_path(str(Path(__file__).with_name("binding-contracts.py")))[
-        "capture"
-    ]
-    for file in [
-        *sorted((HOME / ".config/hypr/conf").glob("*.lua")),
-        HOME / ".config/nacre/shortcuts.lua",
-    ]:
-        if not file.exists() or not re.search(r"\bhl\.bind\s*\(", file.read_text()):
-            continue
+    for file in compositor.binding_source_files(HOME):
         try:
-            records = capture(file)
+            records = compositor.capture_bindings(file)
         except (RuntimeError, OSError, subprocess.TimeoutExpired):
             continue  # Native descriptions remain available for unsupported local code.
         for record in records:

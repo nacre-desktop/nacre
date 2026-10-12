@@ -989,7 +989,7 @@ def ensure_brain(focus=False):
                 if window:
                     break
                 time.sleep(0.1)
-            if window and re.fullmatch(r"0x[0-9a-fA-F]+", window["address"]):
+            if window and compositor().valid_window_id(window["address"]):
                 compositor_action(
                     "fullscreen_state", window["address"], internal=0, client=0
                 )

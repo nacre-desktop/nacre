@@ -104,7 +104,7 @@ def state():
     versions = {
         name: run(args)
         for name, args in {
-            "Hyprland": ["Hyprland", "--version"],
+            compositor.backend_display_name: compositor.version_command(),
             "Python": [sys.executable, "--version"],
         }.items()
     }

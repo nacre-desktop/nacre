@@ -157,14 +157,14 @@ def action(name, value=""):
         compositor_action("switch_workspace", num, current_monitor=True)
         return
     if name == "focus":
-        if not re.fullmatch(r"0x[0-9a-fA-F]+", value):
+        if not compositor.valid_window_id(value):
             raise ValueError("Invalid window")
         compositor_action("focus_window", value)
         return
     if name == "app-windows":
         ids = json.loads(value)
         if not isinstance(ids, list) or not all(
-            isinstance(i, str) and re.fullmatch(r"0x[0-9a-fA-F]+", i) for i in ids
+            compositor.valid_window_id(i) for i in ids
         ):
             raise ValueError("Invalid window group")
         clients = compositor_windows()
