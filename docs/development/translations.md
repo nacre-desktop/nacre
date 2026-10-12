@@ -185,3 +185,10 @@ NACRE_PLAYWRIGHT_MODULE=/path/to/isolated/node_modules/playwright node tools/i18
 ```
 
 The final combined-baseline rebase and full checks remain pending at this checkpoint.
+
+2026-10-12 layout checkpoint: adaptive navigation/search widths, wrapping control
+and menu labels, size-aware action buttons and fitting weekday headings remove
+the observed pseudo clipping. The native expanded gallery covered 181 states per
+language with no owned truncation; the browser covered eight states per language.
+The audit uses offline public fixtures, so real hardware transitions, compositor
+integration, lock/resume and a cold login remain outside its verification scope.

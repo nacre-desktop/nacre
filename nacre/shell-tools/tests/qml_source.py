@@ -95,7 +95,7 @@ QtObject {
     function displayValue(value) { return language === "pseudo" && /[A-Za-z]/.test(value) ? Translation.pseudo(value) : value; }
     function dayName(day, format = Locale.ShortFormat) { return displayValue(locale.dayName(day, format)); }
     function dateTime(value, format = Locale.ShortFormat) { return new Date(value).toLocaleString(locale, format); }
-    function date(value, format = Locale.ShortFormat) { return new Date(value).toLocaleDateString(locale, format); }
+    function date(value, format = Locale.ShortFormat) { return displayValue(new Date(value).toLocaleDateString(locale, format)); }
     function time(value, format = Locale.ShortFormat) { return new Date(value).toLocaleTimeString(locale, format); }
 }
 """.replace("OPTIONS", json.dumps(options))

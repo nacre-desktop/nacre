@@ -16,7 +16,7 @@ Item {
     readonly property var candidate: NacreColorsApp.preview
     readonly property var palette: candidate.palette?.colours || {}
     readonly property var audit: candidate.palette?.accessibility || {}
-    readonly property int railWidth: width < 980 ? 180 : 210
+    readonly property int railWidth: Math.max(width < 980 ? 180 : 210, Math.ceil(searchMetrics.advanceWidth(searchField.placeholderText)) + 40)
     readonly property bool ready: NacreColorsApp.ready
     readonly property bool active: NacreColorsApp.visible
     function captureState() {
@@ -40,6 +40,10 @@ Item {
             canvas.contentY = data.scroll || 0;
             entries.contentY = data.entries || 0;
         });
+    }
+    FontMetrics {
+        id: searchMetrics
+        font: searchField.font
     }
     function search() {
         searchField.forceActiveFocus();
