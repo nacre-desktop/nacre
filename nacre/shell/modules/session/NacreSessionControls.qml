@@ -16,7 +16,7 @@ Item {
             key: "logout",
             label: "Log out",
             icon: "logout",
-            command: ["hyprctl", "eval", "hl.dispatch(hl.dsp.exit())"]
+            command: null
         },
         {
             key: "restart",
@@ -38,7 +38,10 @@ Item {
         if (!action || !visibilities.session)
             return false;
         visibilities.session = false;
-        AppLaunch.run(action.command);
+        if (key === "logout")
+            NacreCompositor.logout();
+        else
+            AppLaunch.run(action.command);
         return true;
     }
     Column {

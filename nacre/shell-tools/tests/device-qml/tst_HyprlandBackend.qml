@@ -8,7 +8,7 @@ TestCase {
     when: windowShown
     Component {
         id: service
-        NacreHyprland {}
+        HyprlandBackend {}
     }
     Component {
         id: window
@@ -152,5 +152,110 @@ TestCase {
         Native.Hyprland.toplevels.values = [first];
         wait(20);
         compare(Object.keys(state.urgentAddresses).length, 0);
+    }
+    function test_typed_window_actions_validate_identity_geometry_and_backend_encoding() {
+        const first = createTemporaryObject(window, test);
+        Native.Hyprland.toplevels.values = [first];
+        Native.Hyprland.monitors = {
+            values: [
+                {
+                    name: "fixture"
+                }
+            ]
+        };
+        const state = createTemporaryObject(service, test);
+        compare(state.clients[0].windowId, "0x10");
+        compare(state.clients[0].geometry.width, 800);
+        verify(!state.moveWindowToWorkspace("unknown", 2));
+        verify(!state.moveWindowToWorkspace("10", "2; forbidden"));
+        verify(!state.resizeWindow("10", 0, 100));
+        verify(!state.placeWindow("10", {
+            x: NaN,
+            y: 0,
+            width: 100,
+            height: 100
+        }));
+        verify(!state.publishPanelRegions(1, [
+            {
+                x: 0,
+                y: 0,
+                width: Infinity,
+                height: 20
+            }
+        ]));
+        compare(Native.Hyprland.requests.length, 0);
+        verify(state.moveWindowToWorkspace("10", 4));
+        compare(Native.Hyprland.requests.pop(), 'hl.dsp.window.move({window="address:0x10",workspace="4",follow=false})');
+        verify(state.closeWindow("10"));
+        compare(Native.Hyprland.requests.pop(), 'hl.dsp.window.close({window="address:0x10"})');
+        verify(state.floatWindow("10"));
+        compare(Native.Hyprland.requests.pop(), 'hl.dsp.window.float({window="address:0x10",action="toggle"})');
+        verify(state.pinWindow("10"));
+        compare(Native.Hyprland.requests.pop(), 'hl.dsp.window.pin({window="address:0x10"})');
+        verify(state.moveWindow("10", -10, 20));
+        compare(Native.Hyprland.requests.pop(), 'hl.dsp.window.move({window="address:0x10",x=-10,y=20,relative=false})');
+        verify(state.resizeWindow("10", 700, 500));
+        compare(Native.Hyprland.requests.pop(), 'hl.dsp.window.resize({window="address:0x10",x=700,y=500,relative=false})');
+        verify(state.placeWindow("10", {
+            x: 1,
+            y: 2,
+            width: 300,
+            height: 200
+        }));
+        compare(Native.Hyprland.requests.slice(-3)[0], 'hl.dsp.window.float({window="address:0x10",action="enable"})');
+        Native.Hyprland.requests = [];
+        verify(!state.moveWorkspaceToMonitor(2, "unknown"));
+        verify(state.moveWorkspaceToMonitor(2, "fixture"));
+        compare(Native.Hyprland.requests.pop(), 'hl.dsp.workspace.move({workspace="2",monitor="fixture"})');
+        verify(state.logout());
+        compare(Native.Hyprland.requests.pop(), "hl.dsp.exit()");
+        Native.Hyprland.usingLua = false;
+        Native.Hyprland.requests = [];
+        verify(state.moveWindowToWorkspace("10", 4, true));
+        compare(Native.Hyprland.requests.pop(), "movetoworkspace 4,address:0x10");
+        verify(state.resizeWindow("10", 700, 500));
+        compare(Native.Hyprland.requests.pop(), "resizewindowpixel exact 700 500,address:0x10");
+    }
+    function test_neutral_events_and_serial_geometry_publication() {
+        const state = createTemporaryObject(service, test);
+        const values = [];
+        state.event.connect(value => values.push(value));
+        let configurations = 0;
+        let gesture = "";
+        state.configurationReloaded.connect(() => configurations++);
+        state.panelGesture.connect(value => gesture = value);
+        Native.Hyprland.rawEvent({
+            name: "activewindowv2",
+            data: "10"
+        });
+        compare(values[0].type, "window-focus");
+        compare(values[0].windowId, "0x10");
+        Native.Hyprland.rawEvent({
+            name: "configreloaded",
+            data: ""
+        });
+        compare(configurations, 1);
+        Native.Hyprland.rawEvent({
+            name: "custom",
+            data: "nacre-panel-drag,end"
+        });
+        compare(gesture, "nacre-panel-drag,end");
+        verify(state.publishPanelRegions(42, [
+            {
+                x: 1.5,
+                y: 2,
+                width: 30,
+                height: 40
+            }
+        ]));
+        const writer = findChild(state, "panelGeometryWriter");
+        verify(writer.running);
+        compare(writer.command[2], "nacre_panel_pid=42;nacre_panel_regions={{x=2,y=2,w=30,h=40}}");
+        verify(state.publishPanelRegions(42, []));
+        compare(writer.pending, "nacre_panel_pid=42;nacre_panel_regions={}");
+        writer.running = false;
+        writer.exited(0, 0);
+        verify(writer.running);
+        compare(writer.command[2], "nacre_panel_pid=42;nacre_panel_regions={}");
     }
 }

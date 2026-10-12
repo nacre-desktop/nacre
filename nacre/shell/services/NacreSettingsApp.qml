@@ -13,7 +13,7 @@ Singleton {
     property int focusAttempts: 0
     property int activation: 0
     property string error: ""
-    readonly property var client: (NacreHyprland.clients || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Settings" && c.wmClass === "org.quickshell") || null
+    readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Settings" && c.wmClass === "org.quickshell") || null
     readonly property bool active: visible && !!window && !window.minimized && (client?.workspace?.id ?? 1) > 0
     readonly property string page: NacrePanelState.settingsPage
     onActiveChanged: NacrePanelState.settingsVisible = active
@@ -48,12 +48,12 @@ Singleton {
         if (!visible || !focusPending)
             return;
         const client = root.client;
-        if (client && /^0x[0-9a-f]+$/i.test(client.address)) {
+        if (client && client.windowId) {
             if ((client.workspace?.id ?? 1) < 0) {
-                const workspace = Math.max(1, NacreHyprland.activeWsId);
-                NacreHyprland.dispatch('hl.dsp.window.move({window="address:' + client.address + '",workspace="' + workspace + '",follow=false})');
+                const workspace = Math.max(1, NacreCompositor.activeWsId);
+                NacreCompositor.moveWindowToWorkspace(client.windowId, workspace);
             }
-            NacreHyprland.dispatch('hl.dsp.focus({window="address:' + client.address + '"})');
+            NacreCompositor.focusWindow(client.windowId);
             focusPending = false;
             focusDelay.stop();
         } else if (++focusAttempts >= 12) {
@@ -63,10 +63,10 @@ Singleton {
     }
     function minimize() {
         const client = root.client;
-        if (!client || minimizeJob.running || !/^0x[0-9a-f]+$/i.test(client.address))
+        if (!client || minimizeJob.running || !client.windowId)
             return;
         minimizeJob.generation = activation;
-        minimizeJob.command = ["python3", Quickshell.env("HOME") + "/.config/hypr/scripts/window-hide.py", "hide", "--window", client.address, "--quiet"];
+        minimizeJob.command = NacreCompositor.hideWindowCommand(client.windowId);
         minimizeJob.running = true;
     }
     Process {

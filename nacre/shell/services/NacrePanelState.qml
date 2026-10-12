@@ -14,7 +14,7 @@ Singleton {
     readonly property var modes: ["apps", "wallpaper", "palette", "legacy", "overview", "clipboard", "keys"]
     readonly property var pages: ["appearance", "desktop", "displays", "sound", "network", "bluetooth", "notifications", "workflows", "lock", "time", "ai", "maintenance"]
     function activeName() {
-        return screens[NacreHyprland.focusedMonitor?.name] ? NacreHyprland.focusedMonitor.name : Object.keys(screens)[0] || "";
+        return screens[NacreCompositor.focusedMonitor?.name] ? NacreCompositor.focusedMonitor.name : Object.keys(screens)[0] || "";
     }
     function getForActive() {
         return screens[activeName()] || null;

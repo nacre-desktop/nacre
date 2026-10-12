@@ -1,5 +1,3 @@
-import Quickshell.Hyprland
+import "../services/compositor" as Backend
 
-GlobalShortcut {
-    appid: "nacre_shell"
-}
+Backend.HyprlandShortcut {}
