@@ -102,7 +102,7 @@ Singleton {
                 active: root.active,
                 created: root.created,
                 page: root.page,
-                search: root.window?.view.query || "",
+                search: root.window?.searchQuery || "",
                 width: root.window?.width || 0,
                 height: root.window?.height || 0
             });
@@ -118,7 +118,7 @@ Singleton {
             return JSON.stringify({
                 visible: root.visible,
                 page: root.page,
-                search: root.window?.view.query || "",
+                search: root.window?.searchQuery || "",
                 width: root.window?.width || 0,
                 height: root.window?.height || 0
             });

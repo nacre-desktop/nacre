@@ -9,6 +9,7 @@ FloatingWindow {
     title: "Nacre Settings"
     objectName: "nacreSettingsWindow"
     readonly property var view: content.item
+    readonly property string searchQuery: view?.query ?? content.savedState?.query ?? ""
     visible: NacreSettingsApp.visible
     minimumSize: Qt.size(720, 540)
     implicitWidth: Math.min(1100, Math.max(720, (screen?.width || 1920) * .75))
