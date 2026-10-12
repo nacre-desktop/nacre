@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Private persistent assistant session, independent from the desktop renderer."""
 
+import argparse
+import re
 import json
 import os
 import queue
@@ -22,6 +24,62 @@ SOCKET = (
     Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
     / "nacre-sidebar-chat.sock"
 )
+CHANNEL = ""
+DEFAULT_STATE = STATE
+DEFAULT_SOCKET = SOCKET
+
+
+def configure_channel(channel):
+    global STATE, SOCKET, CHANNEL
+    if channel and not re.fullmatch(r"[a-z0-9-]{1,48}", channel):
+        raise ValueError("Invalid assistant view channel")
+    CHANNEL = channel
+    STATE = DEFAULT_STATE / "views" / channel if channel else DEFAULT_STATE
+    SOCKET = (
+        DEFAULT_SOCKET.with_name("nacre-chat-" + channel + ".sock")
+        if channel
+        else DEFAULT_SOCKET
+    )
+
+
+def start_service():
+    if not CHANNEL:
+        subprocess.run(
+            ["systemctl", "--user", "start", "nacre-sidebar-ai.service"],
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+        return
+    unit = "nacre-sidebar-ai-view-" + CHANNEL
+    if (
+        subprocess.run(
+            ["systemctl", "--user", "is-active", "--quiet", unit],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).returncode
+        == 0
+    ):
+        return
+    subprocess.run(
+        [
+            "systemd-run",
+            "--user",
+            "--quiet",
+            "--collect",
+            "--unit=" + unit,
+            "--property=Type=exec",
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "server",
+            "--channel",
+            CHANNEL,
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
+
+
 INSTRUCTIONS = """You are Nacre AI in an ongoing desktop sidebar conversation. It is a full assistant workspace, not a short-answer mode. The user can change desktop workspaces without changing this conversation. Read ~/.codex/AGENTS.md and the shared personal workflow at ~/.agents/skills/nacre-project-work/SKILL.md. Use the private shared brain and project registry to resolve context; inspect each project's own instructions before work. Preserve other chats, accounts and active sessions. Use isolated worktrees and the registered build host for heavy tests. Never copy authentication or log secrets. Record useful verified knowledge using the existing brain workflow. Name this conversation with a concise title once its subject is clear."""
 
 
@@ -880,17 +938,34 @@ def server():
     sock.bind(str(SOCKET))
     SOCKET.chmod(0o600)
     sock.listen(5)
-    while True:
-        connection, _ = sock.accept()
-        threading.Thread(target=manager.client, args=(connection,), daemon=True).start()
+    sock.settimeout(5)
+    idle_since = time.monotonic()
+    try:
+        while True:
+            try:
+                connection, _ = sock.accept()
+            except TimeoutError:
+                with manager.lock:
+                    active = bool(manager.clients) or manager.busy
+                if active:
+                    idle_since = time.monotonic()
+                elif CHANNEL and time.monotonic() - idle_since >= 90:
+                    if manager.peer:
+                        manager.peer.close()
+                    manager.save()
+                    return
+                continue
+            idle_since = time.monotonic()
+            threading.Thread(
+                target=manager.client, args=(connection,), daemon=True
+            ).start()
+    finally:
+        sock.close()
+        SOCKET.unlink(missing_ok=True)
 
 
 def client():
-    subprocess.run(
-        ["systemctl", "--user", "start", "nacre-sidebar-ai.service"],
-        check=True,
-        stdout=subprocess.DEVNULL,
-    )
+    start_service()
     incoming = queue.Queue()
 
     def input_lines():
@@ -948,4 +1023,9 @@ def client():
 
 
 if __name__ == "__main__":
-    server() if len(sys.argv) > 1 and sys.argv[1] == "server" else client()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("action", choices=("client", "server"))
+    parser.add_argument("--channel", default="")
+    options = parser.parse_args()
+    configure_channel(options.channel)
+    server() if options.action == "server" else client()

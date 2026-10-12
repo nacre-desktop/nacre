@@ -12,7 +12,7 @@ Singleton {
     property string value: ""
     readonly property string tool: Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/control-tools.py"
     readonly property bool busy: worker.running
-    readonly property bool visibleControls: Object.values(NacrePanelState.screens).some(view => view.osd)
+    readonly property bool visibleControls: NacrePanelState.providerViews.some(view => view.osd)
     function refresh() {
         if (busy) {
             refreshQueued = true;

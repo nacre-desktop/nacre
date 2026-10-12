@@ -43,9 +43,11 @@ SearchSurface {
             return;
         if (e.app) {
             NacreApps.launch(e.app);
-            visibilities.launcher = false;
+            if (!root.detached)
+                visibilities.launcher = false;
         } else if (e.window) {
-            visibilities.launcher = false;
+            if (!root.detached)
+                visibilities.launcher = false;
             NacreHyprland.dispatch('hl.dsp.focus({window=' + JSON.stringify('address:' + e.window.address) + '})');
         } else if (e.action === "brain-query") {
             DesktopExtras.brainQuery = e.value;

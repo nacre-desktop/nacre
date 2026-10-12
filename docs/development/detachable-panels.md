@@ -7,7 +7,7 @@ Primary references:
 - Quickshell FloatingWindow: https://quickshell.org/docs/v0.3.2/types/Quickshell/FloatingWindow/
 - Qt native movement and Wayland positioning: https://doc.qt.io/qt-6/qwindow.html#startSystemMove
 - Established floating/docking behavior: https://doc.qt.io/qt-6/qdockwidget.html
-- Hyprland movement/resize dispatchers: https://wiki.hypr.land/0.54.0/Configuring/Dispatchers/
+- Hyprland movement/resize dispatchers: https://wiki.hypr.land/configuring/core/dispatchers/
 - Quickshell implementation confirms window-wide app IDs rather than a per-window
   FloatingWindow.appId: https://github.com/outfoxxed/quickshell/blob/master/src/window/floatingwindow.hpp
 

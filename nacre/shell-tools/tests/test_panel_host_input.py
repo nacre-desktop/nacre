@@ -58,6 +58,7 @@ class PanelHostInputTests(unittest.TestCase):
 Rectangle {
  width:200;height:100;color:"#334455"
  property var screen
+ property string screenName
  property var visibilities
  property string section:"home"
  property bool keyboardActive:false

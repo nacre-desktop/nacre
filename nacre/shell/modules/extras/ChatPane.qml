@@ -6,23 +6,24 @@ import Quickshell
 
 Item {
     id: root
+    property var chat: NacreAiViews.edge
     required property PersistentProperties visibilities
     function captureUiState() {
         transcript.savePosition();
         return {
             position: transcript.savedPosition,
             cursor: input.cursorPosition,
-            threadId: SidebarChat.threadId,
-            composerKey: SidebarChat.composerKey,
-            draft: SidebarChat.draft,
-            attachments: SidebarChat.attachments
+            threadId: root.chat.threadId,
+            composerKey: root.chat.composerKey,
+            draft: root.chat.draft,
+            attachments: root.chat.attachments
         };
     }
     property var pendingRecovery: null
     function restoreUiState(data) {
-        SidebarChat.restoreComposer(data);
+        root.chat.restoreComposer(data);
         pendingRecovery = data;
-        if (!data.threadId || (SidebarChat.threadId === data.threadId && SidebarChat.messages.count > 0))
+        if (!data.threadId || (root.chat.threadId === data.threadId && root.chat.messages.count > 0))
             finishRecovery();
     }
     function finishRecovery() {
@@ -30,7 +31,7 @@ Item {
         if (!data)
             return;
         pendingRecovery = null;
-        if (data.threadId && SidebarChat.threadId && data.threadId !== SidebarChat.threadId)
+        if (data.threadId && root.chat.threadId && data.threadId !== root.chat.threadId)
             return;
         transcript.savedPosition = data.position;
         transcript.restoring = true;
@@ -47,7 +48,7 @@ Item {
     }
     property bool active: false
     onActiveChanged: if (active) {
-        SidebarChat.start();
+        root.chat.start();
         if (transcript.follow)
             transcript.latest();
     }
@@ -62,20 +63,20 @@ Item {
             ActionButton {
                 text: "New chat"
                 icon: "add_comment"
-                enabled: !SidebarChat.busy
-                onClicked: SidebarChat.newChat()
+                enabled: !root.chat.busy
+                onClicked: root.chat.newChat()
             }
             ActionButton {
                 text: "Workspace"
                 icon: "open_in_new"
-                enabled: !SidebarChat.busy && SidebarChat.threadId.length > 0
-                onClicked: SidebarChat.workspace()
+                enabled: !root.chat.busy && root.chat.threadId.length > 0
+                onClicked: root.chat.workspace()
             }
         }
         NacreText {
             width: parent.width
             elide: Text.ElideRight
-            text: (SidebarChat.provider ? SidebarChat.provider.charAt(0).toUpperCase() + SidebarChat.provider.slice(1) : "Assistant") + " · " + SidebarChat.title
+            text: (root.chat.provider ? root.chat.provider.charAt(0).toUpperCase() + root.chat.provider.slice(1) : "Assistant") + " · " + root.chat.title
             color: NacreColours.palette.m3onSurfaceVariant
             font.pointSize: 10
         }
@@ -89,7 +90,7 @@ Item {
         anchors.right: parent.right
         anchors.topMargin: 12
         anchors.bottomMargin: 10
-        model: SidebarChat.messages
+        model: root.chat.messages
         clip: true
         spacing: 12
         cacheBuffer: 100
@@ -138,7 +139,7 @@ Item {
             const item = index >= 0 ? itemAtIndex(index) : null;
             savedPosition = {
                 bottom: bottom,
-                id: index >= 0 ? SidebarChat.messages.get(index).id : "",
+                id: index >= 0 ? root.chat.messages.get(index).id : "",
                 offset: item ? contentY - item.y : 0,
                 y: contentY - originY
             };
@@ -152,7 +153,7 @@ Item {
                 if (follow)
                     positionViewAtEnd();
                 else {
-                    const index = SidebarChat.itemIndex(savedPosition.id);
+                    const index = root.chat.itemIndex(savedPosition.id);
                     if (index >= 0) {
                         positionViewAtIndex(index, ListView.Beginning);
                         forceLayout();
@@ -207,14 +208,14 @@ Item {
                 spacing: 5
                 ActionButton {
                     text: "Copy"
-                    onClicked: SidebarChat.copy(bubble.text)
+                    onClicked: root.chat.copy(bubble.text)
                 }
                 Repeater {
                     model: root.codeBlocks(bubble.text)
                     ActionButton {
                         required property string modelData
                         text: "Copy code"
-                        onClicked: SidebarChat.copy(modelData)
+                        onClicked: root.chat.copy(modelData)
                     }
                 }
             }
@@ -243,7 +244,7 @@ Item {
         }
     }
     Connections {
-        target: SidebarChat
+        target: root.chat
         function onHistoryReplacing() {
             transcript.savePosition();
         }
@@ -254,7 +255,7 @@ Item {
                 transcript.restorePosition();
         }
         function onThreadIdChanged() {
-            if (root.pendingRecovery && root.pendingRecovery.threadId === SidebarChat.threadId)
+            if (root.pendingRecovery && root.pendingRecovery.threadId === root.chat.threadId)
                 return;
             transcript.savedPosition = {
                 bottom: true
@@ -264,10 +265,10 @@ Item {
     }
     DropArea {
         anchors.fill: parent
-        enabled: SidebarChat.attachmentsSupported
+        enabled: root.chat.attachmentsSupported
         onDropped: drop => {
             if (drop.hasUrls) {
-                SidebarChat.addFiles(drop.urls);
+                root.chat.addFiles(drop.urls);
                 drop.acceptProposedAction();
             }
         }
@@ -280,9 +281,9 @@ Item {
         NacreText {
             width: parent.width
             wrapMode: Text.Wrap
-            visible: SidebarChat.error.length > 0 || SidebarChat.status.length > 0
-            text: SidebarChat.error || SidebarChat.status
-            color: SidebarChat.error ? NacreColours.palette.m3error : NacreColours.palette.m3onSurfaceVariant
+            visible: root.chat.error.length > 0 || root.chat.status.length > 0
+            text: root.chat.error || root.chat.status
+            color: root.chat.error ? NacreColours.palette.m3error : NacreColours.palette.m3onSurfaceVariant
             font.pointSize: 10
         }
         ScrollView {
@@ -294,7 +295,7 @@ Item {
             objectName: "sidebarQuestions"
             width: parent.width
             height: visible ? Math.min(240, root.height * 0.35, Math.max(80, questionColumn.implicitHeight)) : 0
-            visible: SidebarChat.question !== null
+            visible: root.chat.question !== null
             clip: true
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical.policy: ScrollBar.AsNeeded
@@ -303,7 +304,7 @@ Item {
                 width: questionScroll.availableWidth
                 spacing: 10
                 Repeater {
-                    model: SidebarChat.question?.questions ?? []
+                    model: root.chat.question?.questions ?? []
                     Column {
                         id: q
                         required property var modelData
@@ -322,8 +323,8 @@ Item {
                                 ActionButton {
                                     required property var modelData
                                     text: modelData.label
-                                    selected: SidebarChat.answers[q.modelData.id]?.answers?.[0] === text
-                                    onClicked: SidebarChat.setAnswer(q.modelData.id, text)
+                                    selected: root.chat.answers[q.modelData.id]?.answers?.[0] === text
+                                    onClicked: root.chat.setAnswer(q.modelData.id, text)
                                 }
                             }
                         }
@@ -337,15 +338,15 @@ Item {
                                 radius: 10
                                 color: NacreColours.palette.m3surfaceContainerHigh
                             }
-                            onTextChanged: SidebarChat.setAnswer(q.modelData.id, text)
+                            onTextChanged: root.chat.setAnswer(q.modelData.id, text)
                         }
                     }
                 }
                 ActionButton {
                     objectName: "sidebarReply"
                     text: "Reply"
-                    enabled: !SidebarChat.inWorkspace && SidebarChat.question !== null && SidebarChat.question.questions.every(q => (SidebarChat.answers[q.id]?.answers?.[0] ?? "").trim().length > 0)
-                    onClicked: SidebarChat.answer()
+                    enabled: !root.chat.inWorkspace && root.chat.question !== null && root.chat.question.questions.every(q => (root.chat.answers[q.id]?.answers?.[0] ?? "").trim().length > 0)
+                    onClicked: root.chat.answer()
                 }
             }
         }
@@ -353,12 +354,12 @@ Item {
             width: parent.width
             spacing: 5
             Repeater {
-                model: SidebarChat.attachments ?? []
+                model: root.chat.attachments ?? []
                 ActionButton {
                     required property var modelData
                     text: modelData.name
                     icon: "close"
-                    onClicked: SidebarChat.removeAttachment(modelData.path)
+                    onClicked: root.chat.removeAttachment(modelData.path)
                 }
             }
         }
@@ -377,13 +378,13 @@ Item {
             TextArea {
                 id: input
                 objectName: "sidebarComposer"
-                enabled: !SidebarChat.inWorkspace
+                enabled: !root.chat.inWorkspace
                 width: composer.availableWidth
                 wrapMode: TextEdit.Wrap
-                text: SidebarChat.draft
-                onTextChanged: if (SidebarChat.draft !== text)
-                    SidebarChat.draft = text
-                placeholderText: SidebarChat.inWorkspace ? "Chat moved to the workspace" : SidebarChat.busy ? "Add a message while I work" : "Message Nacre AI"
+                text: root.chat.draft
+                onTextChanged: if (root.chat.draft !== text)
+                    root.chat.draft = text
+                placeholderText: root.chat.inWorkspace ? "Chat moved to the workspace" : root.chat.busy ? "Add a message while I work" : "Message Nacre AI"
                 color: NacreColours.palette.m3onSurface
                 placeholderTextColor: NacreColours.palette.m3onSurfaceVariant
                 selectionColor: NacreColours.palette.m3primary
@@ -405,10 +406,10 @@ Item {
             }
         }
         Connections {
-            target: SidebarChat
+            target: root.chat
             function onDraftChanged() {
-                if (input.text !== SidebarChat.draft)
-                    input.text = SidebarChat.draft;
+                if (input.text !== root.chat.draft)
+                    input.text = root.chat.draft;
             }
         }
         Row {
@@ -421,29 +422,29 @@ Item {
                 text: "Send"
                 icon: "arrow_upward"
                 selected: true
-                enabled: !SidebarChat.inWorkspace && (input.text.trim().length > 0 || (SidebarChat.attachments ?? []).length > 0)
+                enabled: !root.chat.inWorkspace && (input.text.trim().length > 0 || (root.chat.attachments ?? []).length > 0)
                 onClicked: root.send()
             }
             ActionButton {
                 compact: true
                 text: "Attach"
                 icon: "attach_file"
-                enabled: SidebarChat.attachmentsSupported
-                onClicked: SidebarChat.pickFiles()
+                enabled: root.chat.attachmentsSupported
+                onClicked: root.chat.pickFiles()
             }
             ActionButton {
                 compact: true
-                text: SidebarChat.busy ? "" : "Screenshot"
+                text: root.chat.busy ? "" : "Screenshot"
                 icon: "screenshot"
-                enabled: SidebarChat.attachmentsSupported
-                onClicked: SidebarChat.screenshot()
+                enabled: root.chat.attachmentsSupported
+                onClicked: root.chat.screenshot()
             }
             ActionButton {
                 compact: true
                 text: ""
                 icon: "stop"
-                visible: SidebarChat.busy
-                onClicked: SidebarChat.stop()
+                visible: root.chat.busy
+                onClicked: root.chat.stop()
             }
             ActionButton {
                 objectName: "sidebarLatest"
@@ -455,12 +456,12 @@ Item {
         }
     }
     function send() {
-        if (!SidebarChat.inWorkspace && (input.text.trim() || (SidebarChat.attachments ?? []).length)) {
+        if (!root.chat.inWorkspace && (input.text.trim() || (root.chat.attachments ?? []).length)) {
             transcript.latest();
-            if (SidebarChat.send(input.text) === false)
+            if (root.chat.send(input.text) === false)
                 return;
-            SidebarChat.draft = "";
-            SidebarChat.attachments = [];
+            root.chat.draft = "";
+            root.chat.attachments = [];
             input.text = "";
         }
     }

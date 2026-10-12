@@ -18,7 +18,8 @@ SearchSurface {
             DesktopExtras.request("copy", {
                 "id": item.id
             });
-            visibilities.launcher = false;
+            if (!root.detached)
+                visibilities.launcher = false;
         }
     }
 

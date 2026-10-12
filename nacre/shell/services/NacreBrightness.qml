@@ -15,7 +15,7 @@ Singleton {
     property string error: ""
     readonly property string backlightDevice: hardware.backlight?.device || ""
     readonly property var ddcMonitors: hardware.ddc
-    readonly property bool controlsVisible: (NacrePanelState.settingsVisible && ["desktop", "displays"].includes(NacrePanelState.settingsPage)) || Object.values(NacrePanelState.screens).some(view => view.dashboard || view.osd) || Object.values(NacrePanelState.panels).some(panel => panel.feedback?.shown)
+    readonly property bool controlsVisible: (NacrePanelState.settingsVisible && ["desktop", "displays"].includes(NacrePanelState.settingsPage)) || NacrePanelState.providerViews.some(view => view.dashboard || view.osd) || Object.values(NacrePanelState.panels).some(panel => panel.feedback?.shown)
     function screenPresent(screen) {
         return Quickshell.screens.some(candidate => candidate === screen || candidate.name === screen?.name);
     }

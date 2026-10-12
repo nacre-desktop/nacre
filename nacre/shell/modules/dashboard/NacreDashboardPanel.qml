@@ -7,13 +7,16 @@ import qs.services
 NacreSurface {
     id: root
     required property PersistentProperties visibilities
+    property string screenName: ""
+    property bool detached: false
+    property bool hostActive: true
     readonly property real viewportWidth: parent?.width ?? 1200
     readonly property real viewportHeight: parent?.height ?? 1000
     readonly property var names: ["today", "weather", "media", "system", "focus"]
     readonly property int currentIndex: names[visibilities.dashboardTab] && NacreDashboardState.tabs.includes(names[visibilities.dashboardTab]) ? visibilities.dashboardTab : Math.max(0, names.indexOf(NacreDashboardState.tabs[0]))
-    readonly property bool updating: visibilities.dashboard && visible && NacrePanelState.hidden !== true
-    readonly property real contentWidth: Math.max(0, Math.min(viewportWidth - 48, 984))
-    readonly property real contentHeight: Math.max(0, Math.min(viewportHeight - 64, 650))
+    readonly property bool updating: hostActive && visibilities.dashboard && visible && (detached || NacrePanelState.hidden !== true)
+    readonly property real contentWidth: Math.max(0, Math.min(detached ? viewportWidth : viewportWidth - 48, 984))
+    readonly property real contentHeight: Math.max(0, detached ? viewportHeight : Math.min(viewportHeight - 64, 650))
     property bool customizing: false
     property real presentedHeight: visibilities.dashboard ? contentHeight : 0
     property int slideDirection: 1
@@ -43,9 +46,17 @@ NacreSurface {
         objectName: "dashboardNavigation"
         x: 24
         y: 12
-        width: Math.max(0, root.width - 142)
+        width: Math.max(0, root.width - (root.detached || !NacrePearls.enabled ? 142 : 222))
         currentIndex: root.currentIndex
         onSelected: index => root.select(index)
+    }
+    NacreDetachControls {
+        x: root.width - 222
+        y: 16
+        kind: "dashboard"
+        host: root
+        screenName: root.screenName
+        visible: !root.detached && NacrePearls.enabled
     }
     ActionButton {
         x: root.width - 100
@@ -75,7 +86,7 @@ NacreSurface {
         Loader {
             id: page
             objectName: "dashboardPage"
-            active: root.visibilities.dashboard || root.presentedHeight > 0
+            active: root.detached || root.visibilities.dashboard || root.presentedHeight > 0
             width: parent.width
             height: parent.height
             focus: true
@@ -162,7 +173,8 @@ NacreSurface {
         if (customizing)
             customizing = false;
         else {
-            visibilities.dashboard = false;
+            if (!root.detached)
+                visibilities.dashboard = false;
             visibilities.dashboardPinned = false;
         }
     }

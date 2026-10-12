@@ -44,8 +44,8 @@ def stage(target):
         )
     for name in ("menu-model.js", "app-browser.js", "calculator.js"):
         shutil.copy2(SHELL / "modules/launcher" / name, target / name)
-    source = adapt((SHELL / "services/NacreMenu.qml").read_text()).replace(
-        "Singleton {", "QtObject {", 1
+    source = adapt((SHELL / "services/NacreMenuContext.qml").read_text()).replace(
+        "Scope {", "QtObject {", 1
     )
     source = source.replace(
         '"../modules/launcher/menu-model.js"', '"../menu-model.js"'
@@ -58,7 +58,8 @@ def stage(target):
         + json.dumps((TOOLS / "launcher-menu.json").read_text()),
     )
     source = source.replace(
-        "Component.onCompleted: refresh()", "Component.onCompleted: parse()"
+        "Component.onCompleted: if (!shared)\n        refresh()",
+        "Component.onCompleted: parse()",
     )
     source = (
         source.replace("PowerProfile.PowerSaver", "0")
@@ -69,6 +70,7 @@ def stage(target):
     source = source.replace(
         "id: root",
         """id: root
+    property QtObject brainDelay: QtObject {function restart(){}}
     property QtObject stateWorker: QtObject { property bool running:false;property bool force:false }
     property QtObject actionWorker: QtObject { property bool running:false;property string action:"";property string value:"";property var payload:({}) }
     property QtObject ownershipWorker: QtObject { property bool running:false;property string ident:"" }
@@ -79,7 +81,8 @@ def stage(target):
 """,
         1,
     )
-    source = source.replace("property var snapshot:", "property var snapshot:")
+    source = "pragma Singleton\n" + source.replace("    visible: false\n", "")
+    source = source.replace("NacreAiViews.edge", "SidebarChat")
     (fixtures / "NacreMenu.qml").write_text(source)
     definitions = {
         "NacreApps": """property var all:[{id:"editor",name:"Editor",icon:"",comment:"Code"},{id:"google-chrome",name:"Google Chrome",icon:"",comment:"Web browser"},{id:"nacre-ai",name:"Nacre AI",icon:"",comment:"Assistant"},{id:"music",name:"Music",icon:"",comment:"Player"}];readonly property var list:all.filter(row=>!LauncherPreferences.hidden.includes(row.id));property string launched:"";function launch(entry){launched=entry.id;return true}""",
@@ -149,3 +152,49 @@ class UniversalMenuUITests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertNotIn("QWARN", result.stdout + result.stderr)
+
+    def test_two_real_contexts_keep_query_results_separate_and_share_catalogue(self):
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Qt Quick Test unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder)
+            stage(target)
+            source = (target / "fixtures/NacreMenu.qml").read_text()
+            source = source.replace("pragma Singleton", "").replace(
+                'import "fixtures"', 'import "."'
+            )
+            (target / "fixtures/NacreMenuContext.qml").write_text(source)
+            with (target / "fixtures/qmldir").open("a") as manifest:
+                manifest.write("\nNacreMenuContext 1.0 NacreMenuContext.qml\n")
+            (target / "tst_menu.qml").unlink()
+            (target / "tst_context.qml").write_text("""import QtQuick
+import QtTest
+import "fixtures"
+TestCase {
+ name:"IndependentLauncherContexts"
+ NacreMenuContext {id:first;shared:NacreMenu}
+ NacreMenuContext {id:second;shared:NacreMenu}
+ function test_queries_are_local_and_catalogue_is_shared(){
+  first.fileQuery="one";first.fileRows=[{name:"First"}];
+  second.fileQuery="two";second.fileRows=[{name:"Second"}];
+  compare(first.fileQuery,"one");compare(second.fileQuery,"two");
+  first.brainQuery="alpha";first.notes=[{title:"Alpha"}];
+  second.brainQuery="beta";second.notes=[{title:"Beta"}];
+  compare(first.brainRows("beta").length,0);
+  compare(second.brainRows("alpha").length,0);
+  compare(first.brainRows("alpha")[0].name,"Alpha");
+  NacreMenu.catalog={rows:[{id:"shared",label:"Shared"}],software:[],error:""};
+  compare(first.rows[0].id,"shared");compare(second.rows[0].id,"shared");
+  NacreMenu.snapshot={packages:[{name:"installed"}]};
+  verify(first.packageNames.has("installed"));verify(second.packageNames.has("installed"));
+ }
+}""")
+            result = subprocess.run(
+                [str(runner), "-input", str(target)],
+                capture_output=True,
+                text=True,
+                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+                timeout=20,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

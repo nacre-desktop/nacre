@@ -33,8 +33,8 @@ Singleton {
     property bool focusWriteFailed: false
     property bool enablingDnd: false
     readonly property var tabs: preferences.tabs || ["today", "weather", "media", "system", "focus"]
-    readonly property bool shown: NacrePanelState.hidden !== true && Object.values(NacrePanelState.screens).some(view => view.dashboard)
-    readonly property bool focusShown: NacrePanelState.hidden !== true && Object.values(NacrePanelState.screens).some(view => view.dashboard && view.dashboardTab === 4)
+    readonly property bool shown: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard))
+    readonly property bool focusShown: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard && view.dashboardTab === 4))
     readonly property bool running: focusState.status === "running"
     readonly property real remaining: running ? Math.max(0, (focusState.deadline || 0) - now) : focusState.status === "paused" ? focusState.remaining || 0 : 0
     readonly property real progress: ["running", "paused"].includes(focusState.status) && focusState.total > 0 ? Math.max(0, Math.min(1, 1 - remaining / focusState.total)) : 0

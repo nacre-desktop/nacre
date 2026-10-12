@@ -8,16 +8,20 @@ import QtQuick.Controls
 
 Item {
     id: root
+    property var chat: NacreAiViews.edge
     required property PersistentProperties visibilities
     required property ShellScreen screen
+    property bool detached: false
+    property bool hostActive: true
     property bool captureOpen: false
     property string section: "chat"
     property real refreshedAt: 0
     visible: width > 0
     clip: true
-    implicitWidth: visibilities.left ? 470 : 0
-    implicitHeight: Math.min(810, screen.height - 150)
+    implicitWidth: detached ? parent.width : visibilities.left ? 470 : 0
+    implicitHeight: detached ? parent.height : Math.min(810, screen.height - 150)
     Behavior on implicitWidth {
+        enabled: !root.detached
         NumberAnimation {
             duration: NacreAppearance.anim.durations.normal
             easing.type: Easing.InOutCubic
@@ -44,9 +48,10 @@ Item {
     Item {
         id: heading
         x: 16
-        y: 16
-        width: 438
-        height: 34
+        y: root.detached ? 0 : 16
+        visible: !root.detached
+        width: Math.max(0, root.width - 32)
+        height: root.detached ? 0 : 34
         BrandLogo {
             id: logo
             ai: true
@@ -62,7 +67,16 @@ Item {
             font.pointSize: 17
             color: NacreColours.palette.m3primary
         }
+        NacreDetachControls {
+            anchors.right: parent.right
+            anchors.rightMargin: 48
+            kind: "ai"
+            host: root
+            screenName: root.screen.name
+            visible: !root.detached && NacrePearls.enabled
+        }
         ActionButton {
+            visible: !root.detached
             anchors.right: parent.right
             text: ""
             icon: "push_pin"
@@ -74,7 +88,7 @@ Item {
         id: tabs
         x: 16
         anchors.top: heading.bottom
-        anchors.topMargin: 12
+        anchors.topMargin: root.detached ? 4 : 12
         spacing: 6
         ActionButton {
             text: "Chat"
@@ -99,12 +113,24 @@ Item {
             icon: "settings"
             selected: root.section === "settings"
             onClicked: {
-                SidebarChat.start();
+                root.chat.start();
                 root.section = "settings";
             }
         }
     }
+    function captureState() {
+        return {
+            section: section,
+            chatUi: chatPane.captureUiState()
+        };
+    }
+    function restoreState(value) {
+        section = value.section || "chat";
+        if (value.chatUi)
+            chatPane.restoreUiState(value.chatUi);
+    }
     ChatPane {
+        id: chatPane
         anchors.top: tabs.bottom
         anchors.topMargin: 14
         anchors.bottom: parent.bottom
@@ -114,13 +140,14 @@ Item {
         anchors.leftMargin: 16
         anchors.rightMargin: 16
         visibilities: root.visibilities
-        active: root.visibilities.left && root.section === "chat"
+        chat: root.chat
+        active: root.hostActive && root.visibilities.left && root.section === "chat"
         visible: root.section === "chat"
     }
     Flickable {
         id: knowledge
         x: 16
-        width: 438
+        width: Math.max(0, root.width - 32)
         anchors.top: tabs.bottom
         anchors.topMargin: 14
         anchors.bottom: parent.bottom
@@ -135,10 +162,10 @@ Item {
         }
         Column {
             id: content
-            width: 438
+            width: Math.max(0, root.width - 32)
             spacing: 12
             Column {
-                width: 438
+                width: Math.max(0, root.width - 32)
                 spacing: 12
                 visible: root.section === "settings"
                 NacreText {
@@ -149,17 +176,17 @@ Item {
                     spacing: 8
                     ActionButton {
                         text: "Codex"
-                        selected: SidebarChat.defaultProvider === "codex"
-                        onClicked: SidebarChat.setProvider("codex")
+                        selected: root.chat.defaultProvider === "codex"
+                        onClicked: root.chat.setProvider("codex")
                     }
                     ActionButton {
                         text: "Claude Code"
-                        selected: SidebarChat.defaultProvider === "claude"
-                        onClicked: SidebarChat.setProvider("claude")
+                        selected: root.chat.defaultProvider === "claude"
+                        onClicked: root.chat.setProvider("claude")
                     }
                 }
                 NacreText {
-                    width: 438
+                    width: Math.max(0, root.width - 32)
                     wrapMode: Text.Wrap
                     text: "Used for new chats here and in the workspace. Existing chats keep their assistant."
                     font.pointSize: 11
@@ -168,9 +195,9 @@ Item {
                 ActionButton {
                     text: "New chat"
                     icon: "add_comment"
-                    enabled: !SidebarChat.busy
+                    enabled: !root.chat.busy
                     onClicked: {
-                        SidebarChat.newChat();
+                        root.chat.newChat();
                         root.section = "chat";
                     }
                 }
@@ -183,7 +210,7 @@ Item {
             NacreTextField {
                 id: search
                 visible: root.section === "brain"
-                width: 438
+                width: Math.max(0, root.width - 32)
                 height: 42
                 leftPadding: 13
                 rightPadding: 13
@@ -233,12 +260,12 @@ Item {
                 }
             }
             Column {
-                width: 438
+                width: Math.max(0, root.width - 32)
                 spacing: 8
                 visible: root.section === "brain" && root.captureOpen
                 TextArea {
                     id: capture
-                    width: 438
+                    width: Math.max(0, root.width - 32)
                     height: 105
                     placeholderText: "A thought worth keeping"
                     wrapMode: TextEdit.Wrap
@@ -273,7 +300,7 @@ Item {
                 }
             }
             NacreText {
-                width: 438
+                width: Math.max(0, root.width - 32)
                 wrapMode: Text.WordWrap
                 visible: DesktopExtras.message.length > 0 || DesktopExtras.captured.length > 0
                 text: DesktopExtras.message || DesktopExtras.captured
@@ -281,7 +308,7 @@ Item {
                 font.pointSize: 11
             }
             Column {
-                width: 438
+                width: Math.max(0, root.width - 32)
                 spacing: 8
                 visible: root.section === "brain" && search.text.trim().length > 0
                 NacreText {
@@ -293,7 +320,7 @@ Item {
                     NacreSurface {
                         id: note
                         required property var modelData
-                        width: 438
+                        width: Math.max(0, root.width - 32)
                         height: 115
                         radius: 13
                         color: NacreColours.palette.m3surfaceContainer
@@ -348,7 +375,7 @@ Item {
                 }
             }
             Column {
-                width: 438
+                width: Math.max(0, root.width - 32)
                 spacing: 8
                 visible: root.section === "chats"
                 NacreText {
@@ -390,13 +417,25 @@ Item {
                     color: NacreColours.palette.m3onSurfaceVariant
                 }
                 Repeater {
+                    model: NacreAiViews.recent
+                    ChatCard {
+                        required property var modelData
+                        label: modelData.title
+                        detail: modelData.busy ? "Responding" : "Saved conversation or draft"
+                        onClicked: {
+                            NacreAiViews.select(modelData.model);
+                            root.section = "chat";
+                        }
+                    }
+                }
+                Repeater {
                     model: DesktopExtras.chats.filter(c => !Object.values(ChatWindowTitle.threadIds).includes(c.id)).slice(0, 6)
                     ChatCard {
                         required property var modelData
                         label: modelData.title
                         detail: modelData.agent + " · " + modelData.account + " · " + modelData.state
                         onClicked: {
-                            SidebarChat.load(modelData.key);
+                            NacreAiViews.load(modelData.key);
                             root.section = "chat";
                         }
                     }
@@ -429,7 +468,7 @@ Item {
         property string label
         property string detail
         signal clicked
-        width: 438
+        width: Math.max(0, root.width - 32)
         height: 55
         radius: 12
         color: NacreColours.palette.m3surfaceContainer
