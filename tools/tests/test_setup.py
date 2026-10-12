@@ -148,6 +148,15 @@ class PackageSetupTests(unittest.TestCase):
                 )
                 self.assertIn('"no"', (home / ".config/nacre/keyboard.lua").read_text())
 
+    def test_invalid_runtime_manifest_cannot_address_files_outside_managed_paths(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            manifest = home / ".local/state/nacre/package-links.json"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text(json.dumps({"/tmp/outside": "/tmp/foreign"}))
+            with self.assertRaisesRegex(ValueError, "Invalid package runtime manifest"):
+                package_runtime.plan(home, root, profile)
+
     def test_niri_hidden_until_packaged_setup_contract_is_ready(self):
         with tempfile.TemporaryDirectory() as folder:
             root, _, _ = self.fixture(folder)
