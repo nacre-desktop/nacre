@@ -7,7 +7,7 @@ import subprocess
 
 
 def capture(path, kind="bindings"):
-    if kind not in ("bindings", "rules"):
+    if kind not in ("bindings", "rules", "declarations"):
         raise ValueError("Unsupported declaration kind")
     lua = shutil.which("lua")
     if not lua:
