@@ -69,7 +69,11 @@ build() {{
 check() {{
   cd "$srcdir/nacre"
   npm ci --ignore-scripts --no-audit --no-fund
-  CI=1 dbus-run-session -- xvfb-run -a python tools/check.py
+  local check_runtime
+  check_runtime=$(mktemp -d)
+  chmod 700 "$check_runtime"
+  XDG_RUNTIME_DIR="$check_runtime" CI=1 dbus-run-session -- xvfb-run -a python tools/check.py
+  rm -rf "$check_runtime"
 }}
 
 package_nacre() {{
