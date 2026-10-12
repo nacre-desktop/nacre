@@ -18,8 +18,8 @@ is a user choice. Never take an arbitrary focused window for placement or pinnin
 
 Super+left-drag is routed by an owned Lua binding. It passes the press and release
 only inside the shell's published popup rectangles, with a mapped-layer/PID guard.
-Elsewhere it dispatches normal Hyprland window movement. Geometry is published on
-panel changes; no subprocess or IPC executes inside the pointer callback.
+Elsewhere it dispatches normal Hyprland window movement. Geometry is throttled to the next frame during
+panel changes (never debounced until an opening animation ends); no subprocess or IPC executes inside the pointer callback.
 
 A Qt DragHandler reserves Super and moves the original live item within its existing
 layer surface. The sensor is a stationary sibling, not a child of the moving panel;
@@ -32,7 +32,8 @@ painted until placement completes and the destination has had two frame interval
 to render. There is no screenshot ghost or second miniature panel. This respects
 the distinction between Wayland layer-shell and xdg-shell surfaces: their protocol
 roles cannot be changed during a mouse grab. A finite fallback releases the lift if
-placement fails. A short pull animates back without opening a window.
+placement fails. The deliberate Super gesture needs only 16 logical pixels in any direction.
+A short pull animates back without opening a window.
 
 View state is independent of shared providers. Launcher contexts share catalogues
 and system snapshots, with local query results. Provider visibility combines edge

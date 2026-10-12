@@ -17,7 +17,7 @@ Item {
         enabled: NacrePearls.enabled && DesktopSettings.data.dragPanels !== false && root.host.visible && root.host.enabled
         acceptedModifiers: Qt.MetaModifier
         acceptedButtons: Qt.LeftButton
-        grabPermissions: PointerHandler.CanTakeOverFromAnything
+        grabPermissions: PointerHandler.CanTakeOverFromItems
         target: null
         onActiveChanged: {
             if (active) {

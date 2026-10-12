@@ -1,8 +1,9 @@
 # Panels as windows
 
 Hold **Super** and drag anywhere inside an open edge panel to lift it into the
-desktop. The full live panel follows your pointer. Pull at least 64 logical pixels
-away from its edge to detach; a shorter pull returns smoothly. **Super+Ctrl+D**
+desktop. The full live panel follows your pointer. Move at least 16 logical pixels
+to detach; a shorter pull returns smoothly. Super reserves the gesture, so it does
+not need the longer distance used by an ordinary pull grip. **Super+Ctrl+D**
 lifts the open panel in place, retaining its dimensions and position.
 
 The floating header has **Dock**, **Pin**, **Maximize/restore** and **Close** at

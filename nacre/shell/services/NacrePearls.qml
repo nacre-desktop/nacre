@@ -4,7 +4,6 @@ import QtQuick.Window
 import Quickshell
 import Quickshell.Io
 import qs.modules.pearls as Pearl
-import "../modules/pearls/geometry.js" as PearlGeometry
 
 Singleton {
     id: root
@@ -15,7 +14,7 @@ Singleton {
     property var entries: []
     property var views: []
     property var drag: null
-    property var grab: null
+    property var lastGesture: ({})
     property string error: ""
     readonly property bool enabled: DesktopSettings.data.detachablePanels !== false
     Component {
@@ -291,6 +290,10 @@ Singleton {
     function begin(kind, host, name, point, entry = null) {
         if (!enabled || DesktopSettings.data.dragPanels === false || drag || host?.canDetach === false)
             return;
+        lastGesture = {
+            stage: "begin",
+            kind: kind
+        };
         const sensorBody = bodyRect(host, name);
         if (host.prepareLift)
             host.prepareLift();
@@ -326,12 +329,19 @@ Singleton {
             point: point,
             dx: dx,
             dy: dy,
-            ready: PearlGeometry.outward(drag.kind, dx, dy) >= 64
+            ready: Math.hypot(dx, dy) >= 16
         });
     }
     function finish() {
         if (!drag || drag.released)
             return;
+        lastGesture = {
+            stage: "release",
+            kind: drag.kind,
+            dx: drag.dx,
+            dy: drag.dy,
+            ready: drag.ready
+        };
         if (!drag.ready) {
             drag = Object.assign({}, drag, {
                 dx: 0,
@@ -377,8 +387,14 @@ Singleton {
         }
     }
     function cancel() {
+        if (drag && !drag.released)
+            lastGesture = {
+                stage: "cancel",
+                kind: drag.kind,
+                dx: drag.dx,
+                dy: drag.dy
+            };
         drag = null;
-        grab = null;
     }
     Timer {
         id: returnDelay
@@ -431,6 +447,9 @@ Singleton {
             const entry = root.entries.find(value => value.key === key);
             if (entry)
                 root.remove(entry);
+        }
+        function gesture(): string {
+            return JSON.stringify(root.lastGesture);
         }
         function state(): string {
             return JSON.stringify(root.entries.map(value => ({
