@@ -28,8 +28,8 @@ FloatingWindow {
         }
     }
     property string error: ""
-    readonly property var client: NacreHyprland.clients.find(value => value.title === root.title && value.pid === Quickshell.processId)
-    readonly property bool presented: visible && !minimized && (!client || client.lastIpcObject.pinned || NacreHyprland.monitors.values.some(monitor => monitor.activeWorkspace?.id === client.workspace?.id))
+    readonly property var client: NacreCompositor.windows.find(value => value.title === root.title && value.pid === Quickshell.processId)
+    readonly property bool presented: visible && !minimized && (!client || client.pinned || NacreCompositor.monitors.values.some(monitor => monitor.activeWorkspace?.id === client.workspace?.id))
     readonly property alias viewState: viewFlags
     readonly property alias providerView: lease
     readonly property alias bodyItem: body
@@ -62,7 +62,7 @@ FloatingWindow {
         id: fitWorker
         command: ["python3", (Quickshell.env("NACRE_PEARL_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/pearl-window.py", "fit", root.title, Quickshell.processId.toString(), "0", "0", Math.min(640, root.screen.width - 40).toString(), Math.min(root.screen.height - 100, Math.max(500, Math.min(820, root.width * .58 + 96))).toString()]
         onExited: {
-            NacreHyprland.refreshToplevels();
+            NacreCompositor.refreshWindows();
             NacrePearls.saveSoon();
         }
     }
@@ -149,14 +149,14 @@ FloatingWindow {
         worker.running = true;
     }
     function placement() {
-        const data = client?.lastIpcObject;
-        if (data?.at && data?.size && data.floating)
+        const data = client?.geometry;
+        if (data && client.floating)
             return {
                 exact: true,
-                x: data.at[0],
-                y: data.at[1],
-                width: data.size[0],
-                height: data.size[1]
+                x: data.x,
+                y: data.y,
+                width: data.width,
+                height: data.height
             };
         return dropPoint;
     }
@@ -232,7 +232,7 @@ FloatingWindow {
             }
             root.ready = true;
             handoffReady.restart();
-            NacreHyprland.refreshToplevels();
+            NacreCompositor.refreshWindows();
             if (action === "place")
                 Qt.callLater(root.activate);
         }

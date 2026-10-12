@@ -5,6 +5,7 @@ import argparse
 import datetime as dt
 import fcntl
 import hashlib
+import importlib
 import importlib.util
 import json
 import os
@@ -16,6 +17,19 @@ from pathlib import Path
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre/releases"
 CONTROL = HOME / ".local/share/nacre/control"
+
+
+def compositor():
+    """Load the common facade from a source checkout or the installed shell."""
+    for directory in (
+        Path(__file__).resolve().parents[1] / "nacre/shell-tools",
+        Path.home() / ".local/share/nacre/shell/tools",
+    ):
+        if (directory / "compositor.py").is_file():
+            if str(directory) not in sys.path:
+                sys.path.insert(0, str(directory))
+            return importlib.import_module("compositor")
+    raise RuntimeError("The Nacre compositor service is not installed")
 
 
 def atomic(path, data):
@@ -181,6 +195,9 @@ def restore(release, record=None, force=False):
         for e in record["entries"]:
             if "after" in e and fingerprint(Path(e["path"])) != e["after"]:
                 raise RuntimeError("Later edit preserved: " + e["path"])
+    # Keep the active backend loaded while restoring an older shell that may
+    # predate the facade files themselves.
+    desktop = compositor()
     for service in (
         "nacre-shell.service",
         "nacre-brain.service",
@@ -208,7 +225,7 @@ def restore(release, record=None, force=False):
         elif e["kind"] == "file":
             shutil.copy2(e["backup"], path)
     subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
-    subprocess.run(["hyprctl", "reload"], check=True, capture_output=True)
+    desktop.reload()
     subprocess.run(
         [
             "systemctl",
@@ -408,7 +425,7 @@ def deploy(repo, components, keyboard, migrate=False):
                 and entry["before"] != fingerprint(Path(entry["path"]))
                 for entry in record["entries"]
             ):
-                subprocess.run(["hyprctl", "reload"], check=True, capture_output=True)
+                compositor().reload()
         subprocess.run(
             [
                 sys.executable,
@@ -423,7 +440,7 @@ def deploy(repo, components, keyboard, migrate=False):
             subprocess.run(
                 ["systemctl", "--user", "is-active", "--quiet", service], check=True
             )
-        errors = subprocess.check_output(["hyprctl", "configerrors"], text=True).strip()
+        errors = compositor().config_errors().strip()
         if errors:
             raise RuntimeError(errors)
         installed = HOME / ".local/share/nacre/shell"

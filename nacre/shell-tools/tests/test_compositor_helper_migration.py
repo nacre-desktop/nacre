@@ -1,0 +1,208 @@
+"""Helper facade boundaries keep explicit intent, fallback behavior and IPC budgets."""
+
+import importlib.util
+import io
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+from types import SimpleNamespace
+import unittest
+from unittest.mock import Mock, patch
+
+import compositor
+
+ROOT = Path(__file__).parents[1]
+
+
+def load(name):
+    spec = importlib.util.spec_from_file_location(
+        name.replace("-", "_"), ROOT / (name + ".py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class HelperCompositorMigrationTests(unittest.TestCase):
+    def test_backend_environment_preserves_explicit_desktop_and_unique_instance_policy(
+        self,
+    ):
+        backend = compositor.backend
+        with (
+            patch.object(
+                backend,
+                "query_result",
+                return_value=subprocess.CompletedProcess(
+                    [], 0, '[{"instance":"selected"}]'
+                ),
+            ) as query,
+            patch.dict(os.environ, {"HYPRLAND_INSTANCE_SIGNATURE": "original"}),
+        ):
+            self.assertEqual(compositor.session_id(), "original")
+            environment = {"XDG_CURRENT_DESKTOP": "custom"}
+            self.assertEqual(
+                compositor.environment_updates(environment),
+                {"HYPRLAND_INSTANCE_SIGNATURE": "selected"},
+            )
+            self.assertEqual(environment, {"XDG_CURRENT_DESKTOP": "custom"})
+        query.assert_called_once_with("instances", timeout=None, check=False)
+        for result in (
+            subprocess.CompletedProcess([], 1, ""),
+            subprocess.CompletedProcess([], 0, "[]"),
+            subprocess.CompletedProcess([], 0, "[{},{}]"),
+        ):
+            with patch.object(backend, "query_result", return_value=result):
+                self.assertEqual(
+                    compositor.environment_updates({}),
+                    {"XDG_CURRENT_DESKTOP": "Hyprland"},
+                )
+
+    def test_performance_and_animation_semantics_are_translated_only_by_backend(self):
+        with patch.object(compositor.backend, "set_options") as apply:
+            compositor.set_animations(True)
+            apply.assert_called_once_with({"animations": {"enabled": True}}, timeout=10)
+            apply.reset_mock()
+            compositor.set_performance(True)
+            self.assertEqual(apply.call_args.args[0]["decoration"]["rounding"], 0)
+            self.assertEqual(apply.call_args.args[0]["general"]["gaps_out"], 0)
+        with patch.object(compositor.backend, "reload") as reload:
+            compositor.set_performance(False)
+            reload.assert_called_once_with(timeout=10)
+
+    def test_nonempty_explicit_startup_routes_only_its_selected_apps(self):
+        startup = load("startup-apps")
+        profile = {
+            "startup": [
+                {
+                    "label": "Browser",
+                    "workspace": 3,
+                    "argv": ["example-browser"],
+                    "classes": ["example-browser"],
+                }
+            ]
+        }
+        session = SimpleNamespace(readiness=Mock())
+        spec = SimpleNamespace(loader=SimpleNamespace(exec_module=lambda module: None))
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.dict(os.environ, {"XDG_RUNTIME_DIR": folder}),
+            patch.object(startup.POLICY, "load", return_value=profile),
+            patch.object(
+                startup.importlib.util, "spec_from_file_location", return_value=spec
+            ),
+            patch.object(
+                startup.importlib.util, "module_from_spec", return_value=session
+            ),
+            patch.object(startup.shutil, "which", return_value="/fake/example-browser"),
+            patch.object(
+                startup.compositor,
+                "query",
+                side_effect=[[], [{"class": "example-browser", "title": "Browser"}]],
+            ) as query,
+            patch.object(startup.compositor, "switch_workspace") as switch,
+            patch.object(startup.subprocess, "Popen") as launch,
+        ):
+            startup.main()
+        self.assertEqual(query.call_count, 2)
+        query.assert_called_with("windows", timeout=None)
+        self.assertEqual([call.args[0] for call in switch.call_args_list], [3, 1])
+        switch.assert_called_with(1, current_monitor=True, timeout=None)
+        launch.assert_called_once()
+        self.assertEqual(launch.call_args.args[0][-1], "example-browser")
+        session.readiness.assert_called_once_with()
+
+    def test_saved_workflow_applies_only_connected_outputs(self):
+        workflows = load("workflow-profiles")
+        connected = {"name": "DP-1", "width": 1920, "height": 1080}
+        disconnected = {"name": "gone", "width": 1920, "height": 1080}
+        with (
+            patch.object(
+                workflows,
+                "load",
+                return_value={
+                    "meeting": {"displays": [connected, disconnected], "roles": []}
+                },
+            ),
+            patch.object(
+                workflows, "devices", return_value={"sinks": [], "sources": []}
+            ),
+            patch.object(
+                workflows.compositor, "query", return_value=[connected]
+            ) as query,
+            patch.object(workflows.compositor, "configure_monitors") as configure,
+            patch.object(workflows.subprocess, "Popen") as launch,
+        ):
+            workflows.apply("meeting")
+        query.assert_called_once_with("monitors", timeout=None)
+        configure.assert_called_once_with([connected], timeout=None)
+        launch.assert_not_called()
+
+    def test_screen_capture_keeps_window_geometry_and_rejects_absent_window(self):
+        menu = load("menu-backend")
+        with patch.object(menu.compositor, "query", return_value={}) as query:
+            with self.assertRaises(ValueError):
+                menu.capture_window()
+        query.assert_called_once_with("active_window", timeout=5)
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.object(menu, "HOME", Path(folder)),
+            patch.object(
+                menu.compositor,
+                "query",
+                return_value={"at": [-40, 20], "size": [640, 480]},
+            ),
+            patch.object(menu.subprocess, "run") as run,
+            patch.object(menu.Path, "read_bytes", return_value=b"PNG"),
+        ):
+            self.assertEqual(menu.capture_window(), "Window saved and copied")
+        self.assertEqual(run.call_args_list[0].args[0][1:3], ["-g", "-40,20 640x480"])
+
+    def test_configuration_diagnostics_keep_the_existing_optional_error_policy(self):
+        maintenance = load("maintenance")
+        with patch.object(
+            maintenance.compositor, "config_errors", return_value="bad option"
+        ) as query:
+            self.assertEqual(maintenance.configuration_errors(), "bad option")
+        query.assert_called_once_with(timeout=5)
+        with patch.object(
+            maintenance.compositor,
+            "config_errors",
+            side_effect=subprocess.TimeoutExpired("compositor", 5),
+        ):
+            self.assertEqual(maintenance.configuration_errors(), "")
+
+    def test_application_isolation_does_not_migrate_apps_when_no_clients_exist(self):
+        isolate = load("isolate-apps")
+        with (
+            patch.object(isolate.compositor, "query", return_value=[]) as query,
+            patch.object(isolate.Path, "iterdir", return_value=[]),
+            patch.object(isolate.subprocess, "run") as migrate,
+            patch("sys.stdout", new=io.StringIO()),
+        ):
+            isolate.main()
+        query.assert_called_once_with("windows", timeout=None)
+        migrate.assert_not_called()
+
+    def test_maintenance_version_source_comes_from_the_selected_backend(self):
+        maintenance = load("maintenance")
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch.object(maintenance, "HOME", Path(directory)),
+            patch.object(maintenance, "STATE", Path(directory)),
+            patch.object(
+                maintenance.compositor, "backend_display_name", "Example compositor"
+            ),
+            patch.object(
+                maintenance.compositor,
+                "version_command",
+                return_value=["example", "--version"],
+            ) as command,
+            patch.object(maintenance.compositor, "config_errors", return_value=""),
+            patch.object(maintenance, "run", return_value="version data"),
+            patch.object(maintenance, "service_health", return_value=({}, {})),
+        ):
+            self.assertEqual(
+                maintenance.state()["versions"]["Example compositor"], "version data"
+            )
+        command.assert_called_once_with()

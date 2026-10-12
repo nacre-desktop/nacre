@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Keep existing desktop applications alive when the shell service is restarted."""
 
-import json
 import os
 import subprocess
 import time
 from pathlib import Path
+
+import compositor
 
 
 def in_shell(pid):
@@ -39,7 +40,7 @@ def descendants(pid):
 
 
 def main():
-    data = json.loads(subprocess.check_output(["hyprctl", "clients", "-j"], text=True))
+    data = compositor.query("windows", timeout=None)
     roots = [c["pid"] for c in data if in_shell(c["pid"])]
     for p in Path("/proc").iterdir():
         if not p.name.isdigit():

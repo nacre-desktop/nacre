@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Readiness and non-disruptive login/resume/hotplug evidence; no secret values."""
 
+import compositor
+
 import argparse
 import datetime as dt
 import json
 import os
 import selectors
-import socket
 import subprocess
 import time
 from pathlib import Path
@@ -43,8 +44,8 @@ def check(event="manual"):
             "Locked",
         ]
     )
-    monitors = json.loads(run(["hyprctl", "monitors", "-j"], "[]"))
-    clients = json.loads(run(["hyprctl", "clients", "-j"], "[]"))
+    monitors = compositor.query("monitors", timeout=5, default=[])
+    clients = compositor.query("windows", timeout=5, default=[])
     record = dict(
         event=event,
         checked=dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -62,7 +63,7 @@ def check(event="manual"):
             c.get("class") in ("nacre-brain", "chrome-127.0.0.1__-Default")
             for c in clients
         ),
-        configErrors=run(["hyprctl", "configerrors"]),
+        configErrors=compositor.config_errors(timeout=5, default=""),
     )
     temp = STATE / "latest.next"
     temp.write_text(json.dumps(record))
@@ -79,7 +80,7 @@ def restore_connected_displays():
     if not config.exists():
         return
     data = json.loads(config.read_text())
-    monitors = json.loads(run(["hyprctl", "monitors", "-j"], "[]"))
+    monitors = compositor.query("monitors", timeout=5, default=[])
     connected = {m["name"] for m in monitors}
     saved = [m for m in data.get("displays", []) if m["name"] in connected]
     if saved:
@@ -90,9 +91,7 @@ def restore_connected_displays():
         )
         m = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(m)
-        subprocess.run(
-            ["hyprctl", "eval", m.monitor_lua(saved)], check=True, capture_output=True
-        )
+        compositor.configure_monitors(saved, timeout=None)
 
 
 def readiness(timeout=15):
@@ -122,18 +121,10 @@ def watch():
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
     )
-    sockpath = (
-        Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
-        / "hypr"
-        / os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
-        / ".socket2.sock"
-    )
-    compositor = socket.socket(socket.AF_UNIX)
-    compositor.connect(str(sockpath))
-    compositor.setblocking(False)
+    connection = compositor.event_socket()
     selector = selectors.DefaultSelector()
     selector.register(observer.stdout, selectors.EVENT_READ, "sleep")
-    selector.register(compositor, selectors.EVENT_READ, "monitor")
+    selector.register(connection, selectors.EVENT_READ, "monitor")
     buffers = {"sleep": b"", "monitor": b""}
     try:
         while True:
@@ -152,15 +143,16 @@ def watch():
                             check("resume")
                         elif "true" in text:
                             check("before-sleep")
-                    elif key.data == "monitor" and text.startswith(
-                        ("monitoradded", "monitorremoved")
+                    elif (
+                        key.data == "monitor"
+                        and compositor.parse_event(text)["type"] == "outputs-changed"
                     ):
                         time.sleep(0.3)
                         restore_connected_displays()
                         check("display-hotplug")
     finally:
         observer.terminate()
-        compositor.close()
+        connection.close()
 
 
 def main():

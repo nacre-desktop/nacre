@@ -53,6 +53,7 @@ class SessionTests(unittest.TestCase):
             ),
             patch.object(m, "devices", return_value={"sinks": [], "sources": []}),
             patch.object(m, "run", return_value="[]"),
+            patch.object(m.compositor, "query", return_value=[]),
             patch.object(m.subprocess, "run") as action,
         ):
             m.apply("meeting")

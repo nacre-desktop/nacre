@@ -55,9 +55,7 @@ class ControlToolsTests(unittest.TestCase):
             patch.object(tools, "service", return_value=(True, "owned")),
             patch.object(tools.time, "sleep"),
         ):
-            tools.apply_temperature(
-                ["hyprctl", "hyprsunset", "temperature", "4500"], "owned", True
-            )
+            tools.apply_temperature(True, "owned", True)
             self.assertEqual(run.call_count, 2)
 
     def test_state_discovery_is_readonly_and_external_owner_is_visible(self):

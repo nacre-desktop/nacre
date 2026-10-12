@@ -68,7 +68,7 @@ class DesktopSettingsTests(unittest.TestCase):
                 patch.object(desktop, "STATE", root / "desktop.json"),
                 patch.object(desktop, "LUA", root / "desktop.lua"),
                 patch.object(desktop, "PENDING", root / "pending.json"),
-                patch.object(desktop, "hypr", return_value="[]"),
+                patch.object(desktop.compositor, "set_desktop_options"),
             ):
                 normal = dict(
                     desktop.DEFAULTS, gapsOut=27, frameWidth=4, nativeClipboard=False
@@ -98,7 +98,7 @@ class DesktopSettingsTests(unittest.TestCase):
                 patch.object(desktop, "STATE", root / "desktop.json"),
                 patch.object(desktop, "LUA", root / "desktop.lua"),
                 patch.object(desktop, "PENDING", root / "pending.json"),
-                patch.object(desktop, "hypr", return_value="[]"),
+                patch.object(desktop.compositor, "set_desktop_options"),
             ):
                 desktop.persist(
                     dict(
@@ -141,7 +141,7 @@ class DesktopSettingsTests(unittest.TestCase):
                 patch.object(desktop, "STATE", root / "desktop.json"),
                 patch.object(desktop, "LUA", root / "desktop.lua"),
                 patch.object(desktop, "PENDING", root / "pending.json"),
-                patch.object(desktop, "hypr", return_value="[]"),
+                patch.object(desktop.compositor, "set_desktop_options"),
             ):
                 desktop.persist(dict(desktop.DEFAULTS, **private))
                 for name in (
@@ -169,7 +169,7 @@ class DesktopSettingsTests(unittest.TestCase):
                 patch.object(desktop, "STATE", root / "desktop.json"),
                 patch.object(desktop, "LUA", root / "desktop.lua"),
                 patch.object(desktop, "PENDING", root / "pending.json"),
-                patch.object(desktop, "hypr") as hypr,
+                patch.object(desktop.compositor, "configure_monitors") as configure,
             ):
                 data = dict(
                     desktop.DEFAULTS, gapsOut=26, displays=[screen("DP-1", 1920, 1080)]
@@ -185,9 +185,9 @@ class DesktopSettingsTests(unittest.TestCase):
                     )
                 )
                 desktop.revert("wrong")
-                hypr.assert_not_called()
+                configure.assert_not_called()
                 desktop.revert("correct")
                 self.assertEqual(desktop.load()["gapsOut"], 26)
                 self.assertEqual(desktop.load()["displays"], [])
                 self.assertFalse(desktop.PENDING.exists())
-                self.assertIn("eDP-1", hypr.call_args.args[1])
+                self.assertEqual(configure.call_args.args[0][0]["name"], "eDP-1")

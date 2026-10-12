@@ -12,6 +12,8 @@ import subprocess
 import tempfile
 import uuid
 
+import compositor
+
 
 def paths(home):
     return (
@@ -275,14 +277,7 @@ def shortcut_rows(bindings):
 
 def live_shortcuts():
     try:
-        query = subprocess.run(
-            ["hyprctl", "binds", "-j"],
-            capture_output=True,
-            text=True,
-            timeout=2,
-            check=True,
-        )
-        rows = shortcut_rows(json.loads(query.stdout))
+        rows = shortcut_rows(compositor.query("bindings", timeout=2))
         return (
             rows,
             ""
@@ -420,17 +415,11 @@ def main():
                 atomic(paths(home)[0], data)
             result = state(home)
         elif args.action == "claim-login":
-            result = claim_login(
-                home, os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
-            )
+            result = claim_login(home, compositor.session_id())
         elif args.action == "acknowledge-login":
-            result = acknowledge_login(
-                home, os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", ""), args.value
-            )
+            result = acknowledge_login(home, compositor.session_id(), args.value)
         else:
-            release_login(
-                home, os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", ""), args.value
-            )
+            release_login(home, compositor.session_id(), args.value)
             result = {"released": True}
         print(json.dumps(result))
     except (OSError, ValueError) as error:

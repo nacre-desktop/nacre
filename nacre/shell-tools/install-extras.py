@@ -4,7 +4,8 @@
 from pathlib import Path
 import datetime as dt
 import subprocess
-import os
+
+import compositor
 
 ROOT = Path(__file__).resolve().parent
 HOME = Path.home()
@@ -47,8 +48,8 @@ def install():
             "Managed shortcuts loader missing; run ./install.sh --apply from the repository"
         )
 
-    if changed and os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
-        subprocess.run(["hyprctl", "reload"], check=True, capture_output=True)
+    if changed and compositor.session_id():
+        compositor.reload(timeout=None)
 
 
 if __name__ == "__main__":

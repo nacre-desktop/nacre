@@ -21,7 +21,9 @@ qt_helper="$(dirname -- "${BASH_SOURCE[0]}")/qt-check.sh"
 if [[ ! -f "$qt_helper" ]]; then qt_helper="$(dirname -- "${BASH_SOURCE[0]}")/../tools/qt-check.sh"; fi
 source "$qt_helper"
 if ! qt_match_check; then
-    hyprctl notify 3 0 0 "Desktop shell not started: Quickshell/Qt mismatch. See docs/features/runtime.md" || true
+    compositor_helper="$(dirname -- "${BASH_SOURCE[0]}")/compositor.py"
+    if [[ ! -f "$compositor_helper" ]]; then compositor_helper="$(dirname -- "${BASH_SOURCE[0]}")/../tools/compositor.py"; fi
+    python3 "$compositor_helper" action notify --icon 3 --timeout-ms 0 --color 0 --message "Desktop shell not started: Quickshell/Qt mismatch. See docs/features/runtime.md" || true
     exit 1
 fi
 # Return unused jemalloc pages asynchronously; live decoder/image caches stay put.
