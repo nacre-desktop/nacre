@@ -4,6 +4,7 @@
 import compositor
 
 import argparse
+from nacre_i18n import tr
 import datetime as dt
 import json
 import os
@@ -131,7 +132,12 @@ def watch():
             for key, _ in selector.select(timeout=30):
                 chunk = os.read(key.fileobj.fileno(), 65536)
                 if not chunk:
-                    raise RuntimeError("Session observer ended")
+                    raise RuntimeError(
+                        tr(
+                            "helper.session-watch.session-observer-ended",
+                            "Session observer ended",
+                        )
+                    )
                 buffers[key.data] += chunk
                 while b"\n" in buffers[key.data]:
                     line, buffers[key.data] = buffers[key.data].split(b"\n", 1)

@@ -19,7 +19,22 @@ QtObject {
     readonly property bool retain: owner.shouldRetain(appName, summary, notification?.transient ?? snapshot.transient ?? false)
     readonly property string timeStr: {
         const seconds = Math.max(0, (owner.clock.getTime() - time.getTime()) / 1000);
-        return seconds < 60 ? "now" : seconds < 3600 ? Math.floor(seconds / 60) + "m" : seconds < 86400 ? Math.floor(seconds / 3600) + "h" : Math.floor(seconds / 86400) + "d";
+        return seconds < 60 ? NacreI18n.tr("notifications.time.now", "now") : seconds < 3600 ? NacreI18n.tr("notifications.time.minutes", {
+            one: "{count}m",
+            other: "{count}m"
+        }, {
+            count: Math.floor(seconds / 60)
+        }) : seconds < 86400 ? NacreI18n.tr("notifications.time.hours", {
+            one: "{count}h",
+            other: "{count}h"
+        }, {
+            count: Math.floor(seconds / 3600)
+        }) : NacreI18n.tr("notifications.time.days", {
+            one: "{count}d",
+            other: "{count}d"
+        }, {
+            count: Math.floor(seconds / 86400)
+        });
     }
     readonly property real timeout: notification?.expireTimeout ?? -1
     readonly property Timer deadline: Timer {

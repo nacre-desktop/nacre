@@ -2,6 +2,7 @@
 """Publish only wallpaper/color data for the root-owned Nacre login theme."""
 
 import configparser
+from nacre_i18n import tr
 import hashlib
 import io
 import json
@@ -63,7 +64,9 @@ def publish(colors, wallpaper, preview=PREVIEW, public=PUBLIC):
     import re
 
     if any(not re.fullmatch("#[0-9a-fA-F]{6}", v) for v in values.values()):
-        raise ValueError("Invalid login palette")
+        raise ValueError(
+            tr("helper.login-appearance.invalid-login-palette", "Invalid login palette")
+        )
     preview.mkdir(parents=True, exist_ok=True, mode=0o700)
     preview.chmod(0o700)
     # Keep one versioned result per wallpaper, so returning to a previous image

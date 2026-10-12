@@ -25,14 +25,14 @@ NacreOverviewCard {
         x: 8
         y: 8
         icon: "chevron_left"
-        label: "Previous month"
+        label: NacreI18n.tr("overview.calendar-card.label.previous-month", "Previous month")
         onActivated: root.monthOffset--
     }
     MonthButton {
         x: parent.width - 38
         y: 8
         icon: "chevron_right"
-        label: "Next month"
+        label: NacreI18n.tr("overview.calendar-card.label.next-month", "Next month")
         onActivated: root.monthOffset++
     }
     Grid {

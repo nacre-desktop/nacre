@@ -2,6 +2,7 @@
 """Read-only cached update count; refreshing never upgrades or modifies packages."""
 
 import argparse
+from nacre_i18n import tr
 import fcntl
 import json
 import sys
@@ -30,7 +31,9 @@ def count_updates():
         if result.returncode not in allowed or (
             result.returncode == 1 and result.stderr.strip()
         ):
-            raise RuntimeError("Update check failed")
+            raise RuntimeError(
+                tr("helper.updates.update-check-failed", "Update check failed")
+            )
         total += len([line for line in result.stdout.splitlines() if line.strip()])
     return {"text": str(total), "count": total, "checked": time.time()}
 
@@ -44,7 +47,12 @@ def pending_qt_release_change(pending):
         if not fields or fields[0] not in pinned:
             continue
         if len(fields) != 4 or fields[2] != "->":
-            raise RuntimeError("Could not parse the pending Qt update")
+            raise RuntimeError(
+                tr(
+                    "helper.updates.could-not-parse-the-pending-qt-update",
+                    "Could not parse the pending Qt update",
+                )
+            )
         old, new = fields[1], fields[3]
         old_release = old.rsplit("-", 1)[0] if "-" in old else old
         new_release = new.rsplit("-", 1)[0] if "-" in new else new

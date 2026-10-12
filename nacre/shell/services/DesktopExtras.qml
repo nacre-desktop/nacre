@@ -72,7 +72,7 @@ Singleton {
                     try {
                         root.accept(worker.action, JSON.parse(line));
                     } catch (e) {
-                        root.message = "Could not read desktop data";
+                        root.message = NacreI18n.tr("ui.desktop-extras.message.could-not-read-desktop-data", "Could not read desktop data");
                     }
                 }
             }

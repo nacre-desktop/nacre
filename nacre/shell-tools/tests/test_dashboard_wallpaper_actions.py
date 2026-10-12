@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Real hero buttons call the current wallpaper interface and open picker/colors."""
 
 import os
@@ -166,6 +168,7 @@ TestCase {
                     str(bool(ffmpeg)).lower(),
                 )
             )
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 capture_output=True,

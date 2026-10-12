@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Native Welcome navigation, controls, bounded layout and keyboard dismissal."""
 
 import os
@@ -257,6 +259,7 @@ TestCase {id:test;name:"Welcome";width:1200;height:900;visible:true;when:windowS
                     "const prefix=" + json.dumps(prefix) + ";",
                 )
             )
+            install_i18n(fixtures)
             result = subprocess.run(
                 [
                     str(runner),

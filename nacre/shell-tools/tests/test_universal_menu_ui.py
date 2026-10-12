@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Real universal menu and model, with only external owners replaced by fixtures."""
 
 import json
@@ -143,6 +145,7 @@ class UniversalMenuUITests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             target = Path(folder)
             stage(target)
+            install_i18n(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 capture_output=True,
@@ -190,6 +193,7 @@ TestCase {
   verify(first.packageNames.has("installed"));verify(second.packageNames.has("installed"));
  }
 }""")
+            install_i18n(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target)],
                 capture_output=True,

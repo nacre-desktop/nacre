@@ -68,7 +68,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
         }
         NacreText {
-            text: "Nacre AI"
+            text: NacreI18n.tr("extras.left-drawer.text.nacre-ai", "Nacre AI")
             anchors.left: logo.right
             anchors.leftMargin: 10
             anchors.verticalCenter: parent.verticalCenter
@@ -91,19 +91,19 @@ Item {
         anchors.topMargin: 12
         spacing: 6
         ActionButton {
-            text: "Chat"
+            text: NacreI18n.tr("extras.left-drawer.text.chat", "Chat")
             icon: "forum"
             selected: root.section === "chat"
             onClicked: root.section = "chat"
         }
         ActionButton {
-            text: "Chats"
+            text: NacreI18n.tr("extras.left-drawer.text.chats", "Chats")
             icon: "history"
             selected: root.section === "chats"
             onClicked: root.section = "chats"
         }
         ActionButton {
-            text: "Brain"
+            text: NacreI18n.tr("extras.left-drawer.text.brain", "Brain")
             icon: "neurology"
             selected: root.section === "brain"
             onClicked: root.section = "brain"
@@ -172,18 +172,18 @@ Item {
                 spacing: 12
                 visible: root.section === "settings"
                 NacreText {
-                    text: "Default assistant"
+                    text: NacreI18n.tr("extras.left-drawer.text.default-assistant", "Default assistant")
                     color: NacreColours.palette.m3primary
                 }
                 Row {
                     spacing: 8
                     ActionButton {
-                        text: "Codex"
+                        text: NacreI18n.tr("extras.left-drawer.text.codex", "Codex")
                         selected: root.chat.defaultProvider === "codex"
                         onClicked: root.chat.setProvider("codex")
                     }
                     ActionButton {
-                        text: "Claude Code"
+                        text: NacreI18n.tr("extras.left-drawer.text.claude-code", "Claude Code")
                         selected: root.chat.defaultProvider === "claude"
                         onClicked: root.chat.setProvider("claude")
                     }
@@ -191,12 +191,12 @@ Item {
                 NacreText {
                     width: Math.max(0, root.width - 32)
                     wrapMode: Text.Wrap
-                    text: "Used for new chats here and in the workspace. Existing chats keep their assistant."
+                    text: NacreI18n.tr("extras.left-drawer.text.used-for-new-chats-here-and-in-the-workspace-existing-c", "Used for new chats here and in the workspace. Existing chats keep their assistant.")
                     font.pointSize: 11
                     color: NacreColours.palette.m3onSurfaceVariant
                 }
                 ActionButton {
-                    text: "New chat"
+                    text: NacreI18n.tr("extras.left-drawer.text.new-chat", "New chat")
                     icon: "add_comment"
                     enabled: !root.chat.busy
                     onClicked: {
@@ -205,7 +205,7 @@ Item {
                     }
                 }
                 ActionButton {
-                    text: "Accounts and usage"
+                    text: NacreI18n.tr("extras.left-drawer.text.accounts-and-usage", "Accounts and usage")
                     icon: "manage_accounts"
                     onClicked: DesktopActions.execute("tasks")
                 }
@@ -217,7 +217,7 @@ Item {
                 height: 42
                 leftPadding: 13
                 rightPadding: 13
-                placeholderText: "Search your brain"
+                placeholderText: NacreI18n.tr("extras.left-drawer.placeholderText.search-your-brain", "Search your brain")
                 text: DesktopExtras.brainQuery
                 background: NacreSurface {
                     color: NacreColours.palette.m3surfaceContainerHigh
@@ -247,12 +247,12 @@ Item {
                 visible: root.section === "brain"
                 spacing: 8
                 ActionButton {
-                    text: "Open brain"
+                    text: NacreI18n.tr("extras.left-drawer.text.open-brain", "Open brain")
                     icon: "neurology"
                     onClicked: DesktopActions.execute("brain")
                 }
                 ActionButton {
-                    text: "Capture"
+                    text: NacreI18n.tr("extras.left-drawer.text.capture", "Capture")
                     icon: "edit_note"
                     selected: root.captureOpen
                     onClicked: {
@@ -270,7 +270,7 @@ Item {
                     id: capture
                     width: Math.max(0, root.width - 32)
                     height: 105
-                    placeholderText: "A thought worth keeping"
+                    placeholderText: NacreI18n.tr("extras.left-drawer.placeholderText.a-thought-worth-keeping", "A thought worth keeping")
                     wrapMode: TextEdit.Wrap
                     color: NacreColours.palette.m3onSurface
                     placeholderTextColor: NacreColours.palette.m3onSurfaceVariant
@@ -282,7 +282,7 @@ Item {
                     }
                 }
                 ActionButton {
-                    text: "Save to brain"
+                    text: NacreI18n.tr("extras.left-drawer.text.save-to-brain", "Save to brain")
                     icon: "save"
                     enabled: capture.text.trim().length > 0 && !DesktopExtras.busy.capture
                     onClicked: {
@@ -315,7 +315,7 @@ Item {
                 spacing: 8
                 visible: root.section === "brain" && search.text.trim().length > 0
                 NacreText {
-                    text: DesktopExtras.busy.brain ? "Searching…" : "Knowledge"
+                    text: DesktopExtras.busy.brain ? NacreI18n.tr("extras.left-drawer.text.searching", "Searching…") : NacreI18n.tr("extras.left-drawer.text.knowledge", "Knowledge")
                     color: NacreColours.palette.m3primary
                 }
                 Repeater {
@@ -352,13 +352,13 @@ Item {
                             Row {
                                 spacing: 8
                                 ActionButton {
-                                    text: "Read note"
+                                    text: NacreI18n.tr("extras.left-drawer.text.read-note", "Read note")
                                     onClicked: DesktopExtras.request("note", {
                                         path: note.modelData.path
                                     })
                                 }
                                 ActionButton {
-                                    text: "Explore"
+                                    text: NacreI18n.tr("extras.left-drawer.text.explore", "Explore")
                                     onClicked: {
                                         root.visibilities.left = false;
                                         root.visibilities.leftPinned = false;
@@ -372,7 +372,7 @@ Item {
                     }
                 }
                 NacreText {
-                    text: "No matching notes"
+                    text: NacreI18n.tr("extras.left-drawer.text.no-matching-notes", "No matching notes")
                     visible: DesktopExtras.notes.length === 0 && !DesktopExtras.busy.brain
                     color: NacreColours.palette.m3onSurfaceVariant
                 }
@@ -382,7 +382,7 @@ Item {
                 spacing: 8
                 visible: root.section === "chats"
                 NacreText {
-                    text: "Workspace chats"
+                    text: NacreI18n.tr("extras.left-drawer.text.workspace-chats", "Workspace chats")
                     color: NacreColours.palette.m3primary
                 }
                 Repeater {
@@ -390,7 +390,9 @@ Item {
                     ChatCard {
                         required property var modelData
                         label: ChatWindowTitle.titles[modelData.pid] || modelData.title
-                        detail: "Workspace " + modelData.workspace?.id
+                        detail: NacreI18n.tr("ui.left-drawer.detail.workspace-value0", "Workspace {value0}", {
+                            value0: modelData.workspace?.id
+                        })
                         onClicked: {
                             root.visibilities.left = false;
                             root.visibilities.leftPinned = false;
@@ -401,13 +403,13 @@ Item {
                 Row {
                     spacing: 8
                     NacreText {
-                        text: "Recent chats"
+                        text: NacreI18n.tr("extras.left-drawer.text.recent-chats", "Recent chats")
                         width: 195
                         anchors.verticalCenter: parent.verticalCenter
                         color: NacreColours.palette.m3primary
                     }
                     ActionButton {
-                        text: "Refresh"
+                        text: NacreI18n.tr("extras.left-drawer.text.refresh", "Refresh")
                         icon: "refresh"
                         enabled: !DesktopExtras.busy.chats
                         onClicked: DesktopExtras.request("chats", {})
@@ -415,7 +417,7 @@ Item {
                 }
                 NacreText {
                     visible: !!DesktopExtras.busy.chats
-                    text: "Reading saved chats…"
+                    text: NacreI18n.tr("extras.left-drawer.text.reading-saved-chats", "Reading saved chats…")
                     font.pointSize: 10
                     color: NacreColours.palette.m3onSurfaceVariant
                 }
@@ -424,7 +426,7 @@ Item {
                     ChatCard {
                         required property var modelData
                         label: modelData.title
-                        detail: modelData.busy ? "Responding" : "Saved conversation or draft"
+                        detail: modelData.busy ? NacreI18n.tr("extras.left-drawer.detail.responding", "Responding") : NacreI18n.tr("extras.left-drawer.detail.saved-conversation-or-draft", "Saved conversation or draft")
                         onClicked: {
                             NacreAiViews.select(modelData.model);
                             root.section = "chat";
@@ -444,7 +446,7 @@ Item {
                     }
                 }
                 ActionButton {
-                    text: "All saved chats"
+                    text: NacreI18n.tr("extras.left-drawer.text.all-saved-chats", "All saved chats")
                     icon: "forum"
                     onClicked: DesktopActions.execute("load")
                 }

@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Actual wrapper/control/poster code with native Qt and safe fixture owners."""
 
 import os
@@ -79,6 +81,7 @@ class DesktopWrappersTests(unittest.TestCase):
                 ROOT / "tests/wrappers-qml/tst_wrappers.qml",
                 target / "tst_wrappers.qml",
             )
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

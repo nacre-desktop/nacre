@@ -10,7 +10,7 @@ SearchSurface {
         return (k.key + " " + k.description).toLowerCase().includes(query.toLowerCase());
     })
 
-    title: "Keyboard shortcuts"
+    title: NacreI18n.tr("extras.keybindings.title.keyboard-shortcuts", "Keyboard shortcuts")
     placeholder: "Search a shortcut or action"
     Component.onCompleted: DesktopExtras.request("keys", {})
     onMoved: delta => {
@@ -32,7 +32,7 @@ SearchSurface {
         NacreText {
             anchors.centerIn: parent
             visible: list.count === 0
-            text: DesktopExtras.busy.keys ? "Reading shortcuts…" : "No matching shortcuts"
+            text: DesktopExtras.busy.keys ? NacreI18n.tr("extras.keybindings.text.reading-shortcuts", "Reading shortcuts…") : NacreI18n.tr("extras.keybindings.text.no-matching-shortcuts", "No matching shortcuts")
         }
 
         ScrollBar.vertical: ScrollBar {}

@@ -58,3 +58,40 @@ def install_foundation_interaction(fixtures, widgets):
         )
         text += "\nsingleton DesktopSettings 1.0 DesktopSettings.qml\n"
     manifest.write_text(text)
+
+
+def install_i18n(directory):
+    """Stage the real message engine for native UI tests without host preferences."""
+    from pathlib import Path
+    import shutil
+
+    source = Path(__file__).resolve().parents[2] / "shell/i18n/translation.js"
+    import json
+
+    options = json.loads(source.with_name("options.json").read_text())
+    shutil.copy2(source, directory / "translation.js")
+    (directory / "NacreI18n.qml").write_text(
+        """pragma Singleton
+import QtQuick
+import "translation.js" as Translation
+QtObject {
+    property string language: "en"
+    property bool developerMode: false
+    property var locale: Qt.locale("en_US")
+    property var messages: ({})
+    property var options: OPTIONS
+    function option(domain, key) { const row = options[domain]?.[key]; return row ? tr(row.id, row.fallback) : key; }
+    function modelLabel(row, key) { return row[key + "Id"] ? tr(row[key + "Id"], row[key]) : row[key]; }
+    function tr(id, fallback, args = {}) { return Translation.translate(messages, language, id, fallback, args); }
+    function localize(value) { return Translation.localize(value, tr); }
+    function number(value, decimals = 0) { return Number(value).toLocaleString(locale, "f", decimals); }
+    function dateTime(value, format = Locale.ShortFormat) { return new Date(value).toLocaleString(locale, format); }
+    function date(value, format = Locale.ShortFormat) { return new Date(value).toLocaleDateString(locale, format); }
+    function time(value, format = Locale.ShortFormat) { return new Date(value).toLocaleTimeString(locale, format); }
+}
+""".replace("OPTIONS", json.dumps(options))
+    )
+    manifest = directory / "qmldir"
+    value = manifest.read_text() if manifest.exists() else ""
+    if "singleton NacreI18n " not in value:
+        manifest.write_text(value + "\nsingleton NacreI18n 1.0 NacreI18n.qml\n")

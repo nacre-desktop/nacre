@@ -2,6 +2,7 @@
 """Track-keyed private lyrics/Orient artwork cache; never publishes desktop colors."""
 
 import hashlib
+from nacre_i18n import tr
 import json
 import os
 from pathlib import Path
@@ -26,7 +27,12 @@ def get(url, maximum):
         or parsed.username
         or parsed.password
     ):
-        raise ValueError("Artwork must use HTTPS")
+        raise ValueError(
+            tr(
+                "helper.dashboard-media.artwork-must-use-https",
+                "Artwork must use HTTPS",
+            )
+        )
     with urllib.request.urlopen(
         urllib.request.Request(
             url, headers={"User-Agent": "Nacre/1.0 (desktop media)"}
@@ -34,10 +40,17 @@ def get(url, maximum):
         timeout=6,
     ) as response:
         if urllib.parse.urlsplit(response.geturl()).scheme != "https":
-            raise ValueError("HTTPS redirect required")
+            raise ValueError(
+                tr(
+                    "helper.dashboard-media.https-redirect-required",
+                    "HTTPS redirect required",
+                )
+            )
         data = response.read(maximum + 1)
         if len(data) > maximum:
-            raise ValueError("Response too large")
+            raise ValueError(
+                tr("helper.dashboard-media.response-too-large", "Response too large")
+            )
         return data
 
 
@@ -95,14 +108,24 @@ def track_data(meta):
             if parsed.scheme == "file":
                 original = Path(urllib.parse.unquote(parsed.path))
                 if original.stat().st_size > 8_000_000:
-                    raise ValueError("Artwork too large")
+                    raise ValueError(
+                        tr(
+                            "helper.dashboard-media.artwork-too-large",
+                            "Artwork too large",
+                        )
+                    )
             else:
                 original = CACHE / (identity + ".image")
                 original.write_bytes(get(art, 4_000_000))
                 original.chmod(0o600)
             with Image.open(original) as image:
                 if image.width * image.height > 16_000_000:
-                    raise ValueError("Artwork dimensions too large")
+                    raise ValueError(
+                        tr(
+                            "helper.dashboard-media.artwork-dimensions-too-large",
+                            "Artwork dimensions too large",
+                        )
+                    )
                 image.thumbnail((512, 512))
                 poster = CACHE / (identity + ".png")
                 image.convert("RGB").save(poster)

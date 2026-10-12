@@ -1,0 +1,216 @@
+{
+  "personality": {
+    "natural": {
+      "id": "options.personality.natural",
+      "fallback": "Natural"
+    },
+    "pigment": {
+      "id": "options.personality.pigment",
+      "fallback": "Pigment"
+    },
+    "harmony": {
+      "id": "options.personality.harmony",
+      "fallback": "Harmony"
+    },
+    "pop": {
+      "id": "options.personality.pop",
+      "fallback": "Pop"
+    },
+    "mist": {
+      "id": "options.personality.mist",
+      "fallback": "Mist"
+    },
+    "vivid": {
+      "id": "options.personality.vivid",
+      "fallback": "Vivid"
+    },
+    "pearl": {
+      "id": "options.personality.pearl",
+      "fallback": "Pearl"
+    },
+    "tide": {
+      "id": "options.personality.tide",
+      "fallback": "Tide"
+    }
+  },
+  "personality-lower": {
+    "natural": {
+      "id": "options.personality-lower.natural",
+      "fallback": "natural"
+    },
+    "pigment": {
+      "id": "options.personality-lower.pigment",
+      "fallback": "pigment"
+    },
+    "harmony": {
+      "id": "options.personality-lower.harmony",
+      "fallback": "harmony"
+    },
+    "pop": {
+      "id": "options.personality-lower.pop",
+      "fallback": "pop"
+    },
+    "mist": {
+      "id": "options.personality-lower.mist",
+      "fallback": "mist"
+    },
+    "vivid": {
+      "id": "options.personality-lower.vivid",
+      "fallback": "vivid"
+    },
+    "pearl": {
+      "id": "options.personality-lower.pearl",
+      "fallback": "pearl"
+    },
+    "tide": {
+      "id": "options.personality-lower.tide",
+      "fallback": "tide"
+    }
+  },
+  "workflow": {
+    "normal": {
+      "id": "options.workflow.normal",
+      "fallback": "Normal"
+    },
+    "focused": {
+      "id": "options.workflow.focused",
+      "fallback": "Focused"
+    },
+    "presentation": {
+      "id": "options.workflow.presentation",
+      "fallback": "Presentation"
+    },
+    "minimal": {
+      "id": "options.workflow.minimal",
+      "fallback": "Minimal"
+    },
+    "meeting": {
+      "id": "options.workflow.meeting",
+      "fallback": "Meeting"
+    },
+    "music": {
+      "id": "options.workflow.music",
+      "fallback": "Music"
+    },
+    "docked": {
+      "id": "options.workflow.docked",
+      "fallback": "Docked"
+    }
+  },
+  "workflow-role": {
+    "Browser": {
+      "id": "options.workflow-role.browser",
+      "fallback": "Browser"
+    },
+    "Nacre AI": {
+      "id": "options.workflow-role.nacre-ai",
+      "fallback": "Nacre AI"
+    },
+    "Discord": {
+      "id": "options.workflow-role.discord",
+      "fallback": "Discord"
+    },
+    "Spotify": {
+      "id": "options.workflow-role.spotify",
+      "fallback": "Spotify"
+    },
+    "Mail": {
+      "id": "options.workflow-role.mail",
+      "fallback": "Mail"
+    },
+    "Brain": {
+      "id": "options.workflow-role.brain",
+      "fallback": "Brain"
+    }
+  },
+  "vision": {
+    "normal": {
+      "id": "options.vision.normal",
+      "fallback": "normal"
+    },
+    "protan": {
+      "id": "options.vision.protan",
+      "fallback": "protan"
+    },
+    "deutan": {
+      "id": "options.vision.deutan",
+      "fallback": "deutan"
+    },
+    "tritan": {
+      "id": "options.vision.tritan",
+      "fallback": "tritan"
+    }
+  },
+  "dashboard-tab": {
+    "weather": {
+      "id": "options.dashboard-tab.weather",
+      "fallback": "Weather"
+    },
+    "media": {
+      "id": "options.dashboard-tab.media",
+      "fallback": "Media"
+    },
+    "system": {
+      "id": "options.dashboard-tab.system",
+      "fallback": "System"
+    },
+    "focus": {
+      "id": "options.dashboard-tab.focus",
+      "fallback": "Focus"
+    }
+  },
+  "shortcut-group": {
+    "Apps and panels": {
+      "id": "options.shortcut-group.apps-and-panels",
+      "fallback": "Apps and panels"
+    },
+    "Windows": {
+      "id": "options.shortcut-group.windows",
+      "fallback": "Windows"
+    },
+    "Workspaces and focus": {
+      "id": "options.shortcut-group.workspaces-and-focus",
+      "fallback": "Workspaces and focus"
+    },
+    "Capture and clipboard": {
+      "id": "options.shortcut-group.capture-and-clipboard",
+      "fallback": "Capture and clipboard"
+    },
+    "Sound, display and locking": {
+      "id": "options.shortcut-group.sound-display-and-locking",
+      "fallback": "Sound, display and locking"
+    }
+  },
+  "prefix-hint": {
+    "> Actions": {
+      "id": "options.prefix-hint.actions",
+      "fallback": "> Actions"
+    },
+    "= Calculate": {
+      "id": "options.prefix-hint.calculate",
+      "fallback": "= Calculate"
+    },
+    "# Brain": {
+      "id": "options.prefix-hint.brain",
+      "fallback": "# Brain"
+    },
+    ": Files": {
+      "id": "options.prefix-hint.files",
+      "fallback": ": Files"
+    },
+    "? AI": {
+      "id": "options.prefix-hint.ai",
+      "fallback": "? AI"
+    }
+  },
+  "mode": {
+    "dark": {
+      "id": "options.mode.dark",
+      "fallback": "Dark"
+    },
+    "light": {
+      "id": "options.mode.light",
+      "fallback": "Light"
+    }
+  }
+}

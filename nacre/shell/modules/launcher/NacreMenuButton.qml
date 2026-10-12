@@ -69,7 +69,7 @@ NacreSurface {
         spacing: 6
         NacreText {
             anchors.verticalCenter: parent.verticalCenter
-            text: root.stateText || (root.selected ? "On" : "Off")
+            text: root.stateText || (root.selected ? NacreI18n.tr("launcher.menu-button.text.on", "On") : NacreI18n.tr("launcher.menu-button.text.off", "Off"))
             font.pointSize: 8
             color: NacreColours.palette.m3onSurfaceVariant
         }
@@ -95,6 +95,6 @@ NacreSurface {
             root.clicked();
         }
 
-        accessibleName: (root.text || root.icon) + (root.toggle ? ". " + (root.stateText || (root.selected ? "On" : "Off")) + ". " + root.description : "")
+        accessibleName: (root.text || root.icon) + (root.toggle ? ". " + (root.stateText || (root.selected ? NacreI18n.tr("launcher.menu-button.accessibleName.on", "On") : NacreI18n.tr("launcher.menu-button.accessibleName.off", "Off"))) + ". " + root.description : "")
     }
 }

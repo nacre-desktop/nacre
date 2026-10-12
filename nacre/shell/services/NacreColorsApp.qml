@@ -5,6 +5,7 @@ import Quickshell.Io
 
 Singleton {
     id: root
+    readonly property string windowTitle: NacreI18n.tr("applications.colors.title", "Nacre Colors")
     property bool created: false
     property bool visible: false
     property var window: null
@@ -177,7 +178,7 @@ Singleton {
                 if (response.error)
                     error = response.error;
                 else if (!data?.id || !data.palette?.colours)
-                    error = "Invalid preview response";
+                    error = NacreI18n.tr("ui.colors-app.error.invalid-preview-response", "Invalid preview response");
                 else {
                     preview = data;
                     options = data.request;
@@ -185,7 +186,7 @@ Singleton {
             }
         } catch (failure) {
             inFlight = false;
-            error = "Could not read the preview result";
+            error = NacreI18n.tr("ui.colors-app.error.could-not-read-the-preview-result", "Could not read the preview result");
         }
         if (queued)
             Qt.callLater(startPreview);
@@ -242,7 +243,7 @@ Singleton {
         id: minJob
         onExited: code => {
             if (code !== 0)
-                root.error = "Could not minimize Colors.";
+                root.error = NacreI18n.tr("ui.colors-app.error.could-not-minimize-colors", "Could not minimize Colors.");
         }
     }
     Process {
@@ -262,7 +263,7 @@ Singleton {
             if (root.visible && root.queued)
                 Qt.callLater(root.startPreview);
             else if (root.visible && failed)
-                root.error = root.helperFailure || "Preview helper stopped; choose a style to retry.";
+                root.error = root.helperFailure || NacreI18n.tr("ui.colors-app.error.preview-helper-stopped-choose-a-style-to-retry", "Preview helper stopped; choose a style to retry.");
         }
     }
     Process {
@@ -278,7 +279,7 @@ Singleton {
                     root.favorites = d.favorites;
                     root.history = d.history;
                 } catch (error) {
-                    root.error = "Could not read the wallpaper library.";
+                    root.error = NacreI18n.tr("ui.colors-app.error.could-not-read-the-wallpaper-library", "Could not read the wallpaper library.");
                 }
             }
         }
@@ -313,12 +314,16 @@ Singleton {
         }
         onExited: code => {
             if (code !== 0) {
-                root.error = (failure || "Action failed; try again.").slice(0, 240);
+                root.error = (failure || NacreI18n.tr("ui.colors-app.error.action-failed-try-again", "Action failed; try again.")).slice(0, 240);
                 return;
             }
             try {
                 const data = JSON.parse(output);
-                root.status = data.applied ? "Applied to the desktop" : data.saved ? "Saved " + data.saved : "Exported to " + data.directory;
+                root.status = data.applied ? NacreI18n.tr("ui.colors-app.status.applied-to-the-desktop", "Applied to the desktop") : data.saved ? NacreI18n.tr("ui.colors-app.status.saved-value0", "Saved {value0}", {
+                    value0: data.saved
+                }) : NacreI18n.tr("ui.colors-app.status.exported-to-value0", "Exported to {value0}", {
+                    value0: data.directory
+                });
                 if (data.directory)
                     root.exportDirectory = data.directory;
                 if (data.applied)
@@ -326,7 +331,7 @@ Singleton {
                 if (!catalogJob.running)
                     catalogJob.running = true;
             } catch (error) {
-                root.error = "Could not read the action result.";
+                root.error = NacreI18n.tr("ui.colors-app.error.could-not-read-the-action-result", "Could not read the action result.");
             }
         }
     }
@@ -339,7 +344,7 @@ Singleton {
             try {
                 root.saved = JSON.parse(text());
             } catch (error) {
-                root.error = "Saved colors could not be read.";
+                root.error = NacreI18n.tr("ui.colors-app.error.saved-colors-could-not-be-read", "Saved colors could not be read.");
             }
         }
     }
@@ -369,7 +374,7 @@ Singleton {
                     root.choose(values.image);
                 root.change(values);
             } catch (error) {
-                root.error = "Invalid preview request.";
+                root.error = NacreI18n.tr("ui.colors-app.error.invalid-preview-request", "Invalid preview request.");
             }
         }
         function close(): void {

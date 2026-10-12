@@ -1,3 +1,4 @@
+from qml_source import install_i18n
 import os
 import shutil
 import subprocess
@@ -63,6 +64,7 @@ class ClickAwayTests(unittest.TestCase):
                 ROOT / "tests/click-away-qml/tst_click_away.qml",
                 path / "tst_click_away.qml",
             )
+            install_i18n(path / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(path), "-o", "-,txt"],
                 capture_output=True,

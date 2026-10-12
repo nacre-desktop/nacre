@@ -2,6 +2,7 @@
 """One user-approved shell geometry for Nacre web, Qt, lock and terminal branding."""
 
 import io
+from nacre_i18n import tr
 import hashlib
 import importlib.util
 import json
@@ -98,7 +99,9 @@ def role_colors(colors):
     def clean(value):
         value = str(value).lstrip("#")
         if not re.fullmatch(r"[0-9a-fA-F]{6}", value):
-            raise ValueError("Invalid logo color")
+            raise ValueError(
+                tr("helper.branding.invalid-logo-color", "Invalid logo color")
+            )
         return "#" + value
 
     foreground = clean(
@@ -159,7 +162,12 @@ def paint_svg(text, roles):
 def raster(text, size=512):
     binary = shutil.which("rsvg-convert")
     if not binary:
-        raise RuntimeError("Nacre logo rasterization needs rsvg-convert from librsvg")
+        raise RuntimeError(
+            tr(
+                "helper.branding.nacre-logo-rasterization-needs-rsvg-convert-from-librsvg",
+                "Nacre logo rasterization needs rsvg-convert from librsvg",
+            )
+        )
     result = subprocess.run(
         [binary, "--format=png", f"--width={size}", f"--height={size}"],
         input=text.encode(),
@@ -174,7 +182,12 @@ def cached_png(text, home, size=512):
     """Cache immutable raster art by geometry, palette, size and renderer build."""
     binary = shutil.which("rsvg-convert")
     if not binary:
-        raise RuntimeError("Nacre logo rasterization needs rsvg-convert from librsvg")
+        raise RuntimeError(
+            tr(
+                "helper.branding.nacre-logo-rasterization-needs-rsvg-convert-from-librsvg",
+                "Nacre logo rasterization needs rsvg-convert from librsvg",
+            )
+        )
     stat = Path(binary).stat()
     key = hashlib.sha256(
         (text + str(size) + str(stat.st_size) + str(stat.st_mtime_ns)).encode()
@@ -185,7 +198,12 @@ def cached_png(text, home, size=512):
         raw = path.read_bytes()
         with Image.open(io.BytesIO(raw)) as image:
             if image.size != (size, size) or image.mode != "RGBA":
-                raise ValueError("Invalid branding cache")
+                raise ValueError(
+                    tr(
+                        "helper.branding.invalid-branding-cache",
+                        "Invalid branding cache",
+                    )
+                )
             image.verify()
         return raw
     except (OSError, ValueError):
@@ -357,7 +375,12 @@ def build():
         else shutil.which("qmlformat")
     )
     if not formatter:
-        raise RuntimeError("Regenerating QML branding requires qmlformat")
+        raise RuntimeError(
+            tr(
+                "helper.branding.regenerating-qml-branding-requires-qmlformat",
+                "Regenerating QML branding requires qmlformat",
+            )
+        )
     root = HERE.parent
     values = templates()
     for variant, name in asset_names():
@@ -411,7 +434,9 @@ def build():
     text = web.read_text()
     symbol_match = re.search(r'<symbol id="(?:sh|nacre)".*?</symbol>', text, re.S)
     if not symbol_match:
-        raise RuntimeError("Brain logo symbol missing")
+        raise RuntimeError(
+            tr("helper.branding.brain-logo-symbol-missing", "Brain logo symbol missing")
+        )
     inner = values["brain-compact"].split(">", 1)[1].rsplit("</svg>", 1)[0]
     for role, var in [
         ("PRIMARY", "accent"),

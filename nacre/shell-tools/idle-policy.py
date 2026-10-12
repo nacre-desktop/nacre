@@ -2,6 +2,7 @@
 """Keep only private idle listeners; managed config owns sleep locking."""
 
 import datetime as dt
+from nacre_i18n import tr
 from pathlib import Path
 import re
 
@@ -24,9 +25,15 @@ def prepare(home=None):
                     "after_sleep_cmd",
                 ):
                     raise RuntimeError(
-                        "Unrecognized private idle general option; reconcile it before deployment"
+                        tr(
+                            "helper.idle-policy.unrecognized-private-idle-general-option-reconcile-it-before-depl",
+                            "Unrecognized private idle general option; reconcile it before deployment",
+                        )
                     )
-            return "# Sleep hooks are managed by Nacre.\n"
+            return tr(
+                "helper.idle-policy.sleep-hooks-are-managed-by-nacre",
+                "# Sleep hooks are managed by Nacre.\n",
+            )
 
         clean = re.sub(r"\bgeneral\s*\{([^{}]*)\}", remove, text)
         clean = clean.replace(

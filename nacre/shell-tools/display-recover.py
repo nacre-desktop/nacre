@@ -2,6 +2,7 @@
 """Recreate renderer surfaces after output geometry/DPR changes, preserving safe UI flags."""
 
 import argparse
+from nacre_i18n import tr
 import fcntl
 import json
 import os
@@ -49,7 +50,12 @@ def main():
             not saved_path.is_relative_to(runtime / "nacre-display-recovery")
             or saved_path.is_symlink()
         ):
-            raise ValueError("Invalid private display snapshot")
+            raise ValueError(
+                tr(
+                    "helper.display-recover.invalid-private-display-snapshot",
+                    "Invalid private display snapshot",
+                )
+            )
         view = json.loads(saved_path.read_text())
     else:
         view = json.loads(a.view or "{}")
@@ -111,7 +117,12 @@ def main():
                     )
                 return
             time.sleep(0.2)
-        raise RuntimeError("Display renderer did not become ready")
+        raise RuntimeError(
+            tr(
+                "helper.display-recover.display-renderer-did-not-become-ready",
+                "Display renderer did not become ready",
+            )
+        )
 
 
 if __name__ == "__main__":

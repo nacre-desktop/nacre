@@ -2,6 +2,7 @@
 """Bounded device actions; authentication stays in the native managers."""
 
 import argparse
+from nacre_i18n import tr
 import json
 import re
 import subprocess
@@ -36,7 +37,12 @@ def command(action, value=""):
         and not any(ord(c) < 32 for c in value)
     ):
         return ["nmcli", "--ask", "device", "wifi", "connect", value]
-    raise ValueError("Unsupported device action")
+    raise ValueError(
+        tr(
+            "helper.device-actions.unsupported-device-action",
+            "Unsupported device action",
+        )
+    )
 
 
 def network_status():

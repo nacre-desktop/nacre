@@ -9,64 +9,64 @@ NacreSettingsPage {
         DesktopSettings.set("weatherLocation", value.trim());
     }
     NacreSettingsSection {
-        title: "Lock screen"
+        title: NacreI18n.tr("ui.lock-page.title.lock-screen", "Lock screen")
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Preview layout"
+                text: NacreI18n.tr("ui.lock-page.text.preview-layout", "Preview layout")
                 onClicked: AppLaunch.run(["nacre-shell", "lock-preview"])
             }
             ActionButton {
-                text: "Lock now"
+                text: NacreI18n.tr("ui.lock-page.text.lock-now", "Lock now")
                 onClicked: DesktopActions.execute("lock")
             }
         }
     }
     NacreSettingsSection {
-        title: "Widgets and privacy"
+        title: NacreI18n.tr("ui.lock-page.title.widgets-and-privacy", "Widgets and privacy")
         NacreSettingToggle {
-            label: "Show media controls"
+            label: NacreI18n.tr("ui.lock-page.label.show-media-controls", "Show media controls")
             setting: "lockMedia"
         }
         NacreSettingToggle {
-            label: "Show weather"
+            label: NacreI18n.tr("ui.lock-page.label.show-weather", "Show weather")
             setting: "lockWeather"
         }
         NacreSettingToggle {
-            label: "Show notifications"
+            label: NacreI18n.tr("ui.lock-page.label.show-notifications", "Show notifications")
             setting: "lockNotifications"
         }
         NacreSettingToggle {
-            label: "Show notification message contents"
+            label: NacreI18n.tr("ui.lock-page.label.show-notification-message-contents", "Show notification message contents")
             setting: "lockNotificationContents"
         }
     }
     NacreSettingsSection {
-        title: "Weather"
-        description: "Leave the city empty to use automatic weather location."
+        title: NacreI18n.tr("ui.lock-page.title.weather", "Weather")
+        description: NacreI18n.tr("ui.lock-page.description.leave-the-city-empty-to-use-automatic-weather-location", "Leave the city empty to use automatic weather location.")
         NacreTextField {
             id: city
             objectName: "weatherCity"
             width: parent.width
             text: DesktopSettings.data.weatherLocation || ""
-            placeholderText: "City or city, country"
+            placeholderText: NacreI18n.tr("ui.lock-page.placeholderText.city-or-city-country", "City or city, country")
             onAccepted: root.saveWeather(text)
         }
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Save city"
+                text: NacreI18n.tr("ui.lock-page.text.save-city", "Save city")
                 onClicked: root.saveWeather(city.text)
             }
             ActionButton {
-                text: "Refresh weather"
+                text: NacreI18n.tr("ui.lock-page.text.refresh-weather", "Refresh weather")
                 onClicked: NacreWeather.reload()
             }
         }
         NacreSettingToggle {
-            label: "Use Fahrenheit"
+            label: NacreI18n.tr("ui.lock-page.label.use-fahrenheit", "Use Fahrenheit")
             setting: "weatherFahrenheit"
         }
         NacreText {

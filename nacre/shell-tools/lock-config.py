@@ -2,6 +2,7 @@
 """Render the Nacre Hyprlock layout; PAM and session locking stay Hyprlock-owned."""
 
 import json
+from nacre_i18n import tr
 import shlex
 import subprocess
 from pathlib import Path
@@ -52,7 +53,12 @@ def render(
     colors, wallpaper, preferences, helper, monitors=None, ready=None, artwork=None
 ):
     if any(c in wallpaper for c in "\n\r"):
-        raise ValueError("Unsupported wallpaper path")
+        raise ValueError(
+            tr(
+                "helper.lock-config.unsupported-wallpaper-path",
+                "Unsupported wallpaper path",
+            )
+        )
     colors = {key: value.lstrip("#") for key, value in colors.items()}
     ready = ready or Path.home() / ".cache/nacre/lock-ready"
     result = (
@@ -215,7 +221,12 @@ def monitor_layout(home=None):
     try:
         monitors = compositor.query("monitors", timeout=2)
         if not isinstance(monitors, list) or not monitors:
-            raise ValueError("No current lock outputs")
+            raise ValueError(
+                tr(
+                    "helper.lock-config.no-current-lock-outputs",
+                    "No current lock outputs",
+                )
+            )
         cache.parent.mkdir(parents=True, exist_ok=True)
         temporary = cache.with_suffix(".next")
         temporary.write_text(json.dumps(monitors))

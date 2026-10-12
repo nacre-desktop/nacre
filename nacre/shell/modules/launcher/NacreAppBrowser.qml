@@ -40,7 +40,7 @@ NacreSurface {
             return basic;
         return root.menu.conversionQuery === scope.text ? root.menu.conversion : {
             ok: false,
-            error: "Converting…"
+            error: NacreI18n.tr("launcher.app-browser.error.converting", "Converting…")
         };
     }
     readonly property bool picker: !!activePrompt
@@ -63,7 +63,7 @@ NacreSurface {
                     kind: "calculation",
                     name: calculationResult.value,
                     label: calculationResult.value,
-                    description: calculationResult.description || "Enter to copy the result",
+                    description: calculationResult.description || NacreI18n.tr("launcher.app-browser.description.enter-to-copy-the-result", "Enter to copy the result"),
                     icon: "calculate",
                     operation: "calculation",
                     value: calculationResult.value
@@ -117,7 +117,7 @@ NacreSurface {
     function navigate(value, remember = true) {
         const resolved = value === "hidden" ? value : root.menu.resolve(value);
         if (!resolved) {
-            root.menu.message = "That section is not available";
+            root.menu.message = NacreI18n.tr("launcher.app-browser.message.that-section-is-not-available", "That section is not available");
             return;
         }
         const node = root.menu.node(resolved);
@@ -174,7 +174,7 @@ NacreSurface {
                 fields: [
                     {
                         id: "value",
-                        label: "Value",
+                        label: NacreI18n.tr("launcher.app-browser.label.value", "Value"),
                         initial: root.activePrompt.initial || ""
                     }
                 ],
@@ -243,33 +243,33 @@ NacreSurface {
         if (entry.operation === "form") {
             form = entry.value === "webapp" ? {
                 kind: "webapp",
-                title: "Create a web app",
-                description: "Add a website to All apps.",
+                title: NacreI18n.tr("launcher.app-browser.title.create-a-web-app", "Create a web app"),
+                description: NacreI18n.tr("launcher.app-browser.description.add-a-website-to-all-apps", "Add a website to All apps."),
                 fields: [
                     {
                         id: "label",
-                        label: "App name",
+                        label: NacreI18n.tr("launcher.app-browser.label.app-name", "App name"),
                         placeholder: "My website"
                     },
                     {
                         id: "url",
-                        label: "Website",
+                        label: NacreI18n.tr("launcher.app-browser.label.website", "Website"),
                         placeholder: "https://…"
                     }
                 ],
                 button: "Create app"
             } : {
                 kind: "reminder",
-                title: "Set a reminder",
+                title: NacreI18n.tr("launcher.app-browser.title.set-a-reminder", "Set a reminder"),
                 fields: [
                     {
                         id: "minutes",
-                        label: "Minutes",
+                        label: NacreI18n.tr("launcher.app-browser.label.minutes", "Minutes"),
                         initial: "25"
                     },
                     {
                         id: "message",
-                        label: "Message",
+                        label: NacreI18n.tr("launcher.app-browser.label.message", "Message"),
                         placeholder: "Time for a break"
                     }
                 ],
@@ -502,7 +502,7 @@ NacreSurface {
             }
             NacreText {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Nacre"
+                text: NacreI18n.tr("launcher.app-browser.text.nacre", "Nacre")
                 font.pointSize: 15
             }
         }
@@ -583,7 +583,7 @@ NacreSurface {
         }
         NacreMenuButton {
             anchors.bottom: parent.bottom
-            text: "Hidden apps"
+            text: NacreI18n.tr("launcher.app-browser.text.hidden-apps", "Hidden apps")
             compact: true
             visible: LauncherPreferences.hidden.length > 0
             onClicked: root.navigate("hidden")
@@ -641,7 +641,7 @@ NacreSurface {
     NacreText {
         x: root.contentX
         y: root.picker ? 16 : 55
-        text: root.picker ? root.activePrompt.title : root.calculation ? "Calculator" : root.scope.kind === "brain" ? "Nacre Brain" : root.scope.kind === "ai" ? "Nacre AI" : root.scope.kind === "help" ? "Search scopes" : root.scope.text ? "Search everything" : root.route === "home" ? "Favorites" : root.route === "hidden" ? "Hidden applications" : root.menu.node(root.route)?.description || ""
+        text: root.picker ? root.activePrompt.title : root.calculation ? NacreI18n.tr("launcher.app-browser.title.calculator", "Calculator") : root.scope.kind === "brain" ? NacreI18n.tr("launcher.app-browser.title.nacre-brain", "Nacre Brain") : root.scope.kind === "ai" ? NacreI18n.tr("launcher.app-browser.title.nacre-ai", "Nacre AI") : root.scope.kind === "help" ? NacreI18n.tr("launcher.app-browser.title.search-scopes", "Search scopes") : root.scope.text ? NacreI18n.tr("launcher.app-browser.title.search-everything", "Search everything") : root.route === "home" ? NacreI18n.tr("launcher.app-browser.title.favorites", "Favorites") : root.route === "hidden" ? NacreI18n.tr("launcher.app-browser.title.hidden-applications", "Hidden applications") : root.menu.node(root.route)?.description || ""
         font.pointSize: root.picker ? 15 : 10
         color: NacreColours.palette.m3onSurfaceVariant
         textFormat: Text.PlainText
@@ -845,7 +845,7 @@ NacreSurface {
         y: root.picker ? 80 : 120
         width: root.contentWidth - 28
         visible: !root.entries.length && !root.form
-        text: root.calculation ? root.calculationResult.error || "Type an expression after =" : root.scope.kind === "files" ? root.menu.fileMessage || "Type : and a filename to search your folders" : root.scope.kind === "brain" ? (root.scope.text ? "Looking in your private notes…" : "Type # and a few words to search Nacre Brain") : root.scope.kind === "ai" ? "Type ? and your question" : root.route === "home" && !root.query ? "Add apps and menu items to Favorites with Ctrl+D or their item actions." : root.route === "software.packages" ? root.menu.packageMessage || "Type two or more characters to search packages" : "No matches. Try a different word, > for actions, or / for search scopes."
+        text: root.calculation ? root.calculationResult.error || NacreI18n.tr("launcher.app-browser.text.type-an-expression-after", "Type an expression after =") : root.scope.kind === "files" ? root.menu.fileMessage || NacreI18n.tr("launcher.app-browser.text.type-and-a-filename-to-search-your-folders", "Type : and a filename to search your folders") : root.scope.kind === "brain" ? (root.scope.text ? NacreI18n.tr("launcher.app-browser.text.looking-in-your-private-notes", "Looking in your private notes…") : NacreI18n.tr("launcher.app-browser.text.type-and-a-few-words-to-search-nacre-brain", "Type # and a few words to search Nacre Brain")) : root.scope.kind === "ai" ? NacreI18n.tr("launcher.app-browser.text.type-and-your-question", "Type ? and your question") : root.route === "home" && !root.query ? NacreI18n.tr("launcher.app-browser.text.add-apps-and-menu-items-to-favorites-with-ctrl-d-or-the", "Add apps and menu items to Favorites with Ctrl+D or their item actions.") : root.route === "software.packages" ? root.menu.packageMessage || NacreI18n.tr("launcher.app-browser.text.type-two-or-more-characters-to-search-packages", "Type two or more characters to search packages") : NacreI18n.tr("launcher.app-browser.text.no-matches-try-a-different-word-for-actions-or-for-sear", "No matches. Try a different word, > for actions, or / for search scopes.")
         wrapMode: Text.Wrap
         textFormat: Text.PlainText
         color: NacreColours.palette.m3onSurfaceVariant
@@ -880,7 +880,7 @@ NacreSurface {
                     visible: !!root.previewEntry
                     compact: true
                     icon: "chevron_left"
-                    text: "Quick controls"
+                    text: NacreI18n.tr("launcher.app-browser.text.quick-controls", "Quick controls")
                     onClicked: root.showQuickControls()
                 }
                 NacreMenuIcon {
@@ -924,7 +924,7 @@ NacreSurface {
                 NacreText {
                     width: parent.width
                     visible: !!root.previewEntry?.previewFont
-                    text: "Nacre\nColors shaped by your wallpaper."
+                    text: NacreI18n.tr("launcher.app-browser.text.nacre-colors-shaped-by-your-wallpaper", "Nacre\nColors shaped by your wallpaper.")
                     textFormat: Text.PlainText
                     font.family: root.previewEntry?.previewFont || NacreTokens.textFamily
                     font.pointSize: 16
@@ -933,7 +933,9 @@ NacreSurface {
                 NacreText {
                     width: parent.width
                     visible: root.previewEntry?.operation === "info"
-                    text: root.previewEntry?.value === "health" ? "Services\n" + Object.keys(Maintenance.data.services || {}).map(key => key + ": " + Maintenance.data.services[key]).join("\n") : root.previewEntry?.value === "guide" ? "Super+Space opens this menu. Search finds apps and controls at any depth.\n\nUse > for commands, = for arithmetic, # for private notes and ? for an explicit AI question.\n\nEnter opens the selected item. Right enters a section; Tab opens item actions. Backspace with an empty query goes back. Escape closes.\n\nCtrl+D adds or removes a favorite." : root.previewEntry?.description || ""
+                    text: root.previewEntry?.value === "health" ? NacreI18n.tr("ui.app-browser.text.services-value0", "Services\n{value0}", {
+                        value0: Object.keys(Maintenance.data.services || {}).map(key => key + ": " + Maintenance.data.services[key]).join("\n")
+                    }) : root.previewEntry?.value === "guide" ? NacreI18n.tr("launcher.app-browser.text.super-a-opens-this-menu-search-finds-apps-and-controls", "Super+Space opens this menu. Search finds apps and controls at any depth.\n\nUse > for commands, = for arithmetic, # for private notes and ? for an explicit AI question.\n\nEnter opens the selected item. Right enters a section; Tab opens item actions. Backspace with an empty query goes back. Escape closes.\n\nCtrl+D adds or removes a favorite.") : root.previewEntry?.description || ""
                     textFormat: Text.PlainText
                     font.pointSize: 10
                     wrapMode: Text.Wrap
@@ -941,7 +943,7 @@ NacreSurface {
                 NacreMenuButton {
                     width: parent.width
                     visible: !!root.previewEntry && root.previewEntry.kind !== "group" && !root.previewEntry.disabled && root.previewEntry.operation !== "info"
-                    text: root.previewEntry?.operation === "wallpaper" ? "Use wallpaper" : root.previewEntry?.operation === "font" ? "Use font" : root.previewEntry?.operation === "install-package" ? "Install" : root.previewEntry?.kind === "app" ? "Open app" : "Run"
+                    text: root.previewEntry?.operation === "wallpaper" ? NacreI18n.tr("launcher.app-browser.text.use-wallpaper", "Use wallpaper") : root.previewEntry?.operation === "font" ? NacreI18n.tr("launcher.app-browser.text.use-font", "Use font") : root.previewEntry?.operation === "install-package" ? NacreI18n.tr("launcher.app-browser.text.install", "Install") : root.previewEntry?.kind === "app" ? NacreI18n.tr("launcher.app-browser.text.open-app", "Open app") : NacreI18n.tr("launcher.app-browser.text.run", "Run")
                     onClicked: root.run(root.previewEntry)
                 }
                 NacreMenuButton {
@@ -949,11 +951,11 @@ NacreSurface {
                     objectName: "launcherDetailActions"
                     width: parent.width
                     visible: !!root.previewEntry
-                    text: root.previewEntry?.kind === "group" ? "Open section" : "Item actions"
+                    text: root.previewEntry?.kind === "group" ? NacreI18n.tr("launcher.app-browser.text.open-section", "Open section") : NacreI18n.tr("launcher.app-browser.text.item-actions", "Item actions")
                     onClicked: root.previewEntry.kind === "group" ? root.navigate(root.previewEntry.id) : root.actionsFor(root.previewEntry, detailActions)
                 }
                 NacreText {
-                    text: "Recent"
+                    text: NacreI18n.tr("launcher.app-browser.text.recent", "Recent")
                     font.pointSize: 10
                     visible: !root.previewEntry && root.menu.recent().length > 0
                 }
@@ -968,7 +970,7 @@ NacreSurface {
                     }
                 }
                 NacreText {
-                    text: "Quick controls"
+                    text: NacreI18n.tr("launcher.app-browser.text.quick-controls", "Quick controls")
                     font.pointSize: 10
                     visible: !root.previewEntry
                 }
@@ -980,9 +982,9 @@ NacreSurface {
                         objectName: "launcherToggle_" + modelData.split(".").pop()
                         toggle: true
                         description: item?.reason || ({
-                                "actions.controls.dnd": "Silence notification popups",
-                                "actions.controls.night-light": "Make the screen warmer",
-                                "actions.controls.stay-awake": "Prevent automatic sleep"
+                                "actions.controls.dnd": NacreI18n.tr("launcher.app-browser.description.silence-notification-popups", "Silence notification popups"),
+                                "actions.controls.night-light": NacreI18n.tr("launcher.app-browser.description.make-the-screen-warmer", "Make the screen warmer"),
+                                "actions.controls.stay-awake": NacreI18n.tr("launcher.app-browser.description.prevent-automatic-sleep", "Prevent automatic sleep")
                             })[modelData] || ""
                         stateText: item?.disabled ? "—" : ""
                         width: detailColumn.width
@@ -998,7 +1000,9 @@ NacreSurface {
                     width: parent.width
                     visible: !root.previewEntry
                     compact: true
-                    text: Updates.count ? Updates.count + " updates" : "Up to date"
+                    text: Updates.count ? NacreI18n.tr("ui.app-browser.text.value0-updates", "{value0} updates", {
+                        value0: Updates.count
+                    }) : NacreI18n.tr("launcher.app-browser.text.up-to-date", "Up to date")
                     icon: "system_update"
                     onClicked: root.run(root.menu.node("health.updates"))
                 }
@@ -1013,7 +1017,7 @@ NacreSurface {
         x: 20
         y: parent.height - 88
         width: parent.width - 40
-        text: root.menu.catalog.error || root.menu.message || (root.calculation ? "Enter copies the result" : root.picker ? "Enter chooses · Escape cancels" : "Enter opens · Tab item actions · Ctrl+D favorite")
+        text: root.menu.catalog.error || root.menu.message || (root.calculation ? NacreI18n.tr("launcher.app-browser.text.enter-copies-the-result", "Enter copies the result") : root.picker ? NacreI18n.tr("launcher.app-browser.text.enter-chooses-escape-cancels", "Enter chooses · Escape cancels") : NacreI18n.tr("launcher.app-browser.text.enter-opens-tab-item-actions-ctrl-d-favorite", "Enter opens · Tab item actions · Ctrl+D favorite"))
         textFormat: Text.PlainText
         font.pointSize: 9
         color: NacreColours.palette.m3onSurfaceVariant
@@ -1029,7 +1033,7 @@ NacreSurface {
         height: 49
         padding: 15
         visible: !root.form && !root.confirmation
-        placeholderText: root.picker ? "Filter choices" : root.calculation ? "= (12 + 8) / 5" : "Search everything…"
+        placeholderText: root.picker ? NacreI18n.tr("launcher.app-browser.placeholderText.filter-choices", "Filter choices") : root.calculation ? "= (12 + 8) / 5" : NacreI18n.tr("launcher.app-browser.placeholderText.search-everything", "Search everything…")
         rightPadding: prefixHints.visible ? prefixHints.width + 28 : 15
         onAccepted: root.activate(root.selection)
         Keys.onDownPressed: root.focusResults()
@@ -1065,7 +1069,7 @@ NacreSurface {
                 NacreText {
                     id: hint
                     anchors.centerIn: parent
-                    text: parent.modelData
+                    text: NacreI18n.option("prefix-hint", parent.modelData)
                     font.pointSize: 8.5
                     color: NacreColours.palette.m3onSurfaceVariant
                 }
@@ -1111,7 +1115,7 @@ NacreSurface {
             }
             NacreText {
                 width: parent.width
-                text: root.confirmation?.operation === "power" ? (root.confirmation?.value === "suspend" ? "Your applications stay open while the laptop sleeps." : "This will close your running apps and tasks. Save your work before continuing.") : "The desktop shell will reload. Your applications stay running."
+                text: root.confirmation?.operation === "power" ? (root.confirmation?.value === "suspend" ? NacreI18n.tr("launcher.app-browser.text.your-applications-stay-open-while-the-laptop-sleeps", "Your applications stay open while the laptop sleeps.") : NacreI18n.tr("launcher.app-browser.text.this-will-close-your-running-apps-and-tasks-save-your-w", "This will close your running apps and tasks. Save your work before continuing.")) : NacreI18n.tr("launcher.app-browser.text.the-desktop-shell-will-reload-your-applications-stay-ru", "The desktop shell will reload. Your applications stay running.")
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
                 color: NacreColours.palette.m3onSurfaceVariant
@@ -1120,14 +1124,14 @@ NacreSurface {
                 spacing: 12
                 NacreMenuButton {
                     id: cancelConfirmation
-                    text: "Cancel"
+                    text: NacreI18n.tr("launcher.app-browser.text.cancel", "Cancel")
                     onClicked: {
                         root.confirmation = null;
                         search.forceActiveFocus();
                     }
                 }
                 NacreMenuButton {
-                    text: root.confirmation?.name || "Continue"
+                    text: root.confirmation?.name || NacreI18n.tr("launcher.app-browser.text.continue", "Continue")
                     onClicked: {
                         const entry = root.confirmation;
                         root.confirmation = null;
@@ -1166,7 +1170,7 @@ NacreSurface {
                 spacing: 7
                 NacreText {
                     width: parent.width
-                    text: root.contextEntry?.name || "Item actions"
+                    text: root.contextEntry?.name || NacreI18n.tr("launcher.app-browser.text.item-actions", "Item actions")
                     font.pointSize: 11
                     wrapMode: Text.Wrap
                     maximumLineCount: 2
@@ -1176,7 +1180,7 @@ NacreSurface {
                 NacreMenuButton {
                     width: parent.width
                     compact: true
-                    text: "Open"
+                    text: NacreI18n.tr("launcher.app-browser.text.open", "Open")
                     visible: !!root.contextEntry && !root.contextEntry.disabled
                     onClicked: {
                         const entry = root.contextEntry;
@@ -1188,7 +1192,7 @@ NacreSurface {
                     width: parent.width
                     compact: true
                     visible: !!root.contextEntry && !["open-file", "search-web"].includes(root.contextEntry.operation)
-                    text: root.contextEntry && LauncherPreferences.favorites.includes(Menu.stable(root.contextEntry)) ? "Remove favorite" : "Add favorite"
+                    text: root.contextEntry && LauncherPreferences.favorites.includes(Menu.stable(root.contextEntry)) ? NacreI18n.tr("launcher.app-browser.text.remove-favorite", "Remove favorite") : NacreI18n.tr("launcher.app-browser.text.add-favorite", "Add favorite")
                     onClicked: {
                         root.favorite(root.contextEntry);
                         context.close();
@@ -1198,7 +1202,7 @@ NacreSurface {
                     width: parent.width
                     compact: true
                     visible: root.contextEntry?.kind === "app"
-                    text: root.contextEntry?.hidden ? "Show application" : "Hide application"
+                    text: root.contextEntry?.hidden ? NacreI18n.tr("launcher.app-browser.text.show-application", "Show application") : NacreI18n.tr("launcher.app-browser.text.hide-application", "Hide application")
                     onClicked: {
                         LauncherPreferences.update("hide", root.contextEntry.id, !root.contextEntry.hidden);
                         context.close();
@@ -1208,7 +1212,7 @@ NacreSurface {
                     width: parent.width
                     compact: true
                     visible: (!!root.contextEntry?.package && root.contextEntry?.checked) || (!!root.contextEntry && !!root.menu.ownership[root.contextEntry.id])
-                    text: "Remove package"
+                    text: NacreI18n.tr("launcher.app-browser.text.remove-package", "Remove package")
                     onClicked: {
                         const entry = Object.assign({}, root.contextEntry, {
                             disabled: false,
@@ -1223,7 +1227,7 @@ NacreSurface {
                     width: parent.width
                     compact: true
                     visible: root.contextEntry?.webapp === true
-                    text: "Remove web app"
+                    text: NacreI18n.tr("launcher.app-browser.text.remove-web-app", "Remove web app")
                     onClicked: {
                         root.menu.execute(Object.assign({}, root.contextEntry, {
                             operation: "webapp-remove"
@@ -1235,7 +1239,7 @@ NacreSurface {
                     width: parent.width
                     compact: true
                     visible: !!root.menu.supportPackage(root.contextEntry) && !!root.contextEntry?.disabled
-                    text: "Install support"
+                    text: NacreI18n.tr("launcher.app-browser.text.install-support", "Install support")
                     onClicked: {
                         const pkg = root.menu.supportPackage(root.contextEntry);
                         context.close();

@@ -2,6 +2,7 @@
 """Desktop and AI launch commands, independent of the private knowledge browser."""
 
 import argparse
+from nacre_i18n import tr
 import importlib.util
 import json
 from pathlib import Path
@@ -153,12 +154,16 @@ def action(name, value=""):
     if name == "workspace":
         num = int(value)
         if num not in range(1, 11):
-            raise ValueError("Invalid workspace")
+            raise ValueError(
+                tr("helper.desktop-actions.invalid-workspace", "Invalid workspace")
+            )
         compositor_action("switch_workspace", num, current_monitor=True)
         return
     if name == "focus":
         if not compositor.valid_window_id(value):
-            raise ValueError("Invalid window")
+            raise ValueError(
+                tr("helper.desktop-actions.invalid-window", "Invalid window")
+            )
         compositor_action("focus_window", value)
         return
     if name == "app-windows":
@@ -166,7 +171,12 @@ def action(name, value=""):
         if not isinstance(ids, list) or not all(
             compositor.valid_window_id(i) for i in ids
         ):
-            raise ValueError("Invalid window group")
+            raise ValueError(
+                tr(
+                    "helper.desktop-actions.invalid-window-group",
+                    "Invalid window group",
+                )
+            )
         clients = compositor_windows()
         windows = sorted(
             (c for c in clients if c["address"] in ids),
@@ -278,7 +288,9 @@ def action(name, value=""):
                 ]
             )
         return
-    raise ValueError("Unknown desktop action")
+    raise ValueError(
+        tr("helper.desktop-actions.unknown-desktop-action", "Unknown desktop action")
+    )
 
 
 if __name__ == "__main__":

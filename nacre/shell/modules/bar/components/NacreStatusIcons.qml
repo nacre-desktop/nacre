@@ -28,28 +28,30 @@ Item {
             id: speaker
             objectName: "nacreStatusAudio"
             icon: NacreAudio.muted ? "volume_off" : "volume_up"
-            label: NacreAudio.muted ? "Sound muted" : "Sound"
+            label: NacreAudio.muted ? NacreI18n.tr("components.status-icons.label.sound-muted", "Sound muted") : NacreI18n.tr("components.status-icons.label.sound", "Sound")
             ink: root.colour
         }
         StatusTarget {
             id: wifi
             objectName: "nacreStatusNetwork"
             icon: NacreNetwork.active ? NacreIcons.getNetworkIcon(NacreNetwork.active.strength || 0) : "wifi_off"
-            label: NacreNetwork.wifiAvailable === false ? "No Wi-Fi adapter" : NacreNetwork.active ? "Wi-Fi connected" : "Wi-Fi disconnected"
+            label: NacreNetwork.wifiAvailable === false ? "No Wi-Fi adapter" : NacreNetwork.active ? NacreI18n.tr("components.status-icons.label.wi-fi-connected", "Wi-Fi connected") : NacreI18n.tr("components.status-icons.label.wi-fi-disconnected", "Wi-Fi disconnected")
             ink: root.colour
         }
         StatusTarget {
             id: bluetooth
             objectName: "nacreStatusBluetooth"
             icon: NacreBluetooth.powered ? "bluetooth" : "bluetooth_disabled"
-            label: NacreBluetooth.available === false ? "No Bluetooth adapter" : NacreBluetooth.powered ? "Bluetooth on" : "Bluetooth off"
+            label: NacreBluetooth.available === false ? "No Bluetooth adapter" : NacreBluetooth.powered ? NacreI18n.tr("components.status-icons.label.bluetooth-on", "Bluetooth on") : NacreI18n.tr("components.status-icons.label.bluetooth-off", "Bluetooth off")
             ink: root.colour
         }
         StatusTarget {
             id: batteryItem
             objectName: "nacreStatusBattery"
             icon: !root.batteryAvailable ? "battery_unknown" : UPower.onBattery ? "battery_full" : "battery_charging_full"
-            label: root.batteryAvailable ? "Battery " + root.batteryPercent + "%" : "Battery unavailable"
+            label: root.batteryAvailable ? NacreI18n.tr("ui.status-icons.label.battery-value0", "Battery {value0}%", {
+                value0: root.batteryPercent
+            }) : NacreI18n.tr("components.status-icons.label.battery-unavailable", "Battery unavailable")
             detail: root.batteryAvailable ? String(root.batteryPercent) : ""
             ink: root.batteryAvailable && root.batteryPercent <= 15 && UPower.onBattery ? NacreColours.palette.m3error : root.colour
         }
@@ -57,7 +59,9 @@ Item {
             id: notices
             objectName: "nacreStatusNotifications"
             icon: "notifications"
-            label: NacreNotifs.retained.length + " notifications"
+            label: NacreI18n.tr("ui.status-icons.label.value0-notifications", "{value0} notifications", {
+                value0: NacreNotifs.retained.length
+            })
             detail: String(Math.min(999, NacreNotifs.retained.length))
             ink: root.colour
         }

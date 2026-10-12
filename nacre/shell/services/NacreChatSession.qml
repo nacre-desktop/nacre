@@ -21,7 +21,7 @@ Scope {
     property string defaultProvider: "codex"
     property bool inWorkspace: false
     property string account: ""
-    property string title: "New chat"
+    property string title: NacreI18n.tr("ui.chat-session.title.new-chat", "New chat")
     property string threadId: ""
     property string model: ""
     property bool busy: false
@@ -158,7 +158,7 @@ Scope {
                         root.attachments = [...unique.values()];
                     }
                 } catch (e) {
-                    root.error = "Could not update the draft";
+                    root.error = NacreI18n.tr("ui.chat-session.error.could-not-update-the-draft", "Could not update the draft");
                 }
             }
         }
@@ -174,7 +174,7 @@ Scope {
     }
     function start() {
         if (!NacreProfile.ai) {
-            error = "Nacre AI is optional. Enable it through component setup.";
+            error = NacreI18n.tr("ui.chat-session.error.nacre-ai-is-optional-enable-it-through-component-setup", "Nacre AI is optional. Enable it through component setup.");
             return;
         }
         wantedConnection = true;
@@ -198,13 +198,13 @@ Scope {
         if (inWorkspace || (!text.trim() && attachments.length === 0))
             return false;
         if (attachments.length && !attachmentsSupported) {
-            error = "Reconnect the assistant before sending attachments";
+            error = NacreI18n.tr("ui.chat-session.error.reconnect-the-assistant-before-sending-attachments", "Reconnect the assistant before sending attachments");
             return false;
         }
         busy = true;
         command({
             action: "send",
-            text: text || "Please review the attached files.",
+            text: text || NacreI18n.tr("ui.chat-session.text.please-review-the-attached-files", "Please review the attached files."),
             attachments: attachments
         });
         return true;
@@ -343,14 +343,14 @@ Scope {
                 try {
                     root.accept(JSON.parse(line));
                 } catch (e) {
-                    root.error = "Could not read the assistant response";
+                    root.error = NacreI18n.tr("ui.chat-session.error.could-not-read-the-assistant-response", "Could not read the assistant response");
                 }
             }
         }
         onExited: {
             root.connected = false;
             if (root.busy) {
-                root.error = "Reopen the drawer to reconnect to the assistant";
+                root.error = NacreI18n.tr("ui.chat-session.error.reopen-the-drawer-to-reconnect-to-the-assistant", "Reopen the drawer to reconnect to the assistant");
                 root.busy = false;
             }
         }

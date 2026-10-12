@@ -131,7 +131,7 @@ NacreSurface {
                 anchors.verticalCenter: parent.verticalCenter
                 NacreText {
                     width: parent.width
-                    text: root.modelData.appName || "Notification"
+                    text: root.modelData.appName || NacreI18n.tr("notifications.notice.text.notification", "Notification")
                     font.pointSize: 10
                     elide: Text.ElideRight
                 }
@@ -148,14 +148,14 @@ NacreSurface {
                 x: parent.width - 66
                 visible: root.hasDetails
                 icon: root.expanded ? "expand_less" : "expand_more"
-                label: root.expanded ? "Collapse notification" : "Expand notification"
+                label: root.expanded ? NacreI18n.tr("notifications.notice.label.collapse-notification", "Collapse notification") : NacreI18n.tr("notifications.notice.label.expand-notification", "Expand notification")
                 onActivated: root.expanded = !root.expanded
             }
             CircleControl {
                 objectName: "noticeDismiss"
                 x: parent.width - 30
                 icon: "close"
-                label: "Dismiss notification"
+                label: NacreI18n.tr("notifications.notice.label.dismiss-notification", "Dismiss notification")
                 onActivated: root.dismiss()
             }
         }
@@ -202,7 +202,7 @@ NacreSurface {
                 model: root.availableActions
                 delegate: ActionButton {
                     required property var modelData
-                    text: modelData.text || "Open"
+                    text: modelData.text || NacreI18n.tr("notifications.notice.text.open", "Open")
                     compact: true
                     width: Math.min(implicitWidth, contents.width)
                     clip: true

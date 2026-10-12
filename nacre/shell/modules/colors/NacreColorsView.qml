@@ -62,8 +62,12 @@ Item {
     Keys.onEscapePressed: query ? query = "" : NacreColorsApp.close()
     FileDialog {
         id: fileDialog
-        title: "Choose a wallpaper"
-        nameFilters: ["Wallpapers (*.png *.jpg *.jpeg *.webp *.gif *.mp4 *.webm *.mkv)", "All files (*)"]
+        title: NacreI18n.tr("colors.colors-view.title.choose-a-wallpaper", "Choose a wallpaper")
+        nameFilters: [NacreI18n.tr("files.filter.wallpapers", "Wallpapers ({patterns})", {
+                patterns: "*.png *.jpg *.jpeg *.webp *.gif *.mp4 *.webm *.mkv"
+            }), NacreI18n.tr("files.filter.all", "All files ({patterns})", {
+                patterns: "*"
+            })]
         onAccepted: root.choosePath(selectedFile)
     }
     onVisibleChanged: if (!visible)
@@ -87,7 +91,7 @@ Item {
             x: 12
             y: 12
             width: parent.width - 24
-            placeholderText: "Find a wallpaper"
+            placeholderText: NacreI18n.tr("colors.colors-view.placeholderText.find-a-wallpaper", "Find a wallpaper")
             text: root.query
             onTextEdited: root.query = text
         }
@@ -96,7 +100,7 @@ Item {
             y: 62
             width: parent.width - 24
             objectName: "openImageButton"
-            text: "Open image"
+            text: NacreI18n.tr("colors.colors-view.text.open-image", "Open image")
             icon: "folder_open"
             compact: true
             onClicked: fileDialog.open()
@@ -145,7 +149,7 @@ Item {
                     x: 8
                     y: 62
                     width: parent.width - 16
-                    text: entry.modelData.dynamic ? "Animated" : "Static"
+                    text: entry.modelData.dynamic ? NacreI18n.tr("colors.colors-view.text.animated", "Animated") : NacreI18n.tr("colors.colors-view.text.static", "Static")
                     font.pointSize: 9
                     color: NacreTokens.mutedInk
                 }
@@ -163,7 +167,7 @@ Item {
                 anchors.centerIn: parent
                 width: parent.width - 16
                 visible: entries.count === 0
-                text: "No matching wallpapers. Open an image to explore it."
+                text: NacreI18n.tr("colors.colors-view.text.no-matching-wallpapers-open-an-image-to-explore-it", "No matching wallpapers. Open an image to explore it.")
                 wrapMode: Text.Wrap
                 font.pointSize: 10
                 color: NacreTokens.mutedInk
@@ -191,12 +195,12 @@ Item {
             spacing: 14
             NacreText {
                 width: parent.width
-                text: root.candidate.name || "Explore a wallpaper"
+                text: root.candidate.name || NacreI18n.tr("colors.colors-view.text.explore-a-wallpaper", "Explore a wallpaper")
                 font.pointSize: 20
                 wrapMode: Text.Wrap
             }
             NacreText {
-                text: NacreColorsApp.previewBusy ? "Preparing preview…" : root.candidate.frames > 1 ? "Animated" : "Click the image to pick a color"
+                text: NacreColorsApp.previewBusy ? NacreI18n.tr("colors.colors-view.text.preparing-preview", "Preparing preview…") : root.candidate.frames > 1 ? NacreI18n.tr("colors.colors-view.text.animated", "Animated") : NacreI18n.tr("colors.colors-view.text.click-the-image-to-pick-a-color", "Click the image to pick a color")
                 font.pointSize: 10
                 color: NacreTokens.mutedInk
             }
@@ -255,7 +259,7 @@ Item {
                     }
 
                     NacreText {
-                        text: "Color families in the image"
+                        text: NacreI18n.tr("colors.colors-view.text.color-families-in-the-image", "Color families in the image")
                         font.pointSize: 11
                     }
                     Flow {
@@ -277,7 +281,9 @@ Item {
                         }
                     }
                     NacreText {
-                        text: "Other shades: " + Math.round((root.candidate.otherCoverage || 0) * 100) + "%"
+                        text: NacreI18n.tr("ui.colors-view.text.other-shades-value0", "Other shades: {value0}%", {
+                            value0: Math.round((root.candidate.otherCoverage || 0) * 100)
+                        })
                         font.pointSize: 9
                         color: NacreTokens.mutedInk
                         visible: (root.candidate.otherCoverage || 0) > .005
@@ -287,10 +293,10 @@ Item {
                         wrapMode: Text.Wrap
                         font.pointSize: 9
                         color: NacreTokens.mutedInk
-                        text: "Similar shades are grouped. Percentages show image area; unlisted colors are Other."
+                        text: NacreI18n.tr("colors.colors-view.text.similar-shades-are-grouped-percentages-show-image-area", "Similar shades are grouped. Percentages show image area; unlisted colors are Other.")
                     }
                     NacreText {
-                        text: "Color style"
+                        text: NacreI18n.tr("colors.colors-view.text.color-style", "Color style")
                         font.pointSize: 12
                     }
                     Flow {
@@ -304,7 +310,7 @@ Item {
                                 required property string modelData
                                 objectName: modelData + "Personality"
                                 compact: true
-                                text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                                text: NacreI18n.option("personality", modelData)
                                 selected: !NacreColorsApp.options.favoriteId && NacreColorsApp.options.personality === modelData
                                 onClicked: NacreColorsApp.change({
                                     personality: modelData
@@ -318,21 +324,21 @@ Item {
                         color: NacreTokens.mutedInk
                         font.pointSize: 10
                         text: ({
-                                natural: "The original Nacre balance of the wallpaper's colors",
-                                pigment: "Puts more weight on the subject and small details",
-                                harmony: "Related hues for a quieter theme",
-                                pop: "A contrasting detail becomes the main accent",
-                                mist: "Soft colors for focus",
-                                vivid: "Stronger wallpaper colors",
-                                pearl: "Nacre's mother-of-pearl signature"
-                            })[NacreColorsApp.options.personality] || "Time-of-day tint"
+                                natural: NacreI18n.tr("colors.colors-view.text.the-original-nacre-balance-of-the-wallpaper-s-colors", "The original Nacre balance of the wallpaper's colors"),
+                                pigment: NacreI18n.tr("colors.colors-view.text.puts-more-weight-on-the-subject-and-small-details", "Puts more weight on the subject and small details"),
+                                harmony: NacreI18n.tr("colors.colors-view.text.related-hues-for-a-quieter-theme", "Related hues for a quieter theme"),
+                                pop: NacreI18n.tr("colors.colors-view.text.a-contrasting-detail-becomes-the-main-accent", "A contrasting detail becomes the main accent"),
+                                mist: NacreI18n.tr("colors.colors-view.text.soft-colors-for-focus", "Soft colors for focus"),
+                                vivid: NacreI18n.tr("colors.colors-view.text.stronger-wallpaper-colors", "Stronger wallpaper colors"),
+                                pearl: NacreI18n.tr("colors.colors-view.text.nacre-s-mother-of-pearl-signature", "Nacre's mother-of-pearl signature")
+                            })[NacreColorsApp.options.personality] || NacreI18n.tr("colors.colors-view.text.time-of-day-tint", "Time-of-day tint")
                     }
                 }
                 Column {
                     width: studio.split ? (studio.width - 20) * .42 : studio.width
                     spacing: 12
                     NacreText {
-                        text: "Desktop preview"
+                        text: NacreI18n.tr("colors.colors-view.text.desktop-preview", "Desktop preview")
                         font.pointSize: 12
                     }
                     NacreThemePreview {
@@ -344,7 +350,7 @@ Item {
                         workspaceColors: NacreColorsApp.options.workspaceColors === true
                     }
                     NacreText {
-                        text: root.audit.textPasses ? "✓ Readable" : "Check readability in Accessibility"
+                        text: root.audit.textPasses ? NacreI18n.tr("colors.colors-view.text.readable", "✓ Readable") : NacreI18n.tr("colors.colors-view.text.check-readability-in-accessibility", "Check readability in Accessibility")
                         color: NacreTokens.mutedInk
                         font.pointSize: 10
                     }
@@ -365,7 +371,7 @@ Item {
                         }
                     }
                     ActionButton {
-                        text: root.fineTune ? "Hide fine-tuning" : "Fine-tune"
+                        text: root.fineTune ? NacreI18n.tr("colors.colors-view.text.hide-fine-tuning", "Hide fine-tuning") : NacreI18n.tr("colors.colors-view.text.fine-tune", "Fine-tune")
                         icon: "tune"
                         compact: true
                         onClicked: root.fineTune = !root.fineTune
@@ -375,13 +381,13 @@ Item {
                         spacing: 10
                         visible: root.fineTune
                         NacreText {
-                            text: "Background tint"
+                            text: NacreI18n.tr("colors.colors-view.text.background-tint", "Background tint")
                             font.pointSize: 11
                         }
                         Row {
                             spacing: 6
                             ActionButton {
-                                text: "Accent"
+                                text: NacreI18n.tr("colors.colors-view.text.accent", "Accent")
                                 compact: true
                                 selected: !NacreColorsApp.options.backgroundFromWallpaper
                                 onClicked: NacreColorsApp.change({
@@ -390,7 +396,7 @@ Item {
                             }
                             ActionButton {
                                 objectName: "wallpaperBackgroundSwitch"
-                                text: "Wallpaper"
+                                text: NacreI18n.tr("colors.colors-view.text.wallpaper", "Wallpaper")
                                 compact: true
                                 selected: NacreColorsApp.options.backgroundFromWallpaper
                                 enabled: NacreColorsApp.options.personality !== "pearl"
@@ -404,10 +410,10 @@ Item {
                             wrapMode: Text.Wrap
                             color: NacreTokens.mutedInk
                             font.pointSize: 9
-                            text: NacreColorsApp.options.backgroundFromWallpaper ? "Panels use shadow tones in dark mode and bright tones in light mode. Accent colors stay the same." : "Panels use a restrained tint of the main accent. This does not change the wallpaper image."
+                            text: NacreColorsApp.options.backgroundFromWallpaper ? NacreI18n.tr("colors.colors-view.text.panels-use-shadow-tones-in-dark-mode-and-bright-tones-i", "Panels use shadow tones in dark mode and bright tones in light mode. Accent colors stay the same.") : NacreI18n.tr("colors.colors-view.text.panels-use-a-restrained-tint-of-the-main-accent-this-do", "Panels use a restrained tint of the main accent. This does not change the wallpaper image.")
                         }
                         NacreText {
-                            text: "Brightness"
+                            text: NacreI18n.tr("colors.colors-view.text.brightness", "Brightness")
                             font.pointSize: 10
                         }
                         NacreAdjustSlider {
@@ -420,7 +426,7 @@ Item {
                             })
                         }
                         NacreText {
-                            text: "Color strength"
+                            text: NacreI18n.tr("colors.colors-view.text.color-strength", "Color strength")
                             font.pointSize: 10
                         }
                         NacreAdjustSlider {
@@ -433,7 +439,7 @@ Item {
                             })
                         }
                         ActionButton {
-                            text: "Shift with time of day"
+                            text: NacreI18n.tr("colors.colors-view.text.shift-with-time-of-day", "Shift with time of day")
                             compact: true
                             selected: NacreColorsApp.options.timeTint === true
                             onClicked: NacreColorsApp.change({
@@ -442,7 +448,7 @@ Item {
                             })
                         }
                         ActionButton {
-                            text: "Color workspace chips"
+                            text: NacreI18n.tr("colors.colors-view.text.color-workspace-chips", "Color workspace chips")
                             compact: true
                             selected: NacreColorsApp.options.workspaceColors === true
                             onClicked: NacreColorsApp.change({
@@ -450,7 +456,7 @@ Item {
                             })
                         }
                         ActionButton {
-                            text: "Reset adjustments"
+                            text: NacreI18n.tr("colors.colors-view.text.reset-adjustments", "Reset adjustments")
                             compact: true
                             onClicked: NacreColorsApp.change({
                                 overrides: {},
@@ -467,7 +473,7 @@ Item {
                 width: parent.width
                 spacing: 14
                 NacreText {
-                    text: "Compare styles"
+                    text: NacreI18n.tr("colors.colors-view.text.compare-styles", "Compare styles")
                     font.pointSize: 14
                 }
                 Flow {
@@ -481,7 +487,7 @@ Item {
                             width: Math.max(300, (comparisons.width - 12) / 2)
                             spacing: 8
                             NacreText {
-                                text: modelData.personality.replace(/^./, s => s.toUpperCase())
+                                text: NacreI18n.option("personality", modelData.personality)
                                 font.pointSize: 11
                             }
                             NacreThemePreview {
@@ -500,13 +506,15 @@ Item {
                 width: parent.width
                 spacing: 12
                 NacreText {
-                    text: "Readability and color vision"
+                    text: NacreI18n.tr("colors.colors-view.text.readability-and-color-vision", "Readability and color vision")
                     font.pointSize: 16
                 }
                 NacreText {
                     width: parent.width
                     wrapMode: Text.Wrap
-                    text: "Minimum audited text contrast: " + Math.round((root.audit.minimumTextContrast || 0) * 100) / 100 + ":1. Coverage is measured image area; salience weights central and detailed areas separately."
+                    text: NacreI18n.tr("ui.colors-view.text.minimum-audited-text-contrast-value0-1-coverage-is-measured-image", "Minimum audited text contrast: {value0}:1. Coverage is measured image area; salience weights central and detailed areas separately.", {
+                        value0: Math.round((root.audit.minimumTextContrast || 0) * 100) / 100
+                    })
                     font.pointSize: 10
                     color: NacreTokens.mutedInk
                 }
@@ -517,7 +525,7 @@ Item {
                         model: ["normal", "protan", "deutan", "tritan"]
                         ActionButton {
                             required property string modelData
-                            text: modelData
+                            text: NacreI18n.option("vision", modelData)
                             compact: true
                             selected: root.vision === modelData
                             onClicked: root.vision = modelData
@@ -544,7 +552,11 @@ Item {
                         required property var modelData
                         width: parent.width
                         font.pointSize: 9
-                        text: modelData.foreground + " on " + modelData.background + " — " + modelData.ratio + ":1"
+                        text: NacreI18n.tr("ui.colors-view.text.value0-on-value1-value2-1", "{value0} on {value1} — {value2}:1", {
+                            value0: modelData.foreground,
+                            value1: modelData.background,
+                            value2: modelData.ratio
+                        })
                         color: NacreTokens.mutedInk
                     }
                 }
@@ -558,7 +570,7 @@ Item {
         height: 80
         NacreText {
             width: parent.width - 130
-            text: NacreColorsApp.error || NacreColorsApp.status || "Preview only — Apply when you're ready"
+            text: NacreColorsApp.error || NacreColorsApp.status || NacreI18n.tr("colors.colors-view.text.preview-only-apply-when-you-re-ready", "Preview only — Apply when you're ready")
             font.pointSize: 10
             color: NacreColorsApp.error ? NacreColours.palette.m3error : NacreTokens.mutedInk
             wrapMode: Text.Wrap
@@ -568,7 +580,7 @@ Item {
             spacing: 8
             ActionButton {
                 objectName: "exportThemes"
-                text: "Export"
+                text: NacreI18n.tr("colors.colors-view.text.export", "Export")
                 icon: "upload"
                 compact: true
                 enabled: root.ready && !NacreColorsApp.actionBusy
@@ -579,7 +591,7 @@ Item {
             objectName: "applyPalette"
             anchors.right: parent.right
             y: 30
-            text: NacreColorsApp.applied ? "In use" : "Apply"
+            text: NacreColorsApp.applied ? NacreI18n.tr("colors.colors-view.text.in-use", "In use") : NacreI18n.tr("colors.colors-view.text.apply", "Apply")
             icon: "check"
             selected: true
             enabled: root.ready && !NacreColorsApp.actionBusy && !NacreColorsApp.applied

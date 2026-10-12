@@ -6,6 +6,7 @@ import "../modules/settings/settings-catalog.js" as Catalog
 
 Singleton {
     id: root
+    readonly property string windowTitle: NacreI18n.tr("applications.settings.title", "Nacre Settings")
     property bool created: false
     property bool visible: false
     property var window: null
@@ -83,7 +84,7 @@ Singleton {
                 focusDelay.restart();
             }
             if (exitCode !== 0)
-                root.error = "Could not minimize Settings. You can close it and reopen it from the launcher.";
+                root.error = NacreI18n.tr("ui.settings-app.error.could-not-minimize-settings-you-can-close-it-and-reopen", "Could not minimize Settings. You can close it and reopen it from the launcher.");
         }
     }
     Timer {

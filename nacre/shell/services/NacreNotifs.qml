@@ -84,7 +84,7 @@ Singleton {
                 saveDelay.restart();
             return true;
         } catch (failure) {
-            error = "Notification history could not be read; its file is protected from overwrite.";
+            error = NacreI18n.tr("ui.notifs.error.notification-history-could-not-be-read-its-file-is-prot", "Notification history could not be read; its file is protected from overwrite.");
             return false;
         }
     }
@@ -195,7 +195,7 @@ Singleton {
         onOutput: text => root.restore(text)
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0)
-                root.error = "Notification history could not be read; its file is protected from overwrite.";
+                root.error = NacreI18n.tr("ui.notifs.error.notification-history-could-not-be-read-its-file-is-prot", "Notification history could not be read; its file is protected from overwrite.");
         }
     }
     NacreHelperTask {
@@ -207,7 +207,7 @@ Singleton {
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0) {
                 root.dirty = true;
-                root.error = "Notification history could not be saved; it remains in memory.";
+                root.error = NacreI18n.tr("ui.notifs.error.notification-history-could-not-be-saved-it-remains-in-m", "Notification history could not be saved; it remains in memory.");
             } else if (root.dirty)
                 saveDelay.restart();
         }

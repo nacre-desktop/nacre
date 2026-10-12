@@ -51,7 +51,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
         }
         ActionButton {
-            text: "Close"
+            text: NacreI18n.tr("extras.search-surface.text.close", "Close")
             icon: "close"
             visible: !root.detached
             onClicked: root.dismiss()

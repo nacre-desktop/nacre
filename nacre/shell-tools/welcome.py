@@ -2,6 +2,7 @@
 """Own only Welcome preferences/session claims; never change desktop setup."""
 
 import argparse
+from nacre_i18n import tr
 from contextlib import contextmanager
 import fcntl
 import json
@@ -50,10 +51,18 @@ def preferences(home):
     value = json.loads(path.read_text()) if path.exists() else {}
     if not isinstance(value, dict) or value.get("version", 1) != 1:
         raise ValueError(
-            "Unsupported Welcome preferences; restore welcome.json or use version 1"
+            tr(
+                "helper.welcome.unsupported-welcome-preferences-restore-welcome-json-or-use-versi",
+                "Unsupported Welcome preferences; restore welcome.json or use version 1",
+            )
         )
     if not isinstance(value.get("showAtLogin", True), bool):
-        raise ValueError("showAtLogin in welcome.json must be true or false")
+        raise ValueError(
+            tr(
+                "helper.welcome.showatlogin-in-welcome-json-must-be-true-or-false",
+                "showAtLogin in welcome.json must be true or false",
+            )
+        )
     return dict(value, version=1, showAtLogin=value.get("showAtLogin", True))
 
 
@@ -145,9 +154,9 @@ SHORTCUTS += (
 
 def shortcut_group(action):
     if action in {"workspace", "move-workspace", "focus"}:
-        return "Workspaces and focus"
+        return tr("helper.welcome.workspaces-and-focus", "Workspaces and focus")
     if action in {"screenshot", "save-screenshot", "clipboard", "emoji"}:
-        return "Capture and clipboard"
+        return tr("helper.welcome.capture-and-clipboard", "Capture and clipboard")
     if action in {
         "lock",
         "volume-up",
@@ -159,7 +168,9 @@ def shortcut_group(action):
         "keyboard-up",
         "keyboard-down",
     }:
-        return "Sound, display and locking"
+        return tr(
+            "helper.welcome.sound-display-and-locking", "Sound, display and locking"
+        )
     if action in {
         "launcher",
         "wallpaper",
@@ -168,8 +179,8 @@ def shortcut_group(action):
         "terminal",
         "ai-sidebar",
     }:
-        return "Apps and panels"
-    return "Windows"
+        return tr("helper.welcome.apps-and-panels", "Apps and panels")
+    return tr("helper.welcome.windows", "Windows")
 
 
 def friendly_key(key):
@@ -249,7 +260,12 @@ def binding_labels(bindings):
 
 def shortcut_rows(bindings):
     if not isinstance(bindings, list) or len(bindings) > 10000:
-        raise ValueError("Invalid compositor binding list")
+        raise ValueError(
+            tr(
+                "helper.welcome.invalid-compositor-binding-list",
+                "Invalid compositor binding list",
+            )
+        )
     labels = binding_labels(bindings)
     result = []
     for action, title, detail in SHORTCUTS:
@@ -318,7 +334,12 @@ def state(home):
 
 def set_startup(home, value):
     if not isinstance(value, bool):
-        raise ValueError("Welcome startup choice must be a boolean")
+        raise ValueError(
+            tr(
+                "helper.welcome.welcome-startup-choice-must-be-a-boolean",
+                "Welcome startup choice must be a boolean",
+            )
+        )
     with locked(home):
         data = preferences(home)
         data["showAtLogin"] = value
@@ -334,14 +355,24 @@ def set_demo_wallpapers(home, values):
         or any(not isinstance(value, str) for value in values)
         or len(set(values)) != 4
     ):
-        raise ValueError("Choose four different local wallpapers")
+        raise ValueError(
+            tr(
+                "helper.welcome.choose-four-different-local-wallpapers",
+                "Choose four different local wallpapers",
+            )
+        )
     if any(
         not isinstance(value, str)
         or not Path(value).is_absolute()
         or not Path(value).is_file()
         for value in values
     ):
-        raise ValueError("Demo wallpapers must be existing absolute local paths")
+        raise ValueError(
+            tr(
+                "helper.welcome.demo-wallpapers-must-be-existing-absolute-local-paths",
+                "Demo wallpapers must be existing absolute local paths",
+            )
+        )
     with locked(home):
         data = preferences(home)
         data["demoWallpapers"] = values
@@ -378,7 +409,12 @@ def acknowledge_login(home, instance, claim):
         _, path = paths(home)
         previous = json.loads(path.read_text()) if path.exists() else {}
         if previous != {"instance": instance, "claim": claim}:
-            raise ValueError("Welcome activation claim is no longer current")
+            raise ValueError(
+                tr(
+                    "helper.welcome.welcome-activation-claim-is-no-longer-current",
+                    "Welcome activation claim is no longer current",
+                )
+            )
         data = preferences(home)
         data["firstRunShown"] = True
         atomic(paths(home)[0], data)

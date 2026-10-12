@@ -1,5 +1,6 @@
 import QtQuick
 import qs.widgets
+import qs.services
 
 NacreSurface {
     id: root
@@ -36,7 +37,7 @@ NacreSurface {
         y: 44
         width: parent.width - 20
         height: 36
-        text: root.entry.name || "Color"
+        text: root.entry.name || NacreI18n.tr("ui.palette-tile.text.color", "Color")
         font.pointSize: 10
         wrapMode: Text.Wrap
         maximumLineCount: 2
@@ -55,13 +56,13 @@ NacreSurface {
             color: NacreTokens.focusInk(root.color)
         }
         NacreText {
-            text: "In use"
+            text: NacreI18n.tr("ui.palette-tile.text.in-use", "In use")
             font.pointSize: 9
             color: NacreTokens.focusInk(root.color)
         }
     }
     NacreInteraction {
-        accessibleName: (root.entry.name || "Color palette") + (root.selected ? ", in use" : "")
+        accessibleName: (root.entry.name || NacreI18n.tr("ui.palette-tile.accessibleName.color-palette", "Color palette")) + (root.selected ? NacreI18n.tr("ui.palette-tile.accessibleName.in-use", ", in use") : "")
         function onClicked() {
             root.choose();
         }

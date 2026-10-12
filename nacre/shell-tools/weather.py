@@ -2,6 +2,7 @@
 """One bounded Open-Meteo snapshot for shell and lock weather consumers."""
 
 import json
+from nacre_i18n import tr
 import time
 import urllib.parse
 import urllib.request
@@ -10,34 +11,34 @@ from pathlib import Path
 HOME = Path.home()
 CACHE = HOME / ".cache/nacre/weather.json"
 WMO = {
-    0: ("Clear", 113),
-    1: ("Mostly clear", 116),
-    2: ("Partly cloudy", 116),
-    3: ("Overcast", 122),
-    45: ("Fog", 143),
-    48: ("Freezing fog", 260),
-    51: ("Light drizzle", 266),
-    53: ("Drizzle", 266),
-    55: ("Heavy drizzle", 281),
-    56: ("Freezing drizzle", 281),
-    57: ("Freezing drizzle", 284),
-    61: ("Light rain", 296),
-    63: ("Rain", 302),
-    65: ("Heavy rain", 308),
-    66: ("Freezing rain", 311),
-    67: ("Freezing rain", 314),
-    71: ("Light snow", 326),
-    73: ("Snow", 332),
-    75: ("Heavy snow", 338),
-    77: ("Snow grains", 350),
-    80: ("Rain showers", 353),
-    81: ("Rain showers", 356),
-    82: ("Heavy showers", 359),
-    85: ("Snow showers", 368),
-    86: ("Heavy snow showers", 371),
-    95: ("Thunderstorm", 200),
-    96: ("Thunderstorm with hail", 389),
-    99: ("Thunderstorm with hail", 389),
+    0: (tr("weather.condition.clear", "Clear"), 113),
+    1: (tr("weather.condition.mostly-clear", "Mostly clear"), 116),
+    2: (tr("weather.condition.partly-cloudy", "Partly cloudy"), 116),
+    3: (tr("weather.condition.overcast", "Overcast"), 122),
+    45: (tr("weather.condition.fog", "Fog"), 143),
+    48: (tr("weather.condition.freezing-fog", "Freezing fog"), 260),
+    51: (tr("weather.condition.light-drizzle", "Light drizzle"), 266),
+    53: (tr("weather.condition.drizzle", "Drizzle"), 266),
+    55: (tr("weather.condition.heavy-drizzle", "Heavy drizzle"), 281),
+    56: (tr("weather.condition.freezing-drizzle", "Freezing drizzle"), 281),
+    57: (tr("weather.condition.freezing-drizzle", "Freezing drizzle"), 284),
+    61: (tr("weather.condition.light-rain", "Light rain"), 296),
+    63: (tr("weather.condition.rain", "Rain"), 302),
+    65: (tr("weather.condition.heavy-rain", "Heavy rain"), 308),
+    66: (tr("weather.condition.freezing-rain", "Freezing rain"), 311),
+    67: (tr("weather.condition.freezing-rain", "Freezing rain"), 314),
+    71: (tr("weather.condition.light-snow", "Light snow"), 326),
+    73: (tr("weather.condition.snow", "Snow"), 332),
+    75: (tr("weather.condition.heavy-snow", "Heavy snow"), 338),
+    77: (tr("weather.condition.snow-grains", "Snow grains"), 350),
+    80: (tr("weather.condition.rain-showers", "Rain showers"), 353),
+    81: (tr("weather.condition.rain-showers", "Rain showers"), 356),
+    82: (tr("weather.condition.heavy-showers", "Heavy showers"), 359),
+    85: (tr("weather.condition.snow-showers", "Snow showers"), 368),
+    86: (tr("weather.condition.heavy-snow-showers", "Heavy snow showers"), 371),
+    95: (tr("weather.condition.thunderstorm", "Thunderstorm"), 200),
+    96: (tr("weather.condition.thunderstorm-with-hail", "Thunderstorm with hail"), 389),
+    99: (tr("weather.condition.thunderstorm-with-hail", "Thunderstorm with hail"), 389),
 }
 
 
@@ -47,7 +48,12 @@ def fetch_json(url):
     ) as response:
         data = response.read(512001)
         if len(data) > 512000:
-            raise ValueError("Weather response too large")
+            raise ValueError(
+                tr(
+                    "helper.weather.weather-response-too-large",
+                    "Weather response too large",
+                )
+            )
         return json.loads(data)
 
 
@@ -60,7 +66,9 @@ def normalize(forecast, location, latitude, longitude, now=None):
     daily = forecast["daily"]
     hourly = forecast["hourly"]
     checked = time.time() if now is None else now
-    description, legacy = WMO.get(current["weather_code"], ("Weather", 122))
+    description, legacy = WMO.get(
+        current["weather_code"], (tr("weather.condition.unknown", "Weather"), 122)
+    )
     stamp = current["time"]
     hours = []
     days = []
@@ -131,7 +139,12 @@ def refresh():
         if not location:
             location = fetch_json("https://ipinfo.io/json").get("city", "")
         if not location:
-            raise ValueError("Set a weather city in Settings")
+            raise ValueError(
+                tr(
+                    "helper.weather.set-a-weather-city-in-settings",
+                    "Set a weather city in Settings",
+                )
+            )
         if previous.get("location") == location and "latitude" in previous:
             latitude, longitude = previous["latitude"], previous["longitude"]
         else:
@@ -145,7 +158,12 @@ def refresh():
                 )
             ).get("results", [])
             if not choices:
-                raise ValueError("Weather city not found")
+                raise ValueError(
+                    tr(
+                        "helper.weather.weather-city-not-found",
+                        "Weather city not found",
+                    )
+                )
             latitude, longitude = choices[0]["latitude"], choices[0]["longitude"]
         forecast = fetch_json(
             url(

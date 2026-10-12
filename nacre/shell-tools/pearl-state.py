@@ -2,6 +2,7 @@
 """Private, atomic panel layout and assistant-view identity recovery."""
 
 import json
+from nacre_i18n import tr
 import os
 from pathlib import Path
 import sys
@@ -21,7 +22,12 @@ def load(path):
     try:
         value = json.loads(path.read_text())
         if not isinstance(value, dict) or value.get("version") != 1:
-            raise ValueError("Unsupported panel layout version")
+            raise ValueError(
+                tr(
+                    "helper.pearl-state.unsupported-panel-layout-version",
+                    "Unsupported panel layout version",
+                )
+            )
         return value
     except FileNotFoundError:
         return {"version": 1, "windows": [], "ai": {"edge": "", "channels": [""]}}
@@ -33,7 +39,9 @@ def save(path, value):
         or value.get("version") != 1
         or not isinstance(value.get("windows"), list)
     ):
-        raise ValueError("Invalid panel layout")
+        raise ValueError(
+            tr("helper.pearl-state.invalid-panel-layout", "Invalid panel layout")
+        )
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     descriptor, temporary = tempfile.mkstemp(dir=path.parent, prefix=".pearls-")
     try:

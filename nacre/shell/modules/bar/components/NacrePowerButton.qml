@@ -29,7 +29,7 @@ NacreSurface {
     }
     NacreInteraction {
         objectName: "nacrePowerActivation"
-        accessibleName: "Open power menu"
+        accessibleName: NacreI18n.tr("components.power-button.accessibleName.open-power-menu", "Open power menu")
         function onClicked() {
             root.toggle();
         }

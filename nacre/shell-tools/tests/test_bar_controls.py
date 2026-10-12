@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Actual independent bar/popout views under native Qt with safe service fixtures."""
 
 import os
@@ -84,6 +86,7 @@ class BarControlsTests(unittest.TestCase):
                 source = remove_objects(source, r"\bIpcHandler\s*\{")
                 (target / (name + ".qml")).write_text(source)
             shutil.copy2(ROOT / "tests/bar-qml/tst_bar.qml", target / "tst_bar.qml")
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

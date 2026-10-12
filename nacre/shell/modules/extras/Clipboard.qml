@@ -23,7 +23,7 @@ SearchSurface {
         }
     }
 
-    title: "Clipboard"
+    title: NacreI18n.tr("extras.clipboard.title.clipboard", "Clipboard")
     placeholder: "Search copied text or images"
     Component.onCompleted: DesktopExtras.request("clips", {})
     onChosen: copy(list.currentIndex)
@@ -69,7 +69,7 @@ SearchSurface {
         NacreText {
             anchors.centerIn: parent
             visible: list.count === 0
-            text: DesktopExtras.busy.clips ? "Reading clipboard…" : "Nothing here yet"
+            text: DesktopExtras.busy.clips ? NacreI18n.tr("extras.clipboard.text.reading-clipboard", "Reading clipboard…") : NacreI18n.tr("extras.clipboard.text.nothing-here-yet", "Nothing here yet")
             color: NacreColours.palette.m3onSurfaceVariant
         }
 
@@ -129,7 +129,7 @@ SearchSurface {
                 spacing: 6
 
                 ActionButton {
-                    text: tile.modelData.pinned ? "Unpin" : "Pin"
+                    text: tile.modelData.pinned ? NacreI18n.tr("extras.clipboard.text.unpin", "Unpin") : NacreI18n.tr("extras.clipboard.text.pin", "Pin")
                     enabled: !DesktopExtras.busy.pin
                     selected: tile.modelData.pinned
                     onClicked: DesktopExtras.request("pin", {

@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Independent header content/workspace row with safe native-service fixtures."""
 
 import os
@@ -112,6 +114,7 @@ Item {
             shutil.copy2(
                 ROOT / "tests/header-qml/tst_header.qml", target / "tst_header.qml"
             )
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

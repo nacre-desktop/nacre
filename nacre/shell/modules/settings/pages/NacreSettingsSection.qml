@@ -51,7 +51,7 @@ NacreSurface {
             text: root.expanded ? "expand_less" : "expand_more"
         }
         NacreInteraction {
-            accessibleName: (root.expanded ? "Collapse " : "Expand ") + root.title
+            accessibleName: (root.expanded ? NacreI18n.tr("ui.settings-section.accessibleName.collapse", "Collapse ") : NacreI18n.tr("ui.settings-section.accessibleName.expand", "Expand ")) + root.title
             function onClicked() {
                 root.expanded = !root.expanded;
             }
