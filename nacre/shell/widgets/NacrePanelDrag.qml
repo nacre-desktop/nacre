@@ -9,7 +9,6 @@ Item {
     required property string kind
     required property var host
     required property var screen
-    anchors.fill: parent
     function globalPoint(point) {
         return Qt.point(screen.x + point.x, screen.y + point.y);
     }

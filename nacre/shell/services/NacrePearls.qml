@@ -185,6 +185,8 @@ Singleton {
             return null;
         if (kind === "launcher" && host?.canDetach === false)
             return null;
+        if (!deferClose && host?.prepareLift)
+            host.prepareLift();
         const data = host?.captureState ? host.captureState() : kind === "dashboard" ? {
             dashboardTab: view.dashboardTab
         } : {
@@ -289,6 +291,9 @@ Singleton {
     function begin(kind, host, name, point, entry = null) {
         if (!enabled || DesktopSettings.data.dragPanels === false || drag || host?.canDetach === false)
             return;
+        const sensorBody = bodyRect(host, name);
+        if (host.prepareLift)
+            host.prepareLift();
         drag = {
             kind: kind,
             host: host,
@@ -297,6 +302,7 @@ Singleton {
             point: point,
             entry: entry,
             body: bodyRect(host, name),
+            sensorBody: sensorBody,
             dx: 0,
             dy: 0,
             ready: false,
@@ -363,6 +369,7 @@ Singleton {
     }
     function handedOff(entry) {
         if (drag?.destination === entry) {
+            drag.host.handoffHidden = true;
             finishEdge(drag.kind, drag.screen, entry.chat);
             cancel();
             // Activate after the layer releases its exclusive keyboard focus.

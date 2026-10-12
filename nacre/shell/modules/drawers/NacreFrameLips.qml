@@ -24,9 +24,9 @@ Item {
         };
     }
     readonly property bool available: !NacrePanelState.hidden && !controller.modal && !visibilities.launcher && !visibilities.session && !visibilities.dashboardPinned && !NacreHoverIntent.fullscreenFor(screen.name)
-    readonly property rect topRect: NacreFrame.headerHeight > 0 ? Qt.rect((width - 208) / 2, NacreFrame.headerHeight - 1 + (controller.panels?.dashboard?.height || 0), 208, 7) : Qt.rect(0, 0, 0, 0)
+    readonly property rect topRect: NacreFrame.headerHeight > 0 ? Qt.rect((width - 208) / 2, NacreFrame.headerHeight - 1 + (controller.panels?.dashboard?.handoffHidden ? 0 : controller.panels?.dashboard?.height || 0), 208, 7) : Qt.rect(0, 0, 0, 0)
     readonly property rect leftRect: NacreFrame.left > 0 ? Qt.rect(controller.panels?.leftDrawer?.width || 0, (height - 144) / 2, NacreFrame.left + 5, 144) : Qt.rect(0, 0, 0, 0)
-    readonly property rect rightRect: NacreFrame.right > 0 ? Qt.rect(width - NacreFrame.right - 5 - (controller.panels?.osd?.width || 0), (height - 144) / 2, NacreFrame.right + 5, 144) : Qt.rect(0, 0, 0, 0)
+    readonly property rect rightRect: NacreFrame.right > 0 ? Qt.rect(width - NacreFrame.right - 5 - (controller.panels?.osd?.handoffHidden ? 0 : controller.panels?.osd?.width || 0), (height - 144) / 2, NacreFrame.right + 5, 144) : Qt.rect(0, 0, 0, 0)
     function publishRegions() {
         if (!screen?.name)
             return;
