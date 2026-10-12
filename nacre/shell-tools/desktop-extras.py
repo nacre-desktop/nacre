@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import compositor
+import welcome
 
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre/shell/extras"
@@ -342,12 +343,12 @@ def clip_action(action, ident):
 
 
 DESCRIPTIONS = {
-    "SUPER+A": "Applications",
-    "SUPER+SPACE": "Command palette",
-    "SUPER+D": "Window overview",
+    "SUPER+A": "AI sidebar",
+    "SUPER+SPACE": "Applications",
+    "SUPER+CTRL+SPACE": "Command palette",
     "SUPER+V": "Clipboard history",
     "SUPER+K": "Keyboard shortcuts",
-    "SUPER+CTRL+B": "AI and brain drawer",
+    "SUPER+I": "Desktop settings",
     "SUPER+SHIFT+O": "Desktop settings",
     "SUPER+O": "Dashboard",
     "SUPER+W": "Wallpaper gallery",
@@ -355,22 +356,23 @@ DESCRIPTIONS = {
     "SUPER+B": "Open brain",
     "SUPER+N": "Capture a thought",
     "SUPER+X": "Power menu",
-    "SUPER+ESCAPE": "Lock screen",
+    "SUPER+ESCAPE": "Power menu",
+    "SUPER+L": "Lock screen",
     "SUPER+R": "Resize mode",
-    "SUPER+Q": "Send window to trash",
+    "SUPER+Q": "Close (undo with Super+Shift+Q within 30 seconds)",
     "SUPER+SHIFT+Q": "Restore last trashed window",
     "SUPER+CTRL+Q": "Close window",
     "SUPER+F": "Fullscreen",
     "SUPER+M": "Maximize",
     "SUPER+T": "Toggle floating",
     "SUPER+P": "Pin window",
-    "SUPER+TAB": "Next workspace",
-    "SUPER+SHIFT+TAB": "Previous workspace",
-    "SUPER+SHIFT+T": "Terminal",
+    "SUPER+TAB": "Window overview",
+    "SUPER+CTRL+right": "Next workspace",
+    "SUPER+CTRL+left": "Previous workspace",
+    "SUPER+RETURN": "Terminal",
     "SUPER+SHIFT+B": "Browser",
-    "SUPER+SHIFT+D": "Discord",
-    "SUPER+SHIFT+S": "Spotify",
-    "SUPER+SHIFT+F": "File manager",
+    "SUPER+SHIFT+S": "Screenshot selection to clipboard",
+    "SUPER+E": "File manager",
     "SUPER+H": "Hide window",
     "SUPER+SHIFT+H": "Restore hidden window",
     "Print": "Screenshot selection to clipboard",
@@ -380,6 +382,7 @@ DESCRIPTIONS = {
 def bindings():
     source = {}
     source_routes = {}
+    descriptions = {"Nacre:" + action: title for action, title, _ in welcome.SHORTCUTS}
     for file in compositor.binding_source_files(HOME):
         try:
             records = compositor.capture_bindings(file)
@@ -392,10 +395,13 @@ def bindings():
             command = (
                 arguments[0] if action["method"] == "exec_cmd" and arguments else ""
             )
-            desc = DESCRIPTIONS.get(key) or action["method"].replace(".", " ").replace(
-                "_", " "
+            semantic = descriptions.get(record.get("flags", {}).get("description"))
+            desc = (
+                semantic
+                or DESCRIPTIONS.get(key)
+                or action["method"].replace(".", " ").replace("_", " ")
             )
-            if command and key not in DESCRIPTIONS:
+            if command and key not in DESCRIPTIONS and not semantic:
                 desc = Path(command.split()[0]).stem.replace("-", " ").replace("_", " ")
             if action["method"] == "submap" and arguments == ["reset"]:
                 desc = "Exit resize mode"
@@ -437,9 +443,9 @@ def bindings():
         if b.get("submap"):
             desc = b["submap"] + " · " + desc
         if key.isdigit() and b["modmask"] == 64:
-            desc = "Go to workspace " + key
+            desc = "Go to workspace " + ("10" if key == "0" else key)
         if key.isdigit() and b["modmask"] == 65:
-            desc = "Move window to workspace " + key
+            desc = "Move window to workspace " + ("10" if key == "0" else key)
         result.append(
             dict(
                 key=combo,

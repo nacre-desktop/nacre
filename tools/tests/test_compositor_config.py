@@ -1,4 +1,4 @@
-"""Neutral declarations compile without changing the existing Hyprland contracts."""
+"""Neutral declarations preserve unchanged behavior and the current shortcut contract."""
 
 import copy
 import importlib.util
@@ -29,14 +29,25 @@ class CompositorConfigTests(unittest.TestCase):
                 self.assertEqual((ROOT / path).read_text(), output)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua unavailable")
-    def test_every_registration_rule_event_and_option_equals_pre_refactor(self):
+    def test_registrations_match_defaults_and_unchanged_historical_contracts(self):
         baseline = json.loads(
             (ROOT / "tools/tests/fixtures/compositor-config-contract.json").read_text()
         )
         self.assertEqual(set(baseline), set(config.OUTPUTS))
+        defaults = json.loads(
+            (ROOT / "tools/tests/fixtures/keybindings-defaults.json").read_text()
+        )
         for path, expected in baseline.items():
             with self.subTest(path=path):
-                self.assertEqual(capture(ROOT / path, "declarations"), expected)
+                actual = capture(ROOT / path, "declarations")
+                if path in defaults:
+                    self.assertEqual(
+                        [row["value"] for row in actual if row["kind"] == "binding"],
+                        defaults[path],
+                    )
+                    actual = [row for row in actual if row["kind"] != "binding"]
+                    expected = [row for row in expected if row["kind"] != "binding"]
+                self.assertEqual(actual, expected)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua unavailable")
     def test_editing_neutral_source_changes_binding_and_window_rule(self):

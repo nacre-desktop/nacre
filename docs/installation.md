@@ -57,8 +57,8 @@ Local edits and foreign runtime links stop deployment before cutover. A failed
 apply restores the snapshot. It does not explicitly start, stop or reload your running
 desktop services: the result is recorded as **prepared**, not live-validated. Log out and
 back into the Hyprland/UWSM session, then open Welcome (`nacre-welcome`) and check
-displays, audio, network, keyboard and locking. Open the launcher with **Super+A**
-and Settings with **Super+S**.
+displays, audio, network, keyboard and locking. Open the launcher with **Super+Space**
+and Settings with **Super+I**.
 
 The default profile has five workspaces and no assigned apps or personal startup
 programs. Neither optional package signs into accounts, downloads models or

@@ -316,7 +316,7 @@ Singleton {
             lock: ["loginctl", "lock-session"],
             load: ["kitty", "--class", "nacre-ai-task", "--title", "Load chat", "--", "nacre-ai", "window", "--worker-command", "sessions"],
             files: ["nacre-app", "files"],
-            terminal: ["kitty"],
+            terminal: ["nacre-app", "terminal"],
             new: ["nacre-shell", "new"],
             resume: ["nacre-shell", "resume"],
             tasks: ["nacre-shell", "tasks"],

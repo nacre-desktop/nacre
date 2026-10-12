@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+General shortcuts use Super+Space for the launcher, Super+Enter for the selected
+terminal, Super+E for Files, Super+I for Settings, Super+Tab for overview and
+Super+L to lock. Super+A opens optional AI; the palette moves to Super+Ctrl+Space.
+Super+Escape and Super+X open power controls, Super+Ctrl+Left/Right switches
+workspaces, and Super+Shift+S also captures an area. Numbered workspace shortcuts
+cover 1–10 (0 selects 10). Scratchpad, group cycling and help use accessible
+letter/navigation/function keys; emoji also has Super+Ctrl+E for layouts with
+shifted punctuation. Browser uses the default-app route; personal editor/chat/music
+and startup/rest script bindings are removed from the general base. Local shortcut
+overrides remain user-owned. README and the live shortcut guide follow the defaults.
+
 Corner notifications stay visible while the top dashboard is open.
 
 An empty startup profile performs no process launches or workspace changes. AI

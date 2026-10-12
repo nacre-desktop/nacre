@@ -103,11 +103,12 @@ options, submaps and backend extension roles. The Hyprland compiler emits:
 - `hypr/conf/cursor.lua`
 - `nacre/shell-tools/shortcuts.lua`
 
-CI checks those files against deterministic output. Immutable baseline fixtures
-also compare the complete ordered registrations: actions, arguments, flags,
-submaps, rules, layer rules, config calls, unbinds and event subscriptions. All
-94 main bindings retain their previous contract. Generated formatting is different;
-registered behavior matches the pre-refactor configuration. Callback bodies for
+CI checks those files against deterministic output. Historical baseline fixtures
+compare unchanged rules, config calls and event subscriptions; current default
+fixtures compare ordered bindings, actions, arguments, flags, submaps, layer rules
+and unbinds. The general desktop now has 97 main bindings, including workspace
+1–10 and familiar app, overview, lock and screenshot shortcuts. Personal app
+launches are absent from the shared declarations. Callback bodies for
 session cursor setup and native drag handoff are explicit backend fragments,
 rather than executable Lua embedded in the neutral source.
 

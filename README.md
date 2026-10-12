@@ -82,23 +82,47 @@ under **Learn → Shortcuts** shows the bindings from your current session.
 
 | Keys | Action |
 | --- | --- |
-| Super + A | Universal launcher |
-| Super + S | Nacre Settings |
+| Super + Space | Universal launcher |
+| Super + Enter | Default terminal |
+| Super + E | Default file manager |
+| Super + Shift + B | Default browser |
+| Super + I | Nacre Settings |
 | Super + W | Wallpaper picker |
-| Super + K | Shortcut list |
-| Super + Shift + T | Terminal |
-| Super + Shift + F | Files |
+| Super + K / Super + F1 | Shortcut list |
+| Super + Ctrl + Space | Command palette |
+| Super + A | Optional AI sidebar |
+| Super + B | Optional Brain |
 | Super + V | Clipboard |
+| Super + . / Super + Ctrl + E | Emoji picker |
 | Super + Ctrl + C | Capture menu |
-| Print Screen | Capture an area to the clipboard |
+| Print Screen / Super + Shift + S | Capture an area to the clipboard |
 | Super + Print Screen | Save a screenshot |
-| Super + Q / Super + Shift + Q | Put a window away / restore it |
-| Super + Ctrl + Q | Close a window |
+| Super + Q | Close with a 30-second undo (Super + Shift + Q) |
+| Super + Ctrl + Q | Close immediately |
+| Super + Ctrl + Shift + Q | Force close |
+| Super + H / Super + Shift + H | Hide / restore a window |
 | Super + M / Super + F | Maximize / fullscreen |
 | Super + T | Toggle floating |
-| Super + 1–7 | Change workspace |
-| Super + Shift + 1–7 | Move a window to a workspace |
-| Super + Escape | Lock |
+| Super + arrows / Super + Shift + arrows | Focus / move a window |
+| Super + R | Resize mode (arrows; Escape or Enter exits) |
+| Super + Tab | Window overview |
+| Super + Ctrl + Left / Right | Previous / next workspace |
+| Super + Ctrl + Shift + Left / Right | Move a window to the previous / next workspace |
+| Super + 1–9, 0 | Change workspace (0 selects workspace 10) |
+| Super + Shift + 1–9, 0 | Move a window to a workspace |
+| Super + S / Super + Ctrl + S | Toggle scratchpad / move a window there |
+| Super + Ctrl + Page Up / Page Down | Previous / next grouped window |
+| Super + Ctrl + D | Detach the open panel |
+| Super + L | Lock |
+| Super + Escape / Super + X | Power menu |
+
+Emoji has both Super+. and Super+Ctrl+E, so layouts where . requires an extra
+modifier have an accessible alternative. Scratchpad, group cycling and help
+use letter, navigation or function keys.
+
+Choose Terminal, Files and Browser through **Setup → Default applications** in
+the launcher. Personal app shortcuts belong in your local configuration; see
+[customizing shortcuts](docs/configuration.md#personal-shortcuts).
 
 In the launcher, `>` searches actions, `=` calculates, `#` searches Brain and `?`
 opens AI when installed. Enter opens a search result; Ctrl+D toggles its favorite.
