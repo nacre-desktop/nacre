@@ -105,7 +105,6 @@ install({
     { "SUPER + bracketleft", "group.prev" },
     { "SUPER + bracketright", "group.next" },
     { "SUPER + J", "layout", "togglesplit" },
-    { "SUPER + mouse:272", "window.drag", nil, { mouse = true } },
     { "SUPER + mouse:273", "window.resize", nil, { mouse = true } },
     { "ALT + TAB", "window.cycle_next", { next = true } },
     { "ALT + SHIFT + TAB", "window.cycle_next", { next = false } },

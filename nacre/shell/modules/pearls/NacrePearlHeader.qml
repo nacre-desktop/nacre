@@ -10,24 +10,16 @@ Item {
     signal dockRequested
     signal closeRequested
     signal pinRequested
-    height: 56
+    height: 40
     MouseArea {
         anchors.fill: parent
         onPressed: root.window.startSystemMove()
         onDoubleClicked: root.window.maximized = !root.window.maximized
     }
-    NacreTearHandle {
-        x: 12
-        y: 12
-        kind: root.entry.kind
-        host: root.window.bodyItem
-        screenName: root.window.screen?.name || root.entry.origin
-        pearl: root.entry
-    }
     NacreText {
-        x: 52
+        x: 14
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.max(0, parent.width - 202)
+        width: Math.max(0, parent.width - (root.entry.kind === "launcher" ? 310 : 180))
         text: ({
                 ai: "Nacre AI",
                 launcher: "Launcher",
@@ -35,7 +27,7 @@ Item {
                 controls: "Controls",
                 media: "Media"
             })[root.entry.kind]
-        font.pointSize: 13
+        font.pointSize: 11
         elide: Text.ElideRight
     }
     Row {
@@ -63,6 +55,13 @@ Item {
             compact: true
             accessibleLabel: "Pin to all workspaces"
             onClicked: root.pinRequested()
+        }
+        ActionButton {
+            text: ""
+            icon: "open_in_full"
+            compact: true
+            accessibleLabel: "Maximize or restore window"
+            onClicked: root.window.maximized = !root.window.maximized
         }
         ActionButton {
             text: ""

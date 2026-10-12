@@ -35,6 +35,7 @@ local stub = {
         assert(type(action) == "table" and action.method, "Unsupported binding constructor")
         records[#records+1] = { keys=keys, action=action, flags=flags or {}, submap=(flags and flags.submap) or submap }
     end,
+    unbind = function() end,
     define_submap = function(name, callback)
         local previous = submap; submap=name; callback(); submap=previous
     end,

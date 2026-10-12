@@ -91,12 +91,6 @@ FocusScope {
                             font.pointSize: 18
                             Layout.fillWidth: true
                         }
-                        NacreDetachControls {
-                            kind: "controls"
-                            host: root
-                            screenName: root.screen.name
-                            visible: !root.detached && NacrePearls.enabled
-                        }
                         ActionButton {
                             text: "Settings"
                             icon: "settings"

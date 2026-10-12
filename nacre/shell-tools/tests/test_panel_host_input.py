@@ -22,6 +22,8 @@ class PanelHostInputTests(unittest.TestCase):
             fixtures.mkdir()
             source = (SHELL / "modules/drawers/NacrePanelHost.qml").read_text()
             source = source.replace("import Quickshell\n", "")
+            source = source.replace("import qs.services", 'import "fixtures"')
+            source = source.replace("import qs.widgets", 'import "fixtures"')
             source = source.replace("import qs.config", 'import "fixtures"')
             for alias in [
                 "Popouts",
@@ -43,6 +45,20 @@ class PanelHostInputTests(unittest.TestCase):
                 "pragma Singleton\nimport QtQuick\nQtObject {property int left:10;property int right:10;property int headerHeight:50;property int bottom:10;property int rounding:20}"
             )
             manifest = ["singleton NacreFrame 1.0 NacreFrame.qml"]
+            for name, body in {
+                "NacrePearls": "property var drag:null",
+                "NacreTokens": 'property bool motionEnabled:false;property color body:"#123456";property color orientSecondary:"#abcdef";property color accent:"#fedcba"',
+            }.items():
+                (fixtures / (name + ".qml")).write_text(
+                    "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
+                )
+                manifest.append("singleton " + name + " 1.0 " + name + ".qml")
+            (fixtures / "NacreSurface.qml").write_text("import QtQuick\nRectangle {}")
+            manifest.append("NacreSurface 1.0 NacreSurface.qml")
+            (fixtures / "NacrePanelDrag.qml").write_text(
+                "import QtQuick\nItem {property string kind;property var host;property var screen}"
+            )
+            manifest.append("NacrePanelDrag 1.0 NacrePanelDrag.qml")
             names = [
                 "LeftDrawer",
                 "NacreOsdPanel",

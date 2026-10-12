@@ -46,17 +46,9 @@ NacreSurface {
         objectName: "dashboardNavigation"
         x: 24
         y: 12
-        width: Math.max(0, root.width - (root.detached || !NacrePearls.enabled ? 142 : 222))
+        width: Math.max(0, root.width - 142)
         currentIndex: root.currentIndex
         onSelected: index => root.select(index)
-    }
-    NacreDetachControls {
-        x: root.width - 222
-        y: 16
-        kind: "dashboard"
-        host: root
-        screenName: root.screenName
-        visible: !root.detached && NacrePearls.enabled
     }
     ActionButton {
         x: root.width - 100

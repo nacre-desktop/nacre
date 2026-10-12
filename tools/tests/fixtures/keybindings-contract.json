@@ -177,17 +177,6 @@
   {
     "action": {
       "args": {},
-      "method": "window.drag"
-    },
-    "flags": {
-      "mouse": true
-    },
-    "keys": "SUPER + mouse:272",
-    "submap": ""
-  },
-  {
-    "action": {
-      "args": {},
       "method": "window.resize"
     },
     "flags": {

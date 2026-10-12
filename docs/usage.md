@@ -23,5 +23,4 @@ AI and Brain are optional. Core Nacre works without either. Installing their cod
 does not sign into providers, download models or populate your memory vault.
 See their [setup guide](optional-apps.md).
 
-Panels can [open as ordinary windows](detachable-panels.md). Use the pop-out button
-or pearl grip in any panel; Super+Ctrl+D detaches the open edge panel.
+Panels can [open as ordinary windows](detachable-panels.md). Hold Super and drag an open panel away from its edge; Super+Ctrl+D lifts it in place.

@@ -34,28 +34,33 @@ FloatingWindow {
     readonly property alias providerView: lease
     readonly property alias bodyItem: body
     title: entry.title
-    color: NacreTokens.body
-    implicitWidth: ({
+    color: "transparent"
+    implicitWidth: dropPoint?.exact ? dropPoint.width + 2 : ({
             launcher: 1000,
             dashboard: 984,
             ai: 520,
             controls: 440,
             media: 330
         })[entry.kind]
-    implicitHeight: ({
+    implicitHeight: dropPoint?.exact ? dropPoint.height + 42 : ({
             launcher: 700,
             dashboard: 740,
             ai: 850,
             controls: 840,
             media: 370
         })[entry.kind]
-    minimumSize: entry.kind === "launcher" ? Qt.size(600, 460) : entry.kind === "media" ? Qt.size(260, 280) : Qt.size(400, 400)
+    minimumSize: dropPoint?.exact ? Qt.size(Math.min(dropPoint.width + 2, 400), Math.min(dropPoint.height + 42, 300)) : entry.kind === "launcher" ? Qt.size(600, 460) : entry.kind === "media" ? Qt.size(260, 280) : Qt.size(400, 400)
     // Qt/compositor occlusion stops painting; provider leases gate background work.
     Timer {
         interval: 60
         running: true
         onTriggered: if (!root.ready)
             root.place(root.dropPoint)
+    }
+    Timer {
+        id: handoffReady
+        interval: 34
+        onTriggered: NacrePearls.handedOff(root.entry)
     }
     PersistentProperties {
         id: viewFlags
@@ -107,7 +112,10 @@ FloatingWindow {
             x: monitor.x + monitor.width / 2,
             y: monitor.y + (monitor.height - height) / 2 + 24
         };
-        const position = Geometry.place(target, {
+        const position = point?.exact ? {
+            x: point.x - 1,
+            y: point.y - 40
+        } : Geometry.place(target, {
             width: width,
             height: height
         }, {
@@ -122,6 +130,18 @@ FloatingWindow {
         worker.px = position.x;
         worker.py = position.y;
         worker.running = true;
+    }
+    function placement() {
+        const data = client?.lastIpcObject;
+        if (data?.at && data?.size && data.floating)
+            return {
+                exact: true,
+                x: data.at[0] + 1,
+                y: data.at[1] + 40,
+                width: data.size[0] - 2,
+                height: data.size[1] - 42
+            };
+        return dropPoint;
     }
     function captureState() {
         return body.item?.captureState ? Object.assign({}, body.item.captureState(), {
@@ -188,8 +208,13 @@ FloatingWindow {
                 }
             }
         }
-        onExited: {
+        onExited: (exitCode, exitStatus) => {
+            if (action === "place" && exitCode !== 0) {
+                Qt.callLater(() => NacrePearls.handoffFailed(root.entry));
+                return;
+            }
             root.ready = true;
+            handoffReady.restart();
             NacreHyprland.refreshToplevels();
             if (action === "place")
                 Qt.callLater(root.activate);
@@ -208,7 +233,7 @@ FloatingWindow {
         opacity: root.ready ? 1 : 0
         Behavior on opacity {
             NumberAnimation {
-                duration: NacreTokens.motionEnabled ? 180 : 0
+                duration: root.dropPoint?.exact ? 0 : NacreTokens.motionEnabled ? 180 : 0
                 easing.type: Easing.OutCubic
             }
         }
@@ -227,7 +252,7 @@ FloatingWindow {
                 }
                 GradientStop {
                     position: 1
-                    color: Qt.alpha(NacreColours.palette.m3tertiary, .65)
+                    color: Qt.alpha(NacreTokens.accent, .65)
                 }
             }
         }
@@ -257,10 +282,10 @@ FloatingWindow {
         }
         Loader {
             id: body
-            x: 12
+            x: 1
             y: header.height
-            width: Math.max(0, parent.width - 24)
-            height: Math.max(0, parent.height - y - 12)
+            width: Math.max(0, parent.width - 2)
+            height: Math.max(0, parent.height - y - 2)
             focus: true
             sourceComponent: ({
                     dashboard: dashboard,

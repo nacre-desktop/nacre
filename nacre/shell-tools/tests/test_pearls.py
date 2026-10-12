@@ -24,6 +24,100 @@ def module(name):
 
 
 class PearlTests(unittest.TestCase):
+    def test_super_drag_routes_only_live_owned_panels_and_preserves_release(self):
+        script = r"""
+local binds, moves, unbound = {}, 0, nil
+local cursor, layers = {x=120,y=220}, {{namespace="nacre-drawers",mapped=true,pid=45}}
+nacre_panel_pid=45
+nacre_panel_regions={{x=100,y=200,w=500,h=300}}
+local proxy
+proxy=setmetatable({}, {__index=function()return proxy end,__call=function()return {} end})
+hl={dsp=proxy,window_rule=function()end,unbind=function(key)unbound=key end,
+ bind=function(key,fn)binds[key]=fn end,
+ get_cursor_pos=function()return cursor end,get_layers=function()return layers end,
+ dispatch=function()moves=moves+1;return {ok=true,request_release=true} end}
+dofile(arg[1])
+assert(unbound=="SUPER + mouse:272")
+local drag=binds["SUPER + mouse:272"]
+local press=drag();assert(press.pass_event and press.request_release and moves==0)
+-- A release is routed by its press, even after crossing outside the popup.
+cursor={x=900,y=900}
+assert(drag().pass_event and moves==0)
+assert(drag().request_release and moves==1)
+cursor={x=120,y=220}
+assert(drag().request_release and moves==2) -- ordinary drag still releases natively
+layers[1].pid=99
+assert(drag().request_release and moves==3);drag()
+layers[1].pid=45;layers[1].mapped=false
+assert(drag().request_release and moves==5);drag()
+layers[1].mapped=true;nacre_panel_regions={}
+assert(drag().request_release and moves==7);drag()
+print("PANEL_ROUTING_OK")
+"""
+        result = subprocess.run(
+            ["lua", "-", str(TOOLS / "shortcuts.lua")],
+            input=script,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("PANEL_ROUTING_OK", result.stdout)
+
+    def test_real_super_drag_handler_moves_live_content_without_plain_click_grab(self):
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Qt Quick Test unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            source = (
+                (SHELL / "widgets/NacrePanelDrag.qml")
+                .read_text()
+                .replace("import qs.services", 'import "."')
+            )
+            (target / "NacrePanelDrag.qml").write_text(source)
+            (target / "NacrePearls.qml").write_text("""pragma Singleton
+import QtQuick
+QtObject {
+ property bool enabled:true;property var drag:null;property int starts:0;property int finishes:0;property real dx:0
+ function begin(kind,host,name,p){starts++;drag={host:host,start:p}}
+ function update(p){dx=p.x-drag.start.x}
+ function finish(){finishes++;drag=null}
+ function cancel(){drag=null}
+}""")
+            (target / "DesktopSettings.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject {property var data:({dragPanels:true})}"
+            )
+            (target / "qmldir").write_text(
+                "singleton NacrePearls 1.0 NacrePearls.qml\nsingleton DesktopSettings 1.0 DesktopSettings.qml\nNacrePanelDrag 1.0 NacrePanelDrag.qml\n"
+            )
+            (target / "tst_drag.qml").write_text("""import QtQuick
+import QtTest
+import "."
+TestCase {
+ name:"SuperPanelLift";width:400;height:300;visible:true;when:windowShown
+ Item {id:panel;width:350;height:250
+  MouseArea {anchors.fill:parent;onPressed:mouse=>mouse.accepted=true}
+  NacrePanelDrag {kind:"ai";host:panel;screen:({name:"test",x:0,y:0})}
+ }
+ function test_reserved_drag_and_plain_click(){
+  mouseDrag(panel,20,20,100,0,Qt.LeftButton,Qt.NoModifier);compare(NacrePearls.starts,0);
+  mouseDrag(panel,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);
+  compare(NacrePearls.starts,1);compare(NacrePearls.finishes,1);verify(NacrePearls.dx>64);
+  DesktopSettings.data={dragPanels:false};
+  mouseDrag(panel,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);compare(NacrePearls.starts,1);
+ }
+}""")
+            result = subprocess.run(
+                [str(runner), "-input", str(target)],
+                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+                text=True,
+                capture_output=True,
+                timeout=20,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("QWARN", result.stdout + result.stderr)
+
     def test_layout_writer_finishes_one_request_without_waiting_for_pipe_eof(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "state.json"
