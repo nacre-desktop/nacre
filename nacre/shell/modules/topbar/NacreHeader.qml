@@ -167,16 +167,16 @@ Item {
             implicitHeight: 34
             NacreWorkspaceRow {
                 id: workspaces
-                availableWidth: Math.max(170, Math.min(360, root.width - right.width - 220))
+                availableWidth: Math.max(170, Math.min(720, root.width / 2 - 130, root.width - right.width - 220))
                 anchors.centerIn: parent
             }
         }
     }
     NacreActiveTitle {
         anchors.centerIn: parent
-        width: Math.max(100, Math.min(650, root.width - 2 * Math.max(left.width, right.width) - 50))
+        width: Math.max(0, Math.min(650, root.width - 2 * Math.max(left.width, right.width) - 50))
         height: 30
-        visible: true
+        visible: width >= 100
         horizontal: true
         monitor: NacreBrightness.getMonitorForScreen(root.screen)
     }
@@ -310,6 +310,7 @@ Item {
                 dashboardDepth: NacreHoverIntent.dashboardDepth,
                 workspaceIds: workspaces.workspaceIds,
                 workspaceStyle: workspaces.customIcons ? "icons" : "necklace",
+                workspaceAppIcons: workspaces.iconAllocation,
                 activeWorkspace: workspaces.activeCell?.workspaceId ?? -1,
                 activeWorkspaceApps: workspaces.activeCell?.windowCount ?? 0
             });

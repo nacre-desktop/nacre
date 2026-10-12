@@ -6,13 +6,36 @@ import qs.config
 
 Item {
     id: root
-    property real availableWidth: 360
+    property real availableWidth: 640
     property bool ready: false
     property Item activeCell: null
     property var displayIds: []
     property real wheelRemainder: 0
     readonly property bool customIcons: NacreBar.workspaceIcons.some(icon => !!icon)
-    readonly property int iconLimit: Math.max(0, Math.min(3, Math.floor((availableWidth - workspaceIds.length * 34 - 26) / 20)))
+    readonly property var iconAllocation: {
+        const counts = displayIds.map(id => NacreHyprland.clients.filter(client => client.workspace?.id === id).length);
+        const base = displayIds.length * 32 + Math.max(0, displayIds.length - 1) * 2 + counts.filter(count => count > 0).length * 4;
+        const capacity = Math.max(0, Math.floor((availableWidth - base) / 20));
+        const shown = counts.map(count => Math.min(count, capacity));
+        function width() {
+            return base + shown.reduce((sum, count, index) => sum + (count + (count < counts[index] ? 1 : 0)) * 20, 0);
+        }
+        while (width() > availableWidth) {
+            let largest = -1;
+            for (let index = 0; index < shown.length; index++) {
+                if (shown[index] > 0 && (largest < 0 || shown[index] > shown[largest] || (shown[index] === shown[largest] && displayIds[largest] === NacreHyprland.activeWsId)))
+                    largest = index;
+            }
+            if (largest < 0)
+                break;
+            shown[largest]--;
+        }
+        const result = {};
+        for (let index = 0; index < displayIds.length; index++)
+            result[displayIds[index]] = shown[index];
+        return result;
+    }
+    readonly property int iconLimit: Math.max(0, ...Object.values(iconAllocation))
     readonly property bool motion: ready && visible && NacreTokens.motionEnabled
     onMotionChanged: {
         if (!motion && ready) {
@@ -85,6 +108,7 @@ Item {
     }
     Rectangle {
         objectName: "workspaceThread"
+        z: -2
         x: 16
         y: 14.5
         width: Math.max(0, beads.width - 32)
@@ -125,14 +149,14 @@ Item {
                 readonly property int windowCount: windows.length
                 readonly property bool occupied: windowCount > 0
                 readonly property bool urgent: windows.some(client => client.urgent === true)
-                readonly property var shownWindows: windows.slice(0, root.iconLimit)
+                readonly property var shownWindows: windows.slice(0, root.iconAllocation[workspaceId] ?? 0)
                 readonly property int overflow: Math.max(0, windowCount - shownWindows.length)
                 readonly property color accent: root.tint(index, workspaceId)
                 objectName: "nacreWorkspace" + workspaceId
                 function settleMotion() {
                     cellResize.complete();
                 }
-                width: root.customIcons ? 46 : 32 + (selected ? shownWindows.length * 20 + (overflow ? 26 : 0) + (windowCount ? 4 : 0) : 0)
+                width: root.customIcons ? 46 : 32 + shownWindows.length * 20 + (overflow ? 20 : 0) + (windowCount ? 4 : 0)
                 height: 30
                 radius: 15
                 color: root.customIcons && selected ? accent : pointer.hovered ? Qt.alpha(accent, .10) : "transparent"
@@ -188,6 +212,33 @@ Item {
                         root.activate(cell.workspaceId);
                     }
                 }
+                Row {
+                    x: 33
+                    objectName: "workspaceApps"
+                    visible: !root.customIcons
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 4
+                    Repeater {
+                        model: !root.customIcons ? cell.shownWindows : []
+                        NacreWorkspaceAppIcon {
+                            required property var modelData
+                            client: modelData
+                            NacreInteraction {
+                                accessibleName: "Focus " + String(parent.client?.title || parent.client?.wmClass || "window")
+                                function onClicked() {
+                                    NacreHyprland.focusWindow(parent.client?.address);
+                                }
+                            }
+                        }
+                    }
+                    NacreText {
+                        objectName: "workspaceOverflow"
+                        visible: cell.overflow > 0
+                        text: "+" + cell.overflow
+                        font.pointSize: 9
+                        color: NacreColours.palette.m3onSurface
+                    }
+                }
                 ToolTip {
                     id: tip
                     visible: pointer.hovered
@@ -210,6 +261,7 @@ Item {
     }
     NacreSurface {
         id: current
+        z: -1
         objectName: "activeWorkspaceCapsule"
         visible: !root.customIcons && !!root.activeCell
         x: root.activeCell?.x ?? 0
@@ -244,31 +296,6 @@ Item {
             occupied: true
             urgent: root.activeCell?.urgent ?? false
             accent: root.activeCell?.accent ?? NacreColours.palette.m3primary
-        }
-        Row {
-            x: 33
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 4
-            Repeater {
-                model: current.visible ? root.activeCell?.shownWindows ?? [] : []
-                NacreWorkspaceAppIcon {
-                    required property var modelData
-                    client: modelData
-                    NacreInteraction {
-                        accessibleName: "Focus " + String(parent.client?.title || parent.client?.wmClass || "window")
-                        function onClicked() {
-                            NacreHyprland.focusWindow(parent.client?.address);
-                        }
-                    }
-                }
-            }
-            NacreText {
-                objectName: "workspaceOverflow"
-                visible: (root.activeCell?.overflow ?? 0) > 0
-                text: "+" + (root.activeCell?.overflow ?? 0)
-                font.pointSize: 9
-                color: NacreColours.palette.m3onSurface
-            }
         }
     }
     MouseArea {
