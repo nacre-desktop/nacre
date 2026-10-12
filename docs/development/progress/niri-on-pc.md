@@ -22,7 +22,7 @@ belong to the separate `feature/niri-backend` task.
   The shared/Hyprland environment, profile and Hyprland configuration match their
   protected fingerprints; existing Hyprland services remain active.
 - Nine startup/observation tests, Ruff and native niri config validation pass.
-- Rebased onto prerequisite main `fa37a28`; full local gate passes 625 tests and
+- Rebased onto current main `d08e06d` (including prerequisite `fa37a28`); full local gate passes 625 tests and
   GitHub desktop CI passes (two CI skips; none locally).
 - Nested niri IPC preflight passes and leaves activation environment unchanged.
   Sent sanitized schema fields to the backend agent. This does not verify SDDM.
