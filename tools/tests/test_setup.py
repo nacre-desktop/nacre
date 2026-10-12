@@ -171,6 +171,25 @@ class PackageSetupTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 setup.distro({"arch": {}}, path)
 
+    def test_selection_retains_existing_assistant_access_preference(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            profile["aiFullAccess"] = True
+            target = home / ".config/nacre/profile.json"
+            target.parent.mkdir(parents=True)
+            target.write_text(json.dumps(profile))
+            args = setup.argparse.Namespace(
+                layout="us",
+                variant=None,
+                model=None,
+                options=None,
+                compositor="hyprland",
+                profile=None,
+                optional=[],
+            )
+            selected, _, _ = setup.selection(args, root, home, False)
+            self.assertTrue(selected["aiFullAccess"])
+
     def test_optional_component_requires_installed_package(self):
         with tempfile.TemporaryDirectory() as folder:
             root, home, _ = self.fixture(folder)
