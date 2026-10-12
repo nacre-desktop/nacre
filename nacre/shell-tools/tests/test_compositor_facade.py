@@ -32,6 +32,8 @@ class CompositorFacadeTests(unittest.TestCase):
                 "hideWindowCommand": "id",
                 "reloadConfiguration": "",
                 "reload": "",
+                "refreshState": "",
+                "createShortcut": "owner,params",
                 "logout": "",
                 "refreshToplevels": "",
                 "publishPanelRegions": "pid,regions",
@@ -107,14 +109,19 @@ TestCase {
         verify(facade.pinWindow("opaque-window"));
         verify(facade.hideWindowCommand("opaque-window"));
         verify(facade.reloadConfiguration());
-        facade.refreshWindows(); facade.reload();
+        facade.refreshWindows(); facade.refreshState();
+        verify(facade.reload());
+        verify(facade.createShortcut(facade,{appid:"fixture",name:"action"}));
         verify(facade.logout());
         verify(facade.publishPanelRegions(123,[]));
         const calls=Backend.HyprlandBackend.calls;
-        compare(calls.length,16);
+        compare(calls.length,18);
         compare(calls[0].args[0],"opaque-workspace");
         compare(calls[2].args[2],true);
         compare(calls[12].name,"refreshToplevels");
+        compare(calls[13].name,"refreshState");
+        compare(calls[14].name,"reload");
+        compare(calls[15].name,"createShortcut");
     }
 }
 """

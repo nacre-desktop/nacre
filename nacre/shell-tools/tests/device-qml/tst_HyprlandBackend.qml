@@ -251,11 +251,12 @@ TestCase {
         const config = findChild(state, "compositorConfigurationReload");
         verify(!config.running);
         const reads = Native.Hyprland.refreshes;
-        state.reload();
+        state.refreshState();
         compare(Native.Hyprland.refreshes, reads + 1);
         verify(!config.running);
-        verify(state.reloadConfiguration());
+        verify(state.reload());
         verify(config.running);
+        verify(state.reloadConfiguration());
         compare(config.command.join(" "), "hyprctl reload");
         compare(Native.Hyprland.refreshes, reads + 1);
     }
@@ -300,5 +301,72 @@ TestCase {
         writer.exited(0, 0);
         verify(writer.running);
         compare(writer.command[2], "nacre_panel_pid=42;nacre_panel_regions={}");
+    }
+    Component {
+        id: shortcutWidget
+        NacreShortcut {
+            property int presses: 0
+            property int releases: 0
+            name: "fixture-action"
+            description: "Fixture shortcut"
+            triggerDescription: "Super+A"
+            onPressed: presses++
+            onReleased: releases++
+        }
+    }
+    function test_shortcut_factory_metadata_events_replacement_and_owner_teardown() {
+        Native.ShortcutRegistry.live = [];
+        Native.ShortcutRegistry.created = 0;
+        Native.ShortcutRegistry.destroyed = 0;
+        Native.ShortcutRegistry.duplicates = 0;
+        const state = createTemporaryObject(service, test);
+        Native.Environment.compositor = state;
+        const owner = createTemporaryObject(shortcutWidget, test);
+        const adapter = owner.registration;
+        compare(Native.ShortcutRegistry.live.length, 1);
+        compare(Native.ShortcutRegistry.created, 1);
+        compare(adapter.nativeShortcut.appid, "nacre_shell");
+        compare(adapter.nativeShortcut.name, "fixture-action");
+        compare(adapter.nativeShortcut.description, "Fixture shortcut");
+        compare(adapter.nativeShortcut.triggerDescription, "Super+A");
+        compare(Object.keys(adapter.metadata()).sort().join(","), "appid,description,name,triggerDescription");
+        adapter.nativeShortcut.pressed();
+        compare(owner.presses, 1);
+        verify(owner.held);
+        adapter.nativeShortcut.released();
+        compare(owner.releases, 1);
+        verify(!owner.held);
+        owner.name = "updated-action";
+        owner.description = "Updated description";
+        owner.triggerDescription = "Super+B";
+        tryCompare(Native.ShortcutRegistry, "created", 2);
+        compare(owner.registration, adapter);
+        compare(Native.ShortcutRegistry.destroyed, 1);
+        compare(Native.ShortcutRegistry.live.length, 1);
+        compare(Native.ShortcutRegistry.duplicates, 0);
+        compare(adapter.nativeShortcut.name, "updated-action");
+        compare(adapter.nativeShortcut.description, "Updated description");
+        compare(adapter.nativeShortcut.triggerDescription, "Super+B");
+        adapter.nativeShortcut.pressed();
+        compare(owner.presses, 2);
+        verify(owner.held);
+        owner.appid = "updated-app";
+        compare(owner.releases, 2);
+        verify(!owner.held);
+        tryCompare(Native.ShortcutRegistry, "created", 3);
+        compare(adapter.nativeShortcut.appid, "updated-app");
+        adapter.nativeShortcut.pressed();
+        compare(owner.presses, 3);
+        adapter.nativeShortcut.released();
+        compare(owner.releases, 3);
+        owner.description = "Pending update before closing";
+        owner.destroy();
+        tryVerify(() => Native.ShortcutRegistry.live.length === 0);
+        compare(Native.ShortcutRegistry.created, Native.ShortcutRegistry.destroyed);
+        const creationsAfterClose = Native.ShortcutRegistry.created;
+        wait(20);
+        compare(Native.ShortcutRegistry.created, creationsAfterClose);
+        compare(Native.ShortcutRegistry.duplicates, 0);
+        Native.Environment.compositor = null;
     }
 }

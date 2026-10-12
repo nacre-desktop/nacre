@@ -110,6 +110,53 @@ class DeviceServiceTests(unittest.TestCase):
                     ROOT.parent / "shell/services/compositor/HyprlandWindow.qml",
                     target / "HyprlandWindow.qml",
                 )
+                adapter = (
+                    ROOT.parent / "shell/services/compositor/HyprlandShortcut.qml"
+                ).read_text()
+                (target / "HyprlandShortcut.qml").write_text(
+                    adapter.replace(
+                        "import Quickshell.Hyprland as Native",
+                        'import "fixtures" as Native',
+                    )
+                )
+                widget = (ROOT.parent / "shell/widgets/NacreShortcut.qml").read_text()
+                (target / "NacreShortcut.qml").write_text(
+                    widget.replace("import qs.services", 'import "fixtures"')
+                )
+                environment = fixtures / "Environment.qml"
+                environment.write_text(
+                    environment.read_text().replace(
+                        "QtObject {", "QtObject {property var compositor:null;"
+                    )
+                )
+                compositor = fixtures / "NacreCompositor.qml"
+                compositor.write_text(
+                    compositor.read_text().replace(
+                        "QtObject {",
+                        "QtObject {function createShortcut(owner,params){return Environment.compositor.createShortcut(owner,params)}",
+                    )
+                )
+                (fixtures / "ShortcutRegistry.qml").write_text("""pragma Singleton
+import QtQuick
+QtObject {
+ property var live: []; property int created:0; property int destroyed:0; property int duplicates:0;
+ function add(value){if(live.some(entry=>entry.appid===value.appid && entry.name===value.name))duplicates++;live=[...live,value];created++}
+ function remove(value){live=live.filter(entry=>entry!==value);destroyed++}
+}
+""")
+                (fixtures / "GlobalShortcut.qml").write_text("""import QtQuick
+QtObject {
+ id: root
+ property string appid:""; property string name:""; property string description:""; property string triggerDescription:"";
+ signal pressed(); signal released();
+ Component.onCompleted: ShortcutRegistry.add(root)
+ Component.onDestruction: ShortcutRegistry.remove(root)
+}
+""")
+                with (fixtures / "qmldir").open("a") as manifest:
+                    manifest.write(
+                        "\nGlobalShortcut 1.0 GlobalShortcut.qml\nsingleton ShortcutRegistry 1.0 ShortcutRegistry.qml\n"
+                    )
             if name in ("NacreApps", "NacreWallpapers"):
                 shutil.copy2(
                     ROOT.parent / "shell/services/app-search.js",

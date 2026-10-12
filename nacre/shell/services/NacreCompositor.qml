@@ -30,7 +30,13 @@ Singleton {
         refreshWindows();
     }
     function reload() {
-        backend.reload();
+        return backend.reload();
+    }
+    function refreshState() {
+        backend.refreshState();
+    }
+    function createShortcut(owner, params) {
+        return backend.createShortcut(owner, params);
     }
     function switchWorkspace(id) {
         return backend.switchWorkspace(id);

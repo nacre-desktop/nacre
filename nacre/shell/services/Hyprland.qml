@@ -11,7 +11,7 @@ Singleton {
     readonly property int activeWsId: NacreCompositor.activeWsId
     readonly property point cursorPos: NacreCompositor.cursorPos
     function reload() {
-        NacreCompositor.reload();
+        NacreCompositor.refreshState();
     }
     function refreshToplevels() {
         NacreCompositor.refreshWindows();
