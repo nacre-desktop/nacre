@@ -28,6 +28,18 @@ MASTER = next(
 GEOMETRY = MASTER
 VIEWBOX = "2.8 3 58 58"
 NS = "{http://www.w3.org/2000/svg}"
+APPLICATIONS = ("ai", "brain", "settings", "colors", "notifications")
+
+
+def asset_names():
+    for application in ("", *APPLICATIONS):
+        stem = "nacre" + ("-" + application if application else "")
+        prefix = application + "-" if application else ""
+        for variant in ("full", "compact", "symbolic"):
+            yield (
+                prefix + variant,
+                stem + ("-" + variant if variant != "full" else "") + ".svg",
+            )
 
 
 def templates():
@@ -60,7 +72,7 @@ def templates():
     )
     full = re.sub(r'viewBox="[^"]+"', f'viewBox="{VIEWBOX}"', original, count=1)
     values = {"full": full, "compact": compact, "symbolic": symbolic}
-    for application in ("ai", "brain", "settings", "colors"):
+    for application in APPLICATIONS:
         label = (HERE / (application + "-label.svg.in")).read_text()
         for variant in ("full", "compact", "symbolic"):
             suffix = label
@@ -197,7 +209,7 @@ def cached_png(text, home, size=512):
 
 def prepare(colors, home):
     """Prepare art without publishing app icons or changing any live consumer."""
-    for variant in ("full", "ai-full", "brain-full", "settings-full", "colors-full"):
+    for variant in ("full", *(app + "-full" for app in APPLICATIONS)):
         cached_png(svg(False, colors, variant), home)
     for variant in ("symbolic", "ai-symbolic"):
         cached_png(templates()[variant].replace("currentColor", "#ffffff"), home, 96)
@@ -307,50 +319,21 @@ def publish(colors, home=None):
     # Kitty composites alpha over its own background, including opacity effects.
     # Baking a palette surface into the image produces a visible square.
     atomic(folder / "nacre.png", raw)
-    for application in ("ai", "brain", "settings", "colors"):
+    for application in APPLICATIONS:
         raw = cached_png(render(application + "-full"), home)
         atomic(folder / ("nacre-" + application + ".png"), raw)
-    for variant, name in [
-        ("full", "nacre.svg"),
-        ("compact", "nacre-compact.svg"),
-        ("symbolic", "nacre-symbolic.svg"),
-        ("ai-full", "nacre-ai.svg"),
-        ("ai-compact", "nacre-ai-compact.svg"),
-        ("ai-symbolic", "nacre-ai-symbolic.svg"),
-        ("brain-full", "nacre-brain.svg"),
-        ("brain-compact", "nacre-brain-compact.svg"),
-        ("brain-symbolic", "nacre-brain-symbolic.svg"),
-        ("settings-full", "nacre-settings.svg"),
-        ("settings-compact", "nacre-settings-compact.svg"),
-        ("settings-symbolic", "nacre-settings-symbolic.svg"),
-        ("colors-full", "nacre-colors.svg"),
-        ("colors-compact", "nacre-colors-compact.svg"),
-        ("colors-symbolic", "nacre-colors-symbolic.svg"),
-    ]:
+    for variant, name in asset_names():
         atomic(folder / name, render(variant).encode())
     atomic(folder / "nacre-text.txt", text_logo(home=home).encode())
     atomic(folder / "nacre-ai-text.txt", text_logo("ai-symbolic", home).encode())
 
-    atomic(
-        home / ".local/share/icons/hicolor/scalable/apps/nacre.svg",
-        render("full").encode(),
-    )
-    atomic(
-        home / ".local/share/icons/hicolor/scalable/apps/nacre-ai.svg",
-        render("ai-full").encode(),
-    )
-    atomic(
-        home / ".local/share/icons/hicolor/scalable/apps/nacre-brain.svg",
-        render("brain-full").encode(),
-    )
-    atomic(
-        home / ".local/share/icons/hicolor/scalable/apps/nacre-colors.svg",
-        render("colors-full").encode(),
-    )
-    atomic(
-        home / ".local/share/icons/hicolor/scalable/apps/nacre-settings.svg",
-        render("settings-full").encode(),
-    )
+    for application in ("", *APPLICATIONS):
+        name = "nacre" + ("-" + application if application else "")
+        variant = application + "-full" if application else "full"
+        atomic(
+            home / ".local/share/icons/hicolor/scalable/apps" / (name + ".svg"),
+            render(variant).encode(),
+        )
     # Already-open old menus read the previous filename; it contains the new art.
     for legacy, current in [
         ("sh.png", "nacre.png"),
@@ -377,57 +360,17 @@ def build():
         raise RuntimeError("Regenerating QML branding requires qmlformat")
     root = HERE.parent
     values = templates()
-    for variant, name in [
-        ("full", "nacre.svg"),
-        ("compact", "nacre-compact.svg"),
-        ("symbolic", "nacre-symbolic.svg"),
-        ("ai-full", "nacre-ai.svg"),
-        ("ai-compact", "nacre-ai-compact.svg"),
-        ("ai-symbolic", "nacre-ai-symbolic.svg"),
-        ("brain-full", "nacre-brain.svg"),
-        ("brain-compact", "nacre-brain-compact.svg"),
-        ("brain-symbolic", "nacre-brain-symbolic.svg"),
-        ("settings-full", "nacre-settings.svg"),
-        ("settings-compact", "nacre-settings-compact.svg"),
-        ("settings-symbolic", "nacre-settings-symbolic.svg"),
-        ("colors-full", "nacre-colors.svg"),
-        ("colors-compact", "nacre-colors-compact.svg"),
-        ("colors-symbolic", "nacre-colors-symbolic.svg"),
-    ]:
+    for variant, name in asset_names():
         (root / "shell/branding" / name).write_text(values[variant])
     (root / "shell/branding/nacre-text.txt").write_text(text_logo())
     helper = (HERE / "logo-data.js.in").read_text()
-    data = (
-        ".pragma library\nvar fullTemplate="
-        + json.dumps(values["full"])
-        + ";\nvar compactTemplate="
-        + json.dumps(values["compact"])
-        + ";\n"
-        + "var aiFullTemplate="
-        + json.dumps(values["ai-full"])
-        + ";\nvar aiCompactTemplate="
-        + json.dumps(values["ai-compact"])
-        + ";\n"
-        + "var brainFullTemplate="
-        + json.dumps(values["brain-full"])
-        + ";\n"
-        + "var brainCompactTemplate="
-        + json.dumps(values["brain-compact"])
-        + ";\n"
-        + "var settingsFullTemplate="
-        + json.dumps(values["settings-full"])
-        + ";\n"
-        + "var settingsCompactTemplate="
-        + json.dumps(values["settings-compact"])
-        + ";\n"
-        + "var colorsFullTemplate="
-        + json.dumps(values["colors-full"])
-        + ";\n"
-        + "var colorsCompactTemplate="
-        + json.dumps(values["colors-compact"])
-        + ";\n"
-        + helper
-    )
+    data = ".pragma library\n"
+    for application in ("", *APPLICATIONS):
+        for variant in ("full", "compact"):
+            name = application + variant.capitalize() if application else variant
+            key = application + "-" + variant if application else variant
+            data += "var " + name + "Template=" + json.dumps(values[key]) + ";\n"
+    data += helper
     for target in [root / "shell/branding/LogoData.js", root / "login/LogoData.js"]:
         target.write_text(data)
     common = (HERE / "logo-widget.qml.in").read_text()

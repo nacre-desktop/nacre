@@ -47,6 +47,19 @@ TestCase {
             modelData: data
         });
     }
+    function test_owned_notifications_use_the_brand_mark() {
+        const view = makeCard();
+        view.modelData.appIcon = "nacre";
+        verify(view.nacreNotification);
+        const logo = findChild(view, "noticeBrandLogo");
+        verify(logo.notifications);
+        verify(logo.visible);
+        verify(!findChild(view, "noticeAppIcon").visible);
+        view.modelData.appIcon = "nacre-notifications";
+        verify(view.nacreNotification);
+        view.modelData.appIcon = "discord";
+        verify(!view.nacreNotification);
+    }
     function test_text_bounds_expand_and_plain_text() {
         const view = makeCard();
         view.modelData.summary = "A long summary with words ".repeat(20);

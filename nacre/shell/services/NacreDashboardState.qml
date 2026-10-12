@@ -100,7 +100,7 @@ Singleton {
             return;
         noticePending = false;
         noticeFallback.stop();
-        Quickshell.execDetached(["notify-send", "--app-name=Nacre Focus", "Focus complete", "Take a moment to rest."]);
+        Quickshell.execDetached(["notify-send", "--app-name=Nacre Focus", "--icon=nacre-notifications", "Focus complete", "Take a moment to rest."]);
     }
     function failed(message) {
         root.message = message;

@@ -67,7 +67,16 @@ def destination(workspace):
 def notify(summary):
     try:
         subprocess.run(
-            ["notify-send", "-t", "2000", summary],
+            [
+                "notify-send",
+                "-a",
+                "Nacre Windows",
+                "-i",
+                "nacre-notifications",
+                "-t",
+                "2000",
+                summary,
+            ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             timeout=2,

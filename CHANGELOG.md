@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+Nacre system notifications use a palette-aware shell-and-bell mark. Third-party
+apps retain their own icons, and the mark is reusable in future panel headers.
+
 Use MIT-licensed Orient 0.1.0-dev.3. Nacre remains GPL-3.0-only; palette and template
 behavior are unchanged.
 

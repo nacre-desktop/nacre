@@ -135,7 +135,7 @@ class SettingsUITests(unittest.TestCase):
                 "import QtQuick\nQtObject {property var objects:[]}"
             )
             (target / "fixtures/BrandLogo.qml").write_text(
-                "import QtQuick\nItem {property bool settings:false;implicitWidth:26;implicitHeight:26}"
+                "import QtQuick\nItem {property bool settings:false;property bool notifications:false;property color background:Qt.rgba(0,0,0,1);implicitWidth:26;implicitHeight:26}"
             )
             (target / "fixtures/NacreIcon.qml").write_text("import QtQuick\nText {}")
             with (target / "fixtures/qmldir").open("a") as manifest:

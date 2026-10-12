@@ -20,7 +20,7 @@ class ScreenshotTests(unittest.TestCase):
             shot.notify("Saved")
         command = run.call_args.args[0]
         self.assertEqual(command[command.index("-a") + 1], "Nacre Capture")
-        self.assertEqual(command[command.index("-i") + 1], "nacre")
+        self.assertEqual(command[command.index("-i") + 1], "nacre-notifications")
 
     def test_cancelled_selection_never_captures_or_clears_clipboard(self):
         for result in (

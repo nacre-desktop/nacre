@@ -38,6 +38,9 @@ class NotificationUITests(unittest.TestCase):
                 (fixtures / (name + ".qml")).write_text(
                     source.replace("import qs.services", 'import "."')
                 )
+            (fixtures / "BrandLogo.qml").write_text(
+                'import QtQuick\nItem {property bool notifications:false;property color background:"black"}'
+            )
             (fixtures / "NacreIcon.qml").write_text("import QtQuick\nText {}")
             (fixtures / "NacreNotifications.qml").write_text(
                 (SHELL / "config/NacreNotifications.qml").read_text()
@@ -47,7 +50,7 @@ class NotificationUITests(unittest.TestCase):
             )
             with (fixtures / "qmldir").open("a") as output:
                 output.write(
-                    "\nNacreIcon 1.0 NacreIcon.qml\nsingleton NacreNotifications 1.0 NacreNotifications.qml\nsingleton NacreNotifs 1.0 NacreNotifs.qml\n"
+                    "\nBrandLogo 1.0 BrandLogo.qml\nNacreIcon 1.0 NacreIcon.qml\nsingleton NacreNotifications 1.0 NacreNotifications.qml\nsingleton NacreNotifs 1.0 NacreNotifs.qml\n"
                 )
             shutil.copy2(
                 ROOT / "tests/notification-qml/tst_notifications.qml",

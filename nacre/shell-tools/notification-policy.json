@@ -1,5 +1,30 @@
 {
-  "feedbackApps": ["notify-send", "window-trash", "nacre os", "grimblast", "nacre_shell-cli", ""],
-  "feedbackSummaries": ["Screenshot", "Screenshot saved", "Screenshot copied", "Window moved to trash", "Window restored from trash", "No active window to trash", "Window is already in trash", "Window hidden", "Window restored", "Window restored to current workspace", "No hidden windows to restore", "No active window to hide", "No hidden windows"],
-  "feedbackPatterns": ["^Restored [0-9]+ window\\(s\\)$"]
+  "feedbackApps": [
+    "notify-send",
+    "window-trash",
+    "nacre os",
+    "grimblast",
+    "nacre_shell-cli",
+    "",
+    "nacre windows",
+    "nacre capture"
+  ],
+  "feedbackSummaries": [
+    "Screenshot",
+    "Screenshot saved",
+    "Screenshot copied",
+    "Window moved to trash",
+    "Window restored from trash",
+    "No active window to trash",
+    "Window is already in trash",
+    "Window hidden",
+    "Window restored",
+    "Window restored to current workspace",
+    "No hidden windows to restore",
+    "No active window to hide",
+    "No hidden windows"
+  ],
+  "feedbackPatterns": [
+    "^Restored [0-9]+ window\\(s\\)$"
+  ]
 }

@@ -7,6 +7,8 @@ import qs.config
 NacreSurface {
     id: root
     required property var modelData
+    readonly property string iconName: String(modelData.appIcon || "").split("/").pop().replace(/\.(svg|png)$/i, "")
+    readonly property bool nacreNotification: iconName === "nacre" || iconName === "nacre-notifications"
     property bool history: false
     property bool expanded: false
     property real dragOffset: 0
@@ -104,20 +106,24 @@ NacreSurface {
             height: 30
             Image {
                 id: appIcon
+                objectName: "noticeAppIcon"
                 width: 28
                 height: 28
                 anchors.verticalCenter: parent.verticalCenter
-                source: root.modelData.appIcon.startsWith("/") ? "file://" + root.modelData.appIcon : Quickshell.iconPath(root.modelData.appIcon, true)
+                source: root.nacreNotification ? "" : root.modelData.appIcon.startsWith("/") ? "file://" + root.modelData.appIcon : Quickshell.iconPath(root.modelData.appIcon, true)
                 asynchronous: true
                 sourceSize.width: 28
                 sourceSize.height: 28
-                visible: status === Image.Ready
+                visible: status === Image.Ready && !root.nacreNotification
             }
-            NacreIcon {
-                anchors.centerIn: appIcon
-                text: "notifications"
-                visible: appIcon.status !== Image.Ready
-                font.pointSize: 17
+            Loader {
+                anchors.fill: appIcon
+                active: root.nacreNotification || appIcon.status !== Image.Ready
+                sourceComponent: BrandLogo {
+                    objectName: "noticeBrandLogo"
+                    notifications: true
+                    background: root.color
+                }
             }
             Column {
                 x: 38

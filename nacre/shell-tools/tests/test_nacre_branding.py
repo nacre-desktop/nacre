@@ -133,19 +133,20 @@ class NacreBrandingTests(unittest.TestCase):
         ] + [True]
         with tempfile.TemporaryDirectory() as folder:
             script = Path(folder) / "binding.js"
-            for ai, brain, variant in [
-                (False, False, "compact"),
-                (True, False, "ai-compact"),
-                (False, True, "brain-compact"),
-            ]:
-                script.write_text(
-                    source
-                    + "\nprocess.stdout.write(colored(..."
-                    + json.dumps([*args, ai, brain])
-                    + "));"
-                )
-                result = subprocess.check_output([*command, str(script)], text=True)
-                self.assertEqual(result, brand.svg(False, colors, variant))
+            for application in ("", *brand.APPLICATIONS):
+                for compact in (True, False):
+                    variant = (application + "-" if application else "") + (
+                        "compact" if compact else "full"
+                    )
+                    flags = [application == app for app in brand.APPLICATIONS]
+                    script.write_text(
+                        source
+                        + "\nprocess.stdout.write(colored(..."
+                        + json.dumps([*args[:-1], compact, *flags])
+                        + "));"
+                    )
+                    result = subprocess.check_output([*command, str(script)], text=True)
+                    self.assertEqual(result, brand.svg(False, colors, variant))
 
     def test_ai_mark_adds_only_role_colored_letters_under_the_right_lip(self):
         regular = ET.fromstring(brand.templates()["compact"])
