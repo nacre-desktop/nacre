@@ -31,8 +31,22 @@ def links(root, profile):
         ".local/share/nacre/thunar-style": Path("/usr/lib/nacre/thunar-style"),
         ".config/quickshell/nacre": root / "nacre/shell",
     }
+    for name in ("nacre-shell", "nacre-session-watch", "nacre-power-key"):
+        values[
+            f".config/systemd/user/graphical-session.target.wants/{name}.service"
+        ] = Path(f"../{name}.service")
+    values[".config/systemd/user/graphical-session.target.wants/hypridle.service"] = (
+        Path("/usr/lib/systemd/user/hypridle.service")
+    )
     if "brain" in profile["components"]:
         values[".local/share/nacre/brain"] = root / "brain"
+        values[
+            ".config/systemd/user/graphical-session.target.wants/nacre-brain.service"
+        ] = Path("../nacre-brain.service")
+        for name in ("check", "sync"):
+            values[
+                f".config/systemd/user/timers.target.wants/nacre-brain-{name}.timer"
+            ] = Path(f"../nacre-brain-{name}.timer")
     if "ai" in profile["components"]:
         values[".local/share/nacre/ai/application"] = root / "runtime/ai"
     return {Path(key): value for key, value in values.items()}

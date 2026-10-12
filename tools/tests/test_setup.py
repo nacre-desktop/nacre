@@ -176,3 +176,45 @@ class PackageSetupTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(RuntimeError, "Install nacre-brain"):
                 setup.selection(args, root, home, False)
+
+
+class ArchPackageLayoutTests(unittest.TestCase):
+    def test_split_packages_have_no_file_collisions_and_ship_native_artifacts(self):
+        stage = load(TOOLS.parent / "packaging/arch/stage.py", "test_arch_stage")
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            build = base / "build"
+            build.mkdir()
+            (build / "revision").write_text("fixture")
+            (build / "defaults").mkdir()
+            (build / "fonts").mkdir()
+            for name in (
+                "dolphin-style/styles/libnacre-dolphin.so",
+                "thunar-style/nacre-thunar-theme.so",
+            ):
+                path = build / "native" / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("fixture compiled bytes")
+            owned = set()
+            for component in ("core", "ai", "brain"):
+                destination = base / component
+                stage.stage(TOOLS.parent, destination, component, build)
+                files = {
+                    p.relative_to(destination)
+                    for p in destination.rglob("*")
+                    if p.is_file() or p.is_symlink()
+                }
+                self.assertFalse(
+                    owned & files, f"Split file collision: {owned & files}"
+                )
+                self.assertTrue(all(path.parts[0] == "usr" for path in files))
+                owned |= files
+            self.assertIn(
+                Path("usr/lib/nacre/dolphin-style/styles/libnacre-dolphin.so"), owned
+            )
+            self.assertIn(
+                Path("usr/lib/nacre/thunar-style/nacre-thunar-theme.so"), owned
+            )
+            self.assertNotIn(Path("usr/bin/orient"), owned)
+            self.assertIn(Path("usr/bin/nacre"), owned)
+            self.assertIn(Path("usr/share/nacre/brain/templates/AGENTS.md"), owned)
