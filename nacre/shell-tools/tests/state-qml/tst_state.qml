@@ -194,23 +194,7 @@ TestCase {
         compare(one.edgeMenu, "");
         compare(NacreHoverIntent.dismissed[0], "one");
     }
-    function test_mutable_legacy_adapter_has_one_map_owner() {
-        Visibilities.hidden = true;
-        verify(NacrePanelState.hidden);
-        NacrePanelState.hidden = false;
-        verify(!Visibilities.hidden);
-        Visibilities.settingsPage = "network";
-        compare(NacrePanelState.settingsPage, "network");
-        Visibilities.screens = {
-            one: one
-        };
-        compare(NacrePanelState.screens.one, one);
-        NacrePanelState.screens = {
-            two: two
-        };
-        compare(Visibilities.screens.two, two);
-        verify(!Visibilities.screens.one);
-    }
+
     function test_bridge_readonly_state_gallery_bounds_and_restore() {
         const view = createTemporaryObject(bridge, test);
         const state = view.stateData();

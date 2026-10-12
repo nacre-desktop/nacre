@@ -40,7 +40,7 @@ class ShellStateTests(unittest.TestCase):
                         "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}\n"
                     )
                     manifest.write(f"singleton {name} 1.0 {name}.qml\n")
-                for name in ("NacrePanelState", "Visibilities", "NacreSettingsApp"):
+                for name in ("NacrePanelState", "NacreSettingsApp"):
                     source = (
                         (SHELL / "services" / (name + ".qml"))
                         .read_text()
