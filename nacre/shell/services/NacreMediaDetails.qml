@@ -48,28 +48,28 @@ Singleton {
         else
             loadedKey = "";
     }
-    Process {
+    NacreHelperTask {
         id: details
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (root.requestedKey !== root.trackKey)
-                    return;
-                try {
-                    const data = JSON.parse(text);
-                    root.lines = data.lines || [];
-                    const colors = {};
-                    for (const key of ["surface", "onSurface", "primary", "secondary", "tertiary"]) {
-                        const value = data.palette?.[key];
-                        if (typeof value === "string" && /^#?[0-9a-fA-F]{6}$/.test(value))
-                            colors[key] = value.startsWith("#") ? value : "#" + value;
-                    }
-                    root.palette = Object.keys(colors).length === 5 ? colors : {};
-                    root.plain = data.plain || "";
-                    root.message = data.lyricsMessage || "";
-                    root.loadedKey = root.requestedKey;
-                } catch (error) {
-                    root.message = "Media details unavailable";
+        onOutput: text => {
+            if (root.requestedKey !== root.trackKey)
+                return;
+            try {
+                const data = JSON.parse(text);
+                if (data.error)
+                    throw new Error();
+                root.lines = data.lines || [];
+                const colors = {};
+                for (const key of ["surface", "onSurface", "primary", "secondary", "tertiary"]) {
+                    const value = data.palette?.[key];
+                    if (typeof value === "string" && /^#?[0-9a-fA-F]{6}$/.test(value))
+                        colors[key] = value.startsWith("#") ? value : "#" + value;
                 }
+                root.palette = Object.keys(colors).length === 5 ? colors : {};
+                root.plain = data.plain || "";
+                root.message = data.lyricsMessage || "";
+                root.loadedKey = root.requestedKey;
+            } catch (error) {
+                root.message = "Media details unavailable";
             }
         }
         onExited: if (root.requestedKey !== root.trackKey)

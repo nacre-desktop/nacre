@@ -77,13 +77,11 @@ Singleton {
         interval: 200
         onTriggered: root.refresh()
     }
-    Process {
+    NacreHelperTask {
         id: reader
         objectName: "networkReader"
         command: ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/network-state.py"]
-        stdout: StdioCollector {
-            onStreamFinished: root.publish(text)
-        }
+        onOutput: text => root.publish(text)
         onExited: (exitCode, exitStatus) => {
             if ((!root.received || exitCode !== 0) && !root.error)
                 root.error = "Wi-Fi refresh failed. The last available state is still shown.";
