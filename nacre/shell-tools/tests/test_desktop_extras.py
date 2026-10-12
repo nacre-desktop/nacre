@@ -97,6 +97,31 @@ class DesktopExtrasTests(unittest.TestCase):
             extras.clip_action("pin", "7")
             self.assertEqual(json.loads((Path(folder) / "pins.json").read_text()), [])
 
+    def test_rebound_actions_and_tenth_workspace_have_correct_labels(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            folder = home / ".config/hypr/conf"
+            folder.mkdir(parents=True)
+            (folder / "map.lua").write_text(
+                'hl.bind("SUPER + A",hl.dsp.exec_cmd("~/.local/bin/nacre-shell launcher"),{description="Nacre:launcher"})\nhl.bind("SUPER + F1",hl.dsp.exec_cmd("~/.local/bin/nacre-menu learn.shortcuts"),{description="Nacre:shortcuts"})'
+            )
+            native = [
+                dict(key="A", modmask=64, dispatcher="__lua"),
+                dict(key="F1", modmask=64, dispatcher="__lua"),
+                dict(key="0", modmask=64, dispatcher="__lua"),
+            ]
+            with (
+                patch.object(extras, "HOME", home),
+                patch.object(extras.compositor, "query", return_value=native),
+            ):
+                rows = extras.bindings()
+            labels = {row["key"]: row for row in rows}
+            self.assertEqual(labels["SUPER+A"]["description"], "Find an application")
+            help_row = labels["SUPER+F1"]
+            self.assertEqual(help_row["menu"], "learn.shortcuts")
+            self.assertEqual(help_row["description"], "Keyboard shortcuts")
+            self.assertEqual(labels["SUPER+0"]["description"], "Go to workspace 10")
+
     def test_generated_shortcut_guide_keeps_actions_and_submap_labels(self):
         import shutil
 

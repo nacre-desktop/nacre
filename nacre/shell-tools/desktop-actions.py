@@ -78,7 +78,7 @@ def action(name, value=""):
         "lock": ["loginctl", "lock-session"],
         "power": [str(HOME / ".local/bin/nacre-shell"), "session"],
         "files": [str(HOME / ".local/bin/nacre-app"), "files"],
-        "terminal": ["kitty"],
+        "terminal": [str(HOME / ".local/bin/nacre-app"), "terminal"],
         "tasks": [
             "kitty",
             "--class",

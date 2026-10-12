@@ -241,11 +241,19 @@ dofile(arg[1]);dofile(arg[2])
             check=True,
         )
         rows = dict(line.split("\t") for line in result.stdout.splitlines())
-        self.assertEqual(rows["SUPER + A"], "Nacre:launcher")
-        self.assertEqual(rows["SUPER + SHIFT + F"], "Nacre:files")
-        self.assertEqual(rows["SUPER + CTRL + B"], "Nacre:ai-sidebar")
+        self.assertEqual(rows["SUPER + SPACE"], "Nacre:launcher")
+        self.assertEqual(rows["SUPER + E"], "Nacre:files")
+        self.assertEqual(rows["SUPER + A"], "Nacre:ai-sidebar")
         self.assertEqual(rows["SUPER + CTRL + D"], "Nacre:detach-panel")
         self.assertEqual(rows["SUPER + 7"], "Nacre:workspace")
+
+    def test_tenth_workspace_has_a_readable_label(self):
+        native = [
+            dict(key=str(n), modmask=64, description="Nacre:workspace")
+            for n in range(10)
+        ]
+        rows = {row["id"]: row for row in welcome.shortcut_rows(native)}
+        self.assertEqual(rows["workspace"]["key"], "Super + 1–9, 0 (workspace 10)")
 
     def test_deployment_and_login_owner_are_declared(self):
         mapping = configure.files(ROOT)
