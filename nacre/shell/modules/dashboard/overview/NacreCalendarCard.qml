@@ -49,7 +49,8 @@ NacreOverviewCard {
                 text: NacreI18n.dayName(((root.firstWeekday + index) % 7) || 7, Locale.ShortFormat)
                 font.pointSize: 10
                 horizontalAlignment: Text.AlignHCenter
-                elide: Text.ElideRight
+                fontSizeMode: Text.Fit
+                minimumPointSize: 6
                 color: NacreColours.palette.m3onSurfaceVariant
             }
         }
