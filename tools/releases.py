@@ -491,6 +491,14 @@ def package_plan(repo, profile):
     original = configure.selected_profile
     configure.selected_profile = lambda root=repo: profile
     try:
+        collisions = set(configure.files(repo)) & set(
+            package_runtime.links(repo, profile)
+        )
+        if collisions:
+            raise RuntimeError(
+                "Package declares both file and runtime link: "
+                + str(sorted(collisions)[0])
+            )
         changed, links, _ = configure.plan(HOME, repo)
         if links:
             raise RuntimeError(

@@ -199,11 +199,6 @@ def stage(root, destination, component, build):
             root / "brain/brain.service",
             deploy / ".config/systemd/user/nacre-brain.service",
         )
-        copy(
-            root / "brain/brain.service",
-            deploy
-            / ".config/systemd/user/graphical-session.target.wants/nacre-brain.service",
-        )
         for source in (root / "ai/systemd").glob("nacre-brain-*"):
             copy(source, deploy / ".config/systemd/user" / source.name)
         copy(

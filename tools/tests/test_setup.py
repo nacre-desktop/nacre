@@ -208,6 +208,7 @@ class ArchPackageLayoutTests(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("fixture compiled bytes")
             owned = set()
+            deployment_owned = set()
             for component in ("core", "ai", "brain"):
                 destination = base / component
                 stage.stage(TOOLS.parent, destination, component, build)
@@ -223,7 +224,19 @@ class ArchPackageLayoutTests(unittest.TestCase):
                 for path in destination.rglob("*"):
                     if path.is_file() and not path.is_symlink():
                         self.assertEqual(path.stat().st_mode & 0o044, 0o044, str(path))
+                deployment = destination / "usr/share/nacre/deployment" / component
+                deployment_owned |= {
+                    p.relative_to(deployment)
+                    for p in deployment.rglob("*")
+                    if p.is_file()
+                }
                 owned |= files
+            self.assertFalse(
+                deployment_owned
+                & set(
+                    package_runtime.links(TOOLS.parent, {"components": ["ai", "brain"]})
+                )
+            )
             self.assertIn(
                 Path("usr/lib/nacre/dolphin-style/styles/libnacre-dolphin.so"), owned
             )
