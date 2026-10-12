@@ -449,7 +449,7 @@ Item {
         }
     }
     IpcHandler {
-        target: "leftDrawer-" + root.screen.name
+        target: root.detached ? "leftDrawerWindow" + root.visibilities.windowKey : "leftDrawer-" + root.screen.name
         function section(name: string): void {
             if (["chat", "chats", "brain", "settings"].includes(name))
                 root.section = name;
