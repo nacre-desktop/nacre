@@ -190,6 +190,23 @@ class PackageSetupTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 setup.distro({"arch": {}}, path)
 
+    def test_terminal_optional_choice_can_override_with_flag(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, _ = self.fixture(folder)
+            args = setup.argparse.Namespace(
+                layout="us",
+                variant="",
+                model="",
+                options="",
+                compositor="hyprland",
+                profile="installed",
+                optional=["ai"],
+            )
+            with patch.object(setup, "ask", side_effect=["no", "no"]) as ask:
+                selected, _, _ = setup.selection(args, root, home, True)
+            self.assertEqual(ask.call_args_list[0].args[1], "yes")
+            self.assertNotIn("ai", selected["components"])
+
     def test_selection_retains_existing_assistant_access_preference(self):
         with tempfile.TemporaryDirectory() as folder:
             root, home, profile = self.fixture(folder)

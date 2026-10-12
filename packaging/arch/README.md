@@ -68,7 +68,11 @@ wrappers, runtime references, service units and `nacre status`. Repeat setup,
 change a seeded palette and confirm it remains unchanged; create a conflicting
 managed edit and confirm setup refuses it. Verify rollback and injected apply
 failure through tests. Check that gcc, npm and Ruff are absent from the runtime
-root. Cold-login graphical validation needs a VM/Wayland session and is a
+root. The reproducible all-component smoke test is
+`python /path/to/packaging/arch/test-installed.py`, copied into the runtime root
+and run as a fresh `nacre-package-test*` user. It refuses existing Nacre config
+or credential directories. Test the terminal wizard through a real TTY too;
+confirm cancellation creates no configuration, then confirm apply. Cold-login graphical validation needs a VM/Wayland session and is a
 separate gate; headless configuration success is not proof of desktop rendering.
 
 ## AUR publishing — maintainer action only
@@ -95,3 +99,23 @@ fresh-user/desktop checks pass:
 
 Repository hosting/signing and AUR account setup are outside this task; never
 copy another account's authentication to publish.
+
+## Namcap diagnostic review
+
+The runtime packages must have no unresolved errors. Script/config-launched
+programs can be reported as unused dependencies; retain dependencies evidenced
+by the installed entry points, Lua config and subprocess calls. Quickshell's
+`qs.*` modules are local config imports, and Python helpers under the shared
+`tools`/`shell-tools` directories use explicit local import paths. These are
+not missing distro packages. The Orient imports and CLI are covered by an
+installed-package smoke test.
+
+`claude_agent_sdk` and `fastembed` belong to optional, separately provisioned
+provider/semantic runtimes; package setup does not install providers/models.
+Do not silence a genuinely required dependency as an optional feature.
+
+With Arch's default debug option, makepkg also emits `nacre-debug`. Namcap can
+flag its build-ID symlinks to native modules shipped in `nacre`, because those
+runtime files are outside the debug archive. Verify both packages installed
+together and resolve every link in the combined root. The three runtime
+packages are the user installation path; keep Arch's debug generation enabled.

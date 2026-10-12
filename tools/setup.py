@@ -108,11 +108,14 @@ def selection(args, root, home, interactive):
     optional = list(args.optional)
     if interactive:
         for name in ("ai", "brain"):
-            default = "yes" if name in profile["components"] else "no"
+            default = (
+                "yes" if name in profile["components"] or name in optional else "no"
+            )
             enabled = ask("Enable optional " + name, default).lower()
             if enabled not in ("yes", "no", "y", "n"):
                 raise ValueError("Answer yes or no")
             profile["components"] = [c for c in profile["components"] if c != name]
+            optional = [value for value in optional if value != name]
             if enabled in ("yes", "y"):
                 optional.append(name)
     profile["components"] = list(
