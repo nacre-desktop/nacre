@@ -31,6 +31,11 @@ def main(argv=None, service=None):
         raise ValueError("A desktop command is required")
     command, *args = args
     service = compositor() if service is None else service
+    if command == "valid-window-id":
+        return 0 if service.valid_window_id(args[0]) else 1
+    if command == "window-job-token":
+        print(service.window_job_token(args[0]))
+        return 0
     if command == "query":
         print(json.dumps(service.query(args[0], timeout=5)))
     elif command == "focus-workspace":
@@ -90,7 +95,7 @@ def main(argv=None, service=None):
 
 if __name__ == "__main__":
     try:
-        main()
+        raise SystemExit(main())
     except (IndexError, ValueError, RuntimeError, OSError) as error:
         print(str(error), file=sys.stderr)
         raise SystemExit(2) from error

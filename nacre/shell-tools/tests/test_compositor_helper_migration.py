@@ -183,3 +183,26 @@ class HelperCompositorMigrationTests(unittest.TestCase):
             isolate.main()
         query.assert_called_once_with("windows", timeout=None)
         migrate.assert_not_called()
+
+    def test_maintenance_version_source_comes_from_the_selected_backend(self):
+        maintenance = load("maintenance")
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch.object(maintenance, "HOME", Path(directory)),
+            patch.object(maintenance, "STATE", Path(directory)),
+            patch.object(
+                maintenance.compositor, "backend_display_name", "Example compositor"
+            ),
+            patch.object(
+                maintenance.compositor,
+                "version_command",
+                return_value=["example", "--version"],
+            ) as command,
+            patch.object(maintenance.compositor, "config_errors", return_value=""),
+            patch.object(maintenance, "run", return_value="version data"),
+            patch.object(maintenance, "service_health", return_value=({}, {})),
+        ):
+            self.assertEqual(
+                maintenance.state()["versions"]["Example compositor"], "version data"
+            )
+        command.assert_called_once_with()

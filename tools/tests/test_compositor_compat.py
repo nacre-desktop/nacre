@@ -147,3 +147,20 @@ class CompositorCompatibilityTests(unittest.TestCase):
             self.assertNotIn("hl.dispatch", source)
             self.assertNotIn("hyprctl ", source)
             self.assertIn("compositor query", source)
+
+    def test_shell_record_filter_uses_backend_validation_for_opaque_ids(self):
+        service = Mock()
+        service.valid_window_id.return_value = True
+        self.assertEqual(compat.main(["valid-window-id", "window-42"], service), 0)
+        service.valid_window_id.assert_called_once_with("window-42")
+        service.valid_window_id.return_value = False
+        self.assertEqual(compat.main(["valid-window-id", "unknown"], service), 1)
+
+    def test_window_timer_token_encoding_is_backend_owned(self):
+        service = Mock()
+        service.window_job_token.return_value = "legacy-token"
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertEqual(compat.main(["window-job-token", "window-42"], service), 0)
+        self.assertEqual(output.getvalue(), "legacy-token\n")
+        service.window_job_token.assert_called_once_with("window-42")

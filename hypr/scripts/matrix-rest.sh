@@ -75,8 +75,8 @@ setsid -f kitty \
         )"
 
         if [[ -n "$address" && "$address" != "null" ]]; then
-            compositor focus-window "address:$address" >/dev/null 2>&1 || true
-            compositor fullscreen fullscreen "address:$address" >/dev/null 2>&1 || true
+            compositor focus-window "$address" >/dev/null 2>&1 || true
+            compositor fullscreen fullscreen "$address" >/dev/null 2>&1 || true
             break
         fi
 

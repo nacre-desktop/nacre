@@ -17,19 +17,19 @@ notify() {
 }
 
 dispatch_close() {
-    compositor close-window "address:$1"
+    compositor close-window "$1"
 }
 
 dispatch_kill() {
-    compositor kill-window "address:$1"
+    compositor kill-window "$1"
 }
 
 dispatch_move() {
-    compositor move-window "$2" "address:$1" false
+    compositor move-window "$2" "$1" false
 }
 
 dispatch_focus() {
-    compositor focus-window "address:$1"
+    compositor focus-window "$1"
 }
 
 state_file() {
@@ -140,8 +140,10 @@ purge_expired() {
     local file address
 
     shopt -s nullglob
-    for file in "$STATE_DIR"/0x*; do
+    for file in "$STATE_DIR"/*; do
+        [[ -f "$file" && ! -L "$file" ]] || continue
         address="${file##*/}"
+        compositor valid-window-id "$address" || continue
         expire_window "$address"
     done
     shopt -u nullglob
@@ -150,7 +152,9 @@ purge_expired() {
 schedule_expiry() {
     local address="$1"
     local trashed_at="$2"
-    local unit="hypr-trash-${address#0x}-${trashed_at}"
+    local token
+    token="$(compositor window-job-token "$address")"
+    local unit="hypr-trash-${token}-${trashed_at}"
 
     if command -v systemd-run >/dev/null 2>&1; then
         systemd-run --user --quiet --collect --unit "$unit" \
@@ -195,8 +199,10 @@ trashed_windows_by_age() {
     local file address
 
     shopt -s nullglob
-    for file in "$STATE_DIR"/0x*; do
+    for file in "$STATE_DIR"/*; do
+        [[ -f "$file" && ! -L "$file" ]] || continue
         address="${file##*/}"
+        compositor valid-window-id "$address" || continue
         load_state "$address" || continue
         client_is_trashed "$address" || continue
         printf '%s\t%s\n' "${trashed_at:-0}" "$address"

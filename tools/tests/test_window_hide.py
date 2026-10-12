@@ -176,6 +176,34 @@ class WindowHideTests(unittest.TestCase):
 
     def test_invalid_address_does_not_reach_the_service(self):
         with patch.object(hide, "compositor") as service:
+            service.return_value.valid_window_id.return_value = False
             with self.assertRaises(ValueError):
                 hide.dispatch("focus", "0x123;bad")
-            service.assert_not_called()
+            service.return_value.valid_window_id.assert_called_once_with("0x123;bad")
+            service.return_value.focus_window.assert_not_called()
+
+    def test_backend_owned_ids_can_be_opaque_without_changing_hide_records(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                patch.object(hide, "compositor") as service,
+                patch.object(hide, "query", return_value=client("window-42", 3)),
+                patch.object(hide, "dispatch") as dispatch,
+                patch.object(hide, "notify"),
+            ):
+                service.return_value.valid_window_id.side_effect = lambda value: (
+                    value == "window-42"
+                )
+                hide.action("hide", directory)
+            self.assertEqual((Path(directory) / "window-42").read_text(), "3\n")
+            dispatch.assert_called_once_with(
+                "window.move", "window-42", workspace="special:hidden", follow=False
+            )
+        with patch.object(hide, "compositor") as service:
+            service.return_value.valid_window_id.return_value = True
+            service.return_value.focus_window.return_value = (
+                subprocess.CompletedProcess([], 0, "ok")
+            )
+            hide.dispatch("focus", "window-42")
+        service.return_value.focus_window.assert_called_once_with(
+            "window-42", timeout=5
+        )
