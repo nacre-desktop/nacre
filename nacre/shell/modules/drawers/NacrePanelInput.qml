@@ -184,6 +184,11 @@ Item {
                         height: r.height
                     })),
             dashboard: dashboardRect,
+            notifications: {
+                visible: panels.notifications?.visible ?? false,
+                suppressed: panels.notifications?.suppressed ?? false,
+                rect: notificationRect
+            },
             left: leftRect,
             osd: osdRect,
             launcher: launcherRect,

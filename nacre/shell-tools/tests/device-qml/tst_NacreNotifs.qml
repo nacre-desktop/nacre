@@ -180,6 +180,14 @@ TestCase {
                 dashboard: true
             }
         };
+        verify(!state.suppressed);
+        verify(entry.hovered);
+        verify(!entry.deadline.running);
+        NacrePanelState.screens = {
+            test: {
+                session: true
+            }
+        };
         verify(!entry.hovered);
         verify(entry.deadline.running);
         NacrePanelState.screens = {};
