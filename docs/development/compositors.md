@@ -200,8 +200,12 @@ notification/clipboard ownership must remain isolated. Inherited application
 launch commands still target installed app/controller scripts; helper overrides
 alone do not make those application bindings source-isolated. Source acceptance
 can test facade/shortcut IPC directly; full application-bind acceptance needs the
-PC/packaging agent's matching isolated runtime. No installed-script rewrite or
-session file edit is performed by the generator.
+PC/packaging agent's matching isolated runtime. Generated `spawn-sh` bindings
+inherit **niri's** environment, not the shell's. For generated-key testing, set
+these overrides before the PC agent starts the isolated nested niri process;
+exporting them only before launching Quickshell tests direct facade/IPC calls,
+not the environment of an already-running compositor. No installed-script rewrite
+or session file edit is performed by the generator.
 
 `compositor_config.supported_backends()`, `backend_capabilities(name)`,
 `render(contract, backend=...)`, `render_keyboard(values, backend=...)` and

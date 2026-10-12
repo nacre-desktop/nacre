@@ -52,6 +52,15 @@
   login/phase-2 UI acceptance is deferred; no session change is needed for this
   task's fixture/CI completion criteria and no live Wayland claim is made.
 
+- Complete check on `ec7730c` passed 647 tests plus lint/format/native-source,
+  boundary, immutable Hyprland registrations and generated outputs. Native KDL
+  validator and real Quickshell fake-socket integration passed locally.
+- Main advanced to `4ee5346` with the approved Orient dev5 pin and panel
+  hide/docking fixes during validation; rebase and final checks/CI are next.
+- Source generated-key overrides must be inherited by the nested niri process
+  itself. Starting only Quickshell with those exports tests direct IPC, not keys.
+  Documentation now distinguishes these paths and keeps app-bind limitations clear.
+
 ## Next
 
 4. Push each tested milestone; give the PC agent an exact revision for live checks.
