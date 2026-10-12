@@ -31,7 +31,7 @@ NacreOverviewCard {
         },
         {
             icon: "timer",
-            text: Overview.uptime(uptimeSeconds),
+            text: Overview.uptime(uptimeSeconds, NacreI18n.tr),
             action: "system"
         }
     ].concat(updateCount >= 0 ? [

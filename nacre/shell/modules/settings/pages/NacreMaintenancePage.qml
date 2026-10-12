@@ -90,7 +90,12 @@ NacreSettingsPage {
             width: parent.width
             text: NacreI18n.tr("ui.maintenance-page.text.session-value0-update-cache-value1", "Session: {value0} · Update cache: {value1}", {
                 value0: (root.state.session?.event || NacreI18n.tr("ui.maintenance-page.text.not-recorded", "Not recorded")),
-                value1: (root.state.updatesAgeSeconds === null || root.state.updatesAgeSeconds === undefined ? NacreI18n.tr("ui.maintenance-page.text.not-recorded-ea80f8", "not recorded") : Math.floor(root.state.updatesAgeSeconds / 60) + NacreI18n.tr("ui.maintenance-page.text.minutes-old", " minutes old"))
+                value1: (root.state.updatesAgeSeconds === null || root.state.updatesAgeSeconds === undefined ? NacreI18n.tr("ui.maintenance-page.text.not-recorded-ea80f8", "not recorded") : NacreI18n.tr("maintenance.cache.age", {
+                        one: "{count} minutes old",
+                        other: "{count} minutes old"
+                    }, {
+                        count: Math.floor(root.state.updatesAgeSeconds / 60)
+                    }))
             })
             font.pointSize: 10
             color: NacreTokens.mutedInk

@@ -48,7 +48,7 @@ NacreSettingsPage {
                 }
                 NacreText {
                     width: parent.width
-                    text: (parent.modelData.connected ? NacreI18n.tr("ui.bluetooth-page.text.connected", "Connected") : parent.modelData.paired ? NacreI18n.tr("ui.bluetooth-page.text.paired", "Paired") : NacreI18n.tr("ui.bluetooth-page.text.not-paired", "Not paired")) + (parent.modelData.trusted ? NacreI18n.tr("ui.bluetooth-page.text.trusted", " · Trusted") : "")
+                    text: parent.modelData.connected ? (parent.modelData.trusted ? NacreI18n.tr("bluetooth.status.connected-trusted", "Connected · Trusted") : NacreI18n.tr("ui.bluetooth-page.text.connected", "Connected")) : parent.modelData.paired ? (parent.modelData.trusted ? NacreI18n.tr("bluetooth.status.paired-trusted", "Paired · Trusted") : NacreI18n.tr("ui.bluetooth-page.text.paired", "Paired")) : parent.modelData.trusted ? NacreI18n.tr("bluetooth.status.not-paired-trusted", "Not paired · Trusted") : NacreI18n.tr("ui.bluetooth-page.text.not-paired", "Not paired")
                     font.pointSize: 10
                     color: NacreTokens.mutedInk
                 }

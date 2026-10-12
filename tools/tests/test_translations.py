@@ -121,6 +121,24 @@ class CoverageTests(unittest.TestCase):
             self.assertEqual(settings.validate("language", "pseudo"), "pseudo")
         self.assertNotIn("language", settings.PRESET_KEYS)
 
+    def test_indirect_messages_and_rendering_factories_are_covered(self):
+        for source in (
+            'Item {readonly property string estimate: "Battery unavailable"}',
+            'result.reason = "Optional tool is not installed";',
+            'valueRow(route, "choice", "New choice", "operation", "value", "icon", "Choice detail")',
+            'el("span", "New caption", "class-name")',
+            'button("New action", callback)',
+            'element.textContent = "New content";',
+        ):
+            with self.subTest(source=source):
+                self.assertTrue(list(uncovered(source)))
+        self.assertEqual(
+            list(
+                uncovered('el("span", tr("test.message", "Translated"), "class-name")')
+            ),
+            [],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

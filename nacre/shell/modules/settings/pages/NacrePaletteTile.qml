@@ -62,7 +62,9 @@ NacreSurface {
         }
     }
     NacreInteraction {
-        accessibleName: (root.entry.name || NacreI18n.tr("ui.palette-tile.accessibleName.color-palette", "Color palette")) + (root.selected ? NacreI18n.tr("ui.palette-tile.accessibleName.in-use", ", in use") : "")
+        accessibleName: root.selected ? NacreI18n.tr("palette.tile.selected", "{name}, in use", {
+            name: root.entry.name ? NacreI18n.option("palette-name", root.entry.name) : NacreI18n.tr("ui.palette-tile.accessibleName.color-palette", "Color palette")
+        }) : root.entry.name ? NacreI18n.option("palette-name", root.entry.name) : NacreI18n.tr("ui.palette-tile.accessibleName.color-palette", "Color palette")
         function onClicked() {
             root.choose();
         }
