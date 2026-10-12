@@ -2,6 +2,7 @@
 """Shell-owned, bounded JSON-lines RPC for explicitly supported helper operations."""
 
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
 import importlib.util
 import json
 import os
@@ -164,7 +165,18 @@ def serve(input_stream=None, output_stream=None, helpers=None):
             slots.release()
 
     send({"ready": True, "version": 1})
-    with ThreadPoolExecutor(max_workers=4, thread_name_prefix="nacre-helper") as pool:
+    # One serial lane per supported helper prevents lock-waiting requests for a
+    # busy tool from occupying the workers needed by independent helpers. Pools
+    # start threads lazily; the shared pending semaphore still bounds all lanes.
+    with ExitStack() as lifetime:
+        pools = {
+            name: lifetime.enter_context(
+                ThreadPoolExecutor(
+                    max_workers=1, thread_name_prefix="nacre-helper-" + name
+                )
+            )
+            for name in sorted(TOOLS)
+        }
         while line := input_stream.readline(MAX_REQUEST + 1):
             if len(line) > MAX_REQUEST:
                 send({"fatal": "Helper request is too large"})
@@ -189,7 +201,7 @@ def serve(input_stream=None, output_stream=None, helpers=None):
                         )
                         continue
                     active.add(request["id"])
-                pool.submit(execute, request)
+                pools[request["tool"]].submit(execute, request)
             except (ValueError, TypeError, UnicodeError, RecursionError) as error:
                 send(
                     {
