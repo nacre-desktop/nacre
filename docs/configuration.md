@@ -1,10 +1,16 @@
 # Configuration and personal profiles
 
-Nacre's default profile has seven numbered workspaces, no startup apps and no
+Nacre's default profile has five workspaces shown as pearls, no startup apps and no
 application-to-workspace assignments. A profile can supply workspace labels/icons,
 startup command argument arrays, window routes and optional app workspace choices.
 See `profiles/default.json` for the format. Profiles have `version:1` and are
 validated before installation. Supply one with `./install.sh --profile PATH`.
+
+Pearls run left to right from workspace 1. The current workspace is larger and
+brighter; occupied workspaces have a smaller colored pearl. Hover for its number
+and window count. Extra occupied or active workspaces remain visible, so lowering
+the configured count never hides your open windows. Custom workspace icons are
+still supported in profiles.
 
 Settings stores your desktop preferences under `~/.config/nacre`. Generated palettes,
 wallpaper metadata and caches stay local. Private monitor, palette, desktop,
