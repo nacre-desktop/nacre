@@ -37,7 +37,12 @@ Item {
     }
     function moved(item, position) {
         const drag = NacrePearls.drag;
-        return drag?.host === item ? Qt.point(position.x + drag.dx, position.y + drag.dy) : position;
+        return drag?.host === item ? Qt.point(drag.body.x - screen.x - x + drag.dx, drag.body.y - screen.y - y + drag.dy) : position;
+    }
+    function sensorPosition(item, position) {
+        const drag = NacrePearls.drag;
+        const sensor = drag?.sensorBody || drag?.body;
+        return drag?.host === item ? Qt.point(sensor.x - screen.x - x, sensor.y - screen.y - y) : position;
     }
     // Keep the actual popup alive during the native-window handoff.
     readonly property var movingPanel: NacrePearls.drag?.screen === screen.name ? NacrePearls.drag.host : null
@@ -97,6 +102,13 @@ Item {
         x: root.moved(left, root.leftPosition).x
         y: root.moved(left, root.leftPosition).y
         NacrePanelDrag {
+            // The sensor stays on the screen while its live panel moves.
+            parent: root
+            x: root.sensorPosition(left, root.leftPosition).x
+            y: root.sensorPosition(left, root.leftPosition).y
+            width: left.width
+            height: left.height
+            z: 20
             kind: "ai"
             host: left
             screen: root.screen
@@ -126,6 +138,13 @@ Item {
         x: root.moved(osd, root.osdPosition).x
         y: root.moved(osd, root.osdPosition).y
         NacrePanelDrag {
+            // The sensor stays on the screen while its live panel moves.
+            parent: root
+            x: root.sensorPosition(osd, root.osdPosition).x
+            y: root.sensorPosition(osd, root.osdPosition).y
+            width: osd.width
+            height: osd.height
+            z: 20
             kind: "controls"
             host: osd
             screen: root.screen
@@ -160,6 +179,13 @@ Item {
         x: root.moved(dashboard, root.dashboardPosition).x
         y: root.moved(dashboard, root.dashboardPosition).y
         NacrePanelDrag {
+            // The sensor stays on the screen while its live panel moves.
+            parent: root
+            x: root.sensorPosition(dashboard, root.dashboardPosition).x
+            y: root.sensorPosition(dashboard, root.dashboardPosition).y
+            width: dashboard.width
+            height: dashboard.height
+            z: 20
             kind: "dashboard"
             host: dashboard
             screen: root.screen
@@ -202,6 +228,13 @@ Item {
         x: root.moved(launcher, root.launcherPosition).x
         y: root.moved(launcher, root.launcherPosition).y
         NacrePanelDrag {
+            // The sensor stays on the screen while its live panel moves.
+            parent: root
+            x: root.sensorPosition(launcher, root.launcherPosition).x
+            y: root.sensorPosition(launcher, root.launcherPosition).y
+            width: launcher.width
+            height: launcher.height
+            z: 20
             kind: "launcher"
             host: launcher
             screen: root.screen

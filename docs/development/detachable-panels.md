@@ -22,7 +22,10 @@ Elsewhere it dispatches normal Hyprland window movement. Geometry is published o
 panel changes; no subprocess or IPC executes inside the pointer callback.
 
 A Qt DragHandler reserves Super and moves the original live item within its existing
-layer surface. Its footprint is excluded from the joined frame while lifted. On
+layer surface. The sensor is a stationary sibling, not a child of the moving panel;
+its press geometry is frozen so translations never feed back through parent movement.
+Opening motion finishes before capturing body dimensions. At handoff the old view is
+suppressed rather than replaying its closing animation at the edge. Its footprint is excluded from the joined frame while lifted. On
 release, an ordinary window is created with the same body dimensions and exact
 logical coordinates; its 40-pixel header extends above the body. The original stays
 painted until placement completes and the destination has had two frame intervals

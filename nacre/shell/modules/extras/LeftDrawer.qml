@@ -11,6 +11,13 @@ Item {
     property var chat: NacreAiViews.edge
     required property PersistentProperties visibilities
     required property ShellScreen screen
+    function prepareLift() {
+        edgeOpening.complete();
+    }
+    property bool handoffHidden: false
+    opacity: handoffHidden ? 0 : 1
+    onEnabledChanged: if (enabled)
+        handoffHidden = false
     property bool detached: false
     property bool hostActive: true
     property bool captureOpen: false
@@ -23,6 +30,7 @@ Item {
     Behavior on implicitWidth {
         enabled: !root.detached
         NumberAnimation {
+            id: edgeOpening
             duration: NacreAppearance.anim.durations.normal
             easing.type: Easing.InOutCubic
         }

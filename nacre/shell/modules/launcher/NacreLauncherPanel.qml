@@ -9,6 +9,13 @@ Item {
     id: root
     required property PersistentProperties visibilities
     property string screenName: ""
+    function prepareLift() {
+        edgeOpening.complete();
+    }
+    property bool handoffHidden: false
+    opacity: handoffHidden ? 0 : 1
+    onEnabledChanged: if (enabled)
+        handoffHidden = false
     property bool detached: false
     property bool closeAfterLaunch: false
     property var menuContext: NacreMenu
@@ -126,6 +133,7 @@ Item {
 
     Behavior on presentedHeight {
         NumberAnimation {
+            id: edgeOpening
             duration: NacreTokens.motionEnabled ? 300 : 0
             easing.type: Easing.OutCubic
         }

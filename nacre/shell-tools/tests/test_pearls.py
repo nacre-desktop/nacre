@@ -81,7 +81,7 @@ import QtQuick
 QtObject {
  property bool enabled:true;property var drag:null;property int starts:0;property int finishes:0;property real dx:0
  function begin(kind,host,name,p){starts++;drag={host:host,start:p}}
- function update(p){dx=p.x-drag.start.x}
+ function update(p){dx=p.x-drag.start.x;drag.host.x=dx}
  function finish(){finishes++;drag=null}
  function cancel(){drag=null}
 }""")
@@ -98,14 +98,14 @@ TestCase {
  name:"SuperPanelLift";width:400;height:300;visible:true;when:windowShown
  Item {id:panel;width:350;height:250
   MouseArea {anchors.fill:parent;onPressed:mouse=>mouse.accepted=true}
-  NacrePanelDrag {kind:"ai";host:panel;screen:({name:"test",x:0,y:0})}
+  NacrePanelDrag {id:sensor;parent:panel.parent;x:0;y:0;width:350;height:250;kind:"ai";host:panel;screen:({name:"test",x:0,y:0})}
  }
  function test_reserved_drag_and_plain_click(){
-  mouseDrag(panel,20,20,100,0,Qt.LeftButton,Qt.NoModifier);compare(NacrePearls.starts,0);
-  mouseDrag(panel,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);
-  compare(NacrePearls.starts,1);compare(NacrePearls.finishes,1);verify(NacrePearls.dx>64);
+  mouseDrag(sensor,20,20,100,0,Qt.LeftButton,Qt.NoModifier);compare(NacrePearls.starts,0);
+  mouseDrag(sensor,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);
+  compare(NacrePearls.starts,1);compare(NacrePearls.finishes,1);compare(NacrePearls.dx,100);compare(panel.x,100);panel.x=0;
   DesktopSettings.data={dragPanels:false};
-  mouseDrag(panel,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);compare(NacrePearls.starts,1);
+  mouseDrag(sensor,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);compare(NacrePearls.starts,1);
  }
 }""")
             result = subprocess.run(

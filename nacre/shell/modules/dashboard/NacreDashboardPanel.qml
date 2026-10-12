@@ -8,6 +8,13 @@ NacreSurface {
     id: root
     required property PersistentProperties visibilities
     property string screenName: ""
+    function prepareLift() {
+        edgeOpening.complete();
+    }
+    property bool handoffHidden: false
+    opacity: handoffHidden ? 0 : 1
+    onEnabledChanged: if (enabled)
+        handoffHidden = false
     property bool detached: false
     property bool hostActive: true
     readonly property real viewportWidth: parent?.width ?? 1200
@@ -149,6 +156,7 @@ NacreSurface {
     }
     Behavior on presentedHeight {
         NumberAnimation {
+            id: edgeOpening
             duration: NacreTokens.motionEnabled ? 360 : 0
             easing.type: Easing.InOutCubic
         }
