@@ -27,10 +27,18 @@ class PackageSetupTests(unittest.TestCase):
         home.mkdir()
         (root / "nacre/shell-tools").mkdir(parents=True)
         (root / "tools").mkdir()
-        for name in ("profile-policy.py",):
+        for name in ("profile-policy.py", "compositor_config.py"):
             (root / "nacre/shell-tools" / name).write_bytes(
                 (TOOLS.parent / "nacre/shell-tools" / name).read_bytes()
             )
+        backend = root / "nacre/shell-tools/compositor_backends"
+        backend.mkdir()
+        (backend / "hyprland_config.py").write_bytes(
+            (
+                TOOLS.parent
+                / "nacre/shell-tools/compositor_backends/hyprland_config.py"
+            ).read_bytes()
+        )
         (root / "tools/configure.py").write_bytes((TOOLS / "configure.py").read_bytes())
         (root / "package.json.installed").write_text(
             json.dumps(
