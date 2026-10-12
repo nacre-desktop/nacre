@@ -14,6 +14,10 @@ TestCase {
         NacreWorkspaceRow {}
     }
     Component {
+        id: symbolIcon
+        NacreWorkspaceAppIcon {}
+    }
+    Component {
         id: header
         NacreHeader {
             width: 1920
@@ -54,6 +58,65 @@ TestCase {
         verify(!view.activate(8));
         verify(!view.activate(NaN));
         compare(NacreHyprland.requests.length, 1);
+    }
+    function test_symbol_classification_and_pearls_only_toggle() {
+        for (const sample of [
+            {
+                name: "kitty",
+                glyph: "terminal"
+            },
+            {
+                name: "firefox",
+                glyph: "language"
+            },
+            {
+                name: "discord",
+                glyph: "forum"
+            },
+            {
+                name: "nacre-ai-dashboard",
+                glyph: "neurology"
+            },
+            {
+                name: "nacre-brain",
+                glyph: "psychology"
+            },
+            {
+                name: "nacre-settings",
+                glyph: "tune"
+            },
+            {
+                name: "editor",
+                glyph: "code"
+            }
+        ]) {
+            const icon = createTemporaryObject(symbolIcon, test, {
+                client: {
+                    wmClass: sample.name
+                }
+            });
+            compare(icon.symbol, sample.glyph);
+        }
+        const view = createTemporaryObject(row, test);
+        NacreHyprland.clients = [
+            {
+                workspace: {
+                    id: 2
+                },
+                wmClass: "kitty"
+            }
+        ];
+        tryVerify(() => view.activeCell?.windowCount === 1);
+        verify(view.showWindowHints);
+        DesktopSettings.data = {
+            workspaceWindowHints: false
+        };
+        tryVerify(() => !view.showWindowHints);
+        compare(view.activeCell.shownWindows.length, 0);
+        compare(view.activeCell.overflow, 0);
+        tryCompare(view.activeCell, "width", 32);
+        verify(!findChild(view.activeCell, "workspaceApps").visible);
+        verify(findChild(view, "activeWorkspacePearl").visible);
     }
     function test_pearls_keep_extra_windows_accessible_and_follow_active_workspace() {
         const view = createTemporaryObject(row, test);

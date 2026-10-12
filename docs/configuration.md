@@ -8,7 +8,7 @@ validated before installation. Supply one with `./install.sh --profile PATH`.
 
 Pearls run left to right from workspace 1, connected by a fine palette-colored
 thread. Empty workspaces are hollow rings; occupied ones have filled pearls.
-Open-window icons stay visible beside every occupied workspace, including those
+Small window-category symbols stay visible beside every occupied workspace, including those
 you are not currently using. The glossy pearl and its highlight slide to the active
 group. Click any icon to focus its window. When space is tight, groups show an
 overflow count while keeping the other bar controls clear. Hover for workspace numbers,
@@ -16,6 +16,9 @@ window counts and titles, or scroll over the necklace to switch workspaces.
 Attention requests get a tertiary-colored ring; its pulse respects reduced motion.
 Extra occupied or active workspaces remain visible, so lowering the configured
 count never hides your open windows. Custom workspace icons are still supported.
+
+For a quieter pearls-only bar, turn off **Show window symbols** in
+**Settings → Appearance → Workspace bar**. Hover still shows window counts and titles.
 
 Settings stores your desktop preferences under `~/.config/nacre`. Generated palettes,
 wallpaper metadata and caches stay local. Private monitor, palette, desktop,

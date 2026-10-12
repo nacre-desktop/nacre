@@ -11,14 +11,21 @@ Item {
     property Item activeCell: null
     property var displayIds: []
     property real wheelRemainder: 0
+    readonly property bool showWindowHints: DesktopSettings.data.workspaceWindowHints !== false
     readonly property bool customIcons: NacreBar.workspaceIcons.some(icon => !!icon)
     readonly property var iconAllocation: {
+        if (!showWindowHints) {
+            const empty = {};
+            for (const id of displayIds)
+                empty[id] = 0;
+            return empty;
+        }
         const counts = displayIds.map(id => NacreHyprland.clients.filter(client => client.workspace?.id === id).length);
         const base = displayIds.length * 32 + Math.max(0, displayIds.length - 1) * 2 + counts.filter(count => count > 0).length * 4;
-        const capacity = Math.max(0, Math.floor((availableWidth - base) / 20));
+        const capacity = Math.max(0, Math.floor((availableWidth - base) / 18));
         const shown = counts.map(count => Math.min(count, capacity));
         function width() {
-            return base + shown.reduce((sum, count, index) => sum + (count + (count < counts[index] ? 1 : 0)) * 20, 0);
+            return base + shown.reduce((sum, count, index) => sum + count * 18 + (count < counts[index] ? 20 : 0), 0);
         }
         while (width() > availableWidth) {
             let largest = -1;
@@ -150,13 +157,13 @@ Item {
                 readonly property bool occupied: windowCount > 0
                 readonly property bool urgent: windows.some(client => client.urgent === true)
                 readonly property var shownWindows: windows.slice(0, root.iconAllocation[workspaceId] ?? 0)
-                readonly property int overflow: Math.max(0, windowCount - shownWindows.length)
+                readonly property int overflow: root.showWindowHints ? Math.max(0, windowCount - shownWindows.length) : 0
                 readonly property color accent: root.tint(index, workspaceId)
                 objectName: "nacreWorkspace" + workspaceId
                 function settleMotion() {
                     cellResize.complete();
                 }
-                width: root.customIcons ? 46 : 32 + shownWindows.length * 20 + (overflow ? 20 : 0) + (windowCount ? 4 : 0)
+                width: root.customIcons ? 46 : 32 + shownWindows.length * 18 + (overflow ? 20 : 0) + (windowCount && root.showWindowHints ? 4 : 0)
                 height: 30
                 radius: 15
                 color: root.customIcons && selected ? accent : pointer.hovered ? Qt.alpha(accent, .10) : "transparent"
@@ -215,14 +222,15 @@ Item {
                 Row {
                     x: 33
                     objectName: "workspaceApps"
-                    visible: !root.customIcons
+                    visible: !root.customIcons && root.showWindowHints
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 4
+                    spacing: 3
                     Repeater {
                         model: !root.customIcons ? cell.shownWindows : []
                         NacreWorkspaceAppIcon {
                             required property var modelData
                             client: modelData
+                            color: cell.selected ? NacreColours.palette.m3onSurface : NacreColours.palette.m3onSurfaceVariant
                             NacreInteraction {
                                 accessibleName: "Focus " + String(parent.client?.title || parent.client?.wmClass || "window")
                                 function onClicked() {

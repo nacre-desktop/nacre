@@ -311,6 +311,7 @@ Item {
                 workspaceIds: workspaces.workspaceIds,
                 workspaceStyle: workspaces.customIcons ? "icons" : "necklace",
                 workspaceAppIcons: workspaces.iconAllocation,
+                workspaceWindowHints: workspaces.showWindowHints ? "symbols" : "none",
                 activeWorkspace: workspaces.activeCell?.workspaceId ?? -1,
                 activeWorkspaceApps: workspaces.activeCell?.windowCount ?? 0
             });
