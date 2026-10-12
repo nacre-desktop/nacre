@@ -78,7 +78,7 @@ check() {{
 
 package_nacre() {{
   depends={array(core)}
-  optdepends=('nacre-ai: optional assistant workspace' 'nacre-brain: optional private Markdown knowledge library')
+  optdepends={array(mapping["core_optional"])}
   cd "$srcdir/nacre"
   python -m installer --destdir="$pkgdir" nacre/shell-cli/dist/*.whl
   python packaging/arch/stage.py "$PWD" "$pkgdir" core "$srcdir/artifacts"
@@ -86,16 +86,18 @@ package_nacre() {{
 
 package_nacre-ai() {{
   pkgdesc='Optional assistant workspace (no bundled providers or accounts)'
+  arch=('any')
   depends={array(["nacre=$pkgver", *mapping["ai"]]).replace("'nacre=$pkgver'", '"nacre=$pkgver"')}
-  optdepends=('nacre-brain: private knowledge helpers')
+  optdepends={array(mapping["ai_optional"])}
   cd "$srcdir/nacre"
   python packaging/arch/stage.py "$PWD" "$pkgdir" ai "$srcdir/artifacts"
 }}
 
 package_nacre-brain() {{
   pkgdesc='Optional private Markdown knowledge library'
+  arch=('any')
   depends={array(["nacre=$pkgver", *mapping["brain"]]).replace("'nacre=$pkgver'", '"nacre=$pkgver"')}
-  optdepends=('chromium: app-window browser for Brain' 'obsidian: alternate Markdown vault editor')
+  optdepends={array(mapping["brain_optional"])}
   cd "$srcdir/nacre"
   python packaging/arch/stage.py "$PWD" "$pkgdir" brain "$srcdir/artifacts"
 }}
