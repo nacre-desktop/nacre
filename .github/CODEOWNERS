@@ -1,0 +1,20 @@
+# Default ownership also catches newly introduced privileged paths.
+* @Siverteh
+
+# Sensitive automation, installation/configuration and permissions.
+/.github/ @Siverteh
+/install.sh @Siverteh
+/tools/ @Siverteh
+/bin/ @Siverteh
+/ai/ @Siverteh
+/brain/ @Siverteh
+/nacre/shell-tools/install*.py @Siverteh
+/nacre/shell-tools/provision.py @Siverteh
+/nacre/shell-tools/qt-check.sh @Siverteh
+/nacre/shell-tools/updates* @Siverteh
+/nacre/shell-tools/menu-backend.py @Siverteh
+/nacre/shell-tools/profile-policy.py @Siverteh
+/nacre/shell-tools/workflow-profiles.py @Siverteh
+/dependencies.lock.json @Siverteh
+/package*.json @Siverteh
+/.gitmodules @Siverteh

@@ -1,5 +1,8 @@
 # Contributing
 
+Start with [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution policy, reporting
+channels and PR expectations. This guide covers development tools and releases.
+
 General desktop changes belong in Nacre. Color analysis and palette generation
 belong in [Orient](https://github.com/nacre-desktop/orient). Keep user configuration
 and account data out of source changes. Make small, focused changes and describe
@@ -16,18 +19,24 @@ sudo pacman -S --needed ruff lua fish qt6-declarative gcc pkgconf gtk3 \
   kconfig kcolorscheme breeze nodejs npm
 ```
 
-Use Python 3.13 or newer. Initialize the engine submodule and formatting tools:
+Use Python 3.13 or newer. Initialize the engine submodule and create an isolated
+check environment rather than activating development code in your daily session:
 
 ```sh
 git submodule update --init --recursive
 npm ci --ignore-scripts
-python3 nacre/shell-tools/provision.py
+python3 -m venv .venv
+.venv/bin/python -m pip install ./deps/orient ./nacre/shell-cli ruff==0.16.10 pillow==12.3.0
 ```
+
+The Pillow version above matches `dependencies.lock.json`; update this example
+when that pin changes. Run `provision.py` only in the separate test account when
+validating live installation: it activates the palette runtime for that user.
 
 ## Check a change
 
 ```sh
-python3 tools/check.py
+PATH="$PWD/.venv/bin:$PATH" python tools/check.py
 ./install.sh --profile default --prepare /tmp/nacre-test-install
 ```
 
@@ -35,7 +44,8 @@ The source check covers Python lint/format, shell/Lua syntax, native Qt/QML,
 JavaScript formatting and regression tests. CI installs the pinned Pillow version
 from `dependencies.lock.json`; Orient itself supports a range for library users.
 
-Use an empty staging directory or a separate test user for installation work.
+Stage installation work in an empty directory before applying it in a separate
+test account.
 Test source changes before a live update. A normal desktop update should preserve
 accounts, notes and busy assistant workers. Full graphical login, hardware devices,
 lock/resume and performance need real-session checks in addition to unit tests.
