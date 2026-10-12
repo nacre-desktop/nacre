@@ -18,7 +18,7 @@ NacreWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     visible: !NacreHoverIntent.fullscreenFor(outputName) || inputController.modal
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.keyboardFocus: inputController.modal ? WlrKeyboardFocus.Exclusive : (flags.left || flags.osd || flags.dashboard || flags.launcher) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: NacrePanelState.hidden ? WlrKeyboardFocus.None : inputController.modal ? WlrKeyboardFocus.Exclusive : (flags.left || flags.osd || flags.dashboard || flags.launcher) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     readonly property string dragRegions: NacrePanelDragRouting.regions
     property string registeredName: ""
     PersistentProperties {
