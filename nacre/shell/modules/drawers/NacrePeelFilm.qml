@@ -8,10 +8,52 @@ import qs.services
 Item {
     id: root
     required property var host
-    readonly property var gesture: NacrePearls.drag?.screen === host.screen.name ? NacrePearls.drag : null
+    property var releasedFilm: null
+    readonly property var liveGesture: NacrePearls.drag?.screen === host.screen.name ? NacrePearls.drag : null
+    readonly property var gesture: liveGesture || releasedFilm
+    property real breakOpacity: 1
     readonly property real distance: gesture ? Math.hypot(gesture.dx, gesture.dy) : 0
-    visible: !!gesture && !gesture.released && distance > 1 && distance < 90 && NacreTokens.motionEnabled
-    opacity: Math.max(0, 1 - Math.pow(distance / 90, 2))
+    visible: !!gesture && distance > 1 && stretch < .995 && NacreTokens.motionEnabled
+    property real stretch: Math.min(1, distance / 170)
+    Behavior on stretch {
+        enabled: !!root.gesture && NacreTokens.motionEnabled
+        NumberAnimation {
+            id: stretching
+            duration: 120
+            easing.type: Easing.OutCubic
+        }
+    }
+    opacity: breakOpacity * Math.max(0, 1 - stretch * stretch)
+    Connections {
+        target: NacrePearls
+        function onDragChanged() {
+            if (root.liveGesture?.released && !breakMotion.running) {
+                root.releasedFilm = root.liveGesture;
+                breakMotion.start();
+                filmExpiry.restart();
+            } else if (!root.gesture) {
+                breakMotion.stop();
+                stretching.complete();
+                root.breakOpacity = 1;
+            }
+        }
+    }
+    Timer {
+        id: filmExpiry
+        interval: 190
+        onTriggered: {
+            root.releasedFilm = null;
+            root.breakOpacity = 1;
+        }
+    }
+    NumberAnimation {
+        id: breakMotion
+        target: root
+        property: "breakOpacity"
+        to: 0
+        duration: 180
+        easing.type: Easing.OutCubic
+    }
     readonly property bool vertical: ["top", "bottom"].includes(NacrePearls.edge(gesture?.kind))
     readonly property point origin: {
         if (!gesture)
@@ -28,7 +70,7 @@ Item {
         const endAlong = vertical ? end.x : end.y;
         const endAcross = vertical ? end.y : end.x;
         const span = vertical ? 68 : 52;
-        const neck = Math.max(3, span * (1 - distance / 90));
+        const neck = Math.max(3, span * (1 - stretch));
         const delta = endAcross - startAcross;
         function point(along, across) {
             return vertical ? along + " " + across : across + " " + along;

@@ -3,6 +3,8 @@ import QtQuick
 import QtQuick.Window
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland as Native
+import "../modules/pearls/geometry.js" as Geometry
 import qs.modules.pearls as Pearl
 
 Singleton {
@@ -14,6 +16,7 @@ Singleton {
     property var entries: []
     property var views: []
     property var drag: null
+    property var nativeDrag: null
     property var lastGesture: ({})
     property string error: ""
     readonly property bool enabled: DesktopSettings.data.detachablePanels !== false
@@ -32,6 +35,40 @@ Singleton {
             property var chat: null
             property var window: null
             property var providerView: null
+        }
+    }
+    function nativeGesture(payload) {
+        const match = /^nacre_pearl_drag,(begin|move|end),(Nacre Pearl (?:Launcher|Dashboard|AI|Controls|Media) [0-9]+),(-?[0-9.]+),(-?[0-9.]+)$/.exec(payload);
+        if (!match)
+            return;
+        const entry = entries.find(value => value.title === match[2]);
+        const point = {
+            x: Number(match[3]),
+            y: Number(match[4])
+        };
+        if (!entry || !Number.isFinite(point.x) || !Number.isFinite(point.y))
+            return;
+        const destination = enabled ? Geometry.docking(entry.kind, point, monitors()) : null;
+        nativeDrag = {
+            entry: entry,
+            point: point,
+            destination: destination
+        };
+        if (match[1] === "end") {
+            nativeDrag = null;
+            if (destination)
+                dock(entry, destination.screen);
+            else {
+                NacreHyprland.refreshToplevels();
+                saveSoon();
+            }
+        }
+    }
+    Connections {
+        target: Native.Hyprland
+        function onRawEvent(event) {
+            if (event.name === "custom")
+                root.nativeGesture(event.data);
         }
     }
     function saveSoon() {
@@ -348,8 +385,8 @@ Singleton {
         }
         const value = drag;
         const point = Object.assign({}, value.body, {
-            x: value.body.x + value.dx,
-            y: value.body.y + value.dy,
+            x: Math.round(value.body.x + value.dx),
+            y: Math.round(value.body.y + value.dy),
             exact: true
         });
         drag = Object.assign({}, value, {

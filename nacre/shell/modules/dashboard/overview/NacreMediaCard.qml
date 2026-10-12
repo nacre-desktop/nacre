@@ -17,7 +17,7 @@ NacreOverviewCard {
     property string artUrl: ""
     readonly property bool sampling: sample.running
     readonly property real progress: player?.positionSupported && player?.lengthSupported ? Overview.progress(positionSeconds, player.length) : 0
-    readonly property real artSize: Math.max(40, Math.min(width - 48, compact ? 132 : 174, height - (audioHalo ? 180 : compact ? 136 : 190)))
+    readonly property real artSize: Math.max(40, Math.min(width - 48, compact ? Math.min(200, Math.max(132, width * .36)) : 174, height - (audioHalo ? 180 : compact ? 136 : 190)))
     function refresh() {
         positionSeconds = player?.positionSupported ? player.position : 0;
     }

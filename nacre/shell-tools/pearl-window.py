@@ -52,7 +52,7 @@ def dispatch(method, address, **values):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("geometry", "place", "pin", "focus"))
+    parser.add_argument("action", choices=("geometry", "place", "fit", "pin", "focus"))
     parser.add_argument("title")
     parser.add_argument("pid", type=int)
     parser.add_argument("x", type=float, nargs="?", default=0)
@@ -82,12 +82,39 @@ def main():
                     relative=False,
                 )
             dispatch("move", address, x=round(args.x), y=round(args.y), relative=False)
+        elif args.action == "fit" and not client.get("fullscreen"):
+            monitor = next(
+                item for item in read("monitors") if item["id"] == client["monitor"]
+            )
+            mw, mh = monitor["width"], monitor["height"]
+            if monitor.get("transform", 0) % 2:
+                mw, mh = mh, mw
+            scale = monitor.get("scale", 1) or 1
+            left, top, right, bottom = monitor.get("reserved", [0, 0, 0, 0])
+            maxw, maxh = mw / scale - left - right, mh / scale - top - bottom
+            width = min(maxw, max(client["size"][0], args.width))
+            height = min(maxh, max(client["size"][1], args.height))
+            x = max(
+                monitor["x"] + left,
+                min(client["at"][0], monitor["x"] + mw / scale - right - width),
+            )
+            y = max(
+                monitor["y"] + top,
+                min(client["at"][1], monitor["y"] + mh / scale - bottom - height),
+            )
+            if [round(width), round(height)] != client["size"]:
+                dispatch(
+                    "resize", address, x=round(width), y=round(height), relative=False
+                )
+            if [round(x), round(y)] != client["at"]:
+                dispatch("move", address, x=round(x), y=round(y), relative=False)
         elif args.action == "focus":
             dispatch("focus", address)
         elif args.action == "pin":
             if not client.get("floating"):
                 raise ValueError("Float the window before pinning it")
             dispatch("pin", address)
+        client = owned(args.title, args.pid, read("clients")) or client
         print(
             json.dumps(
                 {

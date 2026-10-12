@@ -17,7 +17,7 @@ NacreOverviewCard {
         y: 14
         width: parent.width - 88
         text: Qt.formatDate(root.displayed, "MMMM yyyy")
-        font.pointSize: 11
+        font.pointSize: Math.min(14, Math.max(11, root.width / 40))
         horizontalAlignment: Text.AlignHCenter
         elide: Text.ElideRight
     }
@@ -58,7 +58,7 @@ NacreOverviewCard {
             delegate: Item {
                 required property var modelData
                 width: parent.width / 7
-                height: Math.max(24, (root.height - 92) / 6)
+                height: Math.max(24, Math.min(54, (root.height - 92) / 6))
                 Rectangle {
                     anchors.centerIn: parent
                     width: Math.min(parent.width - 4, 30)
@@ -74,7 +74,7 @@ NacreOverviewCard {
                     verticalAlignment: Text.AlignVCenter
                     color: parent.modelData.key === root.todayKey ? NacreColours.palette.m3onPrimary : parent.modelData.inMonth ? NacreColours.palette.m3onSurface : NacreColours.palette.m3onSurfaceVariant
                     opacity: 1
-                    font.pointSize: 11
+                    font.pointSize: Math.min(14, Math.max(11, root.width / 40))
                 }
             }
         }

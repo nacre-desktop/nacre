@@ -4,6 +4,7 @@ import QtQuick.Shapes
 Item {
     id: root
     required property string edge
+    property bool decorationEnabled: true
     property real base: 10
     property real progress: 0
     property bool active: false
@@ -28,7 +29,7 @@ Item {
         }
     }
     function highlight() {
-        if (sweepPending || !visible || !NacreTokens.motionEnabled)
+        if (!decorationEnabled || sweepPending || !visible || !NacreTokens.motionEnabled)
             return;
         sweepPending = true;
         Qt.callLater(() => {
@@ -79,6 +80,7 @@ Item {
     }
     readonly property string outline: flatPath()
     Shape {
+        visible: root.decorationEnabled
         x: root.visualRect.x
         y: root.visualRect.y
         width: root.visualRect.width
@@ -94,6 +96,7 @@ Item {
     }
     Item {
         id: enamel
+        visible: root.decorationEnabled
         x: root.visualRect.x + (root.edge === "left" ? root.base : 0)
         y: root.visualRect.y + (root.edge === "top" ? 1 : 0)
         width: root.edge === "top" ? root.visualRect.width : Math.max(0, root.width - root.base)
@@ -160,7 +163,7 @@ Item {
         }
     }
     Rectangle {
-        visible: root.edge === "top" && root.progress > 0
+        visible: root.decorationEnabled && root.edge === "top" && root.progress > 0
         x: root.visualRect.x + root.shoulder * 2
         y: 2
         width: Math.max(0, root.visualRect.width - root.shoulder * 4) * Math.max(0, Math.min(1, root.progress))

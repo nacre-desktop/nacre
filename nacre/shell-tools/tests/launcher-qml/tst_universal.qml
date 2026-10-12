@@ -144,7 +144,8 @@ TestCase {
         value.navigate("apps");
         compare(value.entries.length, 4);
         const grid = findChild(value, "launcherApps");
-        compare(grid.cellHeight, grid.height / 5);
+        verify(grid.cellHeight >= 72);
+        verify(grid.cellHeight <= 100);
         compare(value.selectedEntry, null);
         value.navigate("actions");
         verify(value.entries.some(row => {
@@ -155,6 +156,17 @@ TestCase {
         }));
     }
 
+    function test_maximized_grid_keeps_tile_spacing_bounded() {
+        const value = view();
+        value.width = 1920;
+        value.height = 1100;
+        value.navigate("apps");
+        const grid = findChild(value, "launcherApps");
+        verify(grid.height > 800);
+        compare(grid.cellHeight, 100);
+        verify(grid.cellWidth >= 110);
+        verify(grid.cellWidth < 140);
+    }
     function test_query_selects_and_launches_real_app_owner() {
         const value = view(), field = findChild(value, "launcherSearch");
         field.text = "google";
@@ -275,7 +287,8 @@ TestCase {
         value.navigate("apps");
         verify(!value.showDetails);
         const grid = findChild(value, "launcherApps");
-        compare(grid.cellHeight, grid.height / 5);
+        verify(grid.cellHeight >= 72);
+        verify(grid.cellHeight <= 100);
         verify(grid.x + grid.width <= value.width);
     }
 

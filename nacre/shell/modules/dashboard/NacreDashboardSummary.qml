@@ -13,7 +13,7 @@ Item {
     readonly property real calendarWidth: width * .31
     readonly property real hostWidth: width * .38 - gap
     readonly property real mediaWidth: width - calendarWidth - hostWidth - gap * 2
-    readonly property real gaugeHeight: 92
+    readonly property real gaugeHeight: Math.max(92, Math.min(112, width / 12))
     implicitHeight: narrow ? media.y + media.height : 300
     Cards.NacreCalendarCard {
         id: calendar

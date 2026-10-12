@@ -237,13 +237,13 @@ TestCase {
             self.assertEqual(quiet.getpixel((5, 200)), rim.getpixel((5, 200)))
             self.assertEqual(pixels("light").getpixel((5, 200)), (245, 242, 237))
 
-            # Along-length enamel uses different source accents, while the
-            # handle's middle stays flat and its shoulders return to the frame.
-            top_left = closed.getpixel((250, 54))
-            top_right = closed.getpixel((350, 54))
-            self.assertGreater(top_left[2], top_left[0] + 30)
-            self.assertGreater(top_right[0], top_left[0] + 25)
-            self.assertEqual(closed.getpixel((218, 54)), (86, 125, 154))
-            self.assertGreater(closed.getpixel((14, 200))[2], 100)
-            self.assertGreater(closed.getpixel((585, 200))[2], 100)
-            self.assertEqual(closed.getpixel((15, 100)), (86, 125, 154))
+            # Flat hover targets must not paint protrusions into the wallpaper.
+            for point in (
+                (250, 54),
+                (350, 54),
+                (218, 54),
+                (14, 200),
+                (585, 200),
+                (15, 100),
+            ):
+                self.assertEqual(closed.getpixel(point), (86, 125, 154))

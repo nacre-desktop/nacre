@@ -49,7 +49,24 @@ FloatingWindow {
             controls: 840,
             media: 370
         })[entry.kind]
-    minimumSize: dropPoint?.exact ? Qt.size(Math.min(dropPoint.width, 400), Math.min(dropPoint.height, 300)) : entry.kind === "launcher" ? Qt.size(600, 460) : entry.kind === "media" ? Qt.size(260, 280) : Qt.size(400, 400)
+    readonly property bool wallpaperGallery: entry.kind === "launcher" && viewFlags.launcherMode === "wallpaper" && (NacreWallpapers.preferences.layout || "carousel") !== "carousel"
+    onWallpaperGalleryChanged: if (wallpaperGallery)
+        galleryFit.restart()
+    Timer {
+        id: galleryFit
+        interval: 80
+        onTriggered: if (root.ready && !fitWorker.running)
+            fitWorker.running = true
+    }
+    Process {
+        id: fitWorker
+        command: ["python3", (Quickshell.env("NACRE_PEARL_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/pearl-window.py", "fit", root.title, Quickshell.processId.toString(), "0", "0", Math.min(640, root.screen.width - 40).toString(), Math.min(root.screen.height - 100, Math.max(500, Math.min(820, root.width * .58 + 96))).toString()]
+        onExited: {
+            NacreHyprland.refreshToplevels();
+            NacrePearls.saveSoon();
+        }
+    }
+    minimumSize: wallpaperGallery ? Qt.size(Math.min(640, screen.width - 40), Math.min(500, screen.height - 100)) : dropPoint?.exact ? Qt.size(Math.min(dropPoint.width, 400), Math.min(dropPoint.height, 300)) : entry.kind === "launcher" ? Qt.size(600, 460) : entry.kind === "media" ? Qt.size(260, 280) : Qt.size(400, 400)
     // Qt/compositor occlusion stops painting; provider leases gate background work.
     Timer {
         interval: 60

@@ -19,7 +19,11 @@ is a user choice. Never take an arbitrary focused window for placement or pinnin
 Super+left-drag is routed by an owned Lua binding. It passes the press and release
 only inside the shell's published popup rectangles, with a mapped-layer/PID guard.
 Elsewhere it dispatches normal Hyprland window movement. Geometry is throttled to the next frame during
-panel changes (never debounced until an opening animation ends); no subprocess or IPC executes inside the pointer callback.
+panel changes (never debounced until an opening animation ends); no external process runs inside the pointer callback. Native pearl movement uses a
+33ms compositor timer only for the duration of a Super-drag. It emits coordinate-change
+events through Hyprland, and disables on release. The shell handles every new
+begin/move/end transaction independently, shows a pointer-transparent inset docking
+guide, and docks on release at the matching edge. No native drag polling runs idle.
 
 A Qt DragHandler reserves Super and moves the original live item within its existing
 layer surface. The layer retains its keyboard focus mode while dragging. Hover exit timers pause
@@ -35,7 +39,7 @@ inactive/focused border. The original stays
 painted until placement completes and the destination has had two frame intervals
 to render. There is no screenshot ghost or second miniature panel. A finite, input-free
 iridescent film stretches from the frame to the moving panel, thins, and breaks
-by 90 logical pixels. Reduced motion omits it. This respects
+over 170 logical pixels, with a short finite break fade. Reduced motion omits it. This respects
 the distinction between Wayland layer-shell and xdg-shell surfaces: their protocol
 roles cannot be changed during a mouse grab. A finite fallback releases the lift if
 placement fails. The deliberate Super gesture needs only 16 logical pixels in any direction.
@@ -55,3 +59,11 @@ workers; normal Escape/outside-click behavior; tiling/resizing/pinning; provider
 idleness; reduced motion; compositor placement and isolated geometry tests including
 negative monitor origins and mixed scales. Physical multi-monitor coverage must be
 reported honestly. Publish upstream first, then update the personal consumer pin.
+
+Detached layouts use actual viewport dimensions. The Dashboard page bounds its
+content width and summary/card height, allocating spare space to the wallpaper hero.
+Launcher rows stay within72–100 logical pixels; they are not one-fifth of an
+arbitrarily tall window. Gallery switching can grow an undersized owned window via
+`pearl-window.py fit`, with scaled/rotated monitor and reserved-area bounds; maximized
+windows are left alone. Full handoff positions are aligned to compositor logical
+pixels, and geometry helpers read their resulting state after writes.
