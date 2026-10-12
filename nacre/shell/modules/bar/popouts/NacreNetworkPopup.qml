@@ -37,14 +37,14 @@ Item {
                 objectName: "quickWifiPower"
                 text: NacreNetwork.wifiEnabled ? "Turn off" : "Turn on"
                 compact: true
-                enabled: !DeviceActions.busy
+                enabled: !DeviceActions.busy && NacreNetwork.wifiAvailable
                 onClicked: if (enabled)
                     DeviceActions.request(["wifi-radio", NacreNetwork.wifiEnabled ? "off" : "on"])
             }
         }
         NacreText {
             width: parent.width
-            text: NacreNetwork.active?.ssid || (NacreNetwork.wifiEnabled ? "Not connected" : "Wi-Fi is off")
+            text: !NacreNetwork.wifiAvailable ? "No Wi-Fi adapter; wired connections remain available." : NacreNetwork.active?.ssid || (NacreNetwork.wifiEnabled ? "Not connected" : "Wi-Fi is off")
             elide: Text.ElideRight
             color: NacreTokens.mutedInk
         }

@@ -7,22 +7,22 @@ NacreSettingsPage {
     Component.onCompleted: NacreNetwork.refresh()
     property string page: "network"
     function request(action, value) {
-        if (!DeviceActions.busy)
+        if (!DeviceActions.busy && NacreNetwork.wifiAvailable)
             DeviceActions.request(value === undefined ? [action] : [action, value]);
     }
     function connect(network) {
-        if (!DeviceActions.busy && NacreNetwork.visibleNetworks.includes(network) && !network.active && network.ssid)
+        if (!DeviceActions.busy && NacreNetwork.wifiAvailable && NacreNetwork.wifiEnabled && NacreNetwork.visibleNetworks.includes(network) && !network.active && network.ssid)
             DeviceActions.connectWifi(network.ssid);
     }
     NacreSettingsSection {
         title: "Wi-Fi"
-        description: NacreNetwork.active ? "Connected to " + NacreNetwork.active.ssid : NacreNetwork.wifiEnabled ? "Not connected" : "Wi-Fi is off"
+        description: !NacreNetwork.wifiAvailable ? "No Wi-Fi adapter; wired connections remain available." : NacreNetwork.active ? "Connected to " + NacreNetwork.active.ssid : NacreNetwork.wifiEnabled ? "Not connected" : "Wi-Fi is off"
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
                 text: NacreNetwork.wifiEnabled ? "Turn Wi-Fi off" : "Turn Wi-Fi on"
-                enabled: !DeviceActions.busy
+                enabled: !DeviceActions.busy && NacreNetwork.wifiAvailable
                 onClicked: root.request("wifi-radio", NacreNetwork.wifiEnabled ? "off" : "on")
             }
             ActionButton {
@@ -75,7 +75,7 @@ NacreSettingsPage {
         NacreText {
             width: parent.width
             visible: NacreNetwork.visibleNetworks.length === 0
-            text: NacreNetwork.wifiEnabled ? "No networks found. Scan to try again." : "Turn Wi-Fi on to see nearby networks."
+            text: !NacreNetwork.wifiAvailable ? "No Wi-Fi adapter; wired connections remain available." : NacreNetwork.wifiEnabled ? "No networks found. Scan to try again." : "Turn Wi-Fi on to see nearby networks."
             wrapMode: Text.Wrap
             color: NacreTokens.mutedInk
         }

@@ -16,6 +16,16 @@ known-good source. Brain keeps a source backup and preserves the browser profile
 A renderer update preserves a busy sidebar worker; worker code changes activate
 when it is idle. Save pending drafts before explicitly restarting/restoring.
 
+Use `nacre doctor --report` for a readable Markdown support report, or
+`nacre doctor --json` for a single redacted JSON document. Plain `nacre doctor`
+uses the same JSON format. Launcher → Health → **Copy support report** copies
+Markdown locally. Reports include hardware/software, device presence, dependencies
+and bounded recent errors. Unavailable probes are identified. Names, home paths,
+network addresses and token-like values are scrubbed before export; review
+free-form logs before sharing. Nothing is uploaded. See the
+[hardware testing checklist](development/hardware-testing.md) for coverage and
+limitations. The internal maintenance `state` action remains local diagnostic state.
+
 After updates, check the shell service and `hyprctl configerrors`. Actual cold
 login, lock/suspend/resume and physical display/device acceptance need testing on
 real hardware; a manual health check cannot establish those paths. General
