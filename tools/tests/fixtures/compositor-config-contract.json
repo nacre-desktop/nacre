@@ -1900,6 +1900,23 @@
         "keys": "SUPER + mouse:272",
         "submap": ""
       }
+    },
+    {
+      "kind": "binding",
+      "value": {
+        "action": {
+          "args": {},
+          "method": "callback"
+        },
+        "flags": {
+          "description": "Nacre:finish-panel-or-window-drag",
+          "ignore_mods": true,
+          "non_consuming": true,
+          "release": true
+        },
+        "keys": "mouse:272",
+        "submap": ""
+      }
     }
   ],
   "hypr/conf/cursor.lua": [

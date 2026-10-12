@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a focused improvement with a concrete use case.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: For early questions and ideas, start in [Discussions](https://github.com/nacre-desktop/nacre/discussions).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Who needs this, and what is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful change and an example of how it would work.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and tradeoffs
+      description:
+        Describe current workarounds and alternatives. Call out new dependencies, downloads,
+        network access, privileges and compatibility impact; say none if there are none.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Additional context
+      description:
+        "Optional: prior discussions, examples or public mockups. A proposal does not imply implementation
+        or support is promised."
+    validations:
+      required: false

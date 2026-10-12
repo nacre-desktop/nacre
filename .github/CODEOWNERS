@@ -1,0 +1,20 @@
+# Default ownership also catches newly introduced privileged paths.
+* @nacre-desktop/maintainers
+
+# Sensitive automation, installation/configuration and permissions.
+/.github/ @nacre-desktop/maintainers
+/install.sh @nacre-desktop/maintainers
+/tools/ @nacre-desktop/maintainers
+/bin/ @nacre-desktop/maintainers
+/ai/ @nacre-desktop/maintainers
+/brain/ @nacre-desktop/maintainers
+/nacre/shell-tools/install*.py @nacre-desktop/maintainers
+/nacre/shell-tools/provision.py @nacre-desktop/maintainers
+/nacre/shell-tools/qt-check.sh @nacre-desktop/maintainers
+/nacre/shell-tools/updates* @nacre-desktop/maintainers
+/nacre/shell-tools/menu-backend.py @nacre-desktop/maintainers
+/nacre/shell-tools/profile-policy.py @nacre-desktop/maintainers
+/nacre/shell-tools/workflow-profiles.py @nacre-desktop/maintainers
+/dependencies.lock.json @nacre-desktop/maintainers
+/package*.json @nacre-desktop/maintainers
+/.gitmodules @nacre-desktop/maintainers
