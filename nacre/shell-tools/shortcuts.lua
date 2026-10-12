@@ -8,3 +8,9 @@ hl.bind("Escape", hl.dsp.global("nacre_shell:dismissHoverEdges"), { non_consumin
 
 -- Detachment belongs to the shell, including UI-only installations.
 hl.bind("SUPER + CTRL + D", hl.dsp.exec_cmd("~/.local/bin/nacre-shell detach"), { description = "Nacre:detach-panel" })
+
+-- Float at first map, so popping out never briefly rearranges tiled applications.
+hl.window_rule({
+    match = { class = "^org[.]quickshell$", title = "^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$" },
+    float = true,
+})

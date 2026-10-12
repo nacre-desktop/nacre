@@ -4,6 +4,7 @@
 from pathlib import Path
 import datetime as dt
 import subprocess
+import os
 
 ROOT = Path(__file__).resolve().parent
 HOME = Path.home()
@@ -11,7 +12,7 @@ HOME = Path.home()
 
 def put(path, text):
     if path.exists() and path.read_text() == text:
-        return
+        return False
     if path.exists():
         backup = (
             HOME
@@ -26,6 +27,7 @@ def put(path, text):
         backup.write_text(path.read_text())
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
+    return True
 
 
 def install():
@@ -33,7 +35,7 @@ def install():
         ["python3", str(ROOT / "lock-prepare.py")], input="{}\n", text=True, check=True
     )
     subprocess.run(["python3", str(ROOT / "install-thunar.py")], check=True)
-    put(
+    changed = put(
         HOME / ".config/nacre/shortcuts.lua",
         (ROOT / "shortcuts.lua").read_text(),
     )
@@ -44,6 +46,9 @@ def install():
         raise RuntimeError(
             "Managed shortcuts loader missing; run ./install.sh --apply from the repository"
         )
+
+    if changed and os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        subprocess.run(["hyprctl", "reload"], check=True, capture_output=True)
 
 
 if __name__ == "__main__":

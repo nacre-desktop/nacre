@@ -225,7 +225,7 @@ class WelcomeTests(unittest.TestCase):
     def test_actual_lua_bind_registrations_have_descriptions(self):
         script = """local function proxy(path)
 return setmetatable({}, {__index=function(t,k) local p=proxy(path..'.'..k);rawset(t,k,p);return p end,__call=function(t,...) return {} end}) end
-hl={dsp=proxy('hl'),bind=function(keys,action,options) if options and options.description then io.write(keys..'\\t'..options.description..'\\n') end end,define_submap=function(name,fn) fn() end}
+hl={window_rule=function(rule) assert(type(rule)=='table') end,dsp=proxy('hl'),bind=function(keys,action,options) if options and options.description then io.write(keys..'\\t'..options.description..'\\n') end end,define_submap=function(name,fn) fn() end}
 dofile(arg[1]);dofile(arg[2])
 """
         result = subprocess.run(
@@ -244,6 +244,7 @@ dofile(arg[1]);dofile(arg[2])
         self.assertEqual(rows["SUPER + A"], "Nacre:launcher")
         self.assertEqual(rows["SUPER + SHIFT + F"], "Nacre:files")
         self.assertEqual(rows["SUPER + CTRL + B"], "Nacre:ai-sidebar")
+        self.assertEqual(rows["SUPER + CTRL + D"], "Nacre:detach-panel")
         self.assertEqual(rows["SUPER + 7"], "Nacre:workspace")
 
     def test_deployment_and_login_owner_are_declared(self):
