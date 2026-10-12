@@ -140,4 +140,126 @@ regression targets rather than an assumption that a new publisher is needed.
 | Notification history load | 18.99 / 20.23 |
 
 These four workloads started 404 Python processes, including cold requests.
-Before/after results and failure validation are added after migration.
+
+## Phase B: shared frequent-helper service
+
+`NacreHelpers` starts one `helper-service.py` child with JSON lines over its private
+stdin/stdout pipes. Request IDs route replies to `NacreHelperTask` owners. The
+service imports supported helpers once, runs at most four requests concurrently,
+and serializes operations within each helper. It bounds pending work to 64,
+requests to 4 MiB, and responses to 8 MiB. Only explicit operations are supported;
+there is no arbitrary script, shell command, menu tool, or process-kill dispatch.
+
+Twelve QML Process blocks now use the service: launcher preference load/writes,
+dashboard reads/focus/preferences, network snapshots, notification history
+load/save, menu status/files/conversions/packages/ownership, and media details.
+Existing standalone CLIs remain available. Their validation, atomic writes,
+advisory locks, output content, and caller queues are retained. The wallpaper
+publisher, streaming spectrum, chat transport, compositor helpers, resource
+readings, and maintenance/doctor paths remain with their existing owners.
+
+Small files already have asynchronous FileView readers. The migrated preference
+and notification operations also initialize, validate, filter, or lock state, so
+duplicating them as raw JSON reads in QML would not simplify their behavior.
+The /proc and /sys readers belong to the hardware task and were left untouched.
+
+On a crash, pending actions fail once and the shell restarts only the helper, with
+250 ms–10 s retry backoff. Startup has a ten-second deadline; outstanding requests
+have a 45-second deadline. Timers stop when there is no outstanding work after
+startup stabilizes. Interrupted requests are never replayed. An explicit stopping
+state preserves fresh requests queued during shutdown for the replacement worker.
+This fixes the shutdown race found by the native failure tests. A canceled or
+destroyed read owner drops its reply; already dispatched backend work can finish.
+State-changing owners remain persistent and retain their existing serial queues.
+
+### Before/after results
+
+Candidate production code: `c927c9a`. These are single five-minute captures and
+ten action repetitions under the same isolated labwc setup, fixture paths,
+interpreter, warmed caches, and predicates used above. Idle means and small timing
+differences are not statistically established improvements.
+
+| Isolated idle (five minutes) | Before | After |
+| --- | ---: | ---: |
+| Shell CPU mean (% of one core) | 0.024 | 0.024 |
+| Aggregate CPU mean (%) | 0.514 | 0.451 |
+| Shell RSS mean / p95 (MiB) | 554.4 / 555.7 | 560.0 / 560.3 |
+| Aggregate RSS mean / p95 (MiB) | 611.1 / 611.9 | 643.7 / 643.5 |
+| PATH python3 launches by minute | 1, 1, 1, 0, 1 | 1, 1, 1, 1, 0 |
+
+The persistent worker trades about **32.6 MiB additional aggregate RSS in this
+capture** for interpreter reuse; RSS includes shared pages and cache variation.
+It does not remove the idle launches from the excluded helpers. Its own healthy
+idle path blocks on stdin and performs no polling.
+
+| Action | Before median / p95 (ms) | After median / p95 (ms) | PATH python3 launches before → after |
+| --- | ---: | ---: | --- |
+| Launcher open acknowledged | 104.3 / 137.0 | 107.9 / 140.5 | 3 each → 2 each |
+| Dashboard open and data ready | 117.1 / 127.7 | 113.6 / 121.5 | normally 2 → normally 1 |
+| Wallpaper pair ready | 228.8 / 501.8 | 225.2 / 245.1 | 0–1 → 0–1 |
+| Palette pair ready | 192.8 / 514.7 | 188.7 / 196.7 | 1–2 → 1–2 |
+| Settings acknowledged, nested Hyprland | 149.2 / 192.9 | 143.8 / 205.1 | Not collected |
+
+Settings uses a separate, comparable before/after pair: Hyprland 0.56.2 nested in
+a headless **GLES2** labwc compositor, with a disposable home and D-Bus session.
+`AQ_DRM_DEVICES=/dev/null` selected the nested Wayland fallback, and the shell used
+the nested instance signature/socket. A pixman parent cannot provide the required
+dmabuf backend. This setup supported the unchanged floating Settings window. The
+live desktop's source, running shell, profiles, wallpaper and preferences were
+not changed. Do not compare nested Settings timing directly with live Hyprland or
+labwc panel timing.
+
+Other event-driven work sometimes added one background launch during a dashboard
+interval. The consistent removal of one launch per open is the useful result.
+CLI IPC and sampling mask much of the request improvement: launcher opening was
+slightly slower by this measurement, and the dashboard difference was small.
+The unchanged wallpaper publisher also had fewer outliers on the second run;
+this does not establish that the helper service caused its improvement.
+
+| Identical helper workload (100 warm requests) | Fresh Python median / p95 (ms) | Service median / p95 (ms) |
+| --- | ---: | ---: |
+| Menu conversion validation | 58.11 / 63.76 | 0.039 / 0.475 |
+| Dashboard read | 42.39 / 48.81 | 0.091 / 0.113 |
+| Launcher preferences load | 36.64 / 41.07 | 0.048 / 0.067 |
+| Notification history load | 18.99 / 20.23 | 0.029 / 0.057 |
+
+The same 404 requests now use **one Python process**, a 99.75% reduction for this
+workload. Worker startup was 31.1 ms; first module imports were measured separately
+(menu 30.0 ms, dashboard 4.7 ms). Warm figures do not hide startup/import cost.
+
+`tools/benchmark-services.py` additionally measures the **actual production QML
+dashboard request owner** from `request("read")` to focus snapshot publication,
+using native Quickshell and only fixture panel/settings dependencies. It renders
+no window and avoids CLI IPC subprocess/polling overhead. Run it against the
+baseline `--services` and `--tools` directories, then the candidate, with
+`--output /tmp/owner.json`. Each run issues 100 warmed reads in a fresh disposable
+home. QML Date.now supplies wall-clock timestamps with 1 ms resolution; clock
+adjustments invalidate a run. This measures data publication, not a rendered frame.
+
+| Production dashboard data refresh (100 requests) | Before | After |
+| --- | ---: | ---: |
+| Mean (ms) | 39.50 | 0.49 |
+| Median / p95 (ms) | 39 / 46 | below 1 / 1 |
+
+This confirms that common dashboard data requests are faster even though opening
+timing includes other UI and CLI overhead. It does not imply a corresponding
+39 ms improvement in input-to-photon latency.
+
+### Validation and scope
+
+The protocol tests cover legacy CLI response equivalence, preference/history
+writes, invalid and non-finite requests, size/queue bounds, independent requests,
+module reuse, and rejection of unsupported menu operations. Native Quickshell
+tests kill a worker with two pending requests, inject malformed responses, and
+expire deadlines; each verifies failed requests, successful recovery, and no
+replay. Existing native network, notification, dashboard-focus and menu tests use
+the same caller state machines with a substituted transport. Source checks cover
+Python lint/format, QML/JavaScript parsing/format, shell/Lua syntax and regression
+suites. Run `python tools/check.py` with its pinned development environment;
+redirect stdin from `/dev/null` when running unattended in tmux.
+
+No visual/layout changes were made. The only overlap with compositor-related
+source is replacing the five helper transport blocks in NacreMenuContext; its
+window dispatch, logout, keybinding sources and menu-backend.py were not changed.
+Remaining launches and first-frame latency require separate work with their
+owners rather than claiming this migration removes every Python process.

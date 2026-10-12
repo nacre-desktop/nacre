@@ -1,6 +1,10 @@
 import importlib.util
 from pathlib import Path
 import tempfile
+import json
+import shutil
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -12,6 +16,31 @@ spec.loader.exec_module(measurement)
 
 
 class PerformanceTests(unittest.TestCase):
+    def test_production_dashboard_owner_benchmark_completes_real_requests(self):
+        if not shutil.which("quickshell"):
+            self.skipTest("Quickshell unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "owner.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parents[1] / "benchmark-services.py"),
+                    "--count",
+                    "3",
+                    "--output",
+                    str(output),
+                ],
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(output.read_text())
+            self.assertEqual(report["requests"], 3)
+            self.assertEqual(len(report["runs_ms"]), 3)
+            self.assertTrue(all(value >= 0 for value in report["runs_ms"]))
+
     def test_proc_stat_handles_spaces_and_parentheses_and_pid_reuse(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
