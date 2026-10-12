@@ -55,6 +55,12 @@ def links(root, profile):
 def plan(home, root, profile):
     known_path = home / ".local/state/nacre/package-links.json"
     known = json.loads(known_path.read_text()) if known_path.exists() else {}
+    permitted = {str(path) for path in links(root, {"components": ["ai", "brain"]})}
+    if not isinstance(known, dict) or any(
+        key not in permitted or not isinstance(value, str)
+        for key, value in known.items()
+    ):
+        raise ValueError("Invalid package runtime manifest")
     desired = links(root, profile)
     changed = []
     for relative, target in desired.items():
