@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+An empty startup profile performs no process launches or workspace changes. AI
+launch actions use the current workspace unless a profile explicitly assigns one.
+
 Workspace pearls flow from primary through secondary to tertiary, with softened
 number ink. They show their numbers and window occupancy. Only the active pearl
 expands with up to three quiet window symbols and an overflow count. The

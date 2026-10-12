@@ -29,6 +29,9 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(profile["startup"], [])
         self.assertEqual(profile["routes"], [])
         self.assertFalse(profile["aiFullAccess"])
+        self.assertIsNone(profile["brainWorkspace"])
+        self.assertIsNone(profile["aiWorkspace"])
+        self.assertNotIn("hl.window_rule", policy.lua(profile))
 
     def test_invalid_profiles_are_rejected_before_install(self):
         for value in (
@@ -46,6 +49,12 @@ class ProfileTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory) / "fresh"
             staging.prepare(ROOT, home, policy.validate({}))
+            prepared = json.loads((home / ".config/nacre/profile.json").read_text())
+            self.assertEqual(prepared["startup"], [])
+            self.assertEqual(prepared["routes"], [])
+            self.assertNotIn(
+                "hl.window_rule", (home / ".config/nacre/profile.lua").read_text()
+            )
             self.assertTrue((home / ".local/bin/nacre-settings").exists())
             self.assertFalse((home / ".local/bin/nacre-ai").exists())
             self.assertFalse((home / ".local/bin/nacre-brain").exists())

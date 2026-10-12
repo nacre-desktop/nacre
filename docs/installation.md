@@ -64,6 +64,10 @@ Keep your current configuration backed up while trying this development preview.
 Log out and back in, then check your displays, audio, network and lock screen.
 Open the launcher with **Super+A** and Settings with **Super+S**.
 
+The default profile has five workspaces with no assigned apps. It does not start
+browsers, editors, chat or music apps at login. The desktop services and first-run
+Welcome are started separately.
+
 ## Optional apps
 
 The default installs the shell, Settings, Colors and Welcome. Add either optional

@@ -2,12 +2,18 @@
 """Desktop and AI launch commands, independent of the private knowledge browser."""
 
 import argparse
+import importlib.util
 import json
 from pathlib import Path
 import re
 import subprocess
 
 HOME = Path.home()
+PROFILE_SPEC = importlib.util.spec_from_file_location(
+    "desktop_profile_policy", Path(__file__).with_name("profile-policy.py")
+)
+POLICY = importlib.util.module_from_spec(PROFILE_SPEC)
+PROFILE_SPEC.loader.exec_module(POLICY)
 
 
 def run(command, default=None, timeout=10):
@@ -96,9 +102,11 @@ def action(name, value=""):
             old = next((c for c in clients if c["class"] == "nacre-ai-dashboard"), None)
             if old:
                 return action("focus", old["address"])
-        launch_app(actions[name])
         if name in ("new", "resume", "tasks"):
-            action("workspace", "2")
+            workspace = POLICY.load(HOME)["aiWorkspace"]
+            if workspace is not None:
+                action("workspace", str(workspace))
+        launch_app(actions[name])
         return
     if name == "volume":
         run(
@@ -126,7 +134,7 @@ def action(name, value=""):
         return
     if name == "workspace":
         num = int(value)
-        if num not in range(1, 8):
+        if num not in range(1, 11):
             raise ValueError("Invalid workspace")
         run(
             [

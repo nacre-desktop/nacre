@@ -6,6 +6,13 @@ startup command argument arrays, window routes and optional app workspace choice
 See `profiles/default.json` for the format. Profiles have `version:1` and are
 validated before installation. Supply one with `./install.sh --profile PATH`.
 
+The general profile starts no browser, editor, chat or music apps and assigns no
+apps to workspaces. Its empty startup helper leaves your current workspace alone.
+AI windows also open on the current workspace unless `aiWorkspace` is explicitly
+set. To replace an older customized profile with these defaults, use
+`./install.sh --profile default`. An update without `--profile` preserves an
+existing profile; private host overrides remain yours to manage.
+
 Pearls run left to right from workspace 1, connected by a fine palette-colored
 thread, flowing from primary through secondary to tertiary. Empty workspaces are
 hollow rings; occupied ones have filled pearls.
