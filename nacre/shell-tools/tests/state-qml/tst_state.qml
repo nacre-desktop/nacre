@@ -46,6 +46,9 @@ TestCase {
         NacrePanelState.openEdge("dashboard", "one");
         verify(!one.hoverDocked);
         compare(one.edgeMenu, "dashboard");
+        NacrePanelState.dockAsHover(one);
+        NacrePanelState.hoverEdge("left", "one");
+        verify(!one.hoverDocked);
         NacrePanelState.openMode("wallpaper", "", false, "one", true);
         NacrePanelState.dockAsHover(one);
         verify(one.launcher);

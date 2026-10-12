@@ -108,6 +108,7 @@ Singleton {
         const view = screens[screenName];
         if (!view || !["dashboard", "left", "osd"].includes(name) || view.session || view.launcher || view.dashboardPinned)
             return false;
+        view.hoverDocked = false;
         clearPopouts();
         view.dashboard = name === "dashboard";
         view.osd = name === "osd";
