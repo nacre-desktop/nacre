@@ -189,6 +189,8 @@ NacreOverviewCard {
             text: root.player ? root.player.trackArtist || root.player.identity : NacreI18n.tr("overview.media-card.text.open-a-music-or-video-app", "Open a music or video app")
             color: NacreColours.palette.m3secondary
             font.pointSize: 10
+            fontSizeMode: root.player ? Text.FixedSize : Text.HorizontalFit
+            minimumPointSize: 8
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
         }

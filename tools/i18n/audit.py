@@ -9,6 +9,8 @@ import re
 import importlib
 import argparse
 import tempfile
+import hashlib
+import urllib.request
 from unittest.mock import patch
 
 root = Path(__file__).resolve().parents[2]
@@ -18,9 +20,48 @@ original = subprocess.run
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--output", type=Path, default=Path("/tmp/nacre-translation-audit"))
 parser.add_argument("surfaces", nargs="*")
+parser.add_argument("--font-directory", type=Path)
+parser.add_argument(
+    "--download-fonts",
+    action="store_true",
+    help="Fetch pinned runtime text/icon fonts into the gallery directory, never install them",
+)
+parser.add_argument(
+    "--text-family",
+    help="Also test a chosen installed text family with the pinned icon font",
+)
 args = parser.parse_args()
 output = args.output.resolve()
 output.mkdir(parents=True, exist_ok=True)
+font_directory = args.font_directory
+if args.download_fonts:
+    font_directory = output / "fonts"
+if font_directory:
+    font_directory = font_directory.resolve()
+    font_directory.mkdir(parents=True, exist_ok=True)
+    manifest = json.loads((root / "nacre/shell-tools/font-assets.json").read_text())
+    for group in manifest["groups"]:
+        if group["id"] not in ("plex", "material"):
+            continue
+        for row in group["files"]:
+            target = font_directory / row["name"]
+            if (
+                target.is_file()
+                and hashlib.sha256(target.read_bytes()).hexdigest() == row["sha256"]
+            ):
+                continue
+            if not args.download_fonts:
+                raise SystemExit(
+                    "Pinned audit font/license is missing or changed: " + str(target)
+                )
+            with urllib.request.urlopen(row["url"], timeout=30) as response:
+                raw = response.read(row["size"] + 1)
+            if (
+                len(raw) != row["size"]
+                or hashlib.sha256(raw).hexdigest() != row["sha256"]
+            ):
+                raise SystemExit("Pinned audit font checksum mismatch: " + row["name"])
+            target.write_bytes(raw)
 english = json.loads((root / "nacre/shell/i18n/en.json").read_text())
 palette = json.loads(
     (root / "nacre/shell-tools/tests/orient-gallery/palettes.json").read_text()
@@ -131,9 +172,40 @@ common = r"""
 """.replace("OUTPUT", json.dumps(str(output)))
 
 
+if font_directory:
+    common += (
+        "FontLoader {id:auditBodyFont;source:"
+        + json.dumps((font_directory / "IBMPlexSans.ttf").as_uri())
+        + "}\n"
+    )
+    common += (
+        "FontLoader {id:auditIconFont;source:"
+        + json.dumps((font_directory / "MaterialSymbolsRounded.ttf").as_uri())
+        + "}\n"
+    )
+
+
+def font_gate(code):
+    if font_directory:
+        return re.sub(
+            r"\bwhen:\s*windowShown",
+            "when: windowShown && auditBodyFont.status === FontLoader.Ready && auditIconFont.status === FontLoader.Ready",
+            code,
+        )
+    return code
+
+
 def prepare_widgets(target):
     fixtures = target / "fixtures"
     if fixtures.exists():
+        if args.text_family:
+            token_file = fixtures / "NacreTokens.qml"
+            token_file.write_text(
+                token_file.read_text().replace(
+                    'DesktopSettings.data.interfaceFont || "IBM Plex Sans"',
+                    json.dumps(args.text_family),
+                )
+            )
         i18n = fixtures / "NacreI18n.qml"
         i18n.write_text(
             i18n.read_text().replace(
@@ -196,7 +268,7 @@ def runner(command, **kwargs):
         + body
         + "}}\n}\n"
     )
-    codefile.write_text(code)
+    codefile.write_text(font_gate(code))
     result = original(command, **kwargs)
     (output / (current + ".log")).write_text(result.stdout + result.stderr)
     if result.returncode:
@@ -286,7 +358,7 @@ def audit_dashboard():
   function test_audit(){for(const lang of ["en","pseudo"]){language=lang;NacreI18n.language=lang;for(const pair of [[weather,"dashboard-weather"],[system,"dashboard-system"],[focus,"dashboard-focus"],[today,"dashboard-today"],[session,"session"]]){const panel=createTemporaryObject(pair[0],this);wait(100);capture(panel,pair[1]);if(pair[0]===focus){for(const status of ["running","paused"]){NacreDashboardState.focusState={status:status};NacreDashboardState.running=status==="running";wait(60);capture(panel,"dashboard-focus-"+status)}}}}}
  }"""
         )
-        (target / "tst_pages.qml").write_text(code)
+        (target / "tst_pages.qml").write_text(font_gate(code))
 
         (fixtures / "NacreText.qml").write_text(
             (root / "nacre/shell/widgets/NacreText.qml").read_text()
@@ -403,7 +475,7 @@ TestCase {id:test;name:"ExtraTranslationAudit";width:1200;height:1000;visible:tr
  function test_audit(){for(const lang of ["en","pseudo"]){language=lang;NacreI18n.language=lang;for(const pair of [[palette,"commands"],[clipboard,"clipboard"],[keys,"keybindings"],[overview,"overview"]]){const panel=createTemporaryObject(pair[0],this);wait(120);capture(panel,"extras-"+pair[1]);if(pair[0]===palette){panel.query="brain: Demo";wait(80);capture(panel,"extras-brain-command")}panel.width=680;wait(100);capture(panel,"extras-"+pair[1]+"-narrow");panel.destroy()}}}
 }"""
         )
-        (target / "tst_menu.qml").write_text(code)
+        (target / "tst_menu.qml").write_text(font_gate(code))
         result = original(
             ["/usr/lib/qt6/bin/qmltestrunner", "-input", str(target), "-o", "-,txt"],
             env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

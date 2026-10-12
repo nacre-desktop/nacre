@@ -35,4 +35,6 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/check.py
       - name: Native English and pseudo gallery
-        run: dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --output /tmp/nacre-pseudo-audit
+        run: |
+          dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --download-fonts --output /tmp/nacre-pseudo-audit
+          dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --font-directory /tmp/nacre-pseudo-audit/fonts --text-family "DejaVu Sans" --output /tmp/nacre-pseudo-wide-font colors controls launcher chat summary

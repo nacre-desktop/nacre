@@ -223,3 +223,31 @@ runtime has been deployed; review is required before deployment.
 | --- | --- | --- |
 | Settings (public synthetic state) | ![English Settings](../../assets/screenshots/translation-en-settings.png) | ![Pseudo Settings](../../assets/screenshots/translation-pseudo-settings.png) |
 | Brain (public demo notes) | ![English Brain](../../assets/screenshots/translation-en-brain.png) | ![Pseudo Brain](../../assets/screenshots/translation-pseudo-brain.png) |
+
+## Font-aware gallery checks
+
+The CI gallery initially exposed a missing prerequisite: without Material Symbols
+Rounded, Qt paints icon identifiers as ordinary words; without IBM Plex Sans, it
+uses a wider fallback text family. The gallery now loads the pinned runtime fonts
+into each temporary Qt process. It verifies their sizes/SHA-256 values from
+`font-assets.json`, including license files, and never installs user fonts or
+writes a user font registry. CI downloads roughly 16 MB from the existing pinned
+Google Fonts/Material Symbols GitHub URLs into `/tmp`.
+
+```sh
+python3 tools/i18n/audit.py --download-fonts --output /tmp/nacre-translation-audit
+python3 tools/i18n/audit.py --font-directory /tmp/nacre-translation-audit/fonts \
+  --text-family "DejaVu Sans" --output /tmp/nacre-translation-wide-font \
+  colors controls launcher chat summary
+```
+
+The wider-family check also found real layout limits in narrow application tiles,
+the chat action row and compact dashboard captions. Tiles/captions fit within their
+bounds and the chat row flows when necessary; the existing English runtime-font
+layout remains unchanged when its labels fit. Both font configurations retain the
+same strict leakage, truncation and painted-boundary checks.
+
+2026-10-12 font-aware follow-up: all 191 states pass with the pinned fonts, and
+143 states pass with DejaVu Sans plus the pinned icon font. The full 633-test check,
+coverage and generated-asset checks pass again after the fitting/flow changes.
+These font-aware commands supersede the earlier CI run that lacked runtime fonts.

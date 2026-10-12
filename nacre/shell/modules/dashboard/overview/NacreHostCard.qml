@@ -106,6 +106,8 @@ NacreOverviewCard {
                     width: Math.max(0, parent.width - 25)
                     text: parent.modelData.text
                     font.pointSize: root.width >= 320 ? Math.min(14, Math.max(12, root.width / 44)) : 10
+                    fontSizeMode: Text.HorizontalFit
+                    minimumPointSize: 8
                     elide: Text.ElideRight
                 }
                 NacreInteraction {
