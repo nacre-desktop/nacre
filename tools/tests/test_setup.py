@@ -27,6 +27,7 @@ class PackageSetupTests(unittest.TestCase):
         home.mkdir()
         (root / "nacre/shell-tools").mkdir(parents=True)
         (root / "tools").mkdir()
+        (root / "runtime/palette").mkdir(parents=True)
         for name in ("profile-policy.py", "compositor_config.py"):
             (root / "nacre/shell-tools" / name).write_bytes(
                 (TOOLS.parent / "nacre/shell-tools" / name).read_bytes()
@@ -83,6 +84,24 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertFalse((home / ".config/nacre/keyboard.lua").exists())
                 self.assertFalse((home / ".config/quickshell/nacre").is_symlink())
                 self.assertEqual(account.read_text(), "private fixture")
+
+    def test_package_rollback_retains_system_runtime_reference_and_can_reapply(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            with (
+                patch.object(releases, "HOME", home),
+                patch.object(releases, "STATE", home / "releases"),
+            ):
+                releases.deploy_package(root, profile, {"layout": "us"}, "hyprland")
+                record = releases.deploy_package(
+                    root, profile, {"layout": "us"}, "hyprland"
+                )
+                releases.restore(Path(record["release"]), record)
+                self.assertEqual(
+                    (home / ".local/share/nacre/palette-runtime").resolve(),
+                    root / "runtime/palette",
+                )
+                releases.deploy_package(root, profile, {"layout": "us"}, "hyprland")
 
     def test_failed_apply_restores_keyboard_config_and_runtime(self):
         with tempfile.TemporaryDirectory() as folder:

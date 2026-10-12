@@ -111,5 +111,9 @@ assert (home / ".local/state/nacre/releases/current.json").read_bytes() == curre
 managed.write_bytes(original)
 run("nacre", "rollback")
 assert digest(palette) == palette_hash and account.exists()
-print("Conflict refusal and package rollback pass without a desktop session.")
+run(*base, "--yes")
+assert (home / ".local/share/nacre/palette-runtime").resolve() == Path(
+    "/usr/share/nacre/runtime/palette"
+)
+print("Conflict refusal, package rollback and reapply pass without a desktop session.")
 print("FRESH_USER_PACKAGE_PROOF_OK")
