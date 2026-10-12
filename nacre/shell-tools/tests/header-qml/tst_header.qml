@@ -33,6 +33,9 @@ TestCase {
         NacreHyprland.clients = [];
         NacreBar.workspaceIcons = [];
         NacreBar.workspaceCount = 5;
+        DesktopSettings.data = {
+            animations: true
+        };
     }
     function test_workspace_readonly_state_and_explicit_activation() {
         const view = createTemporaryObject(row, test);
@@ -56,9 +59,10 @@ TestCase {
         const view = createTemporaryObject(row, test);
         compare(view.workspaceIds.join(","), "1,2,3,4,5");
         const selected = findChild(view, "nacreWorkspace2");
-        verify(findChild(selected, "workspacePearl").visible);
-        compare(findChild(selected, "workspacePearl").width, 17);
-        compare(findChild(findChild(view, "nacreWorkspace1"), "workspacePearl").width, 8);
+        tryVerify(() => view.activeCell === selected);
+        verify(findChild(view, "activeWorkspacePearl").visible);
+        compare(findChild(view, "activeWorkspacePearl").width, 20);
+        compare(findChild(findChild(view, "nacreWorkspace1"), "workspacePearl").width, 10);
         NacreHyprland.clients = [
             {
                 workspace: {
@@ -89,6 +93,82 @@ TestCase {
         NacreBar.workspaceIcons = ["language"];
         verify(view.customIcons);
         verify(!findChild(findChild(view, "nacreWorkspace1"), "workspacePearl").visible);
+    }
+    function test_capsule_icons_overflow_click_and_scroll_are_bounded() {
+        const view = createTemporaryObject(row, test);
+        NacreHyprland.clients = Array.from({
+            length: 5
+        }, (_, index) => ({
+                    workspace: {
+                        id: 2
+                    },
+                    wmClass: "editor",
+                    title: "Window " + index
+                }));
+        tryVerify(() => !!view.activeCell);
+        compare(view.activeCell.shownWindows.length, 3);
+        compare(view.activeCell.overflow, 2);
+        compare(findChild(view, "workspaceOverflow").text, "+2");
+        const stable = findChild(view, "nacreWorkspace1");
+        NacreHyprland.activeWsId = 4;
+        tryVerify(() => view.activeCell?.workspaceId === 4);
+        compare(findChild(view, "nacreWorkspace1"), stable);
+        compare(view.activeCell.shownWindows.length, 0);
+        verify(view.scroll(-60));
+        compare(NacreHyprland.requests.length, 0);
+        verify(view.scroll(-60));
+        compare(NacreHyprland.requests[0], "workspace 5");
+        NacreHyprland.activeWsId = 5;
+        verify(!view.step(1));
+        verify(!view.step(0));
+        compare(NacreHyprland.requests.length, 1);
+        NacreHyprland.activeWsId = 2;
+        wait(250);
+        const cell = findChild(view, "nacreWorkspace2");
+        mouseClick(cell, cell.width - 8, 15);
+        compare(NacreHyprland.requests[1], "workspace 2");
+        view.availableWidth = 200;
+        tryVerify(() => view.iconLimit === 0);
+        compare(view.activeCell.overflow, 5);
+    }
+    function test_attention_reduced_motion_and_icon_focus() {
+        const view = createTemporaryObject(row, test);
+        NacreHyprland.clients = [
+            {
+                workspace: {
+                    id: 3
+                },
+                urgent: true,
+                wmClass: "editor",
+                title: "Attention",
+                address: "0x20"
+            },
+            {
+                workspace: {
+                    id: 2
+                },
+                wmClass: "editor",
+                title: "Editor",
+                address: "0x10"
+            }
+        ];
+        const pearl = findChild(findChild(view, "nacreWorkspace3"), "workspacePearl");
+        const pulse = findChild(pearl, "workspaceAttentionPulse");
+        tryVerify(() => pulse.running);
+        verify(findChild(pearl, "workspaceAttentionRing").visible);
+        DesktopSettings.data = {
+            reduceMotion: true
+        };
+        tryCompare(pulse, "running", false);
+        verify(findChild(pearl, "workspaceAttentionRing").visible);
+        NacreHyprland.activeWsId = 3;
+        tryVerify(() => view.activeCell?.workspaceId === 3);
+        const capsule = findChild(view, "activeWorkspaceCapsule");
+        compare(capsule.x, view.activeCell.x);
+        NacreHyprland.activeWsId = 2;
+        tryVerify(() => view.activeCell?.workspaceId === 2);
+        mouseClick(capsule, 41, 14);
+        compare(NacreHyprland.requests[0], "focus 0x10");
     }
     function test_header_display_no_commands_and_status_geometry() {
         const view = createTemporaryObject(header, test);

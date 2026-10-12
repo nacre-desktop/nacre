@@ -116,4 +116,41 @@ TestCase {
         wait(100);
         compare(Native.Hyprland.refreshes, reads + 1);
     }
+    function test_attention_events_clear_on_focus_close_and_removal() {
+        const first = createTemporaryObject(window, test);
+        const second = createTemporaryObject(window, test, {
+            address: "0x20",
+            activated: false
+        });
+        Native.Hyprland.toplevels.values = [first, second];
+        const state = createTemporaryObject(service, test);
+        Native.Hyprland.rawEvent({
+            name: "urgent",
+            data: "20"
+        });
+        verify(state.clients[1].urgent);
+        verify(state.focusWindow("20"));
+        compare(Native.Hyprland.requests[0], 'hl.dsp.focus({window="address:0x20"})');
+        verify(!state.focusWindow('20"; forbidden'));
+        verify(!state.focusWindow("ffff"));
+        Native.Hyprland.rawEvent({
+            name: "urgent",
+            data: "unknown-address"
+        });
+        compare(Object.keys(state.urgentAddresses).length, 1);
+        state.observeFocus("20");
+        verify(!state.clients[1].urgent);
+        state.observeFocus("10");
+        state.observeUrgency("20");
+        verify(state.clients[1].urgent);
+        Native.Hyprland.rawEvent({
+            name: "closewindow",
+            data: "20"
+        });
+        verify(!state.clients[1].urgent);
+        state.observeUrgency("20");
+        Native.Hyprland.toplevels.values = [first];
+        wait(20);
+        compare(Object.keys(state.urgentAddresses).length, 0);
+    }
 }

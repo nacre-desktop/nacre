@@ -6,11 +6,14 @@ startup command argument arrays, window routes and optional app workspace choice
 See `profiles/default.json` for the format. Profiles have `version:1` and are
 validated before installation. Supply one with `./install.sh --profile PATH`.
 
-Pearls run left to right from workspace 1. The current workspace is larger and
-brighter; occupied workspaces have a smaller colored pearl. Hover for its number
-and window count. Extra occupied or active workspaces remain visible, so lowering
-the configured count never hides your open windows. Custom workspace icons are
-still supported in profiles.
+Pearls run left to right from workspace 1, connected by a fine palette-colored
+thread. Empty workspaces are hollow rings; occupied ones have filled pearls.
+The current pearl slides into a capsule showing up to three window icons and an
+overflow count. Click an icon to focus its window. Hover for workspace numbers,
+window counts and titles, or scroll over the necklace to switch workspaces.
+Attention requests get a tertiary-colored ring; its pulse respects reduced motion.
+Extra occupied or active workspaces remain visible, so lowering the configured
+count never hides your open windows. Custom workspace icons are still supported.
 
 Settings stores your desktop preferences under `~/.config/nacre`. Generated palettes,
 wallpaper metadata and caches stay local. Private monitor, palette, desktop,

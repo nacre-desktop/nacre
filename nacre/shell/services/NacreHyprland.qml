@@ -8,6 +8,7 @@ Singleton {
     id: root
     property var clients: []
     property var byAddress: ({})
+    property var urgentAddresses: ({})
     readonly property var workspaces: Native.Hyprland.workspaces
     readonly property var monitors: Native.Hyprland.monitors
     readonly property var toplevels: Native.Hyprland.toplevels
@@ -30,6 +31,23 @@ Singleton {
     function observeFocus(address) {
         focusAddress = addressOf(address);
         focusKnown = true;
+        clearUrgency(focusAddress);
+    }
+    function clearUrgency(address) {
+        const clean = addressOf(address);
+        if (urgentAddresses[clean]) {
+            const next = Object.assign({}, urgentAddresses);
+            delete next[clean];
+            urgentAddresses = next;
+        }
+    }
+    function observeUrgency(address) {
+        const clean = addressOf(address);
+        const client = byAddress[clean];
+        if (client && client !== activeClient && !urgentAddresses[clean])
+            urgentAddresses = Object.assign({}, urgentAddresses, {
+                [clean]: true
+            });
     }
     function reconcile() {
         const next = {};
@@ -48,6 +66,8 @@ Singleton {
             ordered.push(client);
         }
         const retired = Object.values(byAddress).filter(client => next[client.address] !== client);
+        for (const client of retired)
+            clearUrgency(client.address);
         byAddress = next;
         if (ordered.length !== clients.length || ordered.some((client, index) => client !== clients[index]))
             clients = ordered;
@@ -91,6 +111,13 @@ Singleton {
         error = "";
         return true;
     }
+    function focusWindow(address) {
+        const clean = addressOf(address);
+        if (!clean || !byAddress[clean])
+            return false;
+        Native.Hyprland.dispatch(Native.Hyprland.usingLua ? "hl.dsp.focus({window=" + JSON.stringify("address:" + clean) + "})" : "focuswindow address:" + clean);
+        return true;
+    }
     Component.onCompleted: {
         reconcile();
         if (!cursor.running)
@@ -121,6 +148,10 @@ Singleton {
                 root.focusRevision++;
                 root.observeFocus(event.data);
             }
+            if (name === "urgent")
+                root.observeUrgency(event.data);
+            if (name === "closewindow")
+                root.clearUrgency(event.data);
             if (/^(workspace|focusedmon|monitoradded|monitorremoved|activespecial|moveworkspace)/.test(name))
                 root.monitorRefreshPending = true;
             if (/^(openwindow|closewindow|movewindow|activewindow|changefloatingmode|fullscreen|windowtitle|urgent|pin|changegroup|togglegroup|moveintogroup|moveoutofgroup|monitoradded|monitorremoved|workspace|focusedmon|activespecial|moveworkspace)/.test(name))

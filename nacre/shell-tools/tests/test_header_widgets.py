@@ -31,7 +31,7 @@ class HeaderWidgetTests(unittest.TestCase):
                 "import QtQuick\nText {width:20;height:22}"
             )
             (fixtures / "BrandLogo.qml").write_text(
-                "import QtQuick\nItem {property bool compact:false;implicitWidth:32;implicitHeight:30}"
+                "import QtQuick\nItem {property bool compact:false;property bool ai:false;property bool brain:false;property bool colorsApp:false;property bool settings:false;implicitWidth:32;implicitHeight:30}"
             )
             (fixtures / "NacreActiveTitle.qml").write_text(
                 "import QtQuick\nItem {property bool horizontal:false;property var monitor:null}"
@@ -56,7 +56,8 @@ Item {
 }""")
             definitions = {
                 "NacrePresentation": "property var active:({workspaceColors:false})",
-                "NacreHyprland": 'property int activeWsId:2;property var clients:[];property var focusedMonitor:({name:"test"});property var activeClient:null;property var requests:[];function dispatch(value){requests=[...requests,value];return true}',
+                "NacreIcons": 'function getAppIcon(name,fallback){return ""}',
+                "NacreHyprland": 'property int activeWsId:2;property var clients:[];property var focusedMonitor:({name:"test"});property var activeClient:null;property var requests:[];function dispatch(value){requests=[...requests,value];return true}function focusWindow(address){requests=[...requests,"focus "+address];return true}',
                 "NacreBar": "property int workspaceCount:5;property var workspaceNames:[];property var workspaceIcons:[]",
                 "NacreBrightness": "function getMonitorForScreen(screen){return null}",
                 "NacreTime": 'function format(value){return "12:34"}',
@@ -91,6 +92,8 @@ Item {
             for name in (
                 "NacreHeader",
                 "NacreWorkspaceRow",
+                "NacreWorkspacePearl",
+                "NacreWorkspaceAppIcon",
                 "NacreHeaderForwarder",
             ):
                 source = (SHELL / "modules/topbar" / (name + ".qml")).read_text()
@@ -98,6 +101,7 @@ Item {
                     "qs.widgets",
                     "qs.services",
                     "qs.config",
+                    "qs.utils",
                     "qs.modules.bar.components",
                 ):
                     source = source.replace("import " + imported, 'import "fixtures"')

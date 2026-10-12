@@ -167,6 +167,7 @@ Item {
             implicitHeight: 34
             NacreWorkspaceRow {
                 id: workspaces
+                availableWidth: Math.max(170, Math.min(360, root.width - right.width - 220))
                 anchors.centerIn: parent
             }
         }
@@ -306,7 +307,11 @@ Item {
                 blocked: NacreHoverIntent.blocked[root.screen.name] ?? {},
                 headerFlag: NacreHoverIntent.headers[root.screen.name] ?? false,
                 modalObserver: root.panel?.input?.modal === true,
-                dashboardDepth: NacreHoverIntent.dashboardDepth
+                dashboardDepth: NacreHoverIntent.dashboardDepth,
+                workspaceIds: workspaces.workspaceIds,
+                workspaceStyle: workspaces.customIcons ? "icons" : "necklace",
+                activeWorkspace: workspaces.activeCell?.workspaceId ?? -1,
+                activeWorkspaceApps: workspaces.activeCell?.windowCount ?? 0
             });
         }
     }

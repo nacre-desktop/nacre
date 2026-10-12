@@ -19,4 +19,5 @@ QtObject {
     readonly property bool fullscreen: Number(lastIpcObject.fullscreen || 0) !== 0
     readonly property int pid: Number(lastIpcObject.pid || 0)
     readonly property int focusHistoryId: Number(lastIpcObject.focusHistoryID ?? -1)
+    readonly property bool urgent: owner.urgentAddresses?.[address] === true && nativeWindow?.activated !== true
 }
