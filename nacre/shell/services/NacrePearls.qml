@@ -192,6 +192,7 @@ Singleton {
         const entry = open(kind, data, name, point, model);
         if (!entry)
             return null;
+        NacreHoverIntent.dismiss(screen(name));
         if (kind === "ai" && NacreAiViews.edge === model)
             NacreAiViews.take();
         const field = ({
