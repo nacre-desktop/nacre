@@ -71,9 +71,15 @@ TestCase {
         });
         const number = findChild(pearl, "workspaceNumber");
         compare(number.text, "12");
-        compare(number.color, Qt.color("#ffffff"));
+        compare(number.color, Qt.color("#f5f2ee"));
         pearl.accent = "#ffffff";
-        compare(number.color, Qt.color("#000000"));
+        compare(number.color, Qt.color("#303036"));
+        for (const accent of ["#b5a3d5", "#62789b", "#797979", "#555555"]) {
+            pearl.accent = accent;
+            const ink = pearl.luminance(number.color);
+            const surface = pearl.numberLuminance;
+            verify((Math.max(ink, surface) + .05) / (Math.min(ink, surface) + .05) >= 4.5);
+        }
     }
     function test_symbol_classification_and_pearls_only_toggle() {
         for (const sample of [

@@ -11,6 +11,15 @@ Item {
     property int workspaceId: 0
     readonly property color numberSurface: Qt.tint(accent, Qt.alpha("#fff9f1", current ? .40 : .10))
     readonly property real numberLuminance: luminance(numberSurface)
+    readonly property color numberInk: {
+        const dark = Qt.color("#303036");
+        const light = Qt.color("#f5f2ee");
+        if ((numberLuminance + .05) / (luminance(dark) + .05) >= 4.5)
+            return dark;
+        if ((luminance(light) + .05) / (numberLuminance + .05) >= 4.5)
+            return light;
+        return numberLuminance > .179 ? "#000000" : "#ffffff";
+    }
     function luminance(value) {
         function linear(channel) {
             return channel <= .04045 ? channel / 12.92 : Math.pow((channel + .055) / 1.055, 2.4);
@@ -90,9 +99,9 @@ Item {
         anchors.fill: parent
         text: root.workspaceId > 0 ? root.workspaceId : ""
         font.pointSize: root.workspaceId < 10 ? 8.25 : 6.75
-        font.weight: root.current ? Font.Bold : Font.DemiBold
+        font.weight: root.current ? Font.DemiBold : Font.Medium
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        color: root.occupied || root.current ? (root.numberLuminance > .179 ? "#000000" : "#ffffff") : NacreColours.palette.m3onSurfaceVariant
+        color: root.occupied || root.current ? root.numberInk : NacreColours.palette.m3onSurfaceVariant
     }
 }
