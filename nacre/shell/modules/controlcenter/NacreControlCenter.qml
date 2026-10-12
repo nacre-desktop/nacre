@@ -11,7 +11,7 @@ import qs.modules.notifications
 FocusScope {
     id: root
     function prepareLift() {
-        edgeOpening.complete();
+        revealMotion.complete();
     }
     property bool handoffHidden: false
     opacity: handoffHidden ? 0 : 1

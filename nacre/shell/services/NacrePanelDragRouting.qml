@@ -34,7 +34,12 @@ Singleton {
         return "{" + result.join(",") + "}";
     }
     property string pending: ""
-    onRegionsChanged: delay.restart()
+    onRegionsChanged: {
+        // Throttle rather than debounce: an opening animation must not postpone
+        // its pointer route until the final frame (and make the first pull miss).
+        if (!delay.running)
+            delay.start();
+    }
     Component.onCompleted: delay.restart()
     function publish() {
         pending = "nacre_panel_pid=" + Quickshell.processId + ";nacre_panel_regions=" + regions;
@@ -57,7 +62,7 @@ Singleton {
     }
     Timer {
         id: delay
-        interval: 80
+        interval: 16
         onTriggered: root.publish()
     }
     Process {
