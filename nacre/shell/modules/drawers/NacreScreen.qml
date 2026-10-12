@@ -21,7 +21,7 @@ NacreWindow {
     // Launchers retain keyboard ownership after docking. Their separate hover
     // controller still closes on exit; dropping while Super is held must not
     // lose surface focus before the search field can receive pointer events.
-    WlrLayershell.keyboardFocus: inputController.modal || flags.launcher && !flags.previewOnly ? WlrKeyboardFocus.Exclusive : (flags.left || flags.osd || flags.dashboard) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: NacrePanelState.hidden ? WlrKeyboardFocus.None : inputController.modal || flags.launcher && !flags.previewOnly ? WlrKeyboardFocus.Exclusive : (flags.left || flags.osd || flags.dashboard) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     readonly property string dragRegions: NacrePanelDragRouting.regions
     property string registeredName: ""
     PersistentProperties {

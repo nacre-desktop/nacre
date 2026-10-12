@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import qs.config
+import qs.services
 import qs.widgets
 
 Scope {
@@ -11,7 +12,7 @@ Scope {
         model: ["top", "left", "right", "bottom"]
         NacreWindow {
             required property string modelData
-            readonly property int extent: ({
+            readonly property int extent: NacrePanelState.hidden ? 0 : ({
                     top: NacreFrame.headerHeight,
                     left: NacreFrame.left,
                     right: NacreFrame.right,
