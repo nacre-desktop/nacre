@@ -156,7 +156,6 @@ end)
 -- Desktop surfaces and explicit session actions.
 install({
     { "SUPER + A", "exec_cmd", "~/.local/bin/nacre-shell launcher" },
-    { "SUPER + CTRL + D", "exec_cmd", "~/.local/bin/nacre-shell detach" },
     { "SUPER + D", "exec_cmd", "~/.local/bin/nacre-shell overview" },
     { "SUPER + V", "exec_cmd", "~/.local/bin/nacre-shell clipboard" },
     { "SUPER + W", "exec_cmd", "~/.local/bin/nacre-shell wallpaper" },
