@@ -59,8 +59,9 @@ UWSM files, user units and profile bytes are fingerprinted for before/after chec
 
 The package plan is `pacman -S --needed niri xwayland-satellite wlsunset`. Inspect
 its transaction before applying: add only the required packages, without an
-unrelated distribution/Qt/Hyprland update. Current repository candidates are niri
-26.04, xwayland-satellite 0.8.3 and wlsunset 0.4.0. Existing packages include UWSM
+unrelated distribution/Qt/Hyprland update. Installed versions are niri 26.04, xwayland-satellite 0.8.3 and wlsunset 0.4.0.
+`wayland-utils` was added separately for read-only protocol inspection. These
+transactions added packages without upgrading existing ones. Existing packages include UWSM
 0.27, Hyprland 0.56.2, hyprlock 0.9.6 and hypridle 0.1.8.
 
 SDDM already reads `/usr/local/share/wayland-sessions` and
@@ -78,12 +79,42 @@ Do not enable automatic locking on niri before successful manual lock and unlock
 | Recovery written before changes | Passed | This section precedes package/session changes. |
 | Existing Hyprland uses UWSM | Passed | Active `wayland-wm@hyprland.desktop.service`; graphical-session-bound Nacre units. |
 | SDDM session directories | Passed | Installed SDDM configuration lists both directories above. |
-| Package plan | Passed, not installed yet | Dry-run transaction contains only the three requested additions. |
-| Private backup | Passed | Private pointer and baseline fingerprints created before changes. |
+| Package installation | Passed | Three functional packages and the protocol-inspection utility installed with pacman; private transaction logs and snapshots retained. |
+| Private backup | Passed | Private pointer and baseline fingerprints created before changes; original Hyprland/UWSM/profile bytes and original SDDM/Hyprland session entries still match. |
+| Named login aliases | Installed, selection pending | Both aliases added under `/usr/local/share/wayland-sessions`; original entries untouched. |
+| Plain config | Passed | `niri validate` accepts the phase-1 config. |
+| UWSM selection | Dry run passed | `niri.desktop` resolves to `niri-session` with the installed `niri_session` plugin. No live second UWSM session started. |
+| Startup/idle isolation | Fixture tests passed | ExecCondition skips shared shell/observer and automatic idle in plain niri, permits unchanged Hyprland path. |
+| Nested compositor | Passed, preflight only | Real output/workspace/window IPC and clean exit; display/socket activation environment unchanged. |
 | TTY keyboard/login/recovery | Pending operator test | Do not confuse a documented command with a physically verified fallback. |
 | niri login and logout | Pending | Must be an actual SDDM login and clean logout. |
 | Return login to Hyprland | Pending | Confirm original configuration fingerprints and working shell after return. |
 | UWSM environment cleanup | Pending | Check session targets, display socket and NIRI_SOCKET after logout. |
+
+### Protocol observations
+
+The live Hyprland 0.56.2 registry advertises `ext_session_lock_manager_v1`,
+`ext_idle_notifier_v1`, `zwlr_gamma_control_manager_v1`,
+`hyprland_ctm_control_manager_v1`, `zwlr_screencopy_manager_v1` and
+`ext_image_copy_capture_manager_v1`. Protocol presence makes a shared wlsunset
+implementation worth testing; it does not prove correct gamma behavior, lock
+coverage or successful password authentication. Preserve external schedules and
+current ownership until actual phase-2 tests.
+
+### Local phase-1 gates
+
+New per-user drop-ins use `uwsm/tools/niri-session-gate.py` as ExecCondition for
+`nacre-shell.service`, `nacre-session-watch.service` and `hypridle.service`. An
+explicit Hyprland desktop context passes through even if a stale niri socket is
+present. Plain niri cleanly skips these units. niri's future acceptance record is
+separate from existing private profile files; no readiness/unlock success is
+recorded yet. The installed package's `Niri` entry also receives the guard because
+it applies to service startup rather than only a particular menu alias.
+
+`uwsm/env-niri` selects the task-local `NIRI_CONFIG` and removes Hyprland-only
+activation variables and forced GDK backend only in the niri session. The shared
+`uwsm/env` and `env-hyprland` bytes remain unchanged. No original unit file was
+replaced, and daemon-reload did not request a service or compositor restart.
 
 ## Phase 2: backend branch and personal preferences
 
@@ -112,8 +143,9 @@ so a failed niri experiment cannot overwrite the working Hyprland source.
 
 ## Open issues and sources
 
-- Installed shell supervision and session observation still assume Hyprland; keep
-  phase-1 niri isolated until those startup paths are adapted.
+- Installed shell supervision and session observation still assume Hyprland;
+  phase-1 gates prevent those paths from running under niri. Phase 2 must adapt
+  startup using an isolated source before marking the backend ready.
 - Existing idle resume uses a Hyprland DPMS command. niri needs its own resume hook
   without changing the working Hyprland policy.
 - hyprsunset is compositor-specific. Protocol-based night light is a phase-2 change,
