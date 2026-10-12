@@ -8,7 +8,16 @@ Item {
     property bool occupied: false
     property bool current: false
     property bool urgent: false
-    implicitWidth: current ? 20 : occupied ? 13 : 10
+    property int workspaceId: 0
+    readonly property color numberSurface: Qt.tint(accent, Qt.alpha("#fff9f1", current ? .40 : .10))
+    readonly property real numberLuminance: luminance(numberSurface)
+    function luminance(value) {
+        function linear(channel) {
+            return channel <= .04045 ? channel / 12.92 : Math.pow((channel + .055) / 1.055, 2.4);
+        }
+        return .2126 * linear(value.r) + .7152 * linear(value.g) + .0722 * linear(value.b);
+    }
+    implicitWidth: current ? 22 : occupied ? 20 : 18
     implicitHeight: implicitWidth
     Rectangle {
         id: halo
@@ -75,5 +84,15 @@ Item {
             color: "#fff9f1"
             opacity: root.current ? .6 : .3
         }
+    }
+    NacreText {
+        objectName: "workspaceNumber"
+        anchors.fill: parent
+        text: root.workspaceId > 0 ? root.workspaceId : ""
+        font.pointSize: root.workspaceId < 10 ? 8.25 : 6.75
+        font.weight: root.current ? Font.Bold : Font.DemiBold
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        color: root.occupied || root.current ? (root.numberLuminance > .179 ? "#000000" : "#ffffff") : NacreColours.palette.m3onSurfaceVariant
     }
 }

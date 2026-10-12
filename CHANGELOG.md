@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+Workspace pearls show their numbers and window occupancy. Only the active pearl
+expands with up to three quiet window symbols and an overflow count. The
+pearls-only preference keeps numbers, hover details and workspace switching.
+
 Edge panels can detach into ordinary Nacre windows and dock again. Launcher and
 dashboard navigation is independent; data and samplers stay shared. Optional AI
 conversations move between views with draft and ownership recovery. Pearl grips,

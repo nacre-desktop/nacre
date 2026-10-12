@@ -8,11 +8,12 @@ validated before installation. Supply one with `./install.sh --profile PATH`.
 
 Pearls run left to right from workspace 1, connected by a fine palette-colored
 thread. Empty workspaces are hollow rings; occupied ones have filled pearls.
-Small window-category symbols stay visible beside every occupied workspace, including those
-you are not currently using. The glossy pearl and its highlight slide to the active
-group. Click any icon to focus its window. When space is tight, groups show an
-overflow count while keeping the other bar controls clear. Hover for workspace numbers,
-window counts and titles, or scroll over the necklace to switch workspaces.
+Numbers inside the pearls match the workspace shortcuts. Only the active workspace
+opens into a capsule with up to three quiet window-category symbols; extra windows
+show as a count. Click a symbol to focus its window. The glossy pearl and its
+highlight slide to the active group. When space is tight, fewer symbols appear to
+keep the other bar controls clear. Hover for window counts and titles, or scroll
+over the necklace to switch workspaces.
 Attention requests get a tertiary-colored ring; its pulse respects reduced motion.
 Extra occupied or active workspaces remain visible, so lowering the configured
 count never hides your open windows. Custom workspace icons are still supported.
