@@ -2,7 +2,7 @@
 
 ## Done
 
-- Isolated `perf/shell-memory-budget`; rebased on main `4ee5346`, preserving
+- Isolated `perf/shell-memory-budget`; rebased on main `9a38ff0`, preserving
   compositor/focus/shell-hide work. No live deployment or private preference edits.
 - PSS/USS/SwapPss, unknown-rollup coverage, PID identity recheck and nearest-rank
   percentiles added to tools/performance.py, with regression tests.
@@ -26,9 +26,11 @@
 
 ## Next
 
-- Push final docs/result milestone and update PR #10 from draft.
-- Verify required CI on final head, check main for new changes, then merge one PR.
-- Stop only task-owned benchmark sessions and save final private handoff/evidence.
+- Code, measurement, documentation and PR #10 review preparation are complete.
+- Final rebase preserves the separately merged magnetic docking work. Repeat
+  source/native checks and required CI on this head, then merge PR #10.
+- No performance implementation remains; future limits below are follow-up scope.
+- Final merge/cleanup evidence is recorded privately and in the linked PR status.
 
 ## Open questions / limits
 
