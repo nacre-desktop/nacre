@@ -14,7 +14,6 @@ hl.window_rule({
     match = { class = "^org[.]quickshell$", title = "^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$" },
     float = true,
     no_anim = true,
-    border_size = 0,
 })
 
 -- Only a visible, owned edge panel receives Super+drag. All other presses retain

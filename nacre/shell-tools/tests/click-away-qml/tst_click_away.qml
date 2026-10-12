@@ -160,6 +160,22 @@ TestCase {
         child.destroy();
     }
 
+    function test_hover_drag_does_not_change_keyboard_mode_or_close_panel() {
+        const view = createTemporaryObject(scene, test);
+        view.visibilities.launcher = false;
+        view.visibilities.dashboard = true;
+        compare(view.modal, false);
+        NacrePearls.drag = {
+            screen: "test"
+        };
+        wait(190);
+        verify(view.visibilities.dashboard);
+        compare(view.visibilities.edgeMenu, "");
+        compare(view.modal, false);
+        NacrePearls.drag = null;
+        wait(180);
+        verify(!view.visibilities.dashboard);
+    }
     name: "ClickAway"
     width: 500
     height: 600

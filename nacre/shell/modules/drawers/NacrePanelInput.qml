@@ -74,7 +74,7 @@ Item {
     function settleHover() {
         if (!ready || !panels || !visibilities)
             return;
-        if (hidden || modal) {
+        if (hidden || modal || NacrePearls.drag?.screen === screen.name) {
             leftExit.stop();
             dashboardExit.stop();
             popoutExit.stop();
@@ -120,6 +120,12 @@ Item {
             osdExit.stop();
         else if (!modal && visibilities.osd)
             osdExit.restart();
+    }
+    Connections {
+        target: NacrePearls
+        function onDragChanged() {
+            root.settleHover();
+        }
     }
     Connections {
         target: root.visibilities

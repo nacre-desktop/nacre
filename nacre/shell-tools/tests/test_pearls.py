@@ -79,8 +79,8 @@ print("PANEL_ROUTING_OK")
             (target / "NacrePearls.qml").write_text("""pragma Singleton
 import QtQuick
 QtObject {
- property bool enabled:true;property var drag:null;property int starts:0;property int finishes:0;property real dx:0
- function begin(kind,host,name,p){if(drag)return;starts++;drag={host:host,start:p}}
+ property bool enabled:true;property bool cancelOnBegin:false;property var drag:null;property int starts:0;property int finishes:0;property real dx:0
+ function begin(kind,host,name,p){if(drag)return;starts++;drag={host:host,start:p};if(cancelOnBegin)host.enabled=false}
  function update(p){dx=p.x-drag.start.x;drag.host.x=dx}
  function finish(){finishes++;drag=null}
  function cancel(){drag=null}
@@ -110,6 +110,12 @@ TestCase {
   mouseDrag(sensor,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);
   compare(NacrePearls.starts,1);compare(NacrePearls.finishes,1);compare(NacrePearls.dx,100);
   lower.enabled=false;panel.x=0;
+  NacrePearls.cancelOnBegin=true;NacrePearls.starts=0;NacrePearls.finishes=0;
+  mousePress(sensor,20,20,Qt.LeftButton,Qt.MetaModifier);
+  mouseMove(sensor,120,20,1,Qt.LeftButton,Qt.MetaModifier);wait(30);
+  compare(NacrePearls.starts,1);compare(NacrePearls.finishes,0);compare(NacrePearls.drag,null);
+  mouseRelease(sensor,120,20,Qt.LeftButton,Qt.MetaModifier);
+  NacrePearls.cancelOnBegin=false;panel.enabled=true;
   DesktopSettings.data={dragPanels:false};
   mouseDrag(sensor,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);compare(NacrePearls.starts,1);
  }
