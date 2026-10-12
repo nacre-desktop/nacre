@@ -26,7 +26,12 @@ Singleton {
                 panel.popouts.pinned = false;
             }
     }
+    function dockAsHover(view) {
+        view.edgeMenu = "";
+        view.hoverDocked = true;
+    }
     function closeTransient(view) {
+        view.hoverDocked = false;
         view.launcher = false;
         view.session = false;
         view.dashboard = false;

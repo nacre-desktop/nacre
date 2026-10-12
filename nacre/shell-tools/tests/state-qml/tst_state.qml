@@ -18,6 +18,7 @@ TestCase {
         id: flags
         QtObject {
             property bool previewOnly: false
+            property bool hoverDocked: false
             property bool osd: false
             property bool session: false
             property bool launcher: false
@@ -36,6 +37,22 @@ TestCase {
     }
     property var one: null
     property var two: null
+    function test_docked_hover_resets_on_deliberate_open() {
+        NacrePanelState.openEdge("dashboard", "one");
+        NacrePanelState.dockAsHover(one);
+        verify(one.dashboard);
+        verify(one.hoverDocked);
+        compare(one.edgeMenu, "");
+        NacrePanelState.openEdge("dashboard", "one");
+        verify(!one.hoverDocked);
+        compare(one.edgeMenu, "dashboard");
+        NacrePanelState.openMode("wallpaper", "", false, "one", true);
+        NacrePanelState.dockAsHover(one);
+        verify(one.launcher);
+        verify(one.hoverDocked);
+        NacrePanelState.openMenu();
+        verify(!one.hoverDocked);
+    }
     function init() {
         NacreSettingsApp.close();
         NacreSettingsApp.created = false;

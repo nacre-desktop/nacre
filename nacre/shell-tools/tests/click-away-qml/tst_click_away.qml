@@ -172,6 +172,76 @@ TestCase {
         wait(180);
         verify(!view.visibilities.dashboard);
     }
+    function test_docked_panels_close_on_pointer_exit_data() {
+        return [
+            {
+                tag: "dashboard",
+                field: "dashboard",
+                x: 200,
+                y: 100,
+                outX: 480,
+                outY: 550
+            },
+            {
+                tag: "ai",
+                field: "left",
+                x: 100,
+                y: 200,
+                outX: 450,
+                outY: 550
+            },
+            {
+                tag: "controls",
+                field: "osd",
+                x: 400,
+                y: 200,
+                outX: 20,
+                outY: 550
+            },
+            {
+                tag: "launcher",
+                field: "launcher",
+                x: 200,
+                y: 400,
+                outX: 450,
+                outY: 100
+            }
+        ];
+    }
+    function test_docked_panels_close_on_pointer_exit(data) {
+        const view = createTemporaryObject(scene, test);
+        view.visibilities.launcher = false;
+        view.visibilities.edgeMenu = "";
+        view.visibilities.hoverDocked = true;
+        for (let attempt = 0; attempt < 2; attempt++) {
+            view.visibilities[data.field] = true;
+            mouseMove(view, data.x, data.y);
+            wait(160);
+            verify(view.visibilities[data.field]);
+            verify(!view.modal);
+            mouseMove(view, data.outX, data.outY);
+            tryCompare(view.visibilities, data.field, false, 500);
+        }
+    }
+    function test_docked_sidebar_closes_even_if_pointer_leaves_before_first_hover() {
+        const view = createTemporaryObject(scene, test);
+        mouseMove(view, 450, 550);
+        view.visibilities.launcher = false;
+        view.visibilities.hoverDocked = true;
+        view.visibilities.left = true;
+        verify(!view.leftWasHovered);
+        tryCompare(view.visibilities, "left", false, 500);
+    }
+    function test_docked_launcher_returns_to_modal_when_deliberately_opened() {
+        const view = createTemporaryObject(scene, test);
+        view.visibilities.hoverDocked = true;
+        verify(!view.modal);
+        view.visibilities.hoverDocked = false;
+        verify(view.modal);
+        mouseMove(view, 450, 100);
+        wait(180);
+        verify(view.visibilities.launcher);
+    }
     name: "ClickAway"
     width: 500
     height: 600
@@ -201,6 +271,7 @@ TestCase {
                 property bool osd: false
                 property bool session: false
                 property bool previewOnly: false
+                property bool hoverDocked: false
             }
 
             panels: Item {
