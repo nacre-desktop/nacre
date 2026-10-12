@@ -159,7 +159,7 @@ rewriting current presentation or private preferences to force a byte-equality
 pass. Keep this drift visible during acceptance and review its cause separately
 from the protected static configuration.
 
-Repository validation on the rebased prerequisite main passes: **625 local tests**,
+Repository validation on current main `d08e06d` with this task passes: **625 local tests**,
 Ruff lint/format, native Qt/QML parsing and regression tests, compositor boundary
 and generated-config checks, palette CLI, and browser formatting. GitHub's desktop
 job also passes; its shell suite reports two skips while the local gate reports
