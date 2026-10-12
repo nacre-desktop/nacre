@@ -31,8 +31,14 @@ ends); no external process runs inside the pointer callback. Native pearl moveme
 uses a 33ms compositor timer only for the duration of a Super-drag. It emits
 coordinate-change events through Hyprland, and disables on release. The shell
 handles every new begin/move/end transaction independently, shows a
-pointer-transparent inset docking guide, and docks on release at the matching
-edge. No native drag polling runs idle.
+pointer-transparent magnetic film, and docks on release at the matching edge.
+Each native transaction captures the owned window's initial geometry once through
+Hyprland's existing callback, then derives its moving rectangle from the pointer
+delta. The first lift and native movement both use `Geometry.magnet`: enter at72
+logical pixels from the frame, release the target beyond104, and show the film
+within170. Monitor coordinates are already logical; no extra scaling is applied.
+The target requires overlap along the edge and has one owner at shared monitor
+seams. A click without a16px pull cannot dock a native window. No native drag polling runs idle.
 
 A Qt DragHandler reserves Super and moves the original live item within its existing
 layer surface. The layer retains its keyboard focus mode while dragging. Hover exit timers pause
@@ -47,12 +53,16 @@ logical coordinates, with no added header or body inset. Hyprland owns its norma
 inactive/focused border. The original stays
 painted until placement completes and the destination has had two frame intervals
 to render. There is no screenshot ghost or second miniature panel. A finite, input-free
-iridescent film stretches from the frame to the moving panel, thins, and breaks
-over 170 logical pixels, with a short finite break fade. Reduced motion omits it. This respects
+shared `NacreDockFilm` membrane stretches from the frame to the moving panel,
+thins, and breaks over170 logical pixels. `NacreDockGuide` owns the same decoration
+for initial and subsequent pulls, with a160ms return/fade and no duplicate layer
+renderer. Reduced motion leaves the static cue and disables its animation. This respects
 the distinction between Wayland layer-shell and xdg-shell surfaces: their protocol
 roles cannot be changed during a mouse grab. A finite fallback releases the lift if
 placement fails. The deliberate Super gesture needs only 16 logical pixels in any direction.
-A short pull animates back without opening a window.
+A short pull or release within the magnetic zone animates back without opening a
+window on the same output. Crossing to another output keeps the existing tested
+window handoff before docking there, preserving view state.
 
 View state is independent of shared providers. Launcher contexts share catalogues
 and system snapshots, with local query results. Provider visibility combines edge
@@ -76,3 +86,12 @@ arbitrarily tall window. Gallery switching can grow an undersized owned window v
 `pearl-window.py fit`, with scaled/rotated monitor and reserved-area bounds; maximized
 windows are left alone. Full handoff positions are aligned to compositor logical
 pixels, and geometry helpers read their resulting state after writes.
+
+## Shared magnetic cue
+
+![The same pearly bridge on the first pull and a floating-window pull](../../assets/screenshots/magnetic-docking.png)
+
+This native Qt render uses `NacreDockFilm` with fixed demo colors and plain
+placeholder panels; it contains no personal desktop content or third-party
+artwork. Production uses the current Orient colors. Both paths render the same
+component, with no line-only fallback or extra pop-out copy.
