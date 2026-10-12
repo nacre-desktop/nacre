@@ -1415,6 +1415,18 @@
         "options": {
           "description": "Nacre:move-panel-or-window"
         }
+      },
+      {
+        "kind": "binding",
+        "keys": "mouse:272",
+        "action": "panel.drag.finish",
+        "parameters": {},
+        "options": {
+          "release": true,
+          "ignore_mods": true,
+          "non_consuming": true,
+          "description": "Nacre:finish-panel-or-window-drag"
+        }
       }
     ],
     "hypr/conf/cursor.lua": [

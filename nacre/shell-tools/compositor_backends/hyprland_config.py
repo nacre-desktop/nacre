@@ -63,7 +63,15 @@ SELECTORS = {
     "title_regex": "title",
     "namespace_regex": "namespace",
 }
-FLAGS = {"description", "locked", "repeating", "mouse", "non_consuming"}
+FLAGS = {
+    "description",
+    "locked",
+    "repeating",
+    "mouse",
+    "non_consuming",
+    "release",
+    "ignore_mods",
+}
 EXTENSIONS = {
     "cursor.session": (
         "compositor_backends/hyprland/session-cursor.lua",
@@ -71,6 +79,9 @@ EXTENSIONS = {
     ),
     "panel.drag": ("compositor_backends/hyprland/panel-drag.lua", "nacre_panel_drag"),
 }
+
+CALLBACKS = {key: (key, function) for key, (_, function) in EXTENSIONS.items()}
+CALLBACKS["panel.drag.finish"] = ("panel.drag", "nacre_panel_drag_finish")
 
 
 def fields(value, allowed, required=()):
@@ -202,10 +213,10 @@ def action_lua(row):
             raise ValueError("Invalid window resize dimensions")
     if "action" in params and not isinstance(params["action"], str):
         raise ValueError("Invalid floating action")
-    if action in EXTENSIONS:
+    if action in CALLBACKS:
         if params:
             raise ValueError("Backend callback accepts no declarative parameters")
-        return EXTENSIONS[action][1]
+        return CALLBACKS[action][1]
     if action not in METHODS:
         raise ValueError("Unknown compositor action: " + action)
     scalar = {
@@ -342,7 +353,10 @@ def render(contract, directory=DIRECTORY):
                         raise ValueError("Invalid binding option type")
                 if not isinstance(row["keys"], str) or not row["keys"]:
                     raise ValueError("Invalid binding keys")
-                if row["action"] in EXTENSIONS and row["action"] not in extensions:
+                if (
+                    row["action"] in CALLBACKS
+                    and CALLBACKS[row["action"]][0] not in extensions
+                ):
                     raise ValueError(
                         "Callback binding requires its backend extension first"
                     )

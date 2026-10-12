@@ -46,17 +46,22 @@ local function start_native_drag()
     end
     return result
 end
+-- A layer drag never calls window.drag(), so Hyprland 0.56 does not arm
+-- its implicit release callback. Finish explicitly on every LMB release,
+-- including a release after Super has already been let go. Native movement
+-- itself ends in Hyprland's mouse handler before these callbacks run.
+local function nacre_panel_drag_finish()
+    local shell = drag_route
+    drag_route = nil
+    if native_peer then native_event("end", hl.get_cursor_pos()) end
+    native_peer = nil
+    if native_timer then native_timer:set_enabled(false) end
+    return { ok = true, pass_event = shell ~= false }
+end
 local function nacre_panel_drag()
-    if drag_route ~= nil then
-        local shell = drag_route
-        drag_route = nil
-        if shell then return { ok = true, pass_event = true } end
-        local result = hl.dispatch(hl.dsp.window.drag())
-        if native_peer then native_event("end", hl.get_cursor_pos()) end
-        native_peer = nil
-        if native_timer then native_timer:set_enabled(false) end
-        return result
-    end
+    -- Native window.drag() also asks Hyprland to call this on release. The
+    -- explicit release binding below is idempotent if both callbacks run.
+    if drag_route ~= nil then return nacre_panel_drag_finish() end
     local cursor = hl.get_cursor_pos()
     local shell = false
     for _, layer in ipairs(hl.get_layers()) do
@@ -71,7 +76,8 @@ local function nacre_panel_drag()
         if shell then break end
     end
     drag_route = shell
-    if shell then return { ok = true, pass_event = true, request_release = true } end
+    if shell then return { ok = true, pass_event = true } end
     return start_native_drag()
 end
 hl.bind("SUPER + mouse:272", nacre_panel_drag, {description="Nacre:move-panel-or-window"})
+hl.bind("mouse:272", nacre_panel_drag_finish, {release=true,ignore_mods=true,non_consuming=true,description="Nacre:finish-panel-or-window-drag"})
