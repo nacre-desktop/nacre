@@ -2,100 +2,85 @@
 
 ## Done
 
-- Task branch `feature/niri-backend`, isolated `nacre-niri-backend` worktree.
-- Read the compositor facade and `docs/development/compositors.md` mapping.
-- Verified niri 26.04 IPC schema and include behavior in upstream documentation.
-  Stable IDs differ from changing per-output workspace indices. Includes are
-  supported since 25.11 and merge top-level sections; generate managed fragments,
-  never replace the user's `niri/config.kdl`.
-- Coordinated ownership with the PC/session, packaging and PR-integration agents.
-
-- Python JSON socket backend and canonical event reducer implemented. Fifteen
-  fixture/action/transport tests pass, including large IDs, focus clearing,
-  output-relative resolution, stale events and measured floating placement.
-- Python facade selects the backend without import-time IPC; exposes `events`
-  for QML's persistent consumer. QML event cache, serialized actions, shortcut pulses and reconnect tests pass.
-  Focused-output necklace uses display indices while windows keep stable IDs.
-  Sixteen targeted Python/native-Qt tests pass; not yet live-ready.
-
-- KDL bindings/rules/unsupported report consume the existing neutral source.
-  Native niri 26.04 validates a temporary wrapper with Orient colors and later
-  user-owned overrides. Eight config tests and seventeen Python/QML tests pass.
-- Six Hyprland-generated files are byte-identical. Boundary checks now include
-  niri, and public keyboard/profile/config metadata APIs are exposed.
-- Current main baseline is `fa37a28`; QML milestone is pushed as `9cf7807`.
-  The scoped pre-push guard is honored; no hook/settings edits by this task.
-
-- Caller audit fixed opaque-ID numeric assumptions in Settings/Colors/Welcome
-  activity and focused-output overview grouping. Hyprland branches are retained.
-  Native-Qt tests execute the actual app activity predicates for both ID models.
-- Full-check pass 1 found stale single-backend generator-test assumptions; updated
-  fixture output maps and the unknown-backend assertion, keeping strict validation.
-- Full-check pass 2 reached all shell tests; only the facade harness lacked the
-  new session script. It now verifies lazy backend creation, niri index/ID split,
-  output grouping and invalid selection without warnings. A transient alias-type
-  warning was fixed by reading active workspace and capabilities from one backend.
-- Current fixture checks: 18 backend/QML harness tests plus 8 config tests pass;
-  common generator and facade tests pass. Full source check is being rerun.
-
-- Independent review fixes: preserve wallpaper workspace identity (`var`, not
-  integer), clear queued actions and guard execution when disconnected, and honor
-  source helper/QS config overrides in generated compositor/shortcut bindings.
-  Wallpaper image/provider code is unchanged; the memory agent was notified.
-- Real Quickshell + real Python helper integration passes on a private fake Unix
-  socket with no compositor/windows: initial state, exact large ID, focus and close
-  roundtrip. Native-Qt fixtures also cover actual wallpaper/app predicates.
-- First complete source check passed 642 tests and all lint/format/native-source/
-  boundary/generator checks. Final review fixes and new integration/event tests
-  require a final rerun and final-head CI. PR #12 is draft; previous head CI passed.
-- Operator requires preserving the running Hyprland session. The PC agent's real
-  login/phase-2 UI acceptance is deferred; no session change is needed for this
-  task's fixture/CI completion criteria and no live Wayland claim is made.
-
-- Complete check on `ec7730c` passed 647 tests plus lint/format/native-source,
-  boundary, immutable Hyprland registrations and generated outputs. Native KDL
-  validator and real Quickshell fake-socket integration passed locally.
-- Main advanced to `4ee5346` with the approved Orient dev5 pin and panel
-  hide/docking fixes during validation; rebase and final checks/CI are next.
-- Source generated-key overrides must be inherited by the nested niri process
-  itself. Starting only Quickshell with those exports tests direct IPC, not keys.
-  Documentation now distinguishes these paths and keeps app-bind limitations clear.
+- Branch `feature/niri-backend`, isolated `nacre-niri-backend` worktree, one draft
+  PR: https://github.com/nacre-desktop/nacre/pull/12. Every milestone is committed
+  and pushed. Current baseline: main `4ee5346`, including compositor PR #3,
+  diagnostics/performance integration, approved Orient dev5 pin, and panel fixes.
+- Python JSON socket backend and event reducer: initial state, outputs refreshed
+  on workspace/config changes, stable opaque u64 IDs, canonical events, focus,
+  urgency, dynamic per-output indices, stale IDs and unknown future events.
+- Actions: focus/close, workspace/window movement, floating/resize/placement,
+  directional scrolling-layout operations, fullscreen/maximize, reload and logout.
+  Owned pearl title+PID checks retained; placement uses measured relative deltas
+  in logical pixels and requeries after cross-output moves. No guessed struts.
+- QML facade selection, persistent stream, stable window objects, serialized
+  actions, bounded reconnects and shortcut pulses. Disconnect clears pending work
+  and blocks new/queued actions. Invalid selection fails; unused Hyprland singleton
+  stays uninstantiated. Necklace/overview use focused-output display indices.
+- Minimal caller fixes: app activity recognizes opaque IDs, unsupported minimize
+  avoids empty processes, capture timers honor capabilities, wallpaper workspace
+  identity is `var`. No image/provider changes; memory agent notified.
+- Shared-source KDL bindings/rules/unsupported report; Orient role palette template.
+  Public config/keyboard/profile APIs; explicit name mapping required for initial
+  numeric profile routes. Generator never writes user-owned `niri/config.kdl`.
+  All six Hyprland-generated files and immutable registrations remain unchanged.
+- Targeted checks pass: 22 backend/QML/real-Quickshell harness tests and 9 config
+  tests. Real Quickshell + source Python helpers exercise state and focus/close
+  on a private fake socket with no compositor/windows. Native Qt tests execute
+  actual app/wallpaper predicates and facade backend-selection behavior.
+- Complete pre-rebase source check passed 647 tests plus lint, format, native
+  source parsing, boundary and generator checks. Niri 26.04 validates a temporary
+  include wrapper and palette; test proves parser acceptance and unchanged wrapper,
+  not inspection of niri's effective resolved configuration. Earlier PR CI passed.
+- Independent documentation/code reader review completed; all findings resolved,
+  including action queue on disconnect and source-binding environment inheritance.
 
 ## Next
 
-4. Push each tested milestone; give the PC agent an exact revision for live checks.
-5. Run full tools/check.py, rebase if main moves, open one PR and await CI.
+1. Full `tools/check.py` on current `4ee5346` baseline with matching Orient dev5
+   installed in the task venv; required final-head GitHub CI.
+2. Update PR validation with exact final revision, make PR review-ready, hand off
+   to integration and PC/session agents. Do not deploy or change sessions.
+3. Save final completion evidence in the private brain. Keep this worktree for
+   branch acceptance/review; remove only after no more edits are needed.
 
-## Open questions and integration limits
+## Open questions / known differences
 
-- PR #3 is merged at `1c38f0d`; PR #4 merged as `fa37a28`. This branch
-  includes both, preserving diagnostics and explicit Hyprland drag release.
-- PC agent installed niri 26.04 independently and confirmed the nested IPC
-  schema. Full plain-niri login and branch UI/pearl acceptance are pending.
-- Niri lacks Hyprland pin/special-workspace semantics and a global cursor-position
-  query. Report those capabilities honestly; preserve owned title+PID checks for
-  pearls and distinguish native drag hooks from application-owned docking.
-- No system packages, session files, installer code or private preferences changed.
+- Operator requires keeping Hyprland running. PC agent verified nested niri 26.04
+  IPC schema independently; real login and branch Wayland/UI/pearl acceptance are
+  deferred. No live session acceptance claim is made by this task.
+- Unsupported capabilities: pin, special-workspace hide/force-kill, global cursor
+  query, window capture, physical shortcut release, fullscreen metadata, runtime
+  desktop/monitor configuration and night-light controller. Fail explicitly.
+- Niri-native Mod+mouse movement lacks a drag-end event. Existing application-owned
+  lift/release and focused-pearl detach toggle / `pearls dock` IPC remain; never
+  infer release from an idle timer.
+- `setup_ready=false` for niri until the packaging agent completes offline initial
+  config/includes/keyboard/profile deployment. Backend support alone is not
+  installer/session readiness. No installer, system package, session, Orient-repo,
+  private profile, account or AI-permission edits by this task.
+- Generated compositor actions honor `NACRE_COMPOSITOR_TOOLS`; shortcut IPC honors
+  `NACRE_QS_CONFIG` and `NACRE_QS_BIN`. Export them before starting isolated nested
+  niri for key testing: `spawn-sh` inherits niri's environment. Setting exports only
+  for Quickshell tests direct IPC. Inherited app-launch scripts still use installed
+  paths; matching isolated runtime is PC/packaging scope.
+
+## Checks / continuation
+
+- `/tmp/nacre-niri-full-check.log` and `.exit`: full local gate.
+- `/tmp/nacre-niri-targeted.log`, `/tmp/nacre-niri-config-tests.log`: focused gates.
+- `/tmp/nacre-niri-native-runtime-test.log`: real Quickshell fake-socket integration.
+- Run `git fetch origin refs/heads/main:refs/remotes/origin/main`, verify clean
+  state, then rebase when needed. Remote fetch refspec tracks main only; use an
+  explicitly known old task-head lease for rebased pushes. Honor scoped pre-push
+  privacy guard; no hook/settings modifications by this task.
+- Use `NACRE_COMPOSITOR=niri`, source `NACRE_COMPOSITOR_TOOLS` and
+  `NACRE_PEARL_TOOLS` for helpers. Docs distinguish offline generator/validator
+  commands from queries requiring the intended `NIRI_SOCKET`.
 
 ## Sources
 
 - [IPC](https://niri-wm.github.io/niri/IPC.html)
-- [26.04 IPC schema](https://github.com/niri-wm/niri/blob/v26.04/niri-ipc/src/lib.rs)
+- [26.04 schema](https://github.com/niri-wm/niri/blob/v26.04/niri-ipc/src/lib.rs)
 - [Include merging](https://niri-wm.github.io/niri/Configuration:-Include.html)
 - [Floating windows](https://niri-wm.github.io/niri/Floating-Windows.html)
-
-## Continuation notes
-
-- Python facade/backend and QML singleton are source-selectable; no session or
-  global installed files have been changed. `NACRE_COMPOSITOR_TOOLS` and
-  `NACRE_PEARL_TOOLS` are source-helper overrides for isolated live validation.
-- Target logs: `/tmp/nacre-niri-targeted.log`,
-  `/tmp/nacre-niri-config-tests.log`, `/tmp/nacre-niri-config-check.log`.
-- Public setup gate is intentionally `setup_ready=false` for niri. Packaging
-  agent queries it and retains Hyprland-only setup until its offline deployment
-  supports initial includes, keyboard and explicit named profile routes.
-- Runtime pin/hide/capture/cursor/fullscreen metadata and desktop/monitor/controller
-  settings differ; capability flags and compositor docs state the limits.
-- Native Mod+mouse drag-end events are unavailable. Existing application-owned
-  lift/release and focused-pearl detach toggle/explicit dock IPC remain available;
-  do not fake release based on an idle timer.
