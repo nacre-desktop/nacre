@@ -183,7 +183,37 @@ def fixture(home, source, video=False):
     }
 
 
-def prepare(directory, revision=None):
+def disable_speed_pass(shell):
+    """Same-source control: keep concurrent UI/helper changes, disable this pass."""
+    changes = {
+        "modules/background/NacreWallpaperScene.qml": (
+            "readonly property bool motionHidden: WallpaperPlayback.sleeping || WallpaperPlayback.locked || (!pickerOpen && NacreCompositor.windows.some(client => client.workspace?.id === workspaceId && client.fullscreen))",
+            "readonly property bool motionHidden: false",
+        ),
+        "modules/dashboard/NacreDashboardPanel.qml": (
+            "            asynchronous: true",
+            "            asynchronous: false",
+        ),
+        "services/NacreMenuContext.qml": (
+            "Qt.callLater(root.refreshOnOpen);",
+            "root.refreshOnOpen();",
+        ),
+        "services/NacreDashboardState.qml": (
+            "Qt.callLater(root.refresh)",
+            "root.refresh()",
+        ),
+    }
+    for relative, (before, after) in changes.items():
+        path = shell / relative
+        source = path.read_text()
+        if source.count(before) != 1:
+            raise RuntimeError(
+                "Control no longer matches the production source: " + relative
+            )
+        path.write_text(source.replace(before, after))
+
+
+def prepare(directory, revision=None, control=False):
     from PIL import Image
 
     home = directory / "home"
@@ -198,6 +228,8 @@ def prepare(directory, revision=None):
         with tarfile.open(fileobj=io.BytesIO(archive)) as files:
             files.extractall(source, filter="data")
     shutil.copytree(source / "nacre/shell", shell)
+    if control:
+        disable_speed_pass(shell)
     tools = home / ".local/share/nacre/shell/tools"
     shutil.copytree(
         source / "nacre/shell-tools",
@@ -323,7 +355,7 @@ def shell_environment(tools, environment):
 
 
 def run(args, directory):
-    home, shell, movie = prepare(directory, args.revision)
+    home, shell, movie = prepare(directory, args.revision, args.control)
     # Unix-domain socket paths (including Hyprland signatures) must fit 108 bytes.
     runtime = Path(tempfile.mkdtemp(prefix="npr-"))
     env = {
@@ -449,7 +481,7 @@ def run(args, directory):
             wait_for(lambda: (runtime / "wayland-1").exists(), "nested Wayland socket")
             env["WAYLAND_DISPLAY"] = "wayland-1"
         shell_env = shell_environment(home / ".local/share/nacre/shell/tools", env)
-        if args.adaptive_allocator:
+        if args.adaptive_allocator or args.control:
             shell_env.pop("MALLOC_MMAP_THRESHOLD_", None)
         if args.allocator_mmap_threshold:
             shell_env["MALLOC_MMAP_THRESHOLD_"] = str(args.allocator_mmap_threshold)
@@ -502,6 +534,7 @@ def run(args, directory):
                 versions[name] = "unavailable"
         report = {
             "versions": versions,
+            "control": args.control,
             "budget_tier": args.budget_tier,
             "parent_renderer": args.parent_renderer,
             "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -830,6 +863,11 @@ def main():
         "--revision", help="Immutable git revision for the before capture"
     )
     parser.add_argument("--keep-fixtures", type=Path)
+    parser.add_argument(
+        "--control",
+        action="store_true",
+        help="Disable only this speed pass in the copied shell for a same-source comparison",
+    )
     parser.add_argument("--check-budgets", action="store_true")
     parser.add_argument(
         "--budget-tier",
