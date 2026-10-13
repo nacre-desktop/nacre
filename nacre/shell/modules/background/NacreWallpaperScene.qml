@@ -25,7 +25,7 @@ Item {
     readonly property bool motionAllowed: !WallpaperPlayback.sleeping && !WallpaperPlayback.locked && !WallpaperPlayback.paused && !WallpaperPlayback.batteryPaused && (pickerOpen || !covered)
     // A visible pause keeps its last frame. Only fully hidden motion can release
     // its decoder; a short grace period avoids churn while switching windows.
-    readonly property bool motionHidden: WallpaperPlayback.sleeping || WallpaperPlayback.locked || (covered && !pickerOpen)
+    readonly property bool motionHidden: WallpaperPlayback.sleeping || WallpaperPlayback.locked || (!pickerOpen && NacreCompositor.windows.some(client => client.workspace?.id === workspaceId && client.fullscreen))
     property bool motionRetained: true
     property var motionState: null
     onMotionHiddenChanged: {

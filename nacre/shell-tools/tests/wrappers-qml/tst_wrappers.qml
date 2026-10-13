@@ -247,6 +247,21 @@ TestCase {
         tryCompare(loader, "active", true);
         verify(loader.item !== null);
         WallpaperPlayback.paused = false;
+        // A tiled window may cover only part of the output. Keep its paused
+        // frame rather than exposing the poster through visible desktop gaps.
+        NacreCompositor.windows = [
+            {
+                workspace: {
+                    id: 1
+                },
+                floating: false,
+                fullscreen: false
+            }
+        ];
+        verify(!view.motionAllowed);
+        verify(!view.motionHidden);
+        wait(60);
+        verify(loader.active);
         // A brief cover must reuse the decoder, and the picker keeps motion live.
         NacreCompositor.windows = [
             {

@@ -439,6 +439,8 @@ def run(args, directory):
             wait_for(lambda: (runtime / "wayland-1").exists(), "nested Wayland socket")
             env["WAYLAND_DISPLAY"] = "wayland-1"
         shell_env = shell_environment(home / ".local/share/nacre/shell/tools", env)
+        if args.adaptive_allocator:
+            shell_env.pop("MALLOC_MMAP_THRESHOLD_", None)
         if args.allocator_mmap_threshold:
             shell_env["MALLOC_MMAP_THRESHOLD_"] = str(args.allocator_mmap_threshold)
         process = start(
@@ -741,6 +743,11 @@ def main():
     )
     parser.add_argument("--keep-fixtures", type=Path)
     parser.add_argument("--check-budgets", action="store_true")
+    parser.add_argument(
+        "--adaptive-allocator",
+        action="store_true",
+        help="Control capture without the shell large-buffer allocator policy",
+    )
     parser.add_argument(
         "--allocator-mmap-threshold",
         type=int,
