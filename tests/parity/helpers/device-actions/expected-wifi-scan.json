@@ -1,0 +1,28 @@
+{
+  "stdout": {
+    "message": "Wi-Fi scan complete."
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "nmcli",
+      "argv": [
+        "--wait",
+        "15",
+        "--colors",
+        "no",
+        "--fields",
+        "IN-USE",
+        "device",
+        "wifi",
+        "list",
+        "--rescan",
+        "yes"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

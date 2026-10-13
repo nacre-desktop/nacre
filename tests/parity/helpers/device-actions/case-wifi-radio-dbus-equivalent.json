@@ -1,0 +1,43 @@
+{
+  "helper": "device-actions",
+  "args": [
+    "wifi-radio",
+    "off"
+  ],
+  "commands": {
+    "nmcli": [
+      {}
+    ]
+  },
+  "dbus": [
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Set",
+        "signature": "ssv",
+        "body": [
+          "org.freedesktop.NetworkManager",
+          "WirelessEnabled",
+          {
+            "variant": "b",
+            "value": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "command": "nmcli",
+          "argv": [
+            "radio",
+            "wifi",
+            "off"
+          ],
+          "stdin": ""
+        }
+      ],
+      "reply": {}
+    }
+  ]
+}

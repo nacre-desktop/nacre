@@ -1,0 +1,12 @@
+{
+  "helper": "helper-service",
+  "args": [],
+  "stdout": "jsonl",
+  "fixtures": {
+    "hosted/dashboard-data.py": "def execute(action, value):\n    return {'value': 'x' * (8 * 1024 * 1024)}\n"
+  },
+  "env": {
+    "NACRE_DASHBOARD_TOOLS": "/case/hosted"
+  },
+  "stdin": "{\"id\": 1, \"tool\": \"dashboard-data\", \"arguments\": [\"read\"], \"input\": null}\n"
+}

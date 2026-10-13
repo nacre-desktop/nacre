@@ -1,0 +1,18 @@
+{
+  "stdout": [
+    {
+      "ready": true,
+      "version": 1
+    },
+    {
+      "id": 1,
+      "code": 1,
+      "output": "{\"error\": \"Helper response is too large\"}"
+    }
+  ],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

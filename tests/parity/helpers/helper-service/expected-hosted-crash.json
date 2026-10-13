@@ -1,0 +1,36 @@
+{
+  "stdout": [
+    {
+      "ready": true,
+      "version": 1
+    },
+    {
+      "id": 1,
+      "code": 1,
+      "output": "{\"error\": \"fixture helper crashed\"}"
+    },
+    {
+      "id": 2,
+      "code": 0,
+      "output": "{\"favorites\": [], \"hidden\": [], \"recent\": [], \"usage\": {}}\n"
+    }
+  ],
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/launcher.json": {
+      "mode": "0o600",
+      "text": "{\"favorites\": [], \"hidden\": []}"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

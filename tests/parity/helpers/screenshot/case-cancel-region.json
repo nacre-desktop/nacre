@@ -1,0 +1,14 @@
+{
+  "helper": "screenshot",
+  "args": [
+    "region"
+  ],
+  "stdout": "text",
+  "commands": {
+    "slurp": [
+      {
+        "code": 1
+      }
+    ]
+  }
+}

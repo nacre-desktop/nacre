@@ -1,0 +1,27 @@
+{
+  "helper": "screenshot",
+  "args": [
+    "region"
+  ],
+  "stdout": "text",
+  "commands": {
+    "slurp": [
+      {
+        "stdout": "0,0 800x600\n"
+      }
+    ],
+    "grim": [
+      {
+        "stdout_base64": "iVBORw0KGgo="
+      }
+    ],
+    "wl-copy": [
+      {
+        "read_stdin": true
+      }
+    ],
+    "notify-send": [
+      {}
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "helper": "helper-service",
+  "args": [],
+  "stdout": "jsonl",
+  "fixtures": {
+    "hosted/dashboard-media.py": "import os\ndef track_data(data):\n    os._exit(17)\n"
+  },
+  "env": {
+    "NACRE_DASHBOARD_TOOLS": "/case/hosted"
+  },
+  "stdin": "{\"id\": 1, \"tool\": \"dashboard-media\", \"arguments\": [\"{}\"], \"input\": null}\n"
+}

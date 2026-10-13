@@ -1,0 +1,338 @@
+{
+  "stdout": [
+    {
+      "ready": true,
+      "version": 1
+    },
+    {
+      "id": 65,
+      "code": 1,
+      "output": "{\"error\": \"Helper queue is full\"}"
+    },
+    {
+      "id": 1,
+      "code": 0,
+      "output": "{\"value\": \"1\"}\n"
+    },
+    {
+      "id": 2,
+      "code": 0,
+      "output": "{\"value\": \"2\"}\n"
+    },
+    {
+      "id": 3,
+      "code": 0,
+      "output": "{\"value\": \"3\"}\n"
+    },
+    {
+      "id": 4,
+      "code": 0,
+      "output": "{\"value\": \"4\"}\n"
+    },
+    {
+      "id": 5,
+      "code": 0,
+      "output": "{\"value\": \"5\"}\n"
+    },
+    {
+      "id": 6,
+      "code": 0,
+      "output": "{\"value\": \"6\"}\n"
+    },
+    {
+      "id": 7,
+      "code": 0,
+      "output": "{\"value\": \"7\"}\n"
+    },
+    {
+      "id": 8,
+      "code": 0,
+      "output": "{\"value\": \"8\"}\n"
+    },
+    {
+      "id": 9,
+      "code": 0,
+      "output": "{\"value\": \"9\"}\n"
+    },
+    {
+      "id": 10,
+      "code": 0,
+      "output": "{\"value\": \"10\"}\n"
+    },
+    {
+      "id": 11,
+      "code": 0,
+      "output": "{\"value\": \"11\"}\n"
+    },
+    {
+      "id": 12,
+      "code": 0,
+      "output": "{\"value\": \"12\"}\n"
+    },
+    {
+      "id": 13,
+      "code": 0,
+      "output": "{\"value\": \"13\"}\n"
+    },
+    {
+      "id": 14,
+      "code": 0,
+      "output": "{\"value\": \"14\"}\n"
+    },
+    {
+      "id": 15,
+      "code": 0,
+      "output": "{\"value\": \"15\"}\n"
+    },
+    {
+      "id": 16,
+      "code": 0,
+      "output": "{\"value\": \"16\"}\n"
+    },
+    {
+      "id": 17,
+      "code": 0,
+      "output": "{\"value\": \"17\"}\n"
+    },
+    {
+      "id": 18,
+      "code": 0,
+      "output": "{\"value\": \"18\"}\n"
+    },
+    {
+      "id": 19,
+      "code": 0,
+      "output": "{\"value\": \"19\"}\n"
+    },
+    {
+      "id": 20,
+      "code": 0,
+      "output": "{\"value\": \"20\"}\n"
+    },
+    {
+      "id": 21,
+      "code": 0,
+      "output": "{\"value\": \"21\"}\n"
+    },
+    {
+      "id": 22,
+      "code": 0,
+      "output": "{\"value\": \"22\"}\n"
+    },
+    {
+      "id": 23,
+      "code": 0,
+      "output": "{\"value\": \"23\"}\n"
+    },
+    {
+      "id": 24,
+      "code": 0,
+      "output": "{\"value\": \"24\"}\n"
+    },
+    {
+      "id": 25,
+      "code": 0,
+      "output": "{\"value\": \"25\"}\n"
+    },
+    {
+      "id": 26,
+      "code": 0,
+      "output": "{\"value\": \"26\"}\n"
+    },
+    {
+      "id": 27,
+      "code": 0,
+      "output": "{\"value\": \"27\"}\n"
+    },
+    {
+      "id": 28,
+      "code": 0,
+      "output": "{\"value\": \"28\"}\n"
+    },
+    {
+      "id": 29,
+      "code": 0,
+      "output": "{\"value\": \"29\"}\n"
+    },
+    {
+      "id": 30,
+      "code": 0,
+      "output": "{\"value\": \"30\"}\n"
+    },
+    {
+      "id": 31,
+      "code": 0,
+      "output": "{\"value\": \"31\"}\n"
+    },
+    {
+      "id": 32,
+      "code": 0,
+      "output": "{\"value\": \"32\"}\n"
+    },
+    {
+      "id": 33,
+      "code": 0,
+      "output": "{\"value\": \"33\"}\n"
+    },
+    {
+      "id": 34,
+      "code": 0,
+      "output": "{\"value\": \"34\"}\n"
+    },
+    {
+      "id": 35,
+      "code": 0,
+      "output": "{\"value\": \"35\"}\n"
+    },
+    {
+      "id": 36,
+      "code": 0,
+      "output": "{\"value\": \"36\"}\n"
+    },
+    {
+      "id": 37,
+      "code": 0,
+      "output": "{\"value\": \"37\"}\n"
+    },
+    {
+      "id": 38,
+      "code": 0,
+      "output": "{\"value\": \"38\"}\n"
+    },
+    {
+      "id": 39,
+      "code": 0,
+      "output": "{\"value\": \"39\"}\n"
+    },
+    {
+      "id": 40,
+      "code": 0,
+      "output": "{\"value\": \"40\"}\n"
+    },
+    {
+      "id": 41,
+      "code": 0,
+      "output": "{\"value\": \"41\"}\n"
+    },
+    {
+      "id": 42,
+      "code": 0,
+      "output": "{\"value\": \"42\"}\n"
+    },
+    {
+      "id": 43,
+      "code": 0,
+      "output": "{\"value\": \"43\"}\n"
+    },
+    {
+      "id": 44,
+      "code": 0,
+      "output": "{\"value\": \"44\"}\n"
+    },
+    {
+      "id": 45,
+      "code": 0,
+      "output": "{\"value\": \"45\"}\n"
+    },
+    {
+      "id": 46,
+      "code": 0,
+      "output": "{\"value\": \"46\"}\n"
+    },
+    {
+      "id": 47,
+      "code": 0,
+      "output": "{\"value\": \"47\"}\n"
+    },
+    {
+      "id": 48,
+      "code": 0,
+      "output": "{\"value\": \"48\"}\n"
+    },
+    {
+      "id": 49,
+      "code": 0,
+      "output": "{\"value\": \"49\"}\n"
+    },
+    {
+      "id": 50,
+      "code": 0,
+      "output": "{\"value\": \"50\"}\n"
+    },
+    {
+      "id": 51,
+      "code": 0,
+      "output": "{\"value\": \"51\"}\n"
+    },
+    {
+      "id": 52,
+      "code": 0,
+      "output": "{\"value\": \"52\"}\n"
+    },
+    {
+      "id": 53,
+      "code": 0,
+      "output": "{\"value\": \"53\"}\n"
+    },
+    {
+      "id": 54,
+      "code": 0,
+      "output": "{\"value\": \"54\"}\n"
+    },
+    {
+      "id": 55,
+      "code": 0,
+      "output": "{\"value\": \"55\"}\n"
+    },
+    {
+      "id": 56,
+      "code": 0,
+      "output": "{\"value\": \"56\"}\n"
+    },
+    {
+      "id": 57,
+      "code": 0,
+      "output": "{\"value\": \"57\"}\n"
+    },
+    {
+      "id": 58,
+      "code": 0,
+      "output": "{\"value\": \"58\"}\n"
+    },
+    {
+      "id": 59,
+      "code": 0,
+      "output": "{\"value\": \"59\"}\n"
+    },
+    {
+      "id": 60,
+      "code": 0,
+      "output": "{\"value\": \"60\"}\n"
+    },
+    {
+      "id": 61,
+      "code": 0,
+      "output": "{\"value\": \"61\"}\n"
+    },
+    {
+      "id": 62,
+      "code": 0,
+      "output": "{\"value\": \"62\"}\n"
+    },
+    {
+      "id": 63,
+      "code": 0,
+      "output": "{\"value\": \"63\"}\n"
+    },
+    {
+      "id": 64,
+      "code": 0,
+      "output": "{\"value\": \"64\"}\n"
+    }
+  ],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}
