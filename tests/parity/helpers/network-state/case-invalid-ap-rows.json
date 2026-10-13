@@ -37,5 +37,440 @@
         "stdout": "*:Too strong:AA\\:BB\\:CC\\:DD\\:EE\\:01:101:2412 MHz:wlan0\n*:Bad escape\\q:AA\\:BB\\:CC\\:DD\\:EE\\:02:50:2412 MHz:wlan0\n"
       }
     ]
-  }
+  },
+  "dbus": [
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager",
+          "WirelessEnabled"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "b",
+            "value": true
+          }
+        ]
+      },
+      "effects": [
+        {
+          "command": "nmcli",
+          "argv": [
+            "--terse",
+            "--escape",
+            "yes",
+            "--colors",
+            "no",
+            "--wait",
+            "5",
+            "radio",
+            "wifi"
+          ],
+          "stdin": ""
+        }
+      ]
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager",
+        "interface": "org.freedesktop.NetworkManager",
+        "member": "GetDevices",
+        "signature": "",
+        "body": []
+      },
+      "reply": {
+        "signature": "ao",
+        "body": [
+          [
+            "/org/freedesktop/NetworkManager/Devices/1"
+          ]
+        ]
+      },
+      "effects": [
+        {
+          "command": "nmcli",
+          "argv": [
+            "--terse",
+            "--escape",
+            "yes",
+            "--colors",
+            "no",
+            "--wait",
+            "5",
+            "--fields",
+            "DEVICE,TYPE,STATE",
+            "device",
+            "status"
+          ],
+          "stdin": ""
+        }
+      ]
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/Devices/1",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.Device",
+          "DeviceType"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "u",
+            "value": 2
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/Devices/1",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.Device",
+          "Interface"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "s",
+            "value": "wlan0"
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/Devices/1",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.Device",
+          "State"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "u",
+            "value": 100
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/Devices/1",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.Device.Wireless",
+          "AccessPoints"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "ao",
+            "value": [
+              "/org/freedesktop/NetworkManager/AccessPoint/1_1",
+              "/org/freedesktop/NetworkManager/AccessPoint/1_2"
+            ]
+          }
+        ]
+      },
+      "effects": [
+        {
+          "command": "nmcli",
+          "argv": [
+            "--terse",
+            "--escape",
+            "yes",
+            "--colors",
+            "no",
+            "--wait",
+            "5",
+            "--fields",
+            "IN-USE,SSID,BSSID,SIGNAL,FREQ,DEVICE",
+            "device",
+            "wifi",
+            "list",
+            "--rescan",
+            "no"
+          ],
+          "stdin": ""
+        }
+      ]
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/Devices/1",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.Device.Wireless",
+          "ActiveAccessPoint"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "o",
+            "value": "/org/freedesktop/NetworkManager/AccessPoint/1_1"
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/AccessPoint/1_1",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.AccessPoint",
+          "Ssid"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "ay",
+            "value": [
+              84,
+              111,
+              111,
+              32,
+              115,
+              116,
+              114,
+              111,
+              110,
+              103
+            ]
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/AccessPoint/1_1",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.AccessPoint",
+          "HwAddress"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "s",
+            "value": "AA:BB:CC:DD:EE:01"
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/AccessPoint/1_1",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.AccessPoint",
+          "Strength"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "y",
+            "value": 101
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/AccessPoint/1_1",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.AccessPoint",
+          "Frequency"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "u",
+            "value": 2412
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/AccessPoint/1_2",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.AccessPoint",
+          "Ssid"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "ay",
+            "value": [
+              0,
+              105,
+              110,
+              118,
+              97,
+              108,
+              105,
+              100,
+              32,
+              116,
+              114,
+              97,
+              110,
+              115,
+              112,
+              111,
+              114,
+              116,
+              32,
+              114,
+              111,
+              119
+            ]
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/AccessPoint/1_2",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.AccessPoint",
+          "HwAddress"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "s",
+            "value": "invalid"
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/AccessPoint/1_2",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.AccessPoint",
+          "Strength"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "y",
+            "value": 0
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager/AccessPoint/1_2",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager.AccessPoint",
+          "Frequency"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "u",
+            "value": 0
+          }
+        ]
+      },
+      "effects": []
+    }
+  ]
 }

@@ -21,6 +21,21 @@ def plain(value):
     return value
 
 
+def typed(value):
+    if isinstance(value, dict):
+        if set(value) == {"variant", "value"}:
+            return Variant(
+                value["variant"],
+                bytes(value["value"])
+                if value["variant"] == "ay"
+                else typed(value["value"]),
+            )
+        return {key: typed(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [typed(item) for item in value]
+    return value
+
+
 def append(path, value):
     with path.open("a") as stream:
         fcntl.flock(stream, fcntl.LOCK_EX)
@@ -56,7 +71,7 @@ async def main():
         if "error" in reply:
             return Message.new_error(message, reply["error"], reply.get("text", ""))
         return Message.new_method_return(
-            message, reply.get("signature", ""), reply.get("body", [])
+            message, reply.get("signature", ""), typed(reply.get("body", []))
         )
 
     bus.add_message_handler(handle)

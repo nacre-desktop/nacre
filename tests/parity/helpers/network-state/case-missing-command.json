@@ -1,4 +1,5 @@
 {
   "helper": "network-state",
-  "args": []
+  "args": [],
+  "dbus": []
 }
