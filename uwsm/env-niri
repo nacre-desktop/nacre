@@ -2,6 +2,11 @@
 # UWSM's niri_session plugin exports NIRI_SOCKET and manages clean shutdown.
 export NACRE_COMPOSITOR=niri
 export NIRI_CONFIG="$HOME/.config/nacre/niri-on-pc/config.kdl"
+# Full testing is an explicit prepared-source opt-in, independent of Hyprland.
+if [ -r "$HOME/.local/share/nacre/niri-on-pc/session/source-revision" ]; then
+    export NIRI_CONFIG="$HOME/.local/share/nacre/niri-on-pc/session/config/config.kdl"
+    export PATH="$HOME/.local/share/nacre/niri-on-pc/session-bin:$PATH"
+fi
 # The GNOME screencast portal chooses its own backend. Do not force a global GDK
 # backend in this session (see niri's Important Software documentation).
 unset GDK_BACKEND

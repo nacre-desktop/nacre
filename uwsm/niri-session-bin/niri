@@ -1,0 +1,7 @@
+#!/bin/sh
+# UWSM's niri-session wrapper retains ownership; overlay only its compositor child.
+if [ "${1:-}" = --session ]; then
+    exec /usr/bin/python3 "$HOME/.local/share/nacre/niri-on-pc/niri-session-runtime.py" compositor
+fi
+# Native queries and offline validation must never accidentally start a session.
+exec /usr/bin/niri "$@"

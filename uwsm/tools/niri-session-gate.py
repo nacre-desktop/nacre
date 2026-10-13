@@ -47,6 +47,10 @@ def allowed(action, environment=None, home=None):
         return (
             record.get("backendReady") is True and record.get("unlockVerified") is True
         )
+    if action == "observer":
+        return (
+            record.get("backendReady") is True and record.get("observerReady") is True
+        )
     return record.get("backendReady") is True
 
 
