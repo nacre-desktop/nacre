@@ -217,8 +217,11 @@ per-output index. Default profiles still emit no routes. The independent
 `setup_ready` gate is false for niri until packaged offline deployment is complete;
 the backend alone does not promise installer/session support.
 
-The palette template sets focus-ring and border colors from Orient `primary`,
-`outlineVariant` and `error` roles, leaving enabled state and widths to the user.
+The palette template sets the active focus-ring and border gradient from Orient
+`primary` to `secondary` at 45°, matching the Hyprland palette's role order and
+angle. It retains solid primary fallback, inactive `outlineVariant` and urgent
+`error` colors, leaving enabled state and widths to the user. Niri gives gradients
+precedence over solid colors; an explicit user gradient can be included afterward.
 The unsupported report lists pin/center/size effects, native layer extensions,
 submaps and actions without exact niri equivalents. Unknown declaration kinds
 fail generation; unsupported known semantics are reported rather than silently

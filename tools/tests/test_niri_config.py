@@ -4,6 +4,7 @@ import copy
 import importlib.util
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -53,11 +54,26 @@ class NiriConfigTests(unittest.TestCase):
             ROOT / "nacre/shell-tools/compositor_backends/niri/palette.kdl.in"
         ).read_text()
         self.assertIn("{{primary}}", palette)
+        self.assertIn("{{secondary}}", palette)
         self.assertIn("{{outlineVariant}}", palette)
         self.assertIn("{{error}}", palette)
         self.assertNotIn("width ", palette)
         self.assertNotIn("\n        on", palette)
         self.assertNotIn("\n        off", palette)
+
+    def test_active_gradients_keep_hyprland_role_order_and_angle(self):
+        directory = ROOT / "nacre/shell-tools/compositor_backends"
+        hyprland = (directory / "hyprland/palette.lua.in").read_text()
+        roles = re.findall(r"rgba\(\{\{(\w+)\}\}ff\)", hyprland)
+        angle = re.search(r"angle=(\d+)", hyprland).group(1)
+        palette = (directory / "niri/palette.kdl.in").read_text()
+        gradients = re.findall(
+            r'active-gradient from="#\{\{(\w+)\}\}" '
+            r'to="#\{\{(\w+)\}\}" angle=(\d+)',
+            palette,
+        )
+        self.assertEqual(roles, ["primary", "secondary"])
+        self.assertEqual(gradients, [(*roles, angle), (*roles, angle)])
 
     def test_new_neutral_binding_is_reflected_in_both_backends(self):
         contract = copy.deepcopy(config.load())
@@ -162,8 +178,13 @@ class NiriConfigTests(unittest.TestCase):
             palette = (
                 ROOT / "nacre/shell-tools/compositor_backends/niri/palette.kdl.in"
             ).read_text()
-            for role in ("primary", "outlineVariant", "error"):
-                palette = palette.replace("{{" + role + "}}", "123456")
+            for role, color in {
+                "primary": "123456",
+                "secondary": "abcdef",
+                "outlineVariant": "657483",
+                "error": "d80f4a",
+            }.items():
+                palette = palette.replace("{{" + role + "}}", color)
             (root / "colors.kdl").write_text(palette)
             # Includes precede user-owned choices: duplicate keys across files
             # are explicitly merged by niri, while user settings remain intact.
