@@ -47,10 +47,6 @@ def environment():
         )
     env.update(compositor.environment_updates(env))
     env.setdefault("XDG_SESSION_TYPE", "wayland")
-    # Niri measurements favor independently releasable large image/video buffers.
-    # Keep Hyprland's adaptive policy; a benefit has not been established there.
-    if compositor.backend_name == "niri":
-        env.setdefault("MALLOC_MMAP_THRESHOLD_", "131072")
     return env
 
 
