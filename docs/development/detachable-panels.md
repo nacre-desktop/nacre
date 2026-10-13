@@ -51,8 +51,8 @@ suppressed rather than replaying its closing animation at the edge. Its footprin
 release, an ordinary window is created with the same body dimensions and exact
 logical coordinates, with no added header or body inset. Hyprland owns its normal
 inactive/focused border. The original stays
-painted until placement completes and the destination has had two frame intervals
-to render. There is no screenshot ghost or second miniature panel. A finite, input-free
+painted until placement completes and two explicitly requested destination frames
+have been submitted. A placement acknowledgement alone does not finish the handoff. There is no screenshot ghost or second miniature panel. A finite, input-free
 shared `NacreDockFilm` membrane stretches from the frame to the moving panel,
 thins, and breaks over170 logical pixels. `NacreDockGuide` owns the same decoration
 for initial and subsequent pulls, with a160ms return/fade and no duplicate layer
@@ -151,3 +151,16 @@ Static destinations request their second frame rather than waiting for unrelated
 animation. If no destination frame arrives within500ms, keep the floating window
 and roll back the edge view; never hide an unpainted source. No idle polling or
 image readback is involved.
+
+Both directions use the same frame barrier. A newly placed floating panel publishes
+`painted` only after its destination frames, rather than a fixed34ms delay.
+`ready` means compositor placement succeeded; it must not be treated as rendering
+completion. Failed presentation returns to the original edge panel.
+
+Niri's IPC deliberately omits animated render offsets and its placement action
+always animates. Exact initial floating placements therefore remain transparent
+for a finite400ms settling interval under the retained source before requesting
+the destination frames. This covers the stock26.04 critically damped movement
+spring at normal speed; slower custom compositor animations may still outlast it.
+Ordinary standalone windows, Hyprland handoffs and later native drags do not use
+this interval. It creates no idle work and changes no compositor configuration.

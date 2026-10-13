@@ -18,6 +18,25 @@ FloatingWindow {
     property bool closeAfterLaunch: entry.initial.closeAfterLaunch === true
     onCloseAfterLaunchChanged: NacrePearls.saveSoon()
     property bool ready: false
+    property bool painted: false
+    // Niri reports target geometry before its native movement spring settles.
+    // Keep a lifted source visible while that first placement runs underneath it.
+    property bool revealed: false
+    onReadyChanged: {
+        if (!ready)
+            return;
+        if (dropPoint?.exact && NacreCompositor.backendName === "niri" && NacrePearls.drag?.destination === entry)
+            placementSettle.start();
+        else
+            revealed = true;
+    }
+    onRevealedChanged: if (revealed)
+        handoffFrames.start()
+    Timer {
+        id: placementSettle
+        interval: 400
+        onTriggered: root.revealed = true
+    }
     Connections {
         target: viewFlags
         function onDashboardTabChanged() {
@@ -34,7 +53,7 @@ FloatingWindow {
     readonly property alias providerView: lease
     readonly property alias bodyItem: body
     title: entry.title
-    color: ready ? NacreTokens.body : "transparent"
+    color: revealed ? NacreTokens.body : "transparent"
     implicitWidth: dropPoint?.exact ? dropPoint.width : ({
             launcher: 1000,
             dashboard: 984,
@@ -74,10 +93,14 @@ FloatingWindow {
         onTriggered: if (!root.ready)
             root.place(root.dropPoint)
     }
-    Timer {
-        id: handoffReady
-        interval: 34
-        onTriggered: NacrePearls.handedOff(root.entry)
+    NacreFrameBarrier {
+        id: handoffFrames
+        surface: root.contentItem.Window.window
+        commit: () => {
+            root.painted = true;
+            NacrePearls.handedOff(root.entry);
+        }
+        reject: () => NacrePearls.handoffFailed(root.entry)
     }
     PersistentProperties {
         id: viewFlags
@@ -231,7 +254,6 @@ FloatingWindow {
                 return;
             }
             root.ready = true;
-            handoffReady.restart();
             NacreCompositor.refreshWindows();
             if (action === "place")
                 Qt.callLater(root.activate);
@@ -247,7 +269,7 @@ FloatingWindow {
     Item {
         id: face
         anchors.fill: parent
-        opacity: root.ready ? 1 : 0
+        opacity: root.revealed ? 1 : 0
         Behavior on opacity {
             NumberAnimation {
                 duration: root.dropPoint?.exact ? 0 : NacreTokens.motionEnabled ? 180 : 0

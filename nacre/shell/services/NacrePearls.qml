@@ -560,7 +560,7 @@ Singleton {
             dockTarget: value.magnet?.armed ? value.magnet.screen : ""
         });
         handoffTimeout.restart();
-        if (entry.window.ready)
+        if (entry.window.painted)
             Qt.callLater(() => handedOff(entry));
     }
     function handoffFailed(entry) {
@@ -571,7 +571,7 @@ Singleton {
         }
     }
     function handedOff(entry) {
-        if (drag?.destination === entry) {
+        if (entry.window.painted && drag?.destination === entry) {
             const dockTarget = drag.dockTarget;
             drag.host.handoffHidden = true;
             finishEdge(drag.kind, drag.screen, entry.chat);

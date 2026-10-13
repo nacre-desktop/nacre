@@ -506,6 +506,11 @@ TestCase {
   surface.frameSwapped();verify(entry.window.visible);compare(controller.entries.length,1);compare(surface.requests,2);
   surface.frameSwapped();compare(controller.entries.length,0);verify(!entry.window.visible);wait(1);compare(destroyed,2);
  }
+ function test_ready_but_unpainted_destination_cannot_hide_original(){
+  const entry=addEntry();entry.window.painted=false;const host={handoffHidden:false};
+  controller.drag={host:host,destination:entry};controller.handedOff(entry);
+  verify(!host.handoffHidden);verify(controller.drag);controller.cancel();
+ }
  function test_missing_destination_frame_keeps_native_window(){
   surface.autoFrames=false;const entry=addEntry();
   ignoreWarning("Nacre dock destination did not present; floating window retained");
@@ -535,6 +540,78 @@ TestCase {
   controller.update({x:900,y:370});verify(controller.drag.magnet.armed);verify(controller.magneticCue.armed);
   controller.finish();verify(controller.drag.released);compare(controller.drag.dy,0);
   wait(230);compare(controller.drag,null);compare(controller.entries.length,0);compare(controller.landingCues.length,0);
+ }
+}
+""")
+            result = subprocess.run(
+                [str(runner), "-input", str(target), "-o", "-,txt"],
+                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("QWARN", result.stdout + result.stderr)
+
+    def test_floating_release_waits_for_painted_frames_not_placement_time(self):
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Qt Quick Test unavailable")
+        window = (SHELL / "modules/pearls/NacrePearlWindow.qml").read_text()
+        barrier = window.split("    NacreFrameBarrier {", 1)[1].split(
+            "    PersistentProperties {", 1
+        )[0]
+        barrier = "    NacreFrameBarrier {" + barrier
+        barrier = barrier.replace("root.contentItem.Window.window", "root.testSurface")
+        ready = window.split("    onReadyChanged:", 1)[1].split("    Connections {", 1)[
+            0
+        ]
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder)
+            (target / "NacreFrameBarrier.qml").write_text(
+                (SHELL / "widgets/NacreFrameBarrier.qml").read_text()
+            )
+            (target / "qmldir").write_text(
+                "singleton NacrePearls 1.0 NacrePearls.qml\nsingleton NacreCompositor 1.0 NacreCompositor.qml\n"
+            )
+            (target / "NacrePearls.qml").write_text("""pragma Singleton
+import QtQuick
+QtObject {property var drag:null;property int handoffs:0;property int failures:0;function handedOff(entry){handoffs++} function handoffFailed(entry){failures++}}
+""")
+            (target / "NacreCompositor.qml").write_text(
+                'pragma Singleton\nimport QtQuick\nQtObject {property string backendName:"hyprland"}\n'
+            )
+            (target / "Destination.qml").write_text(
+                'import QtQuick\nimport "."\nItem {id:root;property bool ready:false;property bool painted:false;property bool revealed:false;property var dropPoint:null;property var entry:({});property var testSurface;onReadyChanged:'
+                + ready
+                + barrier
+                + "}\n"
+            )
+            (target / "tst_release.qml").write_text("""import QtQuick
+import QtTest
+import "."
+TestCase {
+ name:"FloatingReleaseFrames";when:windowShown
+ QtObject {id:surface;property int requests:0;signal frameSwapped();function update(){requests++}}
+ Component {id:factory;Destination {testSurface:surface}}
+ function test_placement_does_not_drop_original_before_paint(){
+  const win=factory.createObject(this);NacrePearls.handoffs=0;
+  win.ready=true;wait(80);compare(NacrePearls.handoffs,0);verify(!win.painted);
+  surface.frameSwapped();compare(NacrePearls.handoffs,0);verify(!win.painted);
+  surface.frameSwapped();compare(NacrePearls.handoffs,1);verify(win.painted);
+  surface.frameSwapped();compare(NacrePearls.handoffs,1);win.destroy();
+ }
+ function test_niri_first_placement_stays_hidden_while_native_spring_runs(){
+  NacreCompositor.backendName="niri";NacrePearls.handoffs=0;
+  const win=factory.createObject(this,{dropPoint:{exact:true}});NacrePearls.drag={destination:win.entry};win.ready=true;
+  wait(200);verify(!win.revealed);compare(NacrePearls.handoffs,0);
+  tryVerify(()=>win.revealed,500);surface.frameSwapped();surface.frameSwapped();
+  verify(win.painted);compare(NacrePearls.handoffs,1);win.destroy();
+  NacreCompositor.backendName="hyprland";NacrePearls.drag=null;
+ }
+ function test_missing_frame_returns_to_original(){
+  const win=factory.createObject(this);NacrePearls.handoffs=0;NacrePearls.failures=0;
+  win.ready=true;wait(550);compare(NacrePearls.handoffs,0);compare(NacrePearls.failures,1);verify(!win.painted);win.destroy();
  }
 }
 """)
