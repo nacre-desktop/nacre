@@ -196,7 +196,7 @@ not pass; they are not silently counted as a successful baseline.
 | Capture | degraded | degraded → degraded | Niri native window + grim PNGs pass; native picker/focused-output save keys emitted. Area interaction/multiple outputs pending. |
 | Lock / idle | degraded | degraded → degraded | Nested session-lock acknowledgement passes; isolated hypridle timeout fails. Password, inhibitors, lid and suspend pending. |
 | Night light | degraded | missing → degraded | Owned wlsunset behind gamma-control availability; absent nested gamma disables UI. Physical color/reset pending. |
-| Startup / X11 / portals | degraded | degraded → degraded | Named startup routes; GNOME portal diagnostics. Satellite input, login lifetime and screen sharing pending; GNOME backend absent here. |
+| Startup / X11 / portals | degraded | degraded → degraded | Named startup routes; forced-X11 launch/focus/close passes in niri. Input, login lifetime and screen sharing pending; GNOME backend absent here. |
 | Blur / window rules | degraded | degraded → degraded | KDL bar/floating blur, sizes/corners; working-area proportions declared. Full-output drawers excluded; shaped panel blur unavailable. |
 | Settings / shortcut list | degraded | missing → degraded | Nested preference/effect saves pass; generated keys inspectable, private overrides unverified. Outer gaps disabled. |
 | Output configuration / hotplug | degraded | missing → degraded | Nested scale roundtrip and rollback fixtures. Mode, two outputs and hotplug pending; mirroring disabled. |

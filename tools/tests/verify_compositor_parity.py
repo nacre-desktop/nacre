@@ -174,6 +174,27 @@ def probe(repo, backend, output):
             windows = query("windows")
             assert len(windows) == 2
             identifier = windows[0]["windowId"]
+            if backend == "niri":
+
+                def tabs():
+                    facade("action", "focus_window", "--window", identifier)
+                    run(
+                        ["/usr/bin/niri", "msg", "action", "consume-window-into-column"]
+                    )
+                    run(
+                        [
+                            "/usr/bin/niri",
+                            "msg",
+                            "action",
+                            "toggle-column-tabbed-display",
+                        ]
+                    )
+                    run(["/usr/bin/niri", "msg", "action", "focus-window-down-or-top"])
+                    assert query("active_window")["windowId"] != identifier
+                    facade("action", "focus_window", "--window", identifier)
+                    return "two windows in a tabbed column; tab focus changed"
+
+                check("tabbed-column", tabs)
             results["window-state"] = {"status": "passed", "count": len(windows)}
             for name, args in (
                 ("focus_window", ["--window", identifier]),
@@ -416,6 +437,9 @@ def probe(repo, backend, output):
                         )
                     time.sleep(0.2)
                 assert native["floating"], "Pearl remained tiled"
+                assert query("active_window")["windowId"] == native["windowId"], (
+                    "Pearl did not receive native focus"
+                )
                 ipc("pearls", "dock", entries[0]["key"])
                 time.sleep(0.5)
                 assert json.loads(ipc("pearls", "state")) == [], "Pearl did not dock"
