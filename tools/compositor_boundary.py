@@ -15,6 +15,8 @@ BACKEND_FILES = {
     "hypr/hyprland.lua",
     "nacre/shell-tools/shortcuts.lua",
     "tools/compositor_boundary.py",
+    # Disposable performance fixtures own native compositor startup and input.
+    "tools/performance-session.py",
     # Session lifecycle owns starting/validating the native compositor, not IPC.
     "uwsm/tools/niri-session-runtime.py",
 }

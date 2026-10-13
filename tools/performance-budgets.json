@@ -1,0 +1,32 @@
+{
+  "reference_pss_mib": {
+    "fresh_static": 250,
+    "all_panels_closed": 350,
+    "static_after_latency": 350,
+    "video": 550,
+    "video_paused": 550,
+    "video_suspended": 500,
+    "video_resumed": 550,
+    "static_after_video": 500
+  },
+  "ci_pss_mib": {
+    "fresh_static": 450,
+    "all_panels_closed": 650,
+    "static_after_latency": 650,
+    "video": 900,
+    "video_paused": 900,
+    "video_suspended": 850,
+    "video_resumed": 900,
+    "static_after_video": 850
+  },
+  "ci_frame_p95_ms": {
+    "cold": 2000,
+    "reopen": 1200
+  },
+  "ci_synchronous_p95_ms": {
+    "cold": 500,
+    "reopen": 300
+  },
+  "ci_idle_cpu_mean_one_core_percent": 5,
+  "ci_min_delivered_video_fps": 10
+}
