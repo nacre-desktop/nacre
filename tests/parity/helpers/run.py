@@ -385,7 +385,10 @@ def execute(case, command, trace=None):
                 **identity,
             )
             if not daemon.stdout.readline().startswith("unix:"):
-                raise RuntimeError("Private fixture bus did not start")
+                _, daemon_error = daemon.communicate(timeout=3)
+                raise RuntimeError(
+                    "Private fixture bus did not start: " + daemon_error.strip()
+                )
             peer = subprocess.Popen(
                 [sys.executable, str(HERE / "dbus_peer.py"), str(root)],
                 stdout=subprocess.PIPE,
@@ -472,6 +475,10 @@ def execute(case, command, trace=None):
                     process.communicate()
                     raise
                 code = process.returncode
+                if code and not output.strip() and error.lstrip().startswith("bwrap:"):
+                    raise RuntimeError(
+                        "Parity sandbox could not start: " + error.strip()
+                    )
         finally:
             ipc.close()
             for child in (peer, daemon):
