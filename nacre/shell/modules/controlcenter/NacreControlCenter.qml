@@ -15,6 +15,10 @@ FocusScope {
     }
     readonly property bool opening: visibility && revealMotion.running
     property bool restoreImmediately: false
+    function restoreAttached() {
+        revealMotion.complete();
+        syncSize();
+    }
     property bool handoffHidden: false
     opacity: handoffHidden ? 0 : 1
     onEnabledChanged: if (enabled)
@@ -43,7 +47,7 @@ FocusScope {
     }
     onKeyboardActiveChanged: Qt.callLater(focusExplicit)
     onVisibilityChanged: {
-        syncSize();
+        Qt.callLater(syncSize);
         Qt.callLater(focusExplicit);
     }
     onContentWidthChanged: syncSize()

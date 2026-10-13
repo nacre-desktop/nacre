@@ -20,7 +20,13 @@ Singleton {
     property var niriMove: null
     property var lastGesture: ({})
     property string error: ""
-    readonly property var magneticCue: !enabled || NacrePanelState.hidden ? null : drag && !drag.released ? drag.magnet : nativeDrag?.ready ? nativeDrag.magnet : null
+    readonly property var magneticCue: !enabled || NacrePanelState.hidden || NacreCompositor.backendName === "niri" ? null : drag && !drag.released ? drag.magnet : nativeDrag?.ready ? nativeDrag.magnet : null
+    readonly property var landingCues: {
+        if (!enabled || NacrePanelState.hidden)
+            return [];
+        const kind = drag && !drag.released ? drag.kind : nativeDrag?.ready ? nativeDrag.entry?.kind : niriMove?.entry.kind;
+        return kind ? monitors().map(monitor => Geometry.landing(kind, monitor)).filter(Boolean) : [];
+    }
     readonly property bool enabled: DesktopSettings.data.detachablePanels !== false
     Component {
         id: factory
@@ -405,7 +411,7 @@ Singleton {
                     media: "dashboard",
                     launcher: "launcher"
                 })[entry.kind]];
-        panel?.prepareLift();
+        panel?.restoreAttached();
         remove(entry, false);
     }
     function bodyRect(host, name) {

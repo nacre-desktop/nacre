@@ -443,7 +443,7 @@ TestCase {
  property var view:({dashboard:false,dashboardPinned:false,left:false,leftPinned:false,launcher:false,osd:false,session:false,previewOnly:false,hoverDocked:false,edgeMenu:"",dashboardTab:0})
  property int destroyed:0
  property int prepared:0
- function init(){controller.entries=[];controller.drag=null;controller.nativeDrag=null;controller.niriMove=null;destroyed=0;prepared=0;NacrePanelState.hidden=false;NacrePanelState.screens={test:view};NacrePanelState.panels={test:{dashboard:{prepareLift(){prepared++}}}};NacreCompositor.backendName="hyprland";NacreCompositor.windows=[];}
+ function init(){controller.entries=[];controller.drag=null;controller.nativeDrag=null;controller.niriMove=null;destroyed=0;prepared=0;NacrePanelState.hidden=false;NacrePanelState.screens={test:view};NacrePanelState.panels={test:{dashboard:{restoreAttached(){prepared++}}}};NacreCompositor.backendName="hyprland";NacreCompositor.windows=[];}
  function addEntry(){const e={kind:"dashboard",title:"Nacre Pearl Dashboard 12",origin:"test",window:{visible:true,ready:true,clientAddress:"niri-window:12",captureState(){return {dashboardTab:2}},destroy(){destroyed++}},destroy(){destroyed++}};controller.entries=[e];return e;}
  function packet(phase,x,y){return "nacre_pearl_drag,"+phase+",Nacre Pearl Dashboard 12,"+x+","+y+",400,300,984,740";}
  function test_native_grab_middle_docks_before_pointer_reaches_edge(){
@@ -464,6 +464,7 @@ TestCase {
   niriOwned();addEntry();controller.compositorMove(niriPacket("end"));compare(controller.entries.length,1);
   for(let i=0;i<2;i++){
    if(i) addEntry();controller.compositorMove(niriPacket("begin"));verify(controller.niriMove);
+   compare(controller.landingCues.length,1);compare(controller.landingCues[0].edge,"top");compare(controller.landingCues[0].origin.y,50);compare(controller.magneticCue,null);
    wait(250);compare(controller.entries.length,1);
    controller.compositorMove(niriPacket("end"));compare(controller.entries.length,0);
    verify(view.dashboard);verify(view.hoverDocked);compare(view.dashboardTab,2);wait(1);
@@ -497,7 +498,7 @@ TestCase {
   controller.drag={kind:"dashboard",host:{},screen:"test",start:{x:900,y:300},body:body,ready:false,released:false,magnet:{screen:"test",edge:"top",armed:true}};
   controller.update({x:900,y:370});verify(controller.drag.magnet.armed);verify(controller.magneticCue.armed);
   controller.finish();verify(controller.drag.released);compare(controller.drag.dy,0);
-  wait(230);compare(controller.drag,null);compare(controller.entries.length,0);
+  wait(230);compare(controller.drag,null);compare(controller.entries.length,0);compare(controller.landingCues.length,0);
  }
 }
 """)

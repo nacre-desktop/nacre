@@ -16,6 +16,10 @@ Item {
     }
     readonly property bool opening: visibilities.left && edgeOpening.running
     property bool restoreImmediately: false
+    function restoreAttached() {
+        edgeOpening.complete();
+        implicitWidth = Qt.binding(() => detached ? parent.width : visibilities.left ? 470 : 0);
+    }
     property bool handoffHidden: false
     opacity: handoffHidden ? 0 : 1
     onEnabledChanged: if (enabled)

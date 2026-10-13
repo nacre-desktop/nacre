@@ -123,5 +123,19 @@ Only an owned ready floating pearl that began an observed move can dock.
 The shared magnetic target uses the reported output and final panel edge. Niri
 currently hides positions during native movement and has no cursor IPC; therefore
 `nativePanelDrag` remains false for continuous native tracking. Native docking
-works at release, with the shared returning film; it does not claim Hyprland's
-continuous native preview. Application-owned first pulls still have the live film.
+works at release. Niri uses the same stationary landing field for both first and
+later native pulls; Hyprland retains its live membrane on both paths.
+
+The common landing field now marks every matching output edge during either kind
+of drag. It is a stationary iridescent target, not a guessed cursor/window position.
+Niri therefore has feedback for the entire observed native move despite hiding
+its moving coordinates. The dynamic membrane remains enabled on Hyprland, which supplies live geometry
+for both paths. Niri consistently uses the landing field alone on both paths. Both decorations fade out, accept no input,
+and run no animation while idle; reduced motion removes the fades.
+
+`restoreAttached()` reinstates each panel's size binding explicitly. Completing a
+Behavior animation before Qt has started it does not apply its queued target;
+production-QML regression tests previously observed zero size on all four panels.
+The explicit binding/sizing restore is synchronous, while ordinary close and
+future fresh-open animations remain intact. The control center defers its normal
+visibility-size update until its Behavior enable binding has settled.

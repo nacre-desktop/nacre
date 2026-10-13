@@ -43,6 +43,10 @@ the flat top-center and side-center hover targets remain available.
 
 Reattachment restores the panel directly, without repeating its opening animation.
 On Niri 26.04, drag a floating panel back near its matching frame edge and release
-it to dock. Niri hides a native drag's position until release, so its magnetic
-feedback appears at the drop rather than following the whole native drag. Ordinary
+it to dock. A shared iridescent landing glow marks the matching frame edges throughout
+the drag. Niri hides the moving window's position until release, so its glow
+stays at the destination instead of stretching with the floating window. Ordinary
 window moves and pauses while holding the button do not attach a panel.
+
+On Niri, first pulls and later floating-window pulls use the same landing glow.
+Hyprland additionally shows its stretching membrane, supported on both paths.

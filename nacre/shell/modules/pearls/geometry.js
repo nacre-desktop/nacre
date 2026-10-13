@@ -79,3 +79,26 @@ function magnet(kind, body, point, monitors, previous = null, anchor = body) {
     }
     return null;
 }
+
+// The same stationary landing field works even when a compositor hides the
+// moving window's coordinates. It is a target, not a guessed window position.
+function landing(kind, monitor) {
+    const side = edge(kind);
+    if (!side || !monitor)
+        return null;
+    const frame = monitor.frame || {};
+    const horizontal = side === "top" || side === "bottom";
+    const across = side === "top" ? monitor.y + (frame.top || 0) : side === "bottom" ? monitor.y + monitor.height - (frame.bottom || 0) : side === "left" ? monitor.x + (frame.left || 0) : monitor.x + monitor.width - (frame.right || 0);
+    const along = horizontal ? monitor.x + monitor.width / 2 : monitor.y + (frame.top || 0) + (monitor.height - (frame.top || 0) - (frame.bottom || 0)) / 2;
+    return {
+        screen: monitor.name,
+        edge: side,
+        origin: horizontal ? {
+            x: along,
+            y: across
+        } : {
+            x: across,
+            y: along
+        }
+    };
+}

@@ -13,6 +13,10 @@ NacreSurface {
     }
     readonly property bool opening: visibilities.dashboard && edgeOpening.running
     property bool restoreImmediately: false
+    function restoreAttached() {
+        edgeOpening.complete();
+        presentedHeight = Qt.binding(() => visibilities.dashboard ? contentHeight : 0);
+    }
     property bool handoffHidden: false
     opacity: handoffHidden ? 0 : 1
     onEnabledChanged: if (enabled)
