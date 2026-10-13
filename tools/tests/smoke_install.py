@@ -314,17 +314,30 @@ def main():
                     "Prepared installation lacks its public demo wallpaper"
                 )
             ipc("wallpaper", "set", str(picture))
-            wait_for(
-                "wallpaper selection",
-                lambda: matches(
-                    "wallpaper",
-                    lambda row: (
-                        row.get("applied") == str(picture) and not row.get("busy")
+            try:
+                wait_for(
+                    "wallpaper selection",
+                    lambda: matches(
+                        "wallpaper",
+                        lambda row: (
+                            row.get("applied") == str(picture) and not row.get("busy")
+                        ),
                     ),
-                ),
-                watch,
-                timeout=90,
-            )
+                    watch,
+                    timeout=90,
+                )
+            except (RuntimeError, TimeoutError):
+                diagnostic = subprocess.run(
+                    [str(bridge), "wallpaper", "--file", str(picture)],
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                (output / "palette-cli.log").write_text(
+                    diagnostic.stdout + diagnostic.stderr
+                )
+                raise
             ipc("nacre", "close")
             ipc("nacre", "tab", "0")
             screenshot = output / "screenshot.png"
