@@ -12,6 +12,7 @@ NacreSurface {
         edgeOpening.complete();
     }
     readonly property bool opening: visibilities.dashboard && edgeOpening.running
+    property bool restoreImmediately: false
     property bool handoffHidden: false
     opacity: handoffHidden ? 0 : 1
     onEnabledChanged: if (enabled)
@@ -156,6 +157,7 @@ NacreSurface {
         NacreDashboardCustomize {}
     }
     Behavior on presentedHeight {
+        enabled: !root.restoreImmediately || !root.visibilities.dashboard
         NumberAnimation {
             id: edgeOpening
             duration: NacreTokens.motionEnabled ? 360 : 0

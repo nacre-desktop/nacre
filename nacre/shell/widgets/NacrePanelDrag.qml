@@ -19,6 +19,7 @@ Item {
             NacrePearls.cancel()
         acceptedModifiers: Qt.MetaModifier
         acceptedButtons: Qt.LeftButton
+        cursorShape: Qt.ClosedHandCursor
         grabPermissions: PointerHandler.CanTakeOverFromItems
         target: null
         onActiveChanged: {

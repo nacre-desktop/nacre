@@ -332,6 +332,7 @@ class State:
                     "monitor": workspace["outputId"] if workspace else None,
                     "geometry": geometry,
                     "geometryKnown": known,
+                    "moving": row.get("workspace_id") is None and position is None,
                     "at": [x, y],
                     "size": size,
                     "floating": bool(row.get("is_floating")),

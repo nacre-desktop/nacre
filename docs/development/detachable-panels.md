@@ -103,3 +103,25 @@ then evaluates the current hover immediately when the animation finishes. This
 also handles reduced motion without a fixed timeout, and closes normally if the
 pointer moved away during the animation. Ordinary hover and keyboard focus policies
 remain unchanged.
+
+## Direct restoration and Niri release tracking
+
+Docking restores a panel at full size before removing its native window, instead
+of replaying the ordinary menu-opening animation. The attached host keeps opening
+motion disabled for restored size changes (including asynchronous launcher pages),
+while closing and future ordinary menu openings still animate. View state and
+hover dismissal remain independent of this presentation flag.
+
+Niri 26.04's `Layout::with_windows` publishes interactively moved windows with no
+workspace and no positions, then restores the workspace/geometry at release:
+https://github.com/niri-wm/niri/blob/v26.04/src/layout/mod.rs . The adapter exposes
+that movement state, and the backend emits observed begin/end events. It waits
+for valid final geometry if workspace metadata arrives later, cancels on removal
+or disconnect, and never treats an idle pause or programmatic move as a drop.
+Only an owned ready floating pearl that began an observed move can dock.
+
+The shared magnetic target uses the reported output and final panel edge. Niri
+currently hides positions during native movement and has no cursor IPC; therefore
+`nativePanelDrag` remains false for continuous native tracking. Native docking
+works at release, with the shared returning film; it does not claim Hyprland's
+continuous native preview. Application-owned first pulls still have the live film.

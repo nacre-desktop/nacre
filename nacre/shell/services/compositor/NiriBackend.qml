@@ -46,6 +46,7 @@ Singleton {
     property int reconnectAttempt: 0
     property var registrations: []
     property var pendingActions: []
+    property var movingWindows: ({})
     signal event(var value)
     signal configurationReloaded
     signal panelGesture(string data)
@@ -66,9 +67,30 @@ Singleton {
             return false;
         const next = {};
         const ordered = [];
+        const movements = [];
+        const moving = Object.assign({}, movingWindows);
         for (const record of value.windows) {
             if (!record.windowId || next[record.windowId])
                 continue;
+            const previous = byId[record.windowId]?.record;
+            if (connected && previous && previous.moving !== true && record.moving === true) {
+                moving[record.windowId] = true;
+                movements.push({
+                    type: "window-move",
+                    phase: "begin",
+                    windowId: record.windowId
+                });
+            } else if (moving[record.windowId] && record.moving !== true && record.geometryKnown === true) {
+                delete moving[record.windowId];
+                movements.push({
+                    type: "window-move",
+                    phase: "end",
+                    windowId: record.windowId,
+                    body: record.geometry,
+                    outputId: record.outputId,
+                    floating: record.floating
+                });
+            }
             const window = byId[record.windowId] || windowFactory.createObject(root, {
                 record: record,
                 owner: root
@@ -90,8 +112,21 @@ Singleton {
         connected = true;
         error = value.configFailed ? NacreI18n.tr("ui.niri.error.config-reload-failed", "Niri configuration failed to reload.") : "";
         reconnectAttempt = 0;
+        for (const id of Object.keys(moving)) {
+            if (!next[id]) {
+                delete moving[id];
+                movements.push({
+                    type: "window-move",
+                    phase: "cancel",
+                    windowId: id
+                });
+            }
+        }
+        movingWindows = moving;
         for (const window of retired)
             Qt.callLater(() => window.destroy());
+        for (const movement of movements)
+            event(movement);
         return true;
     }
     Component {
@@ -148,6 +183,11 @@ Singleton {
         }
         onExited: (exitCode, exitStatus) => {
             root.connected = false;
+            root.movingWindows = {};
+            root.event({
+                type: "window-move",
+                phase: "cancel"
+            });
             root.pendingActions = [];
             root.error = NacreI18n.tr("ui.niri.error.ipc-disconnected", "Niri IPC disconnected; reconnecting.");
             root.activeWindowId = "";

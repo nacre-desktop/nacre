@@ -56,9 +56,11 @@
 - Unsupported capabilities: pin, special-workspace hide/force-kill, global cursor
   query, window capture, physical shortcut release, fullscreen metadata, runtime
   desktop/monitor configuration and night-light controller. Fail explicitly.
-- Niri-native Mod+mouse movement lacks a drag-end event. Existing application-owned
-  lift/release and focused-pearl detach toggle / `pearls dock` IPC remain; never
-  infer release from an idle timer.
+- Niri-native Mod+mouse has no dedicated drag-end event or live cursor geometry.
+  Observed workspace-less move state followed by restored geometry now supplies
+  release docking for owned floating panels. Initial application-owned pulls and
+  focused-pearl dock IPC remain. Never infer release from an idle timer; see
+  [the docking contract](../detachable-panels.md).
 - `setup_ready=false` for niri until the packaging agent completes offline initial
   config/includes/keyboard/profile deployment. Backend support alone is not
   installer/session readiness. No installer, system package, session, Orient-repo,

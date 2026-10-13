@@ -13,6 +13,7 @@ Item {
         edgeOpening.complete();
     }
     readonly property bool opening: visibilities.launcher && edgeOpening.running
+    property bool restoreImmediately: false
     property bool handoffHidden: false
     opacity: handoffHidden ? 0 : 1
     onEnabledChanged: if (enabled)
@@ -134,6 +135,7 @@ Item {
     }
 
     Behavior on presentedHeight {
+        enabled: !root.restoreImmediately || !root.visibilities.launcher
         NumberAnimation {
             id: edgeOpening
             duration: NacreTokens.motionEnabled ? 300 : 0

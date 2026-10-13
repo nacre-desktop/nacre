@@ -15,6 +15,7 @@ Item {
         edgeOpening.complete();
     }
     readonly property bool opening: visibilities.left && edgeOpening.running
+    property bool restoreImmediately: false
     property bool handoffHidden: false
     opacity: handoffHidden ? 0 : 1
     onEnabledChanged: if (enabled)
@@ -29,7 +30,7 @@ Item {
     implicitWidth: detached ? parent.width : visibilities.left ? 470 : 0
     implicitHeight: detached ? parent.height : Math.min(810, screen.height - 150)
     Behavior on implicitWidth {
-        enabled: !root.detached
+        enabled: !root.detached && (!root.restoreImmediately || !root.visibilities.left)
         NumberAnimation {
             id: edgeOpening
             duration: NacreAppearance.anim.durations.normal
