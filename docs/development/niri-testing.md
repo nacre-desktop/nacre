@@ -300,6 +300,31 @@ checks. Actual login acceptance remains pending.
 
 ## Open issues and sources
 
+### Optional Brain in the isolated full-login session
+
+The Brain launcher and its user service both need the compositor-neutral Brain
+code. Updating only the isolated shell leaves an older Brain calling `hyprctl`
+before it can launch its browser. Brain now checks `fullscreenState` before
+clearing restored fullscreen state; niri does not implement that operation.
+
+For an already prepared full-login session with the optional Brain installed,
+update Brain and the installed `niri-session-runtime.py`, then route the watcher
+through the same code overlay as the shell. Use a Brain-only service drop-in:
+
+```ini
+[Service]
+ExecStart=
+ExecStart=/usr/bin/python3 %h/.local/share/nacre/niri-on-pc/niri-session-runtime.py brain
+```
+
+Reload user units and restart only `nacre-brain.service`. The `brain` action
+passes through to the original watcher on Hyprland and overlays the prepared
+shell tools on niri. It does not replace shared shell source or restart the
+compositor. Preserve the previous Brain source, runtime helper and drop-in for
+rollback. Verify the health endpoint, actual window creation, repeated-open
+reuse and automatic recovery after stopping only the Brain server. These checks
+do not establish cold-login acceptance.
+
 ### First real niri login and navigation checks (2026-10-13)
 
 The operator selected niri at login. `wayland-wm@niri.desktop.service` and

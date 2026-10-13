@@ -120,7 +120,13 @@ def command(action, environment=None, home=None):
     home = Path.home() if home is None else Path(home)
     gate = module(Path(__file__).with_name("niri-session-gate.py"), "runtime_gate")
     original = [str(home / ".local/bin/nacre-shell"), "start"]
-    if action == "shell" and gate.compositor(env) == "hyprland":
+    if action == "brain":
+        original = [
+            "/usr/bin/python3",
+            str(home / ".local/share/nacre/brain/control.py"),
+            "watch-brain",
+        ]
+    if action in ("shell", "brain") and gate.compositor(env) == "hyprland":
         return original, env
     if gate.compositor(env) != "niri":
         raise ValueError("Niri runtime requires an explicit niri session")
@@ -156,6 +162,8 @@ def command(action, environment=None, home=None):
     env["NACRE_NIRI_HOVER_STREAM"] = "1" if hover_binary else "0"
     if action == "compositor":
         args += [str(hover_binary) if hover_binary else "/usr/bin/niri", "--session"]
+    elif action == "brain":
+        args += original
     else:
         args += [
             "/usr/bin/python3",
@@ -252,7 +260,7 @@ def prepare(backend, destination, home):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("prepare", "compositor", "shell"))
+    parser.add_argument("action", choices=("prepare", "compositor", "shell", "brain"))
     parser.add_argument("--backend", type=Path)
     args = parser.parse_args()
     if args.action == "prepare":

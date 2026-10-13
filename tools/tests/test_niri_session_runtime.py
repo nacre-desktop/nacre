@@ -155,6 +155,16 @@ class NiriRuntimeTests(unittest.TestCase):
         argv, child = runtime.command("shell", env, Path("/fixture"))
         self.assertEqual(argv, ["/fixture/.local/bin/nacre-shell", "start"])
         self.assertEqual(child, env)
+        argv, child = runtime.command("brain", env, Path("/fixture"))
+        self.assertEqual(
+            argv,
+            [
+                "/usr/bin/python3",
+                "/fixture/.local/share/nacre/brain/control.py",
+                "watch-brain",
+            ],
+        )
+        self.assertEqual(child, env)
 
     def test_unknown_context_fails_closed(self):
         with self.assertRaisesRegex(ValueError, "explicit niri"):
@@ -186,7 +196,7 @@ class NiriRuntimeTests(unittest.TestCase):
                 "XDG_RUNTIME_DIR": "/real/runtime",
                 "NIRI_SOCKET": "real",
             }
-            for action in ("compositor", "shell"):
+            for action in ("compositor", "shell", "brain"):
                 argv, child = runtime.command(action, env, home)
                 self.assertIn(str(shell), argv)
                 self.assertIn(str(home / ".local/share/nacre/shell"), argv)
@@ -195,5 +205,14 @@ class NiriRuntimeTests(unittest.TestCase):
                 self.assertEqual(child["DBUS_SESSION_BUS_ADDRESS"], "real")
                 self.assertEqual(child["XDG_RUNTIME_DIR"], "/real/runtime")
                 self.assertEqual(child["NIRI_SOCKET"], "real")
+            argv, _ = runtime.command("brain", env, home)
+            self.assertEqual(
+                argv[-3:],
+                [
+                    "/usr/bin/python3",
+                    str(home / ".local/share/nacre/brain/control.py"),
+                    "watch-brain",
+                ],
+            )
             argv, _ = runtime.command("compositor", env, home)
             self.assertEqual(argv[-2:], ["/usr/bin/niri", "--session"])
