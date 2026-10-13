@@ -447,7 +447,6 @@
   "helper.classic-state.invalid-palette-metadata": "Invalid palette metadata",
   "helper.classic-state.invalid-palette-mode": "Invalid palette mode",
   "helper.classic-state.invalid-palette-role-name": "Invalid palette role name",
-  "helper.classic-state.orient-template-renderer-is-missing-run-install-sh": "Orient template renderer is missing; run ./install.sh",
   "helper.classic-state.palette-is-missing-required-color-roles": "Palette is missing required color roles",
   "helper.classic-state.the-starting-wallpaper-is-unavailable-restore-its-file-and-try-ag": "The starting wallpaper is unavailable. Restore its file and try again.",
   "helper.classic-state.the-starting-wallpaper-source-is-unavailable-restore-its-file-and": "The starting wallpaper source is unavailable. Restore its file and try again.",

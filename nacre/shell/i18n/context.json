@@ -435,7 +435,6 @@
   "helper.classic-state.invalid-palette-metadata": "nacre/shell-tools/classic-state.py: helper UI message; not a command identifier.",
   "helper.classic-state.invalid-palette-mode": "nacre/shell-tools/classic-state.py: helper UI message; not a command identifier.",
   "helper.classic-state.invalid-palette-role-name": "nacre/shell-tools/classic-state.py: helper UI message; not a command identifier.",
-  "helper.classic-state.orient-template-renderer-is-missing-run-install-sh": "nacre/shell-tools/classic-state.py: helper UI message; not a command identifier.",
   "helper.classic-state.palette-is-missing-required-color-roles": "nacre/shell-tools/classic-state.py: helper UI message; not a command identifier.",
   "helper.classic-state.the-starting-wallpaper-is-unavailable-restore-its-file-and-try-ag": "nacre/shell-tools/classic-state.py: helper UI message; not a command identifier.",
   "helper.classic-state.the-starting-wallpaper-source-is-unavailable-restore-its-file-and": "nacre/shell-tools/classic-state.py: helper UI message; not a command identifier.",

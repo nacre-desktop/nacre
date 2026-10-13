@@ -140,7 +140,12 @@ def main():
     lock = json.loads((ROOT.parents[1] / "dependencies.lock.json").read_text())
     pillow = lock["python"]["pillow"]
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", pillow):
-        raise ValueError("Invalid locked Pillow version")
+        raise ValueError(
+            tr(
+                "helper.provision.invalid-locked-pillow-version",
+                "Invalid locked Pillow version",
+            )
+        )
     identity = hashlib.sha256(
         (
             source_digest(source)
