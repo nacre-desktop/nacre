@@ -7,7 +7,7 @@ Developer-only Python tools and test harnesses remain permitted.
 | Wave | Status | Numbers / decisions |
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
-| 1 Service / frequent helpers | Pending | Freeze CLI stdout, exits and writes in disposable HOME. |
+| 1 Service / frequent helpers | In progress; CI-gated | Frozen outputs; local Rust candidates only. |
 | 2 Compositor / pearls | Pending | Persistent native IPC; one neutral compositor contract. |
 | 3 Wallpaper / colors | Pending | Direct Orient crates; preserve paired publication. |
 | 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
@@ -40,18 +40,27 @@ STOP before wave 3 lands if no announced quiet-window comparison is available.
 Existing tasks coordinate Wave 1: peer owns workspace/paths/service + menu-backend,
 dashboard-data/media, network-state, launcher-preferences, notification-history.
 This task owns dashboard-system, resource-state, window-chat-title, light-devices,
-menu-cli; gate deferred with owner conditions, Rust modules not started yet.
+menu-cli; gate deferred with owner conditions. All 27 frozen CLI cases and
+22 focused existing tests pass before porting. Chat-title draft: 3 Rust behavior
+tests, Clippy and all 3 frozen CLI cases pass through a disposable adapter;
+no caller cutover/deletion or public port until main CI is green.
 Frozen helper corpus: `tests/parity/helpers` (separate parity task; do not regenerate).
 API: execute(&[String], Option<Value>) -> Result<Option<Value>>; custom text as needed.
 
 Follow-up: Rust Paths accepts absolute config/state/cache XDG roots, otherwise
 HOME defaults, matching QML. Custom-XDG behavior is an intended parity difference;
 current frozen cases use defaults and remain unchanged.
-Main CI must be green before further wave 1 ports land. Harness owner published
-`9d512943`: root-container fixture ownership and child/bus identity now match
-UID/GID 1000; inner Bubblewrap permissions are explicit in the test container.
-No test/reference was skipped or weakened. CI verification is still pending.
+Paths fix is public (`ae6a9f86`); Rust gates and default-XDG parity pass.
+Main CI must be green before further wave 1 ports land. Sandbox diagnostics
+identify startup failure, not helper output differences: Bubblewrap cannot set
+the isolated loopback address. UID/passwd and NET_ADMIN fixes were insufficient.
+Compatible Ubuntu 22.04 runner fix is integrated from the harness owner,
+with the same Arch container and checks. Integrated local gate: 817 tests,
+10 harness controls and all 349 frozen cases pass, including lint/format checks.
+No test/reference was skipped or weakened. Source CI repair remains pending;
+the separate headless performance workflow passed at `301a0477`.
 
-Next: validate/publish Paths and repair the failing CI harness, verify green main,
-then use frozen current-Python contracts before each assigned helper port.
+Next: verify the runner fix produces green main before port cutovers;
+integrate shared candidate, finish chat-title caller/deletion/test mapping, then
+run full correctness gates before publishing.
 No live machine/QML/config changes by this task; no tags or package uploads.
