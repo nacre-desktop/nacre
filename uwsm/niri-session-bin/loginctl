@@ -1,0 +1,10 @@
+#!/bin/sh
+# Automatic idle locking stays gated until password unlock is physically tested.
+# The existing explicit Lock action still works without a hypridle listener.
+if [ "${NACRE_COMPOSITOR:-}" = niri ] && [ "${1:-}" = lock-session ]; then
+    if pgrep -u "$(id -u)" -x hyprlock >/dev/null; then
+        exit 0
+    fi
+    exec /usr/bin/hyprlock
+fi
+exec /usr/bin/loginctl "$@"

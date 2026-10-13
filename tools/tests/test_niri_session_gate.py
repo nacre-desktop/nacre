@@ -66,12 +66,16 @@ class NiriSessionGateTests(unittest.TestCase):
                 json.dumps(dict(phase="nacre", backendReady=True, unlockVerified=False))
             )
             self.assertTrue(gate.allowed("shell", environment, home))
-            self.assertTrue(gate.allowed("observer", environment, home))
+            self.assertFalse(gate.allowed("observer", environment, home))
             self.assertFalse(gate.allowed("idle", environment, home))
             record.write_text(
                 json.dumps(dict(phase="nacre", backendReady=True, unlockVerified=True))
             )
             self.assertTrue(gate.allowed("idle", environment, home))
+            record.write_text(
+                json.dumps(dict(phase="nacre", backendReady=True, observerReady=True))
+            )
+            self.assertTrue(gate.allowed("observer", environment, home))
             record.write_text(
                 json.dumps(dict(phase="nacre", backendReady=False, unlockVerified=True))
             )
