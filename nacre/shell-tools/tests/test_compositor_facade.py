@@ -6,6 +6,8 @@ import subprocess
 import tempfile
 import unittest
 
+from qml_source import install_i18n
+
 SHELL = Path(__file__).resolve().parents[2] / "shell"
 
 
@@ -85,6 +87,7 @@ QtObject {
             (fixtures / "qmldir").write_text(
                 "singleton HyprlandBackend 1.0 HyprlandBackend.qml\nsingleton NiriBackend 1.0 NiriBackend.qml\nsingleton TestEnvironment 1.0 TestEnvironment.qml\nsingleton Registry 1.0 Registry.qml\n"
             )
+            install_i18n(fixtures)
             source = (SHELL / "services/NacreCompositor.qml").read_text()
             source = (
                 source.replace("pragma Singleton", "")
@@ -94,6 +97,7 @@ QtObject {
                 )
                 .replace("Singleton {", "Item {")
                 .replace("Quickshell.env(", "Backend.TestEnvironment.env(")
+                .replace("NacreI18n.tr(", "Backend.NacreI18n.tr(")
             )
             (target / "NacreCompositor.qml").write_text(source)
             (target / "tst_facade.qml").write_text(
@@ -157,7 +161,7 @@ TestCase {
         compare(facade.windowsForWorkspace(2).length,1);compare(facade.windowsForWorkspace(2)[0].windowId,"first")
         verify(facade.workspaceUrgent(2));compare(facade.windowsForWorkspace(1).length,0)
         Backend.TestEnvironment.values={NACRE_COMPOSITOR:"invalid"}
-        compare(facade.backend,null);compare(facade.backendName,"unsupported");verify(facade.error.length>0)
+        compare(facade.backend,null);compare(facade.backendName,"unsupported");compare(facade.error,"Unknown compositor backend.")
         compare(facade.windows.length,0);compare(Backend.Registry.hyprlandCreated,1)
     }
 }
