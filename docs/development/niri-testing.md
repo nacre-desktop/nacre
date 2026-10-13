@@ -479,10 +479,12 @@ or invalid experiments fall back to packaged Niri; unsupported stream requests
 fall back to ordinary IPC. Hyprland startup remains on its original path.
 
 This takes effect on the next Niri login and is not a hot compositor replacement.
-To disable, move `overview-hover/manifest.json` aside before the next login. The
+To disable for an existing prepared session, create
+`~/.local/share/nacre/niri-on-pc/session/stock-niri` before the next login. Remove
+that marker to restore automatic selection. The
 packaged binary, session entries, personal settings and authentication are not
-replaced. A system companion takes precedence over the private build; to use
-stock Niri, remove the companion package and move private manifests aside.
+replaced. A system companion takes precedence over the private build unless
+stock Niri was explicitly selected.
 The shell negotiates the additional subscription automatically unless explicitly
 disabled with `NACRE_NIRI_HOVER_STREAM=0`. Native nested verification does not certify a complete physical login,
 lock/unlock, idle or portal acceptance cycle.

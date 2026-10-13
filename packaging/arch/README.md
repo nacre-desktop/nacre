@@ -144,6 +144,11 @@ fallback and `NACRE_NIRI_HOVER_STREAM=0` as an explicit opt-out. Do not advertis
 the full Niri setup wizard until its separate setup contract is ready. Publishing
 this recipe does not publish an AUR package or host signed binaries.
 
+For a fresh prepared session, `prepare --stock-niri` persists an explicit stock
+selection even if the companion is installed. Existing prepared sessions can
+disable the companion by creating `~/.local/share/nacre/niri-on-pc/session/stock-niri`
+before the next login; removing that marker restores automatic companion selection.
+
 ## Namcap diagnostic review
 
 The runtime packages must have no unresolved errors. Script/config-launched

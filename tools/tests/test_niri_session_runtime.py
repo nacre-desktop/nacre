@@ -216,4 +216,15 @@ class NiriRuntimeTests(unittest.TestCase):
                 ],
             )
             argv, _ = runtime.command("compositor", env, home)
+            with patch.object(
+                runtime, "overview_hover_binary", return_value=Path("/companion/niri")
+            ):
+                argv, child = runtime.command("compositor", env, home)
+                self.assertEqual(argv[-2:], ["/companion/niri", "--session"])
+                self.assertEqual(child["NACRE_NIRI_HOVER_STREAM"], "1")
+                (home / ".local/share/nacre/niri-on-pc/session/stock-niri").write_text(
+                    "explicit opt-out"
+                )
+                argv, child = runtime.command("compositor", env, home)
+                self.assertEqual(child["NACRE_NIRI_HOVER_STREAM"], "0")
             self.assertEqual(argv[-2:], ["/usr/bin/niri", "--session"])

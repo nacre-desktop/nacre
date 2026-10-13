@@ -54,3 +54,43 @@ Candidate hashes (archives and logs retained privately with task artifacts):
 - Chroot Qt tests need a private 0700 XDG_RUNTIME_DIR and closed stdin; otherwise Quickshell cannot create its runtime or interactive failure tests wait for Enter.
 - Validate file/link ownership before snapshot/apply. Pacman-owned palette references remain system links after rollback, while source runtimes retain byte snapshots.
 - Keep concurrent graphical chroot checks separate/serial; an intermediate overlapping run lost its X display. Final acceptance was rebuilt serially with all checks enabled.
+
+## Niri companion follow-up (2026-10-13)
+
+A separate `nacre-niri` recipe now distributes the pinned overview-hover patch
+without replacing distribution Niri. Nacre Niri preparation prefers the system
+companion, otherwise automatically builds, verifies and installs a private one.
+The shell negotiates hover IPC with stock fallback. This retains the separate
+`setup_ready=false` gate for the full Niri setup wizard.
+
+Validated package source: Nacre `5a368fbc`, official Niri
+`8ed0da44d974c32c6877d2f4630c314da0717ecb`, patch SHA-256
+`a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4`.
+The local archive `nacre-niri-26.04-1-x86_64.pkg.tar.zst` has SHA-256
+`e7012bad2cb9c698eed9992b709980fe1ffe97778153a47814c666143915a082`.
+
+| Check | Result |
+| --- | --- |
+| Owner checks after main integration | 757 tests pass; lint, format, QML parsing, compositor boundary, generated config, palette CLI and Brain JavaScript pass |
+| Source automatic install | Empty scratch home: build, native pointer/QML verification, license and matching proof receipt install; real runtime selects it |
+| Actual makepkg build | Passed with normal Niri features; targeted native protocol test passes (195 other tests filtered) |
+| Packaged binary | Extracted stripped archive passes real nested hover/QML captions, preserved focus/selection, legacy-stream isolation and clear-on-close |
+| System receipt selection | Extracted files pass real owner/version validation in an isolated root-user namespace; no host package replacement |
+| Namcap | Zero errors; three reviewed warnings below |
+| Explicit stock selection | Focused runtime tests pass with an installed companion and a persisted stock marker |
+
+The initial build exposed makepkg's GCC LTO injection in PipeWire C shims, which
+Rust's `lld` could not link. The recipe's `!lto` fixes that while retaining Niri's
+own Rust thin-LTO, screencasting and normal strip/debug settings.
+
+Reviewed namcap warnings: the ELF loader is supplied by glibc; `/bin/sh` is
+implicitly supplied by base bash; distribution `niri` remains required for its
+resources/session support although ELF scanning does not see that relationship.
+The build-root reference warning reflects Rust source-location strings.
+
+This is an on-host build using CachyOS compiler flags, **not a clean stock-Arch
+release build**. Archive extraction/native testing is not a runtime-only fresh
+system installation; an empty scratch pacman database correctly refused the
+uninstalled dependency set. No dependency guard was bypassed for installation.
+Repeat clean-chroot, runtime-only user and cold-login gates before distributing
+signed binaries or publishing to AUR. No AUR or binary release was published here.

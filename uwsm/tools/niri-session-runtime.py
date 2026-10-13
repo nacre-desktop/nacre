@@ -198,7 +198,9 @@ def command(action, environment=None, home=None):
         NACRE_PEARL_TOOLS=str(home / ".local/share/nacre/shell/tools"),
         NACRE_QS_CONFIG=str(home / ".config/quickshell/nacre/shell.qml"),
     )
-    hover_binary = overview_hover_binary(home)
+    hover_binary = (
+        None if (root / "stock-niri").is_file() else overview_hover_binary(home)
+    )
     env["NACRE_NIRI_HOVER_STREAM"] = "1" if hover_binary else "0"
     if action == "compositor":
         args += [str(hover_binary) if hover_binary else "/usr/bin/niri", "--session"]
@@ -212,7 +214,7 @@ def command(action, environment=None, home=None):
     return args, env
 
 
-def prepare(backend, destination, home):
+def prepare(backend, destination, home, *, stock_niri=False):
     backend, destination, home = map(
         lambda p: Path(p).resolve(), (backend, destination, home)
     )
@@ -291,6 +293,10 @@ def prepare(backend, destination, home):
     subprocess.run(
         ["/usr/bin/niri", "validate", "-c", str(config / "config.kdl")], check=True
     )
+    if stock_niri:
+        marker = destination / "stock-niri"
+        marker.write_text("Prepared with --stock-niri\n")
+        marker.chmod(0o600)
     (destination / "source-revision").write_text(
         subprocess.check_output(
             ["git", "-C", str(backend), "rev-parse", "HEAD"], text=True
@@ -305,7 +311,7 @@ def main():
     parser.add_argument(
         "--stock-niri",
         action="store_true",
-        help="prepare without installing the hover companion",
+        help="prepare a session using distribution Niri without hover support",
     )
     args = parser.parse_args()
     if args.action == "prepare":
@@ -317,6 +323,7 @@ def main():
             args.backend,
             Path.home() / ".local/share/nacre/niri-on-pc/session",
             Path.home(),
+            stock_niri=args.stock_niri,
         )
     else:
         argv, env = command(args.action)
