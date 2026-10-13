@@ -93,7 +93,7 @@ def prepare_binary(engine, candidate, pin):
     cargo = shutil.which("cargo")
     if not cargo:
         raise RuntimeError(
-            "Install Rust and LCMS2 build tools, or supply the tested native Orient binary"
+            "Install Rust, CMake and LCMS2 build tools, or supply the tested native Orient binary"
         )
     target = candidate / "cargo-target"
     subprocess.run(
