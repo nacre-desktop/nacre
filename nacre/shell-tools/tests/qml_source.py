@@ -69,6 +69,7 @@ def install_i18n(directory):
     import json
 
     options = json.loads(source.with_name("options.json").read_text())
+    messages = json.loads(source.with_name("en.json").read_text())
     shutil.copy2(source, directory / "translation.js")
     (directory / "NacreI18n.qml").write_text(
         """pragma Singleton
@@ -78,7 +79,7 @@ QtObject {
     property string language: "en"
     property bool developerMode: false
     property var locale: Qt.locale("en_US")
-    property var messages: ({})
+    property var messages: MESSAGES
     property var options: OPTIONS
     function option(domain, key) { const row = options[domain]?.[key]; return row ? tr(row.id, row.fallback) : key; }
     function modelLabel(row, key) { return row[key + "Id"] ? tr(row[key + "Id"], row[key]) : row[key]; }
@@ -98,7 +99,7 @@ QtObject {
     function date(value, format = Locale.ShortFormat) { return displayValue(new Date(value).toLocaleDateString(locale, format)); }
     function time(value, format = Locale.ShortFormat) { return new Date(value).toLocaleTimeString(locale, format); }
 }
-""".replace("OPTIONS", json.dumps(options))
+""".replace("OPTIONS", json.dumps(options)).replace("MESSAGES", json.dumps(messages))
     )
     manifest = directory / "qmldir"
     value = manifest.read_text() if manifest.exists() else ""
