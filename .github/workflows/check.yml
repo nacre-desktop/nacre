@@ -11,7 +11,7 @@ jobs:
     container:
       image: ghcr.io/archlinux/archlinux:latest
       # Bubblewrap supplies an inner disposable filesystem/user namespace.
-      options: --cap-add=SYS_ADMIN --security-opt seccomp=unconfined
+      options: --cap-add=SYS_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined
     steps:
       - name: Install target-platform checks
         run: pacman -Syu --noconfirm --needed git python python-pip python-pillow ruff lua fish qt6-declarative qt6-wayland quickshell qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats gcc pkgconf rust lcms2 cmake make gtk3 librsvg kconfig kcolorscheme breeze nodejs npm xorg-server-xvfb xorg-xauth mesa dbus ttf-dejavu
