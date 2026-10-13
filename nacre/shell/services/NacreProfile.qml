@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 
@@ -17,7 +18,7 @@ Singleton {
     FileView {
         id: file
         preload: true
-        path: Quickshell.env("HOME") + "/.config/nacre/profile.json"
+        path: NacrePaths.config + "/profile.json"
         watchChanges: true
         printErrors: false
         onFileChanged: reload()

@@ -172,7 +172,7 @@ ShellRoot {
         Process {
             id: reader
             running: true
-            command: ["/usr/bin/cat", Quickshell.env("HOME") + "/.cache/nacre/lock-ready/dashboard.json"]
+            command: ["/usr/bin/cat", NacrePaths.cache.slice(7) + "/lock-ready/dashboard.json"]
             stdout: SplitParser {
                 splitMarker: ""
                 onRead: line => {

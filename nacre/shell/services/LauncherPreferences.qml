@@ -94,7 +94,7 @@ Singleton {
         id: watcher
 
         preload: root.ready
-        path: Quickshell.env("HOME") + "/.config/nacre/launcher.json"
+        path: NacrePaths.config + "/launcher.json"
         watchChanges: true
         onFileChanged: reload()
         onLoaded: root.accept(text())
