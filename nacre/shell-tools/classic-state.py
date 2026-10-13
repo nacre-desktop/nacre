@@ -659,6 +659,7 @@ def _publish_lock_login(home, state, colors, wallpaper):
                 colors,
                 selected,
                 home / ".local/state/nacre/shell/login-preview",
+                home=home,
             )
         except (OSError, ValueError, ImportError):
             pass  # A login-theme image failure must not interrupt the desktop palette.

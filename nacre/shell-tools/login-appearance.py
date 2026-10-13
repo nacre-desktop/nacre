@@ -7,12 +7,12 @@ import hashlib
 import io
 import json
 import os
+import pwd
 import tempfile
 from pathlib import Path
 from PIL import Image, ImageFilter, ImageOps
 
 HOME = Path.home()
-PREVIEW = HOME / ".local/state/nacre/shell/login-preview"
 PUBLIC = Path("/var/lib/nacre/login/appearance")
 ROLES = {
     "surface": "surface",
@@ -59,7 +59,10 @@ def prepare(wallpaper, cache=None):
     return target, stamp
 
 
-def publish(colors, wallpaper, preview=PREVIEW, public=PUBLIC):
+def publish(colors, wallpaper, preview=None, public=PUBLIC, *, home=None):
+    home = Path(home) if home is not None else HOME
+    canonical_preview = home / ".local/state/nacre/shell/login-preview"
+    preview = Path(preview) if preview is not None else canonical_preview
     values = {key: "#" + colors[role].lstrip("#") for key, role in ROLES.items()}
     import re
 
@@ -71,7 +74,9 @@ def publish(colors, wallpaper, preview=PREVIEW, public=PUBLIC):
     preview.chmod(0o700)
     # Keep one versioned result per wallpaper, so returning to a previous image
     # copies its prepared blur instead of decoding/encoding it again.
-    cached, stamp = prepare(wallpaper)
+    canonical = preview.resolve() == canonical_preview.resolve()
+    cache = home / ".cache/nacre/login-images" if canonical else preview / "image-cache"
+    cached, stamp = prepare(wallpaper, cache)
     if (
         not (preview / "background.png").exists()
         or not (preview / "image-stamp.txt").exists()
@@ -80,8 +85,17 @@ def publish(colors, wallpaper, preview=PREVIEW, public=PUBLIC):
         atomic(preview / "background.png", cached.read_bytes())
         atomic(preview / "image-stamp.txt", stamp.encode())
     destinations = [preview]
+    # Staging/test homes must never replace the real greeter, even when this
+    # process owns the system appearance directory. HOME may be overridden by
+    # a test subprocess; only the Unix account home may publish to PUBLIC.
     if (
-        public.is_dir()
+        canonical
+        and home.resolve() == HOME.resolve()
+        and (
+            public != PUBLIC
+            or home.resolve() == Path(pwd.getpwuid(os.getuid()).pw_dir).resolve()
+        )
+        and public.is_dir()
         and public.stat().st_uid == os.getuid()
         and os.access(public, os.W_OK)
     ):

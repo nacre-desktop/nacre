@@ -24,7 +24,7 @@ It writes /etc/sddm.conf.d/90-nacre-theme.conf and a root-owned /usr/share/sddm/
 
 ## Wallpaper integration
 
-The only user-writable system data is /var/lib/nacre/login/appearance: a generated blurred PNG and an INI with validated palette colors. The root-owned theme.conf.user points to that INI. No user QML is executed from this folder, and no privileged wallpaper watcher/service is needed. classic-state.py publishes these files when the desktop commits a wallpaper/color scheme. Pillow renders the image; image work is cached across theme-mode changes. Missing rendering dependencies leave the desktop palette working and the previous login appearance intact.
+The only user-writable system data is /var/lib/nacre/login/appearance: a generated blurred PNG and an INI with validated palette colors. The root-owned theme.conf.user points to that INI. No user QML is executed from this folder, and no privileged wallpaper watcher/service is needed. Palette publication for a staging or test home keeps both the login preview and image cache in that home and cannot replace the live greeter appearance. classic-state.py publishes these files when the desktop commits a wallpaper/color scheme. Pillow renders the image; image work is cached across theme-mode changes. Missing rendering dependencies leave the desktop palette working and the previous login appearance intact.
 
 Tests: python3 -m unittest discover -s nacre/shell-tools/tests and QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input nacre/login/tests. The harness uses fake authentication; successful real password login must be checked at the next login.
 
