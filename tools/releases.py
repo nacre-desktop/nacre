@@ -138,7 +138,7 @@ def paths(repo):
     return sorted(set(result), key=str)
 
 
-def capture(repo, revision):
+def capture(repo, revision, extra=(), package=False):
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     release = STATE / dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     release.mkdir(mode=0o700)
@@ -154,7 +154,7 @@ def capture(repo, revision):
         created=dt.datetime.now(dt.timezone.utc).isoformat(),
         entries=[],
     )
-    for i, path in enumerate(paths(repo)):
+    for i, path in enumerate(sorted(set(paths(repo)) | set(extra), key=str)):
         entry = dict(
             path=str(path),
             before=fingerprint(path),
@@ -163,7 +163,12 @@ def capture(repo, revision):
         )
         backup = Path(entry["backup"])
         backup.parent.mkdir(parents=True, exist_ok=True)
-        if path.is_symlink() and path.name in ("shell-runtime", "palette-runtime"):
+        if (
+            not package
+            and path.is_symlink()
+            and path.name in ("shell-runtime", "palette-runtime")
+            and path.resolve().is_dir()
+        ):
             entry.update(kind="runtime", link=os.readlink(path))
             shutil.copytree(
                 path.resolve(),
@@ -195,15 +200,17 @@ def restore(release, record=None, force=False):
         for e in record["entries"]:
             if "after" in e and fingerprint(Path(e["path"])) != e["after"]:
                 raise RuntimeError("Later edit preserved: " + e["path"])
-    # Keep the active backend loaded while restoring an older shell that may
-    # predate the facade files themselves.
-    desktop = compositor()
-    for service in (
-        "nacre-shell.service",
-        "nacre-brain.service",
-        "nacre-session-watch.service",
-    ):
-        subprocess.run(["systemctl", "--user", "stop", service], capture_output=True)
+    live = record.get("deployment") != "package"
+    desktop = compositor() if live else None
+    if live:
+        for service in (
+            "nacre-shell.service",
+            "nacre-brain.service",
+            "nacre-session-watch.service",
+        ):
+            subprocess.run(
+                ["systemctl", "--user", "stop", service], capture_output=True
+            )
     for e in record["entries"]:
         path = Path(e["path"])
         if path.is_symlink() or path.is_file():
@@ -224,22 +231,23 @@ def restore(release, record=None, force=False):
             shutil.copytree(e["backup"], path, symlinks=True)
         elif e["kind"] == "file":
             shutil.copy2(e["backup"], path)
-    subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
-    desktop.reload()
-    subprocess.run(
-        [
-            "systemctl",
-            "--user",
-            "start",
-            "nacre-shell.service",
-            "nacre-brain.service",
-        ],
-        check=True,
-    )
-    subprocess.run(
-        ["systemctl", "--user", "start", "nacre-session-watch.service"],
-        capture_output=True,
-    )
+    if live:
+        subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
+        desktop.reload()
+        subprocess.run(
+            [
+                "systemctl",
+                "--user",
+                "start",
+                "nacre-shell.service",
+                "nacre-brain.service",
+            ],
+            check=True,
+        )
+        subprocess.run(
+            ["systemctl", "--user", "start", "nacre-session-watch.service"],
+            capture_output=True,
+        )
     record["status"] = "rolled-back"
     atomic(release / "release.json", record)
     atomic(
@@ -477,7 +485,99 @@ def deploy(repo, components, keyboard, migrate=False):
         raise
 
 
+def package_plan(repo, profile):
+    import configure
+    import package_runtime
+
+    original = configure.selected_profile
+    configure.selected_profile = lambda root=repo: profile
+    try:
+        collisions = set(configure.files(repo)) & set(
+            package_runtime.links(repo, profile)
+        )
+        if collisions:
+            raise RuntimeError(
+                "Package declares both file and runtime link: "
+                + str(sorted(collisions)[0])
+            )
+        changed, links, _ = configure.plan(HOME, repo)
+        if links:
+            raise RuntimeError(
+                "Source-linked configuration requires explicit source migration first"
+            )
+        runtime = package_runtime.plan(HOME, repo, profile)
+        result = [HOME / relative for relative, _ in changed + runtime]
+        result += [
+            HOME / ".config/nacre" / name
+            for name in ("profile.json", "profile.lua", "keyboard.lua")
+        ]
+        return sorted(set(result), key=str)
+    finally:
+        configure.selected_profile = original
+
+
+def deploy_package(repo, profile, keyboard, compositor):
+    """Apply prebuilt files without a running desktop; use the same rollback owner."""
+    import configure
+    import package_runtime
+    from keyboard import seed
+    import setup
+
+    if compositor != "hyprland":
+        raise RuntimeError(
+            "This package does not yet include a complete compositor setup contract"
+        )
+    if not (repo / "package.json.installed").is_file():
+        raise RuntimeError("Package metadata missing")
+    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (STATE / "release.lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        desired = package_plan(repo, profile)
+        extra = desired + [HOME / ".local/state/nacre/package-links.json"]
+        revision = package_runtime.metadata(repo)["revision"]
+        release, record = capture(repo, revision, extra, package=True)
+        record.update(deployment="package", compositor=compositor, release=str(release))
+        original = configure.selected_profile
+        configure.selected_profile = lambda root=repo: profile
+        try:
+            seed(HOME, keyboard)
+            configure.apply(HOME, repo)
+            profiles = setup.policy(repo)
+            profiles.selected = lambda: profile
+            profiles.install(HOME)
+            package_runtime.apply(HOME, repo, profile)
+            for entry in record["entries"]:
+                entry["after"] = fingerprint(Path(entry["path"]))
+            record["status"] = "prepared"
+            atomic(release / "release.json", record)
+            atomic(
+                STATE / "current.json",
+                dict(
+                    revision=revision,
+                    release=str(release),
+                    status="prepared",
+                    checked=record["created"],
+                ),
+            )
+            return record
+        except BaseException as error:
+            record.update(status="failed", error=str(error))
+            atomic(release / "release.json", record)
+            restore(release, record, force=True)
+            raise
+        finally:
+            configure.selected_profile = original
+
+
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "setup":
+        installed = Path("/usr/share/nacre/tools/setup.py")
+        candidate = (
+            installed if installed.exists() else Path(__file__).with_name("setup.py")
+        )
+        raise SystemExit(
+            subprocess.call([sys.executable, str(candidate), *sys.argv[2:]])
+        )
     p = argparse.ArgumentParser()
     p.add_argument(
         "action",
@@ -494,7 +594,9 @@ def main():
     )
     p.add_argument("repo", nargs="?", type=Path)
     p.add_argument(
-        "--component", action="append", choices=["configs", "apps", "shell", "brain"]
+        "--component",
+        action="append",
+        choices=["configs", "apps", "shell", "brain", "ai"],
     )
     p.add_argument("--keyboard")
     p.add_argument("--migrate-owned", action="store_true")
