@@ -552,6 +552,8 @@ def probe(repo, backend, output):
                 )
                 time.sleep(2)
                 assert worker.poll() is None
+                log.flush()
+                assert "onLockLocked called" in output.with_suffix(".log").read_text()
                 # Authentication and unlock deliberately remain owner-run checks.
                 return (
                     "lock client remains connected; inspect local lock acknowledgement"

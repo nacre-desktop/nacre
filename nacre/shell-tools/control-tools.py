@@ -20,7 +20,16 @@ def record_path(home=None):
         if compositor.backend_name == "niri"
         else "control-tools.json"
     )
-    return (home or Path.home()) / ".local/state/nacre" / name
+    if home is not None:
+        root = Path(home) / ".local/state"
+    else:
+        configured = os.environ.get("XDG_STATE_HOME", "")
+        root = (
+            Path(configured)
+            if configured.startswith("/")
+            else Path.home() / ".local/state"
+        )
+    return root / "nacre" / name
 
 
 def service():

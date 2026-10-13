@@ -255,6 +255,12 @@ def verify(binary, output):
                     (folder / "qmldir").write_text(
                         "singleton " + name + " 1.0 " + name + ".qml\n"
                     )
+                shutil.copy2(
+                    repo / "nacre/shell/utils/NacrePaths.qml",
+                    qml / "utils/NacrePaths.qml",
+                )
+                with (qml / "utils/qmldir").open("a") as manifest:
+                    manifest.write("singleton NacrePaths 1.0 NacrePaths.qml\n")
                 for name in ["NacreText", "NacreIcon"]:
                     shutil.copy2(
                         repo / ("nacre/shell/widgets/" + name + ".qml"),
