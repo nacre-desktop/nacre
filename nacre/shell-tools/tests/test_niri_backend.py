@@ -31,6 +31,24 @@ def state():
 
 
 class NiriStateTests(unittest.TestCase):
+    def test_overview_hover_preserves_focus_and_u64_identity_then_clears(self):
+        model = state()
+        focused = model.snapshot()["activeWindow"]["windowId"]
+        model.apply({"OverviewOpenedOrClosed": {"is_open": True}})
+        model.apply({"NacreOverviewHoverChanged": {"id": 9007199254740995}})
+        snapshot = model.snapshot()
+        self.assertTrue(snapshot["overviewHoverSupported"])
+        self.assertEqual(
+            snapshot["overviewHoveredWindowId"], "niri-window:9007199254740995"
+        )
+        self.assertEqual(snapshot["activeWindow"]["windowId"], focused)
+        model.apply({"OverviewOpenedOrClosed": {"is_open": False}})
+        self.assertIsNone(model.snapshot()["overviewHoveredWindowId"])
+        model.apply({"NacreOverviewHoverChanged": {"id": 1}})
+        self.assertIsNone(model.snapshot()["overviewHoveredWindowId"])
+        with self.assertRaises(ValueError):
+            model.apply({"NacreOverviewHoverChanged": {"id": True}})
+
     def test_initial_state_preserves_u64_ids_and_output_relative_indices(self):
         value = state().snapshot()
         self.assertEqual(
@@ -358,6 +376,32 @@ class NiriActionTests(unittest.TestCase):
 
 
 class NiriTransportTests(unittest.TestCase):
+    def test_optional_hover_stream_falls_back_to_stock_without_consuming_events(self):
+        clients = []
+        servers = []
+        for response in (
+            b'{"Err":"unknown request"}\n',
+            b'{"Ok":"Handled"}\n{"OverviewOpenedOrClosed":{"is_open":true}}\n',
+        ):
+            client, server = socket.socketpair()
+            clients.append(client)
+            servers.append(server)
+            server.sendall(response)
+            self.addCleanup(server.close)
+            self.addCleanup(client.close)
+        backend = niri.Backend()
+        with (
+            patch.dict(os.environ, NACRE_NIRI_HOVER_STREAM="1"),
+            patch.object(backend, "_connection", side_effect=clients),
+        ):
+            connection = backend.event_socket()
+            self.assertIs(connection, clients[1])
+            self.assertEqual(
+                json.loads(servers[0].recv(1024)), "NacreOverviewHoverStream"
+            )
+            self.assertEqual(json.loads(servers[1].recv(1024)), "EventStream")
+            self.assertIn(b"OverviewOpenedOrClosed", connection.recv(1024))
+
     def exchange(self, reply):
         client, server = socket.socketpair()
         received = []

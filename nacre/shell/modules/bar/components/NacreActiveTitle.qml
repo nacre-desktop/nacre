@@ -13,7 +13,7 @@ Item {
     property color colour: NacreColours.palette.m3primary
     readonly property Item child: caption
     property string previousWindowId: ""
-    readonly property var client: WindowTitle.displayWindow(NacreCompositor.activeWindow, NacreCompositor.windows, NacreCompositor.activeWorkspaceId, previousWindowId, NacreCompositor.backendName)
+    readonly property var client: NacreCompositor.overviewHoverWindow || NacreCompositor.overviewSelectedWindow || WindowTitle.displayWindow(NacreCompositor.activeWindow, NacreCompositor.windows, NacreCompositor.activeWorkspaceId, previousWindowId, NacreCompositor.backendName)
     readonly property string displayTitle: client ? NacreI18n.windowCaption(WindowTitle.caption(client.title || client.wmClass, client.wmClass, ChatWindowTitle.titles[client.pid]), client.wmClass) : NacreI18n.tr("desktop.title.empty", "Desktop")
     function rememberWindow() {
         if (NacreCompositor.activeWindow?.windowId)

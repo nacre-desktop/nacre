@@ -7,6 +7,9 @@ import unittest
 import os
 import subprocess
 import shutil
+import hashlib
+import json
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location(
@@ -17,6 +20,39 @@ spec.loader.exec_module(runtime)
 
 
 class NiriRuntimeTests(unittest.TestCase):
+    def test_hover_binary_requires_verified_hash_and_matching_stock_version(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            root = home / ".local/share/nacre/niri-on-pc/overview-hover"
+            root.mkdir(parents=True)
+            binary = root / "niri"
+            binary.write_text("verified experiment")
+            binary.chmod(0o700)
+            manifest = {
+                "schema": 1,
+                "enabled": True,
+                "nestedVerified": True,
+                "sourceRevision": runtime.HOVER_SOURCE,
+                "protocol": "NacreOverviewHoverStream",
+                "binarySha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
+            }
+            (root / "manifest.json").write_text(json.dumps(manifest))
+            with patch.object(
+                runtime.subprocess, "check_output", return_value="niri 26.04 (stock)"
+            ):
+                self.assertEqual(runtime.overview_hover_binary(home), binary)
+                binary.write_text("changed after verification")
+                self.assertIsNone(runtime.overview_hover_binary(home))
+            manifest["binarySha256"] = hashlib.sha256(binary.read_bytes()).hexdigest()
+            (root / "manifest.json").write_text(json.dumps(manifest))
+            with patch.object(
+                runtime.subprocess, "check_output", return_value="niri 26.12 (new)"
+            ):
+                self.assertIsNone(runtime.overview_hover_binary(home))
+            manifest["nestedVerified"] = False
+            (root / "manifest.json").write_text(json.dumps(manifest))
+            self.assertIsNone(runtime.overview_hover_binary(home))
+
     def test_palette_prefers_live_publisher_with_offline_seed_fallback(self):
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder)

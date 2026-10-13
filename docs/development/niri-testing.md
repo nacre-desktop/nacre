@@ -389,3 +389,54 @@ Primary references: [niri getting started](https://niri-wm.github.io/niri/Gettin
 [niri required software](https://niri-wm.github.io/niri/Important-Software.html),
 [niri 26.04 session wrapper](https://github.com/niri-wm/niri/blob/v26.04/resources/niri-session),
 [UWSM session management](https://github.com/Vladimir-csp/uwsm).
+
+## Optional overview hover experiment
+
+Stock Niri26.04 does not expose the preview under the pointer and deliberately
+does not follow mouse focus inside its overview. The top bar can follow the
+keyboard-selected overview window with ordinary IPC. Actual preview hover needs
+additional compositor metadata. Upstream discusses the missing query in
+[discussion3390](https://github.com/niri-wm/niri/discussions/3390) and
+[PR4189](https://github.com/niri-wm/niri/pull/4189); this experiment is separate
+from those unmerged interfaces.
+
+`tools/patches/niri-26.04-overview-hover.patch` applies to official commit
+`8ed0da44d974c32c6877d2f4630c314da0717ecb`, under Niri's GPL-3.0-or-later license.
+The window-under-cursor query adapts the upstream proposal. Nacre's additional
+`NacreOverviewHoverStream` subscription receives ordinary state plus
+`NacreOverviewHoverChanged` only when the hovered preview identity changes.
+Ordinary event subscribers do not receive the additional event. There is no
+hover polling or keyboard-focus substitution. The same Niri hit-testing path
+accounts for overview zoom, workspace scrolling, floating windows and layers.
+
+Build and verify in separate source/artifact directories. Rust1.85+, the normal
+Niri build libraries, GCC, wayland-scanner, Kitty and Quickshell are required.
+The normal compositor features, including systemd/D-Bus and screencasting, stay
+enabled. The verifier opens a private nested compositor, bus, data roots and two
+test terminals, exercises real pointer input and the production title bar, then
+closes its own processes. Its measured probe roundtrip includes helper startup
+and explicit test waiting; it is not a display-latency benchmark.
+
+```sh
+python3 tools/build-niri-overview-hover.py --source /path/to/niri-hover-source
+python3 tools/tests/verify_niri_overview_hover.py \
+  --binary /path/to/niri-hover-source/target/release/niri \
+  --output /path/to/hover-proof.json
+python3 tools/build-niri-overview-hover.py --source /path/to/niri-hover-source \
+  --install-with-proof /path/to/hover-proof.json
+```
+
+Installation accepts proof matching the exact binary and patch, including native
+hover, legacy-stream isolation, selection preservation, close cleanup and real
+QML-caption checks. It stores the optional binary and receipt privately under
+`~/.local/share/nacre/niri-on-pc/overview-hover`. The prepared-session runtime
+checks its owner, checksum, execution and stock26.04 compatibility before using
+it, and enables the opt-in stream only for that prepared Niri session. Missing
+or invalid experiments fall back to packaged Niri; unsupported stream requests
+fall back to ordinary IPC. Hyprland startup remains on its original path.
+
+This takes effect on the next Niri login and is not a hot compositor replacement.
+To disable, move `overview-hover/manifest.json` aside before the next login. The
+packaged binary, session entries, personal settings and authentication are not
+replaced. Native nested verification does not certify a complete physical login,
+lock/unlock, idle or portal acceptance cycle.

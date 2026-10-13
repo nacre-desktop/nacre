@@ -38,6 +38,11 @@ Singleton {
     property var activeWorkspace: null
     property var focusedMonitor: null
     property string activeWindowId: ""
+    property bool overviewOpen: false
+    property bool overviewHoverSupported: false
+    property string overviewHoveredWindowId: ""
+    readonly property var overviewHoverWindow: overviewOpen && overviewHoverSupported ? byId[overviewHoveredWindowId] || null : null
+    readonly property var overviewSelectedWindow: overviewOpen ? byId[activeWorkspace?.activeWindowId] || null : null
     readonly property var activeClient: byId[activeWindowId] || null
     readonly property int activeWsId: activeWorkspace?.index ?? 1
     readonly property point cursorPos: Qt.point(0, 0)
@@ -109,6 +114,9 @@ Singleton {
         byId = next;
         clients = ordered;
         activeWindowId = value.activeWindow?.windowId || "";
+        overviewOpen = value.overviewOpen === true;
+        overviewHoverSupported = value.overviewHoverSupported === true;
+        overviewHoveredWindowId = overviewOpen ? value.overviewHoveredWindowId || "" : "";
         connected = true;
         error = value.configFailed ? NacreI18n.tr("ui.niri.error.config-reload-failed", "Niri configuration failed to reload.") : "";
         reconnectAttempt = 0;
@@ -191,6 +199,9 @@ Singleton {
             root.pendingActions = [];
             root.error = NacreI18n.tr("ui.niri.error.ipc-disconnected", "Niri IPC disconnected; reconnecting.");
             root.activeWindowId = "";
+            root.overviewOpen = false;
+            root.overviewHoverSupported = false;
+            root.overviewHoveredWindowId = "";
             reconnect.restart();
         }
     }

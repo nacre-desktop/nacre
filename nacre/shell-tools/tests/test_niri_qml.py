@@ -126,6 +126,15 @@ Item {
   SignalSpy {id:moveEvents;target:backend;signalName:"event"}
   function init(){NacreI18n.language="en";backend=factory.createObject(null);verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))));moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear()}
   function cleanup(){backend.destroy();backend=null;wait(1)}
+  function test_overview_hover_does_not_replace_focus_and_rejects_stale_targets(){
+   const active=backend.activeClient
+   const next=JSON.parse(JSON.stringify(Snapshots.initial))
+   const hovered=next.windows.find(window=>window.windowId!==active.windowId)
+   next.overviewOpen=true;next.overviewHoverSupported=true;next.overviewHoveredWindowId=hovered.windowId
+   verify(backend.accept(next));compare(backend.overviewHoverWindow.windowId,hovered.windowId);compare(backend.activeClient,active)
+   next.overviewHoveredWindowId="niri-window:999";verify(backend.accept(next));compare(backend.overviewHoverWindow,null)
+   next.overviewHoveredWindowId=hovered.windowId;next.overviewOpen=false;verify(backend.accept(next));compare(backend.overviewHoverWindow,null);compare(backend.activeClient,active)
+  }
   function test_state_identity_focus_and_reconciliation(){
    compare(backend.activeWorkspace.id,"niri-workspace:9007199254740993")
    compare(backend.activeWsId,1);compare(backend.activeClient.windowId,"niri-window:9007199254740995")

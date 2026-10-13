@@ -85,6 +85,8 @@ class State:
         self.ready = set()
         self.config_failed = False
         self.overview_open = False
+        self.overview_hover_supported = False
+        self.overview_hover_id = None
 
     def apply(self, event):
         if isinstance(event, str):
@@ -106,6 +108,7 @@ class State:
             "WindowFocusTimestampChanged",
             "ConfigLoaded",
             "OverviewOpenedOrClosed",
+            "NacreOverviewHoverChanged",
         }
         if name not in known:
             return {"type": "other"}
@@ -205,7 +208,15 @@ class State:
             result = {"type": "configuration-reloaded", "failed": self.config_failed}
         elif name == "OverviewOpenedOrClosed":
             self.overview_open = payload["is_open"]
+            if not self.overview_open:
+                self.overview_hover_id = None
             result = {"type": "overview-changed"}
+        elif name == "NacreOverviewHoverChanged":
+            value = payload["id"]
+            key = identity(value, "window") if value is not None else None
+            self.overview_hover_id = key if self.overview_open else None
+            self.overview_hover_supported = True
+            result = {"type": "overview-hover"}
         return result
 
     def snapshot(self):
@@ -356,6 +367,8 @@ class State:
             "activeWorkspace": focused,
             "focusedMonitor": next((row for row in monitors if row["focused"]), None),
             "overviewOpen": self.overview_open,
+            "overviewHoverSupported": self.overview_hover_supported,
+            "overviewHoveredWindowId": self.overview_hover_id,
             "configFailed": self.config_failed,
         }
 
@@ -783,23 +796,29 @@ class Backend:
         return self._action("LoadConfigFile", {"path": None}, timeout=timeout)
 
     def event_socket(self):
-        connection = self._connection()
-        try:
-            connection.sendall(b'"EventStream"\n')
-            # Read exactly the acknowledgement; do not consume buffered events.
-            reply = bytearray()
-            while not reply.endswith(b"\n"):
-                chunk = connection.recv(1)
-                if not chunk or len(reply) >= MAX_BYTES:
-                    raise ValueError("Invalid event stream acknowledgement")
-                reply.extend(chunk)
-            if json.loads(reply) != {"Ok": "Handled"}:
-                raise RuntimeError("niri event stream was rejected")
-            connection.setblocking(False)
-            return connection
-        except BaseException:
-            connection.close()
-            raise
+        requests = ["EventStream"]
+        if os.environ.get("NACRE_NIRI_HOVER_STREAM") == "1":
+            requests.insert(0, "NacreOverviewHoverStream")
+        for request in requests:
+            connection = self._connection()
+            try:
+                connection.sendall((json.dumps(request) + "\n").encode())
+                # Read exactly the acknowledgement; do not consume buffered events.
+                reply = bytearray()
+                while not reply.endswith(b"\n"):
+                    chunk = connection.recv(1)
+                    if not chunk or len(reply) >= MAX_BYTES:
+                        raise ValueError("Invalid event stream acknowledgement")
+                    reply.extend(chunk)
+                if json.loads(reply) == {"Ok": "Handled"}:
+                    connection.setblocking(False)
+                    return connection
+                if request == "EventStream":
+                    raise RuntimeError("niri event stream was rejected")
+                connection.close()
+            except BaseException:
+                connection.close()
+                raise
 
     def parse_event(self, line):
         return State().apply(json.loads(line))

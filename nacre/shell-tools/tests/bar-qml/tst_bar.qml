@@ -11,6 +11,7 @@ TestCase {
     when: windowShown
     function init() {
         NacreCompositor.activeWindow = null;
+        NacreCompositor.overviewHoverWindow = null;
         NacreCompositor.windows = [];
         NacreCompositor.backendName = "hyprland";
         NacreCompositor.activeWorkspaceId = null;
@@ -142,6 +143,26 @@ TestCase {
         compare(view.displayTitle, "Terminal");
         NacreCompositor.windows = [];
         compare(view.displayTitle, "Desktop");
+    }
+    function test_overview_hover_caption_changes_without_changing_active_window() {
+        const active = {
+            windowId: "one",
+            wmClass: "editor",
+            title: "Focused editor"
+        };
+        NacreCompositor.activeWindow = active;
+        const view = createTemporaryObject(title, test);
+        compare(view.displayTitle, "Focused editor");
+        NacreCompositor.overviewHoverWindow = {
+            windowId: "two",
+            wmClass: "nacre-ai-task",
+            pid: 123,
+            title: "⠹ Other chat | 7ce71273f1db4999bf221..."
+        };
+        compare(view.displayTitle, "⠹ Other chat");
+        compare(NacreCompositor.activeWindow, active);
+        NacreCompositor.overviewHoverWindow = null;
+        compare(view.displayTitle, "Focused editor");
     }
     function test_short_title_painted_group_is_centered_and_resizes() {
         const view = createTemporaryObject(title, test, {

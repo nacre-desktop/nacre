@@ -2,12 +2,49 @@
 """Select an isolated Nacre code view for niri while preserving Hyprland startup."""
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import math
 import os
 from pathlib import Path
 import subprocess
+
+HOVER_SOURCE = "8ed0da44d974c32c6877d2f4630c314da0717ecb"
+
+
+def overview_hover_binary(home):
+    """Use only an explicitly enabled, verified user-owned prototype binary."""
+    root = Path(home) / ".local/share/nacre/niri-on-pc/overview-hover"
+    try:
+        manifest = json.loads((root / "manifest.json").read_text())
+        binary = root / "niri"
+        if (
+            manifest.get("schema") != 1
+            or manifest.get("enabled") is not True
+            or manifest.get("nestedVerified") is not True
+            or manifest.get("sourceRevision") != HOVER_SOURCE
+            or manifest.get("protocol") != "NacreOverviewHoverStream"
+            or not binary.is_file()
+            or binary.is_symlink()
+            or binary.stat().st_uid != os.getuid()
+            or not os.access(binary, os.X_OK)
+            or hashlib.sha256(binary.read_bytes()).hexdigest()
+            != manifest.get("binarySha256")
+        ):
+            return None
+        # Avoid retaining the old experiment after a packaged compositor upgrade.
+        installed = subprocess.check_output(
+            ["/usr/bin/niri", "--version"], text=True, timeout=2
+        )
+        if not installed.startswith("niri 26.04 "):
+            return None
+        candidate = subprocess.check_output(
+            [str(binary), "--version"], text=True, timeout=2
+        )
+        return binary if candidate.startswith("niri 26.04 ") else None
+    except (OSError, ValueError, AttributeError, subprocess.SubprocessError):
+        return None
 
 
 def host_preferences(desktop):
@@ -115,8 +152,10 @@ def command(action, environment=None, home=None):
         NACRE_PEARL_TOOLS=str(home / ".local/share/nacre/shell/tools"),
         NACRE_QS_CONFIG=str(home / ".config/quickshell/nacre/shell.qml"),
     )
+    hover_binary = overview_hover_binary(home)
+    env["NACRE_NIRI_HOVER_STREAM"] = "1" if hover_binary else "0"
     if action == "compositor":
-        args += ["/usr/bin/niri", "--session"]
+        args += [str(hover_binary) if hover_binary else "/usr/bin/niri", "--session"]
     else:
         args += [
             "/usr/bin/python3",
