@@ -10,8 +10,8 @@ maintainer; it does not supply permission or prove that a real-session test ran.
 - [ ] The problem, resulting behavior and scope are clear. Inspect all changed
       files for broad unrelated edits, hidden behavior changes or unexplained
       generated output. Split unrelated changes before merging.
-- [ ] The branch is current with `main` and required CI passes at the revision
-      being merged. Read lint/format/test results and relevant logs, including
+- [ ] The branch is current with `main` and applicable local checks pass at the
+      revision being merged. Read lint/format/test results and relevant logs, including
       skips; a green summary does not replace tests of the affected behavior.
 - [ ] New code has meaningful tests; reproduction and regression evidence cover
       the changed path. Confirm claimed real-session/environment checks and their
@@ -64,11 +64,12 @@ maintainer; it does not supply permission or prove that a real-session test ran.
 
 ## Before merge
 
-- [ ] Resolve outstanding review findings and confirm final CI on the current
-      revision. Sensitive paths have maintainer scrutiny, including anything newly
-      run with sudo; add explicit CODEOWNERS patterns when introducing such paths.
+- [ ] Resolve outstanding review findings and validate the current revision;
+      check CI after a direct push during experimental development. Sensitive paths
+      have maintainer scrutiny, including anything newly run with sudo; add explicit CODEOWNERS patterns when introducing such paths.
 - [ ] Check deployment/recovery impact and rollback where applicable. Do not
       merge based on an unverified claim of live testing or bypass a failing check.
 - [ ] Verify repository settings against the
       [community-settings guide](community-settings.md) when changing CI job names,
-      workflows or community policy; required checks must match actual job names.
+      workflows or community policy; the experimental direct-push policy and enabled
+      CI must match the documented settings.

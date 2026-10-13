@@ -61,7 +61,16 @@ assistant sessions. AI full-access must remain an explicit profile opt-in.
 
 Documentation-only changes should check links, templates and claims; explain
 runtime checks that are not applicable instead of claiming they were performed.
-Complete the [PR template](.github/PULL_REQUEST_TEMPLATE.md) and consult the
-[review checklist](docs/development/review-checklist.md). Sensitive paths request
-maintainer review through [CODEOWNERS](.github/CODEOWNERS). PRs and successful CI
-are required on `main`; approving a fork workflow permits execution, not merging.
+During experimental development (effective 2026-10-13), maintainer agents should
+complete requested work in isolated task worktrees, validate it, integrate it
+with the latest `main`, and push directly without creating a PR or asking again
+for commit/push permission. If another task advances `main`, fetch and integrate
+again before a normal fast-forward push. Never force-push or overwrite another
+task's work. Check CI after publishing and fix failures caused by the change.
+This policy remains in effect until the maintainer changes it.
+
+Outside contributors still submit PRs. When a PR is explicitly requested,
+complete the [PR template](.github/PULL_REQUEST_TEMPLATE.md). All changes should
+use the [review checklist](docs/development/review-checklist.md). Sensitive paths
+retain [CODEOWNERS](.github/CODEOWNERS). Approving a fork workflow permits
+execution, not merging.
