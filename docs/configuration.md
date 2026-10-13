@@ -45,3 +45,55 @@ session: notifications and palette publication have one owner.
 The base keyboard layout is US. First installation reads the system X11 layout
 with `localectl`, then preserves your `~/.config/nacre/keyboard.lua` override on
 updates. Desktop/host overrides load afterwards.
+
+## Personal shortcuts
+
+The [README shortcut table](../README.md#shortcuts) lists the general defaults.
+Five pearls are shown initially, but Super+1–9 and Super+0 can reach workspaces
+1–10; Shift moves a window to the same target. Super+Q holds a window for 30 seconds
+before closing it; Super+Shift+Q restores it during that interval.
+
+In the launcher, **Setup → Default applications** edits `~/.config/nacre/apps.json`.
+App choices are argument arrays, for example:
+
+```json
+{
+  "terminal": ["alacritty"],
+  "files": ["thunar"],
+  "browser": ["firefox"]
+}
+```
+
+Super+Enter, Super+E and Super+Shift+B use those choices. Missing entries retain
+the shipped Kitty, Nacre Dolphin and Chrome defaults. Only applications you have
+installed can be launched.
+
+Use **Setup → Edit personal shortcuts** to edit `~/.config/nacre/shortcuts.lua`.
+Named editor, chat and music shortcuts belong here. A profile JSON controls
+startup and routing; it does not contain shortcut bindings. For example, to keep
+Super+A as your personal launcher, replace the base AI binding explicitly:
+
+```lua
+hl.unbind("SUPER + A")
+hl.bind("SUPER + A", hl.dsp.exec_cmd("~/.local/bin/nacre-shell launcher"),
+    {description="Nacre:launcher"})
+hl.bind("SUPER + CTRL + B", hl.dsp.exec_cmd("~/.local/bin/nacre-shell left"),
+    {description="Nacre:ai-sidebar"})
+hl.bind("SUPER + SHIFT + T", hl.dsp.exec_cmd("uwsm app -- ~/.local/bin/nacre-app terminal"),
+    {description="Nacre:terminal"})
+```
+
+Unbind an occupied combination before assigning another action. For example,
+Super+Shift+S now captures an area; a personal music binding on that key must
+explicitly replace it. Reload Hyprland with Super+Shift+R after editing. Managed
+updates preserve this private file; the live shortcut list reads session bindings.
+
+Super+S toggles the scratchpad; Super+Ctrl+S moves a window there.
+Super+Ctrl+PageUp/PageDown cycles grouped windows. Super+K and Super+F1 open the
+shortcut list. Super+. opens emoji, with Super+Ctrl+E as an alternative for layouts
+where . requires Shift or AltGr. These defaults avoid layout-dependent brackets,
+grave and slash shortcuts.
+
+Hyprland 0.56.x has an [upstream Lua keycode matching bug](https://github.com/hyprwm/Hyprland/discussions/14819),
+so the general defaults avoid physical `code:NN` bindings. Letter shortcuts remain
+layout symbols; custom keyboards can override any binding.

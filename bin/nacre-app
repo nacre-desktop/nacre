@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 DEFAULTS = {
+    "terminal": ["kitty"],
     "browser": ["google-chrome-stable"],
     "files": ["nacre-shell", "dolphin"],
     "mail": ["google-chrome-stable", "--app=https://mail.google.com/"],

@@ -933,7 +933,7 @@ NacreSurface {
                 NacreText {
                     width: parent.width
                     visible: root.previewEntry?.operation === "info"
-                    text: root.previewEntry?.value === "health" ? "Services\n" + Object.keys(Maintenance.data.services || {}).map(key => key + ": " + Maintenance.data.services[key]).join("\n") : root.previewEntry?.value === "guide" ? "Super+A opens this menu. Search finds apps and controls at any depth.\n\nUse > for commands, = for arithmetic, # for private notes and ? for an explicit AI question.\n\nEnter opens the selected item. Right enters a section; Tab opens item actions. Backspace with an empty query goes back. Escape closes.\n\nCtrl+D adds or removes a favorite." : root.previewEntry?.description || ""
+                    text: root.previewEntry?.value === "health" ? "Services\n" + Object.keys(Maintenance.data.services || {}).map(key => key + ": " + Maintenance.data.services[key]).join("\n") : root.previewEntry?.value === "guide" ? "Super+Space opens this menu. Search finds apps and controls at any depth.\n\nUse > for commands, = for arithmetic, # for private notes and ? for an explicit AI question.\n\nEnter opens the selected item. Right enters a section; Tab opens item actions. Backspace with an empty query goes back. Escape closes.\n\nCtrl+D adds or removes a favorite." : root.previewEntry?.description || ""
                     textFormat: Text.PlainText
                     font.pointSize: 10
                     wrapMode: Text.Wrap
