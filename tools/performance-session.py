@@ -502,6 +502,7 @@ def run(args, directory):
                 versions[name] = "unavailable"
         report = {
             "versions": versions,
+            "budget_tier": args.budget_tier,
             "parent_renderer": args.parent_renderer,
             "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "sampler_sha256": hashlib.sha256(
@@ -748,7 +749,12 @@ def check_report(report, budgets):
         failures.append("missing host paging coverage")
     elif report["paging_start"] != report["paging_end"]:
         failures.append("host paging invalidates the performance comparison")
-    for name, ceiling in budgets["ci_pss_mib"].items():
+    limits = (
+        budgets["ci_software_pss_mib"]
+        if report.get("budget_tier") == "software"
+        else budgets["ci_pss_mib"]
+    )
+    for name, ceiling in limits.items():
         sample = report.get("scenarios", {}).get(name, {})
         memory = sample.get("pss_mib", {}).get("shell")
         coverage = sample.get("memory_valid_samples", {}).get("pss", {}).get("shell", 0)
@@ -825,6 +831,12 @@ def main():
     )
     parser.add_argument("--keep-fixtures", type=Path)
     parser.add_argument("--check-budgets", action="store_true")
+    parser.add_argument(
+        "--budget-tier",
+        choices=("ci", "software"),
+        default="ci",
+        help="Explicit software-rendering CI tier; hardware reference budgets stay separate",
+    )
     parser.add_argument(
         "--adaptive-allocator",
         action="store_true",

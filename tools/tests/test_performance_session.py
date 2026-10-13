@@ -69,6 +69,13 @@ class BudgetTests(unittest.TestCase):
         self.assertIn("shell PSS", failures[0])
         self.assertIn("frame p95", failures[1])
 
+    def test_software_tier_is_explicit_and_does_not_relax_hardware_budget(self):
+        data = report()
+        data["scenarios"]["fresh_static"]["pss_mib"]["shell"]["max"] = 800
+        self.assertEqual(len(session.check_report(data, BUDGETS)), 1)
+        data["budget_tier"] = "software"
+        self.assertEqual(session.check_report(data, BUDGETS), [])
+
     def test_paging_cannot_masquerade_as_memory_savings(self):
         data = report()
         data["scenarios"]["video"]["swap_pss_mib"]["shell"]["max"] = 1

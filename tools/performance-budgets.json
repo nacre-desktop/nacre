@@ -28,5 +28,15 @@
     "reopen": 300
   },
   "ci_idle_cpu_mean_one_core_percent": 5,
-  "ci_min_delivered_video_fps": 10
+  "ci_min_delivered_video_fps": 10,
+  "ci_software_pss_mib": {
+    "fresh_static": 1200,
+    "all_panels_closed": 1700,
+    "static_after_latency": 1700,
+    "video": 2000,
+    "video_paused": 2000,
+    "video_suspended": 1900,
+    "video_resumed": 2000,
+    "static_after_video": 1900
+  }
 }
