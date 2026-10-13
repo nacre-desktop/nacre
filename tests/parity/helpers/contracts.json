@@ -1694,7 +1694,8 @@
       "opt_in": "--orient-direct --command TEMPLATE",
       "scope": "recognized computational Orient RPC transport only; all outputs, source/options, versions, writes, modes and other actions exact",
       "evidence": "deps/orient/tests/parity and crates/orient-core/tests plus native CLI/decoder tests at orient_revision"
-    }
+    },
+    "networkmanager-reader": "Typed reader fixtures derive from frozen nmcli radio/device/AP inputs; preserve enumeration order, dedup, filters, stdout and effects; no reference regeneration."
   },
   "intended_differences": {
     "absolute_xdg_roots": {

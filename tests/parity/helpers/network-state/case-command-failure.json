@@ -8,5 +8,41 @@
         "stderr": "fixture unavailable\n"
       }
     ]
-  }
+  },
+  "dbus": [
+    {
+      "match": {
+        "destination": "org.freedesktop.NetworkManager",
+        "path": "/org/freedesktop/NetworkManager",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.NetworkManager",
+          "WirelessEnabled"
+        ]
+      },
+      "reply": {
+        "error": "org.freedesktop.NetworkManager.Unavailable",
+        "text": "Fixture NetworkManager unavailable"
+      },
+      "effects": [
+        {
+          "command": "nmcli",
+          "argv": [
+            "--terse",
+            "--escape",
+            "yes",
+            "--colors",
+            "no",
+            "--wait",
+            "5",
+            "radio",
+            "wifi"
+          ],
+          "stdin": ""
+        }
+      ]
+    }
+  ]
 }
