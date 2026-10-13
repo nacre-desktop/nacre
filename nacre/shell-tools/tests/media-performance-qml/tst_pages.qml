@@ -71,6 +71,7 @@ TestCase {
     }
     function init() {
         NacreMediaDetails.lines = [];
+        NacreMediaDetails.plain = "";
         NacreDashboardState.preferences = {
             albumPalette: true
         };
@@ -260,36 +261,22 @@ TestCase {
             verify(title.mapToItem(view, 0, title.height).y <= transport.mapToItem(view, 0, 0).y, "metadata stays above controls");
         }
     }
-    function test_palette_toggle_and_inline_output() {
+    function test_browser_metadata_and_plain_lyrics() {
+        compare(Model.lyricsMetadata("Northbound - Quiet horizon (Official Audio)", "Northbound - Topic", "", true), {
+            title: "Quiet horizon",
+            artist: "Northbound",
+            album: ""
+        });
+        compare(Model.lyricsMetadata("A documentary - Part two", "Studio", "", true).title, "A documentary - Part two");
+        compare(Model.lyricsMetadata("Quiet horizon (Official Audio)", "Northbound", "Tide", false).title, "Quiet horizon (Official Audio)");
         const {
             view
         } = setup();
-        mouseClick(findChild(view, "mediaAlbumColors"), 20, 15);
-        compare(NacreDashboardState.preferences.albumPalette, false);
-        mouseClick(findChild(view, "mediaAlbumColors"), 20, 15);
-        compare(NacreDashboardState.preferences.albumPalette, true);
-        NacreAudio.outputs = [
-            {
-                id: 1,
-                description: "Speakers"
-            },
-            {
-                id: 2,
-                description: "Headphones"
-            }
-        ];
-        NacreAudio.sink = NacreAudio.outputs[0];
-        const output = findChild(view, "mediaOutput");
-        compare(output.displayText, "Speakers");
-        output.forceActiveFocus();
-        keyClick(Qt.Key_Space);
-        tryCompare(output.popup, "visible", true);
-        keyClick(Qt.Key_Down);
-        keyClick(Qt.Key_Enter);
-        compare(output.displayText, "Headphones");
-        view.shouldUpdate = false;
-        output.activated(0);
-        compare(output.displayText, "Headphones");
+        NacreMediaDetails.plain = "First line\nSecond line";
+        verify(findChild(view, "mediaPlainLyrics").visible);
+        verify(!findChild(view, "mediaTrackDetails").visible);
+        NacreMediaDetails.plain = "";
+        verify(findChild(view, "mediaTrackDetails").visible);
     }
     function test_lyrics_follow_position_and_details_replace_them() {
         const {

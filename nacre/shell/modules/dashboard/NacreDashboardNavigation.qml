@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls.Basic
 import qs.widgets
 import qs.services
 
@@ -8,7 +9,7 @@ Flickable {
     property var order: NacreDashboardState.tabs
     readonly property var names: NacreDashboardRegistry.names
     readonly property int selectedSlot: Math.max(0, order.indexOf(names[currentIndex]))
-    readonly property real slotWidth: Math.max(58, Math.min(170, width / Math.min(6, order.length)))
+    readonly property real slotWidth: Math.max(58, width / Math.max(1, order.length))
     signal selected(int index)
     implicitHeight: 44
     contentWidth: Math.max(width, order.length * slotWidth)
@@ -27,8 +28,11 @@ Flickable {
         else if (right > contentX + width)
             contentX = Math.max(0, right - width);
     }
-    onSelectedSlotChanged: revealSelection()
-    onWidthChanged: revealSelection()
+    onSelectedSlotChanged: Qt.callLater(revealSelection)
+    onWidthChanged: Qt.callLater(revealSelection)
+    onOrderChanged: Qt.callLater(revealSelection)
+    onContentWidthChanged: Qt.callLater(revealSelection)
+    Component.onCompleted: Qt.callLater(revealSelection)
     Rectangle {
         objectName: "dashboardSelection"
         x: root.selectedSlot * root.slotWidth + (root.slotWidth - width) / 2
@@ -65,9 +69,26 @@ Flickable {
                     }
                 }
                 NacreInteraction {
+                    id: interaction
                     accessibleName: NacreDashboardRegistry.title(parent.modelData)
                     function onClicked() {
                         root.selected(parent.pageIndex);
+                    }
+                }
+                ToolTip {
+                    id: hint
+                    parent: interaction
+                    visible: root.slotWidth < 94 && (interaction.hovered || interaction.keyboardFocusVisible)
+                    delay: 450
+                    text: interaction.accessibleName
+                    contentItem: NacreText {
+                        text: hint.text
+                        font.pointSize: 9
+                        color: NacreTokens.ink
+                    }
+                    background: NacreSurface {
+                        radius: 10
+                        color: NacreTokens.raised
                     }
                 }
             }

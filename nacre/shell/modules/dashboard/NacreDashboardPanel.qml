@@ -67,27 +67,9 @@ NacreSurface {
         objectName: "dashboardNavigation"
         x: 24
         y: 12
-        width: Math.max(0, root.width - 142)
+        width: Math.max(0, root.width - 48)
         currentIndex: root.currentIndex
         onSelected: index => root.select(index)
-    }
-    ActionButton {
-        x: root.width - 100
-        y: 16
-        text: ""
-        icon: "tune"
-        compact: true
-        accessibleLabel: NacreI18n.tr("dashboard.dashboard-panel.accessibleLabel.customize-dashboard", "Customize dashboard")
-        onClicked: root.customizing = !root.customizing
-    }
-    ActionButton {
-        x: root.width - 58
-        y: 16
-        text: ""
-        icon: "settings"
-        compact: true
-        accessibleLabel: NacreI18n.tr("dashboard.dashboard-panel.accessibleLabel.open-settings", "Open Settings")
-        onClicked: NacrePanelState.openSettings("")
     }
     Item {
         id: stage
@@ -205,7 +187,10 @@ NacreSurface {
         }
     }
     Keys.onPressed: event => {
-        if (!root.customizing && (event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_Tab) {
+        if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_Comma) {
+            root.customizing = !root.customizing;
+            event.accepted = true;
+        } else if (!root.customizing && (event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_Tab) {
             const order = NacreDashboardState.tabs, before = order.indexOf(root.names[root.currentIndex]), delta = event.modifiers & Qt.ShiftModifier ? -1 : 1;
             root.select(root.names.indexOf(order[(before + delta + order.length) % order.length]));
             event.accepted = true;

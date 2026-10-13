@@ -65,14 +65,9 @@ Flickable {
         Row {
             spacing: 10
             ActionButton {
-                text: NacreI18n.tr("dashboard.dashboard-customize.text.synced-lyrics", "Synced lyrics")
+                text: NacreI18n.tr("dashboard.dashboard-customize.text.synced-lyrics", "Lyrics")
                 selected: NacreDashboardState.preferences.lyrics !== false
                 onClicked: NacreDashboardState.save("lyrics", !NacreDashboardState.preferences.lyrics)
-            }
-            ActionButton {
-                text: NacreI18n.tr("dashboard.dashboard-customize.text.album-colors", "Album colors")
-                selected: NacreDashboardState.preferences.albumPalette !== false
-                onClicked: NacreDashboardState.save("albumPalette", !NacreDashboardState.preferences.albumPalette)
             }
         }
         NacreText {

@@ -65,6 +65,22 @@ TestCase {
         keyClick(Qt.Key_2);
         compare(view.currentIndex, 0);
     }
+    function test_tabs_fill_header_and_customizer_shortcut() {
+        const view = createTemporaryObject(panel, test);
+        const nav = findChild(view, "dashboardNavigation");
+        for (const tabs of [["today", "media", "weather", "system"], ["today", "system"], ["today"], ["today", "media", "weather", "system", "focus", "notifications", "clipboard", "devices", "network", "ai-usage", "screenshots", "brain"]]) {
+            NacreDashboardState.tabs = tabs;
+            wait(30);
+            compare(nav.contentWidth, nav.width);
+            compare(nav.slotWidth, nav.width / tabs.length);
+            compare(nav.x + nav.width / 2, view.width / 2);
+        }
+        view.forceActiveFocus();
+        keyClick(Qt.Key_Comma, Qt.ControlModifier);
+        compare(view.customizing, true);
+        keyClick(Qt.Key_Escape);
+        compare(view.customizing, false);
+    }
     function test_closing_keeps_internal_geometry_then_unloads_and_reverses() {
         const view = createTemporaryObject(panel, test);
         wait(300);
@@ -129,7 +145,7 @@ TestCase {
         nav.order = ["today", "media", "weather", "system", "focus", "notifications", "clipboard", "devices", "network", "ai-usage", "screenshots", "brain"];
         verify(nav.contentWidth > nav.width);
         nav.currentIndex = 11;
-        verify(nav.contentX > 0);
+        tryVerify(() => nav.contentX > 0);
     }
     function test_viewport_and_reduced_motion() {
         DesktopSettings.data = {

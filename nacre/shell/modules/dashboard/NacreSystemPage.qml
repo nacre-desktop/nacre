@@ -24,8 +24,8 @@ Item {
         onExited: code => root.profilesAvailable = code === 0
     }
     readonly property var processes: [...NacreDashboardSystem.processes].sort((a, b) => sortCpu ? (NacreDashboardSystem.cpuByPid[b.pid + ":" + b.start] || 0) - (NacreDashboardSystem.cpuByPid[a.pid + ":" + a.start] || 0) : b.memory - a.memory).slice(0, 5)
-    readonly property real metricsHeight: compact ? Math.min(270, height * (laptop ? .43 : .47)) : Math.min(laptop ? 160 : 182, height * .33)
-    readonly property real updateHeight: laptop ? 100 : 64
+    readonly property real metricsHeight: compact ? Math.min(230, height * .43) : Math.min(150, height * .28)
+    readonly property real updateHeight: laptop ? 88 : 64
     readonly property real bottomY: metricsHeight + 16
     readonly property real bottomHeight: height - bottomY - updateHeight - 12
     implicitWidth: 940
@@ -39,12 +39,19 @@ Item {
         active: root.shouldUpdate
         gpu: [...(NacreSystemUsage.gpus || [])].sort((a, b) => (b.usage || 0) - (a.usage || 0))[0] || null
     }
+    NacreSurface {
+        width: parent.width
+        height: root.metricsHeight
+        radius: 20
+        color: NacreTokens.raised
+    }
     Grid {
         width: parent.width
         height: root.metricsHeight
-        columns: root.compact ? 2 : root.laptop ? 5 : 4
+        columns: root.compact ? 2 : 4
         spacing: 12
         NacreDashboardMetric {
+            color: "transparent"
             width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
             height: root.compact ? (root.metricsHeight - 12) / 2 : root.metricsHeight
             label: NacreI18n.tr("dashboard.system-page.label.cpu", "CPU")
@@ -52,10 +59,11 @@ Item {
             value: Number.isFinite(NacreSystemUsage.cpuPerc) ? NacreI18n.tr("dashboard.system-page.percent", "{value}%", {
                 value: Math.round(NacreSystemUsage.cpuPerc * 100)
             }) : "—"
-            detail: Model.temperature(NacreSystemUsage.cpuTemp)
+            detail: Number.isFinite(NacreSystemUsage.cpuTemp) ? Model.temperature(NacreSystemUsage.cpuTemp) : ""
             history: NacreSystemUsage.cpuHistory || []
         }
         NacreDashboardMetric {
+            color: "transparent"
             width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
             height: root.compact ? (root.metricsHeight - 12) / 2 : root.metricsHeight
             label: NacreI18n.tr("dashboard.system-page.label.memory", "Memory")
@@ -68,21 +76,24 @@ Item {
             fraction: NacreSystemUsage.memPerc
         }
         NacreDashboardMetric {
+            color: "transparent"
             width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
             height: root.compact ? (root.metricsHeight - 12) / 2 : root.metricsHeight
             label: NacreI18n.tr("dashboard.system-page.label.gpu", "GPU")
             icon: "developer_board"
             value: NacreSystemUsage.gpuUsageAvailable ? NacreI18n.tr("dashboard.system-page.percent", "{value}%", {
                 value: Math.round(NacreSystemUsage.gpuPerc * 100)
-            }) : "—"
-            detail: Model.temperature(NacreSystemUsage.gpuTemp) + " · " + gpuMemory.display
+            }) : NacreI18n.tr("dashboard.system-page.gpu-unavailable", "Unavailable")
+            valueSize: NacreSystemUsage.gpuUsageAvailable ? 0 : root.compact ? 12 : 15
+            detail: (Number.isFinite(NacreSystemUsage.gpuTemp) ? Model.temperature(NacreSystemUsage.gpuTemp) + " · " : "") + gpuMemory.display
             fraction: NacreSystemUsage.gpuUsageAvailable ? NacreSystemUsage.gpuPerc : 0
         }
         NacreDashboardMetric {
             id: diskTile
+            color: "transparent"
             width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
             height: root.compact ? (root.metricsHeight - 12) / 2 : root.metricsHeight
-            label: NacreI18n.tr("dashboard.system-page.label.storage", "Storage")
+            label: NacreI18n.tr("dashboard.system-page.label.storage", "Storage") + (root.selectedDisk && root.selectedDisk.path !== "/" ? " " + root.selectedDisk.path : "")
             icon: "hard_drive"
             value: Model.size(root.selectedDisk ? root.selectedDisk.used / 1024 : NacreSystemUsage.storageUsed)
             detail: NacreI18n.tr("dashboard.system-page.total", "{value} total", {
@@ -90,12 +101,12 @@ Item {
             })
             fraction: root.selectedDisk ? root.selectedDisk.used / Math.max(1, root.selectedDisk.total) : NacreSystemUsage.storagePerc
             ActionButton {
-                x: 14
-                y: parent.height - (root.compact ? 32 : 56)
-                width: parent.width - 28
+                x: parent.width - 42
+                y: 9
+                width: 28
                 height: 26
                 compact: true
-                text: (root.selectedDisk?.path || "/").slice(0, 20)
+                text: ""
                 icon: "expand_more"
                 enabled: (NacreDashboardSystem.filesystems || []).length > 0
                 accessibleLabel: NacreI18n.tr("dashboard.system-page.choose-filesystem", "Choose filesystem")
@@ -131,24 +142,12 @@ Item {
                 }
             }
         }
-        NacreDashboardMetric {
-            visible: root.laptop && !root.compact
-            width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
-            height: root.metricsHeight
-            label: NacreI18n.tr("dashboard.system-page.battery", "Battery")
-            icon: UPower.onBattery ? "battery_full" : "power"
-            value: NacreI18n.tr("dashboard.system-page.percent", "{value}%", {
-                value: Math.round((root.battery?.percentage || 0) * 100)
-            })
-            detail: UPower.onBattery ? NacreI18n.tr("dashboard.system-page.on-battery", "On battery") : NacreI18n.tr("dashboard.system-page.connected-power", "Connected to power")
-            fraction: root.battery?.percentage || 0
-        }
     }
     NacreDashboardNetworkCard {
         id: network
         x: 0
         y: root.bottomY
-        width: root.compact ? parent.width * .47 : parent.width * .39
+        width: root.compact ? parent.width * .47 : parent.width * .38
         height: root.bottomHeight
     }
     NacreSurface {
@@ -212,49 +211,6 @@ Item {
                 }
             }
         }
-        Column {
-            x: 16
-            y: Math.max(210, parent.height - 75)
-            width: parent.width - 32
-            spacing: 7
-            visible: parent.height >= 260
-            Repeater {
-                model: (NacreDashboardSystem.filesystems || NacreDashboardSystem.disks).slice(0, 2)
-                Item {
-                    required property var modelData
-                    width: parent.width
-                    height: 27
-                    NacreText {
-                        text: modelData.path
-                        width: parent.width * .5
-                        font.pointSize: 9
-                        elide: Text.ElideMiddle
-                    }
-                    NacreText {
-                        anchors.right: parent.right
-                        text: NacreI18n.tr("dashboard.system-page.drive-use", "{used}/{total}", {
-                            used: Model.size(modelData.used / 1024),
-                            total: Model.size(modelData.total / 1024)
-                        })
-                        color: NacreTokens.mutedInk
-                        font.pointSize: 9
-                    }
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        width: parent.width
-                        height: 4
-                        radius: 2
-                        color: Qt.alpha(NacreTokens.accent, .12)
-                        Rectangle {
-                            width: parent.width * Math.max(0, Math.min(1, parent.parent.modelData.used / Math.max(1, parent.parent.modelData.total)))
-                            height: parent.height
-                            radius: 2
-                            color: NacreTokens.accent
-                        }
-                    }
-                }
-            }
-        }
     }
     NacreSurface {
         y: parent.height - root.updateHeight
@@ -265,14 +221,14 @@ Item {
         Column {
             x: 16
             y: 10
-            width: parent.width * .45
+            width: parent.width * .42
             spacing: 3
             NacreText {
-                text: NacreI18n.tr("dashboard.system-page.updates-count", "{count} updates", {
+                text: Updates.count === 0 ? NacreI18n.tr("dashboard.system-page.up-to-date", "Up to date") : NacreI18n.tr("dashboard.system-page.updates-count", "{count} updates", {
                     count: Updates.count
                 })
-                color: NacreTokens.accent
-                font.pointSize: 13
+                color: NacreTokens.ink
+                font.pointSize: 12
                 font.weight: Font.DemiBold
             }
             NacreText {
@@ -301,25 +257,33 @@ Item {
                 onClicked: Quickshell.execDetached([NacrePaths.tools + "/control.sh", "updates"])
             }
             ActionButton {
-                text: NacreI18n.tr("dashboard.system-page.text.maintenance", "Maintenance")
+                text: root.compact ? "" : NacreI18n.tr("dashboard.system-page.text.maintenance", "Maintenance")
+                icon: root.compact ? "build" : ""
+                accessibleLabel: NacreI18n.tr("dashboard.system-page.text.maintenance", "Maintenance")
                 compact: true
                 onClicked: NacrePanelState.openSettings("maintenance")
             }
         }
         Row {
             x: 16
-            y: 60
-            spacing: 6
+            y: 54
+            spacing: 12
             visible: root.laptop
             NacreText {
-                text: (root.compact ? NacreI18n.tr("dashboard.system-page.battery-percent", "Battery {value}%", {
-                        value: Math.round((root.battery?.percentage || 0) * 100)
-                    }) + " · " : "") + (UPower.onBattery ? NacreI18n.tr("dashboard.system-page.on-battery", "On battery") : NacreI18n.tr("dashboard.system-page.connected-power", "Connected to power"))
+                text: NacreI18n.tr("dashboard.system-page.battery-percent", "Battery {value}%", {
+                    value: Math.round((root.battery?.percentage || 0) * 100)
+                }) + " · " + (UPower.onBattery ? NacreI18n.tr("dashboard.system-page.on-battery", "On battery") : NacreI18n.tr("dashboard.system-page.connected-power", "Connected to power"))
                 color: NacreTokens.mutedInk
                 font.pointSize: 9
                 anchors.verticalCenter: parent.verticalCenter
             }
-            Repeater {
+            ComboBox {
+                id: powerProfile
+                objectName: "systemPowerProfile"
+                width: root.compact ? 125 : 160
+                height: 26
+                visible: root.profilesAvailable
+                textRole: "name"
                 model: [
                     {
                         name: NacreI18n.tr("dashboard.system-page.power-saver", "Power saver"),
@@ -329,20 +293,69 @@ Item {
                         name: NacreI18n.tr("dashboard.system-page.balanced", "Balanced"),
                         value: PowerProfile.Balanced
                     },
-                    {
-                        name: NacreI18n.tr("dashboard.system-page.performance", "Performance"),
-                        value: PowerProfile.Performance
-                    }
-                ]
-                ActionButton {
+                    ...(PowerProfiles.hasPerformanceProfile ? [
+                            {
+                                name: NacreI18n.tr("dashboard.system-page.performance", "Performance"),
+                                value: PowerProfile.Performance
+                            }
+                        ] : [])]
+                currentIndex: model.findIndex(item => item.value === PowerProfiles.profile)
+                Accessible.name: NacreI18n.tr("dashboard.system-page.power-profile", "Power profile")
+                onActivated: index => {
+                    if (root.shouldUpdate)
+                        PowerProfiles.profile = model[index].value;
+                }
+                background: Rectangle {
+                    radius: 13
+                    color: Qt.alpha(NacreTokens.accent, .08)
+                    border.width: powerProfile.activeFocus ? 2 : 0
+                    border.color: NacreTokens.accent
+                }
+                contentItem: NacreText {
+                    text: powerProfile.displayText
+                    leftPadding: 10
+                    rightPadding: 24
+                    verticalAlignment: Text.AlignVCenter
+                    color: NacreTokens.mutedInk
+                    font.pointSize: 9
+                    elide: Text.ElideRight
+                }
+                indicator: NacreIcon {
+                    x: powerProfile.width - 24
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "expand_more"
+                    font.pointSize: 12
+                    color: NacreTokens.mutedInk
+                }
+                delegate: ItemDelegate {
                     required property var modelData
-                    text: root.compact ? "" : modelData.name
-                    icon: modelData.value === PowerProfile.PowerSaver ? "eco" : modelData.value === PowerProfile.Performance ? "bolt" : "balance"
-                    accessibleLabel: modelData.name
-                    compact: true
-                    selected: PowerProfiles.profile === modelData.value
-                    enabled: root.profilesAvailable && (modelData.value !== PowerProfile.Performance || PowerProfiles.hasPerformanceProfile)
-                    onClicked: PowerProfiles.profile = modelData.value
+                    required property int index
+                    width: powerProfile.width
+                    highlighted: powerProfile.highlightedIndex === index
+                    contentItem: NacreText {
+                        text: parent.modelData.name
+                        font.pointSize: 10
+                        color: NacreTokens.ink
+                    }
+                    background: Rectangle {
+                        color: parent.highlighted ? Qt.alpha(NacreTokens.accent, .12) : NacreTokens.raised
+                    }
+                }
+                popup: Popup {
+                    y: -implicitHeight - 4
+                    width: powerProfile.width
+                    padding: 6
+                    implicitHeight: contentItem.implicitHeight + 12
+                    background: NacreSurface {
+                        radius: 14
+                        color: NacreTokens.raised
+                    }
+                    contentItem: ListView {
+                        implicitHeight: contentHeight
+                        model: powerProfile.popup.visible ? powerProfile.delegateModel : null
+                        currentIndex: powerProfile.highlightedIndex
+                        clip: true
+                    }
                 }
             }
         }

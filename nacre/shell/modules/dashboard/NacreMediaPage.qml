@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.Basic
 import QtQuick.Effects
 import Quickshell
 import Quickshell.Services.Mpris
@@ -13,9 +12,9 @@ Item {
     required property bool shouldUpdate
     required property PersistentProperties visibilities
     readonly property var player: NacrePlayers.active
-    readonly property color pagePrimary: NacreMediaDetails.palette.primary || NacreTokens.accent
-    readonly property color pageSecondary: NacreMediaDetails.palette.secondary || NacreTokens.orientSecondary
-    readonly property color pageInk: NacreMediaDetails.palette.onSurface || NacreTokens.ink
+    readonly property color pagePrimary: NacreTokens.accent
+    readonly property color pageSecondary: NacreTokens.orientSecondary
+    readonly property color pageInk: NacreTokens.ink
     readonly property var lyricLines: NacreMediaDetails.lines
     readonly property int lyricIndex: {
         let result = -1;
@@ -35,7 +34,7 @@ Item {
     readonly property real inset: width < 400 ? 14 : 22
     readonly property real secondaryHeight: Math.max(78, Math.min(150, height * .22))
     readonly property real playbackWidth: compact ? width - inset * 2 : Math.max(0, width * .62 - inset * 2)
-    readonly property real playbackHeight: compact ? height - 66 - secondaryHeight - 8 : height - 96
+    readonly property real playbackHeight: compact ? height - 66 - secondaryHeight - 8 : height - 82
     implicitWidth: 940
     implicitHeight: 562
     function member(actor) {
@@ -135,7 +134,7 @@ Item {
         objectName: "mediaHero"
         anchors.fill: parent
         radius: 20
-        color: NacreMediaDetails.palette.surface || NacreTokens.raised
+        color: NacreTokens.raised
         // The diffuse backdrop needs fewer pixels than the crisp cover.
         Item {
             width: hero.width / 2
@@ -158,7 +157,7 @@ Item {
                 blurEnabled: true
                 blurMax: 32
                 blur: .85
-                opacity: .28
+                opacity: .4
                 visible: root.shouldUpdate && backdrop.status === Image.Ready
             }
         }
@@ -169,11 +168,11 @@ Item {
                 orientation: Gradient.Horizontal
                 GradientStop {
                     position: 0
-                    color: Qt.alpha(hero.color, .9)
+                    color: Qt.alpha(hero.color, .7)
                 }
                 GradientStop {
                     position: 1
-                    color: Qt.alpha(hero.color, .65)
+                    color: Qt.alpha(hero.color, .8)
                 }
             }
         }
@@ -255,7 +254,7 @@ Item {
                 NacreClip {
                     id: cover
                     objectName: "fullAlbum"
-                    width: Math.min(parent.height, parent.width * (root.compact ? .32 : .43))
+                    width: Math.min(parent.height, parent.width * (root.compact ? .32 : .4))
                     height: width
                     anchors.verticalCenter: parent.verticalCenter
                     radius: 14
@@ -289,10 +288,10 @@ Item {
                         width: parent.width
                         text: root.player ? root.player.trackTitle || NacreI18n.tr("dashboard.media-page.text.unknown-track", "Unknown track") : NacreI18n.tr("dashboard.media-page.text.no-media-playing", "No media playing")
                         color: root.pageInk
-                        font.pointSize: root.compact ? 18 : 26
+                        font.pointSize: root.compact ? 18 : 23
                         font.weight: Font.DemiBold
                         wrapMode: Text.Wrap
-                        maximumLineCount: 2
+                        maximumLineCount: root.compact ? 2 : 3
                         elide: Text.ElideRight
                     }
                     NacreText {
@@ -439,93 +438,6 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
-                Row {
-                    width: parent.width
-                    spacing: 8
-                    ComboBox {
-                        id: output
-                        objectName: "mediaOutput"
-                        width: Math.max(80, parent.width - paletteToggle.width - 8)
-                        height: 34
-                        model: NacreAudio.outputs
-                        textRole: "description"
-                        currentIndex: NacreAudio.outputs.indexOf(NacreAudio.sink)
-                        displayText: NacreAudio.sink?.description || NacreI18n.tr("dashboard.media-page.text.output-device", "Output device")
-                        enabled: root.shouldUpdate && count > 0
-                        Accessible.name: NacreI18n.tr("dashboard.media-page.text.output-device", "Output device")
-                        onActivated: index => {
-                            const node = NacreAudio.outputs[index];
-                            if (root.shouldUpdate && node)
-                                NacreAudio.chooseOutput(String(node.id));
-                        }
-                        background: Rectangle {
-                            radius: 17
-                            color: Qt.alpha(root.pageInk, .08)
-                            border.width: output.activeFocus ? 2 : 0
-                            border.color: root.pagePrimary
-                        }
-                        contentItem: NacreText {
-                            leftPadding: 12
-                            rightPadding: 26
-                            text: output.displayText
-                            elide: Text.ElideRight
-                            verticalAlignment: Text.AlignVCenter
-                            font.pointSize: 9
-                            color: root.pageInk
-                        }
-                        indicator: NacreIcon {
-                            x: output.width - 24
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "expand_more"
-                            font.pointSize: 13
-                            color: root.pageInk
-                        }
-                        delegate: ItemDelegate {
-                            required property var modelData
-                            required property int index
-                            width: output.width
-                            text: modelData.description
-                            contentItem: NacreText {
-                                text: parent.text
-                                color: root.pageInk
-                                font.pointSize: 10
-                                elide: Text.ElideRight
-                            }
-                            background: Rectangle {
-                                color: parent.highlighted ? Qt.alpha(root.pagePrimary, .15) : hero.color
-                            }
-                            highlighted: output.highlightedIndex === index
-                        }
-                        popup: Popup {
-                            y: output.height + 4
-                            width: output.width
-                            implicitHeight: Math.min(200, contentItem.implicitHeight + 8)
-                            padding: 4
-                            background: Rectangle {
-                                color: hero.color
-                                radius: 12
-                                border.width: 1
-                                border.color: Qt.alpha(root.pagePrimary, .3)
-                            }
-                            contentItem: ListView {
-                                clip: true
-                                implicitHeight: contentHeight
-                                model: output.popup.visible ? output.delegateModel : null
-                                currentIndex: output.highlightedIndex
-                            }
-                        }
-                    }
-                    ActionButton {
-                        id: paletteToggle
-                        objectName: "mediaAlbumColors"
-                        text: NacreI18n.tr("dashboard.media-page.text.album-colors", "Album colors")
-                        icon: selected ? "toggle_on" : "toggle_off"
-                        compact: true
-                        selected: NacreDashboardState.preferences.albumPalette !== false
-                        enabled: root.shouldUpdate
-                        onClicked: NacreDashboardState.save("albumPalette", NacreDashboardState.preferences.albumPalette === false)
-                    }
-                }
             }
         }
         NacreSurface {
@@ -536,14 +448,14 @@ Item {
             width: root.compact ? root.width - root.inset * 2 : root.width - x - root.inset
             height: root.compact ? root.secondaryHeight : playback.height
             radius: 16
-            color: Qt.alpha(hero.color, .75)
+            color: Qt.alpha(hero.color, .6)
             NacreText {
                 id: secondaryTitle
                 visible: !root.compact || !root.lyricLines.length
                 x: 16
                 y: 12
                 width: parent.width - 32
-                text: root.lyricLines.length ? NacreI18n.tr("dashboard.media-page.text.lyrics", "Lyrics") : NacreI18n.tr("dashboard.media-page.text.track-details", "Track details")
+                text: (root.lyricLines.length || NacreMediaDetails.plain) ? NacreI18n.tr("dashboard.media-page.text.lyrics", "Lyrics") : NacreI18n.tr("dashboard.media-page.text.track-details", "Track details")
                 color: Qt.alpha(root.pageInk, .65)
                 font.pointSize: 10
             }
@@ -579,13 +491,34 @@ Item {
                     }
                 }
             }
+            Flickable {
+                id: plainLyrics
+                objectName: "mediaPlainLyrics"
+                x: lyrics.x
+                y: lyrics.y
+                width: lyrics.width
+                height: lyrics.height
+                clip: true
+                visible: !root.lyricLines.length && NacreMediaDetails.plain.length > 0
+                contentHeight: plainText.height
+                boundsBehavior: Flickable.StopAtBounds
+                NacreText {
+                    id: plainText
+                    width: parent.width
+                    text: NacreMediaDetails.plain
+                    wrapMode: Text.Wrap
+                    color: root.pageInk
+                    font.pointSize: root.compact ? 12 : 15
+                    lineHeight: 1.35
+                }
+            }
             Column {
                 objectName: "mediaTrackDetails"
                 x: 16
                 y: 40
                 width: parent.width - 32
                 spacing: root.compact ? 4 : 22
-                visible: !lyrics.visible
+                visible: !lyrics.visible && !plainLyrics.visible
                 NacreText {
                     width: parent.width
                     text: root.player?.trackAlbum || root.player?.trackTitle || NacreI18n.tr("dashboard.media-page.text.ready-when-you-are", "Ready when you are")
@@ -630,7 +563,7 @@ Item {
                 width: parent.width - 32
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 10
-                text: root.lyricLines.length ? NacreI18n.tr("dashboard.media-page.text.lyrics-lrclib", "Lyrics: LRCLIB") : ""
+                text: root.lyricLines.length || NacreMediaDetails.plain ? NacreI18n.tr("dashboard.media-page.text.lyrics-lrclib", "Lyrics: LRCLIB") : ""
                 visible: !root.compact
                 color: Qt.alpha(root.pageInk, .5)
                 font.pointSize: 8

@@ -199,15 +199,20 @@ deadline, a window that resists closing can be forcibly terminated; save work fi
 
 ### Optional dashboard pages
 
-The default dashboard tabs are Dashboard, Media, Weather and System. Open the
-dashboard's customize button or Settings → Workflows → Dashboard extras to enable
+The default dashboard tabs are Dashboard, Media, Weather and System. Press
+**Ctrl+,** in the dashboard or open Settings → Workflows → Dashboard extras to enable
 Focus, Notifications, Clipboard, Devices, Network, AI usage, Screenshots or Brain.
 Extras start off and load only while selected. Both places share the same order.
 Number keys 1–9 and 0 select the first ten visible tabs; Ctrl+Tab cycles through
-all enabled pages. The tab strip scrolls horizontally when necessary.
+all enabled pages. Tabs share the full header width. Compact tabs show their names
+on hover or keyboard focus; the strip scrolls horizontally when necessary.
 
 System CPU process ranking uses recent counter changes among the existing
 helper's memory-heavy process candidates. GPU readings depend on driver support;
 Intel uses shared memory, while supported AMD/NVIDIA devices show VRAM. Screenshot
 delete moves the chosen capture to the trash. AI usage uses the existing
 provider-supported reports; Claude's cached limits appear after a response.
+
+Media keeps playback and lyrics together; audio routing is available in Devices.
+Browser lyric matching depends on the metadata supplied by the website. Tracks
+with plain lyrics show those when timed lyrics are unavailable.

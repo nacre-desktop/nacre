@@ -190,7 +190,7 @@ Item {
                 if (points.length < 2)
                     return;
                 const low = Math.min(...points.map(p => p.temperature)), span = Math.max(1, Math.max(...points.map(p => p.temperature)) - low);
-                const x = i => 12 + i * (width - 24) / (points.length - 1), y = value => 12 + (1 - (value - low) / span) * height * .22;
+                const x = i => 12 + i * (width - 24) / (points.length - 1), y = value => 12 + (1 - (value - low) / span) * height * .38;
                 ctx.lineWidth = 2;
                 ctx.strokeStyle = NacreTokens.accent;
                 ctx.beginPath();
@@ -201,9 +201,17 @@ Item {
                         ctx.moveTo(x(i), y(p.temperature));
                 });
                 ctx.stroke();
-                ctx.font = (root.compact ? "8px " : "10px ") + NacreTokens.textFamily;
+                ctx.lineTo(x(points.length - 1), height * .58);
+                ctx.lineTo(x(0), height * .58);
+                ctx.closePath();
+                const wash = ctx.createLinearGradient(0, 0, 0, height * .58);
+                wash.addColorStop(0, Qt.alpha(first, .14));
+                wash.addColorStop(1, Qt.alpha(first, 0));
+                ctx.fillStyle = wash;
+                ctx.fill();
+                ctx.font = (root.compact ? "8px " : "10px ") + JSON.stringify(NacreTokens.textFamily);
                 for (let i = 0; i < points.length; i++) {
-                    ctx.fillStyle = Qt.alpha(NacreTokens.orientSecondary, .4);
+                    ctx.fillStyle = Qt.alpha(NacreTokens.orientSecondary, .65);
                     ctx.fillRect(x(i) - 3, height - 24 - (points[i].rain || 0) / 100 * height * .2, 6, (points[i].rain || 0) / 100 * height * .2);
                     if (i % 4 === 0) {
                         ctx.fillStyle = NacreTokens.ink;

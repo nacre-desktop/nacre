@@ -4,26 +4,27 @@ import qs.utils
 import Quickshell
 import Quickshell.Io
 import qs.widgets
+import "../modules/dashboard/media/media.js" as Model
 
 Singleton {
     id: root
     readonly property var player: NacrePlayers.active
     readonly property bool shown: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard && view.dashboardTab === 2))
     readonly property bool spectrumVisible: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.mediaMini || view.dashboard && view.dashboardTab === 0))
+    readonly property var lyricMetadata: Model.lyricsMetadata(player?.trackTitle, player?.trackArtist, player?.trackAlbum, /chrome|chromium|firefox|brave|vivaldi|browser/i.test((player?.desktopEntry || "") + " " + (player?.identity || "")))
     readonly property string trackKey: JSON.stringify({
-        title: player?.trackTitle || "",
-        artist: player?.trackArtist || "",
-        album: player?.trackAlbum || "",
+        title: lyricMetadata.title,
+        artist: lyricMetadata.artist,
+        album: lyricMetadata.album,
         duration: player?.length || 0,
-        art: player?.trackArtUrl || "",
+        art: "",
         lyrics: NacreDashboardState.preferences.lyrics !== false,
-        palette: NacreDashboardState.preferences.albumPalette !== false,
-        mode: NacreColours.light ? "light" : "dark"
+        palette: false,
+        mode: "dark"
     })
     property string requestedKey: ""
     property string loadedKey: ""
     property var lines: []
-    property var palette: ({})
     property string plain: ""
     property string message: ""
     property var spectrum: []
@@ -38,7 +39,6 @@ Singleton {
     }
     onTrackKeyChanged: {
         lines = [];
-        palette = ({});
         plain = "";
         message = "";
         load();
@@ -59,13 +59,6 @@ Singleton {
                 if (data.error)
                     throw new Error();
                 root.lines = data.lines || [];
-                const colors = {};
-                for (const key of ["surface", "onSurface", "primary", "secondary", "tertiary"]) {
-                    const value = data.palette?.[key];
-                    if (typeof value === "string" && /^#?[0-9a-fA-F]{6}$/.test(value))
-                        colors[key] = value.startsWith("#") ? value : "#" + value;
-                }
-                root.palette = Object.keys(colors).length === 5 ? colors : {};
                 root.plain = data.plain || "";
                 root.message = data.lyricsMessage || "";
                 root.loadedKey = root.requestedKey;

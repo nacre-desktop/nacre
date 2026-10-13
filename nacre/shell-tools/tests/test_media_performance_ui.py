@@ -27,7 +27,7 @@ def prepare_pages(target):
     )
     stage_qml(SHELL / "widgets/ActionButton.qml", fixtures / "ActionButton.qml")
     for name, body in {
-        "NacreMediaDetails": 'property var palette:({});property var lines:[];property var spectrum:[];property string message:""',
+        "NacreMediaDetails": 'property var palette:({});property var lines:[];property var spectrum:[];property string message:"";property string plain:""',
         "NacreDashboardState": "property var preferences:({albumPalette:true});function save(key,value){preferences=Object.assign({},preferences,{[key]:value})}",
         "NacreAudio": "property var outputs:[];property var sink:null;function chooseOutput(id){sink=outputs.find(node=>String(node.id)===id);return !!sink}",
     }.items():
