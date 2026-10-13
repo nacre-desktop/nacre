@@ -1,0 +1,104 @@
+{
+  "arch": {
+    "core": [
+      "python",
+      "python-pillow",
+      "python-orient-colors",
+      "quickshell",
+      "hyprland",
+      "uwsm",
+      "fish",
+      "kitty",
+      "fastfetch",
+      "dolphin",
+      "kio-extras",
+      "qt6ct",
+      "breeze",
+      "kconfig",
+      "kcolorscheme",
+      "gtk3",
+      "hypridle",
+      "hyprlock",
+      "grim",
+      "slurp",
+      "wl-clipboard",
+      "libnotify",
+      "brightnessctl",
+      "ffmpeg",
+      "fontconfig",
+      "librsvg",
+      "qt6-imageformats",
+      "qt6-multimedia",
+      "qt6-multimedia-ffmpeg",
+      "ddcutil",
+      "wtype",
+      "papirus-icon-theme",
+      "networkmanager",
+      "bluez",
+      "pipewire",
+      "wireplumber",
+      "xdg-utils",
+      "rofi",
+      "kwallet-pam",
+      "polkit-gnome",
+      "cliphist",
+      "qt6-base",
+      "glibc",
+      "python-gobject",
+      "libgweather-4",
+      "geoclue",
+      "bash",
+      "qt6-declarative",
+      "libgcc",
+      "libstdc++",
+      "glib2"
+    ],
+    "ai": [
+      "python",
+      "python-gobject",
+      "python-dbus",
+      "libsecret",
+      "openssh",
+      "tmux",
+      "kitty",
+      "bash"
+    ],
+    "brain": [
+      "python",
+      "python-pillow",
+      "python-yaml",
+      "python-gobject",
+      "python-dbus",
+      "libsecret",
+      "bash"
+    ],
+    "build": [
+      "git",
+      "python-build",
+      "python-installer",
+      "python-hatchling",
+      "nodejs"
+    ],
+    "check": [
+      "ruff",
+      "npm",
+      "lua",
+      "xorg-server-xvfb",
+      "xorg-xauth",
+      "mesa",
+      "dbus",
+      "ttf-dejavu"
+    ],
+    "core_optional": [
+      "nacre-ai: optional assistant workspace",
+      "nacre-brain: optional private Markdown knowledge library"
+    ],
+    "ai_optional": [
+      "nacre-brain: private knowledge helpers"
+    ],
+    "brain_optional": [
+      "chromium: app-window browser for Brain",
+      "obsidian: alternate Markdown vault editor"
+    ]
+  }
+}

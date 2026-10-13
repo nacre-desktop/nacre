@@ -1,8 +1,14 @@
 # Optional AI and Brain
 
+Install the `nacre-ai` and/or `nacre-brain` binary packages, then select them
+in the terminal wizard:
+
 ```sh
-./install.sh --with ai --with brain --apply
+nacre setup --with ai --with brain
 ```
+
+For source contributors, use `./install.sh --with ai --with brain --apply`.
+See [installation](installation.md) for package sources and non-interactive flags.
 
 AI connects your existing Codex/Claude installation and accounts to conversations
 and project tasks. Provider installation/sign-in is a separate user choice. The

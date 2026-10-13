@@ -99,11 +99,28 @@ def files(root=ROOT):
             return False
         return True
 
-    return {
+    result = {
         path: source
         for path, source in result.items()
         if source.exists() and included(path)
     }
+    if (root / "package.json.installed").exists():
+        from package_runtime import files as package_files
+
+        result.pop(Path(".local/bin/orient"), None)
+        result.update(package_files(root, selected_profile(root)))
+    return result
+
+
+def content(source, home):
+    data = source.read_bytes()
+    if "deployment" in source.parts:
+        data = data.replace(b"@NACRE_HOME@", str(home).encode())
+    return data
+
+
+def wanted_digest(source, home):
+    return hashlib.sha256(content(source, home)).hexdigest()
 
 
 def selected_profile(root=ROOT):
@@ -236,9 +253,17 @@ def plan(
                 )
             links[path] = target
     changed = []
+    seeds = (
+        set(json.loads((root / "seed-paths.json").read_text()))
+        if (root / "seed-paths.json").exists()
+        else set()
+    )
+    known = {key: value for key, value in known.items() if key not in seeds}
     for relative, source in desired.items():
+        if str(relative) in seeds and (home / relative).exists():
+            continue  # Defaults seed first login; later palette/private state stays local.
         dest = home / relative
-        current, wanted = digest(dest), digest(source)
+        current, wanted = digest(dest), wanted_digest(source, home)
         if current == wanted and not any(dest.is_relative_to(p) for p in links):
             continue
         owned_link = any(dest.is_relative_to(p) for p in links)
@@ -290,6 +315,11 @@ def apply(
     home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=False, only=()
 ):
     scope = configuration_scope(app_routes_only, only)
+    seeds = (
+        set(json.loads((root / "seed-paths.json").read_text()))
+        if (root / "seed-paths.json").exists()
+        else set()
+    )
     changed, links, known = plan(
         home, root, migrate, app_routes_only, migrate_idle, only
     )
@@ -310,10 +340,18 @@ def apply(
                 (
                     {
                         **known,
-                        **{str(p): digest(home / p) for p in files(root) if p in scope},
+                        **{
+                            str(p): digest(home / p)
+                            for p in files(root)
+                            if p in scope and str(p) not in seeds
+                        },
                     }
                     if scope
-                    else {str(p): digest(home / p) for p in files(root)}
+                    else {
+                        str(p): digest(home / p)
+                        for p in files(root)
+                        if str(p) not in seeds
+                    }
                 ),
                 indent=2,
             ).encode(),
@@ -369,10 +407,11 @@ def apply(
         else:
             atomic(
                 dest,
-                source.read_bytes(),
+                content(source, home),
                 0o755 if os.access(source, os.X_OK) else 0o644,
             )
-            known[str(relative)] = digest(dest)
+            if str(relative) not in seeds:
+                known[str(relative)] = digest(dest)
     atomic(
         home / ".local/state/nacre/configuration.json",
         json.dumps(known, indent=2).encode(),
