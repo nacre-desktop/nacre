@@ -106,6 +106,7 @@ QtObject {
         with tempfile.TemporaryDirectory() as folder:
             target = Path(folder)
             providers = {
+                "NacreCompositor": "property var capabilities:({});property bool overviewOpen:false",
                 "NacrePanelDragRouting": 'property string regions:""',
                 "NacrePanelState": "property bool hidden:false;property real reveal:1;property var screens:({});property var panels:({})",
                 "NacreHoverIntent": "function fullscreenFor(name){return false}",

@@ -26,6 +26,11 @@ Singleton {
         onTriggered: root.refresh()
     }
     FileView {
+        printErrors: false
+        onLoadFailed: error => {
+            if (error !== FileViewError.FileNotFound)
+                console.warn("Update cache could not be read (" + error + ")");
+        }
         path: NacrePaths.cache + "/updates.json"
         watchChanges: true
         onFileChanged: reload()

@@ -90,6 +90,11 @@ Singleton {
     }
     Component.onCompleted: request(["state"])
     FileView {
+        printErrors: false
+        onLoadFailed: error => {
+            if (error !== FileViewError.FileNotFound)
+                console.warn("Desktop settings could not be read (" + error + ")");
+        }
         path: NacrePaths.config + "/desktop.json"
         watchChanges: true
         onFileChanged: reload()

@@ -253,10 +253,12 @@ def install_paths(directory):
     source = target.read_text()
     # These files are dependency fakes created by the caller, never production.
     if "NacreTestPaths {" not in source:
-        if "QtObject {" not in source:
+        if not re.search(r"\bQtObject\s*\{", source):
             raise RuntimeError("Unexpected path fixture root")
         shutil.copy2(STUBS.parent / "fixtures/NacreTestPaths.qml", directory)
-        target.write_text(source.replace("QtObject {", "NacreTestPaths {", 1))
+        target.write_text(
+            re.sub(r"\bQtObject\s*\{", "NacreTestPaths {", source, count=1)
+        )
 
 
 def install_foundation_interaction(fixtures, widgets):
