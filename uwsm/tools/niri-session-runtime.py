@@ -4,9 +4,43 @@
 import argparse
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
+
+
+def host_preferences(desktop):
+    """Seed host scale/input preferences without modifying the shared profile."""
+    natural = desktop.get("naturalScroll", True)
+    if type(natural) is not bool:
+        raise ValueError("Invalid natural scrolling preference")
+    text = "input {\n    touchpad {\n"
+    if natural:
+        text += "        natural-scroll\n"
+    # Match Nacre's existing Hyprland touchpad defaults.
+    text += "        scroll-factor 0.25\n    }\n}\n"
+    for display in desktop.get("displays", []):
+        if display.get("disabled"):
+            continue
+        name, scale = display.get("name"), display.get("scale")
+        if (
+            not isinstance(name, str)
+            or not name
+            or type(scale) not in (int, float)
+            or not math.isfinite(scale)
+            or not 0 < scale <= 10
+        ):
+            raise ValueError("Invalid saved display scale")
+        text += "output " + json.dumps(name) + " {\n    scale " + str(scale) + "\n}\n"
+    text += (
+        "binds {\n"
+        "    Super+Ctrl+Tab { toggle-overview; }\n"
+        "    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n"
+        "    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n"
+        "}\n"
+    )
+    return text
 
 
 def module(path, name):
@@ -14,6 +48,12 @@ def module(path, name):
     value = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(value)
     return value
+
+
+def palette_include(home, config):
+    # The existing palette publisher writes this backend-owned path at runtime.
+    published = Path(home) / ".config/nacre/niri/palette.kdl"
+    return published if published.is_file() else Path(config) / "colors.kdl"
 
 
 def command(action, environment=None, home=None):
@@ -109,15 +149,26 @@ def prepare(backend, destination, home):
             raise ValueError("Invalid palette role")
         palette = palette.replace("{{" + role + "}}", color)
     (config / "colors.kdl").write_text(palette)
+    desktop_path = home / ".config/nacre/desktop.json"
+    desktop = json.loads(desktop_path.read_text()) if desktop_path.exists() else {}
+    (config / "host.kdl").write_text(host_preferences(desktop))
     text = (
         "\n".join(
-            "include " + json.dumps(str(config / name))
+            "include "
+            + json.dumps(
+                str(
+                    palette_include(home, config)
+                    if name == "colors.kdl"
+                    else config / name
+                )
+            )
             for name in (
                 "bindings.kdl",
                 "window-rules.kdl",
                 "keyboard.kdl",
                 "profile.kdl",
                 "colors.kdl",
+                "host.kdl",
             )
         )
         + "\n"

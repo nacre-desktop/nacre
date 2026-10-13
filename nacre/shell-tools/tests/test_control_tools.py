@@ -18,6 +18,27 @@ original_socket_probe = tools.unmanaged_socket
 
 
 class ControlToolsTests(unittest.TestCase):
+    def test_unsupported_night_light_does_not_break_other_controls(self):
+        with (
+            patch.dict(tools.compositor.capabilities, {"nightLightController": False}),
+            patch.object(tools, "service") as service,
+            patch.object(
+                tools, "configured_elsewhere", side_effect=RuntimeError("unsupported")
+            ) as configured,
+            patch.object(
+                tools, "unmanaged_socket", side_effect=RuntimeError("unsupported")
+            ) as socket,
+            patch.object(tools.shutil, "which", return_value="/fixture/tool"),
+        ):
+            state = tools.state()
+            self.assertTrue(state["screenshot"])
+            self.assertFalse(state["nightLightSupported"])
+            self.assertFalse(state["nightLightExternal"])
+            self.assertFalse(state["nightLightEnabled"])
+            service.assert_not_called()
+            configured.assert_not_called()
+            socket.assert_not_called()
+
     def setUp(self):
         # Fixtures never discover sockets in the user's real display namespace.
         self.enterContext(

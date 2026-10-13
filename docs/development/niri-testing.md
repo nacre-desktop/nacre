@@ -300,6 +300,54 @@ checks. Actual login acceptance remains pending.
 
 ## Open issues and sources
 
+### First real niri login and navigation checks (2026-10-13)
+
+The operator selected niri at login. `wayland-wm@niri.desktop.service` and
+`nacre-shell.service` are active, with the niri backend and real output detected.
+The first host-config pass omitted saved scale/input preferences: niri guessed
+175% instead of the existing 150% scale. The session helper now seeds saved output
+scales and touchpad natural scrolling, including Nacre's existing 0.25 scroll
+factor. Applied through config reload with backups; no shell/compositor restart
+or shared profile/Hyprland preference write. The operator confirms both scale and
+two-/three-finger scrolling now feel correct. Niri 26.04 uses the natural-scroll
+setting to invert both axes of three-finger gestures; four-finger overview is
+independent of that inversion.
+
+Use this short physical checklist, recording failures before changing more settings:
+
+| Action | Control in this prepared session | Check |
+|---|---|---|
+| App content | Two-finger scroll | Direction/speed in terminal and browser. Passed by operator. |
+| Pan one workspace | Three fingers left/right; Super+Left/Right | Open three windows; reach each without switching workspace. Swipe direction passed by operator. |
+| Workspaces | Three fingers up/down; Super+1/2; Super+Ctrl+Left/Right | Switch out and back; window stays on its intended workspace. Swipe direction passed by operator. |
+| Native bird's-eye view | Four fingers up/down; Super+Ctrl+Tab | See live windows, select one, drag between workspaces, exit. |
+| Nacre window overview | Super+Tab | Nacre's existing searchable window grid; separate from native overview. |
+| Mouse navigation | Super+middle-button drag; Super+Shift+wheel | Pan horizontally; the new wheel alias focuses columns within one workspace. Super+wheel retains workspace switching. |
+| Shell | Launcher, dashboard, notification, detached panel | Open/close repeatedly; preserve state/focus and normal appearance. |
+| Login lifecycle | Logout and return through Nacre (Hyprland) | Still pending; retain TTY fallback. |
+| Manual lock | Explicit Lock, then password unlock | Still pending; automatic idle stays gated. |
+
+The right-controls status query reproduced the generic unsupported-operation
+error: it called the backend's unsupported night-light probes even though
+`nightLightController=false`. `control-tools.py` now skips those probes and
+publishes the remaining controls; the niri helper status succeeds. Existing
+Hyprland ownership behavior is covered by its regression suite. The staged tool
+was updated in place, preserving the running code mount and detached panel.
+
+Niri colors now include the live palette publisher's canonical output instead
+of a preparation-time snapshot, so wallpaper colors can follow the shell.
+The backend's solid-color template still needs primary-to-secondary gradient
+support to match the existing Hyprland appearance; reported to its owner, without
+editing backend code here. Native niri supports that gradient. Settings can also
+retain a cached monitor readout after an external config reload even though
+native IPC confirms the new scale; runtime monitor-editing support remains gated.
+
+References: [native gestures](https://niri-wm.github.io/niri/Gestures.html),
+[overview](https://niri-wm.github.io/niri/Overview.html),
+[scale](https://niri-wm.github.io/niri/Configuration:-Outputs.html#scale),
+[26.04 swipe implementation](https://github.com/niri-wm/niri/blob/v26.04/src/input/mod.rs#L3777),
+[gradient support](https://niri-wm.github.io/niri/Configuration:-Layout.html#gradients).
+
 - The installed backend lacks niri; the prepared niri-only code view and supervisor
   supply the merged implementation without replacing the working Hyprland source.
   Session observation remains gated until saved-monitor restoration respects the

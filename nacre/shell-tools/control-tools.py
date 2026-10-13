@@ -88,7 +88,8 @@ def apply_temperature(enabled, owner, starting):
 
 
 def state(home=None):
-    available = bool(shutil.which("hyprsunset"))
+    supported = compositor.capabilities.get("nightLightController", True)
+    available = supported and bool(shutil.which("hyprsunset"))
     active, owner = service() if available else (False, "")
     data = load(home)
     owned = active and bool(owner) and data.get("owner") == owner
@@ -98,8 +99,8 @@ def state(home=None):
         "powerProfilesSupported": bool(shutil.which("powerprofilesctl")),
         "nightLightSupported": available,
         "nightLightExternal": (active and not owned)
-        or configured_elsewhere(home)
-        or unmanaged_socket(active),
+        or (supported and configured_elsewhere(home))
+        or (supported and unmanaged_socket(active)),
         "nightLightEnabled": owned and data.get("enabled") is True,
     }
 
