@@ -2,11 +2,13 @@
 layout {
     focus-ring {
         active-color "#{{primary}}"
+        active-gradient from="#{{primary}}" to="#{{secondary}}" angle=45
         inactive-color "#{{outlineVariant}}"
         urgent-color "#{{error}}"
     }
     border {
         active-color "#{{primary}}"
+        active-gradient from="#{{primary}}" to="#{{secondary}}" angle=45
         inactive-color "#{{outlineVariant}}"
         urgent-color "#{{error}}"
     }
