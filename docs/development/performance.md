@@ -106,6 +106,15 @@ unavailable in this compositor; hardware behavior is covered by regression tests
 not inferred from this run. labwc rejected the floating Settings window with an
 existing xdg-surface protocol error, so Settings was measured on live Hyprland.
 
+Notification history clearing publishes one array-model change before dismissing
+native notifications and deferring entry destruction. Removing entries one by one
+recreates every remaining history card and can block shell input as history grows.
+The native regression mounts 300 synthetic entries in the production cards and
+checks that clearing creates no replacement cards. Lifecycle tests also preserve
+transient popups, arrivals during native close callbacks, and clearing before
+saved history has loaded. These fixtures do not measure displayed frames or
+compositor input latency.
+
 `tools/benchmark-helpers.py --output /tmp/helpers-before.json` runs 100 warm
 requests per helper plus one cold request in a disposable home. It exercises a
 bounded invalid conversion, dashboard read, launcher preference load, and history

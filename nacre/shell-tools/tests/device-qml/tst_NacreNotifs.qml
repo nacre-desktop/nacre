@@ -129,6 +129,40 @@ TestCase {
         verify(state.restore(JSON.stringify([row("old")])));
         compare(state.retained.length, 0);
     }
+    function test_bulk_clear_preserves_transient_and_reentrant_arrivals() {
+        const state = createTemporaryObject(service, test);
+        verify(state.restore(JSON.stringify([row("saved"), row("older")])));
+        const active = createTemporaryObject(notice, test);
+        const removed = state.receive(active);
+        removed.hovered = true;
+        const transient = createTemporaryObject(notice, test, {
+            noticeId: 2,
+            temporary: true
+        });
+        const popup = state.receive(transient);
+        const arriving = createTemporaryObject(notice, test, {
+            noticeId: 3
+        });
+        active.closed.connect(() => state.receive(arriving));
+        state.clearHistory();
+        compare(active.dismissed, 1);
+        compare(transient.dismissed, 0);
+        verify(state.list.includes(popup));
+        verify(popup.popup);
+        verify(!removed.popup);
+        verify(!removed.hovered);
+        compare(state.retained.length, 1);
+        compare(state.retained[0].notification, arriving);
+        verify(state.dismissedKeys.saved);
+        verify(state.dismissedKeys.older);
+        verify(state.dismissedKeys[removed.key]);
+        wait(150);
+        const writer = findChild(state, "noticeHistoryWriter");
+        compare(writer.starts, 1);
+        const records = JSON.parse(writer.writes[0]);
+        compare(records.length, 1);
+        compare(records[0].key, state.retained[0].key);
+    }
     function test_transient_feedback_and_dnd_history_policies() {
         const state = createTemporaryObject(service, test);
         state.restore("[]");

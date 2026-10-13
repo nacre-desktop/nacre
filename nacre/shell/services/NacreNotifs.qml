@@ -141,8 +141,22 @@ Singleton {
     function clearHistory() {
         if (!historyReady)
             clearedBeforeLoad = true;
-        for (const entry of [...retained])
-            remove(entry);
+        const removed = [...retained];
+        const removing = new Set(removed);
+        const keys = Object.assign({}, dismissedKeys);
+        for (const entry of removed)
+            keys[entry.key] = true;
+        dismissedKeys = keys;
+        // Publish once: replacing an array model rebuilds every remaining card.
+        // Detach before native close callbacks so new arrivals survive the clear.
+        list = list.filter(entry => !removing.has(entry));
+        for (const entry of removed) {
+            entry.popup = false;
+            entry.hovered = false;
+            if (entry.notification)
+                entry.notification.dismiss();
+            Qt.callLater(() => entry.destroy());
+        }
         persist();
     }
     function hidePopups() {

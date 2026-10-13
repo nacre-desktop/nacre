@@ -9,10 +9,53 @@ import subprocess
 import tempfile
 import unittest
 
-from qml_source import install_foundation_interaction
+from qml_source import install_foundation_interaction, remove_objects
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = ROOT.parent / "shell"
+
+
+def install_history_owner(target, fixtures):
+    source = (SHELL / "services/NacreNotifs.qml").read_text()
+    source = source.replace("pragma Singleton", "").replace("Singleton {", "Item {")
+    for module in (
+        "Quickshell.Services.Notifications",
+        "Quickshell.Io",
+        "Quickshell",
+        "qs.widgets",
+        "qs.config",
+    ):
+        source = source.replace("import " + module, 'import "fixtures"')
+    source = source.replace('Quickshell.env("HOME")', '"/fixture"')
+    source = remove_objects(source, r"\b(?:IpcHandler|NacreShortcut)\s*\{")
+    (target / "NotificationHistory.qml").write_text(source)
+    (target / "NacreNotificationEntry.qml").write_text(
+        'import "fixtures"\n'
+        + (SHELL / "services/NacreNotificationEntry.qml").read_text()
+    )
+    definitions = {
+        "NacreHelperTask": "property var command:[];property bool running:false;property bool stdinEnabled:false;signal started();signal output(string text);signal exited(int code,int status);function write(text){}",
+        "FileView": 'property string path:"";property bool printErrors:false;signal loaded();function text(){return ""}',
+        "NotificationServer": "property bool keepOnReload:false;property bool actionsSupported:false;property bool imageSupported:false;property bool persistenceSupported:false;property bool bodyMarkupSupported:false;signal notification(var notification)",
+        "NacrePanelState": 'property var screens:({});property var panels:({});property var providerViews:[];property bool settingsVisible:false;property string settingsPage:""',
+    }
+    with (fixtures / "qmldir").open("a") as manifest:
+        for name, body in definitions.items():
+            singleton = name == "NacrePanelState"
+            (fixtures / (name + ".qml")).write_text(
+                ("pragma Singleton\n" if singleton else "")
+                + "import QtQuick\nQtObject {"
+                + body
+                + "}"
+            )
+            manifest.write(
+                "\n"
+                + ("singleton " if singleton else "")
+                + name
+                + " 1.0 "
+                + name
+                + ".qml\n"
+            )
 
 
 class NotificationUITests(unittest.TestCase):
@@ -59,6 +102,11 @@ class NotificationUITests(unittest.TestCase):
                 target / "tst_notifications.qml",
             )
             install_i18n(fixtures)
+            install_history_owner(target, fixtures)
+            shutil.copy2(
+                ROOT / "tests/notification-qml/tst_history_clear.qml",
+                target / "tst_history_clear.qml",
+            )
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
