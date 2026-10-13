@@ -54,6 +54,9 @@ lock/resume and performance need real-session checks in addition to unit tests.
 
 ## Packaging and dependencies
 
+See [CI jobs and owners](development/ci.md) for automatic correctness checks,
+advisory benchmarks and manual GPU acceptance.
+
 Nacre pins Orient in `deps/orient` and `dependencies.lock.json`. Update the submodule,
 lock and SDK engine fingerprint together. Regenerate the checked-in startup
 palette with `python3 tools/generate-palettes.py` when the engine changes.
