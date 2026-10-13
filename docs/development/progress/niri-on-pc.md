@@ -1,14 +1,25 @@
 # Niri on PC progress
 
-Updated: 2026-10-13. Status: merged backend consumed in windowed Nacre preview;
-operator now prefers a prepared full Nacre login test, rather than nested input testing.
-Actual session transition, lock/idle/night light and real-login integration remain pending.
+Updated: 2026-10-13. Status: first real Nacre/niri login confirmed. Live scale and
+touchpad/two-/three-finger direction fixes applied and confirmed by the operator.
+Return-to-Hyprland, lock/idle/night light and full acceptance remain pending.
 Branch: `feature/niri-preview` (follow-up PR18; original PR7 merged). Own worktree:
 `nacre-niri-on-pc` under the normal private task-worktree root. One open PR for session/tooling/docs work; backend changes
 belong to the separate `feature/niri-backend` task.
 
 ## Done
 
+- Confirmed actual niri UWSM compositor and Nacre shell are active after greeter
+  login. Imported saved host scale/natural-scroll and native overview/wheel aliases
+  through live config reload. Operator confirms scale and scroll directions.
+- Fixed owned control-tools status capability handling; unsupported night-light
+  probes no longer break the right controls panel's report. Staged only this tool,
+  no shell restart. Detached dashboard and current chats remain running.
+- Replaced stale seeded colors include with the existing live palette output;
+  gradient-template fidelity gap sent to backend owner. No backend code edits.
+- First local validation rerun hit an inherited `QT_LOGGING_RULES=*.debug=false`
+  suppressing the benchmark's console results. Rerun with that test-process
+  logging override removed; do not change the user's runtime logging preference.
 - Installed full-login selection, namespace wrapper, explicit-lock shim and shell
   service drop-in with private before/after receipts at
   `~/.local/state/nacre/backups/niri-full-login-latest`. Protected Hyprland/common
@@ -72,10 +83,13 @@ belong to the separate `feature/niri-backend` task.
 
 ## Next
 
-1. Keep the current Hyprland desktop and all parallel graphical agents running.
-2. Complete/verify full-login preparation, save backup receipts and exact CI head,
-   then let the operator test through SDDM. Record feedback and fix wrapper issues
-   or report reproducible backend defects on PR12.
+1. Keep the current niri desktop, detached dashboard and parallel chats running.
+2. Finish validation/publish current fixes; GitHub CLI credential is invalid in the
+   new session, while the supported GitHub connector can read PR18. Try the existing
+   Git push route before using connector publication; never modify account auth.
+3. Consume the backend owner's tested gradient follow-up when ready; coordinate
+   staged tool/QML updates with the separate redocking task. Do not restart the shell
+   or overwrite its staged tools independently.
 3. When the operator is ready, restart the private recorder, save all work and
    perform TTY recovery + actual niri SDDM login/logout + return to Hyprland.
 4. Resume this same task and inspect recorder evidence. Review generated-lock

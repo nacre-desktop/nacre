@@ -6,6 +6,7 @@ import tempfile
 import unittest
 import os
 import subprocess
+import shutil
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location(
@@ -16,6 +17,61 @@ spec.loader.exec_module(runtime)
 
 
 class NiriRuntimeTests(unittest.TestCase):
+    def test_palette_prefers_live_publisher_with_offline_seed_fallback(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            config = home / "stage/config"
+            self.assertEqual(
+                runtime.palette_include(home, config), config / "colors.kdl"
+            )
+            live = home / ".config/nacre/niri/palette.kdl"
+            live.parent.mkdir(parents=True)
+            live.write_text("palette")
+            self.assertEqual(runtime.palette_include(home, config), live)
+
+    def test_saved_scale_and_scroll_are_seeded_without_hyprland_writes(self):
+        text = runtime.host_preferences(
+            {"naturalScroll": True, "displays": [{"name": "eDP-1", "scale": 1.5}]}
+        )
+        self.assertIn("natural-scroll", text)
+        self.assertIn("scale 1.5", text)
+        self.assertIn("toggle-overview", text)
+        self.assertIn("focus-column-left", text)
+        self.assertNotIn(".config/hypr", text)
+        self.assertNotIn(
+            "natural-scroll", runtime.host_preferences({"naturalScroll": False})
+        )
+
+    def test_invalid_host_preferences_fail_before_install(self):
+        for data in (
+            {"naturalScroll": "false"},
+            {"displays": [{"name": "eDP-1", "scale": float("nan")}]},
+            {"displays": [{"name": "eDP-1", "scale": True}]},
+        ):
+            with self.assertRaises(ValueError):
+                runtime.host_preferences(data)
+
+    @unittest.skipUnless(shutil.which("niri"), "Native niri unavailable")
+    def test_mixed_scale_host_config_and_aliases_parse(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "config.kdl"
+            path.write_text(
+                runtime.host_preferences(
+                    {
+                        "displays": [
+                            {"name": "eDP-1", "scale": 1.5},
+                            {"name": 'DP "quoted"', "scale": 1},
+                        ]
+                    }
+                )
+            )
+            result = subprocess.run(
+                ["/usr/bin/niri", "validate", "-c", str(path)],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_niri_manual_lock_is_explicit_and_other_loginctl_actions_pass_through(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
