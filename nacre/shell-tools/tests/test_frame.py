@@ -1,4 +1,4 @@
-from qml_source import install_i18n
+from qml_fixtures import install_i18n, run_qml
 
 """Render actual independent frame geometry and input masks with Quickshell."""
 
@@ -74,34 +74,11 @@ QtObject {
  Component.onCompleted: Environment.windows = [...Environment.windows, this]
 }
 """)
-            for directory in ("modules/background", "modules/drawers"):
-                source = (target / directory).glob("Nacre*.qml")
-                for path in source:
-                    if path.name != "NacreWallpaperScene.qml":
-                        path.write_text(
-                            path.read_text().replace(
-                                "import qs.widgets", 'import "../.."'
-                            )
-                        )
-            screen = (SHELL / "modules/drawers/NacreScreen.qml").read_text()
-            focus = next(
-                line.strip()
-                for line in screen.splitlines()
-                if line.strip().startswith("WlrLayershell.keyboardFocus:")
-            )
-            fixture = (
-                (ROOT / "tests/frame-qml/hide.qml")
-                .read_text()
-                .replace(
-                    "keyboardFocus: WlrKeyboardFocus.None // production focus binding",
-                    focus.replace("WlrLayershell.", ""),
-                )
-            )
-            # Its binding refers to the production screen's local IDs.
-            fixture = fixture.replace(
-                "inputController.modal", "focusWindow.inputController.modal"
-            ).replace("flags.", "focusWindow.flags.")
-            (target / "shell.qml").write_text(fixture)
+            widgets = target / "widgets"
+            widgets.mkdir()
+            for name in ("NacreWindow.qml", "Anchors.qml"):
+                shutil.copy2(target / name, widgets / name)
+            shutil.copy2(ROOT / "tests/frame-qml/hide.qml", target / "shell.qml")
             environment = {
                 **os.environ,
                 "QT_QPA_PLATFORM": "offscreen",
@@ -120,6 +97,83 @@ QtObject {
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("HIDE_NATIVE_OK", result.stdout + result.stderr)
 
+    def test_production_screen_releases_and_restores_keyboard_focus(self):
+        from qml_fixtures import stage_qml
+
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Qt Quick Test unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder)
+            providers = {
+                "NacrePanelDragRouting": 'property string regions:""',
+                "NacrePanelState": "property bool hidden:false;property real reveal:1;property var screens:({});property var panels:({})",
+                "NacreHoverIntent": "function fullscreenFor(name){return false}",
+                "NacreDashboardState": "property real progress:0",
+                "NacreTokens": "property bool motionEnabled:false",
+                "DesktopSettings": "property var data:({topEdge:true})",
+                "NacreFrame": "property int headerHeight:50",
+            }
+            children = {
+                "NacrePanelMask": "QtObject {property var controller}",
+                "NacreReservedEdges": "QtObject {property var screen}",
+                "NacreChrome": "Item {property var host;property var lips;property bool gallery:false;property var silhouette:({rim:{}})}",
+                "NacreFrameRim": "Item {property var contour;property bool engaged:false}",
+                "NacrePanelInput": 'Item {objectName:"testInput";property var screen;property var panels;property var lips;property var visibilities;property bool modal:false;function dismiss(){}}',
+                "NacrePanelHost": "Item {property var screen;property var visibilities;property var input;property var popouts:({hasCurrent:false})}",
+                "NacreHeader": "Item {property var screen}",
+                "NacreFrameLips": "Item {property var screen;property var visibilities;property var controller;property real focusProgress:0}",
+            }
+            with (target / "qmldir").open("w") as manifest:
+                for name, body in providers.items():
+                    (target / (name + ".qml")).write_text(
+                        "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
+                    )
+                    manifest.write(f"singleton {name} 1.0 {name}.qml\n")
+                for name, body in children.items():
+                    (target / (name + ".qml")).write_text("import QtQuick\n" + body)
+                    manifest.write(f"{name} 1.0 {name}.qml\n")
+            stage_qml(
+                SHELL / "modules/drawers/NacreScreen.qml", target / "NacreScreen.qml"
+            )
+            (target / "tst_focus.qml").write_text("""import QtQuick
+import QtTest
+import Quickshell.Wayland
+import "."
+TestCase {
+ name:"ProductionScreenFocus";when:windowShown
+ Component {id:surface;NacreScreen{outputName:"test"}}
+ function test_focus_tracks_hidden_and_panel_state(){
+  const window=createTemporaryObject(surface,this);
+  const input=findChild(window,"testInput"), flags=input.visibilities;
+  compare(window.WlrLayershell.keyboardFocus,WlrKeyboardFocus.None);
+  flags.launcher=true;
+  compare(window.WlrLayershell.keyboardFocus,WlrKeyboardFocus.Exclusive);
+  NacrePanelState.hidden=true;
+  compare(window.WlrLayershell.keyboardFocus,WlrKeyboardFocus.None);
+  NacrePanelState.hidden=false;
+  compare(window.WlrLayershell.keyboardFocus,WlrKeyboardFocus.Exclusive);
+  flags.launcher=false;flags.left=true;
+  compare(window.WlrLayershell.keyboardFocus,WlrKeyboardFocus.OnDemand);
+  input.modal=true;
+  compare(window.WlrLayershell.keyboardFocus,WlrKeyboardFocus.Exclusive);
+ }
+}
+""")
+            result = run_qml(
+                [str(runner), "-input", str(target), "-o", "-,txt"],
+                env={
+                    **os.environ,
+                    "QT_QPA_PLATFORM": "offscreen",
+                    "QT_QUICK_BACKEND": "software",
+                },
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("QWARN", result.stdout + result.stderr)
+
     def test_registry_preserves_newer_and_other_output_owners(self):
         runner = Path("/usr/lib/qt6/bin/qmltestrunner")
         if not runner.exists():
@@ -131,7 +185,7 @@ QtObject {
             shutil.copy2(
                 ROOT / "tests/frame-qml/tst_registry.qml", target / "tst_registry.qml"
             )
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,
@@ -147,12 +201,10 @@ QtObject {
             self.skipTest("Qt Quick Test unavailable")
         with tempfile.TemporaryDirectory() as folder:
             target = Path(folder)
-            source = (
-                (SHELL / "modules/topbar/NacreHeaderForwarder.qml")
-                .read_text()
-                .replace("import qs.services", 'import "."')
+            shutil.copy2(
+                SHELL / "modules/topbar/NacreHeaderForwarder.qml",
+                target / "NacreHeaderForwarder.qml",
             )
-            (target / "NacreHeaderForwarder.qml").write_text(source)
             (target / "Forwarder.qml").write_text("""import QtQuick
 import "."
 Item {
@@ -201,7 +253,7 @@ TestCase {
  }
 }
 """)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,
@@ -277,13 +329,10 @@ TestCase {
                 )
             install_i18n(target / "services")
             (target / "services/qmldir").unlink()
-            intent = (
-                (SHELL / "services/NacreHoverIntent.qml")
-                .read_text()
-                .replace("import Quickshell", "")
-                .replace("Singleton {", "QtObject {")
+            shutil.copy2(
+                SHELL / "services/NacreHoverIntent.qml",
+                target / "services/NacreHoverIntent.qml",
             )
-            (target / "services/NacreHoverIntent.qml").write_text(intent)
             shutil.copy2(ROOT / "tests/frame-qml/render.qml", target / "shell.qml")
             environment = {
                 **os.environ,

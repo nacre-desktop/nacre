@@ -1,11 +1,12 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Exercise actual battery policy/owner without D-Bus, notifications or private files."""
 
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
 
@@ -66,19 +67,9 @@ Item {
                     + ".qml"
                 )
             (fixtures / "qmldir").write_text("\n".join(entries) + "\n")
-            source = (ROOT.parent / "shell/services/NacreBatteryAlerts.qml").read_text()
-            source = source.replace("pragma Singleton", "").replace(
-                "Singleton {", "Item {"
-            )
-            for line in (
-                "import Quickshell",
-                "import Quickshell.Io",
-                "import Quickshell.Services.UPower",
-                "import qs.utils",
-            ):
-                source = source.replace(line + "\n", "")
-            (target / "NacreBatteryAlerts.qml").write_text(
-                'import "fixtures"\n' + source
+            stage_qml(
+                ROOT.parent / "shell/services/NacreBatteryAlerts.qml",
+                target / "NacreBatteryAlerts.qml",
             )
             shutil.copy2(
                 ROOT.parent / "shell/services/NacreBatteryAlertPolicy.qml", target
@@ -87,8 +78,9 @@ Item {
                 ROOT / "tests/battery-qml/tst_battery.qml", target / "tst_battery.qml"
             )
             install_i18n(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
+                isolate=True,
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 text=True,
                 capture_output=True,

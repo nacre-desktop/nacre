@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import Quickshell
 import "fixtures"
 import "media/media.js" as Model
 
@@ -14,7 +15,7 @@ TestCase {
         id: page
         NacreMediaPage {
             shouldUpdate: true
-            visibilities: QtObject {
+            visibilities: PersistentProperties {
                 property bool dashboard: true
             }
         }

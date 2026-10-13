@@ -1,12 +1,14 @@
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+
 """Exercise the production compositor facade independently of its backend."""
 
 import os
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
 
-from qml_source import install_i18n
+from qml_fixtures import install_i18n
 
 SHELL = Path(__file__).resolve().parents[2] / "shell"
 
@@ -81,33 +83,25 @@ QtObject {
             )
             compositor_dir = target / "compositor"
             compositor_dir.mkdir()
-            (compositor_dir / "session.js").write_text(
-                (SHELL / "services/compositor/session.js").read_text()
+            stage_qml(
+                SHELL / "services/compositor/session.js", compositor_dir / "session.js"
             )
             (fixtures / "qmldir").write_text(
                 "singleton HyprlandBackend 1.0 HyprlandBackend.qml\nsingleton NiriBackend 1.0 NiriBackend.qml\nsingleton TestEnvironment 1.0 TestEnvironment.qml\nsingleton Registry 1.0 Registry.qml\n"
             )
             install_i18n(fixtures)
-            source = (SHELL / "services/NacreCompositor.qml").read_text()
-            source = (
-                source.replace("pragma Singleton", "")
-                .replace("import Quickshell", "")
-                .replace(
-                    'import "compositor" as Backend', 'import "fixtures" as Backend'
-                )
-                .replace("Singleton {", "Item {")
-                .replace("Quickshell.env(", "Backend.TestEnvironment.env(")
-                .replace("NacreI18n.tr(", "Backend.NacreI18n.tr(")
+            stage_qml(
+                SHELL / "services/NacreCompositor.qml", target / "NacreCompositor.qml"
             )
-            (target / "NacreCompositor.qml").write_text(source)
             (target / "tst_facade.qml").write_text(
                 """import QtQuick
 import QtTest
+import Quickshell
 import "fixtures" as Backend
 TestCase {
     name: "CompositorFacade"
     when: windowShown
-    NacreCompositor { id: facade }
+    readonly property var facade: NacreCompositor
     SignalSpy { id: events; target:facade; signalName:"event" }
     SignalSpy { id: configurations; target:facade; signalName:"configurationReloaded" }
     SignalSpy { id: gestures; target:facade; signalName:"panelGesture" }
@@ -151,7 +145,7 @@ TestCase {
     }
     function test_niri_output_indices_identity_and_invalid_selection(){
         compare(Backend.Registry.niriCreated,0)
-        Backend.TestEnvironment.values={NACRE_COMPOSITOR:"niri",HYPRLAND_INSTANCE_SIGNATURE:"legacy"}
+        Quickshell.environment={NACRE_COMPOSITOR:"niri",HYPRLAND_INSTANCE_SIGNATURE:"legacy"}
         compare(facade.backendName,"niri-fixture");compare(Backend.Registry.niriCreated,1)
         Backend.NiriBackend.focusedMonitor={name:"DP-1"}
         Backend.NiriBackend.activeWorkspace={id:"opaque-ws-1",index:2}
@@ -160,15 +154,16 @@ TestCase {
         compare(facade.activeWorkspaceId,"opaque-ws-1");compare(facade.activeWsId,2)
         compare(facade.windowsForWorkspace(2).length,1);compare(facade.windowsForWorkspace(2)[0].windowId,"first")
         verify(facade.workspaceUrgent(2));compare(facade.windowsForWorkspace(1).length,0)
-        Backend.TestEnvironment.values={NACRE_COMPOSITOR:"invalid"}
+        Quickshell.environment={NACRE_COMPOSITOR:"invalid"}
         compare(facade.backend,null);compare(facade.backendName,"unsupported");compare(facade.error,"Unknown compositor backend.")
         compare(facade.windows.length,0);compare(Backend.Registry.hyprlandCreated,1)
     }
 }
 """
             )
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
+                isolate=True,
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,
                 text=True,

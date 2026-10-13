@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "NacreBluetoothModels"
     when: windowShown
-    Component {
-        id: service
-        NacreBluetooth {}
-    }
+
     Component {
         id: adapter
         QtObject {
@@ -34,7 +31,7 @@ TestCase {
         Bluetooth.devices = {
             values: []
         };
-        const state = createTemporaryObject(service, test);
+        const state = NacreBluetooth;
         verify(!state.available);
         verify(!state.powered);
         compare(state.devices.length, 0);

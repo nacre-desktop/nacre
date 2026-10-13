@@ -1,10 +1,10 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import install_i18n
 
 """Decoded preview lifetime, bounded sizes and encoded local-file paths."""
 
 import os
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
 
@@ -20,9 +20,7 @@ class ImageLifetimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
             (target / "NacreImage.qml").write_text(
-                (SHELL / "widgets/NacreImage.qml")
-                .read_text()
-                .replace("import qs.services", 'import "."')
+                (SHELL / "widgets/NacreImage.qml").read_text()
             )
             install_i18n(target)
             (target / "percent % hash # image.svg").write_text(
@@ -48,10 +46,9 @@ TestCase {
         verify(image.source.toString().includes("%23"));
         const source = image.source.toString();
         image.active = false;
-        wait(40);
         compare(image.source.toString(), source);
         image.active = true;
-        wait(150);
+        tryCompare(image, "status", Image.Ready);
         compare(image.source.toString(), source);
         image.active = false;
         tryCompare(image, "status", Image.Null, 500);
@@ -64,7 +61,6 @@ TestCase {
     }
     function test_initially_hidden_and_changed_while_closed() {
         const image = createTemporaryObject(preview, test, {active: false, path: picture});
-        wait(160);
         compare(image.status, Image.Null);
         compare(image.source.toString(), "");
         image.width = 120;
@@ -76,14 +72,13 @@ TestCase {
         tryCompare(image, "status", Image.Null, 500);
         image.path = "";
         image.active = true;
-        wait(20);
         compare(image.source.toString(), "");
         image.path = picture;
         tryCompare(image, "status", Image.Ready, 1000);
     }
 }
 """)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={
                     **os.environ,

@@ -1,11 +1,12 @@
-from qml_source import install_i18n
-from qml_source import install_foundation_interaction
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
+from qml_fixtures import install_foundation_interaction
 
 """Exercise the production composer with a fixture backend and Qt Quick controls."""
 
 import os
 import shutil
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -24,43 +25,30 @@ class ChatPaneUITests(unittest.TestCase):
             shutil.copy2(
                 ROOT / "tests/qml/tst_chatpane.qml", target / "tst_chatpane.qml"
             )
-            source = (ROOT.parent / "shell/modules/extras/ChatPane.qml").read_text()
-            source = (
-                source.replace("import qs.widgets", 'import "fixtures"')
-                .replace("import qs.services", "")
-                .replace("import Quickshell", "")
-                .replace(
-                    "required property PersistentProperties visibilities",
-                    "required property var visibilities",
-                )
+            stage_qml(
+                ROOT.parent / "shell/modules/extras/ChatPane.qml",
+                target / "ChatPane.qml",
             )
-            (target / "ChatPane.qml").write_text(source)
             shutil.copy2(
                 ROOT.parent / "shell/widgets/FastScroll.qml",
                 target / "fixtures/FastScroll.qml",
             )
-            button = (
-                (ROOT.parent / "shell/widgets/ActionButton.qml")
-                .read_text()
-                .replace("import qs.services", "")
+            stage_qml(
+                ROOT.parent / "shell/widgets/ActionButton.qml",
+                target / "fixtures/ActionButton.qml",
             )
-            (target / "fixtures/ActionButton.qml").write_text(button)
             (target / "fixtures/NacreIcon.qml").write_text("import QtQuick\nText {}")
             with (target / "fixtures/qmldir").open("a") as manifest:
                 manifest.write("\nNacreIcon 1.0 NacreIcon.qml\n")
-            layer = (
-                (ROOT.parent / "shell/widgets/NacreInteraction.qml")
-                .read_text()
-                .replace("import qs.widgets", "")
-                .replace("import qs.services", "")
-                .replace("import qs.config", "")
+            stage_qml(
+                ROOT.parent / "shell/widgets/NacreInteraction.qml",
+                target / "fixtures/NacreInteraction.qml",
             )
-            (target / "fixtures/NacreInteraction.qml").write_text(layer)
             install_foundation_interaction(
                 target / "fixtures", ROOT.parent / "shell/widgets"
             )
             install_i18n(target / "fixtures")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env=dict(os.environ, QT_QPA_PLATFORM="offscreen"),
                 capture_output=True,

@@ -1,4 +1,6 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Real hero buttons call the current wallpaper interface and open picker/colors."""
 
@@ -37,9 +39,7 @@ class DashboardWallpaperActionsTests(unittest.TestCase):
                 with (fixtures / "qmldir").open("a") as manifest:
                     manifest.write(f"\nsingleton {name} 1.0 {name}.qml\n")
             (fixtures / "ActionButton.qml").write_text(
-                (SHELL / "widgets/ActionButton.qml")
-                .read_text()
-                .replace("import qs.services", 'import "."')
+                (SHELL / "widgets/ActionButton.qml").read_text()
             )
             (fixtures / "NacreScrollBar.qml").write_text(
                 (SHELL / "widgets/NacreScrollBar.qml").read_text()
@@ -49,13 +49,10 @@ class DashboardWallpaperActionsTests(unittest.TestCase):
                     "\nActionButton 1.0 ActionButton.qml\nNacreScrollBar 1.0 NacreScrollBar.qml\n"
                 )
             for name in ("NacreTodayPage", "NacreDashboardHero", "NacreDashboardVideo"):
-                source = (
-                    (SHELL / "modules/dashboard" / (name + ".qml"))
-                    .read_text()
-                    .replace("import qs.widgets", 'import "fixtures"')
-                    .replace("import qs.services", "")
+                stage_qml(
+                    SHELL / "modules/dashboard" / (name + ".qml"),
+                    target / (name + ".qml"),
                 )
-                (target / (name + ".qml")).write_text(source)
             (target / "NacreDashboardSummary.qml").write_text(
                 "import QtQuick\nItem {property bool active:false;implicitHeight:300;signal systemRequested}"
             )
@@ -169,7 +166,7 @@ TestCase {
                 )
             )
             install_i18n(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 capture_output=True,
                 text=True,

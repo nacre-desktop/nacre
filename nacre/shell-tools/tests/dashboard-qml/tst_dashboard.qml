@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import Quickshell
 import "fixtures"
 
 TestCase {
@@ -12,7 +13,7 @@ TestCase {
     Component {
         id: panel
         NacreDashboardPanel {
-            visibilities: QtObject {
+            visibilities: PersistentProperties {
                 property bool dashboard: true
                 property bool dashboardPinned: false
                 property int dashboardTab: 0

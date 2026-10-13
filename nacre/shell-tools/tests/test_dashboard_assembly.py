@@ -1,15 +1,16 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Production dashboard assembly/navigation with explicitly pending page contracts."""
 
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
 
-from qml_source import install_foundation_interaction
+from qml_fixtures import install_foundation_interaction
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = ROOT.parent / "shell"
@@ -33,15 +34,10 @@ class DashboardAssemblyTests(unittest.TestCase):
             with (fixtures / "qmldir").open("a") as manifest:
                 manifest.write("\nNacreIcon 1.0 NacreIcon.qml\n")
             for name in ("NacreDashboardPanel", "NacreDashboardNavigation"):
-                source = (SHELL / "modules/dashboard" / (name + ".qml")).read_text()
-                source = source.replace("import Quickshell", "")
-                source = source.replace("import qs.widgets", 'import "fixtures"')
-                source = source.replace("import qs.services", "")
-                source = source.replace(
-                    "required property PersistentProperties visibilities",
-                    "required property var visibilities",
+                stage_qml(
+                    SHELL / "modules/dashboard" / (name + ".qml"),
+                    target / (name + ".qml"),
                 )
-                (target / (name + ".qml")).write_text(source)
             (fixtures / "NacreDashboardState.qml").write_text(
                 'pragma Singleton\nimport QtQuick\nQtObject {property var tabs:["today","weather","media","system","focus"]}'
             )
@@ -80,7 +76,7 @@ class DashboardAssemblyTests(unittest.TestCase):
                 target / "tst_dashboard.qml",
             )
             install_i18n(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,

@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "NacreDefaultAudio"
     when: windowShown
-    Component {
-        id: service
-        NacreAudio {}
-    }
+
     Component {
         id: device
         QtObject {
@@ -28,7 +25,7 @@ TestCase {
         };
         Pipewire.defaultAudioSink = first;
         Pipewire.defaultAudioSource = first;
-        const audio = createTemporaryObject(service, test);
+        const audio = NacreAudio;
         verify(audio.available);
         verify(audio.micAvailable);
         verify(audio.muted);

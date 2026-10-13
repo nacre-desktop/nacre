@@ -1,11 +1,12 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Real fresh mode loader/fallback view with isolated service and page contracts."""
 
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
 
@@ -22,21 +23,10 @@ class LauncherPanelTests(unittest.TestCase):
             target = Path(folder)
             shutil.copytree(ROOT / "tests/qml/fixtures", target / "fixtures")
             for name in ("NacreLauncherPanel", "NacreSearchPanel"):
-                source = (SHELL / "modules/launcher" / (name + ".qml")).read_text()
-                source = (
-                    source.replace("import qs.widgets", 'import "fixtures"')
-                    .replace("import qs.services", "")
-                    .replace("import Quickshell", "")
-                    .replace(
-                        "required property PersistentProperties visibilities",
-                        "required property var visibilities",
-                    )
-                    .replace(
-                        "import qs.modules.extras as Extras",
-                        'import "extras" as Extras',
-                    )
+                stage_qml(
+                    SHELL / "modules/launcher" / (name + ".qml"),
+                    target / (name + ".qml"),
                 )
-                (target / (name + ".qml")).write_text(source)
             shutil.copy2(SHELL / "widgets/NacreIdleLoader.qml", target)
             (target / "extras").mkdir()
             stub = "import QtQuick\nItem {required property var visibilities;property bool detached:false;property bool closeAfterLaunch:false;property var menu:null;signal closeRequested;signal queryChanged;signal routeChanged;property string kind:KIND;property real viewportWidth:0;property real viewportHeight:0;implicitWidth:800;implicitHeight:300}"
@@ -57,14 +47,6 @@ class LauncherPanelTests(unittest.TestCase):
                 (target / "extras" / (name + ".qml")).write_text(
                     stub.replace("KIND", '"' + mode + '"')
                 )
-            # The loader's legacy path is exercised independently through a real
-            # NacreSearchPanel. Expose only the fixture kind used in the mode test.
-            path = target / "NacreSearchPanel.qml"
-            path.write_text(
-                path.read_text().replace(
-                    "id: root", "id: root\n property string kind: 'legacy'"
-                )
-            )
             (target / "NacreWallpaperPicker.qml").write_text(
                 "import QtQuick\nItem {required property var visibilities;property bool detached:false;property real viewportWidth:0;property real viewportHeight:0;property int count:3;property int currentIndex:0;implicitWidth:800;implicitHeight:360;function move(delta){currentIndex=Math.max(0,Math.min(2,currentIndex+delta))}}"
             )
@@ -101,7 +83,7 @@ class LauncherPanelTests(unittest.TestCase):
                 ROOT / "tests/launcher-qml/tst_panel.qml", target / "tst_panel.qml"
             )
             install_i18n(target / "fixtures")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,

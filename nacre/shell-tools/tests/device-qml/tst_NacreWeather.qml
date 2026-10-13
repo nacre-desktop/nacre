@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "NacreWeather"
     when: windowShown
-    Component {
-        id: service
-        NacreWeather {}
-    }
+
     function cleanup() {
         DesktopSettings.data = ({});
     }
@@ -28,7 +25,7 @@ TestCase {
         };
     }
     function test_unknown_atomic_validation_and_units() {
-        const view = createTemporaryObject(service, test);
+        const view = NacreWeather;
         verify(!Number.isFinite(view.temperature));
         compare(view.displayTemperature, "");
         verify(view.publish(JSON.stringify(reading()), false));
@@ -52,7 +49,7 @@ TestCase {
         compare(view.reading, previous);
     }
     function test_failure_retains_timestamp_and_no_data_is_unknown() {
-        const view = createTemporaryObject(service, test);
+        const view = NacreWeather;
         verify(!view.publish('{"error":"Offline"}', false));
         verify(!Number.isFinite(view.temperature));
         verify(view.publish(JSON.stringify(reading()), false));
@@ -67,7 +64,7 @@ TestCase {
         compare(view.error, "Offline");
     }
     function test_coalescing_and_old_city_result_rejected() {
-        const view = createTemporaryObject(service, test);
+        const view = NacreWeather;
         const reader = findChild(view, "weatherReader");
         verify(reader.running);
         view.reload();

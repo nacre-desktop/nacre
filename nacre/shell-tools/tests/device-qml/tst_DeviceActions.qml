@@ -6,12 +6,9 @@ TestCase {
     id: test
     name: "WifiConnectionLifecycle"
     when: windowShown
-    Component {
-        id: service
-        DeviceActions {}
-    }
+
     function test_connection_window_blocks_duplicate_actions_and_refreshes_on_exit() {
-        const actions = createTemporaryObject(service, test);
+        const actions = DeviceActions;
         const connector = findChild(actions, "wifiConnector");
         const before = NacreNetwork.refreshes;
         actions.connectWifi("Fixture Guest");

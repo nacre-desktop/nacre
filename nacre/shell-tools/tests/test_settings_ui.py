@@ -1,11 +1,11 @@
-from qml_source import install_i18n, install_paths
-from qml_source import remove_objects, install_foundation_interaction
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
+from qml_fixtures import install_foundation_interaction
 
 """Exercise settings navigation and the shared wheel handler in native Qt."""
-import re
 import os
 import shutil
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -22,77 +22,29 @@ class SettingsUITests(unittest.TestCase):
             target = Path(directory)
             shutil.copytree(ROOT / "tests/qml/fixtures", target / "fixtures")
 
-            def adapted(path, imports="fixtures"):
-                return (
-                    path.read_text()
-                    .replace("import qs.widgets", 'import "' + imports + '"')
-                    .replace("import qs.services", "")
-                    .replace("import qs.utils", "")
-                    .replace("import qs.config", "")
-                    .replace("import Quickshell.Io", "")
-                    .replace("import Quickshell.Services.Pipewire", "")
-                    .replace("import Quickshell", "")
-                    .replace(
-                        "import qs.modules.bar.popouts as Connectivity",
-                        'import "../connectivity" as Connectivity',
-                    )
-                    .replace("Quickshell.screens[0].height", "1080")
-                    .replace("Quickshell.screens[0].width", "1920")
-                    .replace('Quickshell.env("HOME")', '"/fixture"')
-                    .replace('Quickshell.env("XDG_STATE_HOME")', '"/fixture/state"')
-                )
-
-            source = adapted(
-                ROOT.parent / "shell/modules/settings/NacreSettingsView.qml"
+            stage_qml(
+                ROOT.parent / "shell/modules/settings/NacreSettingsView.qml",
+                target / "NacreSettings.qml",
             )
-            source = source.replace('import "pages"', 'import "settings"')
-            (target / "NacreSettings.qml").write_text(source)
-            shutil.copy2(
-                ROOT.parent / "shell/modules/settings/settings-catalog.js",
-                target / "settings-catalog.js",
-            )
-            pages = target / "settings"
-            pages.mkdir()
             for path in (ROOT.parent / "shell/modules/settings/pages").glob("*.qml"):
-                source = (
-                    adapted(path, "../fixtures")
-                    .replace('import "../../dashboard/media"', 'import "../media"')
-                    .replace(
-                        'import "../../notifications"', 'import "../notifications"'
-                    )
-                )
-                if path.name == "NacreAppearancePage.qml":
-                    source = remove_objects(source, r"\bFileView\s*\{")
-                (pages / path.name).write_text(source)
-            connectivity = target / "connectivity"
-            connectivity.mkdir()
+                stage_qml(path, target / path.name)
             for name in ("NacreNetworkPopup", "NacreQuickList"):
-                (connectivity / (name + ".qml")).write_text(
-                    adapted(
-                        ROOT.parent / "shell/modules/bar/popouts" / (name + ".qml"),
-                        "../fixtures",
-                    )
+                stage_qml(
+                    ROOT.parent / "shell/modules/bar/popouts" / (name + ".qml"),
+                    target / (name + ".qml"),
                 )
             for folder, names in {
-                "media": ["NacreMediaSlider", "NacreMediaButton"],
+                "dashboard/media": ["NacreMediaSlider", "NacreMediaButton"],
                 "notifications": ["NacreNotice"],
             }.items():
-                destination = target / folder
-                destination.mkdir()
                 for name in names:
-                    source = adapted(
-                        ROOT.parent
-                        / "shell/modules"
-                        / ("dashboard/media" if folder == "media" else folder)
-                        / (name + ".qml"),
-                        "../fixtures",
+                    stage_qml(
+                        ROOT.parent / "shell/modules" / folder / (name + ".qml"),
+                        target / (name + ".qml"),
                     )
-                    source = source.replace(
-                        "Quickshell.iconPath(root.modelData.appIcon, true)", '""'
-                    )
-                    (destination / (name + ".qml")).write_text(source)
-            (target / "fixtures/NacreNotifications.qml").write_text(
-                (ROOT.parent / "shell/config/NacreNotifications.qml").read_text()
+            stage_qml(
+                ROOT.parent / "shell/config/NacreNotifications.qml",
+                target / "fixtures/NacreNotifications.qml",
             )
             with (target / "fixtures/qmldir").open("a") as manifest:
                 manifest.write(
@@ -110,26 +62,16 @@ class SettingsUITests(unittest.TestCase):
                     "function setProvider(name) { choices=[...choices,name];defaultProvider=name;",
                 )
             )
-            preview = (
-                adapted(ROOT.parent / "shell/lock-preview.qml")
-                .replace('import "widgets"', 'import "fixtures"')
-                .replace('import "services"', "")
-                .replace("ShellRoot {", "Item {")
-                .replace("FloatingWindow {", "Rectangle {")
+            stage_qml(
+                ROOT.parent / "shell/lock-preview.qml", target / "LockPreview.qml"
             )
-            preview = re.sub(
-                r"(?m)^(\s*)title\s*:\s*([^\n]+)",
-                r"\1property string title: \2",
-                preview,
+            stage_qml(
+                ROOT.parent / "shell/widgets/ActionButton.qml",
+                target / "fixtures/ActionButton.qml",
             )
-            preview = remove_objects(preview, r"\bProcess\s*\{\s*id\s*:\s*reader\b")
-            preview = remove_objects(preview, r"\bTimer\s*\{\s*interval\s*:\s*3000\b")
-            (target / "LockPreview.qml").write_text(preview)
-            (target / "fixtures/ActionButton.qml").write_text(
-                adapted(ROOT.parent / "shell/widgets/ActionButton.qml", ".")
-            )
-            (target / "fixtures/NacreScrollBar.qml").write_text(
-                (ROOT.parent / "shell/widgets/NacreScrollBar.qml").read_text()
+            stage_qml(
+                ROOT.parent / "shell/widgets/NacreScrollBar.qml",
+                target / "fixtures/NacreScrollBar.qml",
             )
             with (target / "fixtures/qmldir").open("a") as manifest:
                 manifest.write("\nNacreScrollBar 1.0 NacreScrollBar.qml\n")
@@ -189,8 +131,7 @@ class SettingsUITests(unittest.TestCase):
                 ROOT / "tests/qml/tst_settings.qml", target / "tst_settings.qml"
             )
             install_i18n(target / "fixtures")
-            install_paths(target / "fixtures")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env=dict(os.environ, QT_QPA_PLATFORM="offscreen"),
                 capture_output=True,

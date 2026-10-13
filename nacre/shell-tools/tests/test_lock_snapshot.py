@@ -1,10 +1,11 @@
-from qml_source import install_i18n, install_paths
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Actual lock presentation snapshot uses native battery fraction correctly."""
 
 import os
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
 
@@ -50,24 +51,16 @@ class LockSnapshotTests(unittest.TestCase):
                     ]
                 )
             )
-            source = (
-                (ROOT.parent / "shell/services/LockWidgets.qml")
-                .read_text()
-                .replace("pragma Singleton", "")
-                .replace("import Quickshell.Services.UPower", 'import "fixtures"')
-                .replace("import Quickshell.Io", "")
-                .replace("import Quickshell", "")
-                .replace("import qs.utils", 'import "fixtures"')
-                .replace("Singleton {", "Item {")
-                .replace('Quickshell.env("HOME")', '"/isolated"')
+            stage_qml(
+                ROOT.parent / "shell/services/LockWidgets.qml",
+                target / "LockSnapshot.qml",
             )
-            (target / "LockSnapshot.qml").write_text(source)
             (target / "tst_lock.qml").write_text("""import QtQuick
 import QtTest
 import "fixtures"
 Item {
  width:400;height:300
- LockSnapshot {id:view}
+ readonly property var view: LockSnapshot
  TestCase {
   name:"LockBattery";when:windowShown
   function test_percent_and_unavailable() {
@@ -81,8 +74,7 @@ Item {
  }
 }""")
             install_i18n(fixtures)
-            install_paths(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target)],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,

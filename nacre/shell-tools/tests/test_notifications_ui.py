@@ -1,48 +1,37 @@
-from qml_source import install_i18n, install_paths
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Production notification cards and stack with service-owned fixture entries."""
 
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
 
-from qml_source import install_foundation_interaction, remove_objects
+from qml_fixtures import install_foundation_interaction
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = ROOT.parent / "shell"
 
 
 def install_history_owner(target, fixtures):
-    source = (SHELL / "services/NacreNotifs.qml").read_text()
-    source = source.replace("pragma Singleton", "").replace("Singleton {", "Item {")
-    for module in (
-        "Quickshell.Services.Notifications",
-        "Quickshell.Io",
-        "Quickshell",
-        "qs.widgets",
-        "qs.utils",
-        "qs.config",
-    ):
-        source = source.replace("import " + module, 'import "fixtures"')
-    source = source.replace('Quickshell.env("HOME")', '"/fixture"')
-    source = remove_objects(source, r"\b(?:IpcHandler|NacreShortcut)\s*\{")
-    (target / "NotificationHistory.qml").write_text(source)
-    (target / "NacreNotificationEntry.qml").write_text(
-        'import "fixtures"\n'
-        + (SHELL / "services/NacreNotificationEntry.qml").read_text()
+    stage_qml(SHELL / "services/NacreNotifs.qml", target / "NotificationHistory.qml")
+    stage_qml(
+        SHELL / "services/NacreNotificationEntry.qml",
+        target / "NacreNotificationEntry.qml",
     )
     definitions = {
         "NacreHelperTask": "property var command:[];property bool running:false;property bool stdinEnabled:false;signal started();signal output(string text);signal exited(int code,int status);function write(text){}",
         "FileView": 'property string path:"";property bool printErrors:false;signal loaded();function text(){return ""}',
         "NotificationServer": "property bool keepOnReload:false;property bool actionsSupported:false;property bool imageSupported:false;property bool persistenceSupported:false;property bool bodyMarkupSupported:false;signal notification(var notification)",
+        "NacreCompositor": "function createShortcut(owner,params){return null}",
         "NacrePanelState": 'property var screens:({});property var panels:({});property var providerViews:[];property bool settingsVisible:false;property string settingsPage:""',
     }
     with (fixtures / "qmldir").open("a") as manifest:
         for name, body in definitions.items():
-            singleton = name == "NacrePanelState"
+            singleton = name in ("NacrePanelState", "NacreCompositor")
             (fixtures / (name + ".qml")).write_text(
                 ("pragma Singleton\n" if singleton else "")
                 + "import QtQuick\nQtObject {"
@@ -76,32 +65,21 @@ class NotificationUITests(unittest.TestCase):
             shutil.copytree(ROOT / "tests/qml/fixtures", fixtures)
             install_foundation_interaction(fixtures, SHELL / "widgets")
             for name in ("NacreNotice", "NacreNotificationStack"):
-                source = (SHELL / "modules/notifications" / (name + ".qml")).read_text()
-                source = source.replace("import Quickshell", "").replace(
-                    "import qs.utils", 'import "fixtures"'
+                stage_qml(
+                    SHELL / "modules/notifications" / (name + ".qml"),
+                    target / (name + ".qml"),
                 )
-                source = source.replace("import qs.widgets", 'import "fixtures"')
-                source = source.replace("import qs.services", "").replace(
-                    "import qs.utils", ""
-                )
-                source = source.replace("import qs.config", "")
-                source = source.replace(
-                    "Quickshell.iconPath(root.modelData.appIcon, true)", '""'
-                )
-                (target / (name + ".qml")).write_text(source)
             for name in ("NacreSurface", "NacreText", "ActionButton", "FastScroll"):
-                source = (SHELL / "widgets" / (name + ".qml")).read_text()
-                (fixtures / (name + ".qml")).write_text(
-                    source.replace("import qs.services", 'import "."').replace(
-                        "import qs.utils", 'import "."'
-                    )
+                stage_qml(
+                    SHELL / "widgets" / (name + ".qml"), fixtures / (name + ".qml")
                 )
             (fixtures / "BrandLogo.qml").write_text(
                 'import QtQuick\nItem {property bool notifications:false;property color background:"black"}'
             )
             (fixtures / "NacreIcon.qml").write_text("import QtQuick\nText {}")
-            (fixtures / "NacreNotifications.qml").write_text(
-                (SHELL / "config/NacreNotifications.qml").read_text()
+            stage_qml(
+                SHELL / "config/NacreNotifications.qml",
+                fixtures / "NacreNotifications.qml",
             )
             (fixtures / "NacreNotifs.qml").write_text(
                 'pragma Singleton\nimport QtQuick\nQtObject {property var popups:[];property string dismissed:"";function dismiss(entry){dismissed=entry.key}}'
@@ -115,15 +93,15 @@ class NotificationUITests(unittest.TestCase):
                 target / "tst_notifications.qml",
             )
             install_i18n(fixtures)
-            install_paths(fixtures)
             if with_history:
                 install_history_owner(target, fixtures)
                 shutil.copy2(
                     ROOT / "tests/notification-qml/tst_history_clear.qml",
                     target / "tst_history_clear.qml",
                 )
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
+                isolate=True,
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,
                 text=True,

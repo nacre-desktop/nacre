@@ -1,15 +1,13 @@
 import QtQuick
 import QtTest
+import Quickshell
 import "fixtures" as Native
 
 TestCase {
     id: test
     name: "NacreCompositorClients"
     when: windowShown
-    Component {
-        id: service
-        HyprlandBackend {}
-    }
+
     Component {
         id: window
         QtObject {
@@ -60,7 +58,7 @@ TestCase {
     function test_stable_identity_reactive_metadata_focus_and_removal() {
         const first = createTemporaryObject(window, test);
         Native.Hyprland.toplevels.values = [first];
-        const state = createTemporaryObject(service, test);
+        const state = HyprlandBackend;
         compare(state.clients.length, 1);
         const row = state.clients[0];
         compare(state.activeClient, row);
@@ -114,7 +112,7 @@ TestCase {
         compare(state.clients.length, 0);
     }
     function test_lua_workspace_translation_trusted_expressions_and_event_coalescing() {
-        const state = createTemporaryObject(service, test);
+        const state = HyprlandBackend;
         compare(Native.Hyprland.requests.length, 0);
         verify(state.dispatch("workspace 7"));
         compare(Native.Hyprland.requests[0], "hl.dsp.focus({workspace=7,on_current_monitor=true})");
@@ -143,7 +141,7 @@ TestCase {
             activated: false
         });
         Native.Hyprland.toplevels.values = [first, second];
-        const state = createTemporaryObject(service, test);
+        const state = HyprlandBackend;
         Native.Hyprland.rawEvent({
             name: "urgent",
             data: "20"
@@ -183,7 +181,7 @@ TestCase {
                 }
             ]
         };
-        const state = createTemporaryObject(service, test);
+        const state = HyprlandBackend;
         compare(state.clients[0].windowId, "0x10");
         compare(state.clients[0].geometry.width, 800);
         verify(!state.moveWindowToWorkspace("unknown", 2));
@@ -247,7 +245,7 @@ TestCase {
         compare(Native.Hyprland.requests.pop(), "pin address:0x10");
     }
     function test_metadata_refresh_and_configuration_reload_are_distinct() {
-        const state = createTemporaryObject(service, test);
+        const state = HyprlandBackend;
         const config = findChild(state, "compositorConfigurationReload");
         verify(!config.running);
         const reads = Native.Hyprland.refreshes;
@@ -261,7 +259,7 @@ TestCase {
         compare(Native.Hyprland.refreshes, reads + 1);
     }
     function test_neutral_events_and_serial_geometry_publication() {
-        const state = createTemporaryObject(service, test);
+        const state = HyprlandBackend;
         const values = [];
         state.event.connect(value => values.push(value));
         let configurations = 0;
@@ -319,7 +317,7 @@ TestCase {
         Native.ShortcutRegistry.created = 0;
         Native.ShortcutRegistry.destroyed = 0;
         Native.ShortcutRegistry.duplicates = 0;
-        const state = createTemporaryObject(service, test);
+        const state = HyprlandBackend;
         Native.Environment.compositor = state;
         const owner = createTemporaryObject(shortcutWidget, test);
         const adapter = owner.registration;

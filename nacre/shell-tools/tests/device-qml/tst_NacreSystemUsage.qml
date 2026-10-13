@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "NacreResourceCounters"
     when: windowShown
-    Component {
-        id: service
-        NacreSystemUsage {}
-    }
+
     Component {
         id: visible
         QtObject {
@@ -18,7 +15,7 @@ TestCase {
         }
     }
     function test_counter_baseline_guest_reset_and_memory_fallback() {
-        const state = createTemporaryObject(service, test);
+        const state = NacreSystemUsage;
         state.cpuSample("cpu 100 0 50 800 50 0 0 0 70 20\n");
         verify(isNaN(state.cpuPerc));
         state.cpuSample("cpu 140 0 60 840 60 0 0 0 90 30\n");
@@ -52,7 +49,7 @@ TestCase {
         NacrePanelState.screens = {
             fixture: view
         };
-        const state = createTemporaryObject(service, test);
+        const state = NacreSystemUsage;
         verify(!state.visibleDashboard);
         compare(state.slowReads, 0);
         verify(!findChild(state, "resourceReader").running);

@@ -16,6 +16,11 @@ from unittest.mock import patch
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / "nacre/shell-tools/tests"))
 sys.path.insert(0, str(root / "nacre/shell-tools"))
+qml_fixtures = importlib.import_module("qml_fixtures")
+run_qml = qml_fixtures.run_qml
+stage_qml = qml_fixtures.stage_qml
+
+os.environ["QT_LOGGING_RULES"] = "qml.debug=true"
 original = subprocess.run
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--output", type=Path, default=Path("/tmp/nacre-translation-audit"))
@@ -198,14 +203,6 @@ def font_gate(code):
 def prepare_widgets(target):
     fixtures = target / "fixtures"
     if fixtures.exists():
-        if args.text_family:
-            token_file = fixtures / "NacreTokens.qml"
-            token_file.write_text(
-                token_file.read_text().replace(
-                    'DesktopSettings.data.interfaceFont || "IBM Plex Sans"',
-                    json.dumps(args.text_family),
-                )
-            )
         i18n = fixtures / "NacreI18n.qml"
         i18n.write_text(
             i18n.read_text().replace(
@@ -232,9 +229,7 @@ def prepare_widgets(target):
                 (root / "nacre/shell/widgets/NacreTextField.qml").read_text()
             )
         (fixtures / "ActionButton.qml").write_text(
-            (root / "nacre/shell/widgets/ActionButton.qml")
-            .read_text()
-            .replace("import qs.services", 'import "."')
+            (root / "nacre/shell/widgets/ActionButton.qml").read_text()
         )
         icon = fixtures / "NacreIcon.qml"
         if icon.exists():
@@ -259,6 +254,12 @@ def runner(command, **kwargs):
     body = suites[current][3]
     extra = suites[current][4]
     setup = "" if current == "login" else "NacreI18n.language=language;"
+    if args.text_family and current != "login":
+        setup += (
+            "DesktopSettings.data=Object.assign({},DesktopSettings.data,{interfaceFont:"
+            + json.dumps(args.text_family)
+            + "});"
+        )
     code = (
         code.rstrip()[:-1]
         + common
@@ -286,7 +287,7 @@ def runner(command, **kwargs):
 
 def audit_dashboard():
     from test_media_performance_ui import prepare_pages
-    from qml_source import install_i18n, install_paths
+    from qml_fixtures import install_i18n
 
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder)
@@ -303,23 +304,14 @@ def audit_dashboard():
             "NacreDashboardSummary",
             "NacreCompactMetric",
         ]:
-            source = (
-                (root / "nacre/shell/modules/dashboard" / f"{name}.qml")
-                .read_text()
-                .replace("import qs.widgets", 'import "fixtures"')
-                .replace("import qs.utils", 'import "fixtures"')
-                .replace("import qs.services", 'import "fixtures"')
-                .replace("import Quickshell\n", "")
-                .replace("Quickshell.", "Environment.")
+            stage_qml(
+                root / "nacre/shell/modules/dashboard" / f"{name}.qml",
+                target / f"{name}.qml",
             )
-            (target / f"{name}.qml").write_text(source)
-        for name in ["NacreSessionControls"]:
-            (target / f"{name}.qml").write_text(
-                (root / "nacre/shell/modules/session" / f"{name}.qml")
-                .read_text()
-                .replace("import qs.widgets", 'import "fixtures"')
-                .replace("import qs.services", 'import "fixtures"')
-            )
+        stage_qml(
+            root / "nacre/shell/modules/session/NacreSessionControls.qml",
+            target / "NacreSessionControls.qml",
+        )
         definitions = {
             "NacrePaths": 'property string tools:"/fixture/tools"',
             "NacreDashboardState": 'property var home:({events:[]});property var focusState:({status:"idle"});property bool running:false;property real progress:.3;property string timerText:"24:12";property string message:"";property var brain:({available:false,nodes:[],links:[]});property var preferences:({albumPalette:true});function save(k,v){}function start(value){}function end(value){}function request(value){}function openNote(value){}',
@@ -344,7 +336,6 @@ def audit_dashboard():
                     text + "\nsingleton " + name + " 1.0 " + name + ".qml\n"
                 )
         install_i18n(fixtures)
-        install_paths(fixtures)
         code = (
             """import QtQuick
  import QtTest
@@ -374,7 +365,7 @@ def audit_dashboard():
             + json.dumps({"m3" + k: "#" + v for k, v in palette.items()})
             + "}"
         )
-        result = original(
+        result = run_qml(
             ["/usr/lib/qt6/bin/qmltestrunner", "-input", str(target), "-o", "-,txt"],
             env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
             capture_output=True,
@@ -390,7 +381,7 @@ def audit_dashboard():
 
 def audit_extras():
     from test_universal_menu_ui import stage
-    from qml_source import install_i18n, install_paths, remove_objects
+    from qml_fixtures import install_i18n
 
     with tempfile.TemporaryDirectory() as directory:
         target = Path(directory)
@@ -403,20 +394,11 @@ def audit_extras():
             "Keybindings",
             "Overview",
         ):
-            source = (root / "nacre/shell/modules/extras" / (name + ".qml")).read_text()
-            for imported in ("Quickshell.Io", "Quickshell.Wayland", "Quickshell"):
-                source = source.replace("import " + imported + "\n", "")
-            for imported in ("qs.services", "qs.widgets", "qs.config", "qs.utils"):
-                source = source.replace("import " + imported, 'import "fixtures"')
-            source = source.replace(
-                "required property PersistentProperties", "required property var"
-            ).replace("Quickshell.screens[0].height", "1200")
-            for component in ("IpcHandler", "Process"):
-                source = remove_objects(source, r"\b" + component + r"\s*\{")
-            (
+            stage_qml(
+                root / "nacre/shell/modules/extras" / (name + ".qml"),
                 target
-                / ((name if name == "SearchSurface" else "Feature" + name) + ".qml")
-            ).write_text(source)
+                / ((name if name == "SearchSurface" else "Feature" + name) + ".qml"),
+            )
         from source import tokens
 
         service = (root / "nacre/shell/services/DesktopActions.qml").read_text()
@@ -462,17 +444,17 @@ def audit_extras():
         with (fixtures / "qmldir").open("a") as stream:
             stream.write("\nScreencopyView 1.0 ScreencopyView.qml\n")
         install_i18n(fixtures)
-        install_paths(fixtures)
         prepare_widgets(target)
         code = (
             """import QtQuick
 import QtTest
+import Quickshell
 import "fixtures"
 TestCase {id:test;name:"ExtraTranslationAudit";width:1200;height:1000;visible:true;when:windowShown
- Component{id:palette;FeaturePalette{width:1020;height:600;visibilities:QtObject{property bool launcher:true;property string launcherMode:"palette";property int launcherRequest:0;property string windowKey:"fixture"}}}
- Component{id:clipboard;FeatureClipboard{width:1020;height:600;visibilities:QtObject{property bool launcher:true;property string launcherMode:"clipboard";property int launcherRequest:0;property string windowKey:"fixture"}}}
- Component{id:keys;FeatureKeybindings{width:1020;height:600;visibilities:QtObject{property bool launcher:true;property string launcherMode:"keys";property int launcherRequest:0;property string windowKey:"fixture"}}}
- Component{id:overview;FeatureOverview{width:1020;height:800;visibilities:QtObject{property bool launcher:true;property string launcherMode:"overview";property int launcherRequest:0;property string windowKey:"fixture"}}}
+ Component{id:palette;FeaturePalette{width:1020;height:600;visibilities:PersistentProperties{property bool launcher:true;property string launcherMode:"palette";property int launcherRequest:0;property string windowKey:"fixture"}}}
+ Component{id:clipboard;FeatureClipboard{width:1020;height:600;visibilities:PersistentProperties{property bool launcher:true;property string launcherMode:"clipboard";property int launcherRequest:0;property string windowKey:"fixture"}}}
+ Component{id:keys;FeatureKeybindings{width:1020;height:600;visibilities:PersistentProperties{property bool launcher:true;property string launcherMode:"keys";property int launcherRequest:0;property string windowKey:"fixture"}}}
+ Component{id:overview;FeatureOverview{width:1020;height:800;visibilities:PersistentProperties{property bool launcher:true;property string launcherMode:"overview";property int launcherRequest:0;property string windowKey:"fixture"}}}
 """
             + common
             + """
@@ -480,7 +462,7 @@ TestCase {id:test;name:"ExtraTranslationAudit";width:1200;height:1000;visible:tr
 }"""
         )
         (target / "tst_menu.qml").write_text(font_gate(code))
-        result = original(
+        result = run_qml(
             ["/usr/lib/qt6/bin/qmltestrunner", "-input", str(target), "-o", "-,txt"],
             env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
             capture_output=True,
@@ -510,7 +492,16 @@ for current in args.surfaces or [*suites, "dashboard", "extras"]:
         mod = importlib.import_module(module)
         klass = getattr(mod, cls)
         with patch("subprocess.run", runner):
-            klass(method).debug()
+            if hasattr(mod, "run_qml"):
+
+                def audit_runner(command, **kwargs):
+                    kwargs["isolate"] = False
+                    return run_qml(command, **kwargs)
+
+                with patch.object(mod, "run_qml", audit_runner):
+                    klass(method).debug()
+            else:
+                klass(method).debug()
         logfiles.append(output / (current + ".log"))
         print(current + " captured")
     except (AssertionError, RuntimeError, OSError, subprocess.TimeoutExpired) as error:

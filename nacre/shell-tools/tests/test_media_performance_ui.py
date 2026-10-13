@@ -1,11 +1,12 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Actual media page with native Qt controls and service contracts."""
 
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
 
@@ -24,11 +25,7 @@ def prepare_pages(target):
     (fixtures / "NacreSystemUsage.qml").write_text(
         'pragma Singleton\nimport QtQuick\nQtObject {property real cpuPerc:.15;property real cpuTemp:23;property real gpuTemp:NaN;property real gpuPerc:0;property bool gpuUsageAvailable:false;property real memPerc:.48;property int memUsed:15309210;property int memTotal:32191283;property real storagePerc:.52;property int storageUsed:190840832;property int storageTotal:367001600;property string loadAverage:".10 .20 .30";property string kernel:"Fixture kernel"}'
     )
-    (fixtures / "ActionButton.qml").write_text(
-        (SHELL / "widgets/ActionButton.qml")
-        .read_text()
-        .replace("import qs.services", 'import "."')
-    )
+    stage_qml(SHELL / "widgets/ActionButton.qml", fixtures / "ActionButton.qml")
     for name, body in {
         "NacreMediaDetails": 'property var palette:({});property var lines:[];property var spectrum:[];property string message:""',
         "NacreDashboardState": "property var preferences:({albumPalette:true});function save(key,value){preferences=Object.assign({},preferences,{[key]:value})}",
@@ -39,41 +36,19 @@ def prepare_pages(target):
         )
         with (fixtures / "qmldir").open("a") as manifest:
             manifest.write(f"\nsingleton {name} 1.0 {name}.qml\n")
-    (fixtures / "NacreScrollBar.qml").write_text(
-        (SHELL / "widgets/NacreScrollBar.qml").read_text()
-    )
+    stage_qml(SHELL / "widgets/NacreScrollBar.qml", fixtures / "NacreScrollBar.qml")
     with (fixtures / "qmldir").open("a") as manifest:
         manifest.write("\nNacreScrollBar 1.0 NacreScrollBar.qml\n")
     for name in ("NacreMediaPage",):
-        source = (SHELL / "modules/dashboard" / (name + ".qml")).read_text()
-        source = source.replace("import Quickshell.Services.Mpris", "").replace(
-            "import Quickshell", ""
+        stage_qml(
+            SHELL / "modules/dashboard" / (name + ".qml"), target / (name + ".qml")
         )
-        source = source.replace("import qs.widgets", 'import "fixtures"').replace(
-            "import qs.services", ""
-        )
-        source = source.replace(
-            'Quickshell.iconPath(segment.modelData.desktopEntry || "multimedia-player", true)',
-            '""',
-        )
-        source = source.replace(
-            "required property PersistentProperties visibilities",
-            "required property var visibilities",
-        )
-        for enum_name, value in (("None", "0"), ("Track", "1"), ("Playlist", "2")):
-            source = source.replace("MprisLoopState." + enum_name, value)
-        (target / (name + ".qml")).write_text(source)
     (target / "media").mkdir(exist_ok=True)
     for path in (SHELL / "modules/dashboard/media").iterdir():
         if path.suffix == ".js":
             shutil.copy2(path, target / "media" / path.name)
         else:
-            source = (
-                path.read_text()
-                .replace("import qs.widgets", 'import "../fixtures"')
-                .replace("import qs.services", "")
-            )
-            (target / "media" / path.name).write_text(source)
+            stage_qml(path, target / "media" / path.name)
 
 
 class MediaUITests(unittest.TestCase):
@@ -89,7 +64,7 @@ class MediaUITests(unittest.TestCase):
                 target / "tst_pages.qml",
             )
             install_i18n(target / "fixtures")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,

@@ -1,9 +1,10 @@
+from qml_fixtures import run_qml
+
 """Render the shared landing field on all four frame edges."""
 
 import json
 import os
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
 
@@ -18,9 +19,7 @@ class DockTargetTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             (root / "NacreDockTarget.qml").write_text(
-                (SHELL / "widgets/NacreDockTarget.qml")
-                .read_text()
-                .replace("import qs.services", 'import "."')
+                (SHELL / "widgets/NacreDockTarget.qml").read_text()
             )
             (root / "NacreTokens.qml").write_text(
                 'pragma Singleton\nimport QtQuick\nQtObject {property color accent:"#85b8c9";property color orientSecondary:"#d48dbc";property color orientHighlight:"#e9e5f7"}\n'
@@ -61,7 +60,7 @@ TestCase {
                     + source[end:]
                 )
                 (root / "tst_target.qml").write_text(source)
-            result = subprocess.run(
+            result = run_qml(
                 args,
                 capture_output=True,
                 text=True,

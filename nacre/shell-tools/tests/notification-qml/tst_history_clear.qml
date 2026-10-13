@@ -8,10 +8,7 @@ TestCase {
     width: 424
     height: 860
     when: windowShown
-    Component {
-        id: owner
-        NotificationHistory {}
-    }
+
     Component {
         id: presentation
         Column {
@@ -30,7 +27,7 @@ TestCase {
         }
     }
     function test_clear_publishes_once_without_recreating_remaining_cards() {
-        const state = createTemporaryObject(owner, test);
+        const state = NotificationHistory;
         const rows = [];
         for (let i = 0; i < 300; i++)
             rows.push({

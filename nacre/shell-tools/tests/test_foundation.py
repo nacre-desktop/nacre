@@ -1,4 +1,4 @@
-from qml_source import install_i18n
+from qml_fixtures import install_i18n
 
 """Actual Nacre primitives with native Qt input and text/layout tests."""
 

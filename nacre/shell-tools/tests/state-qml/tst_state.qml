@@ -1,11 +1,15 @@
 import QtQuick
 import QtTest
+import Quickshell
 import "fixtures"
 
 TestCase {
     id: test
     name: "NacreShellState"
     when: windowShown
+    function initTestCase() {
+        Quickshell.screens = Environment.screens;
+    }
     Component {
         id: bridge
         NacreShellIpc {}

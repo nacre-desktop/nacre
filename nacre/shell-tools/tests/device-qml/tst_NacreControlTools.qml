@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "NacreControlTools"
     when: windowShown
-    Component {
-        id: service
-        NacreControlTools {}
-    }
+
     function init() {
         NacrePanelState.screens = ({});
         AppLaunch.calls = [];
@@ -21,7 +18,7 @@ TestCase {
         process.exited(0, 0);
     }
     function test_open_discovery_coalesces_without_device_writes() {
-        const view = createTemporaryObject(service, test);
+        const view = NacreControlTools;
         const process = findChild(view, "controlToolsWorker");
         compare(process.starts, 1);
         compare(process.command[2], "state");
@@ -53,7 +50,7 @@ TestCase {
         compare(process.starts, 2);
     }
     function test_explicit_night_light_guard_and_action_arguments() {
-        const view = createTemporaryObject(service, test);
+        const view = NacreControlTools;
         const process = findChild(view, "controlToolsWorker");
         finish(process, {
             nightLightSupported: true,
@@ -77,7 +74,7 @@ TestCase {
         compare(view.data.nightLightEnabled, false);
     }
     function test_capture_waits_for_dismissal_and_rejects_unknown_tools() {
-        const view = createTemporaryObject(service, test);
+        const view = NacreControlTools;
         view.capture("shell command");
         wait(350);
         compare(AppLaunch.calls.length, 0);

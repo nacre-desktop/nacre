@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "NacreWallpaperProvider"
     when: windowShown
-    Component {
-        id: service
-        NacreWallpapers {}
-    }
+
     function cleanup() {
         NacrePresentation.active = ({});
         NacrePresentation.pending = ({});
@@ -28,7 +25,7 @@ TestCase {
         };
     }
     function setup() {
-        const view = createTemporaryObject(service, test);
+        const view = NacreWallpapers;
         const catalog = findChild(view, "wallpaperCatalog");
         const data = {
             entries: [entry("/fixture/one"), entry("/fixture/two", true)],
