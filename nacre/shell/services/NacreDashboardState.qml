@@ -32,6 +32,7 @@ Singleton {
     property bool noticePending: false
     property bool focusWriteFailed: false
     property bool enablingDnd: false
+    readonly property bool busy: worker.running
     readonly property var tabs: preferences.tabs || ["today", "weather", "media", "system", "focus"]
     readonly property bool shown: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard))
     readonly property bool focusShown: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard && view.dashboardTab === 4))
@@ -162,7 +163,7 @@ Singleton {
             Quickshell.execDetached(["xdg-open", path]);
     }
     onShownChanged: if (shown)
-        refresh()
+        Qt.callLater(root.refresh)
     onFocusShownChanged: if (focusShown)
         request("context")
     Component.onCompleted: refresh()

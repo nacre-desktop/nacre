@@ -167,6 +167,13 @@ class UniversalMenuUITests(unittest.TestCase):
             source = source.replace("pragma Singleton", "").replace(
                 'import "fixtures"', 'import "."'
             )
+            source = source.replace(
+                "id: root", "id: root\nproperty int openRefreshCount: 0", 1
+            )
+            source = source.replace(
+                'function refreshOnOpen() {\n        refresh();\n        DesktopExtras.request("keys", {});\n        NacreControlTools.refresh();\n    }',
+                "function refreshOnOpen() { root.openRefreshCount++; }",
+            )
             (target / "fixtures/NacreMenuContext.qml").write_text(source)
             with (target / "fixtures/qmldir").open("a") as manifest:
                 manifest.write("\nNacreMenuContext 1.0 NacreMenuContext.qml\n")
@@ -178,6 +185,12 @@ TestCase {
  name:"IndependentLauncherContexts"
  NacreMenuContext {id:first;shared:NacreMenu}
  NacreMenuContext {id:second;shared:NacreMenu}
+ function test_open_refresh_is_deferred_and_coalesced(){
+  const before = first.openRefreshCount;
+  first.prepare("home","",true);first.prepare("home","",true);
+  compare(first.openRefreshCount,before);
+  tryCompare(first,"openRefreshCount",before+1,1000);
+ }
  function test_queries_are_local_and_catalogue_is_shared(){
   first.fileQuery="one";first.fileRows=[{name:"First"}];
   second.fileQuery="two";second.fileRows=[{name:"Second"}];

@@ -9,6 +9,7 @@ Item {
     property bool running: false
     property string failure: ""
     property bool frameReady: false
+    property int resumePosition: 0
     readonly property int position: player.position
     readonly property bool playing: player.playing
     readonly property bool audioDisabled: player.audioOutput === null && player.activeAudioTrack === -1
@@ -23,9 +24,29 @@ Item {
         else
             player.pause();
     }
+    function captureState() {
+        return {
+            path: path,
+            position: player.position
+        };
+    }
+    function restoreState(state) {
+        if (state?.path !== path || !Number.isFinite(state.position))
+            return;
+        resumePosition = Math.max(0, Math.floor(state.position));
+        if (player.mediaStatus === MediaPlayer.LoadedMedia || player.mediaStatus === MediaPlayer.BufferedMedia)
+            restorePosition();
+    }
+    function restorePosition() {
+        if (resumePosition > 0 && player.seekable) {
+            player.position = Math.min(resumePosition, Math.max(0, player.duration - 1));
+            resumePosition = 0;
+        }
+    }
     onRunningChanged: syncPlayback()
     onPathChanged: {
         frameReady = false;
+        resumePosition = 0;
         failure = "";
         if (output)
             output.clearOutput();
@@ -53,6 +74,8 @@ Item {
         audioOutput: null
         activeAudioTrack: -1
         loops: MediaPlayer.Infinite
+        onMediaStatusChanged: if (mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia)
+            root.restorePosition()
         onErrorOccurred: (error, message) => {
             root.failure = message;
             root.frameReady = false;

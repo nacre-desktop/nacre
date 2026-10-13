@@ -144,10 +144,21 @@ ShellRoot {
             running:true
         }
         Timer {
+            property int step:0
+            property int savedPosition:0
             interval:50
             repeat:true
             running:true
-            onTriggered: if(video.frameReady && video.position>80) {
+            onTriggered: if(step === 0 && video.frameReady && video.position>150) {
+                savedPosition = video.position;
+                const snapshot = video.captureState();
+                video.running = false;
+                video.restoreState({path:"different.mp4",position:1000});
+                if(video.resumePosition !== 0) throw new Error("unrelated video position restored");
+                snapshot.position += 300;
+                video.restoreState(snapshot);
+                step = 1;
+            } else if(step === 1 && video.position >= savedPosition + 250) {
                 stop();video.running=false;
                 if(video.failure || video.playing || !video.audioDisabled) throw new Error("video did not pause");
                 console.log("NACRE_VIDEO_FIRST_FRAME_PAUSE_OK");Qt.quit();

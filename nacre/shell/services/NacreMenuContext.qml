@@ -81,11 +81,16 @@ Scope {
             stateWorker.running = true;
         }
     }
+    function refreshOnOpen() {
+        refresh();
+        DesktopExtras.request("keys", {});
+        NacreControlTools.refresh();
+    }
     function prepare(route, query = "", opened = false) {
-        if (opened) {
-            refresh();
-            DesktopExtras.request("keys", {});
-        }
+        // Reset/query bindings can request this more than once during an open.
+        // Coalesce refreshes and let the panel start presenting first.
+        if (opened)
+            Qt.callLater(root.refreshOnOpen);
         const node = rows.find(item => item.id === route);
         if (node?.provider === "clipboard")
             DesktopExtras.request("clips", {});
@@ -93,8 +98,6 @@ Scope {
             DesktopExtras.request("keys", {});
         if (route.startsWith("health"))
             Maintenance.refresh();
-        if (opened)
-            NacreControlTools.refresh();
         const scope = Model.scope(query);
         if (scope.kind === "files") {
             fileWanted = scope.text;

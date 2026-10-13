@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls.Basic
 import qs.widgets
 import qs.services
@@ -39,7 +40,8 @@ Flickable {
                 asynchronous: true
                 cache: true
                 retainWhileLoading: true
-                sourceSize.width: 1440
+                sourceSize.width: Math.max(1, Math.ceil(hero.width * (root.Window.window?.devicePixelRatio || 1)))
+                sourceSize.height: Math.max(1, Math.ceil(hero.height * (root.Window.window?.devicePixelRatio || 1)))
             }
             Loader {
                 anchors.fill: parent

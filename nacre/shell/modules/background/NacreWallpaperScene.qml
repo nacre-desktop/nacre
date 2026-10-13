@@ -23,6 +23,19 @@ Item {
     readonly property bool pickerOpen: Object.entries(NacrePanelState.screens).some(([name, view]) => name === screenName && view.launcher && view.launcherMode === "wallpaper")
     readonly property bool covered: NacreCompositor.windows.some(client => client.workspace?.id === workspaceId && (client.fullscreen || (WallpaperPlayback.pauseCovered && !client.floating)))
     readonly property bool motionAllowed: !WallpaperPlayback.sleeping && !WallpaperPlayback.locked && !WallpaperPlayback.paused && !WallpaperPlayback.batteryPaused && (pickerOpen || !covered)
+    // A visible pause keeps its last frame. Only fully hidden motion can release
+    // its decoder; a short grace period avoids churn while switching windows.
+    readonly property bool motionHidden: WallpaperPlayback.sleeping || WallpaperPlayback.locked || (covered && !pickerOpen)
+    property bool motionRetained: true
+    property var motionState: null
+    onMotionHiddenChanged: {
+        if (motionHidden)
+            releaseMotion.restart();
+        else {
+            releaseMotion.stop();
+            motionRetained = true;
+        }
+    }
     readonly property real pixelRatio: Window.window?.devicePixelRatio || 1
     function fileUrl(path) {
         return path ? "file://" + encodeURIComponent(path).replace(/%2F/g, "/") : "";
@@ -125,14 +138,27 @@ Item {
         fillMode: Image.PreserveAspectCrop
     }
     Loader {
+        id: video
+        objectName: "desktopVideoLoader"
         z: 2
         anchors.fill: parent
-        active: NacreWallpapers.displayDynamic && !NacreWallpapers.displayAnimated && !WallpaperPlayback.batteryPaused
+        active: NacreWallpapers.displayDynamic && !NacreWallpapers.displayAnimated && !WallpaperPlayback.batteryPaused && (!root.motionHidden || root.motionRetained)
         source: active ? Qt.resolvedUrl("NacreDesktopVideo.qml") : ""
         onLoaded: {
             item.screenName = Qt.binding(() => root.screenName);
             item.path = Qt.binding(() => NacreWallpapers.displayPath);
             item.running = Qt.binding(() => root.motionAllowed);
+            if (root.motionState)
+                item.restoreState(root.motionState);
+        }
+    }
+    Timer {
+        id: releaseMotion
+        interval: root.releaseDelay
+        running: root.motionHidden
+        onTriggered: if (root.motionHidden) {
+            root.motionState = video.item?.captureState() || null;
+            root.motionRetained = false;
         }
     }
     Timer {
@@ -205,7 +231,7 @@ Item {
                 paletteChoices: NacrePresentation.active.paletteOptions?.length || 0,
                 selectedAccent: NacrePresentation.active.selectedAccent || "",
                 motionAllowed: root.motionAllowed,
-                decoderActive: NacreWallpapers.displayDynamic && !NacreWallpapers.displayAnimated && !WallpaperPlayback.batteryPaused,
+                decoderActive: video.active,
                 batteryPaused: WallpaperPlayback.batteryPaused,
                 expected: NacrePresentation.active.poster || "",
                 error: root.failure,

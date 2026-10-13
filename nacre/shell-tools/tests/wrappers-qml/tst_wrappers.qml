@@ -228,4 +228,58 @@ TestCase {
         compare(NacrePresentation.activations.length, 0);
         compare(AppLaunch.calls.length, 0);
     }
+    function test_hidden_decoder_releases_but_visible_pause_retains_frame() {
+        const view = createTemporaryObject(scene, test);
+        view.releaseDelay = 25;
+        NacreWallpapers.displayDynamic = true;
+        const loader = findChild(view, "desktopVideoLoader");
+        tryCompare(loader, "active", true);
+        verify(loader.item !== null);
+        const decoder = loader.item;
+        WallpaperPlayback.paused = true;
+        wait(60);
+        compare(loader.item, decoder);
+        WallpaperPlayback.locked = true;
+        tryCompare(loader, "active", false, 500);
+        compare(loader.item, null);
+        verify(view.motionState !== null);
+        WallpaperPlayback.locked = false;
+        tryCompare(loader, "active", true);
+        verify(loader.item !== null);
+        WallpaperPlayback.paused = false;
+        // A brief cover must reuse the decoder, and the picker keeps motion live.
+        NacreCompositor.windows = [
+            {
+                workspace: {
+                    id: 1
+                },
+                floating: false,
+                fullscreen: true
+            }
+        ];
+        verify(view.motionHidden);
+        NacreCompositor.windows = [];
+        wait(60);
+        verify(loader.active);
+        NacrePanelState.screens = {
+            test: {
+                launcher: true,
+                launcherMode: "wallpaper"
+            }
+        };
+        NacreCompositor.windows = [
+            {
+                workspace: {
+                    id: 1
+                },
+                floating: false,
+                fullscreen: true
+            }
+        ];
+        verify(!view.motionHidden);
+        wait(60);
+        verify(loader.active);
+        NacreWallpapers.displayDynamic = false;
+        tryCompare(loader, "active", false);
+    }
 }
