@@ -39,6 +39,30 @@ TestCase {
         return value;
     }
 
+    function test_toggle_keeps_english_geometry_and_expands_wrapped_translations() {
+        const previousLanguage = NacreI18n.language;
+        try {
+            NacreI18n.language = "en";
+            const value = view();
+            const button = findChild(value, "launcherToggle_dnd");
+            compare(button.height, 50);
+            const caption = button.children.find(item => item.text === button.text);
+            const description = button.children.find(item => item.text === button.description);
+            verify(caption !== undefined);
+            verify(description !== undefined);
+            verify(Math.abs(caption.y + caption.height / 2 - 16) <= 0.5);
+            compare(description.y, 29);
+            NacreI18n.language = "pseudo";
+            button.width = 150;
+            tryVerify(() => button.height > 50);
+            verify(caption.lineCount > 1);
+            verify(caption.y + caption.height <= description.y);
+            verify(description.y + description.height <= button.height - 6);
+        } finally {
+            NacreI18n.language = previousLanguage;
+        }
+    }
+
     function test_pseudo_keeps_media_capability_names_and_translates_disabled_reasons() {
         const previousLanguage = NacreI18n.language;
         try {

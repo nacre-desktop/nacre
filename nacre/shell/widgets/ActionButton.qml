@@ -20,11 +20,11 @@ NacreSurface {
 
     Row {
         anchors.centerIn: parent
-        width: parent.width - (root.compact ? 20 : 28)
+        width: root.width < root.implicitWidth ? parent.width - (root.compact ? 20 : 28) : implicitWidth
         spacing: root.compact ? 5 : 7
 
         NacreIcon {
-            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenter: label.lineCount > 1 ? parent.verticalCenter : undefined
             text: root.icon
             visible: root.icon.length > 0
             font.pointSize: root.compact ? 12 : 14
@@ -35,7 +35,7 @@ NacreSurface {
             id: label
 
             text: root.text
-            width: parent.width - (root.icon ? (root.compact ? 22 : 25) : 0)
+            width: root.width < root.implicitWidth ? parent.width - (root.icon ? (root.compact ? 22 : 25) : 0) : implicitWidth
             wrapMode: Text.Wrap
             font.pointSize: root.compact ? 10 : 12
             color: root.selected ? NacreColours.palette.m3onPrimary : NacreColours.palette.m3onSurface

@@ -15,7 +15,7 @@ NacreSurface {
 
     signal clicked
 
-    implicitHeight: toggle && description ? Math.max(50, descriptionText.y + descriptionText.implicitHeight + 8) : compact ? 32 : 38
+    implicitHeight: toggle && description ? Math.max(50, descriptionText.y + descriptionText.implicitHeight + 6) : compact ? 32 : 38
     implicitWidth: !text && icon ? implicitHeight : label.implicitWidth + 24 + (icon ? 25 : 0)
     radius: 9
     color: toggle && selected ? Qt.tint(NacreColours.palette.m3surfaceContainerHigh, Qt.alpha(NacreColours.palette.m3primary, .12)) : selected ? NacreColours.palette.m3primary : NacreColours.palette.m3surfaceContainerHigh
@@ -28,7 +28,7 @@ NacreSurface {
 
         x: root.text ? 11 : (parent.width - width) / 2
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root.toggle && root.description ? label.y + label.height / 2 - root.height / 2 : 0
+        anchors.verticalCenterOffset: root.toggle && root.description ? (label.lineCount > 1 ? label.y + label.height / 2 : 16) - root.height / 2 : 0
         text: root.icon
         visible: !!root.icon
         font.pointSize: root.compact ? 12 : 14
@@ -39,8 +39,8 @@ NacreSurface {
         id: label
 
         x: root.icon ? 36 : 12
-        width: Math.max(0, parent.width - x - (root.toggle ? toggleState.width + 20 : 12))
-        y: root.toggle && root.description ? Math.max(4, 16 - Math.min(height, 16) / 2) : (parent.height - height) / 2
+        width: Math.max(0, parent.width - x - (root.toggle ? Math.max(72, toggleState.width + 20) : 12))
+        y: root.toggle && root.description ? Math.max(4, Math.floor(16 - height / 2)) : Math.floor((parent.height - height) / 2)
         text: root.text
         textFormat: Text.PlainText
         font.pointSize: root.compact ? 10 : 11
@@ -52,7 +52,7 @@ NacreSurface {
     NacreText {
         id: descriptionText
         x: label.x
-        y: Math.max(29, label.y + label.height + 5)
+        y: Math.max(29, label.y + label.height + 4)
         width: parent.width - x - 12
         visible: root.toggle && !!root.description
         text: root.description
@@ -66,7 +66,7 @@ NacreSurface {
         anchors.right: parent.right
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root.description ? label.y + label.height / 2 - root.height / 2 : 0
+        anchors.verticalCenterOffset: root.description ? (label.lineCount > 1 ? label.y + label.height / 2 : 16) - root.height / 2 : 0
         visible: root.toggle
         spacing: 6
         NacreText {
