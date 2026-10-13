@@ -3,6 +3,9 @@ on:
   push:
     branches: [main]
   pull_request:
+defaults:
+  run:
+    shell: nice -n 10 bash --noprofile --norc -e -o pipefail {0}
 permissions:
   contents: read
 jobs:
@@ -54,7 +57,7 @@ jobs:
           key: arch-npm-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
       - name: Install the pinned palette engine in an isolated environment
         run: |
-          cargo build --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
+          cargo build -j2 --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
           python -m venv /tmp/check-env
           python - <<'PY'
           import json, subprocess
@@ -70,8 +73,8 @@ jobs:
       - name: Native helper library checks
         run: |
           cargo fmt --check
-          cargo clippy --all-targets -- -D warnings
-          cargo test --quiet
+          cargo clippy -j2 --all-targets -- -D warnings
+          cargo test -j2 --quiet
       - name: Install developer-only helper parity tooling
         run: |
           pacman -S --noconfirm --needed bubblewrap shadow
@@ -171,10 +174,6 @@ jobs:
         env:
           NACRE_ORIENT_BINARY: /tmp/smoke-engine/orient
         run: PATH="/tmp/smoke-env/bin:$PATH" python tools/tests/smoke_install.py --output /tmp/nacre-install-smoke
-      - name: Fresh default install in headless Hyprland when available
-        env:
-          NACRE_ORIENT_BINARY: /tmp/smoke-engine/orient
-        run: PATH="/tmp/smoke-env/bin:$PATH" python tools/tests/smoke_install.py --compositor hyprland --allow-unavailable-compositor --output /tmp/nacre-install-smoke-hyprland
       - name: Fresh-install evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -182,7 +181,6 @@ jobs:
           name: fresh-install-niri
           path: |
             /tmp/nacre-install-smoke
-            /tmp/nacre-install-smoke-hyprland
           retention-days: 7
       - name: Save smoke packages
         if: always()

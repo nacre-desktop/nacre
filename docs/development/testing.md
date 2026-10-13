@@ -75,8 +75,9 @@ binding and file-view warnings/errors. Optional hardware services are not a
 substitute for hardware/session testing. Logs, IPC state, timing and screenshot
 are uploaded even when the smoke fails.
 
-CI also tries Hyprland's headless backend. It may report unavailable only before
-the shell starts; once a compositor starts, all shell assertions remain strict.
+Hyprland's headless backend needs a DRM render node/DMA-BUF that hosted runners
+do not supply. Its strict smoke test is a manual, advisory GPU runner job; nested
+Niri remains the automatic correctness check. See [CI jobs and owners](ci.md).
 Cached Arch packages still undergo normal package database refresh/update;
 venv/Cargo cache keys include interpreter/compiler and source/dependency inputs.
 The normal installation/build commands still run after cache restoration.

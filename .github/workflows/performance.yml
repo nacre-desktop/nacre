@@ -1,18 +1,22 @@
 name: Headless shell performance
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Shared hosted CPU/software rendering makes performance advisory.
+  schedule:
+    - cron: "17 2 * * *"
   workflow_dispatch:
     inputs:
       reference_revision:
         description: Optional ancestor; blank uses a same-source control
         type: string
         default: ""
+defaults:
+  run:
+    shell: nice -n 10 bash --noprofile --norc -e -o pipefail {0}
 permissions:
   contents: read
 jobs:
   shell:
+    continue-on-error: true
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     container: ghcr.io/archlinux/archlinux:latest
@@ -28,7 +32,7 @@ jobs:
       - name: Build the pinned engine for public color fixtures
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          cargo build --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
+          cargo build -j2 --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
       - name: Measure the reference in the same disposable runner
         if: github.event_name == 'workflow_dispatch'
         env:

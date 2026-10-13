@@ -721,9 +721,9 @@ additional static allowance per equivalent output and up to 10 MiB per warmed
 apps view. Multi-output, high-DPI, GIF, HDR and higher-resolution video need
 separate calibration; these are not GPU limits.
 
-The separate **Headless shell performance** workflow runs the full production
-shell in nested Niri on a pixman headless parent, exercises the full panel/video
-cycle and retains JSON artifacts. Mesa OpenGL software rendering is explicit;
+The advisory nightly/manual **Headless shell performance** workflow runs the full
+production shell in nested Niri on a pixman headless parent, exercises the full
+panel/video cycle and retains JSON artifacts. Mesa OpenGL software rendering is explicit;
 this profile is not comparable with the GPU lab reference. A calibration capture
 used 792 MiB fresh and 1238 MiB after video, so its generous regression ceilings
 are a separate `--budget-tier software`, rather than silently changing the GPU

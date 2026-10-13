@@ -1,0 +1,39 @@
+name: GPU compositor smoke
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: nice -n 10 bash --noprofile --norc -e -o pipefail {0}
+jobs:
+  hyprland:
+    # Hyprland needs a DRM render node/DMA-BUF; hosted VMs do not provide it.
+    runs-on: [self-hosted, linux, nacre-gpu]
+    continue-on-error: true
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          submodules: recursive
+      - name: Build the pinned candidate engine
+        run: cargo build -j2 --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
+      - name: Prepare a disposable checking environment
+        run: |
+          python -m venv "$RUNNER_TEMP/nacre-smoke-env"
+          "$RUNNER_TEMP/nacre-smoke-env/bin/python" - <<'PY'
+          import json, os, subprocess
+          pins = json.load(open("dependencies.lock.json"))["python"]
+          subprocess.run([os.environ["RUNNER_TEMP"] + "/nacre-smoke-env/bin/pip", "install", "./nacre/shell-cli", *[name + "==" + version for name, version in pins.items()]], check=True)
+          PY
+      - name: Fresh install in disposable headless Hyprland
+        run: |
+          export NACRE_ORIENT_BINARY="$PWD/deps/orient/target/release/orient"
+          PATH="$RUNNER_TEMP/nacre-smoke-env/bin:$PATH" python tools/tests/smoke_install.py --compositor hyprland --output "$RUNNER_TEMP/nacre-install-smoke-hyprland"
+      - name: Preserve GPU smoke evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fresh-install-hyprland
+          path: ${{ runner.temp }}/nacre-install-smoke-hyprland
+          retention-days: 7
