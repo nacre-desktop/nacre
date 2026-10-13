@@ -1,113 +1,97 @@
 # Install Nacre
 
-The intended user path is **install the binary packages, then run `nacre setup`**.
-The Arch package recipes are currently being validated; they have **not been
-published to the AUR**. Obtain tested binary packages from the maintainer. An AUR
-helper builds from source and therefore requires build tools; installing an
-already built `.pkg.tar.zst` with pacman does not.
+Use an updated Arch-based system with a working Wayland desktop. Arch package
+recipes are available, but **Nacre packages are not yet published to the AUR**.
+Obtain matching, tested binary archives from the maintainer. The tested Hyprland
+stack uses Hyprland 0.56.2 (Lua configuration), Quickshell 0.3.2, Qt 6.12 and UWSM.
+Upgrade the desktop and Qt together; avoid partial system upgrades.
 
-## Arch / CachyOS packages
+## Arch packages and setup
 
-Use a working, updated Arch-based system with a Wayland session. The currently
-supported desktop is Hyprland with its Lua configuration API and UWSM; the tested
-source stack is Hyprland 0.56.2, Quickshell 0.3.2 and Qt 6.12. Update the desktop
-and Qt packages together.
-
-Install the separately maintained `orient` package first, followed
-by the Nacre packages supplied for the same tested release:
+Install the separate Orient engine and Nacre core archives from the same tested
+release. In the directory containing the archives:
 
 ```sh
 sudo pacman -U orient-*.pkg.tar.zst nacre-0*.pkg.tar.zst
-# Optional; install either or both before selecting them in setup:
+# Optional, if you want both apps:
 sudo pacman -U nacre-ai-*.pkg.tar.zst nacre-brain-*.pkg.tar.zst
 nacre setup
 ```
 
-Pacman resolves repository dependencies. It installs shared code, fonts and
-compiled Dolphin/Thunar integrations system-wide. The optional packages provide
-AI and Brain code independently. Setup runs as your ordinary desktop user,
-without sudo, gcc, npm, Ruff, pip downloads or provider sign-in.
-
-The terminal wizard detects the system XKB keyboard settings, lets you confirm
-or change layout, variant, model and options, then selects the compositor,
-optional apps and profile. It prints the private files to deploy and asks before
-applying. Hyprland is available now; niri appears only when a complete packaged
-setup backend is ready. A custom profile is a validated JSON file; see
+Pacman installs shared code and resolves repository dependencies. Run setup as
+your ordinary user, without sudo. Binary installation needs no compiler, npm or
+Python package downloads. The wizard confirms keyboard layout, compositor,
+optional apps and profile, then shows the private files it will deploy and asks
+before applying. A custom profile is a validated JSON file; see
 [configuration](configuration.md).
 
-For unattended use, explicitly confirm the printed plan:
+For an explicit preview or unattended application:
 
 ```sh
-nacre setup --non-interactive --profile default --compositor hyprland \
-  --layout us --variant '' --yes
-nacre setup --non-interactive --profile default --with ai --with brain \
-  --layout no --plan
+nacre setup --non-interactive --profile default --compositor hyprland --layout us --plan
+nacre setup --non-interactive --profile default --compositor hyprland --layout us --yes
 ```
 
-`--plan` changes no configuration. `--yes` applies the plan. Without an explicit
-layout, non-interactive setup accepts the detected system layout, falling back
-to US when system settings are unavailable. An existing private keyboard override
-is always preserved. When no profile is specified, an installed profile is
-retained, including its assistant access preference; fresh profiles use
-workspace-only AI access. Selecting `--profile default` explicitly selects the
-public default profile.
+`--plan` writes no configuration; `--yes` applies. Without a layout, setup uses
+system XKB settings, falling back to US. Existing private keyboard overrides are
+preserved. Omitting `--profile` retains an installed profile; `--profile default`
+selects the public default with five workspaces and no startup apps or app routes.
+Optional app installation never signs in, downloads models or creates notes.
 
-Setup uses the existing configuration conflict checks and release snapshots.
 Local edits and foreign runtime links stop deployment before cutover. A failed
-apply restores the snapshot. It does not explicitly start, stop or reload your running
-desktop services: the result is recorded as **prepared**, not live-validated. Log out and
-back into the Hyprland/UWSM session, then open Welcome (`nacre-welcome`) and check
-displays, audio, network, keyboard and locking. Open the launcher with **Super+Space**
-and Settings with **Super+I**.
+apply restores its snapshot. Package setup prepares the next login; it does not
+restart your running desktop or certify it as tested. Save work, log out and
+select **Nacre (Hyprland)** or the existing UWSM-managed Hyprland session. Open
+Welcome with `nacre-welcome`, the launcher with Super+Space and Settings with
+Super+I. Check keyboard, displays, audio, network and lock/unlock.
 
-The default profile has five workspaces and no assigned apps or personal startup
-programs. Neither optional package signs into accounts, downloads models or
-creates personal notes during setup. See [optional apps](optional-apps.md).
+## Choosing Hyprland or niri
 
-## Package updates and recovery
+Choose **Hyprland** for the packaged setup path. Nacre also has an experimental
+**niri 26.04** backend with generated bindings and shell integration, but the
+packaged niri setup is not ready: `nacre setup --compositor niri` is
+currently rejected. Installing niri or selecting its session entry alone does
+not prepare Nacre for it.
 
-Upgrade the matching packages, then run `nacre setup` to review per-user changes.
-Existing keyboard, palette state, accounts, conversations and notes stay private.
-Use `nacre status` to inspect the current setup and `nacre rollback` to restore
-its private-file snapshot. Rollback refuses to overwrite later edits.
+For niri, start from a working Nacre/Hyprland installation and a source checkout
+with the [source prerequisites](contributing.md#build-tools). Follow the
+[separate login preparation guide](development/niri-testing.md#full-nacre-login-preparation-2026-10-13)
+and read [TTY recovery](recovery.md#recover-from-a-tty) before switching. This is
+a source-only preparation workflow, not the packaged wizard. Keep a working
+Hyprland session available. The prepared **Nacre (niri)** entry is managed
+by UWSM; do not start a second niri service. See [Nacre on niri](../README.md#nacre-on-niri)
+for feature limits and pending session checks.
 
-System package files remain pacman-owned. A setup rollback restores per-user
-configuration and runtime references; it cannot undo a pacman upgrade. Keep the
-previous package archives and downgrade matching packages with `pacman -U` if
-system code must also be restored. Source-based live deployment still uses its
-existing live health gates and rollback behavior.
+### Niri hover companion
 
-## Niri overview titles
-
-The optional **`nacre-niri`** companion supplies native overview hover metadata.
-It installs alongside the distribution's Niri, under `/usr/lib/nacre/niri`, and
-does not replace `/usr/bin/niri` or its session/resources. Install the matching
-tested archive before preparing a Nacre Niri session:
+The optional `nacre-niri` package adds window titles when hovering in native
+niri overview. Install its matching tested archive before preparing niri:
 
 ```sh
 sudo pacman -U nacre-niri-*.pkg.tar.zst
 ```
 
-Nacre's [Niri preparation](development/niri-testing.md#full-nacre-login-preparation-2026-10-13)
-automatically selects the system companion. Without it, source preparation builds,
-verifies and installs a private companion; Rust and Niri development libraries
-are needed only for that source path. Use `prepare --stock-niri` to skip this step.
-The shell negotiates hover support when connecting, so other users get the same
-title behavior when using the companion and the current Nacre shell. Saved agent
-chat names come from each user's own chat metadata; ordinary windows use their
-application title. No maintainer account or chat data is bundled.
+It installs under `/usr/lib/nacre/niri`, alongside `/usr/bin/niri`, without
+replacing the distribution's compositor. Nacre's separate preparation tool
+selects it automatically. Without a packaged or already verified private
+companion, source preparation builds and verifies one, requiring Rust and niri
+development libraries. Its `--stock-niri` option skips the companion; overview
+still works, but hover titles do not. The companion does not establish a complete
+login, unlock, idle or screen-sharing test. Package details are in the
+[Arch guide](../packaging/arch/README.md#niri-companion).
 
-The Niri backend's complete `nacre setup` wizard remains experimental and hidden;
-this companion does not certify lock/unlock, idle, portals or a complete login
-cycle. The package recipe is in [the Arch maintainer guide](../packaging/arch/README.md#niri-companion).
-Binary distribution/AUR publication follows the same release process as the
-other unpublished Nacre packages.
+## Updates
 
-## Source path for contributors
+Upgrade matching packages, then run `nacre setup` to review per-user changes.
+`nacre status` shows the current setup; `nacre rollback` restores the previous
+private-file snapshot and refuses to overwrite later edits. It cannot undo a
+pacman upgrade: retain previous archives if a matching package downgrade is
+needed. See [recovery and troubleshooting](recovery.md).
 
-Contributors need the [source-build tools](contributing.md#build-tools), including
-native compilers and development-only formatters. This path is also useful for
-reviewing changes before a package release:
+## Source installation
+
+Contributors need the [source build tools](contributing.md#build-tools). Clone
+the repository and initialize its pinned Orient dependency:
 
 ```sh
 git clone --recurse-submodules https://github.com/nacre-desktop/nacre.git
@@ -118,17 +102,8 @@ python3 nacre/shell-tools/provision.py
 ./install.sh --profile default --prepare /tmp/nacre-preview
 ```
 
-Use an empty prepare destination. From a running supported Hyprland session,
-apply a **committed, checked** candidate with:
-
-```sh
-./install.sh --profile default --apply
-# Optional apps:
-./install.sh --profile default --with ai --with brain --apply
-```
-
-Source deployment checks the source and live keyboard/desktop behavior before
-accepting an update. Failure restores the previous release. See
-[configuration](configuration.md), [usage](usage.md),
-[updates and recovery](recovery.md) and the
-[Arch package maintainer guide](../packaging/arch/README.md).
+The first install command prints a plan. `--prepare` stages an empty destination
+without changing the running desktop. From a supported Hyprland session, apply a
+committed, checked candidate with `./install.sh --profile default --apply`.
+For optional apps, add `--with ai` and/or `--with brain`. Source deployment uses
+live health checks and rollback; package setup only prepares files for next login.

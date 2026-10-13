@@ -1,27 +1,37 @@
 # Optional AI and Brain
 
-Install the `nacre-ai` and/or `nacre-brain` binary packages, then select them
-in the terminal wizard:
+Core Nacre works without AI or Brain. Install either or both matching binary
+packages, then select them in setup:
 
 ```sh
+sudo pacman -U nacre-ai-*.pkg.tar.zst nacre-brain-*.pkg.tar.zst
 nacre setup --with ai --with brain
 ```
 
-For source contributors, use `./install.sh --with ai --with brain --apply`.
-See [installation](installation.md) for package sources and non-interactive flags.
+For one app, install its archive and pass only its `--with` option. Source
+installs use `./install.sh --with ai --with brain --apply` after reviewing the
+plan. See [installation](installation.md) for prerequisites and package availability.
 
-AI connects your existing Codex/Claude installation and accounts to conversations
-and project tasks. Provider installation/sign-in is a separate user choice. The
-code-only component installer preserves existing accounts and running workers;
-it never copies somebody else's authentication. General profiles use workspace
-write access; full access is an explicit `aiFullAccess:true` profile preference.
+## AI
 
-Brain displays/searches a local Markdown vault. The default path is
-`~/Documents/Nacre-Brain`; `NACRE_BRAIN_DIR`/`NACRE_BRAIN` can select an existing
-vault. Installing the UI does not initialize a replacement vault or install a
-semantic model. Its optional local model setup is a separate choice. A separate
-instance can select `NACRE_BRAIN_PORT` rather than collide with an existing server.
+AI connects an existing Codex or Claude installation and its accounts to
+conversations and project tasks. Install and sign into your chosen provider
+separately, then use AI Settings to select it. Open the sidebar with Super+A or
+from the launcher. Installing Nacre's code does not sign in, copy authentication,
+download models or interrupt existing conversations. Codex defaults to write
+access in the task workspace and configured Brain vault; Claude uses its own
+permission prompts. `"aiFullAccess": true` is a profile opt-in for broader access.
 
-Both applications can be reopened from the launcher. Optional setup pages explain
-missing components instead of making the base desktop depend on them. Your
-accounts and memory remain yours when you update or remove application code.
+## Brain
+
+Brain browses and searches a local Markdown vault. Open it with Super+B or from
+the launcher; Super+N captures a note. The default vault is
+`~/Documents/Nacre-Brain`. Set `NACRE_BRAIN` to select an existing vault consistently
+across Brain and AI tools. `NACRE_BRAIN_DIR` overrides the Brain server's path only.
+Installation does not replace your vault
+or download a semantic model; optional local model setup is a separate choice.
+`NACRE_BRAIN_PORT` selects a different server port when needed.
+
+Setup explains missing optional components. Accounts, conversations and notes
+stay separate from application code and are preserved by managed code updates.
+Use [recovery and troubleshooting](recovery.md) for reports and logs.
