@@ -47,9 +47,10 @@ def environment():
         )
     env.update(compositor.environment_updates(env))
     env.setdefault("XDG_SESSION_TYPE", "wayland")
-    # Keep large image/video buffers independently releasable after idle unload.
-    # glibc's adaptive threshold otherwise retains them in native heap pools.
-    env.setdefault("MALLOC_MMAP_THRESHOLD_", "131072")
+    # Niri measurements favor independently releasable large image/video buffers.
+    # Keep Hyprland's adaptive allocation policy; the same override regressed it.
+    if compositor.backend_name == "niri":
+        env.setdefault("MALLOC_MMAP_THRESHOLD_", "131072")
     return env
 
 

@@ -137,14 +137,22 @@ ShellRoot {
         visible:true
         implicitWidth:64
         implicitHeight:48
-        NacreDesktopVideo {
-            id:video
+        readonly property var video:holder.item
+        Loader {
+            id:holder
             anchors.fill:parent
-            path:Qt.resolvedUrl("sample.mp4").toString().slice(7)
-            running:true
+            sourceComponent:Component {
+                NacreDesktopVideo {
+                    path:Qt.resolvedUrl("sample.mp4").toString().slice(7)
+                    running:false
+                }
+            }
+            onLoaded: if(!testClock.snapshot) item.running = true; else item.restoreState(testClock.snapshot)
         }
         Timer {
+            id:testClock
             property int step:0
+            property var snapshot:null
             property int savedPosition:0
             interval:50
             repeat:true
@@ -159,8 +167,16 @@ ShellRoot {
                 video.restoreState(snapshot);
                 step = 1;
             } else if(step === 1 && video.position >= savedPosition + 250) {
-                stop();video.running=false;
                 if(video.failure || video.playing || !video.audioDisabled) throw new Error("video did not pause");
+                snapshot = video.captureState();
+                holder.active = false;
+                step = 2;
+            } else if(step === 2 && !holder.item) {
+                holder.active = true;
+                step = 3;
+            } else if(step === 3 && video.frameReady && video.position >= snapshot.position - 100) {
+                stop();
+                if(video.failure || video.playing || !video.audioDisabled) throw new Error("paused video restore failed");
                 console.log("NACRE_VIDEO_FIRST_FRAME_PAUSE_OK");Qt.quit();
             }
         }
