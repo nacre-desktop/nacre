@@ -35,6 +35,7 @@ class LauncherPanelTests(unittest.TestCase):
                     )
                 )
                 (target / (name + ".qml")).write_text(source)
+            shutil.copy2(SHELL / "widgets/NacreIdleLoader.qml", target)
             (target / "extras").mkdir()
             stub = "import QtQuick\nItem {required property var visibilities;property bool detached:false;property bool closeAfterLaunch:false;property var menu:null;signal closeRequested;signal queryChanged;signal routeChanged;property string kind:KIND;property real viewportWidth:0;property real viewportHeight:0;implicitWidth:800;implicitHeight:300}"
             for mode, name in [

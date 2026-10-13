@@ -1,5 +1,4 @@
 import QtQuick
-import QtMultimedia
 
 Item {
     id: root
@@ -24,8 +23,8 @@ Item {
     }
     Loader {
         anchors.fill: parent
-        active: root.active
-        sourceComponent: root.entry?.animated ? animation : video
+        active: root.active && root.entry?.animated === true
+        sourceComponent: animation
     }
     Component {
         id: animation
@@ -36,24 +35,10 @@ Item {
             fillMode: Image.PreserveAspectCrop
         }
     }
-    Component {
-        id: video
-        Item {
-            VideoOutput {
-                id: output
-                anchors.fill: parent
-                fillMode: VideoOutput.PreserveAspectCrop
-            }
-            MediaPlayer {
-                source: "file://" + encodeURIComponent(root.entry.path).replace(/%2F/g, "/")
-                videoOutput: output
-                audioOutput: null
-                activeAudioTrack: -1
-                loops: MediaPlayer.Infinite
-                Component.onCompleted: play()
-                onMediaStatusChanged: if (mediaStatus === MediaPlayer.LoadedMedia && root.active)
-                    play()
-            }
-        }
+    Loader {
+        anchors.fill: parent
+        active: root.active && !root.entry?.animated
+        source: active ? Qt.resolvedUrl("NacreWallpaperVideo.qml") : ""
+        onLoaded: item.path = Qt.binding(() => root.entry?.path || "")
     }
 }

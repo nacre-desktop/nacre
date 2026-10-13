@@ -19,6 +19,28 @@ Item {
     readonly property int railWidth: width < 980 ? 180 : 210
     readonly property bool ready: NacreColorsApp.ready
     readonly property bool active: NacreColorsApp.visible
+    function captureState() {
+        return {
+            page: page,
+            query: query,
+            vision: vision,
+            fineTune: fineTune,
+            inspected: inspected,
+            scroll: canvas.contentY,
+            entries: entries.contentY
+        };
+    }
+    function restoreState(data) {
+        page = data.page || "studio";
+        query = data.query || "";
+        vision = data.vision || "normal";
+        fineTune = data.fineTune === true;
+        inspected = data.inspected || null;
+        Qt.callLater(() => {
+            canvas.contentY = data.scroll || 0;
+            entries.contentY = data.entries || 0;
+        });
+    }
     function search() {
         searchField.forceActiveFocus();
         searchField.selectAll();

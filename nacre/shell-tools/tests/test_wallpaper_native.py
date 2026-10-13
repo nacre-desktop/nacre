@@ -35,7 +35,11 @@ class WallpaperNativeTests(unittest.TestCase):
                     SHELL / "widgets" / (name + ".qml"),
                     target / "widgets" / (name + ".qml"),
                 )
-            for name in ("NacreWallpaperHex", "NacreWallpaperMotion"):
+            for name in (
+                "NacreWallpaperHex",
+                "NacreWallpaperMotion",
+                "NacreWallpaperVideo",
+            ):
                 shutil.copy2(
                     SHELL / "modules/launcher" / (name + ".qml"),
                     target / "launcher" / (name + ".qml"),

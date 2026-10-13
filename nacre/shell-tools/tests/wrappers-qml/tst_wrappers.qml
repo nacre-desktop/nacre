@@ -184,6 +184,13 @@ TestCase {
         };
         wait(10);
         compare(slots.filter(slot => slot.source.toString().length > 0).length, 2);
+        view.releaseDelay = 80;
+        view.finish();
+        tryVerify(() => slots.filter(slot => slot.source.toString().length > 0).length === 1, 1000);
+        compare(view.current.requestPath, second);
+        compare(view.current.status, Image.Ready);
+        record(view, "first.png");
+        tryCompare(view, "displayedPath", first, 1000);
     }
     function test_motion_policy_changes_do_not_publish_or_write() {
         const view = createTemporaryObject(scene, test);

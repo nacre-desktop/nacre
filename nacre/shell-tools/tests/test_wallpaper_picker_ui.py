@@ -59,6 +59,7 @@ class WallpaperPickerUITests(unittest.TestCase):
                 "NacreWallpaperPicker",
                 "NacreWallpaperHex",
                 "NacreWallpaperMotion",
+                "NacreWallpaperVideo",
             ):
                 source = (
                     (ROOT.parent / "shell/modules/launcher" / (name + ".qml"))

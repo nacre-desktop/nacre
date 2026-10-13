@@ -77,6 +77,13 @@ TestCase {id:test;name:"ColorsStudio";width:1300;height:1000;visible:true;when:w
  Component{id:mini;NacreThemePreview{width:400;height:280;palette:NacreColorsApp.preview.palette.colours}}
  function test_mini_desktop_children_stay_inside(){const preview=createTemporaryObject(mini,test);for(const h of [200,260,280,350]){preview.height=h;wait(10);verify(findChild(preview,"previewTerminal").visible);verify(findChild(preview,"previewNotification").visible);for(const child of preview.children){if(child.visible && child.width>0 && child.height>0)verify(child.y+child.height<=h+.1)}}}
  Component{id:studio;NacreColorsView{width:1180;height:780}}
+ function test_state_preserves_unsaved_view_choices_without_apply(){
+  const view=createTemporaryObject(studio,test);wait(30);
+  view.query="demo";view.page="accessibility";view.vision="deutan";view.fineTune=true;view.inspected={id:"inspection"};
+  const state=view.captureState();const initial=NacreColorsApp.actions.length;
+  const restored=createTemporaryObject(studio,test);restored.restoreState(state);wait(20);
+  compare(restored.query,"demo");compare(restored.page,"accessibility");compare(restored.vision,"deutan");verify(restored.fineTune);compare(restored.inspected.id,"inspection");compare(NacreColorsApp.actions.length,initial);
+ }
  function test_resize_and_preview_controls_are_read_only(){
   const view=createTemporaryObject(studio,test);wait(30);
   const initial=NacreColorsApp.actions.length;

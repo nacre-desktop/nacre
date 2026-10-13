@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Sample Nacre CPU/RSS, Python launches and IPC completion latency without sudo."""
+"""Sample Nacre CPU/RSS/PSS/USS, Python launches and IPC completion latency without sudo."""
 
 import argparse
 from collections import Counter
 import json
+import math
 import os
 from pathlib import Path
 import statistics
@@ -32,6 +33,47 @@ def process(pid, proc=Path("/proc")):
         return None
 
 
+def memory(pid, proc=Path("/proc")):
+    """Read resident memory; unavailable rollups are unknown, never zero."""
+    try:
+        fields = {}
+        for line in (proc / str(pid) / "smaps_rollup").read_text().splitlines():
+            parts = line.split()
+            if len(parts) == 3 and parts[2] == "kB":
+                fields[parts[0].rstrip(":")] = int(parts[1]) * 1024
+        return {
+            "rss": fields["Rss"],
+            "pss": fields["Pss"],
+            "uss": fields["Private_Clean"] + fields["Private_Dirty"],
+            "swap_pss": fields.get("SwapPss", 0),
+            "memory_error": None,
+        }
+    except (OSError, ValueError, KeyError) as error:
+        return {
+            "pss": None,
+            "uss": None,
+            "swap_pss": None,
+            "memory_error": type(error).__name__,
+        }
+
+
+def memory_sample(rows, shell_pid):
+    sample = {}
+    for metric in ("rss", "pss", "uss", "swap_pss"):
+        sample["shell_" + metric + "_mib"] = (
+            rows[shell_pid][metric] / 1048576
+            if rows[shell_pid].get(metric) is not None
+            else None
+        )
+        values = [row.get(metric) for row in rows.values()]
+        sample["all_" + metric + "_mib"] = (
+            sum(values) / 1048576
+            if all(value is not None for value in values)
+            else None
+        )
+    return sample
+
+
 def snapshot(shell_pid, proc=Path("/proc"), detached=True):
     rows = {
         row["pid"]: row
@@ -56,7 +98,17 @@ def snapshot(shell_pid, proc=Path("/proc"), detached=True):
                 for arg in row["args"]
             ):
                 selected.add(pid)
-    return {pid: rows[pid] for pid in selected if pid in rows}
+    result = {}
+    for pid in selected:
+        if pid not in rows:
+            continue
+        row = rows[pid]
+        row.update(memory(pid, proc))
+        # A process may exit or its PID may be reused while reading the rollup.
+        current = process(pid, proc)
+        if current and current["start"] == row["start"]:
+            result[pid] = row
+    return result
 
 
 def summarize(values):
@@ -66,7 +118,7 @@ def summarize(values):
     return {
         "mean": statistics.mean(values),
         "median": statistics.median(values),
-        "p95": ordered[min(len(values) - 1, int(len(values) * 0.95))],
+        "p95": ordered[min(len(values) - 1, math.ceil(len(values) * 0.95) - 1)],
         "max": max(values),
     }
 
@@ -80,7 +132,9 @@ def idle(shell_pid, duration, interval, spawn_log=None, detached=True):
     seen = {(pid, row["start"]) for pid, row in first.items()}
     previous = first
     cpu = {"shell": [], "all": []}
-    rss = {"shell": [], "all": []}
+    resident = {
+        metric: {"shell": [], "all": []} for metric in ("rss", "pss", "uss", "swap_pss")
+    }
     names = Counter()
     spawns = [0] * max(1, int((duration + 59) // 60))
     samples = []
@@ -119,8 +173,7 @@ def idle(shell_pid, duration, interval, spawn_log=None, detached=True):
             / ticks_per_second
             / (now - before)
             * 100,
-            "shell_rss_mib": rows[shell_pid]["rss"] / 1048576,
-            "all_rss_mib": sum(row["rss"] for row in rows.values()) / 1048576,
+            **memory_sample(rows, shell_pid),
             "processes": [
                 {
                     "pid": pid,
@@ -130,7 +183,13 @@ def idle(shell_pid, duration, interval, spawn_log=None, detached=True):
                     / ticks_per_second
                     / (now - before)
                     * 100,
-                    "rss_mib": row["rss"] / 1048576,
+                    **{
+                        metric + "_mib": row[metric] / 1048576
+                        if row.get(metric) is not None
+                        else None
+                        for metric in resident
+                    },
+                    "memory_error": row["memory_error"],
                 }
                 for pid, row in rows.items()
             ],
@@ -138,7 +197,10 @@ def idle(shell_pid, duration, interval, spawn_log=None, detached=True):
         samples.append(sample)
         for scope in cpu:
             cpu[scope].append(sample[scope + "_cpu_percent"])
-            rss[scope].append(sample[scope + "_rss_mib"])
+            for metric in resident:
+                value = sample[scope + "_" + metric + "_mib"]
+                if value is not None:
+                    resident[metric][scope].append(value)
         previous, before = rows, now
     coverage = (
         "sampled lower bound; processes shorter than sample interval may be missed"
@@ -156,7 +218,14 @@ def idle(shell_pid, duration, interval, spawn_log=None, detached=True):
         "duration_s": before - start,
         "interval_s": interval,
         "cpu_percent_one_core": {key: summarize(value) for key, value in cpu.items()},
-        "rss_mib": {key: summarize(value) for key, value in rss.items()},
+        **{
+            metric + "_mib": {key: summarize(value) for key, value in scopes.items()}
+            for metric, scopes in resident.items()
+        },
+        "memory_valid_samples": {
+            metric: {key: len(value) for key, value in scopes.items()}
+            for metric, scopes in resident.items()
+        },
         "python_spawns_per_minute": spawns,
         "spawn_coverage": coverage,
         "process_names": sorted(names),
@@ -235,7 +304,7 @@ def main():
     if args.duration <= 0 or args.interval <= 0 or args.repeats <= 0:
         parser.error("duration, interval and repeats must be positive")
     report = {
-        "version": 1,
+        "version": 2,
         "date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "shell_pid": args.pid,
         "scope": "shell descendants"

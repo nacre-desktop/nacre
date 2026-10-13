@@ -13,11 +13,11 @@ FloatingWindow {
     implicitHeight: Math.min(760, Math.max(540, (screen?.height || 1200) * .70))
     color: NacreTokens.body
     updatesEnabled: NacreWelcomeApp.active
-    readonly property alias view: view
+    readonly property var view: content.item
     function activate() {
         minimized = false;
         contentItem.Window.window?.requestActivate();
-        view.forceActiveFocus();
+        view?.forceActiveFocus();
     }
     Component.onCompleted: {
         NacreWelcomeApp.window = root;
@@ -42,17 +42,21 @@ FloatingWindow {
             })[NacreWelcomeApp.page] || ""
         onMoveRequested: root.contentItem.Window.window.startSystemMove()
     }
-    NacreWelcomeView {
-        id: view
+    NacreIdleLoader {
+        id: content
+        wanted: NacreWelcomeApp.visible
+        preserveState: true
         x: 24
         y: 80
         width: parent.width - 48
         height: parent.height - 96
+        sourceComponent: NacreWelcomeView {}
     }
     Repeater {
-        // Four bounded full-size stills, only while the tour is active. These use
-        // the same decode dimensions as the background, so clicks reuse the pixels.
-        model: NacreWelcomeApp.active ? NacreWelcomeApp.demoEntries : []
+        // Warm the four background-sized stills only while their demo is shown.
+        // The opening/help pages do not use them; clicks in the demo reuse pixels.
+        objectName: "welcomePosterPreloads"
+        model: NacreWelcomeApp.active && NacreWelcomeApp.page === "colors" ? NacreWelcomeApp.demoEntries : []
         Image {
             required property var modelData
             visible: false
