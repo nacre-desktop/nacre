@@ -119,7 +119,10 @@ def state(home=None):
         or (owned and compositor.backend_name == "niri"),
         "nightLightReason": ""
         if available
-        else "Requires a controller and output gamma control.",
+        else tr(
+            "ui.compositor.requires-gamma-controller",
+            "Requires a controller and output gamma control.",
+        ),
         "nightLightExternal": (active and not owned)
         or (supported and configured_elsewhere(home))
         or (supported and unmanaged_socket(active)),

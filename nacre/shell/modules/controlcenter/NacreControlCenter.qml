@@ -167,7 +167,7 @@ FocusScope {
                             Layout.minimumWidth: 0
                             label: NacreI18n.tr("controlcenter.control-center.label.night-light", "Night light")
                             icon: "nightlight"
-                            detail: !NacreControlTools.data.nightLightSupported ? (NacreControlTools.data.nightLightReason || "Unavailable") : NacreControlTools.data.nightLightExternal ? NacreI18n.tr("controlcenter.control-center.detail.external", "External") : NacreControlTools.data.nightLightEnabled ? NacreI18n.tr("controlcenter.control-center.detail.warm", "Warm") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off")
+                            detail: !NacreControlTools.data.nightLightSupported ? (NacreControlTools.data.nightLightReason || NacreI18n.tr("ui.compositor.unavailable", "Unavailable")) : NacreControlTools.data.nightLightExternal ? NacreI18n.tr("controlcenter.control-center.detail.external", "External") : NacreControlTools.data.nightLightEnabled ? NacreI18n.tr("controlcenter.control-center.detail.warm", "Warm") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off")
                             enabled: NacreControlTools.data.nightLightSupported === true && !NacreControlTools.busy && !NacreControlTools.data.nightLightExternal
                             selected: NacreControlTools.data.nightLightEnabled === true
                             onClicked: NacreControlTools.toggleNightLight()

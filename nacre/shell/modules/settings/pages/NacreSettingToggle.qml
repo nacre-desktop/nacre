@@ -35,7 +35,7 @@ Item {
         x: 42
         width: Math.max(0, parent.width - 42)
         anchors.verticalCenter: parent.verticalCenter
-        text: root.label + (root.setting === "livePreviews" && !root.enabled ? " — unavailable on this compositor" : "")
+        text: root.label + (root.setting === "livePreviews" && !root.enabled ? NacreI18n.tr("ui.compositor.unavailable-suffix", " — unavailable on this compositor") : "")
         wrapMode: Text.Wrap
         font.pointSize: 11
     }
