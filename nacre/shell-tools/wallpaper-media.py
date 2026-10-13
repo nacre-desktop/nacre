@@ -679,12 +679,22 @@ def select(path):
         except (OSError, ValueError, KeyError):
             prepared = False
     if not prepared:
-        subprocess.run(
-            [
-                str(HOME / ".local/bin/nacre-shell"),
-                "wallpaper-image",
+        legacy = HOME / ".local/bin/nacre-shell"
+        bridge = HOME / ".local/share/nacre/shell/bin/nacre_shell"
+        if not bridge.is_file():
+            bridge = Path(__file__).with_name("cli-bridge.sh")
+        command = (
+            [str(legacy), "wallpaper-image", item["poster"]]
+            if legacy.is_file()
+            else [
+                str(bridge),
+                "wallpaper",
+                "--file",
                 item["poster"],
-            ],
+            ]
+        )
+        subprocess.run(
+            command,
             check=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,

@@ -244,6 +244,49 @@ class WallpaperMediaTests(unittest.TestCase):
                     1234000,
                 )
 
+    def test_prepared_install_uses_palette_bridge_when_desktop_wrapper_is_absent(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            source = home / "image.png"
+            Image.new("RGB", (32, 24), "red").save(source)
+            bridge = home / ".local/share/nacre/shell/bin/nacre_shell"
+            bridge.parent.mkdir(parents=True)
+            bridge.touch()
+            with (
+                patch.object(media, "HOME", home),
+                patch.object(media, "STATE", home / "state"),
+                patch.object(media, "CACHE", home / "cache"),
+                patch.object(media.subprocess, "run") as run,
+            ):
+                media.select(source)
+                self.assertEqual(
+                    run.call_args.args[0],
+                    [
+                        str(home / ".local/share/nacre/shell/bin/nacre_shell"),
+                        "wallpaper",
+                        "--file",
+                        str(source),
+                    ],
+                )
+                bridge.unlink()
+                media.select(source)
+                self.assertEqual(
+                    run.call_args.args[0],
+                    [
+                        str(Path(media.__file__).with_name("cli-bridge.sh")),
+                        "wallpaper",
+                        "--file",
+                        str(source),
+                    ],
+                )
+                legacy = home / ".local/bin/nacre-shell"
+                legacy.parent.mkdir(parents=True)
+                legacy.touch()
+                media.select(source)
+                self.assertEqual(
+                    run.call_args.args[0], [str(legacy), "wallpaper-image", str(source)]
+                )
+
     def test_failed_palette_commit_does_not_publish_media_state(self):
         with (
             tempfile.TemporaryDirectory() as folder,
