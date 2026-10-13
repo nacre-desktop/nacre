@@ -1,0 +1,8 @@
+{
+  "helper": "display-recover",
+  "args": [
+    "{}",
+    "--queue"
+  ],
+  "stdout": "text"
+}

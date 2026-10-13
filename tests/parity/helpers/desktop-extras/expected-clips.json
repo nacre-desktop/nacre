@@ -1,0 +1,56 @@
+{
+  "stdout": {
+    "action": "clips",
+    "result": [
+      {
+        "id": "1",
+        "title": "Public clipboard",
+        "image": false,
+        "thumbnail": "",
+        "pinned": false
+      },
+      {
+        "id": "2",
+        "title": "Other text",
+        "image": false,
+        "thumbnail": "",
+        "pinned": false
+      }
+    ],
+    "query": ""
+  },
+  "exit": 0,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell/extras": {
+      "mode": "0o700",
+      "directory": true
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "cliphist",
+      "argv": [
+        "list"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

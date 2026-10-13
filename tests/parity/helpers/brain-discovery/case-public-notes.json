@@ -1,0 +1,8 @@
+{
+  "helper": "brain-discovery",
+  "args": [
+    "organize",
+    "{\"args\": [[{\"id\": \"note:demo\", \"label\": \"Public fixture\", \"text\": \"# Public fixture\\nUseful public docs\", \"path\": \"inbox/demo.md\", \"meta\": {\"worlds\": \"Demo\", \"topics\": \"fixture\"}, \"date\": \"2026-10-01\", \"recorded\": \"2026-10-01T12:00:00+00:00\", \"activity\": 1, \"revision\": \"one\", \"references\": []}]]}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py brain/discovery.py"
+}

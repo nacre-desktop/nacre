@@ -1,0 +1,17 @@
+{
+  "stdout": "",
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 1, \"operation\": \"constants\", \"payload\": {}}\n"
+    }
+  ],
+  "ipc": []
+}

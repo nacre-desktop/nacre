@@ -1,0 +1,8 @@
+{
+  "helper": "brain-auth",
+  "args": [
+    "private_write",
+    "{\"args\": [{\"$path\": \"{home}/auth/public.json\"}, \"{\\\"fixture\\\":\\\"public\\\"}\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py brain/auth.py"
+}

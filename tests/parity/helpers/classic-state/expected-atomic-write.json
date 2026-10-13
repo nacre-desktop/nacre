@@ -1,0 +1,21 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/demo.txt": {
+      "mode": "0o600",
+      "text": "public fixture"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

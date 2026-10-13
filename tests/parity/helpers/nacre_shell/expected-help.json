@@ -1,0 +1,17 @@
+{
+  "stdout": "usage: python3 -m nacre_shell [-h] [-v] {scheme,wallpaper} ...\n\nOrient: Nacre wallpaper and palette engine\n\npositional arguments:\n  {scheme,wallpaper}\n    scheme            manage the colour scheme\n    wallpaper         manage the wallpaper\n\noptions:\n  -h, --help          show this help message and exit\n  -v, --version       show program's version number and exit\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 1, \"operation\": \"constants\", \"payload\": {}}\n"
+    }
+  ],
+  "ipc": []
+}

@@ -1,0 +1,7 @@
+{
+  "helper": "composer",
+  "args": [
+    "load"
+  ],
+  "stdin": "{\"key\":\"demo\"}\n"
+}

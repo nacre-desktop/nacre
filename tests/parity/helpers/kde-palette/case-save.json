@@ -1,0 +1,8 @@
+{
+  "helper": "kde-palette",
+  "args": [
+    "save",
+    "{\"args\": [{\"$path\": \"{home}/.config/demo.ini\"}, \"[General]\\nName=Fixture\\n\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/kde-palette.py"
+}

@@ -1,0 +1,11 @@
+{
+  "helper": "nacre-ai",
+  "args": [
+    "projects"
+  ],
+  "command": "python3 bin/nacre-ai",
+  "stdout": "text",
+  "fixtures": {
+    "home/.config/nacre/ai/projects.json": "{\"projects\":[{\"id\":\"demo\",\"label\":\"Public demo\",\"path\":\"/case/home/demo\"}]}"
+  }
+}

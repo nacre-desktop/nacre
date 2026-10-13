@@ -1,0 +1,10 @@
+{
+  "stdout": {
+    "error": "Select a local image, GIF or video"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

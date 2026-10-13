@@ -1,0 +1,8 @@
+{
+  "helper": "branding",
+  "args": [
+    "svg",
+    "{\"args\": [], \"kwargs\": {\"variant\": \"symbolic\"}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/branding.py"
+}

@@ -1,0 +1,8 @@
+{
+  "helper": "nacre-ai-usage",
+  "args": [
+    "number",
+    "{\"args\": [\"NaN\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py bin/nacre-ai-usage"
+}

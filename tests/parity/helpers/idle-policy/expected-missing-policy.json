@@ -1,0 +1,21 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/hypridle.local.conf": {
+      "mode": "0o600",
+      "text": "# Optional idle listeners. No idle timeout configured.\n"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

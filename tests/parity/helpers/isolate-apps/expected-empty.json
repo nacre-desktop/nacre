@@ -1,0 +1,17 @@
+{
+  "stdout": "Protected application processes: 0\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "clients",
+        "-j"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

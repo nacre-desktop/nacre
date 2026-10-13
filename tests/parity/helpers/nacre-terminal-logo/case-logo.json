@@ -1,0 +1,11 @@
+{
+  "helper": "nacre-terminal-logo",
+  "args": [],
+  "command": "bash bin/nacre-terminal-logo",
+  "stdout": "text",
+  "fixtures": {
+    "home/.local/share/nacre/shell/tools/terminal-branding.py": {
+      "link": "/repo/nacre/shell-tools/terminal-branding.py"
+    }
+  }
+}

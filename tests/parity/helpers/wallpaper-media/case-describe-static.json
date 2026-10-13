@@ -1,0 +1,14 @@
+{
+  "helper": "wallpaper-media",
+  "args": [
+    "describe",
+    "{\"args\": [\"{home}/demo.png\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/wallpaper-media.py",
+  "fixtures": {
+    "home/demo.png": {
+      "base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAD0lEQVR4nGNQjlr1YZUuAAmUAu/5C1xEAAAAAElFTkSuQmCC",
+      "mtime": 1700000000
+    }
+  }
+}

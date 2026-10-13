@@ -1,0 +1,12 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {
+    "home/runtime": {
+      "link": "/case/home/builds/candidate"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,12 @@
+{
+  "helper": "nacre-brain",
+  "args": [
+    "search",
+    "Public"
+  ],
+  "command": "python3 bin/nacre-brain",
+  "stdout": "text",
+  "fixtures": {
+    "home/Documents/Nacre-Brain/inbox/demo.md": "# Public fixture\nPublic content\n"
+  }
+}

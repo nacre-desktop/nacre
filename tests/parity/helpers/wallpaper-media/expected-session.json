@@ -1,0 +1,22 @@
+{
+  "stdout": {
+    "locked": false,
+    "path": ""
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "loginctl",
+      "argv": [
+        "show-user",
+        "1000",
+        "--property=Display",
+        "--value"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

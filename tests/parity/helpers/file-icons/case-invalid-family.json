@@ -1,0 +1,8 @@
+{
+  "helper": "file-icons",
+  "args": [
+    "family",
+    "{\"args\": [\"bad\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/file-icons.py"
+}

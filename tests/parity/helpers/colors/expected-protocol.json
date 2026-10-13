@@ -1,0 +1,45 @@
+{
+  "stdout": [
+    {
+      "ready": true
+    },
+    {
+      "sequence": 1,
+      "error": "Choose a local wallpaper"
+    },
+    {
+      "sequence": -1,
+      "error": "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+    },
+    {
+      "sequence": true,
+      "error": "Invalid preview sequence"
+    },
+    {
+      "sequence": 2,
+      "error": "Invalid color request"
+    }
+  ],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 1, \"operation\": \"constants\", \"payload\": {}}\n"
+    },
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 2, \"operation\": \"background_policy\", \"payload\": {\"personality\": \"natural\", \"background_from_wallpaper\": null}}\n"
+    }
+  ],
+  "ipc": []
+}

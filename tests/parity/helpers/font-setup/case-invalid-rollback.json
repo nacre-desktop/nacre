@@ -1,0 +1,8 @@
+{
+  "helper": "font-setup",
+  "args": [
+    "--rollback",
+    "../escape"
+  ],
+  "stdout": "text"
+}

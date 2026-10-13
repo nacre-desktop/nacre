@@ -1,0 +1,46 @@
+{
+  "stdout": [
+    [
+      {
+        "id": "demo",
+        "label": "Demo",
+        "aliases": [
+          "Demo"
+        ],
+        "origin": "annotated",
+        "category": null,
+        "path": null,
+        "members": {
+          "note:demo": {
+            "reason": "annotation",
+            "score": 1
+          }
+        },
+        "topics": [
+          {
+            "id": "demo:tag-fixture",
+            "label": "fixture",
+            "parent": "demo",
+            "members": [
+              "note:demo"
+            ],
+            "origin": "annotated",
+            "category": null
+          }
+        ],
+        "parent": null
+      }
+    ],
+    {
+      "discovered": [],
+      "promoted": [],
+      "review": 0,
+      "method": "lexical fallback"
+    }
+  ],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

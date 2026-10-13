@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "Note is outside the managed Markdown vault",
+    "type": "ValueError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

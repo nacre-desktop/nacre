@@ -1,0 +1,8 @@
+{
+  "helper": "lock-prepare",
+  "args": [
+    "atomic",
+    "{\"args\": [{\"$path\": \"{home}/.cache/nacre/lock.json\"}, \"public fixture\"]}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/lock-prepare.py"
+}

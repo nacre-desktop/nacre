@@ -1,0 +1,142 @@
+{
+  "stdout": {
+    "data": {
+      "animations": true,
+      "blur": true,
+      "shadow": true,
+      "followMouse": true,
+      "naturalScroll": true,
+      "gapsIn": 6,
+      "gapsOut": 12,
+      "borderSize": 1,
+      "rounding": 10,
+      "frameWidth": 10,
+      "frameRounding": 25,
+      "frameSheen": true,
+      "workspaceWindowHints": true,
+      "detachablePanels": true,
+      "dragPanels": true,
+      "topEdge": true,
+      "clickEdgeMenus": false,
+      "leftEdge": true,
+      "rightEdge": true,
+      "bottomEdge": true,
+      "leftDrawer": true,
+      "livePreviews": true,
+      "nativePalette": true,
+      "nativeOverview": true,
+      "nativeClipboard": true,
+      "dnd": false,
+      "lockMedia": true,
+      "lockWeather": true,
+      "lockNotifications": true,
+      "lockNotificationContents": false,
+      "weatherLocation": "",
+      "weatherFahrenheit": false,
+      "interfaceFont": "",
+      "language": "system"
+    },
+    "error": "not enough values to unpack (expected 2, got 1)",
+    "pending": false
+  },
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/desktop.lock": {
+      "mode": "0o644",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "getoption",
+        "decoration.shadow.enabled",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "getoption",
+        "input.follow_mouse",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "getoption",
+        "general.border_size",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "getoption",
+        "decoration.rounding",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "getoption",
+        "general.gaps_out",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "getoption",
+        "general.gaps_in",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "getoption",
+        "input.touchpad.natural_scroll",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "getoption",
+        "decoration.blur.enabled",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "getoption",
+        "animations.enabled",
+        "-j"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

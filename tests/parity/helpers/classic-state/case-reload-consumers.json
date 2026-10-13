@@ -1,0 +1,18 @@
+{
+  "helper": "classic-state",
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/classic-state.py",
+  "args": [
+    "_reload_desktop_consumers",
+    "{\"args\": [{\"mode\": \"dark\"}, \"Fixture Icons\", \"hl.config({})\", true]}"
+  ],
+  "commands": {
+    "gsettings": [
+      {}
+    ],
+    "hyprctl": [
+      {
+        "stdout": "ok\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "stdout": null,
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "checkupdates",
+      "argv": [],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

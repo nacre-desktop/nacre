@@ -1,0 +1,17 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/demo.ini": {
+      "mode": "0o600",
+      "text": "[General]\nName=Fixture\n"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

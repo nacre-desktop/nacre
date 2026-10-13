@@ -1,0 +1,30 @@
+{
+  "helper": "nacre_shell",
+  "args": [
+    "wallpaper",
+    "--file",
+    "/case/home/demo.mp4"
+  ],
+  "command": "python3 -m nacre_shell",
+  "stdout": "text",
+  "fixtures": {
+    "home/demo.mp4": {
+      "text": "public fake video",
+      "mtime": 1700000000
+    }
+  },
+  "native_engine": true,
+  "commands": {
+    "ffprobe": [
+      {
+        "code": 1,
+        "stderr": "fixture probe failed\n"
+      }
+    ],
+    "ffmpeg": [
+      {
+        "code": 1
+      }
+    ]
+  }
+}

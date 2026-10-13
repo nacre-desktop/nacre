@@ -1,0 +1,19 @@
+{
+  "stdout": {
+    "install": [
+      "IBMPlexSans.ttf",
+      "IBMPlexSans-OFL.txt",
+      "MaterialSymbolsRounded.ttf",
+      "MaterialSymbols-LICENSE.txt"
+    ],
+    "groups": [
+      "material",
+      "plex"
+    ]
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,41 @@
+{
+  "stdout": null,
+  "exit": 1,
+  "files": {
+    "home/.cache": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre/wallpaper-media": {
+      "mode": "0o755",
+      "directory": true
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "ffmpeg",
+      "argv": [
+        "-nostdin",
+        "-v",
+        "error",
+        "-threads",
+        "2",
+        "-i",
+        "/case/home/demo.mp4",
+        "-frames:v",
+        "1",
+        "-vf",
+        "scale=1920:1080:force_original_aspect_ratio=decrease",
+        "-y",
+        "<temp-path>"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

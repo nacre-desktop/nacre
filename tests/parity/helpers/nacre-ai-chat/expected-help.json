@@ -1,0 +1,8 @@
+{
+  "stdout": "usage: nacre-ai-chat [-h] [--thread-id THREAD_ID] [--project PROJECT]\n                     [--path PATH] [--chat-directory] [--account ACCOUNT]\n                     {title,list,resume,serve,configure} [name]\n\nRead chat titles and name the current chat through Codex's local protocol.\n\npositional arguments:\n  {title,list,resume,serve,configure}\n  name\n\noptions:\n  -h, --help            show this help message and exit\n  --thread-id THREAD_ID\n  --project PROJECT\n  --path PATH\n  --chat-directory\n  --account ACCOUNT\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

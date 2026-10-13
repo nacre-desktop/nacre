@@ -1,0 +1,8 @@
+{
+  "helper": "lock-dashboard",
+  "args": [
+    "rgb",
+    "{\"args\": [\"#224466\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/lock-dashboard.py"
+}

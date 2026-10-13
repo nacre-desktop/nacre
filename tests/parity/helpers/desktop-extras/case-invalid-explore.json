@@ -1,0 +1,7 @@
+{
+  "helper": "desktop-extras",
+  "args": [
+    "explore"
+  ],
+  "stdin": "{\"path\":\"../escape.md\"}\n"
+}

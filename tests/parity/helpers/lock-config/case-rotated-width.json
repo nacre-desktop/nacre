@@ -1,0 +1,8 @@
+{
+  "helper": "lock-config",
+  "args": [
+    "output_width",
+    "{\"args\": [{\"width\": 1920, \"height\": 1080, \"transform\": 1}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/lock-config.py"
+}

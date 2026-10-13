@@ -1,0 +1,21 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {
+    "home/.cache": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.cache/nacre/lock.json": {
+      "mode": "0o600",
+      "text": "public fixture"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

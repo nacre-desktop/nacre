@@ -1,0 +1,16 @@
+{
+  "stdout": [
+    [],
+    {
+      "discovered": [],
+      "promoted": [],
+      "review": 0,
+      "method": "lexical fallback"
+    }
+  ],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

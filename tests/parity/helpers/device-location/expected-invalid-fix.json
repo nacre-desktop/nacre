@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "Device location is too imprecise",
+    "type": "ValueError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,16 @@
+{
+  "helper": "brain-provision-semantic",
+  "args": [],
+  "command": "python3 brain/provision-semantic.py",
+  "stdout": "text",
+  "fixtures": {
+    "home/.local/share/nacre/brain-model/bin/python": {
+      "link": "/case/bin/model-python"
+    }
+  },
+  "commands": {
+    "model-python": [
+      {}
+    ]
+  }
+}

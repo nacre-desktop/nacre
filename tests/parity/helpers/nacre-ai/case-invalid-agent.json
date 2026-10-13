@@ -1,0 +1,10 @@
+{
+  "helper": "nacre-ai",
+  "args": [
+    "projects",
+    "--agent",
+    "bad"
+  ],
+  "command": "python3 bin/nacre-ai",
+  "stdout": "text"
+}

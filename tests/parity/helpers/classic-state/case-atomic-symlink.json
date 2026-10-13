@@ -1,0 +1,11 @@
+{
+  "helper": "classic-state",
+  "args": [
+    "atomic_symlink",
+    "{\"args\": [{\"$path\": \"{home}/.config/demo\"}, {\"$path\": \"{home}/target\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/classic-state.py",
+  "fixtures": {
+    "home/target": "public fixture"
+  }
+}

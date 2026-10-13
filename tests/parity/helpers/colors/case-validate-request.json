@@ -1,0 +1,15 @@
+{
+  "helper": "colors",
+  "args": [
+    "validate_request",
+    "{\"args\": [{\"image\": \"{home}/demo.png\", \"mode\": \"dark\", \"hour\": 12}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/colors.py",
+  "fixtures": {
+    "home/demo.png": {
+      "base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAD0lEQVR4nGNQjlr1YZUuAAmUAu/5C1xEAAAAAElFTkSuQmCC",
+      "mtime": 1700000000
+    }
+  },
+  "native_engine": true
+}

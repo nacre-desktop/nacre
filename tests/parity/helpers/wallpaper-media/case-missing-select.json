@@ -1,0 +1,7 @@
+{
+  "helper": "wallpaper-media",
+  "args": [
+    "select",
+    "/case/home/missing.png"
+  ]
+}

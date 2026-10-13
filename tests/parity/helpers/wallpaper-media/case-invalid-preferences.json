@@ -1,0 +1,7 @@
+{
+  "helper": "wallpaper-media",
+  "args": [
+    "preferences"
+  ],
+  "stdin": "{\"rotationMinutes\":1}\n"
+}

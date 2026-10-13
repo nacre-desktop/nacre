@@ -1,0 +1,21 @@
+{
+  "stdout": "",
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "python",
+      "argv": [
+        "-m",
+        "pip",
+        "install",
+        "fastembed==0.8.1",
+        "onnxruntime==1.30.0",
+        "tokenizers==0.23.2"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

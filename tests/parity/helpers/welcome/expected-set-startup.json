@@ -1,0 +1,52 @@
+{
+  "stdout": {
+    "shortcuts": [],
+    "shortcutError": "Shortcuts are available when running inside your Hyprland session.",
+    "preferences": {
+      "version": 1,
+      "showAtLogin": false
+    },
+    "available": {
+      "ai": false,
+      "brain": false
+    }
+  },
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/welcome.json": {
+      "mode": "0o600",
+      "text": "{\n  \"version\": 1,\n  \"showAtLogin\": false\n}\n"
+    },
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/welcome": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/welcome/owner.lock": {
+      "mode": "0o644",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

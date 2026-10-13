@@ -1,0 +1,14 @@
+{
+  "helper": "colors",
+  "args": [
+    "preview"
+  ],
+  "stdin": "{\"image\":\"/case/home/demo.png\",\"mode\":\"invalid\",\"hour\":12}\n",
+  "fixtures": {
+    "home/demo.png": {
+      "base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAD0lEQVR4nGNQjlr1YZUuAAmUAu/5C1xEAAAAAElFTkSuQmCC",
+      "mtime": 1700000000
+    }
+  },
+  "native_engine": true
+}

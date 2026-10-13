@@ -1,0 +1,8 @@
+{
+  "helper": "lock-config",
+  "args": [
+    "render",
+    "{\"args\": [{}, \"bad\\npath\", {}, \"helper\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/lock-config.py"
+}

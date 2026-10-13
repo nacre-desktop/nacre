@@ -1,0 +1,13 @@
+{
+  "helper": "thunar-files",
+  "args": [
+    "setup",
+    "{\"args\": [{}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/thunar-files.py",
+  "commands": {
+    "xfconf-query": [
+      {}
+    ]
+  }
+}

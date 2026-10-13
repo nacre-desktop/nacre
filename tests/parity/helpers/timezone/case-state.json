@@ -1,0 +1,20 @@
+{
+  "helper": "timezone",
+  "args": [
+    "state"
+  ],
+  "commands": {
+    "timedatectl": [
+      {
+        "stdout": "UTC\n"
+      }
+    ]
+  },
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/localTime",
+      "reason": "localized wall-clock display datetime.now(ZoneInfo(zone))"
+    }
+  ]
+}

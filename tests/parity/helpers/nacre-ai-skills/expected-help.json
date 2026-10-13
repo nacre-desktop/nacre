@@ -1,0 +1,8 @@
+{
+  "stdout": "usage: nacre-ai-skills [-h] [--install] [--repo REPO]\n                       [--claude-home CLAUDE_HOME] [--codex-home CODEX_HOME]\n\nInstall pinned shared skills, or expose the existing library to an account.\n\noptions:\n  -h, --help            show this help message and exit\n  --install\n  --repo REPO\n  --claude-home CLAUDE_HOME\n  --codex-home CODEX_HOME\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,14 @@
+{
+  "stdout": {},
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "wl-copy",
+      "argv": [],
+      "stdin": "Public copy"
+    }
+  ],
+  "ipc": []
+}

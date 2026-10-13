@@ -1,0 +1,37 @@
+{
+  "stdout": {
+    "current": "",
+    "entries": [],
+    "favorites": [],
+    "history": [],
+    "choices": {},
+    "exports": "/case/home/Documents/Nacre Colors"
+  },
+  "exit": 0,
+  "files": {
+    "home/Pictures": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/Pictures/Wallpapers": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/Pictures/Wallpapers/Dynamic": {
+      "mode": "0o755",
+      "directory": true
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 1, \"operation\": \"constants\", \"payload\": {}}\n"
+    }
+  ],
+  "ipc": []
+}

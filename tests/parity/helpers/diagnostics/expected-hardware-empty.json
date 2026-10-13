@@ -1,0 +1,16 @@
+{
+  "stdout": {
+    "formFactor": "unknown",
+    "chassisType": null,
+    "battery": false,
+    "backlight": false,
+    "bluetooth": false,
+    "wifi": false,
+    "ethernet": false
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

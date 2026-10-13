@@ -1,0 +1,41 @@
+{
+  "stdout": {
+    "kind": "static",
+    "layout": "carousel",
+    "paused": false,
+    "motionMode": "full",
+    "pauseCovered": true,
+    "rotationEnabled": false,
+    "rotationMinutes": 45,
+    "rotationKind": "all",
+    "rotationShuffle": true,
+    "palettePreset": "wallpaper",
+    "paletteMode": "light",
+    "paletteHarmony": false,
+    "palettePersonality": "natural",
+    "paletteBackgroundFromWallpaper": false,
+    "rotationAnchorMs": "<timestamp>"
+  },
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/wallpaper-picker.json": {
+      "mode": "0o600",
+      "text": "{\"kind\": \"static\", \"layout\": \"carousel\", \"paused\": false, \"motionMode\": \"full\", \"pauseCovered\": true, \"rotationEnabled\": false, \"rotationMinutes\": 45, \"rotationKind\": \"all\", \"rotationShuffle\": true, \"palettePreset\": \"wallpaper\", \"paletteMode\": \"light\", \"paletteHarmony\": false, \"palettePersonality\": \"natural\", \"paletteBackgroundFromWallpaper\": false, \"rotationAnchorMs\": \"<timestamp>\"}"
+    },
+    "home/.config/nacre/wallpaper-picker.lock": {
+      "mode": "0o600",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

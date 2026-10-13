@@ -1,0 +1,8 @@
+{
+  "helper": "weather",
+  "args": [
+    "url",
+    "{\"args\": [\"https://example.invalid\"], \"kwargs\": {\"city\": \"Public City\", \"units\": \"metric\"}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/weather.py"
+}

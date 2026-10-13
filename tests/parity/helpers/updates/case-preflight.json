@@ -1,0 +1,18 @@
+{
+  "helper": "updates",
+  "args": [
+    "--preflight"
+  ],
+  "commands": {
+    "checkupdates": [
+      {
+        "stdout": "demo 1.0 -> 1.1\n"
+      }
+    ],
+    "pacman": [
+      {
+        "stdout": "demo 1.0\n"
+      }
+    ]
+  }
+}

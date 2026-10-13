@@ -1,0 +1,12 @@
+{
+  "helper": "provision",
+  "args": [
+    "source_digest",
+    "{\"args\": [{\"$path\": \"{home}/source\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/provision.py",
+  "fixtures": {
+    "home/source/demo.py": "print(\"public\")\n",
+    "home/source/__pycache__/ignored.pyc": "ignored"
+  }
+}

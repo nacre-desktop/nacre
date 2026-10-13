@@ -1,0 +1,15 @@
+{
+  "helper": "install-dolphin",
+  "args": [],
+  "stdout": "text",
+  "commands": {
+    "xdg-mime": [
+      {
+        "stdout": "org.kde.dolphin.desktop\n"
+      }
+    ],
+    "kbuildsycoca6": [
+      {}
+    ]
+  }
+}

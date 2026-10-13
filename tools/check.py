@@ -184,6 +184,24 @@ def main():
             if line.startswith(("Ran ", "OK ", "OK"))
         )
         print(suite + ": " + summary.replace("\n", "; "), flush=True)
+    output = run(
+        [
+            sys.executable,
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "tests/parity/helpers",
+            "-p",
+            "test_runner.py",
+        ],
+        env=environment,
+    )
+    print("Helper parity harness integrity passed.", flush=True)
+    print(
+        run([sys.executable, "tests/parity/helpers/run.py"], env=environment).strip(),
+        flush=True,
+    )
     cli_python = Path(sys.executable)
     if cli_python.exists():
         environment = dict(os.environ, PYTHONPATH=str(ROOT / "nacre/shell-cli/src"))

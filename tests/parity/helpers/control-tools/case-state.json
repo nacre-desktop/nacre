@@ -1,0 +1,13 @@
+{
+  "helper": "control-tools",
+  "args": [
+    "state"
+  ],
+  "commands": {
+    "hyprctl": [
+      {
+        "stdout": "[]"
+      }
+    ]
+  }
+}

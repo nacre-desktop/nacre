@@ -1,0 +1,13 @@
+{
+  "helper": "nacre-brain-sync",
+  "args": [
+    "snapshot",
+    "{\"args\": [{\"$path\": \"{home}/Brain\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py bin/nacre-brain-sync",
+  "fixtures": {
+    "home/Brain": {
+      "directory": true
+    }
+  }
+}

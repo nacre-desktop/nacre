@@ -1,0 +1,17 @@
+{
+  "stdout": "Primary=224466",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 1, \"operation\": \"render_values\", \"payload\": {\"template\": \"Primary={{ primary }}\", \"values\": {\"primary\": \"224466\"}, \"schemes\": null, \"image\": null, \"custom\": null, \"data\": null}}\n"
+    }
+  ],
+  "ipc": []
+}

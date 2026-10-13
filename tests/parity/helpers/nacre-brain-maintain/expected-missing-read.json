@@ -1,0 +1,73 @@
+{
+  "stdout": null,
+  "exit": 1,
+  "files": {
+    "home/Documents": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/.brain-state": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/.brain-state/lock": {
+      "mode": "0o600",
+      "text": ""
+    },
+    "home/Documents/Nacre-Brain/README.md": {
+      "mode": "0o600",
+      "text": "# Nacre Brain\n\nThis private local folder is the durable knowledge bank shared by your Codex and Claude accounts.\nOpen this folder as an Obsidian vault, or use `nacre-brain search WORDS`.\n\n| Folder | Content |\n| --- | --- |\n| inbox | New facts and task handoffs awaiting organization |\n| personal | Personal preferences and context |\n| projects | Project summaries and pointers to canonical repository instructions |\n| infrastructure | Dated host inventory, access methods, environment boundaries |\n| devices | Device identity, last verified address, hardware evidence |\n| runbooks | Repeatable operational procedures |\n| decisions | Reasons behind durable choices |\n| credentials | Secret-store references only; never secret values |\n\nSearch before adding a note. Record a source and verification date; distinguish\nobserved facts from user reports and unverified historical assumptions. Recheck\nhost identity before acting on a saved address. Keep project rules in the project.\n\nNotes belong to your OS user, not your ChatGPT account. They are not automatically\navailable to ordinary ChatGPT web chats. Codex reads them through your global\ninstructions and personal skills. The public OS repository contains only the\ntools and templates, never this folder or Codex account state.\n\nUse `nacre-brain note --help` to save a unique note without concurrent writers\noverwriting one another. Use `nacre-brain store-credential NAME` to put a secret\nin the OS keyring, then document only its reference. Keyring secrets are not\nautomatically copied to other hosts. This folder is not a backup by itself.\n"
+    },
+    "home/Documents/Nacre-Brain/checkpoints": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/credentials": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/decisions": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/devices": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/inbox": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/infrastructure": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/personal": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/projects": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/raw": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/runbooks": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/wiki": {
+      "mode": "0o700",
+      "directory": true
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

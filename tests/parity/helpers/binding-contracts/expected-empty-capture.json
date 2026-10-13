@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "Lua required for declarative binding checks",
+    "type": "RuntimeError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

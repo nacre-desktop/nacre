@@ -1,0 +1,13 @@
+{
+  "helper": "wallpaper-media",
+  "args": [
+    "session"
+  ],
+  "commands": {
+    "loginctl": [
+      {
+        "stdout": ""
+      }
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "helper": "startup-apps",
+  "args": [
+    "plan",
+    "{\"args\": [[{\"class\": \"kitty\", \"workspace\": {\"id\": 1}, \"title\": \"Fixture\"}]], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/startup-apps.py"
+}

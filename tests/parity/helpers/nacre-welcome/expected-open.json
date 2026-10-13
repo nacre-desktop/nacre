@@ -1,0 +1,22 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "quickshell",
+      "argv": [
+        "ipc",
+        "-c",
+        "nacre",
+        "call",
+        "welcomeApp",
+        "open",
+        "home"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

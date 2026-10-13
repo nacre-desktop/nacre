@@ -1,0 +1,36 @@
+{
+  "helper": "wallpaper-media",
+  "args": [
+    "describe",
+    "{\"args\": [\"{home}/demo.mp4\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/wallpaper-media.py",
+  "fixtures": {
+    "home/demo.mp4": {
+      "text": "public fake video",
+      "mtime": 1700000000
+    }
+  },
+  "commands": {
+    "ffmpeg": [
+      {
+        "code": 1,
+        "stderr": "fixture decoder failed\n"
+      }
+    ],
+    "ffprobe": [
+      {
+        "code": 1
+      }
+    ]
+  },
+  "normalizations": [
+    {
+      "kind": "temp-path",
+      "pointer": "/effects",
+      "pattern": "/case/home/\\.cache/nacre/wallpaper-media/tmp[\\w-]+\\.png",
+      "replacement": "<temp-path>",
+      "reason": "mkstemp output filename for the disposable video frame"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "helper": "brain-launch",
+  "args": [
+    "unknown"
+  ],
+  "stdout": "text",
+  "command": "bash brain/launch.sh"
+}

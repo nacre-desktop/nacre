@@ -1,0 +1,33 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/ai": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/ai/chat-titles": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.local/state/nacre/ai/chat-titles/00000000-0000-0000-0000-000000000001.json": {
+      "mode": "0o600",
+      "text": "{\"title\": \"Public fixture\", \"cwd\": \"/case/home/demo\"}"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

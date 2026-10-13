@@ -1,0 +1,9 @@
+{
+  "helper": "nacre-ai-remote",
+  "args": [
+    "bad/name",
+    "/repo"
+  ],
+  "command": "bash bin/nacre-ai-remote",
+  "stdout": "text"
+}

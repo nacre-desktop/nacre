@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "Invalid assistant view channel",
+    "type": "ValueError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

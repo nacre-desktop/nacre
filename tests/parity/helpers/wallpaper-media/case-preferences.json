@@ -1,0 +1,20 @@
+{
+  "helper": "wallpaper-media",
+  "args": [
+    "preferences"
+  ],
+  "stdin": "{\"rotationMinutes\":45,\"paletteMode\":\"light\"}\n",
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/rotationAnchorMs",
+      "reason": "rotation interval change resets wall-clock anchor"
+    },
+    {
+      "kind": "timestamp",
+      "pointer": "/files/home~1.config~1nacre~1wallpaper-picker.json/text",
+      "json_pointer": "/rotationAnchorMs",
+      "reason": "same millisecond rotation anchor persisted"
+    }
+  ]
+}

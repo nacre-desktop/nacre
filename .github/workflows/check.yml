@@ -8,7 +8,10 @@ permissions:
 jobs:
   desktop:
     runs-on: ubuntu-24.04
-    container: ghcr.io/archlinux/archlinux:latest
+    container:
+      image: ghcr.io/archlinux/archlinux:latest
+      # Bubblewrap supplies an inner disposable filesystem/user namespace.
+      options: --cap-add=SYS_ADMIN --security-opt seccomp=unconfined
     steps:
       - name: Install target-platform checks
         run: pacman -Syu --noconfirm --needed git python python-pip python-pillow ruff lua fish qt6-declarative qt6-wayland quickshell qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats gcc pkgconf rust lcms2 cmake make gtk3 librsvg kconfig kcolorscheme breeze nodejs npm xorg-server-xvfb xorg-xauth mesa dbus ttf-dejavu
@@ -29,6 +32,10 @@ jobs:
           cargo fmt --check
           cargo clippy --all-targets -- -D warnings
           cargo test --quiet
+      - name: Install developer-only helper parity tooling
+        run: |
+          pacman -S --noconfirm --needed bubblewrap
+          /tmp/check-env/bin/pip install dbus-next==0.2.3
       - name: Install development-only JavaScript formatter
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Translation coverage

@@ -1,0 +1,17 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "fixture-browser",
+      "argv": [
+        "--private",
+        "https://example.invalid"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

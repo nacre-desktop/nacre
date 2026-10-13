@@ -1,0 +1,32 @@
+{
+  "helper": "dolphin-files",
+  "args": [
+    "--setup"
+  ],
+  "stdout": "text",
+  "commands": {
+    "qtpaths6": [
+      {
+        "stdout": "/usr/lib/qt6/plugins\n"
+      }
+    ],
+    "kbuildsycoca6": [
+      {}
+    ],
+    "kreadconfig6": [
+      {}
+    ],
+    "kwriteconfig6": [
+      {}
+    ]
+  },
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/files",
+      "pattern": "dolphin-\\d{8}T\\d{12}Z",
+      "replacement": "<timestamp>",
+      "reason": "dated Dolphin preference backup directory"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "helper": "workflow-profiles",
+  "args": [
+    "load",
+    "{\"args\": [], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/workflow-profiles.py"
+}

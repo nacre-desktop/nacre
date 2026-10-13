@@ -1,0 +1,6 @@
+{
+  "helper": "nacre-colors",
+  "args": [],
+  "command": "python3 bin/nacre-colors",
+  "stdout": "text"
+}

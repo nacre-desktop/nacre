@@ -1,0 +1,8 @@
+{
+  "helper": "nacre-ai-chat",
+  "args": [
+    "cache_title",
+    "{\"args\": [\"00000000-0000-0000-0000-000000000001\", \"Public fixture\", \"/case/home/demo\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py bin/nacre-ai-chat"
+}

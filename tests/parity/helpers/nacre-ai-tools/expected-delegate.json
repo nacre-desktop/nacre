@@ -1,0 +1,16 @@
+{
+  "stdout": "delegated\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "fixture-command",
+      "argv": [
+        "public"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}
