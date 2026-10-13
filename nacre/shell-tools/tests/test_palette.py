@@ -43,6 +43,32 @@ class PaletteCommitTest(unittest.TestCase):
             self.assertEqual(event["presentation"], json.loads(path.read_text()))
             self.assertFalse(list(home.glob(".presentation*")))
 
+    def test_live_palette_reload_uses_the_selected_compositor_api(self):
+        for backend in ("hyprland", "niri"):
+            with (
+                self.subTest(backend=backend),
+                patch.object(palette.compositor, "backend_name", backend),
+                patch.object(palette.Path, "iterdir", return_value=iter(())),
+                patch.object(palette.subprocess, "run"),
+                patch.object(
+                    palette.compositor,
+                    "apply_config",
+                    return_value=subprocess.CompletedProcess([], 0, "", ""),
+                ) as apply,
+                patch.object(palette.compositor, "reload") as reload,
+            ):
+                palette._reload_desktop_consumers(
+                    {"mode": "dark"}, "", "palette config", True
+                )
+                if backend == "hyprland":
+                    apply.assert_called_once_with(
+                        "palette config", check=False, timeout=None
+                    )
+                    reload.assert_not_called()
+                else:
+                    apply.assert_not_called()
+                    reload.assert_called_once_with()
+
     def test_wallpaper_commit_updates_consumers_and_preserves_terminal(self):
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder)
