@@ -1,4 +1,5 @@
 import importlib.util
+import socket
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +16,34 @@ def load(name):
 
 
 class ShellRecoveryTests(unittest.TestCase):
+    def test_large_buffer_policy_is_scoped_to_child_and_preserves_override(self):
+        module = load("shell-supervisor")
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory)
+            with socket.socket(socket.AF_UNIX) as display:
+                display.bind(str(runtime / "wayland-test"))
+                for override in (None, "524288"):
+                    with self.subTest(override=override):
+                        source = {
+                            "XDG_RUNTIME_DIR": str(runtime),
+                            "WAYLAND_DISPLAY": "wayland-test",
+                        }
+                        if override:
+                            source["MALLOC_MMAP_THRESHOLD_"] = override
+                        with (
+                            patch.dict(module.os.environ, source, clear=True),
+                            patch.object(
+                                module.compositor,
+                                "environment_updates",
+                                return_value={},
+                            ),
+                        ):
+                            child = module.environment()
+                            self.assertEqual(
+                                child["MALLOC_MMAP_THRESHOLD_"], override or "131072"
+                            )
+                            self.assertEqual(dict(module.os.environ), source)
+
     def test_bad_qml_is_rejected_before_live_source_is_changed(self):
         module = load("install")
         with tempfile.TemporaryDirectory() as directory:

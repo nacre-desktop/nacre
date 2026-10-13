@@ -47,6 +47,9 @@ def environment():
         )
     env.update(compositor.environment_updates(env))
     env.setdefault("XDG_SESSION_TYPE", "wayland")
+    # Keep large image/video buffers independently releasable after idle unload.
+    # glibc's adaptive threshold otherwise retains them in native heap pools.
+    env.setdefault("MALLOC_MMAP_THRESHOLD_", "131072")
     return env
 
 
