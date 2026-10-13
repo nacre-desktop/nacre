@@ -39,6 +39,17 @@ def plan(clients, profile=None):
     ]
 
 
+def workspace_target(profile, workspace):
+    if not compositor.capabilities.get("perOutputWorkspaces"):
+        return workspace
+    names = profile["workspaceNames"]
+    return {
+        "name": names[workspace - 1]
+        if workspace <= len(names) and names[workspace - 1]
+        else "nacre-" + str(workspace)
+    }
+
+
 def main():
     profile = POLICY.load(HOME)
     if not profile["startup"]:
@@ -62,7 +73,8 @@ def main():
         for label, workspace, argv, exists in plan(clients, profile):
             if exists or not shutil.which(argv[0]):
                 continue
-            compositor.switch_workspace(workspace, current_monitor=True, timeout=None)
+            target = workspace_target(profile, workspace)
+            compositor.switch_workspace(target, current_monitor=True, timeout=None)
             subprocess.Popen(
                 ["systemd-run", "--user", "--scope", "--collect", "--quiet", *argv],
                 start_new_session=True,
@@ -86,7 +98,8 @@ def main():
                 ):
                     break
                 time.sleep(0.2)
-        compositor.switch_workspace(1, current_monitor=True, timeout=None)
+        target = workspace_target(profile, 1)
+        compositor.switch_workspace(target, current_monitor=True, timeout=None)
 
 
 if __name__ == "__main__":

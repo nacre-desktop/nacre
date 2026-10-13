@@ -7,7 +7,9 @@ Item {
     property string label: ""
     property string setting: ""
     property bool defaultChecked: false
+    enabled: setting !== "livePreviews" || NacreCompositor.capabilities?.windowCapture !== false
     readonly property bool checked: (DesktopSettings.data[setting] ?? defaultChecked) === true
+    opacity: enabled ? 1 : .5
     implicitHeight: Math.max(34, caption.implicitHeight)
     implicitWidth: 300
     width: parent?.width ?? implicitWidth
@@ -33,7 +35,7 @@ Item {
         x: 42
         width: Math.max(0, parent.width - 42)
         anchors.verticalCenter: parent.verticalCenter
-        text: root.label
+        text: root.label + (root.setting === "livePreviews" && !root.enabled ? " — unavailable on this compositor" : "")
         wrapMode: Text.Wrap
         font.pointSize: 11
     }

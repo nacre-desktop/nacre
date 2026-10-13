@@ -162,7 +162,7 @@ Item {
                 NacreText {
                     width: parent.width
                     wrapMode: Text.Wrap
-                    text: NacreI18n.tr("welcome.welcome-view.text.your-current-shortcuts-grouped-by-what-they-do-scroll-t", "Your current shortcuts, grouped by what they do. Scroll to explore.")
+                    text: NacreCompositor.capabilities?.bindingIntrospection === false ? NacreI18n.tr("ui.compositor.generated-shortcuts", "Nacre's generated shortcuts are shown here. Private niri overrides may differ; check niri's hotkey overlay.") : NacreI18n.tr("welcome.welcome-view.text.your-current-shortcuts-grouped-by-what-they-do-scroll-t", "Your current shortcuts, grouped by what they do. Scroll to explore.")
                     font.pointSize: 11
                     color: NacreTokens.mutedInk
                 }

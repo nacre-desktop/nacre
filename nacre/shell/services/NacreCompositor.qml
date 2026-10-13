@@ -26,6 +26,8 @@ Singleton {
     readonly property var activeWindow: backend?.activeClient ?? null
     readonly property var activeClient: activeWindow
     readonly property var overviewHoverWindow: backend?.overviewHoverWindow ?? null
+    readonly property bool overviewOpen: backend?.overviewOpen ?? false
+    readonly property bool overviewHoverSupported: backend?.overviewHoverSupported ?? false
     readonly property var overviewSelectedWindow: backend?.overviewSelectedWindow ?? null
     readonly property var activeWorkspace: backend?.activeWorkspace ?? null
     readonly property var focusedMonitor: backend?.focusedMonitor ?? null

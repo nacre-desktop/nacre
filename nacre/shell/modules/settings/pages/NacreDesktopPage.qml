@@ -4,6 +4,13 @@ import qs.services
 
 NacreSettingsPage {
     property string page: "desktop"
+    NacreText {
+        width: parent.width
+        visible: NacreCompositor.capabilities?.perOutputWorkspaces === true
+        text: NacreI18n.tr("ui.compositor.niri-settings-limits", "Niri uses one window gap. Outer spacing is configured in niri. Live previews, sticky windows, and shaped panel blur are unavailable.")
+        wrapMode: Text.Wrap
+        color: NacreTokens.mutedInk
+    }
     NacreSettingsSection {
         title: NacreI18n.tr("ui.desktop-page.title.windows-and-spacing", "Windows and spacing")
         Repeater {
@@ -41,6 +48,7 @@ NacreSettingsPage {
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 NacreNumberField {
+                    enabled: !NacreCompositor.capabilities?.desktopOptions || NacreCompositor.capabilities.desktopOptions.includes(parent.modelData.key)
                     objectName: "desktopNumber" + parent.modelData.key
                     label: parent.modelData.label
                     from: 0
@@ -78,6 +86,7 @@ NacreSettingsPage {
             ]
             NacreSettingToggle {
                 required property var modelData
+                enabled: !NacreCompositor.capabilities?.desktopOptions || NacreCompositor.capabilities.desktopOptions.includes(modelData.key)
                 label: modelData.label
                 setting: modelData.key
             }

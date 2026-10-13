@@ -134,6 +134,7 @@ class SettingsUITests(unittest.TestCase):
             with (target / "fixtures/qmldir").open("a") as manifest:
                 manifest.write("\nNacreScrollBar 1.0 NacreScrollBar.qml\n")
             services = {
+                "NacreCompositor": "property var capabilities:({})",
                 "NacrePanelState": 'property string settingsPage:"appearance";function openSettings(page){settingsPage=page}',
                 "TimezoneSettings": 'property var status:({timezone:"UTC",localTime:"12:34",automatic:false,installed:false});property string message:"";property bool busy:false;property var changes:[];function refresh(){} function change(kind,value){changes=[...changes,[kind,value]]}',
                 "NacreTime": "function format(pattern){return Qt.formatDateTime(new Date(2026,9,8,14,54),pattern)}",

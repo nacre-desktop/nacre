@@ -5,6 +5,34 @@ import "settings"
 
 TestCase {
     id: test
+    function test_niri_disables_unavailable_display_transactions_and_live_previews() {
+        NacreCompositor.capabilities = {
+            perOutputWorkspaces: true,
+            monitorConfiguration: false,
+            windowCapture: false,
+            desktopOptions: ["gapsIn"]
+        };
+        try {
+            const view = createTemporaryObject(settings, test);
+            view.open("desktop");
+            wait(30);
+            const page = findChild(view, "settingsPage").item;
+            verify(findChild(page, "desktopNumbergapsIn").enabled);
+            verify(!findChild(page, "desktopNumbergapsOut").enabled);
+            view.open("displays");
+            wait(30);
+            const displays = findChild(view, "settingsPage").item;
+            DesktopSettings.lastRequest = [];
+            displays.edit("eDP-1", 1.25, "");
+            compare(DesktopSettings.lastRequest.length, 0);
+            const toggle = createTemporaryObject(sharedToggle, test, {
+                setting: "livePreviews"
+            });
+            verify(!toggle.enabled);
+        } finally {
+            NacreCompositor.capabilities = {};
+        }
+    }
 
     Component {
         id: sharedSection

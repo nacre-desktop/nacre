@@ -133,7 +133,13 @@ def main():
                 }
             )
         )
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
+    except (
+        OSError,
+        ValueError,
+        KeyError,
+        RuntimeError,
+        subprocess.SubprocessError,
+    ) as error:
         print(json.dumps({"error": str(error)[:200]}))
         return 1
     return 0
