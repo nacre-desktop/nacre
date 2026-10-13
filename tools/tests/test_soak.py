@@ -1,8 +1,10 @@
 """Negative controls for leak detection and disposable-session isolation."""
 
 import importlib.util
+import io
 from pathlib import Path
 import sys
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -70,6 +72,58 @@ class AnalysisTests(unittest.TestCase):
 
 
 class IsolationTests(unittest.TestCase):
+    def test_public_toolkit_policy_survives_environment_isolation(self):
+        result = subprocess.check_output(
+            [
+                "bash",
+                "--noprofile",
+                "--norc",
+                "-c",
+                'source "$1"\nprintf "%s\\n" "$QT_QPA_PLATFORMTHEME" "$QT_WAYLAND_DISABLE_WINDOWDECORATION"',
+                "policy",
+                str(TOOLS.parent / "uwsm/env"),
+            ],
+            env={"PATH": "/usr/bin:/bin"},
+            text=True,
+        ).splitlines()
+        env = soak.environment(Path("/tmp/test"), "niri")
+        self.assertEqual(env["QT_QPA_PLATFORMTHEME"], result[0])
+        self.assertEqual(env["QT_WAYLAND_DISABLE_WINDOWDECORATION"], result[1])
+
+    def test_protocol_tail_is_bounded_and_keeps_latest_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tail.log"
+            tail = soak.TraceTail(budget=100)
+            for i in range(100):
+                tail.append(f"[{i}.123] frame callback\n".encode())
+            tail.append(b"fatal protocol error\n")
+            tail.dump(path)
+            self.assertLessEqual(path.stat().st_size, 100)
+            self.assertTrue(path.read_bytes().endswith(b"fatal protocol error\n"))
+            self.assertGreater(tail.dropped, 0)
+
+    def test_protocol_trace_does_not_flood_or_hide_warning_log(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "shell.log"
+            tail = soak.TraceTail()
+            tail.read(
+                io.BytesIO(
+                    b"[12.345] -> wl_surface#3.commit()\nWARN: bad binding\nxdg_surface#3: error 3\n"
+                ),
+                path,
+            )
+            self.assertNotIn("wl_surface", path.read_text())
+            self.assertIn("WARN: bad binding", path.read_text())
+            self.assertIn("xdg_surface#3: error 3", path.read_text())
+            tail.read(
+                io.BytesIO(
+                    b"[22:51:39.112219] {mesa egl surface queue} -> wl_display#1.sync()\nWARN: still visible\n"
+                ),
+                path,
+            )
+            self.assertNotIn("wl_display", path.read_text())
+            self.assertIn("WARN: still visible", path.read_text())
+
     def test_environment_cannot_reuse_live_compositor_or_bus(self):
         with patch.dict(
             soak.os.environ,

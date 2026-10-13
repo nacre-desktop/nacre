@@ -2,7 +2,7 @@
 """Seeded, isolated overnight shell exercise. Artifacts stay under /tmp."""
 
 import argparse
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, deque
 import csv
 import importlib.util
 import json
@@ -16,6 +16,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 import performance
@@ -43,6 +44,40 @@ FIELDS = (
 SETTINGS = ("appearance", "desktop", "displays", "sound", "notifications")
 WARNING = re.compile(r"(?:WARN|ERROR|qml:|ReferenceError|TypeError|Binding loop)", re.I)
 HELPER_EVENT = re.compile(r"SOAK_HELPER_(START|EXIT) ([\w-]+)(?: (-?\d+) (\d+))?")
+WAYLAND_LINE = re.compile(rb"^\s*\[(?:\d+\.\d+|\d{2}:\d{2}:\d{2}(?:\.\d+)?)\]")
+
+
+class TraceTail:
+    """Bound protocol storage while forwarding ordinary stderr unchanged."""
+
+    def __init__(self, budget=4 * 1048576):
+        self.budget = budget
+        self.lines = deque()
+        self.size = 0
+        self.dropped = 0
+        self.lock = threading.Lock()
+        self.thread = None
+
+    def append(self, line):
+        line = line[: min(4096, self.budget)]
+        with self.lock:
+            self.lines.append(line)
+            self.size += len(line)
+            while self.size > self.budget:
+                self.dropped += 1
+                self.size -= len(self.lines.popleft())
+
+    def read(self, stream, log):
+        with log.open("ab", buffering=0) as output:
+            for line in stream:
+                self.append(line)
+                if not WAYLAND_LINE.match(line):
+                    output.write(line)
+
+    def dump(self, path):
+        with self.lock:
+            data = b"".join(self.lines)
+        path.write_bytes(data)
 
 
 def load_session():
@@ -309,6 +344,9 @@ def environment(directory, backend):
         "XDG_CURRENT_DESKTOP": backend,
         "XDG_SESSION_TYPE": "wayland",
         "QT_QPA_PLATFORM": "wayland",
+        # Match public UWSM toolkit policy; private qt6ct state stays hidden.
+        "QT_QPA_PLATFORMTHEME": "qt6ct",
+        "QT_WAYLAND_DISABLE_WINDOWDECORATION": "1",
         "WAYLAND_DISPLAY": "/tmp/soak-parent.sock",
         "NACRE_COMPOSITOR": backend,
         "NACRE_QS_BIN": "/usr/bin/quickshell",
@@ -384,18 +422,33 @@ def worker(args, directory):
     actions = Counter()
     failures = Counter()
     windows = []
+    traces = []
+    last_ipc_success = started
     warnings = WarningReader(directory / "shell.log")
 
     def start(command, name, extra=None):
+        traced = name == "shell" and args.wayland_debug
+        child_env = extra or env
+        if traced:
+            child_env = dict(child_env, WAYLAND_DEBUG="client")
         with (directory / f"{name}.log").open("a") as log:
             process = subprocess.Popen(
                 command,
-                env=extra or env,
+                env=child_env,
                 stdout=log,
-                stderr=log,
+                stderr=subprocess.PIPE if traced else log,
                 start_new_session=True,
             )
         processes.append(process)
+        if traced:
+            tail = TraceTail()
+            tail.thread = threading.Thread(
+                target=tail.read,
+                args=(process.stderr, directory / "shell.log"),
+                daemon=True,
+            )
+            tail.thread.start()
+            traces.append(tail)
         return process
 
     def run(command, input=None):
@@ -409,7 +462,10 @@ def worker(args, directory):
         return result.stdout.strip()
 
     def ipc(*words):
-        return run(["quickshell", "ipc", "--pid", str(pid), "call", *map(str, words)])
+        nonlocal last_ipc_success
+        result = run(["quickshell", "ipc", "--pid", str(pid), "call", *map(str, words)])
+        last_ipc_success = time.monotonic()
+        return result
 
     def event(kind, **values):
         item = {"seconds": round(time.monotonic() - started, 3), "kind": kind, **values}
@@ -661,11 +717,27 @@ def worker(args, directory):
                 "private Hyprland socket",
             )
             env["HYPRLAND_INSTANCE_SIGNATURE"] = socket.parent.name
+            if args.hyprland_headless:
+                run(["hyprctl", "output", "create", "headless"])
+                monitors = json.loads(run(["hyprctl", "-j", "monitors", "all"]))
+                for monitor in monitors:
+                    if monitor["name"].startswith("WAYLAND-"):
+                        run(
+                            [
+                                "hyprctl",
+                                "eval",
+                                "hl.monitor({output="
+                                + json.dumps(monitor["name"])
+                                + ",disabled=true})",
+                            ]
+                        )
         display = session.wait_for(
             lambda: next((p for p in runtime.glob("wayland-*") if p.is_socket()), None),
             "private Wayland socket",
         )
         env["WAYLAND_DISPLAY"] = str(display)
+        if args.render_loop != "auto":
+            env["QSG_RENDER_LOOP"] = args.render_loop
         # Display and signature were just resolved in this private namespace.
         # Do not rediscover another instance through a supervisor startup query.
         shell = start(["quickshell", "-n", "-p", str(directory / "shell")], "shell")
@@ -682,6 +754,7 @@ def worker(args, directory):
         session.wait_for(ready, "shell IPC", timeout=60)
         # Timing starts only once startup and IPC succeeded.
         started = time.monotonic()
+        last_ipc_success = started
         event("ready", shell_pid=pid, compositor_pid=compositor.pid)
         names = [
             "launcher",
@@ -704,6 +777,10 @@ def worker(args, directory):
             writer.writeheader()
             while time.monotonic() - started <= args.warmup + args.hours * 3600:
                 now = time.monotonic()
+                if now - last_ipc_success > 120:
+                    raise RuntimeError(
+                        "shell IPC unresponsive for over 120 seconds; workload cannot continue"
+                    )
                 for process, role in ((shell, "shell"), (compositor, "compositor")):
                     if process.poll() is not None:
                         exits += role == "shell"
@@ -734,6 +811,9 @@ def worker(args, directory):
                     next_action = now + args.action_interval
                 time.sleep(min(0.5, max(0.01, next_sample - time.monotonic())))
             sample(writer, stream)
+    except KeyboardInterrupt:
+        failure = "interrupted"
+        event("failure", error=failure)
     except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
         failure = str(error)
         event("failure", error=failure)
@@ -750,11 +830,38 @@ def worker(args, directory):
                     if process.poll() is None:
                         os.killpg(process.pid, signal.SIGKILL)
                         process.wait(timeout=5)
+        for trace in traces:
+            trace.thread.join(timeout=1)
+            trace.dump(directory / "wayland-tail.log")
+        duration_complete = any(
+            row["role"] == "shell" and row["seconds"] >= args.warmup + args.hours * 3600
+            for row in rows
+        )
+        probe_failures = sum(e["kind"] == "probe_failure" for e in events)
+        workload_healthy = (
+            duration_complete
+            and failure is None
+            and not failures
+            and not probe_failures
+        )
         report = {
             "backend": args.backend,
             "seed": args.seed,
             "source_revision": (directory / "revision").read_text().strip(),
             "busy_host": True,
+            "duration_complete": duration_complete,
+            "workload_healthy": workload_healthy,
+            "probe_failures": probe_failures,
+            "runtime_policy": {
+                name: env.get(name, "auto")
+                for name in (
+                    "QT_QPA_PLATFORMTHEME",
+                    "QT_WAYLAND_DISABLE_WINDOWDECORATION",
+                    "QSG_RENDER_LOOP",
+                )
+            },
+            "wayland_trace": bool(traces),
+            "hyprland_headless": args.hyprland_headless,
             "requested_hours": args.hours,
             "warmup_seconds": args.warmup,
             "elapsed_seconds": time.monotonic() - started,
@@ -773,7 +880,7 @@ def worker(args, directory):
             **analyze(rows),
         }
         (directory / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-    return 1 if failure else 0
+    return int(not workload_healthy)
 
 
 def main():
@@ -788,6 +895,22 @@ def main():
     parser.add_argument("--seed", type=int, default=20261013)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--orient-binary", type=Path)
+    parser.add_argument(
+        "--hyprland-headless",
+        action="store_true",
+        help="use a virtual Hyprland output to isolate nested Wayland presentation",
+    )
+    parser.add_argument(
+        "--wayland-debug",
+        action="store_true",
+        help="retain only the last 4 MiB of shell Wayland traffic",
+    )
+    parser.add_argument(
+        "--render-loop",
+        choices=("auto", "basic", "threaded"),
+        default="auto",
+        help="test-session-only Qt render-loop comparison",
+    )
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     for value in (args.hours, args.interval, args.action_interval):
@@ -845,7 +968,13 @@ def main():
             str(args.seed),
             "--output",
             str(target),
+            "--render-loop",
+            args.render_loop,
         ]
+        if args.wayland_debug:
+            words.append("--wayland-debug")
+        if args.hyprland_headless:
+            words.append("--hyprland-headless")
         # No inherited accounts, injected Qt paths or session activation variables.
         clean = {
             "PATH": "/usr/bin:/bin",

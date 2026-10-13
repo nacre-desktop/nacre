@@ -5,6 +5,9 @@ one compositor at a time. It uses public generated demo data and a disposable
 HOME, session bus, network and PID namespace. Only the parent Wayland endpoint
 is exposed; live compositor IPC, user services and configurations are hidden.
 The host filesystem is read-only. No installation or desktop restart is needed.
+The session retains the public UWSM Qt theme and disables toolkit window
+decorations, matching Nacre's own window chrome. Private toolkit state stays hidden.
+Use a committed task worktree and leave its code unchanged while both sessions run.
 
 Use the development Python environment described in [contributing](../contributing.md).
 Runtime prerequisites are Bubblewrap, both compositors, Quickshell, D-Bus tools,
@@ -14,6 +17,7 @@ binary to exercise palette changes without building another engine:
 
 ```sh
 nice -n 10 .venv/bin/python tools/soak.py \
+  --hyprland-headless \
   --orient-binary deps/orient/target/release/orient \
   --output /tmp/nacre-soak-before
 ```
@@ -23,6 +27,14 @@ by three measured hours **per compositor**, with one sample every 60 seconds.
 For confirmation, repeat with `--hours 1` and a new output directory. Short
 preflights can use `--hours 0.025 --warmup 10 --interval 10`.
 The tool also lowers its own scheduling priority. Build prerequisites with `-j2`.
+For a protocol crash, add `--wayland-debug`: only the last 4 MiB of client
+protocol traffic are retained in `wayland-tail.log`; ordinary warnings still
+reach `shell.log`. `--render-loop basic` is an explicitly recorded, test-only
+diagnostic comparison. The default leaves Qt's render-loop selection alone.
+`--hyprland-headless` keeps the nested compositor but uses its own virtual output
+and disables its guest Wayland outputs. This avoids a reproduced presentation
+stall with the nested Wayland-backed Hyprland output. It changes only the test
+session and does not establish physical-output performance or acceptance.
 
 Each compositor writes `samples.csv`, `events.jsonl`, `shell.log`,
 `compositor.log` and `report.json` under its output directory in `/tmp`.
@@ -33,6 +45,9 @@ run rather than silently restarting it. Other short helper lifetimes are
 observations, not proof of crashes; they can be legitimate jobs. CSV PIDs belong
 to the private namespace. Helper stderr is shared with the shell, so per-helper
 QML warning attribution is unknown rather than duplicated across helper rows.
+A shell IPC outage lasting more than two minutes stops the invalid workload.
+`duration_complete` and `workload_healthy` distinguish full duration from an
+interrupted, crashed or unresponsive run.
 
 Actions cover launcher queries, dashboard tabs, settings pages, launcher pearl
 detach/dock, wallpapers, palettes, notification bursts, bounded clipboard owners,
@@ -57,6 +72,10 @@ the concurrent redesign and Rust migration.
 ## Results
 
 The overnight comparison is in progress; no long-run conclusion is claimed yet.
+An initial harness variant omitted the public Qt toolkit policy. Its Niri
+shell exited with an initial-configuration Wayland protocol error after 98
+measured minutes; Hyprland stopped answering IPC and was interrupted. Those
+captures are preserved for diagnosis and are not complete production baselines.
 
 | Run | Niri | Hyprland | Result |
 | --- | --- | --- | --- |
