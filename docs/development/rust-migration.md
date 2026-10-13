@@ -71,49 +71,6 @@ integrate shared candidate, finish chat-title caller/deletion/test mapping, then
 run full correctness gates before publishing.
 No live machine/QML/config changes by this task; no tags or package uploads.
 
-## Fix during port
-
-Security review, 2026-10-13: these are lower-severity Python follow-ups, not
-permission to regenerate the frozen corpus wholesale. Add explicit security
-cases and document intended parity differences when each helper is ported.
-See [security review](security-review.md) for severity, current boundaries and
-network triggers. No runtime Python or parity fixture changed in that review.
-
-- **Brain HTTP (`brain/control.py`, `auth.py`):** bound concurrent clients and
-  connection/header/body time; reject transfer-encoding/ambiguous lengths and
-  non-object JSON cleanly; bound note/search responses. Retain loopback binding,
-  Host/cookie/exact-Origin checks and resolved-vault/static-asset allowlists.
-  Add deliberate bootstrap lifetime/revocation and cookie-expiry behavior;
-  refuse symlinked ancestor state directories and repair existing private modes.
-- **Sensitive state (`screenshot`, `composer`, `desktop-extras`,
-  `notification-history`, `sidebar-chat`, `timezone`):** create private files
-  before writing rather than chmod afterward; use 0700 leaf directories and
-  0600 sensitive data, including screenshot captures and city/accuracy records.
-  Refuse linked destinations; repair existing leaf modes. Clipboard thumbnails
-  need cleanup after deletion/clear without reopening the view; draft screenshots
-  need cleanup when removed. Coordinate age/count retention with the owner and
-  renderer; expiry must cover caches/backups intentionally, without deleting
-  user-kept chats, pins or screenshots silently.
-- **Sidebar IPC (`sidebar-chat`):** limit line bytes, client count and idle read
-  time; validate object shape/actions before dispatch. Retain private socket
-  ownership/modes and the session-user trust boundary. Helper-service request
-  caps/tool allowlist must remain intact.
-- **Credentials (`bin/nacre-ai-account`, `bin/nacre-ai-claude`, workflow helpers):**
-  apply private umask before all provider launches, repair existing account-home
-  modes without copying authentication, and verify provider storage selection.
-  Keep tokens/API keys out of argv/logs; inherited key environment is sensitive.
-  Shell Codex entrypoints now apply umask 077, but Python entrypoints can launch
-  pinned binaries directly and need the same protection during their port.
-- **Privileged helper (`timezone`, login installer):** retain root/action/zone
-  validation and fixed absolute executables; move initial authorization from
-  arbitrary user-writable Python to a packaged root-owned narrow entrypoint.
-  No dedicated timezone polkit policy currently ships. Avoid predictable temp
-  names/symlink writes and make city/accuracy state private. Test only staged roots
-  and fake system services; never broaden polkit permission to all Python.
-- **Downloads (`semantic` provisioning, skills, curated wallpapers, Python
-  provisioning):** pin model revision plus digests, lock transitive Python
-  packages with hashes, verify skill/archive/image content, bound compressed and
-  expanded bytes, and enforce HTTPS redirects/timeouts. Existing Codex/Obsidian
-  and font checksums, Git revisions and npm/Cargo locks must remain enforced.
-  Player-provided artwork needs a shared renderer/helper URL policy; document
-  automatic weather/lyrics/update calls before changing consent semantics.
+Port security follow-ups: [security review](security-review.md#fix-during-port).
+Keep existing AI access/consent/retention policies; add explicit security cases
+and intended differences when implementing the reviewed port hardening.
