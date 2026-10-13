@@ -95,3 +95,11 @@ This native Qt render uses `NacreDockFilm` with fixed demo colors and plain
 placeholder panels; it contains no personal desktop content or third-party
 artwork. Production uses the current Orient colors. Both paths render the same
 component, with no line-only fallback or extra pop-out copy.
+
+Native-to-edge docking must not dismiss a panel while it is still growing under
+the stationary drop pointer. Each panel exposes its actual opening animation
+state. The input controller pauses hover-exit timers only during a docked opening,
+then evaluates the current hover immediately when the animation finishes. This
+also handles reduced motion without a fixed timeout, and closes normally if the
+pointer moved away during the animation. Ordinary hover and keyboard focus policies
+remain unchanged.

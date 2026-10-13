@@ -223,6 +223,40 @@ TestCase {
             tryCompare(view.visibilities, data.field, false, 500);
         }
     }
+    function test_docked_opening_defers_hover_exit_data() {
+        return test_docked_panels_close_on_pointer_exit_data();
+    }
+    function test_docked_opening_defers_hover_exit(data) {
+        const view = createTemporaryObject(scene, test);
+        view.visibilities.launcher = false;
+        view.visibilities.hoverDocked = true;
+        const panel = view.panels[data.field === "left" ? "leftDrawer" : data.field];
+        const height = panel.height;
+        panel.opening = true;
+        panel.height = 1;
+        view.visibilities[data.field] = true;
+        mouseMove(view, data.x, data.y);
+        wait(400); // Longer than every exit timer, while the body is growing.
+        verify(view.visibilities[data.field]);
+        panel.height = height;
+        panel.opening = false;
+        wait(160);
+        verify(view.visibilities[data.field]);
+        mouseMove(view, data.outX, data.outY);
+        tryCompare(view.visibilities, data.field, false, 500);
+    }
+    function test_docked_opening_finishes_outside_and_closes() {
+        const view = createTemporaryObject(scene, test);
+        mouseMove(view, 450, 550);
+        view.visibilities.launcher = false;
+        view.visibilities.hoverDocked = true;
+        view.panels.dashboard.opening = true;
+        view.visibilities.dashboard = true;
+        wait(400);
+        verify(view.visibilities.dashboard);
+        view.panels.dashboard.opening = false;
+        tryCompare(view.visibilities, "dashboard", false, 500);
+    }
     function test_docked_sidebar_closes_even_if_pointer_leaves_before_first_hover() {
         const view = createTemporaryObject(scene, test);
         mouseMove(view, 450, 550);
@@ -295,6 +329,7 @@ TestCase {
 
                 Item {
                     id: leftPanel
+                    property bool opening: false
 
                     x: 10
                     y: 100
@@ -304,6 +339,7 @@ TestCase {
 
                 Item {
                     id: rightPanel
+                    property bool opening: false
 
                     x: 300
                     y: 100
@@ -313,6 +349,7 @@ TestCase {
 
                 Item {
                     id: dashboardPanel
+                    property bool opening: false
 
                     x: 100
                     y: 0
@@ -322,6 +359,7 @@ TestCase {
 
                 Item {
                     id: panel
+                    property bool opening: false
 
                     x: 100
                     y: 350
