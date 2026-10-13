@@ -1,0 +1,14 @@
+// Phase 1 bootstrap only. No shell deployment, idle daemon or automatic lock.
+// The backend agent owns the generated personal-profile configuration in phase 2.
+binds {
+    Mod+T { spawn "kitty"; }
+    Mod+Q { close-window; }
+    Mod+Left { focus-column-left; }
+    Mod+Right { focus-column-right; }
+    Mod+Up { focus-window-up; }
+    Mod+Down { focus-window-down; }
+    Mod+Page_Up { focus-workspace-up; }
+    Mod+Page_Down { focus-workspace-down; }
+    Mod+Shift+E { quit; }
+    Ctrl+Alt+Delete { quit; }
+}
