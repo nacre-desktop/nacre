@@ -473,7 +473,37 @@ def run(args, directory):
         wait_for(lambda: state("nacre", "state"), "shell IPC")
         time.sleep(10)
         ipc("nacre", "close")
+        versions = {}
+        for name, command in {
+            "quickshell": ["quickshell", "--version"],
+            "compositor": [
+                "Hyprland" if args.backend == "hyprland" else "niri",
+                "--version",
+            ],
+            "qt": ["pkg-config", "--modversion", "Qt6Core"],
+            "orient": [
+                str(args.orient_binary or Path(sys.prefix) / "bin/orient"),
+                "--version",
+            ],
+        }.items():
+            try:
+                result = subprocess.run(
+                    command,
+                    env=shell_env,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=True,
+                )
+                versions[name] = result.stdout.strip().splitlines()[0]
+            except (OSError, subprocess.SubprocessError, IndexError):
+                versions[name] = "unavailable"
         report = {
+            "versions": versions,
+            "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            "sampler_sha256": hashlib.sha256(
+                Path(performance.__file__).read_bytes()
+            ).hexdigest(),
             "paging_start": paging(),
             "paging_end": paging(),
             "revision": args.revision

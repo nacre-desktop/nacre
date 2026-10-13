@@ -3,6 +3,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      reference_revision:
+        description: Optional ancestor commit for a sequential before/after capture
+        type: string
+        default: ""
 permissions:
   contents: read
 jobs:
@@ -20,10 +26,18 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           submodules: recursive
+          fetch-depth: 0
       - name: Build the pinned engine for public color fixtures
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           cargo build --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
+      - name: Measure the reference in the same disposable runner
+        if: github.event_name == 'workflow_dispatch' && inputs.reference_revision != ''
+        env:
+          REFERENCE_REVISION: ${{ inputs.reference_revision }}
+        run: |
+          reference=$(git rev-parse --verify --end-of-options "${REFERENCE_REVISION}^{commit}")
+          python tools/performance-session.py --backend ${{ matrix.backend }} --orient-binary deps/orient/target/release/orient --revision "$reference" --quick --repeats 5 --idle-seconds 15 --check-budgets --output /tmp/performance-${{ matrix.backend }}-before.json
       - name: Measure shell memory and key event to complete frame
         run: |
           python tools/performance-session.py --backend ${{ matrix.backend }} --orient-binary deps/orient/target/release/orient --quick --repeats 5 --idle-seconds 15 --check-budgets --output /tmp/performance-${{ matrix.backend }}.json
@@ -32,5 +46,5 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: shell-performance-${{ matrix.backend }}
-          path: /tmp/performance-${{ matrix.backend }}.json
+          path: /tmp/performance-${{ matrix.backend }}*.json
           if-no-files-found: error

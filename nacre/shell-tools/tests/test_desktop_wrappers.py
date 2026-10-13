@@ -137,7 +137,6 @@ ShellRoot {
         visible:true
         implicitWidth:64
         implicitHeight:48
-        readonly property var video:holder.item
         Loader {
             id:holder
             anchors.fill:parent
@@ -151,6 +150,7 @@ ShellRoot {
         }
         Timer {
             id:testClock
+            readonly property var video:holder.item
             property int step:0
             property var snapshot:null
             property int savedPosition:0
