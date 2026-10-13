@@ -41,6 +41,32 @@ def run(command, env=None, stdout_only=False):
     return result.stdout if stdout_only else result.stdout + result.stderr
 
 
+def test_environment():
+    """Exercise checkout fixtures independently of the running desktop session."""
+    environment = dict(os.environ)
+    for key in (
+        "NACRE_COMPOSITOR",
+        "NACRE_COMPOSITOR_TOOLS",
+        "NACRE_PEARL_TOOLS",
+        "NACRE_QS_CONFIG",
+        "NIRI_SOCKET",
+        "HYPRLAND_INSTANCE_SIGNATURE",
+        "XDG_CURRENT_DESKTOP",
+        "WAYLAND_DISPLAY",
+        "QT_LOGGING_RULES",
+    ):
+        environment.pop(key, None)
+    environment["QT_QPA_PLATFORM"] = "offscreen"
+    environment["PYTHONPATH"] = os.pathsep.join(
+        (
+            str(ROOT / "nacre/shell-cli/src"),
+            str(ROOT / "nacre/shell-tools"),
+            environment.get("PYTHONPATH", ""),
+        )
+    )
+    return environment
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args()
@@ -132,21 +158,17 @@ def main():
     run([sys.executable, str(ROOT / "tools/compositor_boundary.py")])
     print("Compositor boundary and generated configuration checks passed.", flush=True)
     # Child suites must exercise the candidate engine, never the deployed old one.
-    engine_source = str(ROOT / "nacre/shell-cli/src")
-    os.environ["PYTHONPATH"] = (
-        engine_source
-        + os.pathsep
-        + str(ROOT / "nacre/shell-tools")
-        + os.pathsep
-        + os.environ.get("PYTHONPATH", "")
-    )
+    environment = test_environment()
     for suite in (
         "tools/tests",
         "ai/tests",
         "brain/tests",
         "nacre/shell-tools/tests",
     ):
-        output = run([sys.executable, "-m", "unittest", "discover", "-s", suite])
+        output = run(
+            [sys.executable, "-m", "unittest", "discover", "-s", suite],
+            env=environment,
+        )
         summary = "\n".join(
             line
             for line in output.splitlines()
@@ -195,4 +217,9 @@ def main():
 
 
 if __name__ == "__main__":
+    # Static config analyses also need checkout routing. This changes only the
+    # checker process, leaving the invoking desktop/deployment environment intact.
+    isolated = test_environment()
+    os.environ.clear()
+    os.environ.update(isolated)
     main()

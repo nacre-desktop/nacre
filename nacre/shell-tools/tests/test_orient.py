@@ -17,6 +17,7 @@ except ImportError:
 SOURCE = Path(__file__).resolve().parents[2] / "shell-cli/src"
 sys.path.insert(0, str(SOURCE))
 
+
 @unittest.skipUnless(Image, "Pillow unavailable")
 class OrientTests(unittest.TestCase):
     def setUp(self):

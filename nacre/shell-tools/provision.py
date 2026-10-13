@@ -178,6 +178,8 @@ def main():
             ],
             check=True,
         )
+        smoke_environment = dict(os.environ)
+        smoke_environment.pop("NACRE_ORIENT_BINARY", None)
         subprocess.run(
             [
                 str(venv / "bin/python"),
@@ -185,6 +187,7 @@ def main():
                 "from nacre_shell.palette import generate; generate('d01818','dark'); generate('477fe0','light')",
             ],
             check=True,
+            env=smoke_environment,
         )
         engine_id = subprocess.check_output(
             [
@@ -193,6 +196,7 @@ def main():
                 "from nacre_shell import ENGINE_ID; print(ENGINE_ID)",
             ],
             text=True,
+            env=smoke_environment,
         ).strip()
         (candidate / "orient-build.json").write_text(
             json.dumps(
