@@ -93,7 +93,10 @@ class TranslationTests(unittest.TestCase):
             nacre_i18n._preference_language.cache_clear()
             with (
                 patch.object(nacre_i18n.Path, "home", return_value=home),
-                patch.dict(os.environ, {"NACRE_LANGUAGE": ""}),
+                patch.dict(
+                    os.environ,
+                    {"NACRE_LANGUAGE": "", "XDG_CONFIG_HOME": str(home / ".config")},
+                ),
             ):
                 self.assertEqual(nacre_i18n.language(), "en")
                 self.assertEqual(nacre_i18n.language(), "en")

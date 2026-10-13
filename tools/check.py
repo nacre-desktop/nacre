@@ -69,6 +69,12 @@ def test_environment():
     ):
         environment.pop(key, None)
     environment["QT_QPA_PLATFORM"] = "offscreen"
+    # CI's root process reads a runner-owned checkout. Keep trust scoped to this
+    # verified workspace when the disposable HOME hides the runner's git config.
+    count = int(environment.get("GIT_CONFIG_COUNT", "0"))
+    environment[f"GIT_CONFIG_KEY_{count}"] = "safe.directory"
+    environment[f"GIT_CONFIG_VALUE_{count}"] = str(ROOT)
+    environment["GIT_CONFIG_COUNT"] = str(count + 1)
     environment["PYTHONPATH"] = os.pathsep.join(
         (
             str(ROOT / "nacre/shell-cli/src"),
