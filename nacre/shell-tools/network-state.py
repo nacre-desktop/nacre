@@ -45,7 +45,8 @@ def access_points(text):
             signal = int(signal)
             frequency = int(frequency.split()[0])
             if (
-                active not in ("*", "")
+                # nmcli uses a literal space for an AP that is not in use.
+                active not in ("*", "", " ")
                 or len(ssid.encode("utf-8")) > 32
                 or any(ord(char) < 32 for char in ssid)
                 or not re.fullmatch(r"(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}", bssid)
