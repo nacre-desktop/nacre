@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "BatteryAlerts"
     when: windowShown
-    Component {
-        id: owner
-        NacreBatteryAlerts {}
-    }
+
     Component {
         id: policy
         NacreBatteryAlertPolicy {}
@@ -24,7 +21,7 @@ TestCase {
         UPower.onBattery = true;
     }
     function setup(level = 0) {
-        const view = createTemporaryObject(owner, test);
+        const view = NacreBatteryAlerts;
         verify(view.restore(JSON.stringify({
             version: 1,
             severity: level
@@ -132,10 +129,9 @@ TestCase {
         compare(JSON.parse(data).severity, 1);
         wait(200);
         compare(part(view, "Sender").running, false);
-        const restart = createTemporaryObject(owner, test);
-        verify(restart.restore(data));
-        wait(200);
-        compare(part(restart, "Sender").running, false);
+        const restart = createTemporaryObject(policy, test);
+        verify(restart.initialize(JSON.parse(data).severity));
+        compare(restart.request(view.sample), null);
         UPower.displayDevice.percentage = 0.15;
         tryCompare(part(view, "Sender"), "running", true, 500);
         const command = part(view, "Sender").command;
@@ -147,7 +143,7 @@ TestCase {
         compare(part(view, "Sender").running, false);
     }
     function test_charge_invalid_cache_failure_retry_and_timeout() {
-        const view = createTemporaryObject(owner, test);
+        const view = NacreBatteryAlerts;
         verify(!view.restore("broken"));
         verify(view.cacheError.length > 0);
         UPower.onBattery = false;
@@ -178,7 +174,7 @@ TestCase {
         verify(view.cacheError.length > 0);
     }
     function test_missing_state_and_late_reply_after_charge() {
-        const view = createTemporaryObject(owner, test);
+        const view = NacreBatteryAlerts;
         part(view, "Ledger").loadFailed(FileViewError.FileNotFound);
         verify(view.cacheReady);
         compare(view.cacheError, "");

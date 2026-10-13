@@ -1,4 +1,6 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Actual wrapper/control/poster code with native Qt and safe fixture owners."""
 
@@ -9,7 +11,7 @@ import subprocess
 import tempfile
 import unittest
 
-from qml_source import install_foundation_interaction, remove_objects
+from qml_fixtures import install_foundation_interaction
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = ROOT.parent / "shell"
@@ -60,14 +62,10 @@ class DesktopWrappersTests(unittest.TestCase):
             }
             for area, names in components.items():
                 for name in names:
-                    source = (SHELL / "modules" / area / (name + ".qml")).read_text()
-                    for imported in ("qs.widgets", "qs.services", "qs.config"):
-                        source = source.replace(
-                            "import " + imported, 'import "fixtures"'
-                        )
-                    source = source.replace("import Quickshell.Io", "")
-                    source = remove_objects(source, r"\bIpcHandler\s*\{")
-                    (target / (name + ".qml")).write_text(source)
+                    stage_qml(
+                        SHELL / "modules" / area / (name + ".qml"),
+                        target / (name + ".qml"),
+                    )
             (target / "NacreLevelNotice.qml").write_text(
                 'import QtQuick\nItem {required property var output;property bool shown:false;property string channel:"volume"}'
             )
@@ -82,7 +80,7 @@ class DesktopWrappersTests(unittest.TestCase):
                 target / "tst_wrappers.qml",
             )
             install_i18n(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,

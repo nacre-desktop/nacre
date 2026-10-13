@@ -1,5 +1,7 @@
-from qml_source import install_i18n
-from qml_source import install_foundation_interaction
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
+from qml_fixtures import install_foundation_interaction
 
 """Real popup controls and navigation, with fake devices to preserve live connections."""
 
@@ -7,7 +9,6 @@ import importlib.util
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -57,43 +58,23 @@ class QuickControlsTests(unittest.TestCase):
             target = Path(directory)
             shutil.copytree(ROOT / "tests/qml/fixtures", target / "fixtures")
 
-            def adapt(source):
-                return (
-                    source.replace("import qs.widgets", 'import "fixtures"')
-                    .replace(
-                        "import qs.services",
-                        "" if "import qs.widgets" in source else 'import "fixtures"',
-                    )
-                    .replace("import qs.config", "")
-                    .replace("import Quickshell.Services.Pipewire", "")
-                )
-
             for name, component in [
                 ("Audio", "NacreSoundPopup"),
                 ("Network", "NacreNetworkPopup"),
                 ("Bluetooth", "NacreBluetoothPopup"),
             ]:
-                (target / (name + "Popup.qml")).write_text(
-                    adapt(
-                        (
-                            ROOT.parent
-                            / "shell/modules/bar/popouts"
-                            / (component + ".qml")
-                        ).read_text()
-                    )
+                stage_qml(
+                    ROOT.parent / "shell/modules/bar/popouts" / (component + ".qml"),
+                    target / (name + "Popup.qml"),
                 )
             for component in (
                 "NacreSoundPopup",
                 "NacreNetworkPopup",
                 "NacreBluetoothPopup",
             ):
-                name = {
-                    "NacreSoundPopup": "Audio",
-                    "NacreNetworkPopup": "Network",
-                    "NacreBluetoothPopup": "Bluetooth",
-                }[component]
-                shutil.copy2(
-                    target / (name + "Popup.qml"), target / (component + ".qml")
+                stage_qml(
+                    ROOT.parent / "shell/modules/bar/popouts" / (component + ".qml"),
+                    target / (component + ".qml"),
                 )
             for component in (
                 "NacrePopupContent",
@@ -102,70 +83,40 @@ class QuickControlsTests(unittest.TestCase):
                 "NacreBatteryPopup",
                 "NacreCalendarPopup",
             ):
-                source = adapt(
-                    (
-                        ROOT.parent / "shell/modules/bar/popouts" / (component + ".qml")
-                    ).read_text()
+                stage_qml(
+                    ROOT.parent / "shell/modules/bar/popouts" / (component + ".qml"),
+                    target / (component + ".qml"),
                 )
-                source = (
-                    source.replace("import qs.modules.notifications", "")
-                    .replace("import Quickshell.Services.UPower", "")
-                    .replace("../../dashboard/overview/overview.js", "overview.js")
-                )
-                (target / (component + ".qml")).write_text(source)
             shutil.copy2(
                 ROOT.parent / "shell/modules/dashboard/overview/overview.js",
                 target / "overview.js",
             )
-            (target / "NacreQuickList.qml").write_text(
-                adapt(
-                    (
-                        ROOT.parent / "shell/modules/bar/popouts/NacreQuickList.qml"
-                    ).read_text()
-                )
+            stage_qml(
+                ROOT.parent / "shell/modules/bar/popouts/NacreQuickList.qml",
+                target / "NacreQuickList.qml",
             )
-            (target / "NacreQuickSlider.qml").write_text(
-                adapt(
-                    (
-                        ROOT.parent / "shell/modules/bar/popouts/NacreQuickSlider.qml"
-                    ).read_text()
-                )
+            stage_qml(
+                ROOT.parent / "shell/modules/bar/popouts/NacreQuickSlider.qml",
+                target / "NacreQuickSlider.qml",
             )
             for component in (
                 "NacreControlCenter",
                 "NacreControlLevels",
                 "NacreControlTile",
             ):
-                source = adapt(
-                    (
-                        ROOT.parent
-                        / "shell/modules/controlcenter"
-                        / (component + ".qml")
-                    ).read_text()
+                stage_qml(
+                    ROOT.parent / "shell/modules/controlcenter" / (component + ".qml"),
+                    target / (component + ".qml"),
                 )
-                source = (
-                    source.replace("import Quickshell.Services.UPower", "")
-                    .replace("import qs.modules.notifications", "")
-                    .replace(
-                        "import qs.modules.bar.popouts as Details",
-                        'import "." as Details',
-                    )
-                )
-                (target / (component + ".qml")).write_text(source)
-            (target / "fixtures/NacreRangeSlider.qml").write_text(
-                (ROOT.parent / "shell/widgets/NacreRangeSlider.qml")
-                .read_text()
-                .replace("import qs.services", 'import "."')
+            stage_qml(
+                ROOT.parent / "shell/widgets/NacreRangeSlider.qml",
+                target / "fixtures/NacreRangeSlider.qml",
             )
             for name in ["ActionButton", "NacreInteraction", "NacreScrollBar"]:
-                text = (
-                    (ROOT.parent / "shell/widgets" / (name + ".qml"))
-                    .read_text()
-                    .replace("import qs.widgets", "")
-                    .replace("import qs.services", "")
-                    .replace("import qs.config", "")
+                stage_qml(
+                    ROOT.parent / "shell/widgets" / (name + ".qml"),
+                    target / "fixtures" / (name + ".qml"),
                 )
-                (target / "fixtures" / (name + ".qml")).write_text(text)
             (target / "fixtures/NacreIcon.qml").write_text("import QtQuick\nText {}")
             (target / "fixtures/PwObjectTracker.qml").write_text(
                 "import QtQuick\nQtObject {property var objects:[]}"
@@ -227,19 +178,14 @@ class QuickControlsTests(unittest.TestCase):
             (target / "fixtures/PowerProfile.qml").write_text(
                 "import QtQuick\nQtObject {enum Kind {PowerSaver, Balanced, Performance}}"
             )
-            (target / "fixtures/NacreAppearance.qml").write_text(
-                (ROOT.parent / "shell/config/NacreAppearance.qml")
-                .read_text()
-                .replace("import qs.widgets", 'import "."')
+            stage_qml(
+                ROOT.parent / "shell/config/NacreAppearance.qml",
+                target / "fixtures/NacreAppearance.qml",
             )
-            visibility = (
-                (ROOT.parent / "shell/services/NacrePanelState.qml")
-                .read_text()
-                .replace("import Quickshell", "")
-                .replace("Singleton {", "QtObject {")
-                .replace(": PersistentProperties", "")
+            stage_qml(
+                ROOT.parent / "shell/services/NacrePanelState.qml",
+                target / "fixtures/NacrePanelState.qml",
             )
-            (target / "fixtures/NacrePanelState.qml").write_text(visibility)
             with (target / "fixtures/qmldir").open("a") as f:
                 for name in [*services, "NacrePanelState"]:
                     f.write(f"\nsingleton {name} 1.0 {name}.qml")
@@ -257,13 +203,14 @@ class QuickControlsTests(unittest.TestCase):
                 ROOT.parent / "shell/widgets/FastScroll.qml",
                 target / "fixtures/FastScroll.qml",
             )
-            (target / "fixtures/NacreScrollBar.qml").write_text(
-                (ROOT.parent / "shell/widgets/NacreScrollBar.qml").read_text()
+            stage_qml(
+                ROOT.parent / "shell/widgets/NacreScrollBar.qml",
+                target / "fixtures/NacreScrollBar.qml",
             )
             with (target / "fixtures/qmldir").open("a") as manifest:
                 manifest.write("\nNacreScrollBar 1.0 NacreScrollBar.qml\n")
             install_i18n(target / "fixtures")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env=dict(os.environ, QT_QPA_PLATFORM="offscreen"),
                 capture_output=True,

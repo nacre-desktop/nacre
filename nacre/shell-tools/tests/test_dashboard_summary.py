@@ -1,10 +1,11 @@
-from qml_source import install_i18n, install_paths
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Native summary layout keeps calendar, gauges and real-spectrum baselines aligned."""
 
 import os
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
 from dashboard_fixtures import prepare_dashboard
@@ -38,18 +39,13 @@ class DashboardSummaryTests(unittest.TestCase):
                 "NacreCompactMetric",
                 "NacreAlbumHalo",
             ):
-                source = (
-                    (SHELL / "modules/dashboard" / (name + ".qml"))
-                    .read_text()
-                    .replace("import qs.widgets", 'import "fixtures"')
-                    .replace("import qs.services", "")
-                    .replace("import qs.utils", "")
-                    .replace("import Quickshell", "")
-                    .replace("Quickshell.", "Environment.")
+                stage_qml(
+                    SHELL / "modules/dashboard" / (name + ".qml"),
+                    target / (name + ".qml"),
                 )
-                (target / (name + ".qml")).write_text(source)
             (target / "tst_summary.qml").write_text("""import QtQuick
 import QtTest
+import Quickshell
 import "fixtures"
 TestCase {
  name:"DashboardSummary";width:1100;height:1200;visible:true;when:windowShown
@@ -71,7 +67,7 @@ TestCase {
   verify(!findChild(media,"mediaDuration"));
   systemSpy.target=scene;systemSpy.clear();
   mouseClick(findChild(host,"hostAction_system"),10,10);compare(systemSpy.count,1);
-  mouseClick(findChild(host,"hostAction_updates"),10,10);compare(Environment.launched[1],"updates");
+  mouseClick(findChild(host,"hostAction_updates"),10,10);compare(Quickshell.launched[0][1],"updates");
   const play=findChild(media,"mediaToggle");const point=play.mapToItem(media,0,0);verify(point.y+play.height<=media.height);
   scene.width=580;scene.height=scene.implicitHeight;wait(30);
   verify(host.y>=calendar.y+calendar.height);verify(metrics.y>=host.y+host.height);
@@ -88,8 +84,7 @@ TestCase {
 }
 """)
             install_i18n(fixtures)
-            install_paths(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 capture_output=True,
                 text=True,

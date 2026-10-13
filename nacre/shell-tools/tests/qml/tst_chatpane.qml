@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import Quickshell
 import "fixtures"
 
 TestCase {
@@ -262,11 +263,8 @@ TestCase {
     }
 
     function test_focusing_and_sending_does_not_pin_chat() {
-        const view = createTemporaryObject(pane, test, {
-            "visibilities": {
-                "leftPinned": false
-            }
-        });
+        const view = createTemporaryObject(pane, test);
+        view.visibilities.leftPinned = false;
         verify(view);
         const input = findChild(view, "sidebarComposer");
         input.forceActiveFocus();
@@ -306,9 +304,9 @@ TestCase {
         ChatPane {
             width: 460
             height: 700
-            visibilities: ({
-                    "leftPinned": true
-                })
+            visibilities: PersistentProperties {
+                property bool leftPinned: true
+            }
         }
     }
 

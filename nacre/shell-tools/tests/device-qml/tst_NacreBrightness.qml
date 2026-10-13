@@ -1,17 +1,22 @@
 import QtQuick
 import QtTest
+import Quickshell
 import "fixtures"
 
 TestCase {
     id: test
     name: "NacreScreenLightOwner"
     when: windowShown
-    Component {
-        id: service
-        NacreBrightness {}
+    function init() {
+        Quickshell.screens = [
+            {
+                name: "eDP-1"
+            }
+        ];
     }
+
     function test_mixed_scale_screens_without_backlight_are_readonly() {
-        Environment.screens = [
+        Quickshell.screens = [
             {
                 name: "DP-1",
                 scale: 1
@@ -25,14 +30,14 @@ TestCase {
                 scale: 2
             }
         ];
-        const state = createTemporaryObject(service, test);
+        const state = NacreBrightness;
         compare(state.monitors.length, 3);
         for (const monitor of state.monitors) {
             verify(!monitor.available);
             verify(!monitor.setBrightness(.5));
             compare(monitor.writer.starts, 0);
         }
-        Environment.screens = [
+        Quickshell.screens = [
             {
                 name: "eDP-1"
             }
@@ -41,7 +46,7 @@ TestCase {
         compare(state.monitors.length, 1);
     }
     function test_screen_mapping_no_mount_write_and_closed_timer() {
-        const state = createTemporaryObject(service, test);
+        const state = NacreBrightness;
         compare(state.monitors.length, 1);
         verify(!state.monitors[0].available);
         state.hardware = {
@@ -68,13 +73,13 @@ TestCase {
         const external = {
             name: "DP-1"
         };
-        Environment.screens = [external];
+        Quickshell.screens = [external];
         state.reconcile();
         verify(!state.monitors[0].available);
-        Environment.screens = [];
+        Quickshell.screens = [];
         state.reconcile();
         compare(state.monitors.length, 0);
-        Environment.screens = [
+        Quickshell.screens = [
             {
                 name: "eDP-1"
             }

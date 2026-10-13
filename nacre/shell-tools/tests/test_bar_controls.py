@@ -1,15 +1,16 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Actual independent bar/popout views under native Qt with safe service fixtures."""
 
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
 
-from qml_source import install_foundation_interaction, remove_objects
+from qml_fixtures import install_foundation_interaction
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = ROOT.parent / "shell"
@@ -30,9 +31,7 @@ class BarControlsTests(unittest.TestCase):
                     SHELL / "widgets" / (name + ".qml"), fixtures / (name + ".qml")
                 )
             (fixtures / "NacreAppearance.qml").write_text(
-                (SHELL / "config/NacreAppearance.qml")
-                .read_text()
-                .replace("import qs.widgets", 'import "."')
+                (SHELL / "config/NacreAppearance.qml").read_text()
             )
             definitions = {
                 "NacreBar": "property var sizes:({batteryWidth:200})",
@@ -74,27 +73,13 @@ class BarControlsTests(unittest.TestCase):
                 ("popouts", "NacreBatteryPopup"),
                 ("popouts", "NacreCalendarPopup"),
             ):
-                source = (SHELL / "modules/bar" / area / (name + ".qml")).read_text()
-                for imported in (
-                    "qs.widgets",
-                    "qs.services",
-                    "qs.config",
-                    "qs.utils",
-                    "Quickshell.Services.UPower",
-                ):
-                    source = source.replace("import " + imported, 'import "fixtures"')
-                source = source.replace(
-                    "../../dashboard/overview/overview.js", "overview.js"
+                stage_qml(
+                    SHELL / "modules/bar" / area / (name + ".qml"),
+                    target / (name + ".qml"),
                 )
-                source = source.replace(
-                    "../../../utils/scripts/window-title.js", "window-title.js"
-                )
-                source = source.replace("import Quickshell.Io", "")
-                source = remove_objects(source, r"\bIpcHandler\s*\{")
-                (target / (name + ".qml")).write_text(source)
             shutil.copy2(ROOT / "tests/bar-qml/tst_bar.qml", target / "tst_bar.qml")
             install_i18n(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,

@@ -1,7 +1,8 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 import os
 import shutil
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,33 +18,14 @@ class ClickAwayTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)
             shutil.copytree(ROOT / "tests/qml/fixtures", path / "fixtures")
-            source = (
-                (ROOT.parent / "shell/modules/drawers/NacrePanelInput.qml")
-                .read_text()
-                .replace("import qs.services", 'import "fixtures"')
-                .replace("import qs.config", "")
-                .replace("import qs.modules.bar.popouts as BarPopouts", "")
-                .replace("import qs.modules.osd as Osd", "")
-                .replace("import Quickshell", "")
+            stage_qml(
+                ROOT.parent / "shell/modules/drawers/NacrePanelInput.qml",
+                path / "NacrePanelInput.qml",
             )
-            for typename in [
-                "ShellScreen",
-                "BarPopouts.Wrapper",
-                "PersistentProperties",
-                "Panels",
-                "Item",
-            ]:
-                source = source.replace(
-                    "required property " + typename, "required property var"
-                )
-            (path / "NacrePanelInput.qml").write_text(source)
-            intent = (
-                (ROOT.parent / "shell/services/NacreHoverIntent.qml")
-                .read_text()
-                .replace("import Quickshell", "")
-                .replace("Singleton {", "QtObject {")
+            stage_qml(
+                ROOT.parent / "shell/services/NacreHoverIntent.qml",
+                path / "fixtures/NacreHoverIntent.qml",
             )
-            (path / "fixtures/NacreHoverIntent.qml").write_text(intent)
             (path / "fixtures/NacreCompositor.qml").write_text(
                 'pragma Singleton\nimport QtQuick\nQtObject { property var focusedMonitor:({name:"test"}); property var activeWindow:null }'
             )
@@ -65,7 +47,7 @@ class ClickAwayTests(unittest.TestCase):
                 path / "tst_click_away.qml",
             )
             install_i18n(path / "fixtures")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(path), "-o", "-,txt"],
                 capture_output=True,
                 text=True,

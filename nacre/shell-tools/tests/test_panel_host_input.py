@@ -1,12 +1,12 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Actual panel host disables old controls while their closing geometry remains."""
 
 import os
-import re
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
 
@@ -22,26 +22,10 @@ class PanelHostInputTests(unittest.TestCase):
             root = Path(directory)
             fixtures = root / "fixtures"
             fixtures.mkdir()
-            source = (SHELL / "modules/drawers/NacrePanelHost.qml").read_text()
-            source = source.replace("import Quickshell\n", "")
-            source = source.replace("import qs.services", 'import "fixtures"')
-            source = source.replace("import qs.widgets", 'import "fixtures"')
-            source = source.replace("import qs.config", 'import "fixtures"')
-            for alias in [
-                "Popouts",
-                "Dashboard",
-                "Extras",
-                "Launcher",
-                "Notifications",
-                "Osd",
-                "Session",
-            ]:
-                source = re.sub(
-                    r"import qs\.modules\.[^\n]+ as " + alias,
-                    'import "fixtures" as ' + alias,
-                    source,
-                )
-            (root / "NacrePanelHost.qml").write_text(source)
+            stage_qml(
+                SHELL / "modules/drawers/NacrePanelHost.qml",
+                root / "NacrePanelHost.qml",
+            )
             shutil.copy2(SHELL / "modules/drawers/layout.js", root / "layout.js")
             (fixtures / "NacreFrame.qml").write_text(
                 "pragma Singleton\nimport QtQuick\nQtObject {property int left:10;property int right:10;property int headerHeight:50;property int bottom:10;property int rounding:20}"
@@ -131,7 +115,7 @@ TestCase {
 }
 """)
             install_i18n(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(root), "-o", "-,txt"],
                 capture_output=True,
                 text=True,

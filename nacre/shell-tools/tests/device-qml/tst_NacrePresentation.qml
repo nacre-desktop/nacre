@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "NacreMatchedPresentation"
     when: windowShown
-    Component {
-        id: service
-        NacrePresentation {}
-    }
+
     function record(poster, primary) {
         return {
             poster: poster,
@@ -23,7 +20,7 @@ TestCase {
         };
     }
     function test_bootstrap_same_poster_and_only_latest_ready_can_activate() {
-        const state = createTemporaryObject(service, test);
+        const state = NacrePresentation;
         verify(!state.available);
         verify(state.accept(record("/fixture/first")));
         compare(state.active.poster, "/fixture/first");
@@ -41,7 +38,7 @@ TestCase {
         verify(state.activate("/fixture/fourth"));
     }
     function test_delayed_file_read_cannot_undo_a_newer_streamed_palette() {
-        const state = createTemporaryObject(service, test);
+        const state = NacrePresentation;
         const earlier = Object.assign(record("/fixture/first"), {
             publishedAtMs: 1000
         });
@@ -62,7 +59,7 @@ TestCase {
         compare(state.active.poster, "/fixture/second");
     }
     function test_reject_partial_malformed_and_caller_mutation() {
-        const state = createTemporaryObject(service, test);
+        const state = NacrePresentation;
         const input = record("/fixture/path with space%");
         state.accept(input);
         input.colours.primary = "000000";

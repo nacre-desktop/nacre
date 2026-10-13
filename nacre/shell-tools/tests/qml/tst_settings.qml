@@ -1,7 +1,6 @@
 import QtQuick
 import QtTest
 import "fixtures"
-import "settings"
 
 TestCase {
     id: test
@@ -373,11 +372,11 @@ TestCase {
         const content = findChild(view, "lockPreviewContent");
         verify(window);
         verify(content);
-        compare(content.parent, window);
+        compare(content.parent, window.contentItem);
         compare(content.width, window.width);
         compare(content.height, window.height);
         compare(findChild(view, "lockPreviewHour").text, "02");
-        verify(window.children.length >= 3);
+        verify(window.contentItem.children.length >= 3);
         window.widgetData = {
             "count": 1,
             "notifications": [
@@ -685,9 +684,6 @@ TestCase {
     Component {
         id: lockPreview
 
-        LockPreview {
-            width: 1280
-            height: 800
-        }
+        LockPreview {}
     }
 }

@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "NacreAppDiscovery"
     when: windowShown
-    Component {
-        id: service
-        NacreApps {}
-    }
+
     function entry(id, name, extra) {
         return Object.assign({
             id: id,
@@ -42,7 +39,7 @@ TestCase {
         DesktopEntries.applications = {
             values: [browser, editor, accent]
         };
-        const apps = createTemporaryObject(service, test);
+        const apps = NacreApps;
         compare(apps.fuzzyQuery("vsc")[0], editor);
         compare(apps.fuzzyQuery("visual ide")[0], editor);
         compare(apps.fuzzyQuery("editeur")[0], accent);
@@ -67,7 +64,7 @@ TestCase {
                 })]
         };
         LauncherPreferences.hidden = ["hidden"];
-        const apps = createTemporaryObject(service, test);
+        const apps = NacreApps;
         compare(apps.all.length, 2);
         compare(apps.list.length, 1);
         verify(!apps.launch(hidden));

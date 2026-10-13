@@ -1,4 +1,6 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Native Colors studio controls, sizing, previews and explicit Apply dispatch."""
 
@@ -6,10 +8,9 @@ import json
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
-from qml_source import install_foundation_interaction
+from qml_fixtures import install_foundation_interaction
 
 ROOT = Path(__file__).parents[1]
 SHELL = ROOT.parent / "shell"
@@ -36,26 +37,16 @@ class ColorsUITests(unittest.TestCase):
                 "NacreScrollBar",
                 "NacreImage",
             ):
-                s = (
-                    (SHELL / "widgets" / f"{name}.qml")
-                    .read_text()
-                    .replace("import qs.services", 'import "."')
-                )
-                (fixtures / f"{name}.qml").write_text(s)
+                stage_qml(SHELL / "widgets" / f"{name}.qml", fixtures / f"{name}.qml")
             for name in (
                 "NacreColorsView",
                 "NacreThemePreview",
                 "NacreColorSample",
                 "NacreAccentTarget",
             ):
-                s = (
-                    (SHELL / "modules/colors" / f"{name}.qml")
-                    .read_text()
-                    .replace("import qs.widgets", 'import "fixtures"')
-                    .replace("import qs.services", 'import "fixtures"')
-                    .replace("import Quickshell\n", "")
+                stage_qml(
+                    SHELL / "modules/colors" / f"{name}.qml", target / f"{name}.qml"
                 )
-                (target / f"{name}.qml").write_text(s)
             colors = json.loads(
                 (ROOT / "tests/orient-gallery/palettes.json").read_text()
             )["night-city"]["dark-natural"]["colours"]
@@ -123,7 +114,7 @@ TestCase {id:test;name:"ColorsStudio";width:1300;height:1000;visible:true;when:w
                     )
                 )
             install_i18n(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [
                     str(runner),
                     "-input",

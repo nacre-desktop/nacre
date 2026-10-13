@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import Quickshell
 import "fixtures"
 import "colour-data.js" as Palette
 
@@ -10,21 +11,27 @@ TestCase {
     height: 650
     visible: true
     when: windowShown
+    function initTestCase() {
+        Quickshell.screens = [
+            {
+                name: "test",
+                width: 1920,
+                height: 1200
+            }
+        ];
+    }
     Component {
         id: picker
         NacreWallpaperPicker {
             width: 1160
             height: implicitHeight
-            visibilities: QtObject {
+            visibilities: PersistentProperties {
                 property bool launcher: true
                 property bool previewOnly: false
             }
         }
     }
-    Component {
-        id: presentation
-        NacrePresentation {}
-    }
+
     Component {
         id: backdrop
         NacreWallpaperBackdrop {
@@ -487,7 +494,7 @@ TestCase {
         }
     }
     function test_theme_waits_for_matching_image_ready_and_rejects_stale_ack() {
-        const view = createTemporaryObject(presentation, test);
+        const view = NacrePresentation;
         const first = {
             poster: "/fixture/one",
             mode: "dark",

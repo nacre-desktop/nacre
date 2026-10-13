@@ -1,3 +1,5 @@
+from qml_fixtures import run_qml, stage_qml
+
 """Owned compositor operations, private recovery and real docking geometry."""
 
 import importlib.util
@@ -108,12 +110,7 @@ print("PANEL_ROUTING_OK")
             self.skipTest("Qt Quick Test unavailable")
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
-            source = (
-                (SHELL / "widgets/NacrePanelDrag.qml")
-                .read_text()
-                .replace("import qs.services", 'import "."')
-                .replace("import qs.utils", 'import "."')
-            )
+            source = (SHELL / "widgets/NacrePanelDrag.qml").read_text()
             (target / "NacrePanelDrag.qml").write_text(source)
             (target / "NacrePearls.qml").write_text("""pragma Singleton
 import QtQuick
@@ -177,7 +174,7 @@ TestCase {
   mouseDrag(sensor,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);compare(NacrePearls.starts,1);
  }
 }""")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target)],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 text=True,
@@ -242,20 +239,13 @@ QtObject {property var entries:[];property int writes:0;function saveSoon(){writ
             (target / "qmldir").write_text(
                 "singleton SidebarChat 1.0 SidebarChat.qml\nsingleton NacrePearls 1.0 NacrePearls.qml\nsingleton DesktopExtras 1.0 DesktopExtras.qml\nNacreChatSession 1.0 NacreChatSession.qml\n"
             )
-            source = (
-                (SHELL / "services/NacreAiViews.qml")
-                .read_text()
-                .replace("pragma Singleton", "")
-                .replace("import Quickshell", 'import "."')
-                .replace("Singleton {", "Item {")
-            )
-            (target / "Views.qml").write_text(source)
+            stage_qml(SHELL / "services/NacreAiViews.qml", target / "Views.qml")
             (target / "tst_views.qml").write_text("""import QtQuick
 import QtTest
 import "."
 TestCase {
  name:"AssistantPanelOwnership"
- Views {id:views}
+ readonly property var views:Views
  function test_move_focus_and_dock_without_duplicating_or_losing_drafts(){
   const original=views.edge;original.draft="first draft";original.busy=true;
   compare(views.take(),original);verify(views.edge!==original);
@@ -276,7 +266,7 @@ TestCase {
   compare(views.recent.length,0);compare(views.snapshot().channels.length,1);
  }
 }""")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target)],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 text=True,
@@ -351,10 +341,7 @@ TestCase {
         with tempfile.TemporaryDirectory() as folder:
             target = Path(folder)
             (target / "NacreDockFilm.qml").write_text(
-                (SHELL / "widgets/NacreDockFilm.qml")
-                .read_text()
-                .replace("import qs.services", 'import "."')
-                .replace("import qs.utils", 'import "."')
+                (SHELL / "widgets/NacreDockFilm.qml").read_text()
             )
             (target / "NacreTokens.qml").write_text("""pragma Singleton
 import QtQuick
@@ -382,7 +369,7 @@ TestCase {
  }
 }
 """)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={
                     **os.environ,
@@ -398,7 +385,7 @@ TestCase {
             self.assertNotIn("QWARN", result.stdout + result.stderr)
 
     def test_actual_service_shares_snap_zone_and_preserves_release_lifecycle(self):
-        from qml_source import remove_objects, install_paths
+        from qml_fixtures import stage_qml, run_qml, install_i18n
 
         runner = Path("/usr/lib/qt6/bin/qmltestrunner")
         if not runner.exists():
@@ -418,60 +405,29 @@ TestCase {
                     "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}\n"
                 )
                 manifest += f"singleton {name} 1.0 {name}.qml\n"
-            source = (
-                (SHELL / "services/NacrePanelState.qml")
-                .read_text()
-                .replace("import Quickshell", "")
-                .replace("import qs.utils", 'import "."')
-                .replace("Singleton {", "Item {")
-            )
-            (target / "NacrePanelState.qml").write_text(
-                source.replace("Quickshell.screens", "Environment.screens")
-            )
-            manifest += "singleton NacrePanelState 1.0 NacrePanelState.qml\n"
             (target / "qmldir").write_text(manifest)
-            install_paths(target)
-            source = (
-                (SHELL / "services/NacrePearls.qml")
-                .read_text()
-                .replace("pragma Singleton", "")
-                .replace("import Quickshell.Io", "")
-                .replace("import Quickshell", "")
-                .replace("import qs.utils", 'import "."')
-                .replace("import qs.modules.pearls as Pearl", "")
-                .replace("import qs.config", 'import "."')
-                .replace("import qs.widgets", 'import "."')
-                .replace("Singleton {", "Item {")
-                .replace(
-                    'import "../modules/pearls/geometry.js" as Geometry',
-                    'import "geometry.js" as Geometry',
-                )
+            stage_qml(
+                SHELL / "services/NacrePanelState.qml", target / "NacrePanelState.qml"
             )
-            source = remove_objects(
-                source,
-                r"\b(Component(?!\s*\{\s*id:\s*frameBarrierFactory\b)|Process|IpcHandler|Connections)\s*\{",
+            stage_qml(SHELL / "services/NacrePearls.qml", target / "Controller.qml")
+            (target / "NacrePearlWindow.qml").write_text(
+                "import QtQuick\nItem {property var entry}"
             )
-            source = source.replace(
-                "Quickshell.screens", "Environment.screens"
-            ).replace("Quickshell.processId", "Environment.processId")
-            (target / "NacreFrameBarrier.qml").write_text(
-                (SHELL / "widgets/NacreFrameBarrier.qml").read_text()
-            )
-            (target / "Controller.qml").write_text(source)
-            (target / "geometry.js").write_text(
-                (SHELL / "modules/pearls/geometry.js").read_text()
-            )
+            with (target / "qmldir").open("a") as stream:
+                stream.write("NacrePearlWindow 1.0 NacrePearlWindow.qml\n")
+            install_i18n(target)
             (target / "tst_magnet.qml").write_text("""import QtQuick
 import QtTest
+import Quickshell
 import "."
 TestCase {
  name:"MagneticDockLifecycle";when:windowShown
- Controller {id:controller}
+ readonly property var controller:Controller
  QtObject {id:surface;property bool autoFrames:true;property int requests:0;signal frameSwapped();function update(){requests++;if(autoFrames)Qt.callLater(()=>frameSwapped())}}
  property var view:({dashboard:false,dashboardPinned:false,left:false,leftPinned:false,launcher:false,osd:false,session:false,previewOnly:false,hoverDocked:false,edgeMenu:"",dashboardTab:0})
  property int destroyed:0
  property int prepared:0
- function init(){surface.autoFrames=true;surface.requests=0;controller.entries=[];controller.drag=null;controller.nativeDrag=null;controller.niriMove=null;destroyed=0;prepared=0;NacrePanelState.hidden=false;NacrePanelState.screens={test:view};NacrePanelState.panels={test:{dashboard:{Window:{window:surface},restoreAttached(){prepared++}}}};NacreCompositor.backendName="hyprland";NacreCompositor.windows=[];}
+ function init(){Quickshell.screens=Environment.screens;Quickshell.processId=88;surface.autoFrames=true;surface.requests=0;controller.entries=[];controller.drag=null;controller.nativeDrag=null;controller.niriMove=null;destroyed=0;prepared=0;NacrePanelState.hidden=false;NacrePanelState.screens={test:view};NacrePanelState.panels={test:{dashboard:{Window:{window:surface},restoreAttached(){prepared++}}}};NacreCompositor.backendName="hyprland";NacreCompositor.windows=[];}
  function addEntry(){const e={kind:"dashboard",title:"Nacre Pearl Dashboard 12",origin:"test",window:{visible:true,ready:true,clientAddress:"niri-window:12",captureState(){return {dashboardTab:2}},destroy(){destroyed++}},destroy(){destroyed++}};controller.entries=[e];return e;}
  function packet(phase,x,y){return "nacre_pearl_drag,"+phase+",Nacre Pearl Dashboard 12,"+x+","+y+",400,300,984,740";}
  function test_native_grab_middle_docks_before_pointer_reaches_edge(){
@@ -554,7 +510,7 @@ TestCase {
  }
 }
 """)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,
@@ -568,55 +524,62 @@ TestCase {
         runner = Path("/usr/lib/qt6/bin/qmltestrunner")
         if not runner.exists():
             self.skipTest("Qt Quick Test unavailable")
-        window = (SHELL / "modules/pearls/NacrePearlWindow.qml").read_text()
-        barrier = window.split("    NacreFrameBarrier {", 1)[1].split(
-            "    PersistentProperties {", 1
-        )[0]
-        barrier = "    NacreFrameBarrier {" + barrier
-        barrier = barrier.replace("root.contentItem.Window.window", "root.testSurface")
-        ready = window.split("    onReadyChanged:", 1)[1].split("    Connections {", 1)[
-            0
-        ]
+        from qml_fixtures import stage_qml, run_qml, install_i18n
+
         with tempfile.TemporaryDirectory() as folder:
             target = Path(folder)
-            (target / "NacreFrameBarrier.qml").write_text(
-                (SHELL / "widgets/NacreFrameBarrier.qml").read_text()
+            definitions = {
+                "NacrePearls": "property var drag:null;property int handoffs:0;property int failures:0;function handedOff(entry){handoffs++}function handoffFailed(entry){failures++}function saveSoon(){}function remove(entry){}function screen(name){return null}",
+                "NacreCompositor": 'property string backendName:"hyprland";property var windows:[];property var activeWindow:null;property var monitors:({values:[]});function refreshWindows(){}',
+                "NacreTokens": 'property color body:"#101419";property color mutedInk:"gray";property bool motionEnabled:false',
+                "NacreWallpapers": 'property var preferences:({layout:"carousel"})',
+                "NacreMenu": "",
+            }
+            with (target / "qmldir").open("w") as manifest:
+                for name, body in definitions.items():
+                    (target / (name + ".qml")).write_text(
+                        "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
+                    )
+                    manifest.write(f"singleton {name} 1.0 {name}.qml\n")
+            stage_qml(
+                SHELL / "modules/pearls/NacrePearlWindow.qml",
+                target / "Destination.qml",
             )
-            (target / "qmldir").write_text(
-                "singleton NacrePearls 1.0 NacrePearls.qml\nsingleton NacreCompositor 1.0 NacreCompositor.qml\n"
-            )
-            (target / "NacrePearls.qml").write_text("""pragma Singleton
-import QtQuick
-QtObject {property var drag:null;property int handoffs:0;property int failures:0;function handedOff(entry){handoffs++} function handoffFailed(entry){failures++}}
-""")
-            (target / "NacreCompositor.qml").write_text(
-                'pragma Singleton\nimport QtQuick\nQtObject {property string backendName:"hyprland"}\n'
-            )
-            (target / "Destination.qml").write_text(
-                'import QtQuick\nimport "."\nItem {id:root;property bool ready:false;property bool painted:false;property bool revealed:false;property var dropPoint:null;property var entry:({});property var testSurface;onReadyChanged:'
-                + ready
-                + barrier
-                + "}\n"
-            )
+            body = 'property var visibilities;property bool detached:false;property bool hostActive:true;property var menuContext;property bool closeAfterLaunch:false;property var screen;property var chat;property bool visibility:false;property bool active:false;property string section:"";signal closeRequested;signal uiChanged;signal sectionRequested(string section);function restoreState(value){}'
+            children = {
+                "NacreDashboardPanel": "Item {" + body + "}",
+                "NacreLauncherPanel": "Item {" + body + "}",
+                "LeftDrawer": "Item {" + body + "}",
+                "NacreControlCenter": "Item {" + body + "}",
+                "NacreMiniPlayer": "Item {property bool active:false}",
+                "NacreMenuContext": "QtObject {property var shared}",
+                "NacreSurface": "Rectangle {}",
+                "NacreText": "Text {}",
+                "NacrePearlBorder": "Item {property bool engaged:false}",
+            }
+            with (target / "qmldir").open("a") as manifest:
+                for name, body in children.items():
+                    (target / (name + ".qml")).write_text("import QtQuick\n" + body)
+                    manifest.write(f"{name} 1.0 {name}.qml\n")
+            install_i18n(target)
             (target / "tst_release.qml").write_text("""import QtQuick
 import QtTest
 import "."
 TestCase {
  name:"FloatingReleaseFrames";when:windowShown
- QtObject {id:surface;property int requests:0;signal frameSwapped();function update(){requests++}}
- Component {id:factory;Destination {testSurface:surface}}
+ Component {id:factory;Destination {entry:({kind:"media",title:"Test pearl",key:"test",origin:"test",initial:{}})}}
  function test_placement_does_not_drop_original_before_paint(){
   const win=factory.createObject(this);NacrePearls.handoffs=0;
   win.ready=true;wait(80);compare(NacrePearls.handoffs,0);verify(!win.painted);
-  surface.frameSwapped();compare(NacrePearls.handoffs,0);verify(!win.painted);
-  surface.frameSwapped();compare(NacrePearls.handoffs,1);verify(win.painted);
-  surface.frameSwapped();compare(NacrePearls.handoffs,1);win.destroy();
+  win.frameSwapped();compare(NacrePearls.handoffs,0);verify(!win.painted);
+  win.frameSwapped();compare(NacrePearls.handoffs,1);verify(win.painted);
+  win.frameSwapped();compare(NacrePearls.handoffs,1);win.destroy();
  }
  function test_niri_first_placement_stays_hidden_while_native_spring_runs(){
   NacreCompositor.backendName="niri";NacrePearls.handoffs=0;
-  const win=factory.createObject(this,{dropPoint:{exact:true}});NacrePearls.drag={destination:win.entry};win.ready=true;
+  const win=factory.createObject(this,{dropPoint:{exact:true,x:0,y:0,width:984,height:740}});NacrePearls.drag={destination:win.entry};win.ready=true;
   wait(200);verify(!win.revealed);compare(NacrePearls.handoffs,0);
-  tryVerify(()=>win.revealed,500);surface.frameSwapped();surface.frameSwapped();
+  tryVerify(()=>win.revealed,500);win.frameSwapped();win.frameSwapped();
   verify(win.painted);compare(NacrePearls.handoffs,1);win.destroy();
   NacreCompositor.backendName="hyprland";NacrePearls.drag=null;
  }
@@ -626,7 +589,7 @@ TestCase {
  }
 }
 """)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,
@@ -669,7 +632,7 @@ TestCase {
  }
 }
 """)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={
                     **os.environ,
@@ -766,7 +729,7 @@ TestCase {
   compare(result.x,-1908);compare(result.y,12);
  }
 }""")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target)],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 text=True,

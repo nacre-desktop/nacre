@@ -1,4 +1,6 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Native Welcome navigation, controls, bounded layout and keyboard dismissal."""
 
@@ -6,10 +8,9 @@ import os
 import json
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
-from qml_source import install_foundation_interaction
+from qml_fixtures import install_foundation_interaction
 
 ROOT = Path(__file__).parents[1]
 SHELL = ROOT.parent / "shell"
@@ -34,22 +35,13 @@ class WelcomeUITests(unittest.TestCase):
                 "NacreScrollBar",
                 "NacreImage",
             ):
-                text = (
-                    (SHELL / "widgets" / (name + ".qml"))
-                    .read_text()
-                    .replace("import qs.services", 'import "."')
+                stage_qml(
+                    SHELL / "widgets" / (name + ".qml"), fixtures / (name + ".qml")
                 )
-                (fixtures / (name + ".qml")).write_text(text)
                 if name in ("NacreIcon", "NacreScrollBar", "NacreImage"):
                     with (fixtures / "qmldir").open("a") as stream:
                         stream.write(f"\n{name} 1.0 {name}.qml\n")
-            clip = (
-                (SHELL / "widgets/NacreClip.qml")
-                .read_text()
-                .replace("import Quickshell.Widgets", "")
-                .replace("ClippingRectangle {", "Rectangle {\nclip: true")
-            )
-            (fixtures / "NacreClip.qml").write_text(clip)
+            stage_qml(SHELL / "widgets/NacreClip.qml", fixtures / "NacreClip.qml")
             with (fixtures / "qmldir").open("a") as stream:
                 stream.write("\nNacreClip 1.0 NacreClip.qml\n")
             samples = []
@@ -89,9 +81,7 @@ class WelcomeUITests(unittest.TestCase):
                 SHELL / "branding/LogoData.js", target / "branding/LogoData.js"
             )
             (fixtures / "BrandLogo.qml").write_text(
-                (SHELL / "widgets/BrandLogo.qml")
-                .read_text()
-                .replace("import qs.services", 'import "."')
+                (SHELL / "widgets/BrandLogo.qml").read_text()
             )
             palette = json.loads(
                 (ROOT / "tests/orient-gallery/palettes.json").read_text()
@@ -166,21 +156,14 @@ QtObject { property bool visible:true;property string page:"welcome";property va
                 )
             )
             for name in ("NacreWelcomeView", "NacreWelcomeRow", "NacreWelcomeDemo"):
-                text = (
-                    (SHELL / "modules/welcome" / (name + ".qml"))
-                    .read_text()
-                    .replace("import qs.services", 'import "fixtures"')
-                    .replace("import qs.widgets", 'import "fixtures"')
-                    .replace('import "../colors"', 'import "fixtures"')
+                stage_qml(
+                    SHELL / "modules/welcome" / (name + ".qml"),
+                    target / (name + ".qml"),
                 )
-                (target / (name + ".qml")).write_text(text)
-            previewSource = (
-                (SHELL / "modules/colors/NacreThemePreview.qml")
-                .read_text()
-                .replace("import qs.services", 'import "."')
-                .replace("import qs.widgets", 'import "."')
+            stage_qml(
+                SHELL / "modules/colors/NacreThemePreview.qml",
+                fixtures / "NacreThemePreview.qml",
             )
-            (fixtures / "NacreThemePreview.qml").write_text(previewSource)
             (fixtures / "NacrePresentation.qml").write_text(
                 "pragma Singleton\nimport QtQuick\nQtObject {property var active:({colours:"
                 + json.dumps(palette)
@@ -264,7 +247,7 @@ TestCase {id:test;name:"Welcome";width:1200;height:900;visible:true;when:windowS
                 )
             )
             install_i18n(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [
                     str(runner),
                     "-input",

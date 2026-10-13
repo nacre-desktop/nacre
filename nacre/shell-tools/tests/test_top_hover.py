@@ -1,14 +1,15 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Actual marked frame lips and shared state: hover, click, guards and rearming."""
 
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
-from qml_source import install_foundation_interaction
+from qml_fixtures import install_foundation_interaction
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = ROOT.parent / "shell"
@@ -34,17 +35,9 @@ class TopHoverTests(unittest.TestCase):
                     "pragma Singleton\nimport QtQuick\nQtObject {" + text + "}"
                 )
             for name in ("NacreHoverIntent", "NacrePanelState"):
-                source = (
-                    (SHELL / "services" / (name + ".qml"))
-                    .read_text()
-                    .replace("import Quickshell", "")
-                    .replace("Singleton {", "QtObject {")
-                    .replace("Quickshell.screens", "Environment.screens")
+                stage_qml(
+                    SHELL / "services" / (name + ".qml"), fixtures / (name + ".qml")
                 )
-                source = source.replace(
-                    "import QtQuick", 'import QtQuick\nimport "."', 1
-                )
-                (fixtures / (name + ".qml")).write_text(source)
             with (fixtures / "qmldir").open("a") as manifest:
                 for name in (*definitions, "NacreHoverIntent", "NacrePanelState"):
                     manifest.write(f"\nsingleton {name} 1.0 {name}.qml\n")
@@ -52,14 +45,7 @@ class TopHoverTests(unittest.TestCase):
                 ("NacreFrameLip", SHELL / "widgets/NacreFrameLip.qml"),
                 ("NacreFrameLips", SHELL / "modules/drawers/NacreFrameLips.qml"),
             ):
-                source = path.read_text()
-                for imported in ("qs.widgets", "qs.config", "qs.services"):
-                    source = source.replace("import " + imported, 'import "fixtures"')
-                if name == "NacreFrameLip":
-                    source = source.replace(
-                        "import QtQuick", 'import QtQuick\nimport "fixtures"', 1
-                    )
-                (target / (name + ".qml")).write_text(source)
+                stage_qml(path, target / (name + ".qml"))
             (target / "tst_lips.qml").write_text("""import QtQuick
 import QtTest
 import "fixtures"
@@ -185,7 +171,7 @@ TestCase {
 }
 """)
             install_i18n(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 capture_output=True,
                 text=True,

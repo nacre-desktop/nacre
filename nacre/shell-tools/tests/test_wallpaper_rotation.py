@@ -1,15 +1,15 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Exercise the production rotation timer and shuffle logic in native Qt."""
 
 import os
 from pathlib import Path
-import re
 import shutil
-import subprocess
 import tempfile
 import unittest
-from qml_source import remove_objects
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -22,40 +22,13 @@ class RotationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             target = Path(folder)
             shutil.copytree(ROOT / "tests/qml/fixtures", target / "fixtures")
-            source = (ROOT.parent / "shell/services/NacreWallpapers.qml").read_text()
-            source = (
-                source.replace("pragma Singleton", "")
-                .replace("import qs.utils", 'import "fixtures"')
-                .replace("import Quickshell.Io", "")
-                .replace("import Quickshell", "")
-                .replace("Singleton {", "Item {")
-            )
-            source = source.replace("../utils/scripts/", "").replace(
-                "Component.onCompleted: refresh()", ""
-            )
             shutil.copy2(
                 ROOT.parent / "shell/services/app-search.js", target / "app-search.js"
             )
-            source = remove_objects(
-                source,
-                r"\b(Process|NacrePaletteTask|FileView|IpcHandler|Variants)\s*\{",
+            stage_qml(
+                ROOT.parent / "shell/services/NacreWallpapers.qml",
+                target / "RotatingWalls.qml",
             )
-            source = remove_objects(source, r"\bTimer\s*\{\s*interval:\s*2500\b")
-            source = re.sub(
-                r"property var list: \[\]",
-                'property var list: [{path:"a",dynamic:false},{path:"b",dynamic:true},{path:"c",dynamic:false},{path:"d",dynamic:true}]',
-                source,
-            )
-            source = source.replace('Quickshell.env("HOME")', '"/tmp"')
-            stubs = """
-                property QtObject commit: QtObject {property bool running:false;property string requestPath:"";property string previousPath:""}
-                property QtObject demoRestore: QtObject {property bool running:false;property string token:"";property bool received:false}
-                property QtObject prefWorker: QtObject {property bool running:false;property var value:({})}
-                property QtObject catalog: QtObject {property bool running:false}
-                property QtObject importer: QtObject {property bool running:false;property var files;property var command:[]}
-            """
-            source = source.replace("id: root", "id: root\n" + stubs, 1)
-            (target / "RotatingWalls.qml").write_text(source)
             for name in ["wallpaper-rotation.js"]:
                 shutil.copy2(ROOT.parent / "shell/utils/scripts" / name, target / name)
             services = {
@@ -81,8 +54,9 @@ class RotationTests(unittest.TestCase):
                 target / "tst_wallpaper_rotation.qml",
             )
             install_i18n(target / "fixtures")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
+                isolate=True,
                 env=dict(os.environ, QT_QPA_PLATFORM="offscreen"),
                 capture_output=True,
                 text=True,

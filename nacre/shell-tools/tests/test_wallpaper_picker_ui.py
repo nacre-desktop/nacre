@@ -1,8 +1,9 @@
-from qml_source import install_i18n
-from qml_source import remove_objects, install_foundation_interaction
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
+from qml_fixtures import install_foundation_interaction
 import os
 import shutil
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -33,25 +34,13 @@ class WallpaperPickerUITests(unittest.TestCase):
                 )
             Image.new("RGB", (32, 24), "blue").save(target / "poster.png")
             Image.new("RGB", (32, 24), "green").save(target / "second.png")
-            (target / "NacreWallpaperBackdrop.qml").write_text(
-                (ROOT.parent / "shell/modules/launcher/NacreWallpaperBackdrop.qml")
-                .read_text()
-                .replace("import qs.widgets", 'import "fixtures"')
+            stage_qml(
+                ROOT.parent / "shell/modules/launcher/NacreWallpaperBackdrop.qml",
+                target / "NacreWallpaperBackdrop.qml",
             )
-            presentation = (
-                (ROOT.parent / "shell/services/NacrePresentation.qml")
-                .read_text()
-                .replace("pragma Singleton", "")
-                .replace("import qs.utils", "")
-                .replace("import Quickshell.Io", "")
-                .replace("import Quickshell", "")
-                .replace("Singleton {", "Item {")
-            )
-            (target / "NacrePresentation.qml").write_text(
-                remove_objects(
-                    remove_objects(presentation, r"\bFileView\s*\{"),
-                    r"\bIpcHandler\s*\{",
-                )
+            stage_qml(
+                ROOT.parent / "shell/services/NacrePresentation.qml",
+                target / "NacrePresentation.qml",
             )
             shutil.copy2(
                 ROOT.parent / "shell/services/colour-data.js", target / "colour-data.js"
@@ -62,22 +51,10 @@ class WallpaperPickerUITests(unittest.TestCase):
                 "NacreWallpaperMotion",
                 "NacreWallpaperVideo",
             ):
-                source = (
-                    (ROOT.parent / "shell/modules/launcher" / (name + ".qml"))
-                    .read_text()
-                    .replace("import qs.widgets", 'import "fixtures"')
-                    .replace("import qs.services", "")
-                    .replace("import Quickshell.Io", "")
-                    .replace("import Quickshell", "")
-                    .replace(
-                        "required property PersistentProperties visibilities",
-                        "required property var visibilities",
-                    )
-                    .replace("Quickshell.screens[0].width", "1920")
-                    .replace("Quickshell.screens[0].height", "1200")
+                stage_qml(
+                    ROOT.parent / "shell/modules/launcher" / (name + ".qml"),
+                    target / (name + ".qml"),
                 )
-                source = remove_objects(source, r"\bIpcHandler\s*\{")
-                (target / (name + ".qml")).write_text(source)
             shutil.copy2(
                 ROOT.parent / "shell/widgets/FastScroll.qml",
                 target / "fixtures/FastScroll.qml",
@@ -119,8 +96,9 @@ class WallpaperPickerUITests(unittest.TestCase):
                 target / "tst_wallpapers.qml",
             )
             install_i18n(target / "fixtures")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
+                isolate=True,
                 capture_output=True,
                 text=True,
                 env=dict(os.environ, QT_QPA_PLATFORM="offscreen"),

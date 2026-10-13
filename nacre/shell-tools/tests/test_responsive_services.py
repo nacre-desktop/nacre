@@ -1,15 +1,15 @@
-from qml_source import install_i18n, install_paths
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Production request owners: rapid settings, stale preview replies and teardown."""
 
 import os
 from pathlib import Path
-import re
 import shutil
-import subprocess
 import tempfile
 import unittest
-from qml_source import remove_objects
+
 
 TOOLS = Path(__file__).parents[1]
 SHELL = TOOLS.parent / "shell"
@@ -38,53 +38,16 @@ class ResponsiveServiceTests(unittest.TestCase):
                         "pragma Singleton\nimport QtQuick\nQtObject{" + body + "}"
                     )
                     manifest.write("\nsingleton " + name + " 1.0 " + name + ".qml\n")
-            for name, stubs in {
-                "DesktopSettings": """property QtObject worker: QtObject {property bool running:false;property var change:null;property var command:[]}
-                """,
-                "NacrePaletteTask": """property QtObject server:QtObject{property bool running:true;property var writes:[];function write(value){writes=[...writes,JSON.parse(value)];}}""",
-                "NacreColorsApp": """property QtObject previewServer:QtObject {property bool running:false;property var writes:[];function write(value){writes=[...writes,JSON.parse(value)];}}
-                property QtObject catalogJob:QtObject{property bool running:false}
-                property QtObject actionJob:QtObject{property bool running:false;property var request:null;property string action:"";property string output:"";property string failure:""}
-                property QtObject minJob:QtObject{property bool running:false;property var command:[]}
-                property QtObject focusTimer:QtObject{function restart(){}function stop(){}}
-                property QtObject debounce:QtObject{property int interval:0;function restart(){}function stop(){}}
-                """,
-            }.items():
-                source = (SHELL / "services" / (name + ".qml")).read_text()
-                source = re.sub(r"^pragma Singleton\n", "", source)
-                source = (
-                    source.replace("import Quickshell.Io", "")
-                    .replace("import Quickshell", "")
-                    .replace("import qs.services", 'import "fixtures"')
-                    .replace("import qs.utils", 'import "fixtures"')
-                    .replace("Singleton {", "QtObject {", 1)
-                )
-                if 'import "fixtures"' not in source:
-                    source = 'import "fixtures"\n' + source
-                source = source.replace('Quickshell.env("HOME")', '"/fixture"')
-                source = source.replace(
-                    "readonly property Process server: Process {", "Process {"
-                )
-                pattern = (
-                    r"\b(Process|FileView|IpcHandler|Connections)\s*\{"
-                    if name == "DesktopSettings"
-                    else r"\b(Process|FileView|Timer|IpcHandler|Connections)\s*\{"
-                )
-                source = remove_objects(source, pattern)
-                if name == "DesktopSettings":
-                    source = source.replace(
-                        'Timer {\n        objectName: "settingsRefreshTimer"',
-                        'property Timer refreshClock: Timer {\n        objectName: "settingsRefreshTimer"',
-                    )
-                source = source.replace("id: root", "id: root\n" + stubs, 1)
-                (root / (name + ".qml")).write_text(source)
+            for name in ("DesktopSettings", "NacrePaletteTask", "NacreColorsApp"):
+                stage_qml(SHELL / "services" / (name + ".qml"), root / (name + ".qml"))
             (root / "tst_requests.qml").write_text("""import QtQuick
 import QtTest
+import "fixture-control.js" as Fakes
 import "fixtures"
 TestCase {
  id:test; name:"ResponsiveOwners"
- Component{id:settings;DesktopSettings{}}
- Component{id:studio;NacreColorsApp{}}
+
+
  Component{id:publisher;NacrePaletteTask{}}
  function test_palette_adapters_share_one_serial_transport(){
   const first=createTemporaryObject(publisher,test), second=createTemporaryObject(publisher,test);
@@ -94,32 +57,32 @@ TestCase {
   first.receive(JSON.stringify({ready:true}));
   first.running=true;second.running=true;wait(5);
   compare(first.server.writes.length,1);compare(second.server.writes.length,0);
-  compare(first.server.writes[0].action,"select");
+  compare(JSON.parse(first.server.writes[0]).action,"select");
   first.receive(JSON.stringify({done:true,code:0,result:{path:"scene"}}));wait(5);
-  compare(first.server.writes.length,2);compare(first.server.writes[1].action,"preferences");
+  compare(first.server.writes.length,2);compare(JSON.parse(first.server.writes[1]).action,"preferences");
   first.receive(JSON.stringify({done:true,code:0,result:{layout:"carousel"}}));
   verify(!first.running);verify(!second.running);verify(second.ready);
  }
  function test_rapid_toggle_latest_value_and_rollback(){
-  const model=createTemporaryObject(settings,test);
+  const model=DesktopSettings;
   compare(findChild(model,"settingsRefreshTimer").running,false);
   NacrePanelState.settingsVisible=true;compare(findChild(model,"settingsRefreshTimer").running,true);NacrePanelState.settingsVisible=false;
-  model.worker.running=false;model.queue=[];model.persistedData={blur:false,gapsOut:8};
+  Fakes.withProperty(model,"change").running=false;model.queue=[];model.persistedData={blur:false,gapsOut:8};
   model.set("blur",true);compare(model.data.blur,true);
   model.set("blur",false);compare(model.data.blur,false);
   model.set("blur",true);compare(model.queue.length,1);
   model.set("blur",false);compare(model.queue.length,1);compare(model.data.blur,false);
   model.accept(JSON.stringify({data:{blur:true,gapsOut:8}}));
-  compare(model.data.blur,false);model.worker.running=false;model.finish(0);
-  compare(model.worker.change.value,false);
-  model.accept(JSON.stringify({data:{blur:false,gapsOut:8}}));model.worker.running=false;model.finish(0);
+  compare(model.data.blur,false);Fakes.withProperty(model,"change").running=false;model.finish(0);
+  compare(Fakes.withProperty(model,"change").change.value,false);
+  model.accept(JSON.stringify({data:{blur:false,gapsOut:8}}));Fakes.withProperty(model,"change").running=false;model.finish(0);
   compare(model.data.blur,false);compare(Object.keys(model.desired).length,0);
   model.set("gapsOut",24);compare(model.data.gapsOut,24);
-  model.accept(JSON.stringify({data:{blur:false,gapsOut:8},error:"Rejected"}));model.worker.running=false;model.finish(1);
+  model.accept(JSON.stringify({data:{blur:false,gapsOut:8},error:"Rejected"}));Fakes.withProperty(model,"change").running=false;model.finish(1);
   compare(model.data.gapsOut,8);compare(model.message,"Rejected");
  }
  function test_preview_stream_latest_sequence_noop_and_close(){
-  const model=createTemporaryObject(studio,test);model.visible=true;model.choose("scene");
+  const model=NacreColorsApp;model.visible=true;model.choose("scene");
   compare(model.options.mode,"light");model.acceptPreview(JSON.stringify({ready:true}));
   const first=model.flightSequence;compare(model.previewRequests,1);
   model.change({personality:"harmony"});model.startPreview();compare(model.previewRequests,1);
@@ -128,14 +91,14 @@ TestCase {
   model.acceptPreview(JSON.stringify({sequence:model.flightSequence,result:{id:"fresh",request:model.options,palette:{colours:{surface:"new"}}}}));
   compare(model.preview.id,"fresh");verify(model.ready);
   const generation=model.generation;model.change({personality:"harmony"});compare(model.generation,generation);
-  model.close();verify(!model.previewServer.running);verify(!model.previewBusy);
+  model.close();verify(!Fakes.withProperty(model,"stdinEnabled",true).running);verify(!model.previewBusy);
   model.acceptPreview(JSON.stringify({sequence:model.flightSequence,result:{id:"late"}}));compare(model.preview.id,"fresh");
  }
 }""")
             install_i18n(fixtures)
-            install_paths(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(root), "-o", "-,txt"],
+                isolate=True,
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,
                 text=True,

@@ -1,0 +1,17 @@
+module Quickshell
+Singleton 1.0 Singleton.qml
+Scope 1.0 Scope.qml
+PersistentProperties 1.0 PersistentProperties.qml
+ShellScreen 1.0 ShellScreen.qml
+singleton Quickshell 1.0 Quickshell.qml
+singleton DesktopEntries 1.0 DesktopEntries.qml
+SystemClock 1.0 SystemClock.qml
+IpcHandler 1.0 IpcHandler.qml
+ShellRoot 1.0 ShellRoot.qml
+Anchors 1.0 Anchors.qml
+FloatingWindow 1.0 FloatingWindow.qml
+PanelWindow 1.0 PanelWindow.qml
+LazyLoader 1.0 LazyLoader.qml
+Variants 1.0 Variants.qml
+Region 1.0 Region.qml
+ScreencopyView 1.0 ScreencopyView.qml

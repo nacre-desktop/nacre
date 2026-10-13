@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "NacreKeyboardSteps"
     when: windowShown
-    Component {
-        id: service
-        NacreKeyboardLight {}
-    }
+
     function test_levels_cycle_no_initial_write_and_closed_timer() {
         NacreBrightness.hardware = {
             keyboard: {
@@ -19,7 +16,7 @@ TestCase {
                 current: 0
             }
         };
-        const keys = createTemporaryObject(service, test);
+        const keys = NacreKeyboardLight;
         verify(keys.available);
         compare(keys.brightness, 0);
         verify(!findChild(keys, "keyboardLightTimer").running);

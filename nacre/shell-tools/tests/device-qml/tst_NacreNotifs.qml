@@ -1,22 +1,18 @@
 import QtQuick
 import QtTest
+import Quickshell.Services.Notifications
 import "fixtures"
 
 TestCase {
     id: test
     name: "NacreNotificationLifecycle"
     when: windowShown
-    Component {
-        id: service
-        NacreNotifs {}
-    }
+
     Component {
         id: notice
-        QtObject {
-            property int noticeId: 1
+        NotificationStub {
             property bool tracked: false
             property bool lastGeneration: false
-            property bool temporary: false
             property string summary: "Message"
             property string body: "Body"
             property string appName: "Chat"
@@ -58,7 +54,7 @@ TestCase {
         NacreNotifications.defaultExpireTimeout = 5000;
     }
     function test_control_center_history_clock_runs_only_while_visible() {
-        const view = createTemporaryObject(service, test);
+        const view = NacreNotifs;
         NacrePanelState.panels = ({});
         NacrePanelState.screens = ({});
         view.clock = new Date(0);
@@ -80,7 +76,7 @@ TestCase {
         NacrePanelState.screens = ({});
     }
     function test_clean_load_never_writes_and_live_arrivals_merge_before_save() {
-        const state = createTemporaryObject(service, test);
+        const state = NacreNotifs;
         const writer = findChild(state, "noticeHistoryWriter");
         verify(state.restore(JSON.stringify([row("saved")])));
         wait(150);
@@ -108,7 +104,9 @@ TestCase {
         writer.exited(0, 0);
         wait(150);
         compare(writer.starts, 2);
-        const waiting = createTemporaryObject(service, test);
+    }
+    function test_live_arrivals_merge_before_history_load() {
+        const waiting = NacreNotifs;
         const fresh = createTemporaryObject(notice, test, {
             noticeId: 2
         });
@@ -118,7 +116,7 @@ TestCase {
         compare(waiting.retained.length, 2);
     }
     function test_failed_load_protects_file_and_clear_during_load_cannot_resurrect() {
-        const state = createTemporaryObject(service, test);
+        const state = NacreNotifs;
         state.receive(createTemporaryObject(notice, test));
         verify(!state.restore("bad JSON"));
         wait(150);
@@ -130,7 +128,7 @@ TestCase {
         compare(state.retained.length, 0);
     }
     function test_bulk_clear_preserves_transient_and_reentrant_arrivals() {
-        const state = createTemporaryObject(service, test);
+        const state = NacreNotifs;
         verify(state.restore(JSON.stringify([row("saved"), row("older")])));
         const active = createTemporaryObject(notice, test);
         const removed = state.receive(active);
@@ -164,7 +162,7 @@ TestCase {
         compare(records[0].key, state.retained[0].key);
     }
     function test_transient_feedback_and_dnd_history_policies() {
-        const state = createTemporaryObject(service, test);
+        const state = NacreNotifs;
         state.restore("[]");
         state.policy = {
             feedbackApps: ["notify-send"],
@@ -202,7 +200,7 @@ TestCase {
         compare(state.retained.length, 1);
     }
     function test_hover_suppression_permanent_timeout_expiry_and_native_close() {
-        const state = createTemporaryObject(service, test);
+        const state = NacreNotifs;
         state.restore("[]");
         const native = createTemporaryObject(notice, test);
         const entry = state.receive(native);

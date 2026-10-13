@@ -3,12 +3,10 @@
 import importlib.util
 import json
 from pathlib import Path
-import re
-import subprocess
 import tempfile
 import unittest
 
-from qml_source import install_i18n, install_paths
+from qml_fixtures import install_i18n, stage_qml, run_qml
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKENDS = ROOT.parent / "shell/services/compositor"
@@ -54,58 +52,38 @@ class NiriQmlTests(unittest.TestCase):
             )
             with (fixtures / "qmldir").open("a") as manifest:
                 manifest.write("singleton NacreCompositor 1.0 NacreCompositor.qml\n")
-            for app in ("NacreSettingsApp", "NacreColorsApp", "NacreWelcomeApp"):
-                text = (ROOT.parent / "shell/services" / (app + ".qml")).read_text()
-                expression = re.search(
-                    r"readonly property bool active: ([^\n]+)", text
-                ).group(1)
-                (target / (app + "Activity.qml")).write_text(
-                    'import QtQuick\nimport "fixtures"\nQtObject {'
-                    "property bool visible:true;property var window:({minimized:false});"
-                    'property var client:({workspace:{id:"niri-workspace:9007199254740993"}});'
-                    "readonly property bool active:" + expression + "}"
-                )
-            (fixtures / "WallpaperPlayback.qml").write_text(
-                "pragma Singleton\nimport QtQuick\nQtObject {property bool pauseCovered:true}"
-            )
+            providers = {
+                "NacrePanelState": 'property string settingsPage:"appearance";property var screens:({});function closeTransient(view){}function getForActive(){return null}',
+                "NacreColours": "property bool light:false;property var palette:({})",
+                "NacreTime": "property int hours:12",
+                "NacreWallpapers": 'property string current:"";property string actualCurrent:"";property string pendingPoster:"";property bool displayDynamic:false;property bool displayAnimated:false;property string displayPath:"";property var appearancePreferences:({});property var preferences:({});function refresh(){}',
+                "NacrePresentation": 'property int revision:0;property var active:({poster:"",mode:"dark"});function canonicalPoster(value){return value}function activate(path){return true}',
+                "WallpaperPlayback": "property bool pauseCovered:true;property bool sleeping:false;property bool locked:false;property bool paused:false;property bool batteryPaused:false",
+                "NacreFrame": 'property color colour:"#101419"',
+            }
             with (fixtures / "qmldir").open("a") as manifest:
-                manifest.write(
-                    "singleton WallpaperPlayback 1.0 WallpaperPlayback.qml\n"
+                for name, body in providers.items():
+                    (fixtures / (name + ".qml")).write_text(
+                        "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
+                    )
+                    manifest.write(f"singleton {name} 1.0 {name}.qml\n")
+            compositor = fixtures / "NacreCompositor.qml"
+            compositor.write_text(
+                compositor.read_text().replace(
+                    "QtObject {", "QtObject {property var monitors:({values:[]});"
                 )
-            wallpaper = (
-                ROOT.parent / "shell/modules/background/NacreWallpaperScene.qml"
-            ).read_text()
-            identity = re.search(
-                r"readonly property \w+ workspaceId: [^\n]+", wallpaper
-            ).group(0)
-            coverage = re.search(
-                r"readonly property bool covered: [^\n]+", wallpaper
-            ).group(0)
-            (target / "WallpaperCoverage.qml").write_text(
-                'import QtQuick\nimport "fixtures"\nQtObject {property var monitor:({activeWorkspace:{id:"niri-workspace:9007199254740993"}});'
-                + identity
-                + ";"
-                + coverage
-                + "}"
             )
+            for app in ("NacreSettingsApp", "NacreColorsApp", "NacreWelcomeApp"):
+                stage_qml(
+                    ROOT.parent / "shell/services" / (app + ".qml"),
+                    target / (app + "Activity.qml"),
+                )
+            stage_qml(
+                ROOT.parent / "shell/modules/background/NacreWallpaperScene.qml",
+                target / "WallpaperCoverage.qml",
+            )
+            stage_qml(BACKENDS / "NiriBackend.qml", target / "NiriBackend.qml")
             install_i18n(fixtures)
-            install_paths(fixtures)
-            source = (
-                (BACKENDS / "NiriBackend.qml")
-                .read_text()
-                .replace("pragma Singleton\n", "")
-                .replace("import Quickshell.Io", 'import "fixtures"')
-                .replace("import qs.services", 'import "fixtures"')
-                .replace("import qs.utils", 'import "fixtures"')
-                .replace("import Quickshell\n", "")
-                .replace("Singleton {", "Item {")
-            )
-            source = re.sub(
-                r'Quickshell.env\("([A-Z_]+)"\)',
-                lambda match: '"/fixture"' if match[1] == "HOME" else '""',
-                source,
-            )
-            (target / "NiriBackend.qml").write_text(source)
             for name in ("NiriWindow.qml", "NiriShortcut.qml", "session.js"):
                 (target / name).write_text((BACKENDS / name).read_text())
             (target / "snapshots.js").write_text(
@@ -113,21 +91,18 @@ class NiriQmlTests(unittest.TestCase):
             )
             (target / "tst_niri.qml").write_text("""import QtQuick
 import QtTest
+import Quickshell
 import "session.js" as Session
 import "snapshots.js" as Snapshots
 import "fixtures"
 Item {
  Component {id: wallpaperCoverage; WallpaperCoverage {}}
- Component {id: settingsActivity; NacreSettingsAppActivity {}}
- Component {id: colorsActivity; NacreColorsAppActivity {}}
- Component {id: welcomeActivity; NacreWelcomeAppActivity {}}
- Component {id: factory; NiriBackend {}}
  TestCase {
   name:"NiriBackendContract"; when:windowShown
   property var backend:null
   SignalSpy {id:moveEvents;target:backend;signalName:"event"}
-  function init(){NacreI18n.language="en";backend=factory.createObject(null);verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))));moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear()}
-  function cleanup(){backend.destroy();backend=null;wait(1)}
+  function init(){NacreI18n.language="en";backend=NiriBackend;verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))));moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear()}
+  function cleanup(){backend=null}
   function test_overview_hover_does_not_replace_focus_and_rejects_stale_targets(){
    const active=backend.activeClient
    const next=JSON.parse(JSON.stringify(Snapshots.initial))
@@ -167,7 +142,7 @@ Item {
    compare(moveEvents.signalArguments[5][0].phase,"cancel");
   }
   function test_starting_during_a_move_does_not_invent_a_begin(){
-   backend.destroy();backend=factory.createObject(null);moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear();
+   backend.connected=false;backend.movingWindows={};moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear();
    const next=JSON.parse(JSON.stringify(Snapshots.initial));const row=next.windows.find(w=>w.geometryKnown);
    row.moving=true;row.geometryKnown=false;verify(backend.accept(JSON.parse(JSON.stringify(next))));compare(moveEvents.count,0);
    row.moving=false;row.geometryKnown=true;verify(backend.accept(JSON.parse(JSON.stringify(next))));compare(moveEvents.count,0);
@@ -208,28 +183,28 @@ Item {
    tryCompare(shortcut,"held",false)
    shortcut.params={appid:"nacre_shell",name:"other"}
    verify(!backend.triggerShortcut("nacre_shell:test"));verify(backend.triggerShortcut("nacre_shell:other"))
-   shortcut.destroy();tryCompare(backend,"registrations",[])
+   tryCompare(shortcut,"held",false);shortcut.destroy();tryCompare(backend,"registrations",[])
   }
   function test_opaque_workspace_ids_do_not_pause_actual_app_activity_predicates(){
-   for (const factory of [settingsActivity,colorsActivity,welcomeActivity]) {
-    const activity=factory.createObject(null)
+   for (const activity of [NacreSettingsAppActivity,NacreColorsAppActivity,NacreWelcomeAppActivity]) {
+    activity.visible=true;activity.window={minimized:false};
     verify(activity.active)
     activity.window={minimized:true};verify(!activity.active)
     activity.window={minimized:false};verify(activity.active)
     NacreCompositor.capabilities={perOutputWorkspaces:false}
-    activity.client={workspace:{id:-1}};verify(!activity.active)
-    activity.client={workspace:{id:2}};verify(activity.active)
+    NacreCompositor.windows=[{pid:Quickshell.processId,title:activity.nativeTitle,wmClass:"org.quickshell",workspace:{id:-1}}];verify(!activity.active)
+    NacreCompositor.windows=[{pid:Quickshell.processId,title:activity.nativeTitle,wmClass:"org.quickshell",workspace:{id:2}}];verify(activity.active)
     NacreCompositor.capabilities={perOutputWorkspaces:true}
-    activity.destroy()
+    activity.visible=false
    }
   }
   function test_wallpaper_coverage_preserves_both_workspace_identity_types(){
-   const scene=wallpaperCoverage.createObject(null)
+   const scene=wallpaperCoverage.createObject(null,{screenName:"test"});NacreCompositor.monitors={values:[{name:"test",activeWorkspace:{id:"niri-workspace:9007199254740993"}}]}
    NacreCompositor.windows=[{workspace:{id:"niri-workspace:9007199254740993"},fullscreen:false,floating:false}]
    verify(scene.covered);compare(scene.workspaceId,"niri-workspace:9007199254740993")
    NacreCompositor.windows=[{workspace:{id:"niri-workspace:other"},fullscreen:false,floating:false}]
    verify(!scene.covered)
-   scene.monitor={activeWorkspace:{id:2}}
+   NacreCompositor.monitors={values:[{name:"test",activeWorkspace:{id:2}}]}
    NacreCompositor.windows=[{workspace:{id:2},fullscreen:false,floating:false}]
    verify(scene.covered);compare(scene.workspaceId,2)
    NacreCompositor.windows=[];scene.destroy()
@@ -244,15 +219,14 @@ Item {
  }
 }
 """)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-platform", "offscreen", "-input", str(target)],
+                isolate=True,
                 capture_output=True,
                 text=True,
                 timeout=40,
             )
-            self.assertEqual(
-                result.returncode, 0, (result.stdout + result.stderr)[-9000:]
-            )
+            self.assertEqual(result.returncode, 0, (result.stdout + result.stderr))
 
 
 if __name__ == "__main__":

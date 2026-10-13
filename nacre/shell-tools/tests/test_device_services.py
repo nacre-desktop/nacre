@@ -1,15 +1,15 @@
-from qml_source import install_i18n, install_paths
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Exercise actual independent service code with native dependency fixtures."""
 
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
 
-from qml_source import remove_objects
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -31,7 +31,7 @@ class DeviceServiceTests(unittest.TestCase):
                 "NacrePaths": 'property string state:"file:///fixture";property string pictures:"file:///fixture"',
                 "Environment": 'property var screens:[{name:"eDP-1"}]',
                 "NacreBrightness": "property bool controlsVisible:false;property var hardware:({keyboard:null})",
-                "NacreCompositor": 'property var focusedMonitor:({name:"eDP-1"})',
+                "NacreCompositor": 'property var focusedMonitor:({name:"eDP-1"});function createShortcut(owner,params){return Environment.compositor ? Environment.compositor.createShortcut(owner,params) : null}',
                 "DesktopEntries": "property var applications:({values:[]})",
                 "LauncherPreferences": "property var hidden:[]",
                 "AppLaunch": "property var calls:[];function run(command,cwd){calls=[...calls,{command:command,cwd:cwd}]}",
@@ -97,16 +97,10 @@ class DeviceServiceTests(unittest.TestCase):
                 )
             if name in ("NacreLightChannel", "NacreBrightness", "NacreKeyboardLight"):
                 for component in ("NacreLightChannel", "NacreBacklight"):
-                    source = (
-                        (ROOT.parent / "shell/services" / (component + ".qml"))
-                        .read_text()
-                        .replace("import Quickshell.Io", 'import "fixtures"')
-                        .replace("import Quickshell", "")
-                        .replace("import qs.utils", 'import "fixtures"')
-                        .replace('Quickshell.env("HOME")', '"/fixture"')
-                        .replace('Quickshell.env("NACRE_DASHBOARD_TOOLS")', '""')
+                    stage_qml(
+                        ROOT.parent / "shell/services" / (component + ".qml"),
+                        target / (component + ".qml"),
                     )
-                    (target / (component + ".qml")).write_text(source)
             if name == "NacrePresentation":
                 (fixtures / "NacrePresentation.qml").unlink()
                 manifest = fixtures / "qmldir"
@@ -128,20 +122,13 @@ class DeviceServiceTests(unittest.TestCase):
                     ROOT.parent / "shell/services/compositor/HyprlandWindow.qml",
                     target / "HyprlandWindow.qml",
                 )
-                adapter = (
-                    ROOT.parent / "shell/services/compositor/HyprlandShortcut.qml"
-                ).read_text()
-                (target / "HyprlandShortcut.qml").write_text(
-                    adapter.replace(
-                        "import Quickshell.Hyprland as Native",
-                        'import "fixtures" as Native',
-                    )
+                stage_qml(
+                    ROOT.parent / "shell/services/compositor/HyprlandShortcut.qml",
+                    target / "HyprlandShortcut.qml",
                 )
-                widget = (ROOT.parent / "shell/widgets/NacreShortcut.qml").read_text()
-                (target / "NacreShortcut.qml").write_text(
-                    widget.replace("import qs.services", 'import "fixtures"').replace(
-                        "import qs.utils", 'import "fixtures"'
-                    )
+                stage_qml(
+                    ROOT.parent / "shell/widgets/NacreShortcut.qml",
+                    target / "NacreShortcut.qml",
                 )
                 environment = fixtures / "Environment.qml"
                 environment.write_text(
@@ -153,7 +140,7 @@ class DeviceServiceTests(unittest.TestCase):
                 compositor.write_text(
                     compositor.read_text().replace(
                         "QtObject {",
-                        "QtObject {function createShortcut(owner,params){return Environment.compositor.createShortcut(owner,params)}",
+                        "QtObject {",
                     )
                 )
                 (fixtures / "ShortcutRegistry.qml").write_text("""pragma Singleton
@@ -189,14 +176,9 @@ QtObject {
                 with (fixtures / "qmldir").open("a") as manifest:
                     manifest.write("\nSystemClock 1.0 SystemClock.qml\n")
             if name == "NacreNotifs":
-                entry = (
-                    ROOT.parent / "shell/services/NacreNotificationEntry.qml"
-                ).read_text()
-                (target / "NacreNotificationEntry.qml").write_text(
-                    'import "fixtures"\n'
-                    + entry.replace(
-                        "notification?.transient", "notification?.temporary"
-                    )
+                stage_qml(
+                    ROOT.parent / "shell/services/NacreNotificationEntry.qml",
+                    target / "NacreNotificationEntry.qml",
                 )
                 (fixtures / "NotificationServer.qml").write_text(
                     "import QtQuick\nQtObject {property bool keepOnReload:false;property bool actionsSupported:false;property bool imageSupported:false;property bool persistenceSupported:false;property bool bodyMarkupSupported:false;signal notification(var notification)}"
@@ -210,60 +192,25 @@ QtObject {
                 )
             if name == "NacreWallpapers":
                 # Keep this dependency inside the same temporary directory.
-                (target / "wallpaper-rotation.js").write_text(
-                    (
-                        ROOT.parent / "shell/utils/scripts/wallpaper-rotation.js"
-                    ).read_text()
+                stage_qml(
+                    ROOT.parent / "shell/utils/scripts/wallpaper-rotation.js",
+                    target / "wallpaper-rotation.js",
                 )
-            source = (
+            stage_qml(
                 ROOT.parent
                 / "shell/services"
                 / ("compositor" if name == "HyprlandBackend" else "")
-                / (name + ".qml")
-            ).read_text()
-            source = (
-                source.replace("pragma Singleton", "")
-                .replace("import Quickshell.Services.Pipewire", 'import "fixtures"')
-                .replace(
-                    "import Quickshell.Bluetooth as Bluez", 'import "fixtures" as Bluez'
-                )
-                .replace("import qs.widgets", 'import "fixtures"')
-                .replace("import qs.services", 'import "fixtures"')
-                .replace("import qs.utils", 'import "fixtures"')
-                .replace("Quickshell.screens", "Environment.screens")
-                .replace("target: Quickshell", "target: Environment")
-                .replace("import qs.config", 'import "fixtures"')
-                .replace(
-                    "import Quickshell.Services.Notifications", 'import "fixtures"'
-                )
-                .replace("import Quickshell.Services.Mpris", 'import "fixtures"')
-                .replace(
-                    "import Quickshell.Hyprland as Native",
-                    'import "fixtures" as Native',
-                )
-                .replace("import Quickshell.Hyprland", "")
-                .replace("import Quickshell.Io", 'import "fixtures"')
-                .replace("import Quickshell", 'import QtQuick\nimport "fixtures"')
-                .replace("Singleton {", "Item {")
-                .replace('Quickshell.env("HOME")', '"/fixture"')
-                .replace('Quickshell.env("NACRE_DASHBOARD_TOOLS")', '""')
+                / (name + ".qml"),
+                target / (name + ".qml"),
             )
-            source = source.replace(
-                "../utils/scripts/wallpaper-rotation.js", "wallpaper-rotation.js"
-            )
-            if name == "NacreNotifs":
-                source = source.replace("notification.id", "notification.noticeId")
-            source = remove_objects(source, r"\bIpcHandler\s*\{")
-            source = remove_objects(source, r"\b(?:GlobalShortcut|NacreShortcut)\s*\{")
-            (target / (name + ".qml")).write_text(source)
             shutil.copy2(
                 ROOT / "tests/device-qml" / ("tst_" + name + ".qml"),
                 target / "tst_service.qml",
             )
             install_i18n(fixtures)
-            install_paths(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
+                isolate=True,
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,
                 text=True,

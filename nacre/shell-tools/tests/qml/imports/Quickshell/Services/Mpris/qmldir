@@ -1,0 +1,4 @@
+module Quickshell.Services.Mpris
+singleton Mpris 1.0 Mpris.qml
+MprisLoopState 1.0 MprisLoopState.qml
+MprisPlaybackState 1.0 MprisPlaybackState.qml

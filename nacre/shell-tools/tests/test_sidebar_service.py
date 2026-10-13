@@ -1,10 +1,11 @@
-from qml_source import install_i18n, install_paths
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Actual sidebar QML isolates asynchronous attachment results by composer."""
 
 import os
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
 
@@ -32,16 +33,10 @@ class SidebarServiceTests(unittest.TestCase):
             (fixtures / "qmldir").write_text(
                 "\n".join(f"{name} 1.0 {name}.qml" for name in definitions)
             )
-            source = (ROOT.parent / "shell/services/NacreChatSession.qml").read_text()
-            source = (
-                source.replace("pragma Singleton", "")
-                .replace("import Quickshell.Io", 'import "fixtures"')
-                .replace("import Quickshell", "")
-                .replace("import qs.utils", 'import "fixtures"')
-                .replace("Scope {", "Item {")
-                .replace('Quickshell.env("HOME")', '"/isolated"')
+            stage_qml(
+                ROOT.parent / "shell/services/NacreChatSession.qml",
+                target / "SidebarService.qml",
             )
-            (target / "SidebarService.qml").write_text(source)
             (target / "tst_sidebar.qml").write_text("""import QtQuick
 import QtTest
 Item {
@@ -83,8 +78,7 @@ Item {
  }
 }""")
             install_i18n(fixtures)
-            install_paths(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target)],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 text=True,

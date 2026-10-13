@@ -1,9 +1,11 @@
+from qml_fixtures import stage_qml
+
 """Shared native dashboard card and service fixtures."""
 
 from pathlib import Path
 import shutil
 
-from qml_source import install_foundation_interaction
+from qml_fixtures import install_foundation_interaction
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = ROOT.parent / "shell"
@@ -43,24 +45,12 @@ QtObject {
             manifest.write(f"\nsingleton {name} 1.0 {name}.qml\n")
     (target / "media").mkdir(exist_ok=True)
     shutil.copy2(SHELL / "modules/dashboard/media/media.js", target / "media/media.js")
-    (target / "NacreAlbumHalo.qml").write_text(
-        (SHELL / "modules/dashboard/NacreAlbumHalo.qml")
-        .read_text()
-        .replace("import qs.widgets", 'import "fixtures"')
-        .replace("import qs.services", "")
+    stage_qml(
+        SHELL / "modules/dashboard/NacreAlbumHalo.qml", target / "NacreAlbumHalo.qml"
     )
     (target / "overview").mkdir()
     for path in (SHELL / "modules/dashboard/overview").iterdir():
         if path.suffix == ".js":
             shutil.copy2(path, target / "overview" / path.name)
-            continue
-        source = (
-            path.read_text()
-            .replace("import Quickshell.Io", "")
-            .replace("import Quickshell", "")
-        )
-        source = source.replace("import qs.widgets", 'import "../fixtures"').replace(
-            "import qs.services", ""
-        )
-        source = source.replace('Quickshell.env("USER")', '"fixture-user"')
-        (target / "overview" / path.name).write_text(source)
+        elif path.suffix == ".qml":
+            stage_qml(path, target / "overview" / path.name)

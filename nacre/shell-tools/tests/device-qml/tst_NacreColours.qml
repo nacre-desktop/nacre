@@ -7,12 +7,9 @@ TestCase {
     id: test
     name: "NacrePaletteSnapshot"
     when: windowShown
-    Component {
-        id: service
-        NacreColours {}
-    }
+
     function test_complete_channels_atomic_mode_and_last_good_rejection() {
-        const colours = createTemporaryObject(service, test);
+        const colours = NacreColours;
         const raw = Object.assign({}, Data.fallback, {
             primary: "#ff2200",
             surface: "#201000",
@@ -49,7 +46,7 @@ TestCase {
         NacrePresentation.active = {};
         NacrePresentation.available = false;
         AppLaunch.calls = [];
-        const colours = createTemporaryObject(service, test);
+        const colours = NacreColours;
         NacrePresentation.active = {
             mode: "dark",
             colours: Data.fallback

@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "NacreWifiSnapshots"
     when: windowShown
-    Component {
-        id: service
-        NacreNetwork {}
-    }
+
     function point(ssid, active, strength, suffix) {
         return {
             ssid: ssid,
@@ -21,7 +18,7 @@ TestCase {
         };
     }
     function test_ethernet_only_snapshot_is_successful_and_has_no_radio() {
-        const state = createTemporaryObject(service, test);
+        const state = NacreNetwork;
         verify(state.publish(JSON.stringify({
             wifiAvailable: false,
             wifiEnabled: false,
@@ -34,7 +31,7 @@ TestCase {
         compare(state.visibleNetworks.length, 0);
     }
     function test_atomic_publish_grouped_active_preference_and_failed_refresh() {
-        const state = createTemporaryObject(service, test);
+        const state = NacreNetwork;
         const reader = findChild(state, "networkReader");
         verify(state.busy);
         compare(reader.starts, 1);
@@ -83,7 +80,7 @@ TestCase {
         compare(state.error, "");
     }
     function test_event_bursts_and_busy_requests_coalesce_without_successful_polling() {
-        const state = createTemporaryObject(service, test);
+        const state = NacreNetwork;
         const reader = findChild(state, "networkReader");
         for (let i = 0; i < 20; i++)
             state.scheduleRefresh();
@@ -104,7 +101,7 @@ TestCase {
         compare(reader.starts, 2);
     }
     function test_hidden_active_and_roaming_snapshot_replaces_connected_row() {
-        const state = createTemporaryObject(service, test);
+        const state = NacreNetwork;
         state.publish(JSON.stringify({
             wifiEnabled: true,
             wifiInterface: "wlan0",

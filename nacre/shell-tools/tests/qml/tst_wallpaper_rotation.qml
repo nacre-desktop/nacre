@@ -1,11 +1,37 @@
 import QtQuick
 import QtTest
+import "fixture-control.js" as Fakes
 import "fixtures"
 import "wallpaper-rotation.js" as Rotation
 
 TestCase {
     id: test
 
+    function init() {
+        const view = RotatingWalls;
+        for (const part of view.children) {
+            if ("command" in part && "running" in part)
+                part.running = false;
+        }
+        view.list = [
+            {
+                path: "a",
+                dynamic: false
+            },
+            {
+                path: "b",
+                dynamic: true
+            },
+            {
+                path: "c",
+                dynamic: false
+            },
+            {
+                path: "d",
+                dynamic: true
+            }
+        ];
+    }
     function cleanup() {
         NacreWelcomeApp.active = false;
         NacreWelcomeApp.page = "home";
@@ -17,8 +43,8 @@ TestCase {
     }
 
     function test_theme_queue_coalesces_latest_values_without_mixing_actions() {
-        const view = createTemporaryObject(walls, test);
-        view.prefWorker.running = true;
+        const view = RotatingWalls;
+        findChild(view, "wallpaperPreferences").running = true;
         view.preference({
             palettePersonality: "harmony"
         });
@@ -73,21 +99,21 @@ TestCase {
     }
 
     function test_restore_pauses_rotation_without_resetting_deadline() {
-        const view = createTemporaryObject(walls, test);
+        const view = RotatingWalls;
         view.preferences = Object.assign({}, view.preferences, {
             rotationEnabled: true
         });
         const deadline = view.rotationDueMs;
-        view.demoRestore.running = true;
+        Fakes.withProperty(view, "token").running = true;
         verify(view.themeBusy);
         verify(!view.canRotate);
         compare(view.rotationDueMs, deadline);
-        view.demoRestore.running = false;
+        Fakes.withProperty(view, "token").running = false;
         verify(view.canRotate);
         compare(view.rotationDueMs, deadline);
     }
     function test_welcome_demo_pauses_without_resetting_deadline() {
-        const w = createTemporaryObject(walls, test);
+        const w = RotatingWalls;
         const due = w.rotationDueMs;
         NacreWelcomeApp.active = true;
         NacreWelcomeApp.page = "home";
@@ -101,7 +127,7 @@ TestCase {
     }
 
     function test_disabled_timer_and_lifecycle_pause() {
-        const view = createTemporaryObject(walls, test);
+        const view = RotatingWalls;
         const clock = findChild(view, "wallpaperRotationTimer");
         verify(clock);
         verify(!clock.running);
@@ -145,22 +171,22 @@ TestCase {
     }
 
     function test_timer_uses_single_existing_commit_queue() {
-        const view = createTemporaryObject(walls, test);
+        const view = RotatingWalls;
         view.preferences = Object.assign({}, view.preferences, {
             "rotationEnabled": true,
             "rotationShuffle": false,
             "rotationAnchorMs": Date.now() - 30 * 60000 + 50
         });
         const clock = findChild(view, "wallpaperRotationTimer");
-        tryCompare(view.commit, "running", true, 300);
-        compare(view.commit.requestPath, "a");
+        tryCompare(findChild(view, "wallpaperCommit"), "running", true, 300);
+        compare(findChild(view, "wallpaperCommit").requestPath, "a");
         verify(!clock.running);
         view.advanceRotation(true);
-        compare(view.commit.requestPath, "a");
+        compare(findChild(view, "wallpaperCommit").requestPath, "a");
     }
 
     function test_temporary_pauses_and_unrelated_preferences_keep_deadline() {
-        const view = createTemporaryObject(walls, test);
+        const view = RotatingWalls;
         const anchor = Date.now();
         view.preferences = Object.assign({}, view.preferences, {
             "rotationEnabled": true,
@@ -189,9 +215,9 @@ TestCase {
             "rotationMinutes": 30,
             "rotationAnchorMs": anchor
         };
-        const first = createTemporaryObject(walls, test);
+        const first = RotatingWalls;
         first.preferences = saved;
-        const second = createTemporaryObject(walls, test);
+        const second = RotatingWalls;
         second.preferences = saved;
         compare(first.rotationDueMs, anchor + 30 * 60000);
         compare(second.rotationDueMs, first.rotationDueMs);
@@ -200,7 +226,7 @@ TestCase {
 
     function test_overdue_pause_rotates_once_after_resume() {
         WallpaperPlayback.locked = true;
-        const view = createTemporaryObject(walls, test);
+        const view = RotatingWalls;
         view.preferences = {
             "rotationEnabled": true,
             "rotationMinutes": 30,
@@ -208,10 +234,10 @@ TestCase {
             "rotationAnchorMs": Date.now() - 30 * 60000 + 30
         };
         wait(80);
-        verify(!view.commit.running);
+        verify(!findChild(view, "wallpaperCommit").running);
         WallpaperPlayback.locked = false;
-        tryCompare(view.commit, "running", true, 400);
-        compare(view.commit.requestPath, "a");
+        tryCompare(findChild(view, "wallpaperCommit"), "running", true, 400);
+        compare(findChild(view, "wallpaperCommit").requestPath, "a");
         view.media = {
             "path": "a",
             "poster": "a",
@@ -219,15 +245,15 @@ TestCase {
         };
         view.lastImage = "a";
         view.selectedPath = "";
-        view.commit.running = false;
+        findChild(view, "wallpaperCommit").running = false;
         wait(80);
-        verify(!view.commit.running);
+        verify(!findChild(view, "wallpaperCommit").running);
         verify(findChild(view, "wallpaperRotationTimer").running);
         verify(view.rotationDueMs > Date.now() + 29 * 60000);
     }
 
     function test_palette_publication_without_photo_change_keeps_deadline() {
-        const view = createTemporaryObject(walls, test);
+        const view = RotatingWalls;
         const changed = Date.now() - 50000;
         view.media = {
             "path": "a",
@@ -261,7 +287,7 @@ TestCase {
     }
 
     function test_previous_tracks_successful_visits_and_failure_keeps_history() {
-        const view = createTemporaryObject(walls, test);
+        const view = RotatingWalls;
         view.list = ["/a", "/b", "/c"].map(path => ({
                     path,
                     poster: path,
@@ -277,33 +303,33 @@ TestCase {
         view.lastImage = "/a";
         function complete(index) {
             verify(view.publishSelection(JSON.stringify(view.list[index])));
-            view.commit.running = false;
+            findChild(view, "wallpaperCommit").running = false;
         }
         view.advanceRotation(true);
-        compare(view.commit.requestPath, "/b");
+        compare(findChild(view, "wallpaperCommit").requestPath, "/b");
         complete(1);
         view.advanceRotation(true);
-        compare(view.commit.requestPath, "/c");
+        compare(findChild(view, "wallpaperCommit").requestPath, "/c");
         complete(2);
         compare(view.wallpaperHistory.join(","), "/a,/b");
         view.previousWallpaper();
-        compare(view.commit.requestPath, "/b");
+        compare(findChild(view, "wallpaperCommit").requestPath, "/b");
         verify(!view.publishSelection('{}'));
         compare(view.wallpaperHistory.join(","), "/a,/b");
         complete(1);
         compare(view.wallpaperHistory.join(","), "/a");
         view.previousWallpaper();
-        compare(view.commit.requestPath, "/a");
+        compare(findChild(view, "wallpaperCommit").requestPath, "/a");
         complete(0);
         compare(view.wallpaperHistory.length, 0);
         view.previousWallpaper();
-        compare(view.commit.requestPath, "/c");
-        const request = view.commit.requestPath;
+        compare(findChild(view, "wallpaperCommit").requestPath, "/c");
+        const request = findChild(view, "wallpaperCommit").requestPath;
         view.previousWallpaper();
-        compare(view.commit.requestPath, request);
+        compare(findChild(view, "wallpaperCommit").requestPath, request);
     }
     function test_previous_preserves_repeated_nonadjacent_visits() {
-        const view = createTemporaryObject(walls, test);
+        const view = RotatingWalls;
         view.list = ["/a", "/b", "/c"].map(path => ({
                     path,
                     poster: path,
@@ -315,18 +341,18 @@ TestCase {
         view.lastImage = "/b";
         view.wallpaperHistory = ["/a", "/b", "/a"];
         view.previousWallpaper();
-        compare(view.commit.requestPath, "/a");
+        compare(findChild(view, "wallpaperCommit").requestPath, "/a");
         verify(view.publishSelection(JSON.stringify(view.list[0])));
-        view.commit.running = false;
+        findChild(view, "wallpaperCommit").running = false;
         compare(view.wallpaperHistory.join(","), "/a,/b");
         view.previousWallpaper();
-        compare(view.commit.requestPath, "/b");
+        compare(findChild(view, "wallpaperCommit").requestPath, "/b");
         verify(view.publishSelection(JSON.stringify(view.list[1])));
-        view.commit.running = false;
+        findChild(view, "wallpaperCommit").running = false;
         compare(view.wallpaperHistory.join(","), "/a");
     }
     function test_history_keeps_original_when_poster_file_arrives_first() {
-        const view = createTemporaryObject(walls, test);
+        const view = RotatingWalls;
         view.list = ["/a", "/b"].map(path => ({
                     path,
                     poster: path,
@@ -341,18 +367,18 @@ TestCase {
         view.media = view.list[0];
         view.lastImage = "/a";
         view.advanceRotation(true);
-        compare(view.commit.requestPath, "/b");
+        compare(findChild(view, "wallpaperCommit").requestPath, "/b");
         // FileView can receive the new poster before the worker's final selection response.
         view.lastImage = "/new-poster.png";
         verify(view.publishSelection(JSON.stringify(view.list[1])));
-        view.commit.running = false;
+        findChild(view, "wallpaperCommit").running = false;
         compare(view.wallpaperHistory.join(","), "/a");
         view.previousWallpaper();
-        compare(view.commit.requestPath, "/a");
+        compare(findChild(view, "wallpaperCommit").requestPath, "/a");
     }
 
     function test_motion_toggle_uses_existing_preference_owner() {
-        const view = createTemporaryObject(walls, test);
+        const view = RotatingWalls;
         view.media = {
             path: "/a",
             poster: "/a",
@@ -365,18 +391,12 @@ TestCase {
         };
         WallpaperPlayback.paused = false;
         view.toggleMotion();
-        compare(view.prefWorker.value.paused, true);
-        view.prefWorker.running = false;
+        compare(findChild(view, "wallpaperPreferences").value.paused, true);
+        findChild(view, "wallpaperPreferences").running = false;
         view.media.dynamic = false;
         NacrePresentation.active = {};
     }
 
     name: "WallpaperRotation"
     when: windowShown
-
-    Component {
-        id: walls
-
-        RotatingWalls {}
-    }
 }

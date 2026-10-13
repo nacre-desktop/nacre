@@ -81,6 +81,8 @@ class UpdateFailureTests(unittest.TestCase):
             result = subprocess.run(
                 ["bash", str(Path(__file__).parents[1] / "updates.sh")],
                 env=dict(os.environ, PATH=str(root) + ":/usr/bin:/bin"),
+                stdin=subprocess.DEVNULL,
+                timeout=10,
                 capture_output=True,
                 text=True,
             )

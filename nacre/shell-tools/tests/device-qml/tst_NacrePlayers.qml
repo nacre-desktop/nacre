@@ -6,10 +6,7 @@ TestCase {
     id: test
     name: "NacreMediaSelection"
     when: windowShown
-    Component {
-        id: service
-        NacrePlayers {}
-    }
+
     Component {
         id: player
         QtObject {
@@ -53,7 +50,7 @@ TestCase {
         Mpris.players = {
             values: [spotify, browser]
         };
-        const state = createTemporaryObject(service, test);
+        const state = NacrePlayers;
         compare(state.active, browser);
         compare(browser.commands.length, 0);
         compare(spotify.commands.length, 0);

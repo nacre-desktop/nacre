@@ -1,15 +1,16 @@
-from qml_source import install_i18n
+from qml_fixtures import run_qml
+from qml_fixtures import stage_qml
+from qml_fixtures import install_i18n
 
 """Independent header content/workspace row with safe native-service fixtures."""
 
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
 
-from qml_source import install_foundation_interaction, remove_objects
+from qml_fixtures import install_foundation_interaction
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = ROOT.parent / "shell"
@@ -82,13 +83,10 @@ Item {
                         "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}\n"
                     )
                     manifest.write(f"\nsingleton {name} 1.0 {name}.qml\n")
-                intent = (
-                    (SHELL / "services/NacreHoverIntent.qml")
-                    .read_text()
-                    .replace("import Quickshell", "")
-                    .replace("Singleton {", "QtObject {")
+                stage_qml(
+                    SHELL / "services/NacreHoverIntent.qml",
+                    fixtures / "NacreHoverIntent.qml",
                 )
-                (fixtures / "NacreHoverIntent.qml").write_text(intent)
                 manifest.write(
                     "\nsingleton NacreHoverIntent 1.0 NacreHoverIntent.qml\n"
                 )
@@ -99,22 +97,9 @@ Item {
                 "NacreWorkspaceAppIcon",
                 "NacreHeaderForwarder",
             ):
-                source = (SHELL / "modules/topbar" / (name + ".qml")).read_text()
-                for imported in (
-                    "qs.widgets",
-                    "qs.services",
-                    "qs.config",
-                    "qs.utils",
-                    "qs.modules.bar.components",
-                ):
-                    source = source.replace("import " + imported, 'import "fixtures"')
-                source = remove_objects(
-                    source.replace("import Quickshell.Io", ""), r"\bIpcHandler\s*\{"
+                stage_qml(
+                    SHELL / "modules/topbar" / (name + ".qml"), target / (name + ".qml")
                 )
-                source = source.replace(
-                    "../../utils/scripts/window-title.js", "window-title.js"
-                )
-                (target / (name + ".qml")).write_text(source)
             shutil.copy2(
                 SHELL / "utils/scripts/window-title.js", target / "window-title.js"
             )
@@ -122,7 +107,7 @@ Item {
                 ROOT / "tests/header-qml/tst_header.qml", target / "tst_header.qml"
             )
             install_i18n(fixtures)
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
                 capture_output=True,

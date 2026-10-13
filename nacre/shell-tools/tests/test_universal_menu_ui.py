@@ -1,4 +1,5 @@
-from qml_source import install_i18n, install_paths
+from qml_fixtures import stage_qml, run_qml
+from qml_fixtures import install_i18n
 
 """Real universal menu and model, with only external owners replaced by fixtures."""
 
@@ -6,30 +7,13 @@ import json
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import tempfile
 import unittest
 
-from qml_source import install_foundation_interaction, remove_objects
+from qml_fixtures import install_foundation_interaction
 
 TOOLS = Path(__file__).resolve().parents[1]
 SHELL = TOOLS.parent / "shell"
-
-
-def adapt(source):
-    source = source.replace("import qs.utils", 'import "."')
-    for name in ("Quickshell.Services.UPower", "Quickshell.Io", "Quickshell"):
-        source = source.replace("import " + name + "\n", "")
-    for name in ("qs.widgets", "qs.services"):
-        source = source.replace("import " + name, 'import "fixtures"')
-    source = source.replace("Quickshell.screens[0].width", "1920").replace(
-        "Quickshell.screens[0].height", "1200"
-    )
-    source = source.replace(
-        'Quickshell.iconPath(root.entry.icon || "application-x-executable", true)', '""'
-    )
-    source = remove_objects(source, r"\bIpcHandler\s*\{")
-    return source
 
 
 def stage(target):
@@ -42,51 +26,23 @@ def stage(target):
         "NacreMenuForm",
         "NacreMenuButton",
     ):
-        (target / (name + ".qml")).write_text(
-            adapt((SHELL / "modules/launcher" / (name + ".qml")).read_text())
+        stage_qml(
+            SHELL / "modules/launcher" / (name + ".qml"), target / (name + ".qml")
         )
     for name in ("menu-model.js", "app-browser.js", "calculator.js"):
         shutil.copy2(SHELL / "modules/launcher" / name, target / name)
-    source = adapt((SHELL / "services/NacreMenuContext.qml").read_text()).replace(
-        "Scope {", "QtObject {", 1
+    stage_qml(SHELL / "services/NacreMenu.qml", fixtures / "NacreMenu.qml")
+    stage_qml(
+        SHELL / "services/NacreMenuContext.qml", fixtures / "NacreMenuContext.qml"
     )
-    source = source.replace(
-        '"../modules/launcher/menu-model.js"', '"../menu-model.js"'
-    ).replace('"../modules/launcher/app-browser.js"', '"../app-browser.js"')
-    for kind in ("Process", "NacreHelperTask", "Timer", "FileView"):
-        source = remove_objects(source, r"\b" + kind + r"\s*\{")
-    source = source.replace(
-        'property string defaultText: ""',
-        "property string defaultText: "
-        + json.dumps((TOOLS / "launcher-menu.json").read_text()),
+    menu_data = json.dumps((TOOLS / "launcher-menu.json").read_text())
+    (fixtures / "FileView.qml").write_text(
+        'import QtQuick\nQtObject {property string path: "";property bool preload:false;property bool printErrors:false;property bool watchChanges:false;signal loaded();signal fileChanged();function reload(){loaded()}function text(){return path.includes("/shell/tools/launcher-menu.json") ? '
+        + menu_data
+        + ' : ""}Component.onCompleted:Qt.callLater(reload)}'
     )
-    source = source.replace(
-        "Component.onCompleted: if (!shared)\n        refresh()",
-        "Component.onCompleted: parse()",
-    )
-    source = (
-        source.replace("PowerProfile.PowerSaver", "0")
-        .replace("PowerProfile.Balanced", "1")
-        .replace("PowerProfile.Performance", "2")
-    )
-    source = source.replace('Quickshell.env("HOME")', '"/fixture"')
-    source = source.replace(
-        "id: root",
-        """id: root
-    property QtObject brainDelay: QtObject {function restart(){}}
-    property QtObject stateWorker: QtObject { property bool running:false;property bool force:false }
-    property QtObject actionWorker: QtObject { property bool running:false;property string action:"";property string value:"";property var payload:({}) }
-    property QtObject ownershipWorker: QtObject { property bool running:false;property string ident:"" }
-    property QtObject packageDelay: QtObject { function restart(){} }
-    property QtObject fileDelay: QtObject { function restart(){} }
-    property QtObject conversionDelay: QtObject { function restart(){} }
-    property QtObject captureDelay: QtObject { property string value:"";function restart(){} }
-""",
-        1,
-    )
-    source = "pragma Singleton\n" + source.replace("    visible: false\n", "")
-    source = source.replace("NacreAiViews.edge", "SidebarChat")
-    (fixtures / "NacreMenu.qml").write_text(source)
+    with (fixtures / "qmldir").open("a") as manifest:
+        manifest.write("\nFileView 1.0 FileView.qml\n")
     definitions = {
         "NacreApps": """property var all:[{id:"editor",name:"Editor",icon:"",comment:"Code"},{id:"google-chrome",name:"Google Chrome",icon:"",comment:"Web browser"},{id:"nacre-ai",name:"Nacre AI",icon:"",comment:"Assistant"},{id:"music",name:"Music",icon:"",comment:"Player"}];readonly property var list:all.filter(row=>!LauncherPreferences.hidden.includes(row.id));property string launched:"";function launch(entry){launched=entry.id;return true}""",
         "LauncherPreferences": """property var favorites:[];property var hidden:[];property var recent:[];property var usage:({});property string error:"";property bool ready:true;function update(action,id,enabled){const key=action==="favorite"?"favorites":action==="hide"?"hidden":"recent";let result=this[key].filter(value=>value!==id);if(enabled)result.push(id);this[key]=result;}""",
@@ -94,7 +50,7 @@ def stage(target):
         "AppLaunch": """property var commands:[];function run(command){commands=[...commands,command];}""",
         "DesktopSettings": """property var data:({animations:true,blur:true,shadow:true,dnd:false,interfaceFont:""});property var changes:[];function set(key,value){data=Object.assign({},data,{[key]:value});changes=[...changes,[key,value]];}""",
         "NacreWallpapers": """property var list:[{path:"/fixture/blue.png",name:"Blue garden",dynamic:false,thumbnail:""}];property string current:"/fixture/blue.png";property var appearancePreferences:({palettePersonality:"natural",paletteMode:"dark",paletteBackgroundFromWallpaper:false});property var paletteOptions:[{name:"Blue",accent:"blue",colors:[]}];property string selectedAccent:"blue";property var preferences:[];function preference(value){preferences=[...preferences,value];appearancePreferences=Object.assign({},appearancePreferences,value);}function setWallpaper(value){current=value;}""",
-        "NacreControlTools": """property bool busy:false;property var data:({nightLightSupported:true,nightLightEnabled:false,nightLightExternal:false});function refresh(){}function toggleNightLight(){data=Object.assign({},data,{nightLightEnabled:!data.nightLightEnabled});}""",
+        "NacreControlTools": """property bool busy:false;property var data:({nightLightSupported:true,nightLightEnabled:false,nightLightExternal:false});property int refreshes:0;function refresh(){refreshes++}function toggleNightLight(){data=Object.assign({},data,{nightLightEnabled:!data.nightLightEnabled});}""",
         "NacreAudio": """property var outputs:[];property var sink:null;function chooseOutput(id){return true;}property bool available:true;property bool micAvailable:true;property bool muted:false;property bool micMuted:false;function toggleMute(){muted=!muted;}function toggleMic(){micMuted=!micMuted;}""",
         "NacrePlayers": """property var active:({canTogglePlaying:true,canGoNext:true,canGoPrevious:true});property var actions:[];function control(value){actions=[...actions,value];return true;}""",
         "NacreNetwork": """property bool wifiAvailable:true;property bool wifiEnabled:true;property var visibleNetworks:[]""",
@@ -109,7 +65,6 @@ def stage(target):
         "PowerProfiles": """property int profile:1;property bool hasPerformanceProfile:true""",
     }
     with (fixtures / "qmldir").open("a") as manifest:
-        manifest.write("\nsingleton NacreMenu 1.0 NacreMenu.qml\n")
         for name, body in definitions.items():
             (fixtures / (name + ".qml")).write_text(
                 "pragma Singleton\nimport QtQuick\nQtObject{" + body + "}\n"
@@ -147,8 +102,7 @@ class UniversalMenuUITests(unittest.TestCase):
             target = Path(folder)
             stage(target)
             install_i18n(target / "fixtures")
-            install_paths(target / "fixtures")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 capture_output=True,
                 text=True,
@@ -165,20 +119,6 @@ class UniversalMenuUITests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             target = Path(folder)
             stage(target)
-            source = (target / "fixtures/NacreMenu.qml").read_text()
-            source = source.replace("pragma Singleton", "").replace(
-                'import "fixtures"', 'import "."'
-            )
-            source = source.replace(
-                "id: root", "id: root\nproperty int openRefreshCount: 0", 1
-            )
-            source = source.replace(
-                'function refreshOnOpen() {\n        refresh();\n        DesktopExtras.request("keys", {});\n        NacreControlTools.refresh();\n    }',
-                "function refreshOnOpen() { root.openRefreshCount++; }",
-            )
-            (target / "fixtures/NacreMenuContext.qml").write_text(source)
-            with (target / "fixtures/qmldir").open("a") as manifest:
-                manifest.write("\nNacreMenuContext 1.0 NacreMenuContext.qml\n")
             (target / "tst_menu.qml").unlink()
             (target / "tst_context.qml").write_text("""import QtQuick
 import QtTest
@@ -188,10 +128,10 @@ TestCase {
  NacreMenuContext {id:first;shared:NacreMenu}
  NacreMenuContext {id:second;shared:NacreMenu}
  function test_open_refresh_is_deferred_and_coalesced(){
-  const before = first.openRefreshCount;
+  const before = NacreControlTools.refreshes;
   first.prepare("home","",true);first.prepare("home","",true);
-  compare(first.openRefreshCount,before);
-  tryCompare(first,"openRefreshCount",before+1,1000);
+  compare(NacreControlTools.refreshes,before);
+  tryCompare(NacreControlTools,"refreshes",before+1);
  }
  function test_queries_are_local_and_catalogue_is_shared(){
   first.fileQuery="one";first.fileRows=[{name:"First"}];
@@ -209,8 +149,7 @@ TestCase {
  }
 }""")
             install_i18n(target / "fixtures")
-            install_paths(target / "fixtures")
-            result = subprocess.run(
+            result = run_qml(
                 [str(runner), "-input", str(target)],
                 capture_output=True,
                 text=True,

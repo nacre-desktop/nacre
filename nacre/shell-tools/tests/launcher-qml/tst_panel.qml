@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import Quickshell
 import "fixtures"
 
 TestCase {
@@ -19,7 +20,7 @@ TestCase {
                 id: panel
                 width: implicitWidth
                 height: implicitHeight
-                property QtObject state: QtObject {
+                property PersistentProperties state: PersistentProperties {
                     property bool launcher: false
                     property string launcherMode: "apps"
                     property string launcherQuery: ""
@@ -79,7 +80,11 @@ TestCase {
         for (const mode of ["palette", "legacy", "overview", "clipboard", "keys", "apps"]) {
             panel.state.launcherMode = mode;
             wait(20);
-            compare(findChild(panel, "launcherPage").item.kind, mode);
+            const item = findChild(panel, "launcherPage").item;
+            if (mode === "legacy")
+                verify(findChild(item, "legacyLauncherSearch"));
+            else
+                compare(item.kind, mode);
         }
         panel.state.launcherMode = "wallpaper";
         wait(20);
@@ -103,7 +108,7 @@ TestCase {
         NacreSearchPanel {
             width: 680
             height: implicitHeight
-            visibilities: QtObject {
+            visibilities: PersistentProperties {
                 property bool launcher: true
                 property string launcherQuery: ""
                 property int launcherRequest: 0
