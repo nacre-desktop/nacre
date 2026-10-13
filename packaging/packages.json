@@ -48,6 +48,7 @@
       "libgweather-4",
       "geoclue",
       "bash",
+      "jq",
       "qt6-declarative",
       "libgcc",
       "libstdc++",

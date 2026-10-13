@@ -1,6 +1,7 @@
 """Exercise shell security boundaries with disposable homes and fake services."""
 
 import json
+import importlib.util
 import os
 from pathlib import Path
 import shutil
@@ -9,6 +10,25 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+class ShellPackagingTests(unittest.TestCase):
+    def test_window_state_parser_dependency_is_in_the_core_package(self):
+        spec = importlib.util.spec_from_file_location(
+            "security_recipe", ROOT / "packaging/arch/recipe.py"
+        )
+        recipe = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(recipe)
+        rendered = recipe.render(ROOT, "fixture-revision")
+        core = rendered.split("package_nacre() {", 1)[1].split("package_nacre-ai()", 1)[
+            0
+        ]
+        self.assertIn("'jq'", core.split("depends=", 1)[1].splitlines()[0])
+        checked_in = (ROOT / "packaging/arch/PKGBUILD").read_text()
+        core = checked_in.split("package_nacre() {", 1)[1].split(
+            "package_nacre-ai()", 1
+        )[0]
+        self.assertIn("'jq'", core.split("depends=", 1)[1].splitlines()[0])
 
 
 class PrivateCodexTests(unittest.TestCase):

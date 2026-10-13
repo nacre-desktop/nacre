@@ -3,15 +3,17 @@
 Reviewed 2026-10-13 against `main` in an isolated worktree. This is a source review
 with disposable regression tests, not a penetration test or a live account audit.
 No HIGH-severity Python issue was confirmed. Runtime Python and frozen parity
-fixtures were left unchanged; follow-ups are in [Rust migration](rust-migration.md#fix-during-port).
+fixtures were left unchanged; follow-ups are in [Fix during port](#fix-during-port), linked from the Rust migration status.
 
 | Severity | Area | File | Finding / status |
 | --- | --- | --- | --- |
 | Medium | Shell / IPC | `hypr/scripts/window-trash.sh` | **fixed**: cached state was sourced as shell code; now validated JSON, validated IDs, link refusal, atomic 0600 files and 0700 directory. Old 30-second shell records are ignored; existing trashed windows remain manually closable. |
 | Medium | Notification privacy | `nacre/shell/modules/notifications/NacreNotice.qml` | **fixed**: image/icon URLs could initiate network fetches; accept local files/resources/providers and named icons only. |
 | Medium | Credentials | `bin/codex`, `ai/remote-codex-wrapper.sh` | **fixed**: wrappers inherited permissive umasks; new provider files/directories now inherit 0600/0700 restrictions. Existing files are not repaired. |
+| Low | Packaging | `packaging/packages.json`, `packaging/arch/PKGBUILD` | **fixed**: declare `jq`, required by window helpers and their data validation. CI initially skipped four shell tests without it; all four ran locally, and the CI repair task added the check-environment dependency. |
 | Medium | Brain availability | `brain/control.py` | **fix during port**: no connection timeout or concurrent-client cap; malformed non-object action JSON raises an uncaught error. Existing 4 KiB action limit does not bound slow connections or note responses. |
 | Low | Brain auth lifetime | `brain/auth.py` | **fix during port**: bootstrap remains reusable until restart; cookie persists across restarts without server-side expiry/revocation UI. Auth files are 0600 and directory 0700; no HTTP request logging. |
+| Medium | Brain auth scope | `brain/control.py`, `brain/web/app.js` | **fix during port**: cookies are host-scoped rather than port-scoped. Visiting an untrusted service on another loopback port in the Brain browser profile can disclose the cookie; note links permit explicit HTTP(S) navigation. |
 | Medium | Screenshots / location | `nacre/shell-tools/screenshot.py`, `timezone.py` | **fix during port**: full screenshots inherit umask; system timezone status exposes city/accuracy at 0644. Precise device coordinates are ephemeral. |
 | Medium | History retention | `notification-history.py`, `desktop-extras.py`, `composer.py`, `sidebar-chat.py` under `nacre/shell-tools/` | **fix during port**: notifications, chat/drafts/screenshots lack age expiry; clipboard thumbnail cleanup occurs only on refresh. Private-file protections exist but old directory modes are not consistently repaired. |
 | Medium | Optional downloads | `brain/provision-semantic.py`, `brain/semantic.py`, `bin/nacre-ai-skills`, `tools/fetch-wallpapers.py` | **fix during port**: model revision/content and archive/image digests not locked; some downloads/extractions are unbounded. Skills/images pin source commits; Python top-level packages pin versions but transitive installs lack a hash lock. |
@@ -33,6 +35,10 @@ The bootstrap browser command contains a private local HTML path, not a token;
 the token travels in the local HTTP URL. The HTTP logger is disabled. Another
 process with the same user privileges can read the credential files/browser
 profile; loopback authentication does not protect against that process.
+Cookies also lack port isolation ([RFC 6265, section 8.5](https://datatracker.ietf.org/doc/html/rfc6265#section-8.5)).
+The dedicated browser profile limits incidental sharing but is not an isolation
+boundary if it navigates to another service on the same loopback host. This
+protocol-based finding was not tested against a live browser or service.
 
 Clipboard storage uses `wl-paste --watch cliphist store`. Upstream
 [wl-clipboard](https://github.com/bugaevc/wl-clipboard/blob/master/src/wl-paste.c)
@@ -110,6 +116,8 @@ network triggers. No runtime Python or parity fixture changed in that review.
   non-object JSON cleanly; bound note/search responses. Retain loopback binding,
   Host/cookie/exact-Origin checks and resolved-vault/static-asset allowlists.
   Add deliberate bootstrap lifetime/revocation and cookie-expiry behavior;
+  design origin-bound credentials rather than relying on port-scoped cookies
+  (which browsers do not provide), and test navigation to other loopback ports.
   refuse symlinked ancestor state directories and repair existing private modes.
 - **Sensitive state (`screenshot`, `composer`, `desktop-extras`,
   `notification-history`, `sidebar-chat`, `timezone`):** create private files
