@@ -540,3 +540,64 @@ Run the same harness in each revision with its matching native binary and SDK:
 NACRE_ORIENT_BINARY=/path/to/matching/orient python tools/benchmark_orient_rpc.py \
   --output /tmp/orient-rpc.json
 ```
+
+
+## Rust migration wave 0 (2026-10-13)
+
+Orient dev6 exposes `orient-core` and `orient-decoder` to native consumers. The
+55 frozen normalized frames and all 160 gallery/codec palette cases match Pillow,
+including JPEG. The tested dependency pin, SDK descriptor and reference palette
+provenance agree; no color roles or owner state changed. Nacre's Python helpers
+are still present at this wave. See [migration status](rust-migration.md).
+
+### Busy-machine evidence
+
+Only helper CPU time, launches and helper RSS are evidence in this window.
+The existing four-request workloads use disposable HOME/XDG state and 100 warm
+requests plus one cold request. QML/helper source is held at `0ecb3bb7`; the
+candidate applies the dev6 C8 pin, holding unrelated cleanup/SDK changes constant.
+`benchmark-helpers.py --busy-machine` suppresses wall-clock and PSS results.
+Fresh CPU uses Linux child `getrusage`; service CPU uses `/proc/PID/stat` user,
+system and reaped-child ticks. Both exclude driver CPU and waiting time.
+Service resolution is 10 ms per workload, or 0.1 ms/request for 100 requests;
+a zero tick difference means below that resolution, not zero CPU consumption.
+
+| Helper CPU user + system, mean per warm request (ms); busy machine | Fresh before | Fresh after | Service before | Service after |
+| --- | ---: | ---: | ---: | ---: |
+| Menu conversion validation | 73.98 | 67.95 | 0.10 | 0.10 |
+| Dashboard read | 45.75 | 54.98 | 0.10 | 0.10 |
+| Launcher preferences load | 39.59 | 38.26 | <0.10 | <0.10 |
+| Notification history load | 19.58 | 19.77 | 0.10 | 0.20 |
+
+| Fixed helper workload; busy machine | Before | After |
+| --- | ---: | ---: |
+| Fresh helper Python launches (404 requests) | 404 | 404 |
+| Shared service Python launches (same requests) | 1 | 1 |
+| Service RSS after all warm requests (MiB) | 26.99 | 27.01 |
+
+These helpers are unchanged, so this pair establishes a baseline, not a claimed
+wave 0 speed or memory improvement. CPU measurements remain sensitive to clock
+frequency, caches and scheduling; RSS counts shared pages. Full public summaries
+are in [rust-migration-results.json](rust-migration-results.json).
+
+### Deferred quiet-window measurements
+
+The initial five-minute nested Hyprland/labwc captures and ten action repetitions
+were affected by background cache warming and paging. Final shell SwapPss was
+73.5 MiB before and 96.2 MiB after. Lower shell RSS/PSS is not a memory saving;
+slower action acknowledgements are not attributed to migration code. A focused
+warmed repeat timed out on dashboard readiness in the unchanged baseline. These
+captures are retained privately for diagnosis and discarded as performance evidence.
+Whole-shell wall-clock latency, RSS/PSS and idle CPU conclusions are deferred.
+
+The owner will announce a quiet window. Measure baseline/current in A/B/A/B order,
+check `vmstat` si/so and process SwapPss before and throughout every run, and discard
+any run that pages. Only a regression reproduced in that window triggers the stop
+rule. All parity, test and CI gates remain mandatory while ports continue.
+A quiet-window comparison is required before wave 3 (wallpaper/colors) lands;
+without an announced window, stop there and ask for one.
+
+The dashboard-owner harness now uses a private runtime directory, full XDG state,
+and a private D-Bus session. It explicitly enables its `qml.debug` result marker;
+inherited debug suppression previously hid successful runs. These are test-harness
+changes and do not change the UI or readiness boundary.

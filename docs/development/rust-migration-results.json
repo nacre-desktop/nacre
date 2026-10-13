@@ -1,0 +1,196 @@
+{
+  "condition": "busy machine",
+  "wave": 0,
+  "scope": "unchanged Nacre helpers/QML at 0ecb3bb7, native Orient dev5 EB versus dev6 C8 pin; transport SDK held constant",
+  "quiet_window_pending": true,
+  "cpu": {
+    "before": {
+      "fresh": {
+        "transport": "fresh Python",
+        "python_processes": 404,
+        "startup_ms": null,
+        "service_memory": null,
+        "measurement_condition": "busy machine",
+        "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+        "cpu_resolution_ms": 0.001,
+        "results": {
+          "menu-backend": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 6280.754999999999,
+              "system": 1116.837,
+              "total_per_request": 73.97592
+            }
+          },
+          "dashboard-data": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 3803.7479999999996,
+              "system": 770.843,
+              "total_per_request": 45.745909999999995
+            }
+          },
+          "launcher-preferences": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 3345.0190000000007,
+              "system": 613.9689999999997,
+              "total_per_request": 39.58988000000001
+            }
+          },
+          "notification-history": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 1614.1509999999996,
+              "system": 343.36600000000004,
+              "total_per_request": 19.57517
+            }
+          }
+        }
+      },
+      "service": {
+        "transport": "service",
+        "python_processes": 1,
+        "startup_ms": null,
+        "service_memory": {
+          "rss_mib": 26.9921875
+        },
+        "measurement_condition": "busy machine",
+        "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+        "cpu_resolution_ms": 10.0,
+        "results": {
+          "menu-backend": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 10.000000000000002,
+              "system": 0.0,
+              "total_per_request": 0.10000000000000002
+            }
+          },
+          "dashboard-data": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 9.999999999999995,
+              "system": 0.0,
+              "total_per_request": 0.09999999999999995
+            }
+          },
+          "launcher-preferences": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 0.0,
+              "system": 0.0,
+              "total_per_request": 0.0
+            }
+          },
+          "notification-history": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 10.000000000000009,
+              "system": 0.0,
+              "total_per_request": 0.10000000000000009
+            }
+          }
+        }
+      }
+    },
+    "after": {
+      "fresh": {
+        "transport": "fresh Python",
+        "python_processes": 404,
+        "startup_ms": null,
+        "service_memory": null,
+        "measurement_condition": "busy machine",
+        "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+        "cpu_resolution_ms": 0.001,
+        "results": {
+          "menu-backend": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 5739.228,
+              "system": 1055.75,
+              "total_per_request": 67.94977999999999
+            }
+          },
+          "dashboard-data": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 4677.8189999999995,
+              "system": 819.9479999999999,
+              "total_per_request": 54.977669999999996
+            }
+          },
+          "launcher-preferences": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 3209.422,
+              "system": 616.4220000000003,
+              "total_per_request": 38.25844
+            }
+          },
+          "notification-history": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 1646.6139999999996,
+              "system": 329.8429999999999,
+              "total_per_request": 19.764569999999996
+            }
+          }
+        }
+      },
+      "service": {
+        "transport": "service",
+        "python_processes": 1,
+        "startup_ms": null,
+        "service_memory": {
+          "rss_mib": 27.0078125
+        },
+        "measurement_condition": "busy machine",
+        "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+        "cpu_resolution_ms": 10.0,
+        "results": {
+          "menu-backend": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 10.000000000000002,
+              "system": 0.0,
+              "total_per_request": 0.10000000000000002
+            }
+          },
+          "dashboard-data": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 9.999999999999995,
+              "system": 0.0,
+              "total_per_request": 0.09999999999999995
+            }
+          },
+          "launcher-preferences": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 0.0,
+              "system": 0.0,
+              "total_per_request": 0.0
+            }
+          },
+          "notification-history": {
+            "requests": 100,
+            "cpu_ms": {
+              "user": 10.000000000000009,
+              "system": 10.0,
+              "total_per_request": 0.2000000000000001
+            }
+          }
+        }
+      }
+    }
+  },
+  "discarded_shell_captures": {
+    "reason": "cache warming and significant swapping; not performance evidence",
+    "final_shell_swap_pss_mib": {
+      "baseline": 73.5,
+      "candidate": 96.2
+    },
+    "focused_repeat": "unchanged baseline dashboard readiness timeout"
+  }
+}

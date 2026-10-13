@@ -19,6 +19,8 @@ def benchmark(services, tools, count):
         home = root / "home"
         target = root / "services"
         target.mkdir()
+        private_runtime = root / "runtime"
+        private_runtime.mkdir(mode=0o700)
         runtime = home / ".local/share/nacre/palette-runtime/venv/bin/python"
         runtime.parent.mkdir(parents=True)
         runtime.symlink_to(sys.executable)
@@ -71,13 +73,26 @@ ShellRoot {
             "XDG_CONFIG_HOME": str(home / ".config"),
             "XDG_CACHE_HOME": str(home / ".cache"),
             "XDG_STATE_HOME": str(home / ".local/state"),
+            "XDG_DATA_HOME": str(home / ".local/share"),
+            "XDG_DATA_DIRS": "/usr/local/share:/usr/share",
+            "XDG_RUNTIME_DIR": str(private_runtime),
             "QT_QPA_PLATFORM": "offscreen",
+            # The result marker uses console.log (qml.debug); inherited global
+            # debug suppression otherwise hides a successful benchmark result.
+            "QT_LOGGING_RULES": "*.debug=false\nqml.debug=true",
             "PATH": str(Path(sys.executable).parent) + os.pathsep + os.environ["PATH"],
             "NACRE_OWNER_COUNT": str(count),
         }
         environment.pop("NACRE_DASHBOARD_TOOLS", None)
+        for name in (
+            "WAYLAND_DISPLAY",
+            "HYPRLAND_INSTANCE_SIGNATURE",
+            "NIRI_SOCKET",
+            "DBUS_SESSION_BUS_ADDRESS",
+        ):
+            environment.pop(name, None)
         result = subprocess.run(
-            ["quickshell", "-p", str(root), "-n"],
+            ["dbus-run-session", "--", "quickshell", "-p", str(root), "-n"],
             env=environment,
             capture_output=True,
             text=True,
