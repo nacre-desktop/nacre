@@ -228,8 +228,51 @@ Private AI accounts/history are not copied and real chat writes are read-only.
 Custom Hyprland Lua is copied for reference, not executed or automatically
 translated. Generated compositor bindings are provided by the merged backend.
 Real lock/unlock, idle, night light, mixed-output testing and SDDM service lifetime
-remain gated on a later real-session cycle. **Nacre (niri)** at login currently
-still starts the guarded plain-niri configuration.
+remain unverified until a real-session cycle.
+
+### Full Nacre login preparation (2026-10-13)
+
+The operator prefers testing at the login screen; the interactive nested preview
+was closed. `uwsm/tools/niri-session-runtime.py prepare --backend "$PWD"` stages
+a separate niri shell/tool tree and personal generated configuration under
+`~/.local/share/nacre/niri-on-pc/session`. It validates niri config before writing
+the `source-revision` marker. The existing private profile remains live and intact;
+the prepared profile copy is only source-staging input.
+
+When that marker is present, `uwsm/env-niri` selects the prepared config and adds
+the niri-only `session-bin` to PATH. Its niri wrapper intercepts only `--session`;
+queries/validation still use the native binary. UWSM retains session ownership.
+Both the compositor and shell service see the separately staged code mounted over
+the conventional shell path in their own process namespaces. This keeps QML's
+helper paths and generated bindings consistent without replacing installed
+Hyprland source. The real system/user buses, runtime, device access and private
+preferences stay available. This code view is deliberately not the isolated
+hardware-disabled preview.
+
+The shell service's new ExecStart wrapper executes the original controller
+directly in Hyprland context. In niri it runs the staged supervisor. Nested
+supervisor preflight loads the full shell; the namespace can access the render
+device. No service or compositor restart is requested when installing the
+drop-in. Shell readiness, observer readiness and password-unlock readiness are
+separate: allow the prepared niri shell, keep the observer and hypridle gated.
+The observer currently attempts unsupported saved-monitor restoration; reported
+on [the backend PR](https://github.com/nacre-desktop/nacre/pull/12#issuecomment-6140649789).
+
+The niri-only loginctl wrapper routes the existing explicit Lock action to
+hyprlock even while hypridle is gated; other loginctl commands and Hyprland
+behavior pass through. Password authentication is unchanged. Test manual unlock
+before enabling idle/suspend locking. Night light is not ready under niri yet.
+
+To return this machine to guarded plain niri without changing Hyprland, rename
+`~/.local/share/nacre/niri-on-pc/session/source-revision` out of the way and restore
+the backed-up acceptance record (or remove the new record if it was absent).
+The new runtime drop-in can be removed and the user manager daemon-reloaded;
+its Hyprland path already passes through unchanged. Keep backups outside Git.
+
+**Ready for a first login test** means the code/config/startup preparation is in
+place, not that SDDM login/logout, hardware, lock/password unlock or night light
+have passed. Select **Nacre (niri)** when all current graphical work is saved.
+Return through **Nacre (Hyprland)** or the TTY fallback at the start of this guide.
 
 | Area | Result | Acceptance steps |
 |---|---|---|
@@ -249,9 +292,10 @@ still starts the guarded plain-niri configuration.
 
 ## Open issues and sources
 
-- Installed shell supervision and session observation still assume Hyprland;
-  phase-1 gates prevent those paths from running under niri. Phase 2 must adapt
-  startup using an isolated source before marking the backend ready.
+- The installed backend lacks niri; the prepared niri-only code view and supervisor
+  supply the merged implementation without replacing the working Hyprland source.
+  Session observation remains gated until saved-monitor restoration respects the
+  backend capability. Real startup/teardown acceptance is pending.
 - Existing idle resume uses a Hyprland DPMS command. niri needs its own resume hook
   without changing the working Hyprland policy.
 - hyprsunset is compositor-specific. Protocol-based night light is a phase-2 change,
