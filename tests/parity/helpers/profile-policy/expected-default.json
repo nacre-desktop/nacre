@@ -1,0 +1,23 @@
+{
+  "stdout": {
+    "version": 1,
+    "id": "default",
+    "components": [
+      "configs",
+      "shell"
+    ],
+    "workspaceCount": 5,
+    "workspaceNames": [],
+    "workspaceIcons": [],
+    "startup": [],
+    "routes": [],
+    "brainWorkspace": null,
+    "aiWorkspace": null,
+    "aiFullAccess": false
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

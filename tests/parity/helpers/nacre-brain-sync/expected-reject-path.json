@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "Invalid vault path",
+    "type": "ValueError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

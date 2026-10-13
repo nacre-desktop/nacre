@@ -1,0 +1,14 @@
+{
+  "helper": "device-actions",
+  "args": [
+    "bluetooth-connect",
+    "AA:BB:CC:DD:EE:FF"
+  ],
+  "commands": {
+    "bluetoothctl": [
+      {
+        "stdout": "Failed to connect\n"
+      }
+    ]
+  }
+}

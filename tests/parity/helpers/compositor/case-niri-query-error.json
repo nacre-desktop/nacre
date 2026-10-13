@@ -1,0 +1,22 @@
+{
+  "helper": "compositor",
+  "args": [
+    "query",
+    "windows"
+  ],
+  "stdout": "text",
+  "env": {
+    "NACRE_COMPOSITOR": "niri",
+    "NIRI_SOCKET": "/case/runtime/niri.sock"
+  },
+  "sockets": [
+    {
+      "path": "runtime/niri.sock",
+      "connections": [
+        {
+          "text": "{\"Err\": \"fixture denied\"}\n"
+        }
+      ]
+    }
+  ]
+}

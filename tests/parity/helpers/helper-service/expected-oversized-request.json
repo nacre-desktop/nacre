@@ -1,0 +1,16 @@
+{
+  "stdout": [
+    {
+      "ready": true,
+      "version": 1
+    },
+    {
+      "fatal": "Helper request is too large"
+    }
+  ],
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

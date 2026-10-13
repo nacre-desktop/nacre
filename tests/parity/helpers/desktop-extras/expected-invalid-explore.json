@@ -1,0 +1,33 @@
+{
+  "stdout": {
+    "action": "explore",
+    "error": "Could not complete explore. Check the selected item or try again.",
+    "query": ""
+  },
+  "exit": 0,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell/extras": {
+      "mode": "0o700",
+      "directory": true
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

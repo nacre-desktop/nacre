@@ -1,0 +1,10 @@
+{
+  "helper": "notification-history",
+  "args": [
+    "load"
+  ],
+  "stdout": "text",
+  "fixtures": {
+    "home/.local/state/nacre/shell/notifications/history.json": "{}"
+  }
+}

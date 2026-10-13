@@ -1,0 +1,15 @@
+{
+  "helper": "pearl-window",
+  "args": [
+    "geometry",
+    "Wrong title",
+    "123"
+  ],
+  "commands": {
+    "hyprctl": [
+      {
+        "stdout": "[]"
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "stdout": {
+    "message": "Device updated"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "nmcli",
+      "argv": [
+        "radio",
+        "wifi",
+        "off"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

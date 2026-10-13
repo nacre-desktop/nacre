@@ -1,0 +1,21 @@
+{
+  "stdout": {
+    "backend": "niri",
+    "backendReady": false,
+    "setup_ready": false,
+    "managedIncludes": true,
+    "minimumVersion": "26.04",
+    "includeMinimumVersion": "25.11",
+    "testedVersion": "26.04",
+    "generatedFiles": [
+      "niri/bindings.kdl",
+      "niri/window-rules.kdl",
+      "niri/unsupported.json"
+    ]
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

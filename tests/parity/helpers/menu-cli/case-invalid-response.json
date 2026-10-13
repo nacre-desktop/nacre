@@ -1,0 +1,10 @@
+{
+  "helper": "menu-cli",
+  "args": [
+    "respond",
+    "00000000000000000000000000000000"
+  ],
+  "stdout": "text",
+  "stdin": "{\"accepted\":true}\n",
+  "compare_stderr": true
+}

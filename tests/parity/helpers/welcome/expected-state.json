@@ -1,0 +1,28 @@
+{
+  "stdout": {
+    "shortcuts": [],
+    "shortcutError": "Shortcuts are available when running inside your Hyprland session.",
+    "preferences": {
+      "version": 1,
+      "showAtLogin": true
+    },
+    "available": {
+      "ai": false,
+      "brain": false
+    }
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "binds",
+        "-j"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

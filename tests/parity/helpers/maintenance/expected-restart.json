@@ -1,0 +1,82 @@
+{
+  "stdout": {
+    "release": {},
+    "services": {
+      "nacre-shell.service": "unavailable",
+      "nacre-sidebar-ai.service": "unavailable",
+      "nacre-brain.service": "unavailable",
+      "nacre-session-watch.service": "unavailable",
+      "hypridle.service": "unavailable",
+      "nacre-brain-sync.timer": "unavailable",
+      "xdg-desktop-portal.service": "unavailable",
+      "xdg-desktop-portal-hyprland.service": "unavailable",
+      "xdg-document-portal.service": "unavailable"
+    },
+    "brainSync": {
+      "state": "unrecorded",
+      "message": "No synchronization attempt recorded"
+    },
+    "serviceDetails": {},
+    "failedServices": [],
+    "drift": [],
+    "configErrors": "",
+    "updatesAgeSeconds": null,
+    "session": {},
+    "performance": {},
+    "versions": {
+      "Hyprland": "",
+      "Python": "Python 3.14.7"
+    },
+    "checked": "<timestamp>"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "systemctl",
+      "argv": [
+        "--user",
+        "restart",
+        "nacre-shell.service"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "systemctl",
+      "argv": [
+        "--user",
+        "show",
+        "nacre-shell.service",
+        "nacre-sidebar-ai.service",
+        "nacre-brain.service",
+        "nacre-session-watch.service",
+        "hypridle.service",
+        "nacre-brain-sync.timer",
+        "xdg-desktop-portal.service",
+        "xdg-desktop-portal-hyprland.service",
+        "xdg-document-portal.service",
+        "-p",
+        "Id",
+        "-p",
+        "ActiveState",
+        "-p",
+        "Result",
+        "-p",
+        "ExecMainStatus"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "systemctl",
+      "argv": [
+        "--user",
+        "--failed",
+        "--no-legend",
+        "--plain"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

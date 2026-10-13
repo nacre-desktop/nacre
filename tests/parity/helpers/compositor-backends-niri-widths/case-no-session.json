@@ -1,0 +1,8 @@
+{
+  "helper": "compositor-backends-niri-widths",
+  "args": [
+    "check_session",
+    "{\"args\": [], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/compositor_backends/niri_widths.py"
+}

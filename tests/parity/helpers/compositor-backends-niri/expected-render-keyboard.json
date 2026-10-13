@@ -1,0 +1,8 @@
+{
+  "stdout": "input {\n    keyboard {\n        xkb {\n            layout \"us\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

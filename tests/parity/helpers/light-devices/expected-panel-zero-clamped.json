@@ -1,0 +1,31 @@
+{
+  "stdout": {
+    "kind": "backlight",
+    "device": "panel",
+    "maximum": 100,
+    "current": 1
+  },
+  "exit": 0,
+  "files": {
+    "sys/class/backlight/panel/brightness": {
+      "mode": "0o644",
+      "text": "1"
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "brightnessctl",
+      "argv": [
+        "--class",
+        "backlight",
+        "--device",
+        "panel",
+        "set",
+        "1"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

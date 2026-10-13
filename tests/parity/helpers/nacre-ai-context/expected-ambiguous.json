@@ -1,0 +1,26 @@
+{
+  "stdout": {
+    "matched": [],
+    "projects": [
+      {
+        "id": "demo-a",
+        "label": "Demo A",
+        "path": "/case/home/a",
+        "matches": []
+      },
+      {
+        "id": "demo-b",
+        "label": "Demo B",
+        "path": "/case/home/b",
+        "matches": []
+      }
+    ],
+    "ambiguous": false,
+    "instruction": "Read repository instructions before editing. Use isolated local worktrees; heavy builds use build_host/build_path and exact changes in isolated remote tmux worktrees. No match is not permission to invent a repository. Multiple matches may be legitimate cross-project work; clarify only if target is unclear."
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

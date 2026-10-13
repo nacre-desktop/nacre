@@ -1,0 +1,25 @@
+{
+  "stdout": null,
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 1, \"operation\": \"constants\", \"payload\": {}}\n"
+    },
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 2, \"operation\": \"background_policy\", \"payload\": {\"personality\": \"natural\", \"background_from_wallpaper\": null}}\n"
+    }
+  ],
+  "ipc": []
+}

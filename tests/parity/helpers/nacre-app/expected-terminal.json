@@ -1,0 +1,17 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "kitty",
+      "argv": [
+        "--title",
+        "Public"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

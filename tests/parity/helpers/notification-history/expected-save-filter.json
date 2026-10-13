@@ -1,0 +1,33 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell/notifications": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell/notifications/history.json": {
+      "mode": "0o600",
+      "text": "[{\"key\": \"demo\", \"time\": 1234, \"summary\": \"Public note\", \"body\": \"Hello\", \"appName\": \"Demo\"}]"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

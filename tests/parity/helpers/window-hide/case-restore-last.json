@@ -1,0 +1,35 @@
+{
+  "helper": "window-hide",
+  "args": [
+    "restore-last"
+  ],
+  "stdout": "text",
+  "command": "python3 hypr/scripts/window-hide.py",
+  "commands": {
+    "hyprctl": [
+      {
+        "argv": [
+          "clients",
+          "-j"
+        ],
+        "stdout": "[{\"address\": \"0x123\", \"title\": \"Nacre Pearl Dashboard 123\", \"pid\": 123, \"at\": [10, 20], \"size\": [800, 600], \"workspace\": {\"id\": 2}, \"monitor\": 0}]"
+      },
+      {
+        "argv": [
+          "activeworkspace",
+          "-j"
+        ],
+        "stdout": "{\"id\":2}"
+      },
+      {
+        "stdout": "ok\n"
+      }
+    ],
+    "notify-send": [
+      {}
+    ]
+  },
+  "fixtures": {
+    "home/.cache/hypr-minimize/0x123": "2\n"
+  }
+}

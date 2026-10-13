@@ -46,11 +46,7 @@ def collection():
                 )
             )
         with Image.open(source) as image:
-            if (
-                list(image.size) != item["size"]
-                or image.width < 3840
-                or image.height < 2000
-            ):
+            if list(image.size) != item["size"] or max(image.size) != 3840:
                 raise ValueError(
                     tr(
                         "helper.demo-wallpapers.bundled-wallpaper-resolution-does-not-match-its-manifest",

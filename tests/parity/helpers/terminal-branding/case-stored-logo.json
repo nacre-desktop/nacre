@@ -1,0 +1,8 @@
+{
+  "helper": "terminal-branding",
+  "args": [],
+  "stdout": "text",
+  "fixtures": {
+    "home/.local/share/nacre/branding/nacre-text.txt": "Public logo\n"
+  }
+}

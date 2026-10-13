@@ -1,0 +1,18 @@
+{
+  "helper": "install-extras",
+  "args": [],
+  "stdout": "text",
+  "fixtures": {
+    "home/.config/hypr/hyprland.lua": "-- Nacre native desktop shortcuts\nload_private(\"shortcuts\")\n"
+  },
+  "commands": {
+    "systemctl": [
+      {}
+    ],
+    "hyprctl": [
+      {
+        "stdout": "ok\n"
+      }
+    ]
+  }
+}

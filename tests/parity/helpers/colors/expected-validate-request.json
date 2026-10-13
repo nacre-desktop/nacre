@@ -1,0 +1,38 @@
+{
+  "stdout": {
+    "mode": "dark",
+    "personality": "natural",
+    "overrides": {},
+    "brightness": 0.0,
+    "saturation": 1.0,
+    "hour": 12,
+    "autoMode": false,
+    "tideAutomatic": false,
+    "timeTint": false,
+    "workspaceColors": false,
+    "image": "/case/home/demo.png",
+    "backgroundFromWallpaper": false
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 1, \"operation\": \"constants\", \"payload\": {}}\n"
+    },
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 2, \"operation\": \"background_policy\", \"payload\": {\"personality\": \"natural\", \"background_from_wallpaper\": null}}\n"
+    }
+  ],
+  "ipc": []
+}

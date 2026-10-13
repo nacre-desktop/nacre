@@ -1,0 +1,8 @@
+{
+  "helper": "nacre-app",
+  "args": [
+    "unknown"
+  ],
+  "command": "python3 bin/nacre-app",
+  "stdout": "text"
+}

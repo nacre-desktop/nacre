@@ -1,0 +1,43 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "slurp",
+      "argv": [],
+      "stdin": ""
+    },
+    {
+      "command": "grim",
+      "argv": [
+        "-g",
+        "0,0 800x600",
+        "-"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "wl-copy",
+      "argv": [
+        "--type",
+        "image/png"
+      ],
+      "stdin_base64": "iVBORw0KGgo="
+    },
+    {
+      "command": "notify-send",
+      "argv": [
+        "-a",
+        "Nacre Capture",
+        "-i",
+        "nacre-notifications",
+        "Screenshot",
+        "Copied selection to clipboard"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

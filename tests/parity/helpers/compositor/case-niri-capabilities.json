@@ -1,0 +1,9 @@
+{
+  "helper": "compositor",
+  "args": [
+    "capabilities"
+  ],
+  "env": {
+    "NACRE_COMPOSITOR": "niri"
+  }
+}

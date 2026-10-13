@@ -1,0 +1,38 @@
+{
+  "stdout": [
+    {
+      "ready": true,
+      "version": 1
+    },
+    {
+      "id": 5,
+      "code": 0,
+      "output": "[]\n"
+    },
+    {
+      "id": 1,
+      "code": 0,
+      "output": "{\"value\": \"1\"}\n"
+    },
+    {
+      "id": 2,
+      "code": 0,
+      "output": "{\"value\": \"2\"}\n"
+    },
+    {
+      "id": 3,
+      "code": 0,
+      "output": "{\"value\": \"3\"}\n"
+    },
+    {
+      "id": 4,
+      "code": 0,
+      "output": "{\"value\": \"4\"}\n"
+    }
+  ],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

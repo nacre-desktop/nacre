@@ -1,0 +1,10 @@
+{
+  "stdout": {
+    "error": "Administrator authentication is required"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

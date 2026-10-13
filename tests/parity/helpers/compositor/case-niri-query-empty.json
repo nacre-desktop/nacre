@@ -1,0 +1,27 @@
+{
+  "helper": "compositor",
+  "args": [
+    "query",
+    "windows"
+  ],
+  "env": {
+    "NACRE_COMPOSITOR": "niri",
+    "NIRI_SOCKET": "/case/runtime/niri.sock"
+  },
+  "sockets": [
+    {
+      "path": "runtime/niri.sock",
+      "connections": [
+        {
+          "text": "{\"Ok\": {\"Outputs\": {}}}\n"
+        },
+        {
+          "text": "{\"Ok\": {\"Workspaces\": []}}\n"
+        },
+        {
+          "text": "{\"Ok\": {\"Windows\": []}}\n"
+        }
+      ]
+    }
+  ]
+}

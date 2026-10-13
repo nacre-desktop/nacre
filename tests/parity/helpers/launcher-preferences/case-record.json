@@ -1,0 +1,20 @@
+{
+  "helper": "launcher-preferences",
+  "args": [
+    "record"
+  ],
+  "stdin": "{\"id\":\"demo.desktop\",\"enabled\":true}\n",
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/usage/demo.desktop/last",
+      "reason": "launcher use time.time()"
+    },
+    {
+      "kind": "timestamp",
+      "pointer": "/files/home~1.config~1nacre~1launcher.json/text",
+      "json_pointer": "/usage/demo.desktop/last",
+      "reason": "same usage timestamp persisted"
+    }
+  ]
+}

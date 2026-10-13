@@ -1,0 +1,9 @@
+{
+  "helper": "resource-state",
+  "args": [],
+  "fixtures": {
+    "sys/class/hwmon/hwmon0/name": "coretemp",
+    "sys/class/hwmon/hwmon0/temp1_input": "42000",
+    "sys/class/hwmon/hwmon0/temp1_label": "Package id 0"
+  }
+}

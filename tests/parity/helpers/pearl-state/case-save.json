@@ -1,0 +1,7 @@
+{
+  "helper": "pearl-state",
+  "args": [
+    "save"
+  ],
+  "stdin": "{\"version\":1,\"windows\":[],\"ai\":{\"edge\":\"left\",\"channels\":[\"\"]}}\n"
+}

@@ -1,0 +1,96 @@
+{
+  "stdout": [
+    {
+      "ready": true,
+      "version": 1
+    },
+    {
+      "id": 1,
+      "code": 0,
+      "output": "{\"favorites\": [], \"hidden\": [], \"recent\": [], \"usage\": {}}\n"
+    },
+    {
+      "id": 9007199254740991,
+      "code": 0,
+      "output": "{\"favorites\": [], \"hidden\": [], \"recent\": [], \"usage\": {}}\n"
+    },
+    {
+      "id": 0,
+      "code": 1,
+      "output": "{\"error\": \"Invalid helper request ID\"}"
+    },
+    {
+      "id": 0,
+      "code": 1,
+      "output": "{\"error\": \"Invalid helper request ID\"}"
+    },
+    {
+      "id": 2,
+      "code": 1,
+      "output": "{\"error\": \"Unsupported helper\"}"
+    },
+    {
+      "id": 0,
+      "code": 1,
+      "output": "{\"error\": \"Invalid helper request\"}"
+    },
+    {
+      "id": 0,
+      "code": 1,
+      "output": "{\"error\": \"Expecting property name enclosed in double quotes: line 1 column 2 (char 1)\"}"
+    },
+    {
+      "id": 0,
+      "code": 1,
+      "output": "{\"error\": \"Non-finite JSON value\"}"
+    },
+    {
+      "id": 4,
+      "code": 1,
+      "output": "{\"error\": \"Unsupported helper operation\"}"
+    },
+    {
+      "id": 5,
+      "code": 1,
+      "output": "{\"error\": \"Invalid helper arguments\"}"
+    },
+    {
+      "id": 6,
+      "code": 1,
+      "output": "{\"error\": \"Invalid helper arguments\"}"
+    },
+    {
+      "id": 7,
+      "code": 1,
+      "output": "{\"error\": \"Invalid helper arguments\"}"
+    },
+    {
+      "id": 8,
+      "code": 0,
+      "output": "{\"favorites\": [], \"hidden\": [], \"recent\": [], \"usage\": {}}\n"
+    },
+    {
+      "id": 8,
+      "code": 0,
+      "output": "{\"favorites\": [], \"hidden\": [], \"recent\": [], \"usage\": {}}\n"
+    }
+  ],
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/launcher.json": {
+      "mode": "0o600",
+      "text": "{\"favorites\": [], \"hidden\": []}"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,8 @@
+{
+  "helper": "login-appearance",
+  "args": [
+    "prepare",
+    "{\"args\": [\"/case/home/missing.png\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/login-appearance.py"
+}

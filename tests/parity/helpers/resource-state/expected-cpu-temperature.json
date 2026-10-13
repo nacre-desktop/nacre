@@ -1,0 +1,17 @@
+{
+  "stdout": {
+    "cpuTemp": 42.0,
+    "gpuTemp": null,
+    "gpuPerc": null,
+    "gpuUsageAvailable": false,
+    "gpuFrequencyMHz": null,
+    "gpus": [],
+    "storageUsed": 0.0,
+    "storageTotal": 1048576.0
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

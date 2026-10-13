@@ -1,0 +1,21 @@
+{
+  "stdout": {
+    "processes": [
+      {
+        "pid": 123,
+        "name": "demo worker",
+        "start": "1000",
+        "uid": 1000,
+        "memory": 40960,
+        "cpuSeconds": 1.5,
+        "parent": 1
+      }
+    ],
+    "disks": []
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

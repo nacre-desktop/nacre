@@ -1,0 +1,8 @@
+{
+  "stdout": "-- Your system keyboard choice. Edit here; Nacre updates preserve this file.\nhl.config({\n    [\"input.kb_unknown\"] = \"x\",\n})\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

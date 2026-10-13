@@ -1,0 +1,17 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "eval",
+        "hl.monitor({output=\"DP-1\",width=1920,height=1080,refreshRate=60,scale=1,x=0,y=0})"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

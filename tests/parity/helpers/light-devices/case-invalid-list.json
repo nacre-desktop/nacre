@@ -1,0 +1,7 @@
+{
+  "helper": "light-devices",
+  "args": [
+    "discover",
+    "{}"
+  ]
+}

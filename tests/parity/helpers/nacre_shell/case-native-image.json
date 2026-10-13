@@ -1,0 +1,15 @@
+{
+  "helper": "nacre_shell",
+  "args": [
+    "from_image",
+    "{\"args\": [\"/case/home/demo.png\"], \"kwargs\": {\"hour\": 12, \"cache_dir\": {\"$path\": \"/proc/parity-readonly-cache\"}}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre_shell.engine",
+  "fixtures": {
+    "home/demo.png": {
+      "base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAD0lEQVR4nGNQjlr1YZUuAAmUAu/5C1xEAAAAAElFTkSuQmCC",
+      "mtime": 1700000000
+    }
+  },
+  "native_engine": true
+}

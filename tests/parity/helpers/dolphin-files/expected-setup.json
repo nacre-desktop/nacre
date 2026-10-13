@@ -1,0 +1,49 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/dolphinrc": {
+      "mode": "0o600",
+      "text": "[General]\nBrowseThroughArchives=true\nGlobalViewProps=true\nOpenExternallyCalledFolderInNewTab=true\nEditableUrl=false\nShowStatusBar=FullWidth\n\n[IconsMode]\nIconSize=80\nPreviewSize=96\nMaximumTextLines=2\nUseSystemFont=true\n\n[KFileDialog Settings]\nPlaces Icons Auto-resize=false\nPlaces Icons Static Size=22\n\n[MainWindow]\nMenuBar=Disabled\n\n[UiSettings]\nColorScheme=Nacre\n\n"
+    },
+    "home/.config/mimeapps.list": {
+      "mode": "0o600",
+      "text": "[Default Applications]\ninode/directory=org.kde.dolphin.desktop\napplication/zip=org.kde.dolphin.desktop\napplication/x-zip-compressed=org.kde.dolphin.desktop\n\n"
+    },
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.local/state/nacre/backups": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/backups/<timestamp>": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.local/state/nacre/dolphin-default.json": {
+      "mode": "0o600",
+      "text": "{\n  \"backup\": \"/case/home/.local/state/nacre/backups/<timestamp>\",\n  \"defaults\": {\n    \"General\": {\n      \"BrowseThroughArchives\": \"true\",\n      \"GlobalViewProps\": \"true\",\n      \"OpenExternallyCalledFolderInNewTab\": \"true\",\n      \"EditableUrl\": \"false\",\n      \"ShowStatusBar\": \"FullWidth\"\n    },\n    \"IconsMode\": {\n      \"IconSize\": \"80\",\n      \"PreviewSize\": \"96\",\n      \"MaximumTextLines\": \"2\",\n      \"UseSystemFont\": \"true\"\n    },\n    \"KFileDialog Settings\": {\n      \"Places Icons Auto-resize\": \"false\",\n      \"Places Icons Static Size\": \"22\"\n    },\n    \"MainWindow\": {\n      \"MenuBar\": \"Disabled\"\n    },\n    \"UiSettings\": {\n      \"ColorScheme\": \"Nacre\"\n    }\n  }\n}\n"
+    },
+    "home/.local/state/nacre/dolphin-setup.lock": {
+      "mode": "0o644",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

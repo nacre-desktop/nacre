@@ -1,0 +1,27 @@
+{
+  "helper": "wallpaper-media",
+  "args": [
+    "session"
+  ],
+  "commands": {
+    "loginctl": [
+      {
+        "argv": [
+          "show-user",
+          "1000",
+          "--property=Display",
+          "--value"
+        ],
+        "stdout": "7\n"
+      },
+      {
+        "stdout": "yes\n"
+      }
+    ],
+    "busctl": [
+      {
+        "stdout": "o \"/org/freedesktop/login1/session/_7\"\n"
+      }
+    ]
+  }
+}

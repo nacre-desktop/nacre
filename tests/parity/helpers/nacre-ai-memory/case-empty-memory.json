@@ -1,0 +1,13 @@
+{
+  "helper": "nacre-ai-memory",
+  "args": [
+    "--title",
+    "Public fixture",
+    "--source",
+    "fixture",
+    "--confidence",
+    "reported"
+  ],
+  "command": "python3 bin/nacre-ai-memory",
+  "stdout": "text"
+}

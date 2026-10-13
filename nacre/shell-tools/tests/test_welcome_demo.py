@@ -57,7 +57,7 @@ class WelcomeDemoTests(unittest.TestCase):
                     self.assertGreater(distance, 70, (item["name"], mode, distance))
                     self.assertNotEqual(pop["colours"], pearl["colours"])
 
-    def test_offline_native_resolution_cache_preserves_bytes_and_repairs_damage(self):
+    def test_offline_bundled_resolution_cache_preserves_bytes_and_repairs_damage(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             entries = art.ensure(home)
@@ -85,8 +85,7 @@ class WelcomeDemoTests(unittest.TestCase):
                 )
                 with Image.open(item["path"]) as image:
                     self.assertEqual(list(image.size), item["size"])
-                    self.assertGreaterEqual(image.width, 3840)
-                    self.assertGreaterEqual(image.height, 2000)
+                    self.assertEqual(max(image.size), 3840)
             Path(entries[0]["path"]).write_bytes(b"broken cache")
             art.ensure(home, fast=True)
             self.assertEqual(

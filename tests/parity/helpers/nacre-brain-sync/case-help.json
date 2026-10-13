@@ -1,0 +1,8 @@
+{
+  "helper": "nacre-brain-sync",
+  "args": [
+    "--help"
+  ],
+  "command": "python3 bin/nacre-brain-sync",
+  "stdout": "text"
+}

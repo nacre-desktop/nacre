@@ -1,0 +1,36 @@
+{
+  "stdout": {
+    "deleted": true
+  },
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/colors.json": {
+      "mode": "0o600",
+      "text": "{\"version\": 1, \"wallpapers\": {}, \"favorites\": [], \"history\": []}"
+    },
+    "home/.config/nacre/colors.lock": {
+      "mode": "0o600",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 1, \"operation\": \"constants\", \"payload\": {}}\n"
+    }
+  ],
+  "ipc": []
+}

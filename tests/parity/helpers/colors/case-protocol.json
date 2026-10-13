@@ -1,0 +1,9 @@
+{
+  "helper": "colors",
+  "args": [
+    "serve"
+  ],
+  "stdout": "jsonl",
+  "stdin": "{\"sequence\":1,\"request\":{}}\n{broken\n{\"sequence\":true,\"request\":{}}\n{\"sequence\":2,\"request\":[]}\n",
+  "native_engine": true
+}

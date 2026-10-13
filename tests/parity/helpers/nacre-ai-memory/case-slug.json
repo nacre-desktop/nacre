@@ -1,0 +1,8 @@
+{
+  "helper": "nacre-ai-memory",
+  "args": [
+    "slug",
+    "{\"args\": [\"A Public World!\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py bin/nacre-ai-memory"
+}

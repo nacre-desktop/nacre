@@ -1,0 +1,10 @@
+{
+  "helper": "lock-info",
+  "args": [
+    "toggle"
+  ],
+  "stdout": "text",
+  "fixtures": {
+    "home/.config/nacre/lock.json": "{\"lockMedia\":false}"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "helper": "helper-service",
+  "args": [],
+  "stdout": "jsonl",
+  "stdin_repeat": {
+    "text": "x",
+    "count": 4194305
+  }
+}

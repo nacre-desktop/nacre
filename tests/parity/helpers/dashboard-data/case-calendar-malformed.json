@@ -1,0 +1,17 @@
+{
+  "helper": "dashboard-data",
+  "args": [
+    "read"
+  ],
+  "fixtures": {
+    "home/.config/nacre/dashboard.json": "{\"calendarFile\":\"/case/home/demo.ics\"}",
+    "home/demo.ics": "invalid calendar"
+  },
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/checked",
+      "reason": "dashboard sampling time.time()"
+    }
+  ]
+}

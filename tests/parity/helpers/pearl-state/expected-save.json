@@ -1,0 +1,29 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell/pearls.json": {
+      "mode": "0o600",
+      "text": "{\"version\": 1, \"windows\": [], \"ai\": {\"edge\": \"left\", \"channels\": [\"\"]}}"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

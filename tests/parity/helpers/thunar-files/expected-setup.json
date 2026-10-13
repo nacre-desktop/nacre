@@ -1,0 +1,380 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/thunar-setup.lock": {
+      "mode": "0o644",
+      "text": ""
+    },
+    "home/.local/state/nacre/thunar-style.json": {
+      "mode": "0o600",
+      "text": "{\n  \"before\": {\n    \"default-view\": \"\",\n    \"last-view\": \"\",\n    \"last-icon-view-zoom-level\": \"\",\n    \"last-location-bar\": \"\",\n    \"last-side-pane\": \"\",\n    \"last-menubar-visible\": \"\",\n    \"last-statusbar-visible\": \"\",\n    \"last-separator-position\": \"\",\n    \"last-window-width\": \"\",\n    \"last-window-height\": \"\",\n    \"misc-single-click\": \"\",\n    \"misc-thumbnail-mode\": \"\",\n    \"misc-thumbnail-draw-frames\": \"\",\n    \"shortcuts-icon-size\": \"\"\n  },\n  \"applied\": {\n    \"default-view\": [\n      \"string\",\n      \"ThunarIconView\"\n    ],\n    \"last-view\": [\n      \"string\",\n      \"ThunarIconView\"\n    ],\n    \"last-icon-view-zoom-level\": [\n      \"string\",\n      \"THUNAR_ZOOM_LEVEL_150_PERCENT\"\n    ],\n    \"last-location-bar\": [\n      \"string\",\n      \"ThunarLocationButtons\"\n    ],\n    \"last-side-pane\": [\n      \"string\",\n      \"ThunarShortcutsPane\"\n    ],\n    \"last-menubar-visible\": [\n      \"bool\",\n      \"false\"\n    ],\n    \"last-statusbar-visible\": [\n      \"bool\",\n      \"true\"\n    ],\n    \"last-separator-position\": [\n      \"int\",\n      \"210\"\n    ],\n    \"last-window-width\": [\n      \"int\",\n      \"1100\"\n    ],\n    \"last-window-height\": [\n      \"int\",\n      \"760\"\n    ],\n    \"misc-single-click\": [\n      \"bool\",\n      \"false\"\n    ],\n    \"misc-thumbnail-mode\": [\n      \"string\",\n      \"THUNAR_THUMBNAIL_MODE_ONLY_LOCAL\"\n    ],\n    \"misc-thumbnail-draw-frames\": [\n      \"bool\",\n      \"false\"\n    ],\n    \"shortcuts-icon-size\": [\n      \"string\",\n      \"THUNAR_ICON_SIZE_24\"\n    ]\n  }\n}\n"
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/default-view"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/default-view",
+        "--create",
+        "--type",
+        "string",
+        "--set",
+        "ThunarIconView"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-view"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-view",
+        "--create",
+        "--type",
+        "string",
+        "--set",
+        "ThunarIconView"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-icon-view-zoom-level"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-icon-view-zoom-level",
+        "--create",
+        "--type",
+        "string",
+        "--set",
+        "THUNAR_ZOOM_LEVEL_150_PERCENT"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-location-bar"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-location-bar",
+        "--create",
+        "--type",
+        "string",
+        "--set",
+        "ThunarLocationButtons"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-side-pane"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-side-pane",
+        "--create",
+        "--type",
+        "string",
+        "--set",
+        "ThunarShortcutsPane"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-menubar-visible"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-menubar-visible",
+        "--create",
+        "--type",
+        "bool",
+        "--set",
+        "false"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-statusbar-visible"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-statusbar-visible",
+        "--create",
+        "--type",
+        "bool",
+        "--set",
+        "true"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-separator-position"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-separator-position",
+        "--create",
+        "--type",
+        "int",
+        "--set",
+        "210"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-window-width"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-window-width",
+        "--create",
+        "--type",
+        "int",
+        "--set",
+        "1100"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-window-height"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/last-window-height",
+        "--create",
+        "--type",
+        "int",
+        "--set",
+        "760"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/misc-single-click"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/misc-single-click",
+        "--create",
+        "--type",
+        "bool",
+        "--set",
+        "false"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/misc-thumbnail-mode"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/misc-thumbnail-mode",
+        "--create",
+        "--type",
+        "string",
+        "--set",
+        "THUNAR_THUMBNAIL_MODE_ONLY_LOCAL"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/misc-thumbnail-draw-frames"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/misc-thumbnail-draw-frames",
+        "--create",
+        "--type",
+        "bool",
+        "--set",
+        "false"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/shortcuts-icon-size"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "xfconf-query",
+      "argv": [
+        "-c",
+        "thunar",
+        "-p",
+        "/shortcuts-icon-size",
+        "--create",
+        "--type",
+        "string",
+        "--set",
+        "THUNAR_ICON_SIZE_24"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

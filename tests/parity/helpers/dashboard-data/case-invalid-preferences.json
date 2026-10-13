@@ -1,0 +1,7 @@
+{
+  "helper": "dashboard-data",
+  "args": [
+    "preferences",
+    "{\"tabs\":[\"today\",\"today\"]}"
+  ]
+}

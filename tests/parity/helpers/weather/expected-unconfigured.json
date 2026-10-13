@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "stale": true,
+    "error": "Weather unavailable. Set a city or try again."
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

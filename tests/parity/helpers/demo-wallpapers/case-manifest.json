@@ -1,0 +1,8 @@
+{
+  "helper": "demo-wallpapers",
+  "args": [
+    "collection",
+    "{\"args\": [], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/demo-wallpapers.py"
+}

@@ -1,0 +1,15 @@
+{
+  "helper": "nacre-app",
+  "args": [
+    "terminal",
+    "--title",
+    "Public"
+  ],
+  "command": "python3 bin/nacre-app",
+  "stdout": "text",
+  "commands": {
+    "kitty": [
+      {}
+    ]
+  }
+}

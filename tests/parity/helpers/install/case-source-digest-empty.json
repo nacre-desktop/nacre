@@ -1,0 +1,13 @@
+{
+  "helper": "install",
+  "args": [
+    "source_digest",
+    "{\"args\": [{\"$path\": \"{home}/empty\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/install.py",
+  "fixtures": {
+    "home/empty": {
+      "directory": true
+    }
+  }
+}

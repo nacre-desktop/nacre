@@ -1,0 +1,13 @@
+{
+  "helper": "nacre-settings",
+  "args": [
+    "network"
+  ],
+  "command": "python3 bin/nacre-settings",
+  "stdout": "text",
+  "commands": {
+    "quickshell": [
+      {}
+    ]
+  }
+}

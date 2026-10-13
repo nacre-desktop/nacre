@@ -1,0 +1,11 @@
+{
+  "helper": "dolphin-files",
+  "args": [
+    "config",
+    "{\"args\": [{\"$path\": \"{home}/demo.ini\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/dolphin-files.py",
+  "fixtures": {
+    "home/demo.ini": "[General]\nName=Public\n"
+  }
+}

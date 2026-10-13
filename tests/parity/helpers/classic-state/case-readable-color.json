@@ -1,0 +1,9 @@
+{
+  "helper": "classic-state",
+  "args": [
+    "readable",
+    "{\"args\": [\"#777777\", \"#000000\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/classic-state.py",
+  "native_engine": true
+}

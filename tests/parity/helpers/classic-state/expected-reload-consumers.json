@@ -1,0 +1,67 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "gsettings",
+      "argv": [
+        "set",
+        "org.gnome.desktop.interface",
+        "cursor-theme",
+        "breeze_cursors"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "gsettings",
+      "argv": [
+        "set",
+        "org.gnome.desktop.interface",
+        "cursor-size",
+        "24"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "gsettings",
+      "argv": [
+        "set",
+        "org.gnome.desktop.interface",
+        "color-scheme",
+        "prefer-dark"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "gsettings",
+      "argv": [
+        "set",
+        "org.gnome.desktop.interface",
+        "gtk-theme",
+        "Adwaita-dark"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "gsettings",
+      "argv": [
+        "set",
+        "org.gnome.desktop.interface",
+        "icon-theme",
+        "Fixture Icons"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "eval",
+        "hl.config({})"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

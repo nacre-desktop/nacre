@@ -1,0 +1,15 @@
+{
+  "helper": "lock-info",
+  "args": [
+    "art"
+  ],
+  "stdout": "text",
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/files/home~1.cache~1nacre~1lock-art-source.json/text",
+      "json_pointer": "/checked",
+      "reason": "art freshness check time.time()"
+    }
+  ]
+}

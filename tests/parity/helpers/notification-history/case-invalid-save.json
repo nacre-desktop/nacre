@@ -1,0 +1,8 @@
+{
+  "helper": "notification-history",
+  "args": [
+    "save"
+  ],
+  "stdout": "text",
+  "stdin": "{}\n"
+}

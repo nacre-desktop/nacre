@@ -1,0 +1,9 @@
+{
+  "helper": "palette_engine",
+  "args": [
+    "render_values",
+    "{\"args\": [\"Primary={{ primary }}\", {\"primary\": \"224466\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/palette_engine.py",
+  "native_engine": true
+}

@@ -1,0 +1,18 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "install",
+    "demo"
+  ],
+  "stdout": "text",
+  "commands": {
+    "pkexec": [
+      {
+        "stdout": "installed\n"
+      }
+    ],
+    "pacman": [
+      {}
+    ]
+  }
+}

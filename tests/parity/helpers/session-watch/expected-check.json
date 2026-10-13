@@ -1,0 +1,65 @@
+{
+  "stdout": {
+    "event": "fixture",
+    "checked": "<timestamp>",
+    "desktopReady": false,
+    "wallet": "unavailable",
+    "monitors": [],
+    "brainWindows": 0,
+    "configErrors": "ok"
+  },
+  "exit": 0,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/session": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.local/state/nacre/session/events.jsonl": {
+      "mode": "0o600",
+      "text": "{\"event\": \"fixture\", \"checked\": \"<timestamp>\", \"desktopReady\": false, \"wallet\": \"unavailable\", \"monitors\": [], \"brainWindows\": 0, \"configErrors\": \"ok\"}\n"
+    },
+    "home/.local/state/nacre/session/latest.json": {
+      "mode": "0o600",
+      "text": "{\"event\": \"fixture\", \"checked\": \"<timestamp>\", \"desktopReady\": false, \"wallet\": \"unavailable\", \"monitors\": [], \"brainWindows\": 0, \"configErrors\": \"ok\"}"
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "monitors",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "clients",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "configerrors"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

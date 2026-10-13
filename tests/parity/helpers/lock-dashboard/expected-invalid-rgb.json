@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "Invalid palette color",
+    "type": "ValueError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,35 @@
+{
+  "stdout": {
+    "ok": true,
+    "value": "6.2137 mi",
+    "description": "Enter to copy \u00b7 currencies use stored Qalculate rates"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "qalc",
+      "argv": [
+        "--terse",
+        "--defaults",
+        "--nodatasets",
+        "--time",
+        "400",
+        "--set",
+        "update exchange rates 0",
+        "--set",
+        "save config 0",
+        "--set",
+        "save definitions 0",
+        "--set",
+        "save mode 0",
+        "--set",
+        "clear history 1",
+        "10 km to miles"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

@@ -1,0 +1,66 @@
+{
+  "stdout": {
+    "wifiEnabled": true,
+    "wifiAvailable": true,
+    "wifiInterface": "wlan0",
+    "networks": []
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "nmcli",
+      "argv": [
+        "--terse",
+        "--escape",
+        "yes",
+        "--colors",
+        "no",
+        "--wait",
+        "5",
+        "radio",
+        "wifi"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "nmcli",
+      "argv": [
+        "--terse",
+        "--escape",
+        "yes",
+        "--colors",
+        "no",
+        "--wait",
+        "5",
+        "--fields",
+        "DEVICE,TYPE,STATE",
+        "device",
+        "status"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "nmcli",
+      "argv": [
+        "--terse",
+        "--escape",
+        "yes",
+        "--colors",
+        "no",
+        "--wait",
+        "5",
+        "--fields",
+        "IN-USE,SSID,BSSID,SIGNAL,FREQ,DEVICE",
+        "device",
+        "wifi",
+        "list",
+        "--rescan",
+        "no"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

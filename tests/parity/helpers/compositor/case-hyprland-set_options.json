@@ -1,0 +1,45 @@
+{
+  "helper": "compositor",
+  "args": [
+    "action",
+    "set_options",
+    "--options",
+    "{\"general.gaps_in\":4}"
+  ],
+  "stdout": "text",
+  "commands": {
+    "hyprctl": [
+      {
+        "argv": [
+          "monitors",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "workspaces",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "clients",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "activewindow",
+          "-j"
+        ],
+        "stdout": "{}"
+      },
+      {
+        "stdout": "ok\n"
+      }
+    ]
+  }
+}

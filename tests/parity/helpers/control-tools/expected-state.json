@@ -1,0 +1,15 @@
+{
+  "stdout": {
+    "screenshot": false,
+    "colorPicker": false,
+    "powerProfilesSupported": false,
+    "nightLightSupported": false,
+    "nightLightExternal": false,
+    "nightLightEnabled": false
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

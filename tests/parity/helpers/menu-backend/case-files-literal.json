@@ -1,0 +1,18 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "files",
+    "report"
+  ],
+  "fixtures": {
+    "home/Documents/report.pdf": "public fixture",
+    "home/Documents/ignore.txt": "skip"
+  },
+  "commands": {
+    "fd": [
+      {
+        "stdout": "/case/home/Documents/report.pdf\u0000/etc/passwd\u0000/case/home/Documents/ignore.txt\u0000"
+      }
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "stdout": {
+    "favorites": [
+      "demo.desktop"
+    ],
+    "hidden": [],
+    "recent": [],
+    "usage": {}
+  },
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/launcher.json": {
+      "mode": "0o600",
+      "text": "{\"favorites\": [\"demo.desktop\"], \"hidden\": [], \"recent\": [], \"usage\": {}}"
+    },
+    "home/.config/nacre/launcher.lock": {
+      "mode": "0o600",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

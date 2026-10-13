@@ -1,0 +1,2558 @@
+{
+  "stdout": [
+    {
+      "type": "snapshot",
+      "backend": "niri",
+      "capabilities": {
+        "stableWorkspaceIndices": false,
+        "globalWorkspaces": false,
+        "perOutputWorkspaces": true,
+        "scrollingLayout": true,
+        "floatingPlacement": true,
+        "pinWindow": false,
+        "windowCapture": false,
+        "cursorPosition": false,
+        "nativePanelDrag": false,
+        "windowHide": false,
+        "fullscreenState": false,
+        "shortcutRelease": false,
+        "desktopOptions": [],
+        "monitorConfiguration": false,
+        "nightLightController": false
+      },
+      "monitors": [
+        {
+          "id": "DP-1",
+          "name": "DP-1",
+          "outputId": "DP-1",
+          "x": -1920,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "logicalWidth": 1920,
+          "logicalHeight": 1080,
+          "scale": 1,
+          "transform": 0,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": false,
+          "activeWorkspace": {
+            "id": "niri-workspace:101",
+            "workspaceId": "niri-workspace:101",
+            "index": 1,
+            "name": "1",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": true,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": "niri-window:1"
+          },
+          "availableModes": [
+            "1920x1080@120.000"
+          ]
+        },
+        {
+          "id": "DP-2",
+          "name": "DP-2",
+          "outputId": "DP-2",
+          "x": 0,
+          "y": 0,
+          "width": 2560,
+          "height": 1440,
+          "logicalWidth": 960,
+          "logicalHeight": 1706,
+          "scale": 1.5,
+          "transform": 1,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": true,
+          "activeWorkspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "availableModes": [
+            "2560x1440@120.000"
+          ]
+        }
+      ],
+      "workspaces": [
+        {
+          "id": "niri-workspace:101",
+          "workspaceId": "niri-workspace:101",
+          "index": 1,
+          "name": "1",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": true,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": "niri-window:1"
+        },
+        {
+          "id": "niri-workspace:102",
+          "workspaceId": "niri-workspace:102",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        },
+        {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        {
+          "id": "niri-workspace:202",
+          "workspaceId": "niri-workspace:202",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": true,
+          "activeWindowId": "niri-window:3"
+        },
+        {
+          "id": "niri-workspace:203",
+          "workspaceId": "niri-workspace:203",
+          "index": 3,
+          "name": "3",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        }
+      ],
+      "windows": [
+        {
+          "id": "niri-window:1",
+          "windowId": "niri-window:1",
+          "address": "niri-window:1",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 1",
+          "pid": 123,
+          "workspaceId": "niri-workspace:101",
+          "workspace": {
+            "id": "niri-workspace:101",
+            "workspaceId": "niri-workspace:101",
+            "index": 1,
+            "name": "1",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": true,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": "niri-window:1"
+          },
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "geometry": {
+            "x": -1892,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            -1892,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:9007199254740995",
+          "windowId": "niri-window:9007199254740995",
+          "address": "niri-window:9007199254740995",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 9007199254740995",
+          "pid": 123,
+          "workspaceId": "niri-workspace:9007199254740993",
+          "workspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 28,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            28,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": true,
+          "focused": true,
+          "urgent": false,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:3",
+          "windowId": "niri-window:3",
+          "address": "niri-window:3",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 3",
+          "pid": 123,
+          "workspaceId": "niri-workspace:202",
+          "workspace": {
+            "id": "niri-workspace:202",
+            "workspaceId": "niri-workspace:202",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": false,
+            "focused": false,
+            "urgent": true,
+            "activeWindowId": "niri-window:3"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 28,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            28,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        }
+      ],
+      "activeWindow": {
+        "id": "niri-window:9007199254740995",
+        "windowId": "niri-window:9007199254740995",
+        "address": "niri-window:9007199254740995",
+        "appId": "org.example.Test",
+        "class": "org.example.Test",
+        "title": "Test 9007199254740995",
+        "pid": 123,
+        "workspaceId": "niri-workspace:9007199254740993",
+        "workspace": {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        "outputId": "DP-2",
+        "monitor": "DP-2",
+        "geometry": {
+          "x": 28,
+          "y": 44,
+          "width": 500,
+          "height": 400
+        },
+        "geometryKnown": true,
+        "moving": false,
+        "at": [
+          28,
+          44
+        ],
+        "size": [
+          500,
+          400
+        ],
+        "floating": true,
+        "focused": true,
+        "urgent": false,
+        "hidden": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenMode": 0,
+        "fullscreenKnown": false
+      },
+      "activeWorkspace": {
+        "id": "niri-workspace:9007199254740993",
+        "workspaceId": "niri-workspace:9007199254740993",
+        "index": 1,
+        "name": "coding",
+        "outputId": "DP-2",
+        "monitor": "DP-2",
+        "active": true,
+        "focused": true,
+        "urgent": false,
+        "activeWindowId": "niri-window:9007199254740995"
+      },
+      "focusedMonitor": {
+        "id": "DP-2",
+        "name": "DP-2",
+        "outputId": "DP-2",
+        "x": 0,
+        "y": 0,
+        "width": 2560,
+        "height": 1440,
+        "logicalWidth": 960,
+        "logicalHeight": 1706,
+        "scale": 1.5,
+        "transform": 1,
+        "refreshRate": 120.0,
+        "reserved": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "reservedKnown": false,
+        "focused": true,
+        "activeWorkspace": {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        "availableModes": [
+          "2560x1440@120.000"
+        ]
+      },
+      "overviewOpen": false,
+      "overviewHoverSupported": false,
+      "overviewHoveredWindowId": null,
+      "configFailed": false
+    },
+    {
+      "type": "windows-changed"
+    },
+    {
+      "type": "snapshot",
+      "backend": "niri",
+      "capabilities": {
+        "stableWorkspaceIndices": false,
+        "globalWorkspaces": false,
+        "perOutputWorkspaces": true,
+        "scrollingLayout": true,
+        "floatingPlacement": true,
+        "pinWindow": false,
+        "windowCapture": false,
+        "cursorPosition": false,
+        "nativePanelDrag": false,
+        "windowHide": false,
+        "fullscreenState": false,
+        "shortcutRelease": false,
+        "desktopOptions": [],
+        "monitorConfiguration": false,
+        "nightLightController": false
+      },
+      "monitors": [
+        {
+          "id": "DP-1",
+          "name": "DP-1",
+          "outputId": "DP-1",
+          "x": -1920,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "logicalWidth": 1920,
+          "logicalHeight": 1080,
+          "scale": 1,
+          "transform": 0,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": false,
+          "activeWorkspace": {
+            "id": "niri-workspace:102",
+            "workspaceId": "niri-workspace:102",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": true,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": null
+          },
+          "availableModes": [
+            "1920x1080@120.000"
+          ]
+        },
+        {
+          "id": "DP-2",
+          "name": "DP-2",
+          "outputId": "DP-2",
+          "x": 0,
+          "y": 0,
+          "width": 2560,
+          "height": 1440,
+          "logicalWidth": 960,
+          "logicalHeight": 1706,
+          "scale": 1.5,
+          "transform": 1,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": true,
+          "activeWorkspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "availableModes": [
+            "2560x1440@120.000"
+          ]
+        }
+      ],
+      "workspaces": [
+        {
+          "id": "niri-workspace:101",
+          "workspaceId": "niri-workspace:101",
+          "index": 1,
+          "name": "1",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": "niri-window:1"
+        },
+        {
+          "id": "niri-workspace:102",
+          "workspaceId": "niri-workspace:102",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": true,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        },
+        {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        {
+          "id": "niri-workspace:202",
+          "workspaceId": "niri-workspace:202",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": true,
+          "activeWindowId": "niri-window:3"
+        },
+        {
+          "id": "niri-workspace:203",
+          "workspaceId": "niri-workspace:203",
+          "index": 3,
+          "name": "3",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        }
+      ],
+      "windows": [
+        {
+          "id": "niri-window:1",
+          "windowId": "niri-window:1",
+          "address": "niri-window:1",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 1",
+          "pid": 123,
+          "workspaceId": "niri-workspace:101",
+          "workspace": {
+            "id": "niri-workspace:101",
+            "workspaceId": "niri-workspace:101",
+            "index": 1,
+            "name": "1",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": false,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": "niri-window:1"
+          },
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "geometry": {
+            "x": -1892,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            -1892,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:9007199254740995",
+          "windowId": "niri-window:9007199254740995",
+          "address": "niri-window:9007199254740995",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 9007199254740995",
+          "pid": 123,
+          "workspaceId": "niri-workspace:9007199254740993",
+          "workspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 28,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            28,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": true,
+          "focused": true,
+          "urgent": false,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:3",
+          "windowId": "niri-window:3",
+          "address": "niri-window:3",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 3",
+          "pid": 123,
+          "workspaceId": "niri-workspace:202",
+          "workspace": {
+            "id": "niri-workspace:202",
+            "workspaceId": "niri-workspace:202",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": false,
+            "focused": false,
+            "urgent": true,
+            "activeWindowId": "niri-window:3"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 28,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            28,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        }
+      ],
+      "activeWindow": {
+        "id": "niri-window:9007199254740995",
+        "windowId": "niri-window:9007199254740995",
+        "address": "niri-window:9007199254740995",
+        "appId": "org.example.Test",
+        "class": "org.example.Test",
+        "title": "Test 9007199254740995",
+        "pid": 123,
+        "workspaceId": "niri-workspace:9007199254740993",
+        "workspace": {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        "outputId": "DP-2",
+        "monitor": "DP-2",
+        "geometry": {
+          "x": 28,
+          "y": 44,
+          "width": 500,
+          "height": 400
+        },
+        "geometryKnown": true,
+        "moving": false,
+        "at": [
+          28,
+          44
+        ],
+        "size": [
+          500,
+          400
+        ],
+        "floating": true,
+        "focused": true,
+        "urgent": false,
+        "hidden": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenMode": 0,
+        "fullscreenKnown": false
+      },
+      "activeWorkspace": {
+        "id": "niri-workspace:9007199254740993",
+        "workspaceId": "niri-workspace:9007199254740993",
+        "index": 1,
+        "name": "coding",
+        "outputId": "DP-2",
+        "monitor": "DP-2",
+        "active": true,
+        "focused": true,
+        "urgent": false,
+        "activeWindowId": "niri-window:9007199254740995"
+      },
+      "focusedMonitor": {
+        "id": "DP-2",
+        "name": "DP-2",
+        "outputId": "DP-2",
+        "x": 0,
+        "y": 0,
+        "width": 2560,
+        "height": 1440,
+        "logicalWidth": 960,
+        "logicalHeight": 1706,
+        "scale": 1.5,
+        "transform": 1,
+        "refreshRate": 120.0,
+        "reserved": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "reservedKnown": false,
+        "focused": true,
+        "activeWorkspace": {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        "availableModes": [
+          "2560x1440@120.000"
+        ]
+      },
+      "overviewOpen": false,
+      "overviewHoverSupported": false,
+      "overviewHoveredWindowId": null,
+      "configFailed": false
+    },
+    {
+      "type": "workspace-monitor-change",
+      "workspaceId": "niri-workspace:102"
+    },
+    {
+      "type": "snapshot",
+      "backend": "niri",
+      "capabilities": {
+        "stableWorkspaceIndices": false,
+        "globalWorkspaces": false,
+        "perOutputWorkspaces": true,
+        "scrollingLayout": true,
+        "floatingPlacement": true,
+        "pinWindow": false,
+        "windowCapture": false,
+        "cursorPosition": false,
+        "nativePanelDrag": false,
+        "windowHide": false,
+        "fullscreenState": false,
+        "shortcutRelease": false,
+        "desktopOptions": [],
+        "monitorConfiguration": false,
+        "nightLightController": false
+      },
+      "monitors": [
+        {
+          "id": "DP-1",
+          "name": "DP-1",
+          "outputId": "DP-1",
+          "x": -1920,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "logicalWidth": 1920,
+          "logicalHeight": 1080,
+          "scale": 1,
+          "transform": 0,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": false,
+          "activeWorkspace": {
+            "id": "niri-workspace:102",
+            "workspaceId": "niri-workspace:102",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": true,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": null
+          },
+          "availableModes": [
+            "1920x1080@120.000"
+          ]
+        },
+        {
+          "id": "DP-2",
+          "name": "DP-2",
+          "outputId": "DP-2",
+          "x": 0,
+          "y": 0,
+          "width": 2560,
+          "height": 1440,
+          "logicalWidth": 960,
+          "logicalHeight": 1706,
+          "scale": 1.5,
+          "transform": 1,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": true,
+          "activeWorkspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "availableModes": [
+            "2560x1440@120.000"
+          ]
+        }
+      ],
+      "workspaces": [
+        {
+          "id": "niri-workspace:101",
+          "workspaceId": "niri-workspace:101",
+          "index": 1,
+          "name": "1",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": "niri-window:1"
+        },
+        {
+          "id": "niri-workspace:102",
+          "workspaceId": "niri-workspace:102",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": true,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        },
+        {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        {
+          "id": "niri-workspace:202",
+          "workspaceId": "niri-workspace:202",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": true,
+          "activeWindowId": "niri-window:3"
+        },
+        {
+          "id": "niri-workspace:203",
+          "workspaceId": "niri-workspace:203",
+          "index": 3,
+          "name": "3",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        }
+      ],
+      "windows": [
+        {
+          "id": "niri-window:1",
+          "windowId": "niri-window:1",
+          "address": "niri-window:1",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 1",
+          "pid": 123,
+          "workspaceId": "niri-workspace:101",
+          "workspace": {
+            "id": "niri-workspace:101",
+            "workspaceId": "niri-workspace:101",
+            "index": 1,
+            "name": "1",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": false,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": "niri-window:1"
+          },
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "geometry": {
+            "x": -1892,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            -1892,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:9007199254740995",
+          "windowId": "niri-window:9007199254740995",
+          "address": "niri-window:9007199254740995",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 9007199254740995",
+          "pid": 123,
+          "workspaceId": "niri-workspace:9007199254740993",
+          "workspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 28,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            28,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": true,
+          "focused": false,
+          "urgent": false,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:3",
+          "windowId": "niri-window:3",
+          "address": "niri-window:3",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 3",
+          "pid": 123,
+          "workspaceId": "niri-workspace:202",
+          "workspace": {
+            "id": "niri-workspace:202",
+            "workspaceId": "niri-workspace:202",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": false,
+            "focused": false,
+            "urgent": true,
+            "activeWindowId": "niri-window:3"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 28,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            28,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        }
+      ],
+      "activeWindow": null,
+      "activeWorkspace": {
+        "id": "niri-workspace:9007199254740993",
+        "workspaceId": "niri-workspace:9007199254740993",
+        "index": 1,
+        "name": "coding",
+        "outputId": "DP-2",
+        "monitor": "DP-2",
+        "active": true,
+        "focused": true,
+        "urgent": false,
+        "activeWindowId": "niri-window:9007199254740995"
+      },
+      "focusedMonitor": {
+        "id": "DP-2",
+        "name": "DP-2",
+        "outputId": "DP-2",
+        "x": 0,
+        "y": 0,
+        "width": 2560,
+        "height": 1440,
+        "logicalWidth": 960,
+        "logicalHeight": 1706,
+        "scale": 1.5,
+        "transform": 1,
+        "refreshRate": 120.0,
+        "reserved": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "reservedKnown": false,
+        "focused": true,
+        "activeWorkspace": {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        "availableModes": [
+          "2560x1440@120.000"
+        ]
+      },
+      "overviewOpen": false,
+      "overviewHoverSupported": false,
+      "overviewHoveredWindowId": null,
+      "configFailed": false
+    },
+    {
+      "type": "window-focus",
+      "windowId": null
+    },
+    {
+      "type": "snapshot",
+      "backend": "niri",
+      "capabilities": {
+        "stableWorkspaceIndices": false,
+        "globalWorkspaces": false,
+        "perOutputWorkspaces": true,
+        "scrollingLayout": true,
+        "floatingPlacement": true,
+        "pinWindow": false,
+        "windowCapture": false,
+        "cursorPosition": false,
+        "nativePanelDrag": false,
+        "windowHide": false,
+        "fullscreenState": false,
+        "shortcutRelease": false,
+        "desktopOptions": [],
+        "monitorConfiguration": false,
+        "nightLightController": false
+      },
+      "monitors": [
+        {
+          "id": "DP-1",
+          "name": "DP-1",
+          "outputId": "DP-1",
+          "x": -1920,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "logicalWidth": 1920,
+          "logicalHeight": 1080,
+          "scale": 1,
+          "transform": 0,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": false,
+          "activeWorkspace": {
+            "id": "niri-workspace:102",
+            "workspaceId": "niri-workspace:102",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": true,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": null
+          },
+          "availableModes": [
+            "1920x1080@120.000"
+          ]
+        },
+        {
+          "id": "DP-2",
+          "name": "DP-2",
+          "outputId": "DP-2",
+          "x": 0,
+          "y": 0,
+          "width": 2560,
+          "height": 1440,
+          "logicalWidth": 960,
+          "logicalHeight": 1706,
+          "scale": 1.5,
+          "transform": 1,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": true,
+          "activeWorkspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "availableModes": [
+            "2560x1440@120.000"
+          ]
+        }
+      ],
+      "workspaces": [
+        {
+          "id": "niri-workspace:101",
+          "workspaceId": "niri-workspace:101",
+          "index": 1,
+          "name": "1",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": "niri-window:1"
+        },
+        {
+          "id": "niri-workspace:102",
+          "workspaceId": "niri-workspace:102",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": true,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        },
+        {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        {
+          "id": "niri-workspace:202",
+          "workspaceId": "niri-workspace:202",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": true,
+          "activeWindowId": "niri-window:3"
+        },
+        {
+          "id": "niri-workspace:203",
+          "workspaceId": "niri-workspace:203",
+          "index": 3,
+          "name": "3",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        }
+      ],
+      "windows": [
+        {
+          "id": "niri-window:1",
+          "windowId": "niri-window:1",
+          "address": "niri-window:1",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 1",
+          "pid": 123,
+          "workspaceId": "niri-workspace:101",
+          "workspace": {
+            "id": "niri-workspace:101",
+            "workspaceId": "niri-workspace:101",
+            "index": 1,
+            "name": "1",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": false,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": "niri-window:1"
+          },
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "geometry": {
+            "x": -1892,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            -1892,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:9007199254740995",
+          "windowId": "niri-window:9007199254740995",
+          "address": "niri-window:9007199254740995",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 9007199254740995",
+          "pid": 123,
+          "workspaceId": "niri-workspace:9007199254740993",
+          "workspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 28,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            28,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": true,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:3",
+          "windowId": "niri-window:3",
+          "address": "niri-window:3",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 3",
+          "pid": 123,
+          "workspaceId": "niri-workspace:202",
+          "workspace": {
+            "id": "niri-workspace:202",
+            "workspaceId": "niri-workspace:202",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": false,
+            "focused": false,
+            "urgent": true,
+            "activeWindowId": "niri-window:3"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 28,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            28,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        }
+      ],
+      "activeWindow": null,
+      "activeWorkspace": {
+        "id": "niri-workspace:9007199254740993",
+        "workspaceId": "niri-workspace:9007199254740993",
+        "index": 1,
+        "name": "coding",
+        "outputId": "DP-2",
+        "monitor": "DP-2",
+        "active": true,
+        "focused": true,
+        "urgent": false,
+        "activeWindowId": "niri-window:9007199254740995"
+      },
+      "focusedMonitor": {
+        "id": "DP-2",
+        "name": "DP-2",
+        "outputId": "DP-2",
+        "x": 0,
+        "y": 0,
+        "width": 2560,
+        "height": 1440,
+        "logicalWidth": 960,
+        "logicalHeight": 1706,
+        "scale": 1.5,
+        "transform": 1,
+        "refreshRate": 120.0,
+        "reserved": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "reservedKnown": false,
+        "focused": true,
+        "activeWorkspace": {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        "availableModes": [
+          "2560x1440@120.000"
+        ]
+      },
+      "overviewOpen": false,
+      "overviewHoverSupported": false,
+      "overviewHoveredWindowId": null,
+      "configFailed": false
+    },
+    {
+      "type": "window-urgent",
+      "windowId": "niri-window:9007199254740995"
+    },
+    {
+      "type": "snapshot",
+      "backend": "niri",
+      "capabilities": {
+        "stableWorkspaceIndices": false,
+        "globalWorkspaces": false,
+        "perOutputWorkspaces": true,
+        "scrollingLayout": true,
+        "floatingPlacement": true,
+        "pinWindow": false,
+        "windowCapture": false,
+        "cursorPosition": false,
+        "nativePanelDrag": false,
+        "windowHide": false,
+        "fullscreenState": false,
+        "shortcutRelease": false,
+        "desktopOptions": [],
+        "monitorConfiguration": false,
+        "nightLightController": false
+      },
+      "monitors": [
+        {
+          "id": "DP-1",
+          "name": "DP-1",
+          "outputId": "DP-1",
+          "x": -1920,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "logicalWidth": 1920,
+          "logicalHeight": 1080,
+          "scale": 1,
+          "transform": 0,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": false,
+          "activeWorkspace": {
+            "id": "niri-workspace:102",
+            "workspaceId": "niri-workspace:102",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": true,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": null
+          },
+          "availableModes": [
+            "1920x1080@120.000"
+          ]
+        },
+        {
+          "id": "DP-2",
+          "name": "DP-2",
+          "outputId": "DP-2",
+          "x": 0,
+          "y": 0,
+          "width": 2560,
+          "height": 1440,
+          "logicalWidth": 960,
+          "logicalHeight": 1706,
+          "scale": 1.5,
+          "transform": 1,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": true,
+          "activeWorkspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "availableModes": [
+            "2560x1440@120.000"
+          ]
+        }
+      ],
+      "workspaces": [
+        {
+          "id": "niri-workspace:101",
+          "workspaceId": "niri-workspace:101",
+          "index": 1,
+          "name": "1",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": "niri-window:1"
+        },
+        {
+          "id": "niri-workspace:102",
+          "workspaceId": "niri-workspace:102",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": true,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        },
+        {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        {
+          "id": "niri-workspace:202",
+          "workspaceId": "niri-workspace:202",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": true,
+          "activeWindowId": "niri-window:3"
+        },
+        {
+          "id": "niri-workspace:203",
+          "workspaceId": "niri-workspace:203",
+          "index": 3,
+          "name": "3",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        }
+      ],
+      "windows": [
+        {
+          "id": "niri-window:1",
+          "windowId": "niri-window:1",
+          "address": "niri-window:1",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 1",
+          "pid": 123,
+          "workspaceId": "niri-workspace:101",
+          "workspace": {
+            "id": "niri-workspace:101",
+            "workspaceId": "niri-workspace:101",
+            "index": 1,
+            "name": "1",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": false,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": "niri-window:1"
+          },
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "geometry": {
+            "x": -1892,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            -1892,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:9007199254740995",
+          "windowId": "niri-window:9007199254740995",
+          "address": "niri-window:9007199254740995",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 9007199254740995",
+          "pid": 123,
+          "workspaceId": "niri-workspace:9007199254740993",
+          "workspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 44,
+            "y": 64,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            44,
+            64
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": true,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:3",
+          "windowId": "niri-window:3",
+          "address": "niri-window:3",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 3",
+          "pid": 123,
+          "workspaceId": "niri-workspace:202",
+          "workspace": {
+            "id": "niri-workspace:202",
+            "workspaceId": "niri-workspace:202",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": false,
+            "focused": false,
+            "urgent": true,
+            "activeWindowId": "niri-window:3"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 28,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            28,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        }
+      ],
+      "activeWindow": null,
+      "activeWorkspace": {
+        "id": "niri-workspace:9007199254740993",
+        "workspaceId": "niri-workspace:9007199254740993",
+        "index": 1,
+        "name": "coding",
+        "outputId": "DP-2",
+        "monitor": "DP-2",
+        "active": true,
+        "focused": true,
+        "urgent": false,
+        "activeWindowId": "niri-window:9007199254740995"
+      },
+      "focusedMonitor": {
+        "id": "DP-2",
+        "name": "DP-2",
+        "outputId": "DP-2",
+        "x": 0,
+        "y": 0,
+        "width": 2560,
+        "height": 1440,
+        "logicalWidth": 960,
+        "logicalHeight": 1706,
+        "scale": 1.5,
+        "transform": 1,
+        "refreshRate": 120.0,
+        "reserved": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "reservedKnown": false,
+        "focused": true,
+        "activeWorkspace": {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        "availableModes": [
+          "2560x1440@120.000"
+        ]
+      },
+      "overviewOpen": false,
+      "overviewHoverSupported": false,
+      "overviewHoveredWindowId": null,
+      "configFailed": false
+    },
+    {
+      "type": "window-geometry"
+    },
+    {
+      "type": "snapshot",
+      "backend": "niri",
+      "capabilities": {
+        "stableWorkspaceIndices": false,
+        "globalWorkspaces": false,
+        "perOutputWorkspaces": true,
+        "scrollingLayout": true,
+        "floatingPlacement": true,
+        "pinWindow": false,
+        "windowCapture": false,
+        "cursorPosition": false,
+        "nativePanelDrag": false,
+        "windowHide": false,
+        "fullscreenState": false,
+        "shortcutRelease": false,
+        "desktopOptions": [],
+        "monitorConfiguration": false,
+        "nightLightController": false
+      },
+      "monitors": [
+        {
+          "id": "DP-1",
+          "name": "DP-1",
+          "outputId": "DP-1",
+          "x": -1920,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "logicalWidth": 1920,
+          "logicalHeight": 1080,
+          "scale": 1,
+          "transform": 0,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": false,
+          "activeWorkspace": {
+            "id": "niri-workspace:102",
+            "workspaceId": "niri-workspace:102",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": true,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": null
+          },
+          "availableModes": [
+            "1920x1080@120.000"
+          ]
+        },
+        {
+          "id": "DP-2",
+          "name": "DP-2",
+          "outputId": "DP-2",
+          "x": 0,
+          "y": 0,
+          "width": 2560,
+          "height": 1440,
+          "logicalWidth": 960,
+          "logicalHeight": 1706,
+          "scale": 1.5,
+          "transform": 1,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": true,
+          "activeWorkspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "availableModes": [
+            "2560x1440@120.000"
+          ]
+        }
+      ],
+      "workspaces": [
+        {
+          "id": "niri-workspace:101",
+          "workspaceId": "niri-workspace:101",
+          "index": 1,
+          "name": "1",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": "niri-window:1"
+        },
+        {
+          "id": "niri-workspace:102",
+          "workspaceId": "niri-workspace:102",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": true,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        },
+        {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        {
+          "id": "niri-workspace:202",
+          "workspaceId": "niri-workspace:202",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": true,
+          "activeWindowId": "niri-window:3"
+        },
+        {
+          "id": "niri-workspace:203",
+          "workspaceId": "niri-workspace:203",
+          "index": 3,
+          "name": "3",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        }
+      ],
+      "windows": [
+        {
+          "id": "niri-window:9007199254740995",
+          "windowId": "niri-window:9007199254740995",
+          "address": "niri-window:9007199254740995",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 9007199254740995",
+          "pid": 123,
+          "workspaceId": "niri-workspace:9007199254740993",
+          "workspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 44,
+            "y": 64,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            44,
+            64
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": true,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:3",
+          "windowId": "niri-window:3",
+          "address": "niri-window:3",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 3",
+          "pid": 123,
+          "workspaceId": "niri-workspace:202",
+          "workspace": {
+            "id": "niri-workspace:202",
+            "workspaceId": "niri-workspace:202",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": false,
+            "focused": false,
+            "urgent": true,
+            "activeWindowId": "niri-window:3"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 28,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            28,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        }
+      ],
+      "activeWindow": null,
+      "activeWorkspace": {
+        "id": "niri-workspace:9007199254740993",
+        "workspaceId": "niri-workspace:9007199254740993",
+        "index": 1,
+        "name": "coding",
+        "outputId": "DP-2",
+        "monitor": "DP-2",
+        "active": true,
+        "focused": true,
+        "urgent": false,
+        "activeWindowId": "niri-window:9007199254740995"
+      },
+      "focusedMonitor": {
+        "id": "DP-2",
+        "name": "DP-2",
+        "outputId": "DP-2",
+        "x": 0,
+        "y": 0,
+        "width": 2560,
+        "height": 1440,
+        "logicalWidth": 960,
+        "logicalHeight": 1706,
+        "scale": 1.5,
+        "transform": 1,
+        "refreshRate": 120.0,
+        "reserved": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "reservedKnown": false,
+        "focused": true,
+        "activeWorkspace": {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        "availableModes": [
+          "2560x1440@120.000"
+        ]
+      },
+      "overviewOpen": false,
+      "overviewHoverSupported": false,
+      "overviewHoveredWindowId": null,
+      "configFailed": false
+    },
+    {
+      "type": "window-close",
+      "windowId": "niri-window:1"
+    },
+    {
+      "type": "snapshot",
+      "backend": "niri",
+      "capabilities": {
+        "stableWorkspaceIndices": false,
+        "globalWorkspaces": false,
+        "perOutputWorkspaces": true,
+        "scrollingLayout": true,
+        "floatingPlacement": true,
+        "pinWindow": false,
+        "windowCapture": false,
+        "cursorPosition": false,
+        "nativePanelDrag": false,
+        "windowHide": false,
+        "fullscreenState": false,
+        "shortcutRelease": false,
+        "desktopOptions": [],
+        "monitorConfiguration": false,
+        "nightLightController": false
+      },
+      "monitors": [
+        {
+          "id": "DP-1",
+          "name": "DP-1",
+          "outputId": "DP-1",
+          "x": -1920,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "logicalWidth": 1920,
+          "logicalHeight": 1080,
+          "scale": 1,
+          "transform": 0,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": false,
+          "activeWorkspace": {
+            "id": "niri-workspace:102",
+            "workspaceId": "niri-workspace:102",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-1",
+            "monitor": "DP-1",
+            "active": true,
+            "focused": false,
+            "urgent": false,
+            "activeWindowId": null
+          },
+          "availableModes": [
+            "1920x1080@120.000"
+          ]
+        },
+        {
+          "id": "DP-2",
+          "name": "DP-2",
+          "outputId": "DP-2",
+          "x": 0,
+          "y": 0,
+          "width": 2560,
+          "height": 1440,
+          "logicalWidth": 960,
+          "logicalHeight": 1706,
+          "scale": 1.5,
+          "transform": 1,
+          "refreshRate": 120.0,
+          "reserved": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reservedKnown": false,
+          "focused": true,
+          "activeWorkspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "availableModes": [
+            "2560x1440@120.000"
+          ]
+        }
+      ],
+      "workspaces": [
+        {
+          "id": "niri-workspace:101",
+          "workspaceId": "niri-workspace:101",
+          "index": 1,
+          "name": "1",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": "niri-window:1"
+        },
+        {
+          "id": "niri-workspace:102",
+          "workspaceId": "niri-workspace:102",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-1",
+          "monitor": "DP-1",
+          "active": true,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        },
+        {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        {
+          "id": "niri-workspace:202",
+          "workspaceId": "niri-workspace:202",
+          "index": 2,
+          "name": "2",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": true,
+          "activeWindowId": "niri-window:3"
+        },
+        {
+          "id": "niri-workspace:203",
+          "workspaceId": "niri-workspace:203",
+          "index": 3,
+          "name": "3",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": false,
+          "focused": false,
+          "urgent": false,
+          "activeWindowId": null
+        }
+      ],
+      "windows": [
+        {
+          "id": "niri-window:9007199254740995",
+          "windowId": "niri-window:9007199254740995",
+          "address": "niri-window:9007199254740995",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 9007199254740995",
+          "pid": 123,
+          "workspaceId": "niri-workspace:9007199254740993",
+          "workspace": {
+            "id": "niri-workspace:9007199254740993",
+            "workspaceId": "niri-workspace:9007199254740993",
+            "index": 1,
+            "name": "coding",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": true,
+            "focused": true,
+            "urgent": false,
+            "activeWindowId": "niri-window:9007199254740995"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 44,
+            "y": 64,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            44,
+            64
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": true,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        },
+        {
+          "id": "niri-window:3",
+          "windowId": "niri-window:3",
+          "address": "niri-window:3",
+          "appId": "org.example.Test",
+          "class": "org.example.Test",
+          "title": "Test 3",
+          "pid": 123,
+          "workspaceId": "niri-workspace:202",
+          "workspace": {
+            "id": "niri-workspace:202",
+            "workspaceId": "niri-workspace:202",
+            "index": 2,
+            "name": "2",
+            "outputId": "DP-2",
+            "monitor": "DP-2",
+            "active": false,
+            "focused": false,
+            "urgent": true,
+            "activeWindowId": "niri-window:3"
+          },
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "geometry": {
+            "x": 28,
+            "y": 44,
+            "width": 500,
+            "height": 400
+          },
+          "geometryKnown": true,
+          "moving": false,
+          "at": [
+            28,
+            44
+          ],
+          "size": [
+            500,
+            400
+          ],
+          "floating": false,
+          "focused": false,
+          "urgent": true,
+          "hidden": false,
+          "pinned": false,
+          "fullscreen": 0,
+          "fullscreenMode": 0,
+          "fullscreenKnown": false
+        }
+      ],
+      "activeWindow": null,
+      "activeWorkspace": {
+        "id": "niri-workspace:9007199254740993",
+        "workspaceId": "niri-workspace:9007199254740993",
+        "index": 1,
+        "name": "coding",
+        "outputId": "DP-2",
+        "monitor": "DP-2",
+        "active": true,
+        "focused": true,
+        "urgent": false,
+        "activeWindowId": "niri-window:9007199254740995"
+      },
+      "focusedMonitor": {
+        "id": "DP-2",
+        "name": "DP-2",
+        "outputId": "DP-2",
+        "x": 0,
+        "y": 0,
+        "width": 2560,
+        "height": 1440,
+        "logicalWidth": 960,
+        "logicalHeight": 1706,
+        "scale": 1.5,
+        "transform": 1,
+        "refreshRate": 120.0,
+        "reserved": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "reservedKnown": false,
+        "focused": true,
+        "activeWorkspace": {
+          "id": "niri-workspace:9007199254740993",
+          "workspaceId": "niri-workspace:9007199254740993",
+          "index": 1,
+          "name": "coding",
+          "outputId": "DP-2",
+          "monitor": "DP-2",
+          "active": true,
+          "focused": true,
+          "urgent": false,
+          "activeWindowId": "niri-window:9007199254740995"
+        },
+        "availableModes": [
+          "2560x1440@120.000"
+        ]
+      },
+      "overviewOpen": false,
+      "overviewHoverSupported": false,
+      "overviewHoveredWindowId": null,
+      "configFailed": false
+    },
+    {
+      "type": "window-geometry"
+    }
+  ],
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [
+    {
+      "socket": "runtime/niri.sock",
+      "message": "\"NacreOverviewHoverStream\"\n"
+    },
+    {
+      "socket": "runtime/niri.sock",
+      "message": "\"Outputs\"\n"
+    },
+    {
+      "socket": "runtime/niri.sock",
+      "message": "\"Outputs\"\n"
+    }
+  ]
+}

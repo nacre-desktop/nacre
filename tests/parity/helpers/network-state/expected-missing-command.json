@@ -1,0 +1,10 @@
+{
+  "stdout": {
+    "error": "NetworkManager is unavailable or did not respond."
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

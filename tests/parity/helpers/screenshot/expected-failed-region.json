@@ -1,0 +1,35 @@
+{
+  "stdout": "",
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "slurp",
+      "argv": [],
+      "stdin": ""
+    },
+    {
+      "command": "grim",
+      "argv": [
+        "-g",
+        "0,0 800x600",
+        "-"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "notify-send",
+      "argv": [
+        "-a",
+        "Nacre Capture",
+        "-i",
+        "nacre-notifications",
+        "Screenshot",
+        "Capture failed: Command '['grim', '-g', '0,0 800x600', '-']' returned non-zero exit status 1."
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

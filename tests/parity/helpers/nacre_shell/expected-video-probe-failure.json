@@ -1,0 +1,63 @@
+{
+  "stdout": "",
+  "exit": 1,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/palette-commit.lock": {
+      "mode": "0o644",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 1, \"operation\": \"constants\", \"payload\": {}}\n"
+    },
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 2, \"operation\": \"background_policy\", \"payload\": {\"personality\": \"natural\", \"background_from_wallpaper\": null}}\n"
+    },
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 3, \"operation\": \"from_image\", \"payload\": {\"path\": \"/case/home/demo.mp4\", \"options\": {\"mode\": \"dark\", \"variant\": \"tonalspot\", \"flavour\": \"default\", \"accent\": null, \"smart\": false, \"harmony\": false, \"personality\": \"natural\", \"overrides\": {}, \"brightness\": 0.0, \"saturation\": 1.0, \"hour\": 12, \"cache_dir\": null, \"background_from_wallpaper\": false, \"time_tint\": false}}}\n"
+    },
+    {
+      "command": "ffprobe",
+      "argv": [
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration:stream=codec_type,width,height,avg_frame_rate",
+        "-of",
+        "json",
+        "/case/home/demo.mp4"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

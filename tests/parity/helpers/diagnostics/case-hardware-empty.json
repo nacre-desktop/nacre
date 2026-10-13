@@ -1,0 +1,8 @@
+{
+  "helper": "diagnostics",
+  "args": [
+    "hardware",
+    "{\"args\": [], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/diagnostics.py"
+}

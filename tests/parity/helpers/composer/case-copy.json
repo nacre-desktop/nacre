@@ -1,0 +1,14 @@
+{
+  "helper": "composer",
+  "args": [
+    "copy"
+  ],
+  "stdin": "{\"text\":\"Public copy\"}\n",
+  "commands": {
+    "wl-copy": [
+      {
+        "read_stdin": true
+      }
+    ]
+  }
+}

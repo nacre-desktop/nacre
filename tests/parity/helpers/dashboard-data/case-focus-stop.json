@@ -1,0 +1,16 @@
+{
+  "helper": "dashboard-data",
+  "args": [
+    "focus-stop"
+  ],
+  "fixtures": {
+    "home/.local/state/nacre/dashboard-focus.json": "{\"status\":\"running\",\"remaining\":600,\"deadline\":2000000000,\"ownsDnd\":true}"
+  },
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/checked",
+      "reason": "dashboard sampling time.time()"
+    }
+  ]
+}

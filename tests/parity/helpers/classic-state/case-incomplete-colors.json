@@ -1,0 +1,8 @@
+{
+  "helper": "classic-state",
+  "args": [
+    "validated_colors",
+    "{\"args\": [{\"mode\": \"dark\", \"colours\": {\"primary\": \"224466\"}}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/classic-state.py"
+}

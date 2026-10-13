@@ -1,0 +1,95 @@
+{
+  "stdout": [
+    {
+      "ready": true,
+      "version": 1
+    },
+    {
+      "id": 1,
+      "code": 0,
+      "output": "{\"ok\": false, \"error\": \"Install libqalculate for unit and currency conversions\"}\n"
+    },
+    {
+      "id": 2,
+      "code": 0,
+      "output": "{\"key\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\", \"lines\": [], \"plain\": \"\", \"palette\": {}, \"lyricsMessage\": \"No synced lyrics found\", \"cacheSeconds\": 1209600}\n"
+    },
+    {
+      "id": 3,
+      "code": 0,
+      "output": ""
+    },
+    {
+      "id": 4,
+      "code": 0,
+      "output": "[{\"summary\": \"Hello\"}]\n"
+    },
+    {
+      "id": 5,
+      "code": 0,
+      "output": "{\"favorites\": [\"demo.desktop\"], \"hidden\": [], \"recent\": [], \"usage\": {}}\n"
+    }
+  ],
+  "exit": 0,
+  "files": {
+    "home/.cache": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre/dashboard-media": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.cache/nacre/dashboard-media/44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a.json": {
+      "mode": "0o600",
+      "text": "{\"key\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\", \"lines\": [], \"plain\": \"\", \"palette\": {}, \"lyricsMessage\": \"No synced lyrics found\", \"cacheSeconds\": 1209600}"
+    },
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/launcher.json": {
+      "mode": "0o600",
+      "text": "{\"favorites\": [\"demo.desktop\"], \"hidden\": [], \"recent\": [], \"usage\": {}}"
+    },
+    "home/.config/nacre/launcher.lock": {
+      "mode": "0o600",
+      "text": ""
+    },
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell/notifications": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.local/state/nacre/shell/notifications/history.json": {
+      "mode": "0o600",
+      "text": "[{\"summary\": \"Hello\"}]"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

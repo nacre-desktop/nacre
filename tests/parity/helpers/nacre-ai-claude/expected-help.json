@@ -1,0 +1,8 @@
+{
+  "stdout": "usage: nacre-ai-claude [-h] [--project PROJECT] [--path PATH]\n                       [--account ACCOUNT] [--thread-id THREAD_ID]\n                       [--chat-directory] [--tmux]\n                       {new,resume,list,login}\n\nLaunch Claude tasks and read native session metadata using Anthropic's SDK.\n\npositional arguments:\n  {new,resume,list,login}\n\noptions:\n  -h, --help            show this help message and exit\n  --project PROJECT\n  --path PATH\n  --account ACCOUNT\n  --thread-id THREAD_ID\n  --chat-directory\n  --tmux\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,26 @@
+{
+  "stdout": {
+    "installed": false,
+    "installedProgram": "/usr/local/libexec/nacre-timezone.py",
+    "automatic": false,
+    "confirmedTimezone": "",
+    "deviceLocation": false,
+    "timezone": "UTC",
+    "localTime": "<timestamp>"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "timedatectl",
+      "argv": [
+        "show",
+        "--property=Timezone",
+        "--value"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

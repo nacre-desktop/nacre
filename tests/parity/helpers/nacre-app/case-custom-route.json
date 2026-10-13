@@ -1,0 +1,17 @@
+{
+  "helper": "nacre-app",
+  "args": [
+    "browser",
+    "https://example.invalid"
+  ],
+  "command": "python3 bin/nacre-app",
+  "stdout": "text",
+  "fixtures": {
+    "home/.config/nacre/apps.json": "{\"browser\":[\"fixture-browser\",\"--private\"]}"
+  },
+  "commands": {
+    "fixture-browser": [
+      {}
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "stdout": {
+    "latitude": 59,
+    "longitude": 10,
+    "accuracy": 100,
+    "timestamp": 1000
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

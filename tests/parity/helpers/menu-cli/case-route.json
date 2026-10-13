@@ -1,0 +1,18 @@
+{
+  "helper": "menu-cli",
+  "args": [
+    "home"
+  ],
+  "stdout": "text",
+  "commands": {
+    "qs": [
+      {}
+    ]
+  },
+  "fixtures": {
+    "home/.local/share/nacre/shell/bin/qs": {
+      "link": "/case/bin/qs"
+    }
+  },
+  "compare_stderr": true
+}

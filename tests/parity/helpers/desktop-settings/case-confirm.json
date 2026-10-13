@@ -1,0 +1,52 @@
+{
+  "helper": "desktop-settings",
+  "args": [
+    "confirm"
+  ],
+  "commands": {
+    "hyprctl": [
+      {
+        "argv": [
+          "monitors",
+          "all",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "monitors",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "workspaces",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "clients",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "activewindow",
+          "-j"
+        ],
+        "stdout": "{}"
+      },
+      {
+        "stdout": "ok\n"
+      }
+    ]
+  },
+  "fixtures": {
+    "home/.config/nacre/desktop.json": "{}"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "helper": "nacre_i18n",
+  "args": [
+    "missing.id",
+    "Hello",
+    "{broken"
+  ],
+  "stdout": "text"
+}

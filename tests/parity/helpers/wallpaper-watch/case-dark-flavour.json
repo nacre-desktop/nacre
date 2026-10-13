@@ -1,0 +1,11 @@
+{
+  "helper": "wallpaper-watch",
+  "args": [
+    "flavour",
+    "{\"args\": [{\"$path\": \"{home}/scheme.json\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/wallpaper-watch.py",
+  "fixtures": {
+    "home/scheme.json": "{\"mode\":\"dark\"}"
+  }
+}

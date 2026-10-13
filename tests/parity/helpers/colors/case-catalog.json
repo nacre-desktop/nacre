@@ -1,0 +1,7 @@
+{
+  "helper": "colors",
+  "args": [
+    "catalog"
+  ],
+  "native_engine": true
+}

@@ -1,0 +1,16 @@
+{
+  "helper": "nacre-ai-tools",
+  "args": [
+    "fixture-command",
+    "public"
+  ],
+  "command": "python3 bin/nacre-ai-tools",
+  "stdout": "text",
+  "commands": {
+    "fixture-command": [
+      {
+        "stdout": "delegated\n"
+      }
+    ]
+  }
+}

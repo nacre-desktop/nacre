@@ -1,0 +1,7 @@
+{
+  "helper": "nacre-ai-usage",
+  "args": [
+    "read"
+  ],
+  "command": "python3 bin/nacre-ai-usage"
+}

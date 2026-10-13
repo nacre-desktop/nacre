@@ -1,0 +1,16 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "reload"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

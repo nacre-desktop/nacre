@@ -1,0 +1,18 @@
+{
+  "helper": "maintenance",
+  "args": [
+    "restart"
+  ],
+  "commands": {
+    "systemctl": [
+      {}
+    ]
+  },
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/checked",
+      "reason": "maintenance sampling datetime.now()"
+    }
+  ]
+}

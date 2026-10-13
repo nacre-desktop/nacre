@@ -1,0 +1,14 @@
+{
+  "helper": "light-devices",
+  "args": [
+    "read-ddc",
+    "{\"kind\":\"ddc\",\"bus\":4}"
+  ],
+  "commands": {
+    "ddcutil": [
+      {
+        "stdout": "VCP 10 C 101 100\n"
+      }
+    ]
+  }
+}

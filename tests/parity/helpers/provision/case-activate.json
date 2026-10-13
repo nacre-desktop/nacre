@@ -1,0 +1,14 @@
+{
+  "helper": "provision",
+  "args": [
+    "activate_runtime",
+    "{\"args\": [{\"$path\": \"{home}/builds/candidate\"}, {\"$path\": \"{home}/runtime\"}, {\"$path\": \"{home}/builds\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/provision.py",
+  "fixtures": {
+    "home/builds/candidate": {
+      "directory": true
+    },
+    "home/builds/candidate/demo.txt": "public fixture"
+  }
+}

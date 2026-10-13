@@ -1,0 +1,10 @@
+{
+  "helper": "launcher-preferences",
+  "args": [
+    "hide"
+  ],
+  "stdin": "{\"id\":\"demo.desktop\",\"enabled\":false}\n",
+  "fixtures": {
+    "home/.config/nacre/launcher.json": "{\"hidden\":[\"demo.desktop\"],\"favorites\":[\"keep.desktop\"]}"
+  }
+}

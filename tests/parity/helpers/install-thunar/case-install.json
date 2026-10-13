@@ -1,0 +1,12 @@
+{
+  "helper": "install-thunar",
+  "args": [],
+  "stdout": "text",
+  "commands": {
+    "xdg-mime": [
+      {
+        "stdout": "org.example.Files.desktop\n"
+      }
+    ]
+  }
+}

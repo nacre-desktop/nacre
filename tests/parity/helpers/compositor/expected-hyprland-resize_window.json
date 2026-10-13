@@ -1,0 +1,17 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "eval",
+        "hl.dispatch(hl.dsp.window.resize({x=800,y=600,relative=false,window=\"address:0x123\"}))"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

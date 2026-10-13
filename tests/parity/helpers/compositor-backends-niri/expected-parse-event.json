@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "type": "window-focus",
+    "windowId": "niri-window:123"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

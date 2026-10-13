@@ -1,0 +1,41 @@
+{
+  "helper": "network-state",
+  "args": [],
+  "commands": {
+    "nmcli": [
+      {
+        "argv": [
+          "--terse",
+          "--escape",
+          "yes",
+          "--colors",
+          "no",
+          "--wait",
+          "5",
+          "radio",
+          "wifi"
+        ],
+        "stdout": "enabled\n"
+      },
+      {
+        "argv": [
+          "--terse",
+          "--escape",
+          "yes",
+          "--colors",
+          "no",
+          "--wait",
+          "5",
+          "--fields",
+          "DEVICE,TYPE,STATE",
+          "device",
+          "status"
+        ],
+        "stdout": "wlan0:wifi:connected\n"
+      },
+      {
+        "stdout": "*:Cafe\\:Desk:AA\\:BB\\:CC\\:DD\\:EE\\:01:75:2412 MHz:wlan0\n :Other:AA\\:BB\\:CC\\:DD\\:EE\\:02:44:5180 MHz:wlan0\n*:Duplicate:AA\\:BB\\:CC\\:DD\\:EE\\:01:100:2412 MHz:wlan0\nbad\n"
+      }
+    ]
+  }
+}

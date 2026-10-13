@@ -1,0 +1,24 @@
+{
+  "helper": "helper-service",
+  "args": [],
+  "stdout": "jsonl",
+  "fixtures": {
+    "hosted/dashboard-media.py": "def track_data(data):\n    raise RuntimeError('fixture helper crashed')\n"
+  },
+  "env": {
+    "NACRE_DASHBOARD_TOOLS": "/case/hosted"
+  },
+  "dialogue": [
+    {
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 1, \"tool\": \"dashboard-media\", \"arguments\": [\"{}\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 2, \"tool\": \"launcher-preferences\", \"arguments\": [\"load\"], \"input\": null}\n",
+      "receive": 1
+    }
+  ]
+}

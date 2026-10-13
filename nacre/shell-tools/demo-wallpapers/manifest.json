@@ -29,11 +29,11 @@
       "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
       "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
       "size": [
-        5184,
-        3456
+        3840,
+        2560
       ],
-      "sha256": "20d453a582be6ed5a8b313c0261b7b99e372e77acfe1ab280f1b353110b463d1",
-      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+      "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
     },
     {
       "file": "canyon.jpg",
@@ -46,11 +46,11 @@
       "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
       "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
       "size": [
-        6265,
-        2000
+        3840,
+        1226
       ],
-      "sha256": "663b419bcb1800a21311ab70c28372f46e086244f48162146a1100ccb97795a4",
-      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+      "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
     },
     {
       "file": "coast.jpg",

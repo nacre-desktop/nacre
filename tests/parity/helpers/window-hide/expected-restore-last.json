@@ -1,0 +1,37 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {
+    "home/.cache/hypr-minimize/.lock": {
+      "mode": "0o600",
+      "text": ""
+    }
+  },
+  "deleted": [
+    "home/.cache/hypr-minimize/0x123"
+  ],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "clients",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "notify-send",
+      "argv": [
+        "-a",
+        "Nacre Windows",
+        "-i",
+        "nacre-notifications",
+        "-t",
+        "2000",
+        "No hidden windows to restore"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

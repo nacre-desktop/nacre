@@ -1,0 +1,24 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "qs",
+      "argv": [
+        "-c",
+        "nacre",
+        "ipc",
+        "call",
+        "nacre",
+        "menu",
+        "home",
+        ""
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": [],
+  "stderr": ""
+}

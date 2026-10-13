@@ -1,0 +1,7 @@
+{
+  "helper": "launcher-preferences",
+  "args": [
+    "favorite"
+  ],
+  "stdin": "{\"id\":\"demo.desktop\",\"enabled\":true}\n"
+}

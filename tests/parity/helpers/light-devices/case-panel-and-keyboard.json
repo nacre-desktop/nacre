@@ -1,0 +1,15 @@
+{
+  "helper": "light-devices",
+  "args": [
+    "discover",
+    "[\"eDP-1\"]"
+  ],
+  "fixtures": {
+    "sys/class/backlight/panel/max_brightness": "100",
+    "sys/class/backlight/panel/brightness": "50",
+    "sys/class/leds/demo::kbd_backlight/max_brightness": "3",
+    "sys/class/leds/demo::kbd_backlight/brightness": "1",
+    "sys/class/leds/input1::capslock/max_brightness": "1",
+    "sys/class/leds/input1::capslock/brightness": "1"
+  }
+}

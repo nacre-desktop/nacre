@@ -1,0 +1,7 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "reminder"
+  ],
+  "stdin": "{\"minutes\":0,\"message\":\"Break\"}\n"
+}

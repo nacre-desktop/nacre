@@ -1,0 +1,8 @@
+{
+  "stdout": "label {\n    monitor = DP-1\n    text = Public fixture\n    font_size = 16\n}\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

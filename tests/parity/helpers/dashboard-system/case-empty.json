@@ -1,0 +1,7 @@
+{
+  "helper": "dashboard-system",
+  "args": [],
+  "fixtures": {
+    "proc/mounts": ""
+  }
+}

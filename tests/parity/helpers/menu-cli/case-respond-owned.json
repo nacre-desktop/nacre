@@ -1,0 +1,20 @@
+{
+  "helper": "menu-cli",
+  "args": [
+    "respond",
+    "00000000000000000000000000000000"
+  ],
+  "stdout": "text",
+  "stdin": "{\"cancelled\":false,\"value\":\"1\"}\n",
+  "fixtures": {
+    "home/.cache/nacre/menu/requests/00000000000000000000000000000000": {
+      "directory": true,
+      "mode": "700"
+    },
+    "home/.cache/nacre/menu/requests/00000000000000000000000000000000/request.json": {
+      "text": "{\"version\": 1, \"id\": \"00000000000000000000000000000000\", \"kind\": \"pick\", \"expires\": 4000000000, \"title\": \"Demo\", \"choices\": [{\"label\": \"One\", \"value\": \"1\"}, {\"label\": \"Two\", \"value\": \"2\", \"disabled\": true}]}",
+      "mode": "600"
+    }
+  },
+  "compare_stderr": true
+}

@@ -1,0 +1,11 @@
+{
+  "helper": "brain-semantic-client",
+  "args": [
+    "SemanticClient.vectors",
+    "{\"construct\": [{\"$path\": \"/repo/brain\"}], \"args\": [[{\"id\": \"demo\", \"revision\": \"one\", \"featureText\": \"Public fixture\"}], {\"$path\": \"{home}/vectors.json\"}]}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py brain/semantic-client.py",
+  "env": {
+    "NACRE_BRAIN_SEMANTICS": "0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "stdout": "usage: install.py [-h] [--code-only] [--restore]\n\noptions:\n  -h, --help   show this help message and exit\n  --code-only\n  --restore\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,21 @@
+{
+  "stdout": {},
+  "exit": 0,
+  "files": {
+    "home/.cache": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre/lock-widgets.lock": {
+      "mode": "0o600",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

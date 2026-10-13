@@ -1,0 +1,41 @@
+{
+  "helper": "network-state",
+  "args": [],
+  "commands": {
+    "nmcli": [
+      {
+        "argv": [
+          "--terse",
+          "--escape",
+          "yes",
+          "--colors",
+          "no",
+          "--wait",
+          "5",
+          "radio",
+          "wifi"
+        ],
+        "stdout": "enabled\n"
+      },
+      {
+        "argv": [
+          "--terse",
+          "--escape",
+          "yes",
+          "--colors",
+          "no",
+          "--wait",
+          "5",
+          "--fields",
+          "DEVICE,TYPE,STATE",
+          "device",
+          "status"
+        ],
+        "stdout": "eth0:ethernet:connected\n"
+      },
+      {
+        "stdout": ""
+      }
+    ]
+  }
+}

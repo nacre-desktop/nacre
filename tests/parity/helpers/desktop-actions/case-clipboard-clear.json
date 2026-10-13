@@ -1,0 +1,12 @@
+{
+  "helper": "desktop-actions",
+  "args": [
+    "clipboard-clear"
+  ],
+  "stdout": "text",
+  "commands": {
+    "cliphist": [
+      {}
+    ]
+  }
+}

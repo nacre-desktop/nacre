@@ -1,0 +1,403 @@
+{
+  "stdout": {
+    "entries": [],
+    "preferences": {
+      "kind": "static",
+      "layout": "carousel",
+      "paused": false,
+      "motionMode": "full",
+      "pauseCovered": true,
+      "rotationEnabled": false,
+      "rotationMinutes": 30,
+      "rotationKind": "all",
+      "rotationShuffle": true,
+      "palettePreset": "wallpaper",
+      "paletteMode": "dark",
+      "paletteHarmony": false,
+      "palettePersonality": "natural",
+      "paletteBackgroundFromWallpaper": false
+    },
+    "media": {},
+    "errors": [],
+    "palettes": [
+      {
+        "id": "amethyst",
+        "name": "Amethyst",
+        "seed": "#8b6bd1",
+        "group": "soft",
+        "swatches": [
+          "9484bc",
+          "aca7bc",
+          "c1becc"
+        ],
+        "surface": "121018"
+      },
+      {
+        "id": "ocean",
+        "name": "Ocean",
+        "seed": "#2785b6",
+        "group": "soft",
+        "swatches": [
+          "6792ac",
+          "9aaab3",
+          "b4bfc5"
+        ],
+        "surface": "0d1216"
+      },
+      {
+        "id": "forest",
+        "name": "Forest",
+        "seed": "#4c8861",
+        "group": "soft",
+        "swatches": [
+          "76957f",
+          "a0aba2",
+          "b8c0bb"
+        ],
+        "surface": "0f1310"
+      },
+      {
+        "id": "rose",
+        "name": "Rose",
+        "seed": "#b95879",
+        "group": "soft",
+        "swatches": [
+          "b47d8e",
+          "b9a5aa",
+          "cbbdc0"
+        ],
+        "surface": "170f11"
+      },
+      {
+        "id": "ember",
+        "name": "Ember",
+        "seed": "#bb713d",
+        "group": "soft",
+        "swatches": [
+          "ad8469",
+          "b5a69c",
+          "c7beb6"
+        ],
+        "surface": "16100d"
+      },
+      {
+        "id": "slate",
+        "name": "Slate",
+        "seed": "#73808c",
+        "group": "soft",
+        "swatches": [
+          "868e95",
+          "a5a9ab",
+          "bcbfc0"
+        ],
+        "surface": "111213"
+      },
+      {
+        "id": "soft-red",
+        "name": "Blush Red",
+        "seed": "#e54a54",
+        "group": "soft",
+        "swatches": [
+          "c67775",
+          "c1a4a1",
+          "d1bdbc"
+        ],
+        "surface": "190e0e"
+      },
+      {
+        "id": "soft-orange",
+        "name": "Apricot",
+        "seed": "#ef8a47",
+        "group": "soft",
+        "swatches": [
+          "d19a78",
+          "d4c0b3",
+          "b1a59d"
+        ],
+        "surface": "17100c"
+      },
+      {
+        "id": "soft-gold",
+        "name": "Honey",
+        "seed": "#c59628",
+        "group": "soft",
+        "swatches": [
+          "b49b6a",
+          "c3b9a9",
+          "d6d1c5"
+        ],
+        "surface": "14110b"
+      },
+      {
+        "id": "soft-yellow",
+        "name": "Butter Yellow",
+        "seed": "#dac343",
+        "group": "soft",
+        "swatches": [
+          "cfc487",
+          "e4e1cb",
+          "eeecde"
+        ],
+        "surface": "13120a"
+      },
+      {
+        "id": "soft-lime",
+        "name": "Pear",
+        "seed": "#9eaf38",
+        "group": "soft",
+        "swatches": [
+          "a0ab72",
+          "bec3af",
+          "d6d8cc"
+        ],
+        "surface": "11120b"
+      },
+      {
+        "id": "soft-green",
+        "name": "Sage",
+        "seed": "#6b9b67",
+        "group": "soft",
+        "swatches": [
+          "7b9579",
+          "a2aba1",
+          "bac0b9"
+        ],
+        "surface": "0f130f"
+      },
+      {
+        "id": "soft-teal",
+        "name": "Sea Glass",
+        "seed": "#409e91",
+        "group": "soft",
+        "swatches": [
+          "6a968f",
+          "9daba9",
+          "b6c0be"
+        ],
+        "surface": "0d1312"
+      },
+      {
+        "id": "soft-cyan",
+        "name": "Glacier",
+        "seed": "#32a8c3",
+        "group": "soft",
+        "swatches": [
+          "6da2b0",
+          "a6b8bd",
+          "c1cdd0"
+        ],
+        "surface": "0c1315"
+      },
+      {
+        "id": "soft-blue",
+        "name": "Cornflower",
+        "seed": "#4e78db",
+        "group": "soft",
+        "swatches": [
+          "738cc3",
+          "9fa9bd",
+          "868d99"
+        ],
+        "surface": "0e1219"
+      },
+      {
+        "id": "soft-indigo",
+        "name": "Periwinkle",
+        "seed": "#6964c8",
+        "group": "soft",
+        "swatches": [
+          "8788c0",
+          "a6a8bc",
+          "bebfcc"
+        ],
+        "surface": "101118"
+      },
+      {
+        "id": "soft-purple",
+        "name": "Lilac",
+        "seed": "#a05acb",
+        "group": "soft",
+        "swatches": [
+          "a27fbc",
+          "b2a6bb",
+          "c6becc"
+        ],
+        "surface": "140f17"
+      },
+      {
+        "id": "soft-pink",
+        "name": "Candy Pink",
+        "seed": "#de5caa",
+        "group": "soft",
+        "swatches": [
+          "c079a0",
+          "c0a6b3",
+          "d1bfc9"
+        ],
+        "surface": "180e13"
+      },
+      {
+        "id": "super-red",
+        "name": "Super Red",
+        "seed": "#ff3030",
+        "group": "vivid",
+        "swatches": [
+          "ff4740",
+          "fe897e",
+          "c17971"
+        ],
+        "surface": "1c0d0b"
+      },
+      {
+        "id": "flame-orange",
+        "name": "Flame Orange",
+        "seed": "#ff791f",
+        "group": "vivid",
+        "swatches": [
+          "ff791f",
+          "de8f66",
+          "ffccb0"
+        ],
+        "surface": "1c0e07"
+      },
+      {
+        "id": "solar-gold",
+        "name": "Solar Gold",
+        "seed": "#ffb800",
+        "group": "vivid",
+        "swatches": [
+          "ffb800",
+          "ffdfa8",
+          "ddc396"
+        ],
+        "surface": "181004"
+      },
+      {
+        "id": "electric-yellow",
+        "name": "Electric Yellow",
+        "seed": "#f5ed00",
+        "group": "vivid",
+        "swatches": [
+          "f5ed00",
+          "f4f192",
+          "f0efb5"
+        ],
+        "surface": "131204"
+      },
+      {
+        "id": "acid-lime",
+        "name": "Acid Lime",
+        "seed": "#b5ed14",
+        "group": "vivid",
+        "swatches": [
+          "b5ed14",
+          "d7fb99",
+          "def6ba"
+        ],
+        "surface": "0f1406"
+      },
+      {
+        "id": "emerald",
+        "name": "Emerald",
+        "seed": "#11d96c",
+        "group": "vivid",
+        "swatches": [
+          "11d96c",
+          "93eaa9",
+          "91c59d"
+        ],
+        "surface": "08150b"
+      },
+      {
+        "id": "deep-teal",
+        "name": "Deep Teal",
+        "seed": "#00b99d",
+        "group": "vivid",
+        "swatches": [
+          "00b99d",
+          "83ccba",
+          "a5e0d0"
+        ],
+        "surface": "051511"
+      },
+      {
+        "id": "electric-cyan",
+        "name": "Electric Cyan",
+        "seed": "#00d6f5",
+        "group": "vivid",
+        "swatches": [
+          "00d6f5",
+          "99ecfd",
+          "c6f5ff"
+        ],
+        "surface": "041418"
+      },
+      {
+        "id": "cobalt-blue",
+        "name": "Cobalt Blue",
+        "seed": "#4275ff",
+        "group": "vivid",
+        "swatches": [
+          "5687ff",
+          "84a9fa",
+          "748dbf"
+        ],
+        "surface": "0c111e"
+      },
+      {
+        "id": "royal-indigo",
+        "name": "Royal Indigo",
+        "seed": "#7155ff",
+        "group": "vivid",
+        "swatches": [
+          "857bff",
+          "a3a0ff",
+          "b9bcff"
+        ],
+        "surface": "10101e"
+      },
+      {
+        "id": "vivid-purple",
+        "name": "Violet",
+        "seed": "#b147ff",
+        "group": "vivid",
+        "swatches": [
+          "b863ff",
+          "ca94fc",
+          "d7b6f9"
+        ],
+        "surface": "150e1b"
+      },
+      {
+        "id": "hot-pink",
+        "name": "Hot Pink",
+        "seed": "#ff38b8",
+        "group": "vivid",
+        "swatches": [
+          "ff38b8",
+          "fa8bc9",
+          "fcb2d9"
+        ],
+        "surface": "1b0c14"
+      }
+    ]
+  },
+  "exit": 0,
+  "files": {
+    "home/Pictures": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/Pictures/Wallpapers": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/Pictures/Wallpapers/Dynamic": {
+      "mode": "0o755",
+      "directory": true
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

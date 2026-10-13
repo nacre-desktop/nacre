@@ -1,0 +1,21 @@
+{
+  "stdout": null,
+  "exit": 1,
+  "files": {
+    "home/.cache": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre/dashboard-media": {
+      "mode": "0o700",
+      "directory": true
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

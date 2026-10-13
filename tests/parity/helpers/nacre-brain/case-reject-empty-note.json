@@ -1,0 +1,16 @@
+{
+  "helper": "nacre-brain",
+  "args": [
+    "note",
+    "--kind",
+    "inbox",
+    "--title",
+    "Public",
+    "--source",
+    "fixture",
+    "--confidence",
+    "reported"
+  ],
+  "command": "python3 bin/nacre-brain",
+  "stdout": "text"
+}

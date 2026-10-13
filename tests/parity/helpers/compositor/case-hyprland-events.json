@@ -1,0 +1,56 @@
+{
+  "helper": "compositor",
+  "args": [
+    "events"
+  ],
+  "stdout": "jsonl",
+  "commands": {
+    "hyprctl": [
+      {
+        "argv": [
+          "monitors",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "workspaces",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "clients",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "activewindow",
+          "-j"
+        ],
+        "stdout": "{}"
+      },
+      {
+        "stdout": "ok\n"
+      }
+    ]
+  },
+  "env": {
+    "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+  },
+  "sockets": [
+    {
+      "path": "runtime/hypr/fixture/.socket2.sock",
+      "connections": [
+        {
+          "unsolicited": true,
+          "text": "activewindowv2>>0x123\nworkspace>>2\nunknown>>demo\n"
+        }
+      ]
+    }
+  ]
+}

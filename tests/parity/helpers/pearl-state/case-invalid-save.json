@@ -1,0 +1,7 @@
+{
+  "helper": "pearl-state",
+  "args": [
+    "save"
+  ],
+  "stdin": "{\"version\":2,\"windows\":[]}\n"
+}

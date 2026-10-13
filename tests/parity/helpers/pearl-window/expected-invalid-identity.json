@@ -1,0 +1,19 @@
+{
+  "stdout": {
+    "error": "Invalid pearl identity"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "clients",
+        "-j"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

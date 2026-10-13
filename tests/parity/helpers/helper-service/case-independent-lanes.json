@@ -1,0 +1,29 @@
+{
+  "helper": "helper-service",
+  "args": [],
+  "fixtures": {
+    "hosted/dashboard-data.py": "from pathlib import Path\nimport time\ndef execute(action, value):\n    while not Path('/case/release').exists():\n        time.sleep(0.005)\n    return {'value': value}\n"
+  },
+  "env": {
+    "NACRE_DASHBOARD_TOOLS": "/case/hosted"
+  },
+  "stdout": "jsonl",
+  "dialogue": [
+    {
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 1, \"tool\": \"dashboard-data\", \"arguments\": [\"read\", \"1\"], \"input\": null}\n{\"id\": 2, \"tool\": \"dashboard-data\", \"arguments\": [\"read\", \"2\"], \"input\": null}\n{\"id\": 3, \"tool\": \"dashboard-data\", \"arguments\": [\"read\", \"3\"], \"input\": null}\n{\"id\": 4, \"tool\": \"dashboard-data\", \"arguments\": [\"read\", \"4\"], \"input\": null}\n"
+    },
+    {
+      "send": "{\"id\": 5, \"tool\": \"notification-history\", \"arguments\": [\"load\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "release": {
+        "release": "go"
+      },
+      "receive": 4
+    }
+  ]
+}

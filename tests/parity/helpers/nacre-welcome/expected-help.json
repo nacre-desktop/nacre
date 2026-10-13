@@ -1,0 +1,8 @@
+{
+  "stdout": "usage: nacre-welcome [-h] [--login | --enable | --disable]\n                     [{home,colors,shortcuts,apps,ready,help}]\n\nOpen the single Nacre Welcome window; automatically shown once on first login.\n\npositional arguments:\n  {home,colors,shortcuts,apps,ready,help}\n\noptions:\n  -h, --help            show this help message and exit\n  --login\n  --enable\n  --disable\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

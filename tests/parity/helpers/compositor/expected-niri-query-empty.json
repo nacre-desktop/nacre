@@ -1,0 +1,21 @@
+{
+  "stdout": [],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [
+    {
+      "socket": "runtime/niri.sock",
+      "message": "\"Outputs\"\n"
+    },
+    {
+      "socket": "runtime/niri.sock",
+      "message": "\"Workspaces\"\n"
+    },
+    {
+      "socket": "runtime/niri.sock",
+      "message": "\"Windows\"\n"
+    }
+  ]
+}

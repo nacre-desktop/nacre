@@ -1,0 +1,10 @@
+{
+  "stdout": {
+    "error": "Command '['/case/bin/python3', '/case/home/.local/share/nacre/control/check-overlays.py', '--keyboard', '/usr/bin/wtype']' returned non-zero exit status 2."
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

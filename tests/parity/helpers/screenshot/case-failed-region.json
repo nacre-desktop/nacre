@@ -1,0 +1,22 @@
+{
+  "helper": "screenshot",
+  "args": [
+    "region"
+  ],
+  "stdout": "text",
+  "commands": {
+    "slurp": [
+      {
+        "stdout": "0,0 800x600\n"
+      }
+    ],
+    "grim": [
+      {
+        "code": 1
+      }
+    ],
+    "notify-send": [
+      {}
+    ]
+  }
+}

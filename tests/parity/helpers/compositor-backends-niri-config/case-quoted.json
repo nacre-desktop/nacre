@@ -1,0 +1,8 @@
+{
+  "helper": "compositor-backends-niri-config",
+  "args": [
+    "quoted",
+    "{\"args\": [\"a\\\"b\\n\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/compositor_backends/niri_config.py"
+}

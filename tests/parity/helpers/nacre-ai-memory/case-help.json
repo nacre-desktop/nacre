@@ -1,0 +1,8 @@
+{
+  "helper": "nacre-ai-memory",
+  "args": [
+    "--help"
+  ],
+  "command": "python3 bin/nacre-ai-memory",
+  "stdout": "text"
+}

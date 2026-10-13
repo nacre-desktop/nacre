@@ -1,0 +1,8 @@
+{
+  "helper": "device-location",
+  "args": [
+    "validate_fix",
+    "{\"args\": [{\"latitude\": 100, \"longitude\": 10, \"accuracy\": 100, \"timestamp\": 1000}], \"kwargs\": {\"now\": 1000}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/device-location.py"
+}

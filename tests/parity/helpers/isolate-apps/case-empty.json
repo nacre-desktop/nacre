@@ -1,0 +1,12 @@
+{
+  "helper": "isolate-apps",
+  "args": [],
+  "stdout": "text",
+  "commands": {
+    "hyprctl": [
+      {
+        "stdout": "[]"
+      }
+    ]
+  }
+}

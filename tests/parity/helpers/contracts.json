@@ -1,0 +1,1699 @@
+{
+  "reference_revision": "3917893e49d37906cc3e43dfa743c819e7a7d39a",
+  "orient_integration_commit": "db420276",
+  "orient_revision": "7f1b0b14289d80dcc3611b76a3847ee4c078f607",
+  "engine_pin": {
+    "version": "0.1.0.dev6",
+    "engine": "orient-0.1.0.dev6-55b192008cc8-c8a5bd24dad2",
+    "decoder": "c8a5bd24dad288bc10fe53e3941791eb5d746e9ab11cca3952b9aaf6888db9dc",
+    "interfaceVersion": 1
+  },
+  "reference_python": "3.14.7",
+  "existing_test_suites": [
+    "nacre/shell-tools/tests",
+    "tools/tests",
+    "ai/tests",
+    "brain/tests"
+  ],
+  "helpers": [
+    {
+      "helper": "binding-contracts",
+      "source": "nacre/shell-tools/binding-contracts.py",
+      "cases": 1,
+      "operations": [
+        "[\"capture\"]"
+      ],
+      "existing_tests": []
+    },
+    {
+      "helper": "brain-auth",
+      "source": "brain/auth.py",
+      "cases": 1,
+      "operations": [
+        "[\"private_write\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_brain_sync.py",
+        "ai/tests/test_claude_workflow.py",
+        "ai/tests/test_codex_startup.py",
+        "ai/tests/test_shared_skills.py",
+        "ai/tests/test_workflow.py",
+        "brain/tests/test_auth.py",
+        "brain/tests/test_web_translations.py",
+        "nacre/shell-tools/tests/test_device_services.py",
+        "nacre/shell-tools/tests/test_login_theme.py",
+        "nacre/shell-tools/tests/test_login_ui.py",
+        "nacre/shell-tools/tests/test_menu_backend.py",
+        "nacre/shell-tools/tests/test_terminal_branding.py",
+        "tools/tests/test_compositor_config.py",
+        "tools/tests/test_niri_preview.py",
+        "tools/tests/test_public_names.py",
+        "tools/tests/test_releases.py",
+        "tools/tests/test_session_startup.py",
+        "tools/tests/test_setup.py"
+      ]
+    },
+    {
+      "helper": "brain-control",
+      "source": "brain/control.py",
+      "cases": 2,
+      "operations": [
+        "[\"fields\"]",
+        "[\"note_path\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_chat_titles.py",
+        "ai/tests/test_codex_startup.py",
+        "ai/tests/test_translations.py",
+        "brain/tests/test_auth.py",
+        "brain/tests/test_index.py",
+        "nacre/shell-tools/tests/test_bar_controls.py",
+        "nacre/shell-tools/tests/test_chatpane_ui.py",
+        "nacre/shell-tools/tests/test_colors_ui.py",
+        "nacre/shell-tools/tests/test_control_tools.py",
+        "nacre/shell-tools/tests/test_dashboard_summary.py",
+        "nacre/shell-tools/tests/test_dashboard_wallpaper_actions.py",
+        "nacre/shell-tools/tests/test_desktop_extras.py",
+        "nacre/shell-tools/tests/test_desktop_wrappers.py",
+        "nacre/shell-tools/tests/test_device_actions.py",
+        "nacre/shell-tools/tests/test_device_services.py",
+        "nacre/shell-tools/tests/test_frame.py",
+        "nacre/shell-tools/tests/test_lock_widgets.py",
+        "nacre/shell-tools/tests/test_media_performance_ui.py",
+        "nacre/shell-tools/tests/test_menu_backend.py",
+        "nacre/shell-tools/tests/test_orient.py",
+        "nacre/shell-tools/tests/test_panel_host_input.py",
+        "nacre/shell-tools/tests/test_panel_redock_motion.py",
+        "nacre/shell-tools/tests/test_pearls.py",
+        "nacre/shell-tools/tests/test_quick_controls.py",
+        "nacre/shell-tools/tests/test_terminal_branding.py",
+        "nacre/shell-tools/tests/test_top_hover.py",
+        "nacre/shell-tools/tests/test_universal_menu_ui.py",
+        "nacre/shell-tools/tests/test_welcome_ui.py",
+        "nacre/shell-tools/tests/test_window_chat_title.py",
+        "tools/tests/test_compositor_config.py",
+        "tools/tests/test_compositor_external_entrypoints.py",
+        "tools/tests/test_configure.py",
+        "tools/tests/test_matrix_palette.py",
+        "tools/tests/test_niri_session_runtime.py",
+        "tools/tests/test_profiles.py",
+        "tools/tests/test_public_names.py",
+        "tools/tests/test_releases.py",
+        "tools/tests/test_translations.py"
+      ]
+    },
+    {
+      "helper": "brain-discovery",
+      "source": "brain/discovery.py",
+      "cases": 2,
+      "operations": [
+        "[\"organize\"]"
+      ],
+      "existing_tests": [
+        "brain/tests/test_discovery.py",
+        "brain/tests/test_index.py",
+        "nacre/shell-tools/tests/test_control_tools.py",
+        "nacre/shell-tools/tests/test_device_services.py",
+        "nacre/shell-tools/tests/test_light_devices.py",
+        "nacre/shell-tools/tests/test_menu_backend.py"
+      ]
+    },
+    {
+      "helper": "brain-install",
+      "source": "brain/install.py",
+      "cases": 1,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_codex_startup.py",
+        "ai/tests/test_obsidian_install.py",
+        "ai/tests/test_workflow.py",
+        "nacre/shell-tools/tests/test_bar_controls.py",
+        "nacre/shell-tools/tests/test_battery_alerts.py",
+        "nacre/shell-tools/tests/test_chatpane_ui.py",
+        "nacre/shell-tools/tests/test_click_away.py",
+        "nacre/shell-tools/tests/test_colors_ui.py",
+        "nacre/shell-tools/tests/test_compositor_facade.py",
+        "nacre/shell-tools/tests/test_dashboard_assembly.py",
+        "nacre/shell-tools/tests/test_dashboard_summary.py",
+        "nacre/shell-tools/tests/test_dashboard_wallpaper_actions.py",
+        "nacre/shell-tools/tests/test_desktop_wrappers.py",
+        "nacre/shell-tools/tests/test_device_services.py",
+        "nacre/shell-tools/tests/test_diagnostics.py",
+        "nacre/shell-tools/tests/test_font_setup.py",
+        "nacre/shell-tools/tests/test_foundation.py",
+        "nacre/shell-tools/tests/test_frame.py",
+        "nacre/shell-tools/tests/test_header_widgets.py",
+        "nacre/shell-tools/tests/test_helper_service.py",
+        "nacre/shell-tools/tests/test_image_lifetime.py",
+        "nacre/shell-tools/tests/test_launcher_panel.py",
+        "nacre/shell-tools/tests/test_lock_dashboard.py",
+        "nacre/shell-tools/tests/test_lock_snapshot.py",
+        "nacre/shell-tools/tests/test_login_theme.py",
+        "nacre/shell-tools/tests/test_media_performance_ui.py",
+        "nacre/shell-tools/tests/test_menu_backend.py",
+        "nacre/shell-tools/tests/test_niri_qml.py",
+        "nacre/shell-tools/tests/test_notifications_ui.py",
+        "nacre/shell-tools/tests/test_panel_host_input.py",
+        "nacre/shell-tools/tests/test_paths.py",
+        "nacre/shell-tools/tests/test_pearl_dashboard_focus.py",
+        "nacre/shell-tools/tests/test_pearls.py",
+        "nacre/shell-tools/tests/test_quick_controls.py",
+        "nacre/shell-tools/tests/test_responsive_services.py",
+        "nacre/shell-tools/tests/test_settings_ui.py",
+        "nacre/shell-tools/tests/test_shell_recovery.py",
+        "nacre/shell-tools/tests/test_shell_state.py",
+        "nacre/shell-tools/tests/test_sidebar_service.py",
+        "nacre/shell-tools/tests/test_top_hover.py",
+        "nacre/shell-tools/tests/test_universal_menu_ui.py",
+        "nacre/shell-tools/tests/test_wallpaper_picker_ui.py",
+        "nacre/shell-tools/tests/test_wallpaper_rotation.py",
+        "nacre/shell-tools/tests/test_welcome_demo.py",
+        "nacre/shell-tools/tests/test_welcome_ui.py",
+        "tools/tests/test_app_files.py",
+        "tools/tests/test_compositor_wallpaper_filter.py",
+        "tools/tests/test_configure.py",
+        "tools/tests/test_niri_hover_build.py",
+        "tools/tests/test_niri_package.py",
+        "tools/tests/test_niri_session_runtime.py",
+        "tools/tests/test_profiles.py",
+        "tools/tests/test_public_names.py",
+        "tools/tests/test_setup.py",
+        "tools/tests/test_translations.py"
+      ]
+    },
+    {
+      "helper": "brain-launch",
+      "source": "brain/launch.sh",
+      "cases": 1,
+      "operations": [
+        "[\"unknown\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_claude_workflow.py",
+        "ai/tests/test_codex_startup.py",
+        "ai/tests/test_conversation.py",
+        "ai/tests/test_obsidian_install.py",
+        "ai/tests/test_workflow.py",
+        "brain/tests/test_index.py",
+        "nacre/shell-tools/tests/test_allocator_environment.py",
+        "nacre/shell-tools/tests/test_bar_controls.py",
+        "nacre/shell-tools/tests/test_compositor_helper_migration.py",
+        "nacre/shell-tools/tests/test_dashboard_summary.py",
+        "nacre/shell-tools/tests/test_desktop_actions.py",
+        "nacre/shell-tools/tests/test_desktop_extras.py",
+        "nacre/shell-tools/tests/test_header_widgets.py",
+        "nacre/shell-tools/tests/test_helper_service.py",
+        "nacre/shell-tools/tests/test_helper_transport.py",
+        "nacre/shell-tools/tests/test_launcher_panel.py",
+        "nacre/shell-tools/tests/test_launcher_preferences.py",
+        "nacre/shell-tools/tests/test_menu_backend.py",
+        "nacre/shell-tools/tests/test_menu_model.py",
+        "nacre/shell-tools/tests/test_panel_host_input.py",
+        "nacre/shell-tools/tests/test_panel_redock_motion.py",
+        "nacre/shell-tools/tests/test_pearls.py",
+        "nacre/shell-tools/tests/test_session_workflows.py",
+        "nacre/shell-tools/tests/test_settings_launcher.py",
+        "nacre/shell-tools/tests/test_sidebar_chat.py",
+        "nacre/shell-tools/tests/test_startup_apps.py",
+        "nacre/shell-tools/tests/test_top_hover.py",
+        "nacre/shell-tools/tests/test_universal_menu_ui.py",
+        "nacre/shell-tools/tests/test_wallpaper_native.py",
+        "nacre/shell-tools/tests/test_wallpaper_picker_ui.py",
+        "nacre/shell-tools/tests/test_welcome.py",
+        "nacre/shell-tools/tests/test_welcome_ui.py",
+        "tools/tests/test_bindings.py",
+        "tools/tests/test_public_names.py",
+        "tools/tests/test_session_startup.py",
+        "tools/tests/test_shell_session.py",
+        "tools/tests/test_translations.py"
+      ]
+    },
+    {
+      "helper": "brain-provision-semantic",
+      "source": "brain/provision-semantic.py",
+      "cases": 1,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": []
+    },
+    {
+      "helper": "brain-semantic",
+      "source": "brain/semantic.py",
+      "cases": 1,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": [
+        "brain/tests/test_index.py",
+        "nacre/shell-tools/tests/test_compositor_helper_migration.py",
+        "nacre/shell-tools/tests/test_niri_backend.py"
+      ]
+    },
+    {
+      "helper": "brain-semantic-client",
+      "source": "brain/semantic-client.py",
+      "cases": 2,
+      "operations": [
+        "[\"SemanticClient.vectors\"]"
+      ],
+      "existing_tests": []
+    },
+    {
+      "helper": "branding",
+      "source": "nacre/shell-tools/branding.py",
+      "cases": 3,
+      "operations": [
+        "[\"luminance\"]",
+        "[\"svg\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_live_terminal_logo.py",
+        "nacre/shell-tools/tests/test_lock_ready.py",
+        "nacre/shell-tools/tests/test_lock_widgets.py",
+        "nacre/shell-tools/tests/test_nacre_branding.py",
+        "nacre/shell-tools/tests/test_terminal_branding.py",
+        "nacre/shell-tools/tests/test_wallpaper_media.py",
+        "nacre/shell-tools/tests/test_welcome_ui.py"
+      ]
+    },
+    {
+      "helper": "classic-state",
+      "source": "nacre/shell-tools/classic-state.py",
+      "cases": 7,
+      "operations": [
+        "[\"_reload_desktop_consumers\"]",
+        "[\"atomic_symlink\"]",
+        "[\"atomic_write\"]",
+        "[\"readable\"]",
+        "[\"validated_colors\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_login_theme.py",
+        "nacre/shell-tools/tests/test_orient.py",
+        "nacre/shell-tools/tests/test_palette.py",
+        "nacre/shell-tools/tests/test_welcome_demo.py"
+      ]
+    },
+    {
+      "helper": "colors",
+      "source": "nacre/shell-tools/colors.py",
+      "cases": 7,
+      "operations": [
+        "[\"apply\"]",
+        "[\"catalog\"]",
+        "[\"delete\"]",
+        "[\"preview\"]",
+        "[\"serve\"]",
+        "[\"validate_request\"]"
+      ],
+      "existing_tests": [
+        "brain/tests/test_index.py",
+        "nacre/shell-tools/tests/test_colors_backend.py",
+        "nacre/shell-tools/tests/test_colors_ui.py",
+        "nacre/shell-tools/tests/test_dashboard_wallpaper_actions.py",
+        "nacre/shell-tools/tests/test_device_actions.py",
+        "nacre/shell-tools/tests/test_dolphin_style.py",
+        "nacre/shell-tools/tests/test_file_manager_style.py",
+        "nacre/shell-tools/tests/test_generated_presets.py",
+        "nacre/shell-tools/tests/test_header_widgets.py",
+        "nacre/shell-tools/tests/test_launcher_panel.py",
+        "nacre/shell-tools/tests/test_lock_dashboard.py",
+        "nacre/shell-tools/tests/test_lock_ready.py",
+        "nacre/shell-tools/tests/test_lock_widgets.py",
+        "nacre/shell-tools/tests/test_login_theme.py",
+        "nacre/shell-tools/tests/test_nacre_branding.py",
+        "nacre/shell-tools/tests/test_niri_qml.py",
+        "nacre/shell-tools/tests/test_palette.py",
+        "nacre/shell-tools/tests/test_quick_controls.py",
+        "nacre/shell-tools/tests/test_thunar_style.py",
+        "nacre/shell-tools/tests/test_universal_menu_ui.py",
+        "nacre/shell-tools/tests/test_wallpaper_media.py",
+        "nacre/shell-tools/tests/test_welcome_ui.py",
+        "nacre/shell-tools/tests/test_welcome_window_preload.py",
+        "tools/tests/test_matrix_palette.py",
+        "tools/tests/test_matrix_rest.py",
+        "tools/tests/test_niri_config.py",
+        "tools/tests/test_niri_session_runtime.py"
+      ]
+    },
+    {
+      "helper": "composer",
+      "source": "nacre/shell-tools/composer.py",
+      "cases": 4,
+      "operations": [
+        "[\"copy\"]",
+        "[\"files\"]",
+        "[\"load\"]",
+        "[\"save\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_chatpane_ui.py",
+        "nacre/shell-tools/tests/test_composer.py",
+        "nacre/shell-tools/tests/test_sidebar_service.py"
+      ]
+    },
+    {
+      "helper": "compositor",
+      "source": "nacre/shell-tools/compositor.py",
+      "cases": 26,
+      "operations": [
+        "[\"action\"]",
+        "[\"capabilities\"]",
+        "[\"events\"]",
+        "[\"query\"]"
+      ],
+      "existing_tests": [
+        "brain/tests/test_index.py",
+        "nacre/shell-tools/tests/test_compositor_backend.py",
+        "nacre/shell-tools/tests/test_compositor_facade.py",
+        "nacre/shell-tools/tests/test_compositor_helper_migration.py",
+        "nacre/shell-tools/tests/test_control_tools.py",
+        "nacre/shell-tools/tests/test_desktop_actions.py",
+        "nacre/shell-tools/tests/test_desktop_extras.py",
+        "nacre/shell-tools/tests/test_desktop_settings.py",
+        "nacre/shell-tools/tests/test_device_services.py",
+        "nacre/shell-tools/tests/test_diagnostics.py",
+        "nacre/shell-tools/tests/test_frame.py",
+        "nacre/shell-tools/tests/test_lock_ready.py",
+        "nacre/shell-tools/tests/test_niri_backend.py",
+        "nacre/shell-tools/tests/test_niri_qml.py",
+        "nacre/shell-tools/tests/test_niri_runtime.py",
+        "nacre/shell-tools/tests/test_niri_widths.py",
+        "nacre/shell-tools/tests/test_paths.py",
+        "nacre/shell-tools/tests/test_pearls.py",
+        "nacre/shell-tools/tests/test_session_workflows.py",
+        "nacre/shell-tools/tests/test_startup_apps.py",
+        "nacre/shell-tools/tests/test_welcome.py",
+        "nacre/shell-tools/tests/test_welcome_ui.py",
+        "tools/tests/test_compositor_boundary.py",
+        "tools/tests/test_compositor_compat.py",
+        "tools/tests/test_compositor_config.py",
+        "tools/tests/test_compositor_entrypoint.py",
+        "tools/tests/test_compositor_external_entrypoints.py",
+        "tools/tests/test_compositor_wallpaper_filter.py",
+        "tools/tests/test_config_defaults.py",
+        "tools/tests/test_niri_acceptance_monitor.py",
+        "tools/tests/test_niri_config.py",
+        "tools/tests/test_niri_hover_build.py",
+        "tools/tests/test_niri_session_gate.py",
+        "tools/tests/test_niri_session_runtime.py",
+        "tools/tests/test_profiles.py",
+        "tools/tests/test_releases.py",
+        "tools/tests/test_setup.py",
+        "tools/tests/test_translations.py",
+        "tools/tests/test_window_hide.py"
+      ]
+    },
+    {
+      "helper": "compositor-backends-hyprland",
+      "source": "nacre/shell-tools/compositor_backends/hyprland.py",
+      "cases": 5,
+      "operations": [
+        "[\"Backend.apply_config\"]",
+        "[\"Backend.parse_event\"]",
+        "[\"Backend.render_keyboard\"]",
+        "[\"Backend.valid_window_id\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_bar_controls.py",
+        "nacre/shell-tools/tests/test_compositor_backend.py",
+        "nacre/shell-tools/tests/test_compositor_facade.py",
+        "nacre/shell-tools/tests/test_diagnostics.py",
+        "nacre/shell-tools/tests/test_login_theme.py",
+        "nacre/shell-tools/tests/test_niri_backend.py",
+        "nacre/shell-tools/tests/test_niri_qml.py",
+        "nacre/shell-tools/tests/test_pearls.py",
+        "tools/tests/test_compositor_boundary.py",
+        "tools/tests/test_compositor_entrypoint.py",
+        "tools/tests/test_configure.py",
+        "tools/tests/test_niri_acceptance_monitor.py",
+        "tools/tests/test_niri_config.py",
+        "tools/tests/test_niri_session_gate.py",
+        "tools/tests/test_niri_session_runtime.py",
+        "tools/tests/test_private_lua.py",
+        "tools/tests/test_session_cursor.py",
+        "tools/tests/test_session_startup.py",
+        "tools/tests/test_setup.py",
+        "tools/tests/test_shell_session.py",
+        "tools/tests/test_translations.py"
+      ]
+    },
+    {
+      "helper": "compositor-backends-hyprland-config",
+      "source": "nacre/shell-tools/compositor_backends/hyprland_config.py",
+      "cases": 2,
+      "operations": [
+        "[\"lua_value\"]",
+        "[\"workspace_target\"]"
+      ],
+      "existing_tests": [
+        "tools/tests/test_setup.py"
+      ]
+    },
+    {
+      "helper": "compositor-backends-niri",
+      "source": "nacre/shell-tools/compositor_backends/niri.py",
+      "cases": 5,
+      "operations": [
+        "[\"Backend.apply_config\"]",
+        "[\"Backend.parse_event\"]",
+        "[\"Backend.render_keyboard\"]",
+        "[\"Backend.valid_window_id\"]"
+      ],
+      "existing_tests": [
+        "brain/tests/test_index.py",
+        "nacre/shell-tools/tests/test_compositor_facade.py",
+        "nacre/shell-tools/tests/test_niri_backend.py",
+        "nacre/shell-tools/tests/test_niri_qml.py",
+        "nacre/shell-tools/tests/test_niri_runtime.py",
+        "nacre/shell-tools/tests/test_niri_widths.py",
+        "nacre/shell-tools/tests/test_pearls.py",
+        "tools/tests/test_check_environment.py",
+        "tools/tests/test_compositor_boundary.py",
+        "tools/tests/test_compositor_config.py",
+        "tools/tests/test_niri_acceptance_monitor.py",
+        "tools/tests/test_niri_config.py",
+        "tools/tests/test_niri_hover_build.py",
+        "tools/tests/test_niri_package.py",
+        "tools/tests/test_niri_preview.py",
+        "tools/tests/test_niri_session_gate.py",
+        "tools/tests/test_niri_session_runtime.py",
+        "tools/tests/test_profiles.py",
+        "tools/tests/test_setup.py"
+      ]
+    },
+    {
+      "helper": "compositor-backends-niri-config",
+      "source": "nacre/shell-tools/compositor_backends/niri_config.py",
+      "cases": 2,
+      "operations": [
+        "[\"quoted\"]",
+        "[\"workspace_args\"]"
+      ],
+      "existing_tests": [
+        "tools/tests/test_niri_config.py",
+        "tools/tests/test_setup.py"
+      ]
+    },
+    {
+      "helper": "compositor-backends-niri-widths",
+      "source": "nacre/shell-tools/compositor_backends/niri_widths.py",
+      "cases": 2,
+      "operations": [
+        "[\"--help\"]",
+        "[\"check_session\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_niri_widths.py",
+        "tools/tests/test_niri_session_runtime.py",
+        "tools/tests/test_profiles.py"
+      ]
+    },
+    {
+      "helper": "compositor-compat",
+      "source": "hypr/scripts/compositor-compat.py",
+      "cases": 5,
+      "operations": [
+        "[\"focus-window\"]",
+        "[\"focus-workspace\"]",
+        "[\"query\"]",
+        "[\"valid-window-id\"]"
+      ],
+      "existing_tests": [
+        "tools/tests/test_compositor_boundary.py",
+        "tools/tests/test_compositor_compat.py"
+      ]
+    },
+    {
+      "helper": "compositor_config",
+      "source": "nacre/shell-tools/compositor_config.py",
+      "cases": 3,
+      "operations": [
+        "[\"backend_capabilities\"]",
+        "[\"supported_backends\"]"
+      ],
+      "existing_tests": [
+        "tools/tests/test_compositor_config.py",
+        "tools/tests/test_niri_config.py",
+        "tools/tests/test_setup.py"
+      ]
+    },
+    {
+      "helper": "control-tools",
+      "source": "nacre/shell-tools/control-tools.py",
+      "cases": 3,
+      "operations": [
+        "[\"color-picker\"]",
+        "[\"night-light\"]",
+        "[\"state\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_control_tools.py",
+        "nacre/shell-tools/tests/test_device_services.py"
+      ]
+    },
+    {
+      "helper": "dashboard-data",
+      "source": "nacre/shell-tools/dashboard-data.py",
+      "cases": 9,
+      "operations": [
+        "[\"capture\"]",
+        "[\"focus-start\"]",
+        "[\"focus-stop\"]",
+        "[\"preferences\"]",
+        "[\"read\"]",
+        "[\"unknown\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_helper_service.py",
+        "nacre/shell-tools/tests/test_helper_transport.py",
+        "nacre/shell-tools/tests/test_pearl_dashboard_data.py"
+      ]
+    },
+    {
+      "helper": "dashboard-media",
+      "source": "nacre/shell-tools/dashboard-media.py",
+      "cases": 7,
+      "operations": [
+        "[\"[]\"]",
+        "[\"{\\\"lyrics\\\": false, \\\"title\\\": \\\"Demo\\\", \\\"artist\\\": \\\"Fixture\\\"}\"]",
+        "[\"{\\\"palette\\\": true, \\\"art\\\": \\\"file:///case/home/missing.png\\\"}\"]",
+        "[\"{\\\"palette\\\": true, \\\"art\\\": \\\"http://example.invalid/art\\\"}\"]",
+        "[\"{\\\"title\\\": \\\"Public\\\"}\"]",
+        "[\"{broken\"]",
+        "[\"{}\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_helper_service.py",
+        "nacre/shell-tools/tests/test_pearl_dashboard_data.py"
+      ]
+    },
+    {
+      "helper": "dashboard-system",
+      "source": "nacre/shell-tools/dashboard-system.py",
+      "cases": 5,
+      "operations": [
+        "[\"end\"]",
+        "[\"unknown\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_pearl_dashboard_data.py"
+      ]
+    },
+    {
+      "helper": "demo-wallpapers",
+      "source": "nacre/shell-tools/demo-wallpapers.py",
+      "cases": 1,
+      "operations": [
+        "[\"collection\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_welcome_demo.py"
+      ]
+    },
+    {
+      "helper": "desktop-actions",
+      "source": "nacre/shell-tools/desktop-actions.py",
+      "cases": 3,
+      "operations": [
+        "[\"clipboard-clear\"]",
+        "[\"focus\"]",
+        "[\"unknown\"]"
+      ],
+      "existing_tests": [
+        "brain/tests/test_index.py",
+        "nacre/shell-tools/tests/test_desktop_actions.py"
+      ]
+    },
+    {
+      "helper": "desktop-extras",
+      "source": "nacre/shell-tools/desktop-extras.py",
+      "cases": 3,
+      "operations": [
+        "[\"clips\"]",
+        "[\"explore\"]",
+        "[\"unknown\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_desktop_extras.py"
+      ]
+    },
+    {
+      "helper": "desktop-settings",
+      "source": "nacre/shell-tools/desktop-settings.py",
+      "cases": 3,
+      "operations": [
+        "[\"confirm\"]",
+        "[\"set\"]",
+        "[\"state\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_desktop_settings.py",
+        "tools/tests/test_translations.py"
+      ]
+    },
+    {
+      "helper": "device-actions",
+      "source": "nacre/shell-tools/device-actions.py",
+      "cases": 4,
+      "operations": [
+        "[\"bluetooth-connect\"]",
+        "[\"unknown\"]",
+        "[\"wifi-radio\"]",
+        "[\"wifi-scan\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_device_actions.py",
+        "nacre/shell-tools/tests/test_lock_widgets.py",
+        "nacre/shell-tools/tests/test_quick_controls.py"
+      ]
+    },
+    {
+      "helper": "device-location",
+      "source": "nacre/shell-tools/device-location.py",
+      "cases": 3,
+      "operations": [
+        "[\"validate_fix\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_device_location.py"
+      ]
+    },
+    {
+      "helper": "diagnostics",
+      "source": "nacre/shell-tools/diagnostics.py",
+      "cases": 2,
+      "operations": [
+        "[\"hardware\"]",
+        "[\"redact\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_compositor_helper_migration.py",
+        "nacre/shell-tools/tests/test_diagnostics.py",
+        "nacre/shell-tools/tests/test_menu_backend.py"
+      ]
+    },
+    {
+      "helper": "display-recover",
+      "source": "nacre/shell-tools/display-recover.py",
+      "cases": 2,
+      "operations": [
+        "[\"{broken\"]",
+        "[\"{}\"]"
+      ],
+      "existing_tests": []
+    },
+    {
+      "helper": "dolphin-files",
+      "source": "nacre/shell-tools/dolphin-files.py",
+      "cases": 2,
+      "operations": [
+        "[\"--setup\"]",
+        "[\"config\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_dolphin_files.py"
+      ]
+    },
+    {
+      "helper": "file-icons",
+      "source": "nacre/shell-tools/file-icons.py",
+      "cases": 4,
+      "operations": [
+        "[\"family\"]",
+        "[\"overlay_index\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_file_manager_style.py"
+      ]
+    },
+    {
+      "helper": "font-setup",
+      "source": "nacre/shell-tools/font-setup.py",
+      "cases": 2,
+      "operations": [
+        "[\"--rollback\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_font_setup.py"
+      ]
+    },
+    {
+      "helper": "helper-service",
+      "source": "nacre/shell-tools/helper-service.py",
+      "cases": 10,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_helper_service.py",
+        "nacre/shell-tools/tests/test_helper_transport.py"
+      ]
+    },
+    {
+      "helper": "idle-policy",
+      "source": "nacre/shell-tools/idle-policy.py",
+      "cases": 2,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_idle_policy.py",
+        "tools/tests/test_configure.py",
+        "tools/tests/test_idle_seed.py"
+      ]
+    },
+    {
+      "helper": "install",
+      "source": "nacre/shell-tools/install.py",
+      "cases": 3,
+      "operations": [
+        "[\"--help\"]",
+        "[\"--restore\"]",
+        "[\"source_digest\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_codex_startup.py",
+        "ai/tests/test_obsidian_install.py",
+        "ai/tests/test_workflow.py",
+        "nacre/shell-tools/tests/test_bar_controls.py",
+        "nacre/shell-tools/tests/test_battery_alerts.py",
+        "nacre/shell-tools/tests/test_chatpane_ui.py",
+        "nacre/shell-tools/tests/test_click_away.py",
+        "nacre/shell-tools/tests/test_colors_ui.py",
+        "nacre/shell-tools/tests/test_compositor_facade.py",
+        "nacre/shell-tools/tests/test_dashboard_assembly.py",
+        "nacre/shell-tools/tests/test_dashboard_summary.py",
+        "nacre/shell-tools/tests/test_dashboard_wallpaper_actions.py",
+        "nacre/shell-tools/tests/test_desktop_wrappers.py",
+        "nacre/shell-tools/tests/test_device_services.py",
+        "nacre/shell-tools/tests/test_diagnostics.py",
+        "nacre/shell-tools/tests/test_font_setup.py",
+        "nacre/shell-tools/tests/test_foundation.py",
+        "nacre/shell-tools/tests/test_frame.py",
+        "nacre/shell-tools/tests/test_header_widgets.py",
+        "nacre/shell-tools/tests/test_helper_service.py",
+        "nacre/shell-tools/tests/test_image_lifetime.py",
+        "nacre/shell-tools/tests/test_launcher_panel.py",
+        "nacre/shell-tools/tests/test_lock_dashboard.py",
+        "nacre/shell-tools/tests/test_lock_snapshot.py",
+        "nacre/shell-tools/tests/test_login_theme.py",
+        "nacre/shell-tools/tests/test_media_performance_ui.py",
+        "nacre/shell-tools/tests/test_menu_backend.py",
+        "nacre/shell-tools/tests/test_niri_qml.py",
+        "nacre/shell-tools/tests/test_notifications_ui.py",
+        "nacre/shell-tools/tests/test_panel_host_input.py",
+        "nacre/shell-tools/tests/test_paths.py",
+        "nacre/shell-tools/tests/test_pearl_dashboard_focus.py",
+        "nacre/shell-tools/tests/test_pearls.py",
+        "nacre/shell-tools/tests/test_quick_controls.py",
+        "nacre/shell-tools/tests/test_responsive_services.py",
+        "nacre/shell-tools/tests/test_settings_ui.py",
+        "nacre/shell-tools/tests/test_shell_recovery.py",
+        "nacre/shell-tools/tests/test_shell_state.py",
+        "nacre/shell-tools/tests/test_sidebar_service.py",
+        "nacre/shell-tools/tests/test_top_hover.py",
+        "nacre/shell-tools/tests/test_universal_menu_ui.py",
+        "nacre/shell-tools/tests/test_wallpaper_picker_ui.py",
+        "nacre/shell-tools/tests/test_wallpaper_rotation.py",
+        "nacre/shell-tools/tests/test_welcome_demo.py",
+        "nacre/shell-tools/tests/test_welcome_ui.py",
+        "tools/tests/test_app_files.py",
+        "tools/tests/test_compositor_wallpaper_filter.py",
+        "tools/tests/test_configure.py",
+        "tools/tests/test_niri_hover_build.py",
+        "tools/tests/test_niri_package.py",
+        "tools/tests/test_niri_session_runtime.py",
+        "tools/tests/test_profiles.py",
+        "tools/tests/test_public_names.py",
+        "tools/tests/test_setup.py",
+        "tools/tests/test_translations.py"
+      ]
+    },
+    {
+      "helper": "install-dolphin",
+      "source": "nacre/shell-tools/install-dolphin.py",
+      "cases": 1,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": []
+    },
+    {
+      "helper": "install-extras",
+      "source": "nacre/shell-tools/install-extras.py",
+      "cases": 2,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": []
+    },
+    {
+      "helper": "install-thunar",
+      "source": "nacre/shell-tools/install-thunar.py",
+      "cases": 1,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": []
+    },
+    {
+      "helper": "isolate-apps",
+      "source": "nacre/shell-tools/isolate-apps.py",
+      "cases": 1,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_compositor_helper_migration.py"
+      ]
+    },
+    {
+      "helper": "kde-palette",
+      "source": "nacre/shell-tools/kde-palette.py",
+      "cases": 2,
+      "operations": [
+        "[\"read\"]",
+        "[\"save\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_dolphin_style.py",
+        "nacre/shell-tools/tests/test_file_manager_style.py"
+      ]
+    },
+    {
+      "helper": "launcher-preferences",
+      "source": "nacre/shell-tools/launcher-preferences.py",
+      "cases": 7,
+      "operations": [
+        "[\"favorite\"]",
+        "[\"hide\"]",
+        "[\"load\"]",
+        "[\"record\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_helper_service.py",
+        "nacre/shell-tools/tests/test_helper_transport.py",
+        "nacre/shell-tools/tests/test_launcher_preferences.py"
+      ]
+    },
+    {
+      "helper": "light-devices",
+      "source": "nacre/shell-tools/light-devices.py",
+      "cases": 9,
+      "operations": [
+        "[\"discover\"]",
+        "[\"read-ddc\"]",
+        "[\"set\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_light_devices.py"
+      ]
+    },
+    {
+      "helper": "lock-config",
+      "source": "nacre/shell-tools/lock-config.py",
+      "cases": 3,
+      "operations": [
+        "[\"block\"]",
+        "[\"output_width\"]",
+        "[\"render\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_lock_dashboard.py",
+        "nacre/shell-tools/tests/test_lock_ready.py",
+        "nacre/shell-tools/tests/test_lock_widgets.py",
+        "nacre/shell-tools/tests/test_login_theme.py"
+      ]
+    },
+    {
+      "helper": "lock-dashboard",
+      "source": "nacre/shell-tools/lock-dashboard.py",
+      "cases": 3,
+      "operations": [
+        "[\"layout\"]",
+        "[\"rgb\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_lock_dashboard.py"
+      ]
+    },
+    {
+      "helper": "lock-info",
+      "source": "nacre/shell-tools/lock-info.py",
+      "cases": 3,
+      "operations": [
+        "[\"art\"]",
+        "[\"snapshot\"]",
+        "[\"toggle\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_lock_ready.py",
+        "nacre/shell-tools/tests/test_lock_widgets.py"
+      ]
+    },
+    {
+      "helper": "lock-prepare",
+      "source": "nacre/shell-tools/lock-prepare.py",
+      "cases": 3,
+      "operations": [
+        "[\"atomic\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_lock_ready.py"
+      ]
+    },
+    {
+      "helper": "login-appearance",
+      "source": "nacre/shell-tools/login-appearance.py",
+      "cases": 1,
+      "operations": [
+        "[\"prepare\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_login_theme.py"
+      ]
+    },
+    {
+      "helper": "login-install",
+      "source": "nacre/shell-tools/login-install.py",
+      "cases": 2,
+      "operations": [
+        "[\"--help\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_login_theme.py"
+      ]
+    },
+    {
+      "helper": "maintenance",
+      "source": "nacre/shell-tools/maintenance.py",
+      "cases": 2,
+      "operations": [
+        "[\"check\"]",
+        "[\"restart\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_brain_sync.py",
+        "nacre/shell-tools/tests/test_compositor_helper_migration.py",
+        "nacre/shell-tools/tests/test_diagnostics.py"
+      ]
+    },
+    {
+      "helper": "menu-backend",
+      "source": "nacre/shell-tools/menu-backend.py",
+      "cases": 18,
+      "operations": [
+        "[\"convert\"]",
+        "[\"files\"]",
+        "[\"install\"]",
+        "[\"installed\"]",
+        "[\"reminder\"]",
+        "[\"state\"]",
+        "[\"tool\"]",
+        "[\"webapp-create\"]",
+        "[\"webapp-remove\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_compositor_helper_migration.py",
+        "nacre/shell-tools/tests/test_helper_service.py",
+        "nacre/shell-tools/tests/test_menu_backend.py"
+      ]
+    },
+    {
+      "helper": "menu-cli",
+      "source": "nacre/shell-tools/menu-cli.py",
+      "cases": 7,
+      "operations": [
+        "[\"home\"]",
+        "[\"pick\"]",
+        "[\"read-request\"]",
+        "[\"respond\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_menu_cli.py"
+      ]
+    },
+    {
+      "helper": "nacre-ai",
+      "source": "bin/nacre-ai",
+      "cases": 4,
+      "operations": [
+        "[\"--help\"]",
+        "[\"projects\"]",
+        "[\"window\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_chat_titles.py",
+        "ai/tests/test_claude_workflow.py",
+        "ai/tests/test_codex_startup.py",
+        "ai/tests/test_conversation.py",
+        "ai/tests/test_shared_skills.py",
+        "ai/tests/test_translations.py",
+        "ai/tests/test_workflow.py",
+        "brain/tests/test_web_translations.py",
+        "nacre/shell-tools/tests/test_menu_model.py",
+        "nacre/shell-tools/tests/test_nacre_branding.py",
+        "nacre/shell-tools/tests/test_niri_widths.py",
+        "nacre/shell-tools/tests/test_terminal_branding.py",
+        "nacre/shell-tools/tests/test_universal_menu_ui.py",
+        "tools/tests/test_configure.py",
+        "tools/tests/test_niri_session_runtime.py",
+        "tools/tests/test_profiles.py",
+        "tools/tests/test_public_names.py"
+      ]
+    },
+    {
+      "helper": "nacre-ai-account",
+      "source": "bin/nacre-ai-account",
+      "cases": 2,
+      "operations": [
+        "[\"../bad\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_workflow.py"
+      ]
+    },
+    {
+      "helper": "nacre-ai-chat",
+      "source": "bin/nacre-ai-chat",
+      "cases": 3,
+      "operations": [
+        "[\"--help\"]",
+        "[\"cache_title\"]",
+        "[\"list\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_chat_titles.py",
+        "ai/tests/test_workflow.py"
+      ]
+    },
+    {
+      "helper": "nacre-ai-claude",
+      "source": "bin/nacre-ai-claude",
+      "cases": 2,
+      "operations": [
+        "[\"--help\"]",
+        "[\"list\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_claude_workflow.py",
+        "ai/tests/test_codex_startup.py",
+        "ai/tests/test_workflow.py"
+      ]
+    },
+    {
+      "helper": "nacre-ai-context",
+      "source": "bin/nacre-ai-context",
+      "cases": 3,
+      "operations": [
+        "[\"demo\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_conversation.py"
+      ]
+    },
+    {
+      "helper": "nacre-ai-memory",
+      "source": "bin/nacre-ai-memory",
+      "cases": 3,
+      "operations": [
+        "[\"--help\"]",
+        "[\"--title\"]",
+        "[\"slug\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_conversation.py"
+      ]
+    },
+    {
+      "helper": "nacre-ai-remote",
+      "source": "bin/nacre-ai-remote",
+      "cases": 2,
+      "operations": [
+        "[\"bad/name\"]",
+        "[\"demo\"]"
+      ],
+      "existing_tests": []
+    },
+    {
+      "helper": "nacre-ai-skills",
+      "source": "bin/nacre-ai-skills",
+      "cases": 2,
+      "operations": [
+        "[\"--help\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_shared_skills.py",
+        "ai/tests/test_workflow.py"
+      ]
+    },
+    {
+      "helper": "nacre-ai-tools",
+      "source": "bin/nacre-ai-tools",
+      "cases": 2,
+      "operations": [
+        "[\"fixture-command\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "brain/tests/test_web_translations.py",
+        "nacre/shell-tools/tests/test_menu_model.py",
+        "nacre/shell-tools/tests/test_nacre_branding.py"
+      ]
+    },
+    {
+      "helper": "nacre-ai-usage",
+      "source": "bin/nacre-ai-usage",
+      "cases": 3,
+      "operations": [
+        "[\"number\"]",
+        "[\"read\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_conversation.py"
+      ]
+    },
+    {
+      "helper": "nacre-app",
+      "source": "bin/nacre-app",
+      "cases": 3,
+      "operations": [
+        "[\"browser\"]",
+        "[\"terminal\"]",
+        "[\"unknown\"]"
+      ],
+      "existing_tests": [
+        "tools/tests/test_app_files.py",
+        "tools/tests/test_bindings.py",
+        "tools/tests/test_configure.py"
+      ]
+    },
+    {
+      "helper": "nacre-brain",
+      "source": "bin/nacre-brain",
+      "cases": 4,
+      "operations": [
+        "[\"init\"]",
+        "[\"note\"]",
+        "[\"path\"]",
+        "[\"search\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_brain_sync.py",
+        "ai/tests/test_workflow.py",
+        "brain/tests/test_auth.py",
+        "nacre/shell-tools/tests/test_startup_apps.py",
+        "tools/tests/test_configure.py",
+        "tools/tests/test_profiles.py",
+        "tools/tests/test_releases.py",
+        "tools/tests/test_setup.py"
+      ]
+    },
+    {
+      "helper": "nacre-brain-maintain",
+      "source": "bin/nacre-brain-maintain",
+      "cases": 3,
+      "operations": [
+        "[\"--help\"]",
+        "[\"read\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_brain_sync.py"
+      ]
+    },
+    {
+      "helper": "nacre-brain-sync",
+      "source": "bin/nacre-brain-sync",
+      "cases": 3,
+      "operations": [
+        "[\"--help\"]",
+        "[\"note_path\"]",
+        "[\"snapshot\"]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_brain_sync.py",
+        "tools/tests/test_configure.py"
+      ]
+    },
+    {
+      "helper": "nacre-colors",
+      "source": "bin/nacre-colors",
+      "cases": 2,
+      "operations": [
+        "[\"--help\"]",
+        "[]"
+      ],
+      "existing_tests": []
+    },
+    {
+      "helper": "nacre-settings",
+      "source": "bin/nacre-settings",
+      "cases": 2,
+      "operations": [
+        "[\"network\"]",
+        "[\"unknown\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_settings_launcher.py",
+        "tools/tests/test_compositor_external_entrypoints.py",
+        "tools/tests/test_profiles.py"
+      ]
+    },
+    {
+      "helper": "nacre-terminal-logo",
+      "source": "bin/nacre-terminal-logo",
+      "cases": 1,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": []
+    },
+    {
+      "helper": "nacre-welcome",
+      "source": "bin/nacre-welcome",
+      "cases": 2,
+      "operations": [
+        "[\"--help\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_welcome.py",
+        "tools/tests/test_session_startup.py"
+      ]
+    },
+    {
+      "helper": "nacre_i18n",
+      "source": "nacre/shell-tools/nacre_i18n.py",
+      "cases": 3,
+      "operations": [
+        "[\"missing.id\"]"
+      ],
+      "existing_tests": [
+        "tools/tests/test_setup.py"
+      ]
+    },
+    {
+      "helper": "nacre_shell",
+      "source": "nacre/shell-cli/src/nacre_shell",
+      "cases": 9,
+      "operations": [
+        "[\"--help\"]",
+        "[\"from_image\"]",
+        "[\"scheme\"]",
+        "[\"wallpaper\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_colors_backend.py",
+        "nacre/shell-tools/tests/test_generated_presets.py",
+        "nacre/shell-tools/tests/test_helper_service.py",
+        "nacre/shell-tools/tests/test_native_engine.py",
+        "nacre/shell-tools/tests/test_niri_qml.py",
+        "nacre/shell-tools/tests/test_notification_history.py",
+        "nacre/shell-tools/tests/test_orient.py",
+        "nacre/shell-tools/tests/test_wallpaper_media.py",
+        "nacre/shell-tools/tests/test_welcome_demo.py",
+        "tools/tests/test_compositor_external_entrypoints.py",
+        "tools/tests/test_compositor_wallpaper_filter.py",
+        "tools/tests/test_niri_config.py"
+      ]
+    },
+    {
+      "helper": "network-state",
+      "source": "nacre/shell-tools/network-state.py",
+      "cases": 7,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_helper_service.py",
+        "nacre/shell-tools/tests/test_network_state.py"
+      ]
+    },
+    {
+      "helper": "notification-history",
+      "source": "nacre/shell-tools/notification-history.py",
+      "cases": 5,
+      "operations": [
+        "[\"load\"]",
+        "[\"save\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_helper_service.py",
+        "nacre/shell-tools/tests/test_notification_history.py"
+      ]
+    },
+    {
+      "helper": "palette_engine",
+      "source": "nacre/shell-tools/palette_engine.py",
+      "cases": 2,
+      "operations": [
+        "[\"render_values\"]"
+      ],
+      "existing_tests": []
+    },
+    {
+      "helper": "pearl-state",
+      "source": "nacre/shell-tools/pearl-state.py",
+      "cases": 4,
+      "operations": [
+        "[\"load\"]",
+        "[\"save\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_pearls.py"
+      ]
+    },
+    {
+      "helper": "pearl-window",
+      "source": "nacre/shell-tools/pearl-window.py",
+      "cases": 5,
+      "operations": [
+        "[\"focus\"]",
+        "[\"geometry\"]",
+        "[\"pin\"]",
+        "[\"place\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_pearls.py"
+      ]
+    },
+    {
+      "helper": "power-button-policy",
+      "source": "nacre/shell-tools/power-button-policy.py",
+      "cases": 2,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_power_button.py"
+      ]
+    },
+    {
+      "helper": "profile-policy",
+      "source": "nacre/shell-tools/profile-policy.py",
+      "cases": 3,
+      "operations": [
+        "[\"install\"]",
+        "[\"show\"]"
+      ],
+      "existing_tests": [
+        "tools/tests/test_profiles.py",
+        "tools/tests/test_setup.py",
+        "tools/tests/test_translations.py"
+      ]
+    },
+    {
+      "helper": "provision",
+      "source": "nacre/shell-tools/provision.py",
+      "cases": 2,
+      "operations": [
+        "[\"activate_runtime\"]",
+        "[\"source_digest\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_native_engine.py",
+        "nacre/shell-tools/tests/test_orient_provision.py"
+      ]
+    },
+    {
+      "helper": "resource-state",
+      "source": "nacre/shell-tools/resource-state.py",
+      "cases": 3,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_resource_state.py"
+      ]
+    },
+    {
+      "helper": "screenshot",
+      "source": "nacre/shell-tools/screenshot.py",
+      "cases": 3,
+      "operations": [
+        "[\"region\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_control_tools.py",
+        "nacre/shell-tools/tests/test_quick_controls.py",
+        "nacre/shell-tools/tests/test_screenshot.py"
+      ]
+    },
+    {
+      "helper": "session-watch",
+      "source": "nacre/shell-tools/session-watch.py",
+      "cases": 1,
+      "operations": [
+        "[\"check\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_session_workflows.py"
+      ]
+    },
+    {
+      "helper": "shell-supervisor",
+      "source": "nacre/shell-tools/shell-supervisor.py",
+      "cases": 2,
+      "operations": [
+        "[\"health\"]",
+        "[\"restore\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_shell_recovery.py"
+      ]
+    },
+    {
+      "helper": "sidebar-chat",
+      "source": "nacre/shell-tools/sidebar-chat.py",
+      "cases": 3,
+      "operations": [
+        "[\"configure_channel\"]",
+        "[\"model_input\"]",
+        "[\"preferences\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_composer.py",
+        "nacre/shell-tools/tests/test_pearls.py",
+        "nacre/shell-tools/tests/test_sidebar_chat.py"
+      ]
+    },
+    {
+      "helper": "startup-apps",
+      "source": "nacre/shell-tools/startup-apps.py",
+      "cases": 2,
+      "operations": [
+        "[\"plan\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_compositor_helper_migration.py",
+        "nacre/shell-tools/tests/test_startup_apps.py",
+        "tools/tests/test_bindings.py",
+        "tools/tests/test_session_startup.py"
+      ]
+    },
+    {
+      "helper": "terminal-branding",
+      "source": "nacre/shell-tools/terminal-branding.py",
+      "cases": 2,
+      "operations": [
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_live_terminal_logo.py",
+        "nacre/shell-tools/tests/test_terminal_branding.py"
+      ]
+    },
+    {
+      "helper": "thunar-files",
+      "source": "nacre/shell-tools/thunar-files.py",
+      "cases": 1,
+      "operations": [
+        "[\"setup\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_runtime_environment.py"
+      ]
+    },
+    {
+      "helper": "timezone",
+      "source": "nacre/shell-tools/timezone.py",
+      "cases": 3,
+      "operations": [
+        "[\"confirm\"]",
+        "[\"manual\"]",
+        "[\"state\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_device_location.py",
+        "nacre/shell-tools/tests/test_pearl_dashboard_data.py",
+        "nacre/shell-tools/tests/test_settings_ui.py",
+        "nacre/shell-tools/tests/test_timezone.py"
+      ]
+    },
+    {
+      "helper": "updates",
+      "source": "nacre/shell-tools/updates.py",
+      "cases": 2,
+      "operations": [
+        "[\"--preflight\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "ai/tests/test_shared_skills.py",
+        "brain/tests/test_index.py",
+        "nacre/shell-tools/tests/test_compositor_helper_migration.py",
+        "nacre/shell-tools/tests/test_dashboard_summary.py",
+        "nacre/shell-tools/tests/test_desktop_actions.py",
+        "nacre/shell-tools/tests/test_launcher_preferences.py",
+        "nacre/shell-tools/tests/test_live_terminal_logo.py",
+        "nacre/shell-tools/tests/test_niri_backend.py",
+        "nacre/shell-tools/tests/test_niri_widths.py",
+        "nacre/shell-tools/tests/test_palette.py",
+        "nacre/shell-tools/tests/test_sidebar_chat.py",
+        "nacre/shell-tools/tests/test_updates.py",
+        "tools/tests/test_configure.py",
+        "tools/tests/test_shell_session.py"
+      ]
+    },
+    {
+      "helper": "wallpaper-media",
+      "source": "nacre/shell-tools/wallpaper-media.py",
+      "cases": 8,
+      "operations": [
+        "[\"catalog\"]",
+        "[\"describe\"]",
+        "[\"preferences\"]",
+        "[\"select\"]",
+        "[\"session\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_colors_backend.py",
+        "nacre/shell-tools/tests/test_wallpaper_media.py",
+        "nacre/shell-tools/tests/test_welcome_demo.py"
+      ]
+    },
+    {
+      "helper": "wallpaper-watch",
+      "source": "nacre/shell-tools/wallpaper-watch.py",
+      "cases": 2,
+      "operations": [
+        "[\"--help\"]",
+        "[\"flavour\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_wallpaper_watch.py"
+      ]
+    },
+    {
+      "helper": "weather",
+      "source": "nacre/shell-tools/weather.py",
+      "cases": 2,
+      "operations": [
+        "[\"url\"]",
+        "[]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_dashboard_assembly.py",
+        "nacre/shell-tools/tests/test_desktop_settings.py",
+        "nacre/shell-tools/tests/test_device_services.py",
+        "nacre/shell-tools/tests/test_lock_dashboard.py",
+        "nacre/shell-tools/tests/test_lock_widgets.py",
+        "nacre/shell-tools/tests/test_panel_redock_motion.py",
+        "nacre/shell-tools/tests/test_pearl_dashboard_data.py"
+      ]
+    },
+    {
+      "helper": "welcome",
+      "source": "nacre/shell-tools/welcome.py",
+      "cases": 3,
+      "operations": [
+        "[\"set-startup\"]",
+        "[\"state\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_niri_qml.py",
+        "nacre/shell-tools/tests/test_welcome.py",
+        "nacre/shell-tools/tests/test_welcome_demo.py",
+        "nacre/shell-tools/tests/test_welcome_ui.py",
+        "nacre/shell-tools/tests/test_welcome_window_preload.py",
+        "tools/tests/test_session_startup.py",
+        "tools/tests/test_translations.py"
+      ]
+    },
+    {
+      "helper": "window-chat-title",
+      "source": "nacre/shell-tools/window-chat-title.py",
+      "cases": 3,
+      "operations": [
+        "[\"123\"]",
+        "[\"999\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_window_chat_title.py"
+      ]
+    },
+    {
+      "helper": "window-hide",
+      "source": "hypr/scripts/window-hide.py",
+      "cases": 3,
+      "operations": [
+        "[\"hide\"]",
+        "[\"restore-current\"]",
+        "[\"restore-last\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_shell_state.py",
+        "tools/tests/test_compositor_external_entrypoints.py",
+        "tools/tests/test_window_hide.py"
+      ]
+    },
+    {
+      "helper": "workflow-profiles",
+      "source": "nacre/shell-tools/workflow-profiles.py",
+      "cases": 2,
+      "operations": [
+        "[\"apply\"]",
+        "[\"load\"]"
+      ],
+      "existing_tests": [
+        "nacre/shell-tools/tests/test_compositor_helper_migration.py",
+        "nacre/shell-tools/tests/test_session_workflows.py"
+      ]
+    }
+  ],
+  "unfrozen_paths": [
+    "Creation of UUID-named web apps, reminders, selector sessions, screenshots in composer, and browser bootstrap credentials; random identities cannot be normalized.",
+    "Full colors preview/publication cache identities include device, inode and ctime; native extraction uses a read-only cache_dir for its frozen palette result.",
+    "Demo wallpaper verification receipts include device/inode metadata; the bundled manifest validation is frozen and existing tests cover cache repair.",
+    "Real nested compositor sessions, native lock/login rendering across font stacks, hardware writes/signals, privileged deployment, online weather/lyrics and remote sync remain integration checks.",
+    "Optional embedding model installation/inference needs its pinned local model and platform; absence/disabled behavior and provision argv are frozen."
+  ],
+  "shell_wrappers_outside_python_migration": [
+    "nacre/shell-tools/cli-bridge.sh",
+    "nacre/shell-tools/control.sh",
+    "nacre/shell-tools/launch.sh",
+    "nacre/shell-tools/menu.sh",
+    "nacre/shell-tools/qt-check.sh",
+    "nacre/shell-tools/updates.sh"
+  ],
+  "transport_equivalences": {
+    "dbus": "exact typed method match with explicit recorded actions",
+    "orient-direct": {
+      "opt_in": "--orient-direct --command TEMPLATE",
+      "scope": "recognized computational Orient RPC transport only; all outputs, source/options, versions, writes, modes and other actions exact",
+      "evidence": "deps/orient/tests/parity and crates/orient-core/tests plus native CLI/decoder tests at orient_revision"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "Palette is missing required color roles",
+    "type": "ValueError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

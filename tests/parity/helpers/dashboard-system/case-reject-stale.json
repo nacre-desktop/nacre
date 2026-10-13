@@ -1,0 +1,11 @@
+{
+  "helper": "dashboard-system",
+  "args": [
+    "end",
+    "999",
+    "0"
+  ],
+  "fixtures": {
+    "proc/mounts": ""
+  }
+}

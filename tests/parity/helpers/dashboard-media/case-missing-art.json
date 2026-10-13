@@ -1,0 +1,6 @@
+{
+  "helper": "dashboard-media",
+  "args": [
+    "{\"palette\": true, \"art\": \"file:///case/home/missing.png\"}"
+  ]
+}

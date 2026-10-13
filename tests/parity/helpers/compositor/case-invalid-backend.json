@@ -1,0 +1,10 @@
+{
+  "helper": "compositor",
+  "args": [
+    "capabilities"
+  ],
+  "stdout": "text",
+  "env": {
+    "NACRE_COMPOSITOR": "unknown"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "helper": "brain-semantic",
+  "args": [],
+  "command": "python3 brain/semantic.py",
+  "stdout": "text",
+  "stdin": "{\"texts\":[\"Public fixture\"]}\n"
+}

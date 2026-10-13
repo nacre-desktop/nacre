@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "[Errno 2] No such file or directory: '/case/home/missing.png'",
+    "type": "FileNotFoundError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

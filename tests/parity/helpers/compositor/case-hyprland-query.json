@@ -1,0 +1,14 @@
+{
+  "helper": "compositor",
+  "args": [
+    "query",
+    "windows"
+  ],
+  "commands": {
+    "hyprctl": [
+      {
+        "stdout": "[{\"address\": \"0x123\", \"title\": \"Demo\", \"class\": \"demo\", \"workspace\": {\"id\": 2}, \"at\": [10, 20], \"size\": [800, 600], \"monitor\": 0}]"
+      }
+    ]
+  }
+}

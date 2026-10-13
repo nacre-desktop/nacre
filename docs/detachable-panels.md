@@ -10,7 +10,7 @@ Floating panels keep their original content, with no added title strip. Their
 rounded border uses the desktop's neutral and focused colors. Use ordinary
 Super-drag to move, Super+right-drag to resize, and the normal tiling/pinning keys.
 Bring either a lifted panel or a floating window near its matching edge. The
-same pearly film bridges the panel and frame on every pull; release while it is
+matching docking cue marks the panel and frame on every pull; release while it is
 bright to reattach. The target follows the panel's edge rather than your pointer,
 so grabbing near the middle works too. Reattached panels return to hover mode and close when the
 pointer leaves; panels deliberately opened by click or shortcut still stay open.

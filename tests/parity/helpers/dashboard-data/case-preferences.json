@@ -1,0 +1,14 @@
+{
+  "helper": "dashboard-data",
+  "args": [
+    "preferences",
+    "{\"tabs\": [\"focus\", \"today\"], \"focusMinutes\": 40}"
+  ],
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/checked",
+      "reason": "dashboard sampling time.time()"
+    }
+  ]
+}

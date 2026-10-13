@@ -1,0 +1,8 @@
+{
+  "helper": "kde-palette",
+  "args": [
+    "read",
+    "{\"args\": [{\"$path\": \"{home}/missing\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/kde-palette.py"
+}

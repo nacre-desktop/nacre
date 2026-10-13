@@ -1,0 +1,13 @@
+{
+  "helper": "dashboard-data",
+  "args": [
+    "read"
+  ],
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/checked",
+      "reason": "dashboard sampling time.time()"
+    }
+  ]
+}

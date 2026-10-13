@@ -1,0 +1,8 @@
+{
+  "helper": "idle-policy",
+  "args": [],
+  "stdout": "text",
+  "fixtures": {
+    "home/.config/hypr/hypridle.local.conf": "# Optional idle listeners.\n"
+  }
+}

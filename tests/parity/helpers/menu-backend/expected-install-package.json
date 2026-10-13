@@ -1,0 +1,20 @@
+{
+  "stdout": "installed\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "pkexec",
+      "argv": [
+        "pacman",
+        "-S",
+        "--needed",
+        "--",
+        "demo"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

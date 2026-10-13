@@ -1,0 +1,8 @@
+{
+  "helper": "diagnostics",
+  "args": [
+    "redact",
+    "{\"args\": [\"public fixture /case/home/secret.txt token=abcd https://example.invalid\", [\"/case/home\"]], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/diagnostics.py"
+}

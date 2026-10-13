@@ -1,0 +1,19 @@
+{
+  "stdout": {
+    "error": "Failed to connect"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "bluetoothctl",
+      "argv": [
+        "connect",
+        "AA:BB:CC:DD:EE:FF"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

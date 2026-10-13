@@ -1,0 +1,8 @@
+{
+  "helper": "file-icons",
+  "args": [
+    "overlay_index",
+    "{\"args\": [[[\"16x16/places\", 16]], \"Papirus\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/file-icons.py"
+}

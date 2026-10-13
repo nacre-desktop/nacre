@@ -1,0 +1,10 @@
+{
+  "helper": "nacre-ai-context",
+  "args": [
+    "demo"
+  ],
+  "command": "python3 bin/nacre-ai-context",
+  "fixtures": {
+    "home/.config/nacre/ai/projects.json": "{\"projects\":[{\"id\":\"demo-a\",\"label\":\"Demo A\",\"path\":\"/case/home/a\"},{\"id\":\"demo-b\",\"label\":\"Demo B\",\"path\":\"/case/home/b\"}]}"
+  }
+}

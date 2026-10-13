@@ -1,0 +1,41 @@
+{
+  "helper": "network-state",
+  "args": [],
+  "commands": {
+    "nmcli": [
+      {
+        "argv": [
+          "--terse",
+          "--escape",
+          "yes",
+          "--colors",
+          "no",
+          "--wait",
+          "5",
+          "radio",
+          "wifi"
+        ],
+        "stdout": "enabled\n"
+      },
+      {
+        "argv": [
+          "--terse",
+          "--escape",
+          "yes",
+          "--colors",
+          "no",
+          "--wait",
+          "5",
+          "--fields",
+          "DEVICE,TYPE,STATE",
+          "device",
+          "status"
+        ],
+        "stdout": "wlan0:wifi:connected\n"
+      },
+      {
+        "stdout": "*:Too strong:AA\\:BB\\:CC\\:DD\\:EE\\:01:101:2412 MHz:wlan0\n*:Bad escape\\q:AA\\:BB\\:CC\\:DD\\:EE\\:02:50:2412 MHz:wlan0\n"
+      }
+    ]
+  }
+}

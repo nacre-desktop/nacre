@@ -1,0 +1,8 @@
+{
+  "helper": "nacre-ai-account",
+  "args": [
+    "../bad"
+  ],
+  "command": "python3 bin/nacre-ai-account",
+  "stdout": "text"
+}

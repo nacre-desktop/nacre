@@ -1,0 +1,17 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {
+    "home/auth": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/auth/public.json": {
+      "mode": "0o600",
+      "text": "{\"fixture\":\"public\"}"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

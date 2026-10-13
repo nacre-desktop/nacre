@@ -1,0 +1,66 @@
+{
+  "helper": "helper-service",
+  "args": [],
+  "stdout": "jsonl",
+  "dialogue": [
+    {
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 1, \"tool\": \"launcher-preferences\", \"arguments\": [\"load\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 9007199254740991, \"tool\": \"launcher-preferences\", \"arguments\": [\"load\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 0, \"tool\": \"launcher-preferences\", \"arguments\": [\"load\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": true, \"tool\": \"launcher-preferences\", \"arguments\": [\"load\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 2, \"tool\": \"../../bad\", \"arguments\": [\"load\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{}\n",
+      "receive": 1
+    },
+    {
+      "send": "{broken\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\":3,\"input\":NaN}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 4, \"tool\": \"launcher-preferences\", \"arguments\": [\"bad\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 5, \"tool\": \"launcher-preferences\", \"arguments\": [1], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 6, \"tool\": \"launcher-preferences\", \"arguments\": [\"a\\u0000b\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 7, \"tool\": \"launcher-preferences\", \"arguments\": [\"x\", \"x\", \"x\", \"x\", \"x\", \"x\", \"x\", \"x\", \"x\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 8, \"tool\": \"launcher-preferences\", \"arguments\": [\"load\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 8, \"tool\": \"launcher-preferences\", \"arguments\": [\"load\"], \"input\": null}\n",
+      "receive": 1
+    }
+  ]
+}

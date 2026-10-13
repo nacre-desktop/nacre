@@ -1,0 +1,27 @@
+{
+  "helper": "compositor",
+  "args": [
+    "action",
+    "focus_window",
+    "--window",
+    "niri-window:123"
+  ],
+  "stdout": "text",
+  "env": {
+    "NACRE_COMPOSITOR": "niri",
+    "NIRI_SOCKET": "/case/runtime/niri.sock"
+  },
+  "sockets": [
+    {
+      "path": "runtime/niri.sock",
+      "connections": [
+        {
+          "text": "{\"Ok\": \"Handled\"}\n"
+        },
+        {
+          "text": "{\"Ok\": \"Handled\"}\n"
+        }
+      ]
+    }
+  ]
+}

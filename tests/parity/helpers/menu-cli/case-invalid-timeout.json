@@ -1,0 +1,11 @@
+{
+  "helper": "menu-cli",
+  "args": [
+    "pick",
+    "--timeout",
+    "0"
+  ],
+  "stdout": "text",
+  "stdin": "One\nTwo\n",
+  "compare_stderr": true
+}

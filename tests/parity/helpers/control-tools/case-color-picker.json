@@ -1,0 +1,12 @@
+{
+  "helper": "control-tools",
+  "args": [
+    "color-picker"
+  ],
+  "stdout": "text",
+  "commands": {
+    "hyprpicker": [
+      {}
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "helper": "device-actions",
+  "args": [
+    "wifi-scan"
+  ],
+  "commands": {
+    "nmcli": [
+      {}
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "helper": "desktop-extras",
+  "args": [
+    "clips"
+  ],
+  "commands": {
+    "cliphist": [
+      {
+        "stdout": "1\tPublic clipboard\n2\tOther text\n"
+      }
+    ]
+  }
+}

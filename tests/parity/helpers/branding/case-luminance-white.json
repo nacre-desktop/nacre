@@ -1,0 +1,8 @@
+{
+  "helper": "branding",
+  "args": [
+    "luminance",
+    "{\"args\": [\"#ffffff\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/branding.py"
+}

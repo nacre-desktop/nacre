@@ -1,0 +1,8 @@
+{
+  "stdout": "usage: nacre-brain-sync [-h] [--exchange] [--force] [--config CONFIG]\n\nThree-way private vault synchronization; never propagate deletions.\n\noptions:\n  -h, --help       show this help message and exit\n  --exchange\n  --force          retry immediately despite offline backoff\n  --config CONFIG\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,17 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "eval",
+        "hl.dispatch(hl.dsp.focus({workspace=\"2\",on_current_monitor=true}))"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

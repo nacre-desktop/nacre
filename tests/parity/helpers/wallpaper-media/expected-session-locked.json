@@ -1,0 +1,46 @@
+{
+  "stdout": {
+    "locked": true,
+    "path": "/org/freedesktop/login1/session/_7"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "loginctl",
+      "argv": [
+        "show-user",
+        "1000",
+        "--property=Display",
+        "--value"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "loginctl",
+      "argv": [
+        "show-session",
+        "7",
+        "--property=LockedHint",
+        "--value"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "busctl",
+      "argv": [
+        "--system",
+        "call",
+        "org.freedesktop.login1",
+        "/org/freedesktop/login1",
+        "org.freedesktop.login1.Manager",
+        "GetSession",
+        "s",
+        "7"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

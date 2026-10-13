@@ -1,0 +1,8 @@
+{
+  "helper": "power-button-policy",
+  "args": [],
+  "stdout": "text",
+  "fixtures": {
+    "home/.config/nacre/host.lua": "hl.bind(\"XF86PowerOff\", custom)\n"
+  }
+}

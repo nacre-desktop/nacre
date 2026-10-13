@@ -1,0 +1,8 @@
+{
+  "stdout": "[Icon Theme]\nName=Nacre Files\nComment=Palette-matched Papirus folders\nInherits=Papirus,Papirus,Adwaita,hicolor\nDirectories=16x16/places\n\n[16x16/places]\nSize=16\nContext=Places\nType=Fixed\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

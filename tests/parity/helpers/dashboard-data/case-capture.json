@@ -1,0 +1,31 @@
+{
+  "helper": "dashboard-data",
+  "args": [
+    "capture",
+    "Public fixture note\n- [ ] Read docs"
+  ],
+  "commands": {
+    "nacre-brain": [
+      {
+        "argv": [
+          "path"
+        ],
+        "stdout": "/case/home/Brain\n"
+      },
+      {
+        "read_stdin": true,
+        "stdout": "saved\n"
+      }
+    ]
+  },
+  "fixtures": {
+    "home/Brain/demo.md": "# Public fixture\n- [ ] Read docs\n"
+  },
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/checked",
+      "reason": "dashboard sampling time.time()"
+    }
+  ]
+}

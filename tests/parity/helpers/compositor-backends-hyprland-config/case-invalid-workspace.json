@@ -1,0 +1,8 @@
+{
+  "helper": "compositor-backends-hyprland-config",
+  "args": [
+    "workspace_target",
+    "{\"args\": [{\"kind\": \"bad\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/compositor_backends/hyprland_config.py"
+}

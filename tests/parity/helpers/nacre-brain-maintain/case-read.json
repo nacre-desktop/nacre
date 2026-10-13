@@ -1,0 +1,12 @@
+{
+  "helper": "nacre-brain-maintain",
+  "args": [
+    "read",
+    "wiki/Public.md"
+  ],
+  "command": "python3 bin/nacre-brain-maintain",
+  "fixtures": {
+    "home/Documents/Nacre-Brain/wiki/Public.md": "# Public\n\nFixture.\n"
+  },
+  "stdout": "text"
+}

@@ -1,0 +1,8 @@
+{
+  "helper": "sidebar-chat",
+  "args": [
+    "model_input",
+    "{\"args\": [\"Public fixture\", []], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/sidebar-chat.py"
+}

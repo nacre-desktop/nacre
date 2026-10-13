@@ -1,0 +1,8 @@
+{
+  "helper": "binding-contracts",
+  "args": [
+    "capture",
+    "{\"args\": [{\"$path\": \"{home}\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/binding-contracts.py"
+}

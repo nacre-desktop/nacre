@@ -1,0 +1,7 @@
+{
+  "helper": "updates",
+  "args": [],
+  "fixtures": {
+    "home/.cache/nacre/updates.json": "{\"text\":\"2\",\"count\":2,\"checked\":4000000000}"
+  }
+}

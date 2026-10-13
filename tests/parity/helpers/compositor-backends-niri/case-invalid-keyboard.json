@@ -1,0 +1,8 @@
+{
+  "helper": "compositor-backends-niri",
+  "args": [
+    "Backend.render_keyboard",
+    "{\"args\": [{\"unknown\": \"x\"}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/compositor_backends/niri.py"
+}

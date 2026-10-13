@@ -1,0 +1,20 @@
+{
+  "stdout": {
+    "backend": "hyprland",
+    "capabilities": {
+      "stableWorkspaceIndices": true,
+      "globalWorkspaces": true,
+      "perOutputWorkspaces": false,
+      "scrollingLayout": false,
+      "floatingPlacement": true,
+      "pinWindow": true,
+      "windowCapture": true,
+      "fullscreenState": true
+    }
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,77 @@
+{
+  "stdout": [
+    {
+      "file": "forest.jpg",
+      "name": "Forest Edge",
+      "title": "At the edge of a conifer forest (Unsplash).jpg",
+      "artist": "Ales Krivec aleskrivec",
+      "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+      "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+      "size": [
+        3840,
+        2563
+      ],
+      "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+    },
+    {
+      "file": "aurora.jpg",
+      "name": "Northern Lights",
+      "title": "Aurora in Fairbanks.jpg",
+      "artist": "Karthik Sridharan",
+      "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+      "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+      "size": [
+        3840,
+        2560
+      ],
+      "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+    },
+    {
+      "file": "canyon.jpg",
+      "name": "Canyon Sunset",
+      "title": "Grand Canyon South Rim at Sunset.jpg",
+      "artist": "Mgimelfarb",
+      "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+      "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+      "size": [
+        3840,
+        1226
+      ],
+      "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+    },
+    {
+      "file": "coast.jpg",
+      "name": "Clear Coast",
+      "title": "Still and clear sea.jpg",
+      "artist": "Jdszekeres",
+      "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+      "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+      "size": [
+        3840,
+        2880
+      ],
+      "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+    }
+  ],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

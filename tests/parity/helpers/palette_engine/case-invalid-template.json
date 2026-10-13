@@ -1,0 +1,9 @@
+{
+  "helper": "palette_engine",
+  "args": [
+    "render_values",
+    "{\"args\": [\"{{ unsupported }}\", {}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/palette_engine.py",
+  "native_engine": true
+}

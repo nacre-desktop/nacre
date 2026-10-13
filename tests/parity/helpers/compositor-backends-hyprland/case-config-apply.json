@@ -1,0 +1,43 @@
+{
+  "helper": "compositor-backends-hyprland",
+  "args": [
+    "Backend.apply_config",
+    "{\"args\": [\"hl.config({ general = { gaps_in = 4 } })\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/compositor_backends/hyprland.py",
+  "commands": {
+    "hyprctl": [
+      {
+        "argv": [
+          "monitors",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "workspaces",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "clients",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "activewindow",
+          "-j"
+        ],
+        "stdout": "{}"
+      },
+      {
+        "stdout": "ok\n"
+      }
+    ]
+  }
+}

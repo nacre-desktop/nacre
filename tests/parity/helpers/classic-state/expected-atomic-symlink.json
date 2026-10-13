@@ -1,0 +1,16 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/demo": {
+      "link": "/case/home/target"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

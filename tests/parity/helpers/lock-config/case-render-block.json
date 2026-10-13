@@ -1,0 +1,8 @@
+{
+  "helper": "lock-config",
+  "args": [
+    "block",
+    "{\"args\": [\"label\", \"DP-1\"], \"kwargs\": {\"text\": \"Public fixture\", \"font_size\": 16}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/lock-config.py"
+}

@@ -1,0 +1,42 @@
+{
+  "helper": "desktop-settings",
+  "args": [
+    "set",
+    "{\"unknown\":true}"
+  ],
+  "commands": {
+    "hyprctl": [
+      {
+        "argv": [
+          "monitors",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "workspaces",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "clients",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "activewindow",
+          "-j"
+        ],
+        "stdout": "{}"
+      },
+      {
+        "stdout": "ok\n"
+      }
+    ]
+  }
+}

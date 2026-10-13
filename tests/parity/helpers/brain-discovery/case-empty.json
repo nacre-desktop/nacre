@@ -1,0 +1,8 @@
+{
+  "helper": "brain-discovery",
+  "args": [
+    "organize",
+    "{\"args\": [[]], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py brain/discovery.py"
+}

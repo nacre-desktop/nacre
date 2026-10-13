@@ -1,0 +1,45 @@
+{
+  "helper": "compositor",
+  "args": [
+    "action",
+    "configure_monitors",
+    "--records",
+    "[{\"output\": \"DP-1\", \"width\": 1920, \"height\": 1080, \"refreshRate\": 60, \"scale\": 1, \"x\": 0, \"y\": 0}]"
+  ],
+  "stdout": "text",
+  "commands": {
+    "hyprctl": [
+      {
+        "argv": [
+          "monitors",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "workspaces",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "clients",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "activewindow",
+          "-j"
+        ],
+        "stdout": "{}"
+      },
+      {
+        "stdout": "ok\n"
+      }
+    ]
+  }
+}

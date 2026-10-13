@@ -1,0 +1,16 @@
+{
+  "helper": "compositor",
+  "args": [
+    "query",
+    "windows"
+  ],
+  "stdout": "text",
+  "commands": {
+    "hyprctl": [
+      {
+        "code": 1,
+        "stderr": "fixture query failed\n"
+      }
+    ]
+  }
+}

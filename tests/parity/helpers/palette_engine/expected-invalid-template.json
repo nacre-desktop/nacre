@@ -1,0 +1,20 @@
+{
+  "stdout": {
+    "error": "Missing or invalid color template token: unsupported",
+    "type": "ValueError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "orient",
+      "argv": [
+        "--rpc",
+        "--serve"
+      ],
+      "stdin": "{\"id\": 1, \"operation\": \"render_values\", \"payload\": {\"template\": \"{{ unsupported }}\", \"values\": {}, \"schemes\": null, \"image\": null, \"custom\": null, \"data\": null}}\n"
+    }
+  ],
+  "ipc": []
+}

@@ -1,0 +1,47 @@
+{
+  "stdout": {
+    "preferences": {
+      "tabs": [
+        "focus",
+        "today"
+      ],
+      "homeZone": "",
+      "homeCity": "",
+      "calendarFile": "",
+      "lyrics": true,
+      "albumPalette": true,
+      "focusMinutes": 40
+    },
+    "focus": {},
+    "home": {},
+    "calendar": {
+      "events": [],
+      "error": "",
+      "configured": false
+    },
+    "brain": {},
+    "checked": "<timestamp>"
+  },
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/dashboard.json": {
+      "mode": "0o600",
+      "text": "{\"tabs\": [\"focus\", \"today\"], \"homeZone\": \"\", \"homeCity\": \"\", \"calendarFile\": \"\", \"lyrics\": true, \"albumPalette\": true, \"focusMinutes\": 40}"
+    },
+    "home/.config/nacre/dashboard.lock": {
+      "mode": "0o644",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

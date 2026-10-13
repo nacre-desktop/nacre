@@ -1,0 +1,21 @@
+{
+  "stdout": {
+    "message": "Web app removed"
+  },
+  "exit": 0,
+  "files": {
+    "home/.local/state/nacre/menu/webapps.json": {
+      "mode": "0o600",
+      "text": "[]"
+    },
+    "home/.local/state/nacre/menu/webapps.lock": {
+      "mode": "0o600",
+      "text": ""
+    }
+  },
+  "deleted": [
+    "home/.local/share/applications/nacre-web-00000000000000000000000000000000.desktop"
+  ],
+  "effects": [],
+  "ipc": []
+}

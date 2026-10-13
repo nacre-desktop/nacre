@@ -1,0 +1,62 @@
+{
+  "helper": "session-watch",
+  "args": [
+    "check",
+    "{\"args\": [\"fixture\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/session-watch.py",
+  "commands": {
+    "hyprctl": [
+      {
+        "argv": [
+          "monitors",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "workspaces",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "clients",
+          "-j"
+        ],
+        "stdout": "[]"
+      },
+      {
+        "argv": [
+          "activewindow",
+          "-j"
+        ],
+        "stdout": "{}"
+      },
+      {
+        "stdout": "ok\n"
+      }
+    ]
+  },
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/checked",
+      "reason": "session observation datetime.now()"
+    },
+    {
+      "kind": "timestamp",
+      "pointer": "/files/home~1.local~1state~1nacre~1session~1events.jsonl/text",
+      "json_pointer": "/checked",
+      "reason": "same timestamp in single event line"
+    },
+    {
+      "kind": "timestamp",
+      "pointer": "/files/home~1.local~1state~1nacre~1session~1latest.json/text",
+      "json_pointer": "/checked",
+      "reason": "same timestamp in latest observation"
+    }
+  ]
+}

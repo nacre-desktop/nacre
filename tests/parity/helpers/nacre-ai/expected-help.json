@@ -1,0 +1,8 @@
+{
+  "stdout": "usage: nacre-ai [-h] [--project PROJECT] [--agent {codex,claude}]\n                [--account ACCOUNT]\n                [{dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}]\n\nLaunch independent local or SSH Codex tasks, sessions, and the personal vault.\n\npositional arguments:\n  {dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}\n\noptions:\n  -h, --help            show this help message and exit\n  --project PROJECT\n  --agent {codex,claude}\n  --account ACCOUNT     Account profile override for this invocation;\n                        providers keep separate logins and histories\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}
