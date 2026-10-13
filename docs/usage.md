@@ -1,46 +1,198 @@
 # Using Nacre
 
-Open the universal launcher with Super+Space. Search apps or desktop actions; Enter
-opens the selected result after searching. `>` scopes actions, `=` opens the
-calculator, `#` searches optional Brain notes and `?` opens optional AI. Favorites
-can be managed on hover or with Ctrl+D. Sections include apps, capture, appearance,
-setup, software, health, shortcuts and power.
+Open the launcher with Super+Space. Search apps or desktop actions, then press
+Enter to open the selected result. `>` scopes actions, `=` opens the calculator,
+`#` searches optional Brain notes and `?` opens optional AI. Manage favorites on
+hover or with Ctrl+D. Super+I opens Settings; Super+K opens the shortcut list.
 
-Super+I opens Settings. Use Colors to compare wallpaper palettes without applying;
-Apply publishes the selected wallpaper/colors. Natural is the wallpaper balance,
-Pop emphasizes contrasting details, and the other styles offer calm, misty, vivid,
-pearl or time-aware palettes. Dark/light and background tint are separate choices.
-Wallpaper selection preserves dynamic playback; motion/battery preferences live in
-Settings. Welcome introduces colors, shortcuts and optional apps on first use.
+Colors previews wallpaper palettes before applying. Natural keeps the image's
+balance; Pop brings out contrasting details. Other styles offer softer or more
+vivid palettes. Dark/light and background tint are separate choices. Applying
+publishes the wallpaper and colors. Static and animated wallpapers share the
+picker; motion and battery preferences live in Settings. Welcome introduces the
+main controls on first use.
 
 Super+Z hides or shows the shell frame and panels. The wallpaper stays visible,
-and tiled windows expand into the space freed by the frame. Toggling it back
-restores the frame reservation without changing your configured window gaps.
+and tiled windows gain the freed space. Showing the frame restores its reserved
+space without changing configured gaps. Super+Q closes the current window;
+put-away/undo is a separate Hyprland profile opt-in. Super+L locks, and
+Super+Escape or Super+X opens the power menu.
 
-Use Super+Q to close the current window on both compositors. Trash/undo shortcuts
-are an explicit personal-profile opt-in on Hyprland; the general profile does not
-assign them or Super+Ctrl+Q. On Hyprland, Super+M maximizes the window.
-Super+Tab opens overview; Super+Ctrl+Left/Right switches workspaces.
-Super+L locks the desktop; Super+Escape (or Super+X) opens the power menu.
-The launcher can show the current key bindings under Learn. Actual keys can differ
-with private overrides. Notifications expire and can be reviewed in history;
-Do not disturb controls popup presentation. Night light warms display colors;
-Stay awake temporarily inhibits idle actions. Quick controls show their state.
+Notifications can be reviewed in history; Do not disturb suppresses popups.
+Night light warms display colors, and Stay awake temporarily inhibits idle
+actions. On niri, night light needs wlsunset and output gamma control. Niri display
+changes support scale, mode and extension with rollback; mirroring is unavailable.
+Read [Nacre on niri](../README.md#nacre-on-niri) for limits.
 
-On niri, trash/undo, minimize, scratchpad
-and sticky-window bindings are unavailable. Number keys select existing workspaces
-on the focused output; their display numbers can change. Super+G switches a column
-to tabs, and Super+Ctrl+Page Up/Down cycles its tabs. Alt+Tab cycles windows in the
-active workspace by creation order. Native overview hover titles require the
-niri overview companion; stock niri explains that limit. Live thumbnails are disabled.
-Print opens niri's screenshot picker; Super+Print saves the focused output. The
-launcher capture helper retains full-desktop capture. Niri display controls support
-scale, mode and extension with automatic rollback; mirroring is disabled. Night
-light requires wlsunset and output gamma control. [Acceptance details](development/niri-parity.md)
-cover the remaining hardware/session checks.
+[Optional AI and Brain](optional-apps.md) need separate setup. Supported panels
+can [open as ordinary windows](detachable-panels.md): Super+Ctrl+D detaches the
+open panel. Hyprland also supports holding Super and dragging it away from the edge.
 
-AI and Brain are optional. Core Nacre works without either. Installing their code
-does not sign into providers, download models or populate your memory vault.
-See their [setup guide](optional-apps.md).
+## Shortcut reference
 
-Panels can [open as ordinary windows](detachable-panels.md). Hold Super and drag an open panel away from its edge; Super+Ctrl+D lifts it in place.
+**Super** is usually the Windows key. These tables are generated defaults; private
+overrides may differ. Hyprland's launcher shortcut list reads current session
+bindings; niri shows generated bindings because private binding introspection is
+unavailable. Hardware keys need the corresponding device and installed tools.
+For custom bindings and the trash opt-in, see [configuration](configuration.md).
+
+<!-- BEGIN GENERATED KEYBINDINGS -->
+
+<!-- Generated by tools/generate_usage_keybindings.py; edit the contract, not these tables. -->
+
+## Hyprland shortcuts
+
+| Keys | Action |
+| --- | --- |
+| Audio mute key | Mute audio |
+| Volume down key | Lower volume |
+| Volume up key | Raise volume |
+| Microphone mute key | Mute microphone |
+| Power key / Super + L | Lock the session |
+| Brightness down key | Lower display brightness |
+| Brightness up key | Raise display brightness |
+| Keyboard backlight up key | Raise keyboard backlight |
+| Keyboard backlight down key | Lower keyboard backlight |
+| Super + . / Super + Ctrl + E | Emoji picker |
+| Print Screen / Super + Shift + S | Capture an area to the clipboard |
+| Super + Print Screen | Save a desktop screenshot |
+| Super + Q | Close the window |
+| Super + H | Hide the window |
+| Super + Shift + H | Restore the last hidden window |
+| Super + Alt + H | Restore hidden windows on this workspace |
+| Super + F | Toggle fullscreen |
+| Super + M | Toggle maximization |
+| Super + T | Toggle floating |
+| Super + P | Keep the window on all workspaces |
+| Super + Shift + P | Toggle pseudo tiling |
+| Super + G | Toggle window group |
+| Super + Ctrl + Page Up | Previous window in window group |
+| Super + Ctrl + Page Down | Next window in window group |
+| Super + J | Toggle split direction |
+| Super + right mouse button | Resize the window by dragging |
+| Alt + Tab | Cycle windows forward |
+| Alt + Shift + Tab | Cycle windows backward |
+| Super + 1–9 / Super + 0 | Switch to workspace 1–10 (0 selects 10) |
+| Super + Shift + 1–9 / Super + Shift + 0 | Move the window to workspace 1–10 (0 selects 10) |
+| Super + Ctrl + Right / Super + scroll down | Switch to next workspace |
+| Super + Ctrl + Left / Super + scroll up | Switch to previous workspace |
+| Super + Ctrl + Shift + Left | Move the window to previous workspace |
+| Super + Ctrl + Shift + Right | Move the window to next workspace |
+| Super + S | Toggle scratchpad |
+| Super + Ctrl + S | Move the window to scratchpad |
+| Super + Left | Focus left |
+| Super + Shift + Left | Move the window left |
+| Super + Alt + Left / Left (resize mode) | Decrease width |
+| Super + Right | Focus right |
+| Super + Shift + Right | Move the window right |
+| Super + Alt + Right / Right (resize mode) | Increase width |
+| Super + Up | Focus up |
+| Super + Shift + Up | Move the window up |
+| Super + Alt + Up / Up (resize mode) | Decrease height |
+| Super + Down | Focus down |
+| Super + Shift + Down | Move the window down |
+| Super + Alt + Down / Down (resize mode) | Increase height |
+| Super + R | Enter resize mode |
+| Escape (resize mode) / Enter (resize mode) / Super + R (resize mode) | Exit resize mode |
+| Super + Space | Universal launcher |
+| Super + Tab | Window overview |
+| Super + V | Clipboard history |
+| Super + W | Wallpaper picker |
+| Super + Z | Hide or show the shell frame and panels |
+| Super + O | Toggle the main panel |
+| Super + I | Nacre Settings |
+| Super + Ctrl + C | Capture menu |
+| Super + X / Super + Escape | Power menu |
+| Super + Shift + R | Reload compositor configuration |
+| Super + Enter | Default terminal |
+| Super + Shift + B | Default browser |
+| Super + E | Default file manager |
+| Super + B | Optional Brain |
+| Super + N | Capture a note in optional Brain |
+| Super + Ctrl + Space | Command palette |
+| Super + K / Super + F1 | Shortcut list |
+| Super + A | Optional AI sidebar |
+| Escape | Dismiss hover panels (also passes Escape to the app) |
+| Super + Ctrl + D | Detach the open panel |
+| Super + left mouse button | Move a panel or window by dragging |
+| left mouse button (release) | Finish dragging a panel or window |
+
+## Niri shortcuts
+
+Number keys select existing workspaces on the focused output; their numbers can change.
+
+| Keys | Action |
+| --- | --- |
+| Audio mute key | Mute audio |
+| Volume down key | Lower volume |
+| Volume up key | Raise volume |
+| Microphone mute key | Mute microphone |
+| Power key / Super + L | Lock the session |
+| Brightness down key | Lower display brightness |
+| Brightness up key | Raise display brightness |
+| Keyboard backlight up key | Raise keyboard backlight |
+| Keyboard backlight down key | Lower keyboard backlight |
+| Super + . / Super + Ctrl + E | Emoji picker |
+| Print Screen / Super + Shift + S | Open niri's screenshot picker |
+| Super + Print Screen | Save a screenshot of the focused output |
+| Super + Q | Close the window |
+| Super + F | Toggle fullscreen |
+| Super + M | Toggle maximization |
+| Super + T | Toggle floating |
+| Super + G | Toggle column tabs |
+| Super + Ctrl + Page Up | Previous window in column tabs |
+| Super + Ctrl + Page Down | Next window in column tabs |
+| Alt + Tab | Cycle windows forward |
+| Alt + Shift + Tab | Cycle windows backward |
+| Super + 1–9 / Super + 0 | Switch to workspace 1–10 (0 selects 10) |
+| Super + Shift + 1–9 / Super + Shift + 0 | Move the window to workspace 1–10 (0 selects 10) |
+| Super + Ctrl + Right / Super + scroll down | Switch to next workspace |
+| Super + Ctrl + Left / Super + scroll up | Switch to previous workspace |
+| Super + Ctrl + Shift + Left | Move the window to previous workspace |
+| Super + Ctrl + Shift + Right | Move the window to next workspace |
+| Super + Left | Focus left |
+| Super + Shift + Left | Move the window left |
+| Super + Alt + Left | Decrease width |
+| Super + Right | Focus right |
+| Super + Shift + Right | Move the window right |
+| Super + Alt + Right | Increase width |
+| Super + Up | Focus up |
+| Super + Shift + Up | Move the window up |
+| Super + Alt + Up | Decrease height |
+| Super + Down | Focus down |
+| Super + Shift + Down | Move the window down |
+| Super + Alt + Down | Increase height |
+| Super + Space | Universal launcher |
+| Super + Tab | Window overview |
+| Super + V | Clipboard history |
+| Super + W | Wallpaper picker |
+| Super + Z | Hide or show the shell frame and panels |
+| Super + O | Toggle the main panel |
+| Super + I | Nacre Settings |
+| Super + Ctrl + C | Capture menu |
+| Super + X / Super + Escape | Power menu |
+| Super + Shift + R | Reload compositor configuration |
+| Super + Enter | Default terminal |
+| Super + Shift + B | Default browser |
+| Super + E | Default file manager |
+| Super + B | Optional Brain |
+| Super + N | Capture a note in optional Brain |
+| Super + Ctrl + Space | Command palette |
+| Super + K / Super + F1 | Shortcut list |
+| Super + A | Optional AI sidebar |
+| Super + Ctrl + D | Detach the open panel |
+
+## Personal trash shortcuts (opt-in, Hyprland only)
+
+Enable `windowTrashBindings` in your profile. These are absent from the default profile
+and unavailable on niri. Super + Q still closes immediately. After the put-away
+deadline, a window that resists closing can be forcibly terminated; save work first.
+
+| Keys | Action |
+| --- | --- |
+| Super + Ctrl + Q | Put away the window; close after 30 seconds (opt-in) |
+| Super + Shift + Q | Undo the last put-away within 30 seconds (opt-in) |
+| Super + Alt + Q | Restore all windows still put away (opt-in) |
+| Super + Ctrl + Shift + Q | Force close the window (opt-in) |
+
+<!-- END GENERATED KEYBINDINGS -->

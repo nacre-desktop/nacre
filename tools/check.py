@@ -104,6 +104,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args()
     check_home_paths()
+    run([sys.executable, str(ROOT / "tools/generate_usage_keybindings.py"), "--check"])
+    print("Shortcut documentation matches the compositor contract.", flush=True)
     for path in RETIRED:
         if (ROOT / path).exists():
             raise RuntimeError("Retired desktop tree reintroduced: " + path)
