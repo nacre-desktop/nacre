@@ -346,11 +346,19 @@ def execute(case, command, trace=None):
             sandbox += ["--ro-bind", str(HERE / "fake.py"), "/usr/bin/" + name]
         for key, value in env.items():
             sandbox += ["--setenv", key, value]
+        identity = {}
+        if os.getuid() == 0:
+            # CI is root; fixture ownership is input, not an output normalization.
+            for path in [root, *root.rglob("*")]:
+                os.chown(path, 1000, 1000, follow_symlinks=False)
+            identity = {"user": 1000, "group": 1000, "extra_groups": []}
         daemon = peer = None
         if case.get("dbus"):
             import dbus_next
 
             (root / "support").mkdir()
+            if identity:
+                os.chown(root / "support", 1000, 1000)
             sandbox += [
                 "--ro-bind",
                 str(Path(dbus_next.__file__).parent),
@@ -360,6 +368,8 @@ def execute(case, command, trace=None):
                 "/case/support:" + env["PYTHONPATH"],
             ]
             (root / "dbus-fixtures.json").write_text(json.dumps(expand(case["dbus"])))
+            if identity:
+                os.chown(root / "dbus-fixtures.json", 1000, 1000)
             daemon = subprocess.Popen(
                 [
                     "dbus-daemon",
@@ -372,6 +382,7 @@ def execute(case, command, trace=None):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                **identity,
             )
             if not daemon.stdout.readline().startswith("unix:"):
                 raise RuntimeError("Private fixture bus did not start")
@@ -380,6 +391,7 @@ def execute(case, command, trace=None):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                **identity,
             )
             try:
                 read_packet(peer)
@@ -387,12 +399,8 @@ def execute(case, command, trace=None):
                 peer.kill()
                 daemon.kill()
                 raise
-            # SASL EXTERNAL uses the host UID for this private socket; no UID
-            # appears in these contracts. The ordinary filesystem cases use 1000.
-            uid_index = sandbox.index("--uid") + 1
-            sandbox[uid_index] = str(os.getuid())
-            gid_index = sandbox.index("--gid") + 1
-            sandbox[gid_index] = str(os.getgid())
+            # Bus and helper children share the same fixture UID mapping, so
+            # EXTERNAL authentication sees 1000 even when the CI parent is root.
             sandbox += [
                 "--setenv",
                 "DBUS_SESSION_BUS_ADDRESS",
@@ -410,6 +418,9 @@ def execute(case, command, trace=None):
             (root / "bin/orient").write_bytes((HERE / "fake.py").read_bytes())
             (root / "bin/orient").chmod(0o755)
             (root / "native-orient").touch()
+            if identity:
+                os.chown(root / "bin/orient", 1000, 1000)
+                os.chown(root / "native-orient", 1000, 1000)
             sandbox += [
                 "--ro-bind",
                 str(Path(engine).resolve()),
@@ -427,6 +438,7 @@ def execute(case, command, trace=None):
                 stderr=subprocess.PIPE,
                 text=True,
                 bufsize=1,
+                **identity,
             ) as process:
                 packets = []
                 try:
