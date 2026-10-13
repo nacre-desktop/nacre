@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0.dev5",
-  "engine": "orient-0.1.0.dev5-55b192008cc8-eb85870464b0",
-  "decoder": "eb85870464b039be3329e37d254279649e2da1afe788ec26b4e4b93b4fbd4199",
+  "version": "0.1.0.dev6",
+  "engine": "orient-0.1.0.dev6-55b192008cc8-c8a5bd24dad2",
+  "decoder": "c8a5bd24dad288bc10fe53e3941791eb5d746e9ab11cca3952b9aaf6888db9dc",
   "interfaceVersion": 1
 }
