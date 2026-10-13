@@ -10,11 +10,13 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
 # Standalone helpers share the translation runtime during source-tree tooling.
 sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
 RETIRED = (
+    "nacre/shell-tools/tests/qml_source.py",
     "nacre/login/issue",
     "nacre/shell/run.fish",
     "waybar",
@@ -36,7 +38,14 @@ RETIRED = (
 
 
 def run(command, env=None, stdout_only=False):
-    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, env=env)
+    result = subprocess.run(
+        command,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        env=env,
+        stdin=subprocess.DEVNULL,
+    )
     if result.returncode:
         raise RuntimeError(result.stdout + result.stderr)
     return result.stdout if stdout_only else result.stdout + result.stderr
@@ -55,6 +64,8 @@ def test_environment():
         "XDG_CURRENT_DESKTOP",
         "WAYLAND_DISPLAY",
         "QT_LOGGING_RULES",
+        "QML_IMPORT_PATH",
+        "QML2_IMPORT_PATH",
     ):
         environment.pop(key, None)
     environment["QT_QPA_PLATFORM"] = "offscreen"
@@ -263,7 +274,15 @@ def main():
 if __name__ == "__main__":
     # Static config analyses also need checkout routing. This changes only the
     # checker process, leaving the invoking desktop/deployment environment intact.
-    isolated = test_environment()
-    os.environ.clear()
-    os.environ.update(isolated)
-    main()
+    with tempfile.TemporaryDirectory(prefix="nacre-check-home-") as folder:
+        isolated = test_environment()
+        isolated.update(
+            HOME=folder,
+            XDG_CONFIG_HOME=str(Path(folder) / "config"),
+            XDG_CACHE_HOME=str(Path(folder) / "cache"),
+            XDG_STATE_HOME=str(Path(folder) / "state"),
+            XDG_DATA_HOME=str(Path(folder) / "data"),
+        )
+        os.environ.clear()
+        os.environ.update(isolated)
+        main()

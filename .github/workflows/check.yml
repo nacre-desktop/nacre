@@ -13,11 +13,45 @@ jobs:
       # Bubblewrap supplies an inner disposable filesystem/user namespace.
       options: --cap-add=SYS_ADMIN --cap-add=NET_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined
     steps:
+      - name: Rolling package cache key
+        id: cache_epoch
+        run: printf 'week=%s\n' "$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - name: Restore Arch packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: /var/cache/pacman/pkg
+          key: arch-pacman-${{ runner.arch }}-${{ steps.cache_epoch.outputs.week }}
+          restore-keys: arch-pacman-${{ runner.arch }}-
       - name: Install target-platform checks
         run: pacman -Syu --noconfirm --needed git python python-pip python-pillow ruff lua fish qt6-declarative qt6-wayland quickshell qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats gcc pkgconf rust lcms2 cmake make gtk3 librsvg kconfig kcolorscheme breeze nodejs npm xorg-server-xvfb xorg-xauth mesa dbus ttf-dejavu
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           submodules: recursive
+      - name: Tool cache identity
+        id: tools
+        run: |
+          printf 'python=%s\n' "$(python -c 'import sys; print(sys.version.split()[0])')" >> "$GITHUB_OUTPUT"
+          printf 'rust=%s\n' "$(rustc --version | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Restore check environment
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: /tmp/check-env
+          key: arch-venv-${{ runner.arch }}-${{ steps.tools.outputs.python }}-${{ hashFiles('dependencies.lock.json', 'nacre/shell-cli/**', 'ruff.toml') }}
+      - name: Restore Cargo downloads and builds
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            deps/orient/target
+            target
+          key: arch-cargo-${{ runner.arch }}-${{ steps.tools.outputs.rust }}-${{ hashFiles('dependencies.lock.json', 'Cargo.lock', 'Cargo.toml', 'crates/**') }}
+          restore-keys: arch-cargo-${{ runner.arch }}-${{ steps.tools.outputs.rust }}-
+      - name: Restore npm downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.npm
+          key: arch-npm-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
       - name: Install the pinned palette engine in an isolated environment
         run: |
           cargo build --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
@@ -58,3 +92,67 @@ jobs:
         run: |
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --download-fonts --output /tmp/nacre-pseudo-audit
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --font-directory /tmp/nacre-pseudo-audit/fonts --text-family "DejaVu Sans" --output /tmp/nacre-pseudo-wide-font colors controls launcher chat summary
+      - name: Candidate engine for fresh-install tests
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: smoke-engine
+          path: deps/orient/target/release/orient
+          retention-days: 3
+      - name: Native gallery evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-gallery
+          path: |
+            /tmp/nacre-pseudo-audit
+            /tmp/nacre-pseudo-wide-font
+          retention-days: 7
+  fresh-install:
+    needs: desktop
+    runs-on: ubuntu-24.04
+    container: ghcr.io/archlinux/archlinux:latest
+    timeout-minutes: 10
+    steps:
+      - name: Rolling package cache key
+        id: cache_epoch
+        run: printf 'week=%s\n' "$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - name: Restore smoke packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: /var/cache/pacman/pkg
+          key: arch-smoke-pacman-${{ runner.arch }}-${{ steps.cache_epoch.outputs.week }}
+          restore-keys: arch-smoke-pacman-${{ runner.arch }}-
+      - name: Install nested compositor test dependencies
+        run: pacman -Syu --noconfirm --needed git python python-pip python-pillow qt6-declarative qt6-wayland quickshell qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats niri hyprland grim xorg-server-xvfb mesa dbus ttf-dejavu
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Download candidate engine
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: smoke-engine
+          path: /tmp/smoke-engine
+      - name: Install candidate test runtime
+        run: |
+          python -m venv /tmp/smoke-env
+          python - <<'PY'
+          import json, subprocess
+          pins = json.load(open("dependencies.lock.json"))["python"]
+          subprocess.run(["/tmp/smoke-env/bin/pip", "install", "./nacre/shell-cli", *[name + "==" + version for name, version in pins.items()]], check=True)
+          PY
+          chmod +x /tmp/smoke-engine/orient
+      - name: Fresh default install in nested niri
+        env:
+          NACRE_ORIENT_BINARY: /tmp/smoke-engine/orient
+        run: PATH="/tmp/smoke-env/bin:$PATH" python tools/tests/smoke_install.py --output /tmp/nacre-install-smoke
+      - name: Fresh default install in headless Hyprland when available
+        env:
+          NACRE_ORIENT_BINARY: /tmp/smoke-engine/orient
+        run: PATH="/tmp/smoke-env/bin:$PATH" python tools/tests/smoke_install.py --compositor hyprland --allow-unavailable-compositor --output /tmp/nacre-install-smoke-hyprland
+      - name: Fresh-install evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fresh-install-niri
+          path: |
+            /tmp/nacre-install-smoke
+            /tmp/nacre-install-smoke-hyprland
+          retention-days: 7
