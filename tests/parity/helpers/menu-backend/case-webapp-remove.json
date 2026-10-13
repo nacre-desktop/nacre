@@ -1,0 +1,11 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "webapp-remove",
+    "00000000000000000000000000000000"
+  ],
+  "fixtures": {
+    "home/.local/state/nacre/menu/webapps.json": "[{\"id\": \"00000000000000000000000000000000\", \"label\": \"Demo\", \"url\": \"https://example.invalid\"}]",
+    "home/.local/share/applications/nacre-web-00000000000000000000000000000000.desktop": "owned public fixture"
+  }
+}

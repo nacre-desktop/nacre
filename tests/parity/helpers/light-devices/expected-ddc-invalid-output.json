@@ -1,0 +1,22 @@
+{
+  "stdout": {
+    "error": "Light control failed; refresh the controls and check device access."
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "ddcutil",
+      "argv": [
+        "--bus",
+        "4",
+        "--brief",
+        "getvcp",
+        "10"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

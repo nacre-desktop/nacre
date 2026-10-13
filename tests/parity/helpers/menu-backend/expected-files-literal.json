@@ -1,0 +1,38 @@
+{
+  "stdout": {
+    "rows": [
+      {
+        "path": "/case/home/Documents/report.pdf",
+        "name": "report.pdf",
+        "id": "e4fcba2715b091120232"
+      },
+      {
+        "path": "/case/home/Documents/ignore.txt",
+        "name": "ignore.txt",
+        "id": "edd3a426860206a9cda0"
+      }
+    ]
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "fd",
+      "argv": [
+        "--type",
+        "f",
+        "--fixed-strings",
+        "--ignore-case",
+        "--max-results",
+        "50",
+        "--print0",
+        "--",
+        "report",
+        "/case/home/Documents"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

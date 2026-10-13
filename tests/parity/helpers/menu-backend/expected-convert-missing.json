@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "ok": false,
+    "error": "Install libqalculate for unit and currency conversions"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

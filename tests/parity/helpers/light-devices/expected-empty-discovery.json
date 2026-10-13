@@ -1,0 +1,12 @@
+{
+  "stdout": {
+    "backlight": null,
+    "keyboard": null,
+    "ddc": []
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

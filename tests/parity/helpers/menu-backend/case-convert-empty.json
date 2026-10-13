@@ -1,0 +1,14 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "convert",
+    ""
+  ],
+  "commands": {
+    "qalc": [
+      {
+        "stdout": "6.2137 mi\n"
+      }
+    ]
+  }
+}

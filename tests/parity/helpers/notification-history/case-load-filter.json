@@ -1,0 +1,9 @@
+{
+  "helper": "notification-history",
+  "args": [
+    "load"
+  ],
+  "fixtures": {
+    "home/.local/state/nacre/shell/notifications/history.json": "[{\"summary\": \"Public note\", \"appName\": \"Demo\"}, {\"summary\": \"Transient\", \"transient\": true}]"
+  }
+}

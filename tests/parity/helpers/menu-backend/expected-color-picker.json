@@ -1,0 +1,30 @@
+{
+  "stdout": {
+    "message": "Color copied"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprpicker",
+      "argv": [
+        "-a"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "notify-send",
+      "argv": [
+        "-a",
+        "Nacre Capture",
+        "-i",
+        "nacre-notifications",
+        "Nacre",
+        "Color copied"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

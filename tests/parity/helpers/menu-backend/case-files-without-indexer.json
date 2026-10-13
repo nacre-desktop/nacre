@@ -1,0 +1,10 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "files",
+    "report"
+  ],
+  "fixtures": {
+    "home/Documents/report.pdf": "public fixture"
+  }
+}

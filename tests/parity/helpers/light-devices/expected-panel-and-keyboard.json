@@ -1,0 +1,22 @@
+{
+  "stdout": {
+    "backlight": {
+      "kind": "backlight",
+      "device": "panel",
+      "maximum": 100,
+      "current": 50
+    },
+    "keyboard": {
+      "kind": "keyboard",
+      "device": "demo::kbd_backlight",
+      "maximum": 3,
+      "current": 1
+    },
+    "ddc": []
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,15 @@
+{
+  "stdout": {
+    "error": "Invalid launcher preferences; original file preserved"
+  },
+  "exit": 1,
+  "files": {
+    "home/.config/nacre/launcher.lock": {
+      "mode": "0o600",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,10 @@
+{
+  "stdout": {
+    "error": "Light control failed; refresh the controls and check device access."
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

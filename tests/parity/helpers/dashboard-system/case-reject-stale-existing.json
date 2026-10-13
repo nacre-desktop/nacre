@@ -1,0 +1,12 @@
+{
+  "helper": "dashboard-system",
+  "args": [
+    "end",
+    "123",
+    "999"
+  ],
+  "fixtures": {
+    "proc/mounts": "",
+    "proc/123/stat": "123 (demo worker) S 1 0 0 0 0 0 0 0 0 0 100 50 0 0 0 0 0 0 1000 0 10 0 0 0"
+  }
+}

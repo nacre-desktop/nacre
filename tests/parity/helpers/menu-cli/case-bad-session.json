@@ -1,0 +1,9 @@
+{
+  "helper": "menu-cli",
+  "args": [
+    "read-request",
+    "../escape"
+  ],
+  "stdout": "text",
+  "compare_stderr": true
+}

@@ -1,0 +1,12 @@
+{
+  "helper": "network-state",
+  "args": [],
+  "commands": {
+    "nmcli": [
+      {
+        "code": 10,
+        "stderr": "fixture unavailable\n"
+      }
+    ]
+  }
+}

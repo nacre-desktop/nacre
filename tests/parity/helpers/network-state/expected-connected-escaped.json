@@ -1,0 +1,83 @@
+{
+  "stdout": {
+    "wifiEnabled": true,
+    "wifiAvailable": true,
+    "wifiInterface": "wlan0",
+    "networks": [
+      {
+        "ssid": "Cafe:Desk",
+        "bssid": "AA:BB:CC:DD:EE:01",
+        "strength": 75,
+        "frequency": 2412,
+        "active": true,
+        "interface": "wlan0"
+      },
+      {
+        "ssid": "Other",
+        "bssid": "AA:BB:CC:DD:EE:02",
+        "strength": 44,
+        "frequency": 5180,
+        "active": false,
+        "interface": "wlan0"
+      }
+    ]
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "nmcli",
+      "argv": [
+        "--terse",
+        "--escape",
+        "yes",
+        "--colors",
+        "no",
+        "--wait",
+        "5",
+        "radio",
+        "wifi"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "nmcli",
+      "argv": [
+        "--terse",
+        "--escape",
+        "yes",
+        "--colors",
+        "no",
+        "--wait",
+        "5",
+        "--fields",
+        "DEVICE,TYPE,STATE",
+        "device",
+        "status"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "nmcli",
+      "argv": [
+        "--terse",
+        "--escape",
+        "yes",
+        "--colors",
+        "no",
+        "--wait",
+        "5",
+        "--fields",
+        "IN-USE,SSID,BSSID,SIGNAL,FREQ,DEVICE",
+        "device",
+        "wifi",
+        "list",
+        "--rescan",
+        "no"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

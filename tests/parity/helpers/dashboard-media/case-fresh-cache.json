@@ -1,0 +1,9 @@
+{
+  "helper": "dashboard-media",
+  "args": [
+    "{\"title\": \"Public\"}"
+  ],
+  "fixtures": {
+    "home/.cache/nacre/dashboard-media/fddbf7c0b6997bfb62debb3e5c23c9267346c3d104034e6ed6cd397f2c868a8f.json": "{\"cacheSeconds\": 9999999999, \"key\": \"cached-public\", \"plain\": \"Fixture lyrics\", \"lines\": [], \"palette\": {}}"
+  }
+}

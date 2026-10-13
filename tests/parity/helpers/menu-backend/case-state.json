@@ -1,0 +1,38 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "state",
+    "--force"
+  ],
+  "commands": {
+    "pacman": [
+      {
+        "stdout": "demo 1.2\n"
+      }
+    ],
+    "fc-list": [
+      {
+        "stdout": "Fixture Sans\nFixture Sans\nOther Sans\n"
+      }
+    ],
+    "systemctl": [
+      {
+        "stdout": "inactive\n",
+        "code": 3
+      }
+    ]
+  },
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/created",
+      "reason": "menu snapshot time.time()"
+    },
+    {
+      "kind": "timestamp",
+      "pointer": "/files/home~1.cache~1nacre~1menu~1state.json/text",
+      "json_pointer": "/created",
+      "reason": "same snapshot timestamp persisted"
+    }
+  ]
+}

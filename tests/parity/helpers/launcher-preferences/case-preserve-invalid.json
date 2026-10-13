@@ -1,0 +1,10 @@
+{
+  "helper": "launcher-preferences",
+  "args": [
+    "favorite"
+  ],
+  "stdin": "{\"id\":\"demo.desktop\",\"enabled\":true}\n",
+  "fixtures": {
+    "home/.config/nacre/launcher.json": "{\"favorites\":false}"
+  }
+}

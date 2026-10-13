@@ -1,0 +1,8 @@
+{
+  "helper": "notification-history",
+  "args": [
+    "save"
+  ],
+  "stdout": "text",
+  "stdin": "[{\"key\": \"demo\", \"time\": 1234, \"summary\": \"Public note\", \"body\": \"Hello\", \"appName\": \"Demo\", \"actions\": [\"private\"], \"transient\": false}, {\"summary\": \"Transient\", \"transient\": true}]\n"
+}

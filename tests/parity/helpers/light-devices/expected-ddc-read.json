@@ -1,0 +1,25 @@
+{
+  "stdout": {
+    "kind": "ddc",
+    "bus": 4,
+    "current": 40,
+    "maximum": 100
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "ddcutil",
+      "argv": [
+        "--bus",
+        "4",
+        "--brief",
+        "getvcp",
+        "10"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

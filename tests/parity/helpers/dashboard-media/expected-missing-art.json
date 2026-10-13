@@ -1,0 +1,32 @@
+{
+  "stdout": {
+    "key": "7ce3b7d99679cfd399aceff3a4c3bb880bf9dee90b305a5942007752df70c567",
+    "lines": [],
+    "plain": "",
+    "palette": {},
+    "lyricsMessage": "No synced lyrics found",
+    "cacheSeconds": 1209600
+  },
+  "exit": 0,
+  "files": {
+    "home/.cache": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre/dashboard-media": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.cache/nacre/dashboard-media/7ce3b7d99679cfd399aceff3a4c3bb880bf9dee90b305a5942007752df70c567.json": {
+      "mode": "0o600",
+      "text": "{\"key\": \"7ce3b7d99679cfd399aceff3a4c3bb880bf9dee90b305a5942007752df70c567\", \"lines\": [], \"plain\": \"\", \"palette\": {}, \"lyricsMessage\": \"No synced lyrics found\", \"cacheSeconds\": 1209600}"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

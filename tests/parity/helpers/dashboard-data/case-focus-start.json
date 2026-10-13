@@ -1,0 +1,25 @@
+{
+  "helper": "dashboard-data",
+  "args": [
+    "focus-start",
+    "{\"minutes\":10,\"dnd\":false}"
+  ],
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/checked",
+      "reason": "dashboard sampling time.time()"
+    },
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/focus/deadline",
+      "reason": "focus start wall-clock deadline"
+    },
+    {
+      "kind": "timestamp",
+      "pointer": "/files/home~1.local~1state~1nacre~1dashboard-focus.json/text",
+      "json_pointer": "/deadline",
+      "reason": "same deadline persisted in private state"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "installed"
+  ],
+  "commands": {
+    "pacman": [
+      {
+        "stdout": "demo 1.2\nother 3.4\nbroken\n"
+      }
+    ]
+  }
+}

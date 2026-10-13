@@ -1,0 +1,14 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {
+    "home/.cache/nacre/menu/requests/00000000000000000000000000000000/response.json": {
+      "mode": "0o600",
+      "text": "{\"cancelled\": false, \"value\": \"1\", \"error\": \"\"}"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": ""
+}

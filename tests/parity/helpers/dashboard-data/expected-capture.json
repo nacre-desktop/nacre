@@ -1,0 +1,84 @@
+{
+  "stdout": {
+    "preferences": {
+      "tabs": [
+        "today",
+        "weather",
+        "media",
+        "system",
+        "focus"
+      ],
+      "homeZone": "",
+      "homeCity": "",
+      "calendarFile": "",
+      "lyrics": true,
+      "albumPalette": true,
+      "focusMinutes": 25
+    },
+    "focus": {},
+    "home": {},
+    "calendar": {
+      "events": [],
+      "error": "",
+      "configured": false
+    },
+    "brain": {
+      "available": true,
+      "recent": [
+        {
+          "title": "Public fixture",
+          "path": "/case/home/Brain/demo.md"
+        }
+      ],
+      "tasks": [
+        {
+          "text": "Read docs",
+          "path": "/case/home/Brain/demo.md"
+        }
+      ],
+      "root": "/case/home/Brain"
+    },
+    "checked": "<timestamp>"
+  },
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/dashboard.lock": {
+      "mode": "0o644",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "nacre-brain",
+      "argv": [
+        "note",
+        "--kind",
+        "inbox",
+        "--title",
+        "Public fixture note",
+        "--source",
+        "Nacre Focus quick capture",
+        "--confidence",
+        "reported"
+      ],
+      "stdin": "Public fixture note\n- [ ] Read docs"
+    },
+    {
+      "command": "nacre-brain",
+      "argv": [
+        "path"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

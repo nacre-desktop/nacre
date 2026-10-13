@@ -1,0 +1,7 @@
+{
+  "helper": "launcher-preferences",
+  "args": [
+    "favorite"
+  ],
+  "stdin": "{\"id\":\"bad\\nname\",\"enabled\":true}\n"
+}

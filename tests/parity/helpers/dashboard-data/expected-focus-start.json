@@ -1,0 +1,69 @@
+{
+  "stdout": {
+    "preferences": {
+      "tabs": [
+        "today",
+        "weather",
+        "media",
+        "system",
+        "focus"
+      ],
+      "homeZone": "",
+      "homeCity": "",
+      "calendarFile": "",
+      "lyrics": true,
+      "albumPalette": true,
+      "focusMinutes": 25
+    },
+    "focus": {
+      "status": "running",
+      "total": 600,
+      "remaining": 600,
+      "deadline": "<timestamp>",
+      "previousDnd": false,
+      "ownsDnd": true
+    },
+    "home": {},
+    "calendar": {
+      "events": [],
+      "error": "",
+      "configured": false
+    },
+    "brain": {},
+    "checked": "<timestamp>"
+  },
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/dashboard.lock": {
+      "mode": "0o644",
+      "text": ""
+    },
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/dashboard-focus.json": {
+      "mode": "0o600",
+      "text": "{\"status\": \"running\", \"total\": 600, \"remaining\": 600, \"deadline\": \"<timestamp>\", \"previousDnd\": false, \"ownsDnd\": true}"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,31 @@
+{
+  "stdout": {
+    "version": 1,
+    "id": "00000000000000000000000000000000",
+    "kind": "pick",
+    "expires": 4000000000,
+    "title": "Demo",
+    "choices": [
+      {
+        "label": "One",
+        "value": "1",
+        "description": "",
+        "icon": "chevron_right",
+        "disabled": false
+      },
+      {
+        "label": "Two",
+        "value": "2",
+        "description": "",
+        "icon": "chevron_right",
+        "disabled": true
+      }
+    ]
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": ""
+}

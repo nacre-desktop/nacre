@@ -1,0 +1,26 @@
+{
+  "stdout": {
+    "error": "NetworkManager is unavailable or did not respond."
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "nmcli",
+      "argv": [
+        "--terse",
+        "--escape",
+        "yes",
+        "--colors",
+        "no",
+        "--wait",
+        "5",
+        "radio",
+        "wifi"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

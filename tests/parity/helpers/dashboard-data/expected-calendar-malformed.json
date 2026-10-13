@@ -1,0 +1,38 @@
+{
+  "stdout": {
+    "preferences": {
+      "tabs": [
+        "today",
+        "weather",
+        "media",
+        "system",
+        "focus"
+      ],
+      "homeZone": "",
+      "homeCity": "",
+      "calendarFile": "/case/home/demo.ics",
+      "lyrics": true,
+      "albumPalette": true,
+      "focusMinutes": 25
+    },
+    "focus": {},
+    "home": {},
+    "calendar": {
+      "events": [],
+      "configured": true,
+      "error": ""
+    },
+    "brain": {},
+    "checked": "<timestamp>"
+  },
+  "exit": 0,
+  "files": {
+    "home/.config/nacre/dashboard.lock": {
+      "mode": "0o644",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

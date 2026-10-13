@@ -1,0 +1,9 @@
+{
+  "helper": "launcher-preferences",
+  "args": [
+    "load"
+  ],
+  "fixtures": {
+    "home/.config/nacre/launcher.json": "{\"favorites\":[\"demo.desktop\",\"demo.desktop\",1],\"hidden\":[],\"recent\":[],\"usage\":{\"demo.desktop\":{\"count\":2000001,\"last\":0}}}"
+  }
+}

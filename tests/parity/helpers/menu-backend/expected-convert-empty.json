@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "ok": false,
+    "error": "Try a conversion such as 10 km to miles"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

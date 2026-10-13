@@ -1,0 +1,13 @@
+{
+  "helper": "window-chat-title",
+  "args": [
+    "123"
+  ],
+  "fixtures": {
+    "proc/123/task/123/children": "124",
+    "proc/123/cmdline": "terminal\u0000",
+    "proc/124/task/124/children": "",
+    "proc/124/cmdline": "codex\u0000resume\u000000000000-0000-0000-0000-000000000001\u0000",
+    "home/.local/state/nacre/ai/chat-titles/00000000-0000-0000-0000-000000000001.json": "{\"title\":\"  Public\\n chat  \"}"
+  }
+}
