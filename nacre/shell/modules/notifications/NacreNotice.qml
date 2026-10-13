@@ -1,4 +1,5 @@
 import QtQuick
+import "../../utils/scripts/notification-images.js" as NotificationImages
 import Quickshell
 import qs.widgets
 import qs.services
@@ -110,7 +111,7 @@ NacreSurface {
                 width: 28
                 height: 28
                 anchors.verticalCenter: parent.verticalCenter
-                source: root.nacreNotification ? "" : root.modelData.appIcon.startsWith("/") ? "file://" + root.modelData.appIcon : Quickshell.iconPath(root.modelData.appIcon, true)
+                source: root.nacreNotification ? "" : NotificationImages.localSource(root.modelData.appIcon) || (NotificationImages.iconName(root.modelData.appIcon) ? Quickshell.iconPath(root.modelData.appIcon, true) : "")
                 asynchronous: true
                 sourceSize.width: 28
                 sourceSize.height: 28
@@ -187,7 +188,7 @@ NacreSurface {
             width: parent.width
             height: visible ? 140 : 0
             visible: root.expanded && root.modelData.image.length > 0
-            source: visible ? root.modelData.image : ""
+            source: visible ? NotificationImages.localSource(root.modelData.image) : ""
             asynchronous: true
             sourceSize.width: 600
             sourceSize.height: 300

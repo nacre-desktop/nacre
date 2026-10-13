@@ -60,6 +60,16 @@ TestCase {
         view.modelData.appIcon = "discord";
         verify(!view.nacreNotification);
     }
+    function test_notification_urls_cannot_start_network_image_requests() {
+        const view = makeCard();
+        view.expanded = true;
+        for (const url of ["https://example.invalid/pixel", "http://127.0.0.1/private", "//example.invalid/image", "file://example.invalid/image"]) {
+            view.modelData.image = url;
+            view.modelData.appIcon = url;
+            compare(findChild(view, "noticeImage").source.toString(), "");
+            compare(findChild(view, "noticeAppIcon").source.toString(), "");
+        }
+    }
     function test_text_bounds_expand_and_plain_text() {
         const view = makeCard();
         view.modelData.summary = "A long summary with words ".repeat(20);
