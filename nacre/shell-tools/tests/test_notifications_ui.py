@@ -60,6 +60,12 @@ def install_history_owner(target, fixtures):
 
 class NotificationUITests(unittest.TestCase):
     def test_cards_and_popup_stack(self):
+        self.run_notifications()
+
+    def test_bulk_history_clear(self):
+        self.run_notifications(with_history=True)
+
+    def run_notifications(self, *, with_history=False):
         runner = Path("/usr/lib/qt6/bin/qmltestrunner")
         if not runner.exists():
             self.skipTest("Qt Quick Test unavailable")
@@ -102,11 +108,12 @@ class NotificationUITests(unittest.TestCase):
                 target / "tst_notifications.qml",
             )
             install_i18n(fixtures)
-            install_history_owner(target, fixtures)
-            shutil.copy2(
-                ROOT / "tests/notification-qml/tst_history_clear.qml",
-                target / "tst_history_clear.qml",
-            )
+            if with_history:
+                install_history_owner(target, fixtures)
+                shutil.copy2(
+                    ROOT / "tests/notification-qml/tst_history_clear.qml",
+                    target / "tst_history_clear.qml",
+                )
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
