@@ -1205,6 +1205,10 @@
             "blur": true,
             "ignore_alpha": 0.5,
             "no_anim": true
+          },
+          "niri": {
+            "blur": true,
+            "namespace_regex": "^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$"
           }
         },
         "id": "nacre-overlay-glass"

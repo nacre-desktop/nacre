@@ -39,6 +39,11 @@ backend = _backend_module.Backend()
 backend_name = backend.name
 backend_display_name = backend.display_name
 capabilities = backend.capabilities
+night_light_tool = getattr(backend, "night_light_tool", "hyprsunset")
+night_light_service = getattr(backend, "night_light_service", "hyprsunset.service")
+portal_service = getattr(
+    backend, "portal_service", "xdg-desktop-portal-hyprland.service"
+)
 _MISSING = object()
 
 
@@ -91,10 +96,12 @@ for _name in (
     "switch_workspace",
     "focus_window",
     "focus_direction",
+    "cycle_window",
     "move_direction",
     "move_window",
     "move_workspace",
     "close_window",
+    "screenshot_window",
     "kill_window",
     "float_window",
     "pin_window",
@@ -119,6 +126,7 @@ for _name in (
     "apply_config",
     "ensure_desktop_loader",
     "night_light_command",
+    "night_light_available",
     "night_light_configured_elsewhere",
     "night_light_external_socket",
     "set_night_light_temperature",
@@ -145,6 +153,7 @@ def main():
             "switch_workspace",
             "focus_window",
             "focus_direction",
+            "cycle_window",
             "move_direction",
             "close_window",
             "kill_window",
@@ -217,7 +226,7 @@ def main():
         method(
             args.window or "", args.width, args.height, relative=args.relative == "true"
         )
-    elif args.name in ("focus_direction", "move_direction"):
+    elif args.name in ("focus_direction", "move_direction", "cycle_window"):
         method(args.direction)
     elif args.name == "place_window":
         method(

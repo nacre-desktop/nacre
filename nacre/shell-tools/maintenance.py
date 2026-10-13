@@ -22,7 +22,7 @@ SERVICES = [
     "hypridle.service",
     "nacre-brain-sync.timer",
     "xdg-desktop-portal.service",
-    "xdg-desktop-portal-hyprland.service",
+    compositor.portal_service,
     "xdg-document-portal.service",
 ]
 
@@ -213,7 +213,7 @@ def main():
         for unit in (
             "xdg-document-portal.service",
             "xdg-desktop-portal.service",
-            "xdg-desktop-portal-hyprland.service",
+            compositor.portal_service,
         ):
             if run(["systemctl", "--user", "is-failed", unit]) == "failed":
                 subprocess.run(["systemctl", "--user", "restart", unit], check=True)

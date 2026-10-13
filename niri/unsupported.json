@@ -58,24 +58,6 @@
     {
       "source": "hypr/conf/keybinding.lua",
       "kind": "binding",
-      "id": "SUPER + G",
-      "reason": "No equivalent niri capability for group.toggle"
-    },
-    {
-      "source": "hypr/conf/keybinding.lua",
-      "kind": "binding",
-      "id": "SUPER + CTRL + Page_Up",
-      "reason": "No equivalent niri capability for group.previous"
-    },
-    {
-      "source": "hypr/conf/keybinding.lua",
-      "kind": "binding",
-      "id": "SUPER + CTRL + Page_Down",
-      "reason": "No equivalent niri capability for group.next"
-    },
-    {
-      "source": "hypr/conf/keybinding.lua",
-      "kind": "binding",
       "id": "SUPER + J",
       "reason": "No equivalent niri capability for layout.toggle-split"
     },
@@ -84,18 +66,6 @@
       "kind": "binding",
       "id": "SUPER + mouse:273",
       "reason": "Keep niri's native move/resize gestures; no pointer-hook substitution"
-    },
-    {
-      "source": "hypr/conf/keybinding.lua",
-      "kind": "binding",
-      "id": "ALT + TAB",
-      "reason": "No equivalent niri capability for window.cycle"
-    },
-    {
-      "source": "hypr/conf/keybinding.lua",
-      "kind": "binding",
-      "id": "ALT + SHIFT + TAB",
-      "reason": "No equivalent niri capability for window.cycle"
     },
     {
       "source": "hypr/conf/keybinding.lua",
@@ -161,91 +131,43 @@
       "source": "hypr/conf/windowrule.lua",
       "kind": "window-rule",
       "id": "nacre-thunar-files",
-      "reason": "Unmapped window effects: centered, size"
+      "reason": "Unmapped window effects: size proportions use niri's working area"
     },
     {
       "source": "hypr/conf/windowrule.lua",
       "kind": "window-rule",
       "id": "nacre-dolphin-files",
-      "reason": "Unmapped window effects: centered, size"
-    },
-    {
-      "source": "hypr/conf/nacre.lua",
-      "kind": "layer-rule",
-      "id": "nacre-overlay-glass",
-      "reason": "Backend-specific layer-rule is not emitted for niri"
+      "reason": "Unmapped window effects: size proportions use niri's working area"
     },
     {
       "source": "hypr/conf/nacre.lua",
       "kind": "window-rule",
       "id": "nacre-lock-preview",
-      "reason": "Unmapped window effects: centered, size"
+      "reason": "Unmapped window effects: size proportions use niri's working area"
     },
     {
       "source": "hypr/conf/nacre.lua",
       "kind": "window-rule",
       "id": "nacre-audio-mixer",
-      "reason": "Unmapped window effects: centered, pinned, size"
-    },
-    {
-      "source": "hypr/conf/nacre.lua",
-      "kind": "window-rule",
-      "id": "nacre-bluetooth-manager",
-      "reason": "Unmapped window effects: centered, size"
-    },
-    {
-      "source": "hypr/conf/nacre.lua",
-      "kind": "window-rule",
-      "id": "nacre-network-editor",
-      "reason": "Unmapped window effects: centered, size"
+      "reason": "Unmapped window effects: pinned"
     },
     {
       "source": "hypr/conf/nacre.lua",
       "kind": "window-rule",
       "id": "nacre-share-picker",
-      "reason": "Unmapped window effects: centered, pinned, size"
+      "reason": "Unmapped window effects: pinned"
     },
     {
       "source": "hypr/conf/nacre.lua",
       "kind": "window-rule",
       "id": "nacre-picture-in-picture",
-      "reason": "Unmapped window effects: centered, pinned"
-    },
-    {
-      "source": "hypr/conf/nacre.lua",
-      "kind": "window-rule",
-      "id": "nacre-native-controls",
-      "reason": "Unmapped window effects: centered, size"
+      "reason": "Unmapped window effects: pinned"
     },
     {
       "source": "hypr/conf/nacre.lua",
       "kind": "backend-config",
       "id": "",
       "reason": "Backend-specific backend-config is not emitted for niri"
-    },
-    {
-      "source": "hypr/conf/nacre.lua",
-      "kind": "window-rule",
-      "id": "nacre-settings-app",
-      "reason": "Unmapped window effects: centered"
-    },
-    {
-      "source": "hypr/conf/nacre.lua",
-      "kind": "window-rule",
-      "id": "nacre-colors-app",
-      "reason": "Unmapped window effects: centered"
-    },
-    {
-      "source": "hypr/conf/nacre.lua",
-      "kind": "window-rule",
-      "id": "nacre-welcome",
-      "reason": "Unmapped window effects: centered"
-    },
-    {
-      "source": "hypr/conf/brain.lua",
-      "kind": "window-rule",
-      "id": "brain-auth-handoff",
-      "reason": "Unmapped window effects: size"
     },
     {
       "source": "nacre/shell-tools/shortcuts.lua",

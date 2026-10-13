@@ -3,36 +3,55 @@
 window-rule {
     match app-id="^([Tt]hunar)$"
     open-floating true
+    default-column-width { proportion 0.7; }
+    default-window-height { proportion 0.75; }
 }
 
 window-rule {
     match app-id="^(org[.]kde[.]dolphin|[Dd]olphin)$"
     open-floating true
+    default-column-width { proportion 0.6; }
+    default-window-height { proportion 0.75; }
+}
+
+layer-rule {
+    match namespace="^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$"
+    background-effect { blur true; }
 }
 
 window-rule {
     match app-id="^org.quickshell$" title="^Nacre lock screen preview$"
     open-floating true
+    default-column-width { proportion 0.7; }
+    default-window-height { proportion 0.7; }
 }
 
 window-rule {
     match app-id="^org\\.pulseaudio\\.pavucontrol$"
     open-floating true
+    default-column-width { fixed 700; }
+    default-window-height { fixed 600; }
 }
 
 window-rule {
     match app-id="^blueman-manager$"
     open-floating true
+    default-column-width { fixed 800; }
+    default-window-height { fixed 600; }
 }
 
 window-rule {
     match app-id="^nm-connection-editor$"
     open-floating true
+    default-column-width { fixed 800; }
+    default-window-height { fixed 700; }
 }
 
 window-rule {
     match app-id="^hyprland-share-picker$"
     open-floating true
+    default-column-width { fixed 600; }
+    default-window-height { fixed 400; }
 }
 
 window-rule {
@@ -43,6 +62,8 @@ window-rule {
 window-rule {
     match app-id="^nacre-control$"
     open-floating true
+    default-column-width { fixed 720; }
+    default-window-height { fixed 500; }
 }
 
 window-rule {
@@ -75,6 +96,8 @@ window-rule {
 window-rule {
     match app-id="^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$"
     open-floating true
+    default-column-width { fixed 80; }
+    default-window-height { fixed 80; }
 }
 
 window-rule {

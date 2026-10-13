@@ -151,6 +151,17 @@ class Backend:
         "floatingPlacement": True,
         "pinWindow": True,
         "windowCapture": True,
+        "windowHide": True,
+        "windowTrash": True,
+        "scratchpad": True,
+        "windowGroups": True,
+        "windowForceKill": True,
+        "pseudoTiling": True,
+        "layoutSplit": True,
+        "keymaps": True,
+        "nonConsumingShortcuts": True,
+        "bindingIntrospection": True,
+        "monitorMirroring": True,
         "fullscreenState": True,
     }
 
@@ -319,6 +330,13 @@ class Backend:
         if direction not in ("left", "right", "up", "down"):
             raise ValueError("Invalid focus direction")
         return self._action("focus", {"direction": direction}, timeout=timeout)
+
+    def cycle_window(self, direction="next", *, timeout=10):
+        if direction not in ("next", "previous"):
+            raise ValueError("Invalid cycle direction")
+        return self._action(
+            "window.cycle", {"next": direction == "next"}, timeout=timeout
+        )
 
     def move_direction(self, direction, *, timeout=10):
         if direction not in ("left", "right", "up", "down"):
@@ -553,6 +571,12 @@ class Backend:
 
     def night_light_configured_elsewhere(self, home):
         return (Path(home) / ".config/hypr/hyprsunset.conf").exists()
+
+    def night_light_available(self):
+        return bool(shutil.which("hyprsunset"))
+
+    def screenshot_window(self, path, window="", *, timeout=10):
+        raise RuntimeError("Use the geometry-based capture helper on Hyprland")
 
     def night_light_external_socket(self, active):
         signature = self.session_id()

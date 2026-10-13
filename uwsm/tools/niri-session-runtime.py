@@ -197,6 +197,9 @@ def command(action, environment=None, home=None):
         NACRE_COMPOSITOR_TOOLS=str(home / ".local/share/nacre/shell/tools"),
         NACRE_PEARL_TOOLS=str(home / ".local/share/nacre/shell/tools"),
         NACRE_QS_CONFIG=str(home / ".config/quickshell/nacre/shell.qml"),
+        NACRE_NIRI_CONFIG=str(root / "config/config.kdl"),
+        NACRE_NIRI_DESKTOP_CONFIG=str(root / "config/desktop.kdl"),
+        NACRE_NIRI_TOOLS_SOURCE=str(shell / "tools"),
     )
     hover_binary = (
         None
@@ -274,7 +277,33 @@ def prepare(backend, destination, home, *, stock_niri=False):
     (config / "colors.kdl").write_text(palette)
     desktop_path = home / ".config/nacre/desktop.json"
     desktop = json.loads(desktop_path.read_text()) if desktop_path.exists() else {}
-    (config / "host.kdl").write_text(host_preferences(desktop))
+    (config / "host.kdl").write_text(host_preferences({**desktop, "displays": []}))
+    compositor_backend = module(
+        backend / "nacre/shell-tools/compositor_backends/niri.py", "session_compositor"
+    )
+    preferences = compositor_backend.Backend().render_desktop_options(desktop)
+    saved_outputs = desktop.get("compositorDisplays", {}).get("niri")
+    if saved_outputs is not None:
+        preferences += compositor_backend.Backend().render_monitors(saved_outputs)
+    else:
+        # First niri preparation carries across physical scale, not another
+        # compositor's layout or unsupported mirroring.
+        for display in desktop.get("displays", []):
+            if display.get("disabled"):
+                continue
+            name, scale = display.get("name"), display.get("scale")
+            if (
+                not isinstance(name, str)
+                or not name
+                or type(scale) not in (int, float)
+                or not math.isfinite(scale)
+                or not 0 < scale <= 10
+            ):
+                raise ValueError("Invalid saved display scale")
+            preferences += (
+                "output " + json.dumps(name) + " { scale " + str(scale) + "; }\n"
+            )
+    (config / "desktop.kdl").write_text(preferences)
     text = (
         "\n".join(
             "include "
@@ -296,6 +325,7 @@ def prepare(backend, destination, home, *, stock_niri=False):
         )
         + "\n"
     )
+    text += 'include "desktop.kdl"\n'
     text += "\n".join("workspace " + json.dumps(name) for name in names.values()) + "\n"
     text += "hotkey-overlay {\n    skip-at-startup\n}\n"
     # UWSM activates the real shell service; no duplicate compositor autostart.
