@@ -16,7 +16,7 @@ tools:
 
 ```sh
 sudo pacman -S --needed ruff lua fish qt6-declarative gcc pkgconf gtk3 \
-  kconfig kcolorscheme breeze nodejs npm rust lcms2 cmake
+  kconfig kcolorscheme breeze nodejs npm rust lcms2 cmake make
 ```
 
 Use Python 3.13 or newer. Initialize the engine submodule and create an isolated
