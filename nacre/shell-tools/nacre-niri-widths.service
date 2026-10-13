@@ -1,0 +1,13 @@
+[Unit]
+Description=Nacre proportional tiled widths for X11 applications on Niri
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecCondition=/usr/bin/python3 %h/.local/share/nacre/shell/tools/compositor_backends/niri_widths.py --check-session
+ExecStart=/usr/bin/python3 %h/.local/share/nacre/shell/tools/compositor_backends/niri_widths.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

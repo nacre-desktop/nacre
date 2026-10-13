@@ -20,6 +20,52 @@ spec.loader.exec_module(runtime)
 
 
 class NiriRuntimeTests(unittest.TestCase):
+    def test_width_observer_uses_prepared_code_without_switching_compositor(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            shell = (
+                home
+                / ".local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell"
+            )
+            for name in (
+                "source/shell.qml",
+                "tools/compositor_backends/niri.py",
+                "bin/qs",
+            ):
+                path = shell / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.touch()
+            environment = {
+                "NACRE_COMPOSITOR": "niri",
+                "NIRI_SOCKET": "/test/niri.sock",
+                "DISPLAY": ":8",
+            }
+            with patch.object(
+                runtime,
+                "overview_hover_binary",
+                side_effect=AssertionError(
+                    "Observer must not read a large compositor artifact"
+                ),
+            ):
+                args, env = runtime.command("widths", environment, home)
+            self.assertEqual(
+                args[-2:],
+                [
+                    "/usr/bin/python3",
+                    str(
+                        home
+                        / ".local/share/nacre/shell/tools/compositor_backends/niri_widths.py"
+                    ),
+                ],
+            )
+            self.assertEqual(env["NIRI_SOCKET"], "/test/niri.sock")
+            self.assertEqual(env["DISPLAY"], ":8")
+            self.assertNotIn("--session", args)
+            check, _ = runtime.command("widths-check", environment, home)
+            self.assertEqual(check[-1], "--check-session")
+            with self.assertRaises(ValueError):
+                runtime.command("widths", {"NACRE_COMPOSITOR": "hyprland"}, home)
+
     def test_hover_binary_requires_verified_hash_and_matching_stock_version(self):
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder)

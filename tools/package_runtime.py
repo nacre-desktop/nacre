@@ -31,7 +31,12 @@ def links(root, profile):
         ".local/share/nacre/thunar-style": Path("/usr/lib/nacre/thunar-style"),
         ".config/quickshell/nacre": root / "nacre/shell",
     }
-    for name in ("nacre-shell", "nacre-session-watch", "nacre-power-key"):
+    for name in (
+        "nacre-shell",
+        "nacre-session-watch",
+        "nacre-power-key",
+        "nacre-niri-widths",
+    ):
         values[
             f".config/systemd/user/graphical-session.target.wants/{name}.service"
         ] = Path(f"../{name}.service")

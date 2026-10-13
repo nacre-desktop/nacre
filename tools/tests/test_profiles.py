@@ -56,6 +56,15 @@ class ProfileTests(unittest.TestCase):
                 "hl.window_rule", (home / ".config/nacre/profile.lua").read_text()
             )
             self.assertTrue((home / ".local/bin/nacre-settings").exists())
+            self.assertTrue(
+                (home / ".config/systemd/user/nacre-niri-widths.service").is_file()
+            )
+            self.assertTrue(
+                (
+                    home
+                    / ".local/share/nacre/shell/tools/compositor_backends/niri_widths.py"
+                ).is_file()
+            )
             self.assertFalse((home / ".local/bin/nacre-ai").exists())
             self.assertFalse((home / ".local/bin/nacre-brain").exists())
             self.assertFalse(

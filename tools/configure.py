@@ -92,6 +92,9 @@ def files(root=ROOT):
     result[Path(".config/systemd/user/nacre-power-key.service")] = (
         root / "nacre/shell-tools/nacre-power-key.service"
     )
+    result[Path(".config/systemd/user/nacre-niri-widths.service")] = (
+        root / "nacre/shell-tools/nacre-niri-widths.service"
+    )
     features = selected_profile(root)["components"]
 
     def included(path):

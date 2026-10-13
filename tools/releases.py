@@ -98,6 +98,7 @@ def paths(repo):
         for p in (
             "nacre-shell.service",
             "nacre-session-watch.service",
+            "nacre-niri-widths.service",
             "nacre-sidebar-ai.service",
             "nacre-brain.service",
             "nacre-brain-sync.service",
@@ -207,6 +208,7 @@ def restore(release, record=None, force=False):
             "nacre-shell.service",
             "nacre-brain.service",
             "nacre-session-watch.service",
+            "nacre-niri-widths.service",
         ):
             subprocess.run(
                 ["systemctl", "--user", "stop", service], capture_output=True
@@ -246,6 +248,10 @@ def restore(release, record=None, force=False):
         )
         subprocess.run(
             ["systemctl", "--user", "start", "nacre-session-watch.service"],
+            capture_output=True,
+        )
+        subprocess.run(
+            ["systemctl", "--user", "start", "nacre-niri-widths.service"],
             capture_output=True,
         )
     record["status"] = "rolled-back"

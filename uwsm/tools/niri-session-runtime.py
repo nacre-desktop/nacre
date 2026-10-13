@@ -199,13 +199,25 @@ def command(action, environment=None, home=None):
         NACRE_QS_CONFIG=str(home / ".config/quickshell/nacre/shell.qml"),
     )
     hover_binary = (
-        None if (root / "stock-niri").is_file() else overview_hover_binary(home)
+        None
+        if action in ("widths", "widths-check") or (root / "stock-niri").is_file()
+        else overview_hover_binary(home)
     )
     env["NACRE_NIRI_HOVER_STREAM"] = "1" if hover_binary else "0"
     if action == "compositor":
         args += [str(hover_binary) if hover_binary else "/usr/bin/niri", "--session"]
     elif action == "brain":
         args += original
+    elif action in ("widths", "widths-check"):
+        args += [
+            "/usr/bin/python3",
+            str(
+                home
+                / ".local/share/nacre/shell/tools/compositor_backends/niri_widths.py"
+            ),
+        ]
+        if action == "widths-check":
+            args += ["--check-session"]
     else:
         args += [
             "/usr/bin/python3",
@@ -306,7 +318,10 @@ def prepare(backend, destination, home, *, stock_niri=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("prepare", "compositor", "shell", "brain"))
+    parser.add_argument(
+        "action",
+        choices=("prepare", "compositor", "shell", "brain", "widths", "widths-check"),
+    )
     parser.add_argument("--backend", type=Path)
     parser.add_argument(
         "--stock-niri",

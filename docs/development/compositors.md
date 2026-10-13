@@ -86,6 +86,47 @@ only native selection and action encoding moved into the interface.
 
 ## One editable configuration source
 
+### Proportional widths and application constraints
+
+The prepared Niri session opens normal columns at `proportion 0.5`, so the width
+follows the output's working area and scale. Native Wayland applications can
+still enforce a larger minimum size; Niri's `min-width` rule only increases the
+application's minimum. An application that renders a wider surface has the final
+say, even when the compositor asks for a smaller size.
+
+`nacre-niri-widths.service` adds compatibility for ordinary tiled X11 applications.
+It listens to Niri window events and X11 property events, and relaxes only the
+advisory minimum width. Newly opened constrained windows get one half-width
+correction after the hints reach the bridge, handling apps that already committed
+an oversized initial surface. Existing windows and subsequent manual geometry are
+not reset. The opening percentage can be changed with `--opening-width`; it defaults
+to 50 to match Nacre's standard Niri layout. App zoom stays unchanged. Later app hint
+changes are handled without polling or changing manual column widths.
+
+Floating windows, transient dialogs, non-normal window types and explicitly fixed
+widths retain their constraints. Switching to floating restores the latest app
+minimum, as does stopping the helper. The observer skips Hyprland and sessions
+without a usable Niri/X11 context. Its code and service ship with core installation,
+including the Arch package and rollback snapshots.
+
+For applications with an enforced native minimum, their X11 mode can be more
+flexible. This is a compatibility choice with X11's scaling behavior, rather than
+a universal guarantee that every application's content can fit every viewport.
+No monitor-specific scale factor is required. Avoid changing a native app's
+platform unless its minimum-size behavior has actually been verified.
+
+The standalone native check uses stock Niri, a separate nested compositor and
+synthetic X11 clients, without real app accounts or a session activation import:
+
+```sh
+python3 tools/tests/verify_niri_widths.py --output /tmp/niri-width-proof.json
+```
+
+It verifies proportional widths while resizing the nested output, renewed app
+minimum hints, manual resize ownership, floating/fixed/dialog exclusions and
+restoration on service shutdown. Disabling the helper restores advisory hints;
+it does not reset existing manual window sizes.
+
 Edit `nacre/shell-tools/compositor-contract.json`, then run:
 
 ```sh

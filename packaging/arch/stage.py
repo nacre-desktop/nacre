@@ -85,7 +85,12 @@ def stage(root, destination, component, build):
             True,
         )
         copy(deploy / ".local/bin/nacre", destination / "usr/bin/nacre")
-        for name in ("nacre-shell", "nacre-session-watch", "nacre-power-key"):
+        for name in (
+            "nacre-shell",
+            "nacre-session-watch",
+            "nacre-power-key",
+            "nacre-niri-widths",
+        ):
             copy(
                 tools / (name + ".service"),
                 deploy / ".config/systemd/user" / (name + ".service"),

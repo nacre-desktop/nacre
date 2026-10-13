@@ -198,6 +198,10 @@ def deploy(code_only=False):
         shutil.copyfile(ROOT / "nacre-sidebar-ai.service", chat_service)
     observer = HOME / ".config/systemd/user/nacre-session-watch.service"
     shutil.copyfile(ROOT / "nacre-session-watch.service", observer)
+    shutil.copyfile(
+        ROOT / "nacre-niri-widths.service",
+        HOME / ".config/systemd/user/nacre-niri-widths.service",
+    )
     subprocess.run(["python3", str(ROOT / "idle-policy.py")], check=True)
     idle_dropin = HOME / ".config/systemd/user/hypridle.service.d/nacre.conf"
     idle_dropin.parent.mkdir(parents=True, exist_ok=True)
@@ -218,6 +222,11 @@ def deploy(code_only=False):
     )
     subprocess.run(
         ["systemctl", "--user", "enable", "--now", "nacre-session-watch.service"],
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["systemctl", "--user", "enable", "--now", "nacre-niri-widths.service"],
         check=True,
         capture_output=True,
     )
@@ -321,6 +330,10 @@ def deploy(code_only=False):
         HOME / ".config/systemd/user/nacre-shell.service",
         (ROOT / "nacre-shell.service").read_text(),
     )
+    write(
+        HOME / ".config/systemd/user/nacre-niri-widths.service",
+        (ROOT / "nacre-niri-widths.service").read_text(),
+    )
     # Apply the selected palette last, after any older profile overrides.
     path = HOME / ".config/hypr/hyprland.lua"
     marker = "-- Nacre committed wallpaper palette"
@@ -408,8 +421,18 @@ def deploy(code_only=False):
         check=True,
         capture_output=True,
     )
+    subprocess.run(
+        ["systemctl", "--user", "enable", "--now", "nacre-niri-widths.service"],
+        check=True,
+        capture_output=True,
+    )
     compositor.reload(timeout=None)
     subprocess.run(["python3", str(ROOT / "isolate-apps.py")], check=True)
+    subprocess.run(
+        ["systemctl", "--user", "try-restart", "nacre-niri-widths.service"],
+        check=True,
+        capture_output=True,
+    )
     subprocess.run(
         ["systemctl", "--user", "restart", "nacre-shell.service"], check=True
     )
