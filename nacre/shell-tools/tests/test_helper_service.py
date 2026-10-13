@@ -55,17 +55,16 @@ class HelperServiceTests(unittest.TestCase):
             import PIL
         except ImportError:
             self.skipTest("Pinned Pillow unavailable")
-        candidate = TOOLS.parents[1] / "deps/orient/src"
-        if not (candidate / "orient/engine.py").is_file():
-            self.fail("Initialize the pinned Orient engine before running tests")
+        from nacre_shell import ENGINE_ID
+        from nacre_shell._backend import binary
+        import shutil
+
         with tempfile.TemporaryDirectory(prefix="nacre-media-rpc-") as directory:
             root = Path(directory)
             home = root / "home"
             runtime = home / ".local/share/nacre/palette-runtime/venv"
             venv.EnvBuilder(with_pip=False).create(runtime)
             python = runtime / "bin/python"
-            # Use the exact candidate engine and installed Pillow through this
-            # isolated environment's site directory, not inherited PYTHONPATH.
             site = Path(
                 subprocess.check_output(
                     [
@@ -76,11 +75,25 @@ class HelperServiceTests(unittest.TestCase):
                     text=True,
                 ).strip()
             )
-            (site / "candidate-runtime.pth").write_text(
-                str(candidate)
-                + "\n"
-                + str(Path(PIL.__file__).resolve().parent.parent)
-                + "\n"
+            # Copy the installed adapter into the isolated environment, never Orient src/.
+            installed = (
+                Path(sys.prefix)
+                / "lib"
+                / (
+                    "python"
+                    + str(sys.version_info.major)
+                    + "."
+                    + str(sys.version_info.minor)
+                )
+                / "site-packages/nacre_shell"
+            )
+            self.assertTrue(
+                installed.is_dir(), "Install the Nacre adapter before running tests"
+            )
+            shutil.copytree(installed, site / "nacre_shell")
+            shutil.copy2(binary(), runtime / "bin/orient")
+            (site / "pillow.pth").write_text(
+                str(Path(PIL.__file__).resolve().parent.parent) + "\n"
             )
             environment = {
                 **os.environ,
@@ -89,14 +102,19 @@ class HelperServiceTests(unittest.TestCase):
                 "XDG_STATE_HOME": str(home / ".local/state"),
                 "XDG_CACHE_HOME": str(home / ".cache"),
             }
-            for name in ("PYTHONPATH", "PYTHONHOME", "NACRE_DASHBOARD_TOOLS"):
+            for name in (
+                "PYTHONPATH",
+                "PYTHONHOME",
+                "NACRE_DASHBOARD_TOOLS",
+                "NACRE_ORIENT_BINARY",
+            ):
                 environment.pop(name, None)
             probe = json.loads(
                 subprocess.check_output(
                     [
                         str(python),
                         "-c",
-                        "import json,orient,PIL;print(json.dumps({'source':orient.__file__,'version':orient.__version__,'pillow':PIL.__version__}))",
+                        "import json,nacre_shell,PIL,importlib.util;print(json.dumps({'source':nacre_shell.__file__,'engine':nacre_shell.ENGINE_ID,'pillow':PIL.__version__,'python_orient':importlib.util.find_spec('orient') is not None}))",
                     ],
                     env=environment,
                     text=True,
@@ -104,13 +122,11 @@ class HelperServiceTests(unittest.TestCase):
             )
             self.assertEqual(
                 Path(probe["source"]).resolve(),
-                (candidate / "orient/__init__.py").resolve(),
+                (site / "nacre_shell/__init__.py").resolve(),
             )
             self.assertEqual(probe["pillow"], PIL.__version__)
-            self.assertIn(
-                '"' + probe["version"] + '"',
-                (candidate / "orient/__init__.py").read_text(),
-            )
+            self.assertEqual(probe["engine"], ENGINE_ID)
+            self.assertFalse(probe["python_orient"])
             art = root / "art.ppm"
             art.write_text("P3\n2 1\n255\n35 90 170 240 170 45\n")
             metadata = json.dumps(

@@ -3,7 +3,7 @@
     "core": [
       "python",
       "python-pillow",
-      "python-orient-colors",
+      "orient",
       "quickshell",
       "hyprland",
       "uwsm",

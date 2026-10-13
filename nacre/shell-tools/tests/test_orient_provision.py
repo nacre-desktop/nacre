@@ -28,6 +28,7 @@ class OrientProvisionTests(unittest.TestCase):
                 "__pycache__",
                 "build",
                 "dist",
+                "target",
                 "src/engine.egg-info",
             ):
                 target = source / folder
@@ -41,6 +42,29 @@ class OrientProvisionTests(unittest.TestCase):
             self.assertNotEqual(changed, baseline)
             notice.write_text("updated attribution")
             self.assertNotEqual(provision.source_digest(source), changed)
+
+    def test_reuses_only_matching_native_binary(self):
+        with (
+            patch.dict(provision.os.environ, {"NACRE_ORIENT_BINARY": "/native/orient"}),
+            patch.object(provision.shutil, "which", return_value=None),
+            patch.object(provision, "binary_info") as info,
+        ):
+            info.return_value = {"backend": "rust", "engine": "tested"}
+            self.assertEqual(
+                provision.prepare_binary(
+                    Path("engine"), Path("candidate"), {"engine": "tested"}
+                ),
+                Path("/native/orient"),
+            )
+            for description in (
+                {"backend": "python", "engine": "tested"},
+                {"backend": "rust", "engine": "older"},
+            ):
+                info.return_value = description
+                with self.assertRaisesRegex(RuntimeError, "Install Rust"):
+                    provision.prepare_binary(
+                        Path("engine"), Path("candidate"), {"engine": "tested"}
+                    )
 
     def test_replaces_link_without_modifying_old_environment(self):
         with tempfile.TemporaryDirectory() as folder:

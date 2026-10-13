@@ -21,13 +21,13 @@ import time
 source = Path(__file__).parents[1] / "shell-cli/src"
 if source.is_dir():
     sys.path.insert(0, str(source))
-from orient import ENGINE_ID, FORMAT_VERSION  # noqa: E402
-from orient.engine import from_image  # noqa: E402
-from orient.accessibility import audit  # noqa: E402
-from orient.extract import sample_color  # noqa: E402
-from orient.colour import lch  # noqa: E402
-from orient.export import export as export_templates  # noqa: E402
-from orient.palette import PERSONALITIES, background_policy, validate  # noqa: E402
+from nacre_shell import ENGINE_ID, FORMAT_VERSION  # noqa: E402
+from nacre_shell.engine import from_image  # noqa: E402
+from nacre_shell.accessibility import audit  # noqa: E402
+from nacre_shell.extract import sample_color  # noqa: E402
+from nacre_shell.colour import lch  # noqa: E402
+from nacre_shell.export import export as export_templates  # noqa: E402
+from nacre_shell.palette import PERSONALITIES, background_policy, validate  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
 HOME = Path.home()

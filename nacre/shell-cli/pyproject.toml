@@ -6,8 +6,8 @@ build-backend = "hatchling.build"
 name = "nacre_shell"
 requires-python = ">=3.13"
 version = "0.1.0.dev2"
-description = "Orient: Nacre's independent wallpaper palette engine"
-dependencies = ["orient-colors==0.1.0.dev5"]
+description = "Nacre desktop adapter for the standalone Orient engine"
+dependencies = ["pillow>=11,<13"]
 
 [project.scripts]
 nacre_shell = "nacre_shell:main"

@@ -33,7 +33,15 @@ def source_digest(source):
     for path in sorted(source.rglob("*")):
         if path.is_file() and not any(
             p
-            in ("__pycache__", "build", "dist", ".git", ".ruff_cache", ".pytest_cache")
+            in (
+                "__pycache__",
+                "build",
+                "dist",
+                ".git",
+                ".ruff_cache",
+                ".pytest_cache",
+                "target",
+            )
             or p.endswith(".egg-info")
             for p in path.parts
         ):
@@ -59,6 +67,57 @@ def activate_runtime(candidate, runtime, builds):
         raise
 
 
+def binary_info(path):
+    reply = subprocess.run(
+        [str(path), "--rpc"],
+        input=json.dumps({"operation": "info", "payload": {}}),
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=True,
+    )
+    return json.loads(reply.stdout)["result"]
+
+
+def prepare_binary(engine, candidate, pin):
+    choices = [os.environ.get("NACRE_ORIENT_BINARY"), shutil.which("orient")]
+    for choice in choices:
+        if not choice:
+            continue
+        try:
+            info = binary_info(choice)
+            if info.get("backend") == "rust" and info.get("engine") == pin["engine"]:
+                return Path(choice)
+        except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+            pass
+    cargo = shutil.which("cargo")
+    if not cargo:
+        raise RuntimeError(
+            "Install Rust and LCMS2 build tools, or supply the tested native Orient binary"
+        )
+    target = candidate / "cargo-target"
+    subprocess.run(
+        [
+            cargo,
+            "build",
+            "--release",
+            "--locked",
+            "--manifest-path",
+            str(engine / "Cargo.toml"),
+            "--target-dir",
+            str(target),
+            "-p",
+            "orient-cli",
+        ],
+        check=True,
+    )
+    binary = target / "release/orient"
+    info = binary_info(binary)
+    if info.get("backend") != "rust" or info.get("engine") != pin["engine"]:
+        raise RuntimeError("Built Orient binary differs from the tested dependency pin")
+    return binary
+
+
 def main():
     result = subprocess.run(["pacman", "-Q", *PACKAGES], capture_output=True, text=True)
     if result.returncode:
@@ -78,23 +137,27 @@ def main():
                 "Initialize Orient with git submodule update --init --recursive",
             )
         )
-    pillow = json.loads((ROOT.parents[1] / "dependencies.lock.json").read_text())[
-        "python"
-    ]["pillow"]
+    lock = json.loads((ROOT.parents[1] / "dependencies.lock.json").read_text())
+    pillow = lock["python"]["pillow"]
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", pillow):
-        raise ValueError(
-            tr(
-                "helper.provision.invalid-locked-pillow-version",
-                "Invalid locked Pillow version",
-            )
-        )
+        raise ValueError("Invalid locked Pillow version")
     identity = hashlib.sha256(
-        (source_digest(source) + source_digest(engine) + pillow).encode()
+        (
+            source_digest(source)
+            + source_digest(engine)
+            + json.dumps(lock, sort_keys=True)
+        ).encode()
     ).hexdigest()
     marker = RUNTIME / "orient-build.json"
     if marker.exists() and json.loads(marker.read_text()).get("source") == identity:
-        print("Orient environment already matches source")
-        return
+        if (RUNTIME / "venv/bin/orient").is_file():
+            info = binary_info(RUNTIME / "venv/bin/orient")
+            if (
+                info.get("engine") == lock["orient"]["engine"]
+                and info.get("backend") == "rust"
+            ):
+                print("Native Orient environment already matches source")
+                return
     # A fixed final directory keeps venv shebangs valid. It is not active until tested.
     builds = RUNTIME.parent / "palette-engines"
     builds.mkdir(parents=True, exist_ok=True)
@@ -104,11 +167,12 @@ def main():
     try:
         venv = candidate / "venv"
         subprocess.run(["/usr/bin/python3", "-m", "venv", str(venv)], check=True)
+        native = prepare_binary(engine, candidate, lock["orient"])
+        shutil.copy2(native, venv / "bin/orient")
         subprocess.run(
             [
                 str(venv / "bin/pip"),
                 "install",
-                str(engine),
                 str(source),
                 "pillow==" + pillow,
             ],
@@ -126,13 +190,17 @@ def main():
             [
                 str(venv / "bin/python"),
                 "-c",
-                "from orient import ENGINE_ID; print(ENGINE_ID)",
+                "from nacre_shell import ENGINE_ID; print(ENGINE_ID)",
             ],
             text=True,
         ).strip()
         (candidate / "orient-build.json").write_text(
-            json.dumps({"source": identity, "engine": engine_id}) + "\n"
+            json.dumps(
+                {"source": identity, "engine": engine_id, "backend": "rust-binary"}
+            )
+            + "\n"
         )
+        shutil.rmtree(candidate / "cargo-target", ignore_errors=True)
         activate_runtime(candidate, RUNTIME, builds)
     except BaseException:
         # Candidate was never promoted; active runtime remains unchanged.

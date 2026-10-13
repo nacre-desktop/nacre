@@ -101,7 +101,7 @@ def track_data(meta):
             result["lyricsMessage"] = "Lyrics unavailable for this track"
     if meta.get("palette") and meta.get("art"):
         try:
-            from orient.engine import from_image
+            from nacre_shell.engine import from_image
 
             art = meta["art"]
             parsed = urllib.parse.urlsplit(art)

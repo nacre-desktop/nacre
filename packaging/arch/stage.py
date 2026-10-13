@@ -142,7 +142,7 @@ def stage(root, destination, component, build):
         )
         palette = shared / "runtime/palette/venv"
         (palette / "bin").mkdir(parents=True)
-        for name in ("python", "nacre_shell"):
+        for name in ("python", "nacre_shell", "orient"):
             (palette / "bin" / name).symlink_to("/usr/bin/" + name)
         (palette / "lib").symlink_to("/usr/lib")
         for name in ("dolphin-style", "thunar-style"):

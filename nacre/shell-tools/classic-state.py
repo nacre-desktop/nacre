@@ -325,28 +325,10 @@ def readable(value, background, minimum=4.5):
 
 def render_template(home, name, colors):
     """Use Orient's pure renderer; publication remains owned by this module."""
-    import importlib.util
+    from palette_engine import render_values
 
     here = Path(__file__).parent
-    local = here.parent / "shell-cli/src/orient/template_engine.py"
-    candidates = [
-        local,
-        *(Path(home) / ".local/share/nacre/palette-runtime/venv/lib").glob(
-            "python*/site-packages/orient/template_engine.py"
-        ),
-    ]
-    source = next((p for p in candidates if p.is_file()), None)
-    if source is None:
-        raise RuntimeError(
-            tr(
-                "helper.classic-state.orient-template-renderer-is-missing-run-install-sh",
-                "Orient template renderer is missing; run ./install.sh",
-            )
-        )
-    spec = importlib.util.spec_from_file_location("orient_templates", source)
-    renderer = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(renderer)
-    return renderer.render_values(
+    return render_values(
         (
             compositor.palette_template_path()
             if name == "compositor-palette"

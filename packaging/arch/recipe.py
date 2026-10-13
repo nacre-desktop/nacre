@@ -30,9 +30,7 @@ def render(root, revision):
                 sources.append(row["name"] + "::" + row["url"])
                 checksums.append(row["sha256"])
     core = [
-        "python-orient-colors=" + lock["version"].replace("-dev.", "dev")
-        if v == "python-orient-colors"
-        else v
+        "orient=" + lock["version"].replace("-dev.", "dev") if v == "orient" else v
         for v in mapping["core"]
     ]
     all_runtime = list(dict.fromkeys([*core, *mapping["ai"], *mapping["brain"]]))
@@ -69,10 +67,12 @@ build() {{
 check() {{
   cd "$srcdir/nacre"
   npm ci --ignore-scripts --no-audit --no-fund
+  python -m venv --system-site-packages "$srcdir/check-env"
+  "$srcdir/check-env/bin/python" -m installer nacre/shell-cli/dist/*.whl
   local check_runtime
   check_runtime=$(mktemp -d)
   chmod 700 "$check_runtime"
-  XDG_RUNTIME_DIR="$check_runtime" CI=1 dbus-run-session -- xvfb-run -a python tools/check.py </dev/null
+  XDG_RUNTIME_DIR="$check_runtime" CI=1 dbus-run-session -- xvfb-run -a "$srcdir/check-env/bin/python" tools/check.py </dev/null
   rm -rf "$check_runtime"
 }}
 

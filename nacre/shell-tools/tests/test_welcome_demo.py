@@ -30,9 +30,9 @@ class WelcomeDemoTests(unittest.TestCase):
     def test_curated_art_has_distinct_pop_and_readable_modes(self):
         sys.path.insert(0, str(ROOT.parent / "shell-cli/src"))
         self.addCleanup(sys.path.pop, 0)
-        from orient.engine import from_image
-        from orient.colour import hue_distance, lch
-        from orient.palette import validate
+        from nacre_shell.engine import from_image
+        from nacre_shell.colour import hue_distance, lch
+        from nacre_shell.palette import validate
 
         with tempfile.TemporaryDirectory() as directory:
             for item in art.collection():

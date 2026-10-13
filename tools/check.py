@@ -5,7 +5,6 @@ import argparse
 import ast
 import json
 import os
-import importlib.util
 from pathlib import Path
 import shutil
 import subprocess
@@ -50,7 +49,7 @@ def main():
             raise RuntimeError("Retired desktop tree reintroduced: " + path)
     lock = json.loads((ROOT / "dependencies.lock.json").read_text())
     engine = ROOT / lock["orient"]["path"]
-    if not (engine / "src/orient").is_dir():
+    if not (engine / "crates/orient-cli").is_dir():
         raise RuntimeError(
             "Initialize the pinned engine: git submodule update --init --recursive"
         )
@@ -154,9 +153,7 @@ def main():
             if line.startswith(("Ran ", "OK ", "OK"))
         )
         print(suite + ": " + summary.replace("\n", "; "), flush=True)
-    cli_python = Path.home() / ".local/share/nacre/palette-runtime/venv/bin/python"
-    if not cli_python.exists() and importlib.util.find_spec("PIL"):
-        cli_python = Path(sys.executable)
+    cli_python = Path(sys.executable)
     if cli_python.exists():
         environment = dict(os.environ, PYTHONPATH=str(ROOT / "nacre/shell-cli/src"))
         help_text = run(

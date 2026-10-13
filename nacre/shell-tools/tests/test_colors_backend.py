@@ -113,7 +113,7 @@ class ColorsBackendTests(unittest.TestCase):
         image.paste("#269bc8", (65, 40, 75, 75))
         image.save(self.image)
         data = self.preview()
-        from orient.colour import lch
+        from nacre_shell.colour import lch
 
         hues = [
             lch(item["hex"])[2]

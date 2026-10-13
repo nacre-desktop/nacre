@@ -3,8 +3,11 @@
   "orient": {
     "repository": "https://github.com/nacre-desktop/orient.git",
     "version": "0.1.0-dev.5",
-    "revision": "6ee17843647250b45f75dc229ab02688a6450bc2",
-    "path": "deps/orient"
+    "revision": "203ca257757a09e5239333f307e666f9c8ed1d1a",
+    "path": "deps/orient",
+    "engine": "orient-0.1.0.dev5-55b192008cc8-266b40f5b3ae",
+    "decoder": "266b40f5b3ae572d357c52daabbc1e6fd5f780585139ed2f925f2f8955d44568",
+    "interfaceVersion": 1
   },
   "python": {
     "pillow": "12.3.0"

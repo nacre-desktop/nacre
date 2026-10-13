@@ -1,6 +1,11 @@
-"""Compatibility import for the standalone Orient extract module."""
+"""Native decoding/analysis adapter."""
 
-import sys
-from orient import extract as implementation
+from ._backend import call
 
-sys.modules[__name__] = implementation
+
+def analyze(path):
+    return call("analyze", path=str(path))
+
+
+def sample_color(path, x, y):
+    return call("sample_color", path=str(path), x=x, y=y)

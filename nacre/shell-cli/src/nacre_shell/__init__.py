@@ -1,6 +1,6 @@
-"""Desktop compatibility adapter for the standalone Orient engine."""
+"""Desktop adapter for the pinned standalone Rust Orient engine."""
 
-from orient import ENGINE_ID as ENGINE_ID, __version__ as __version__
+from ._backend import ENGINE_ID as ENGINE_ID, FORMAT_VERSION as FORMAT_VERSION, __version__ as __version__
 
 
 def main():

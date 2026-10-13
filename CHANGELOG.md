@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+Use the pinned standalone Rust Orient binary for all palette calculations and
+template rendering. Provision an immutable native runtime; retain Pillow for
+desktop image previews. The gallery and current wallpaper colors are unchanged.
+
 General shortcuts use Super+Space for the launcher, Super+Enter for the selected
 terminal, Super+E for Files, Super+I for Settings, Super+Tab for overview and
 Super+L to lock. Super+A opens optional AI; the palette moves to Super+Ctrl+Space.

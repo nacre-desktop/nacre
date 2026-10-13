@@ -13,11 +13,11 @@ supported desktop is Hyprland with its Lua configuration API and UWSM; the teste
 source stack is Hyprland 0.56.2, Quickshell 0.3.2 and Qt 6.12. Update the desktop
 and Qt packages together.
 
-Install the separately maintained `python-orient-colors` package first, followed
+Install the separately maintained `orient` package first, followed
 by the Nacre packages supplied for the same tested release:
 
 ```sh
-sudo pacman -U python-orient-colors-*.pkg.tar.zst nacre-0*.pkg.tar.zst
+sudo pacman -U orient-*.pkg.tar.zst nacre-0*.pkg.tar.zst
 # Optional; install either or both before selecting them in setup:
 sudo pacman -U nacre-ai-*.pkg.tar.zst nacre-brain-*.pkg.tar.zst
 nacre setup

@@ -1,7 +1,7 @@
 # Arch packages (not yet published)
 
 One package base builds `nacre` (core), `nacre-ai` and `nacre-brain`. Orient owns
-its independent `python-orient-colors` package; do not bundle Orient into Nacre.
+its independent `orient` package; do not bundle Orient into Nacre.
 The tested exact engine revision/version is in `dependencies.lock.json`.
 Arch versions use `0.1.0devN`, which sorts below `0.1.0`; Python uses
 `0.1.0.devN` and Git tags use `v0.1.0-dev.N`.
@@ -52,7 +52,7 @@ sudo mkarchroot -C /usr/share/devtools/pacman.conf.d/extra.conf \
   /var/tmp/nacre-chroot/root base-devel
 # Build Orient in its owner's package directory first, then:
 makechrootpkg -c -r /var/tmp/nacre-chroot \
-  -I /path/to/python-orient-colors-0.1.0dev5-1-any.pkg.tar.zst
+  -I /path/to/orient-0.1.0dev5-1-x86_64.pkg.tar.zst
 namcap PKGBUILD ./*.pkg.tar.zst
 ```
 

@@ -16,7 +16,7 @@ tools:
 
 ```sh
 sudo pacman -S --needed ruff lua fish qt6-declarative gcc pkgconf gtk3 \
-  kconfig kcolorscheme breeze nodejs npm
+  kconfig kcolorscheme breeze nodejs npm rust lcms2
 ```
 
 Use Python 3.13 or newer. Initialize the engine submodule and create an isolated
@@ -26,7 +26,9 @@ check environment rather than activating development code in your daily session:
 git submodule update --init --recursive
 npm ci --ignore-scripts
 python3 -m venv .venv
-.venv/bin/python -m pip install ./deps/orient ./nacre/shell-cli ruff==0.16.10 pillow==12.3.0
+cargo build --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
+export NACRE_ORIENT_BINARY="$PWD/deps/orient/target/release/orient"
+.venv/bin/python -m pip install ./nacre/shell-cli ruff==0.16.10 pillow==12.3.0
 ```
 
 The Pillow version above matches `dependencies.lock.json`; update this example
@@ -53,12 +55,13 @@ lock/resume and performance need real-session checks in addition to unit tests.
 ## Packaging and dependencies
 
 Nacre pins Orient in `deps/orient` and `dependencies.lock.json`. Update the submodule,
-lock and desktop-adapter dependency together. Regenerate the checked-in startup
+lock and SDK engine fingerprint together. Regenerate the checked-in startup
 palette with `python3 tools/generate-palettes.py` when the engine changes.
 
-The library's broader Pillow requirement belongs in Orient; the exact desktop
-version belongs in Nacre's lock. A dependency change must invalidate the isolated
-runtime build cache. Keep template previews separate from palette publication.
+Nacre calls the pinned standalone Rust binary through its JSON interface; no
+Python Orient package is installed. Pillow remains for desktop thumbnails/artwork,
+with its exact desktop version in Nacre's lock. A dependency change must
+invalidate the isolated runtime build cache. Keep template previews separate from palette publication.
 
 Bundled wallpapers must permit redistribution. Preserve their source/license
 metadata and update their checksums and dimensions after optimization. Public
