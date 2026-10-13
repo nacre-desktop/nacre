@@ -211,12 +211,14 @@ launcher and panels retain their existing appearance.
 
 Windowed checks passed: native config validation; loaded shell and live workspace
 state; launcher open/controller palette route; dashboard IPC open with pinning;
-detached launcher represented by a real niri window; Wayland Kitty window;
+detached launcher represented by a real niri window; Wayland and forced-X11 Kitty windows;
 private notification delivery visibly captured; and `grim` output capture.
 Unpinned dashboard disappears without hover by existing design; automation pins
 it for the state assertion. User-manager environment bytes match before/after,
 and the running Hyprland services stay active. Physical key/input acceptance is
-still pending. A five-workspace profile displays a sixth empty workspace because
+still pending. Synthetic wtype events inside nested niri returned success but did
+not activate the Alt aliases; do not count this as keyboard acceptance. Test keys
+with the actual niri window focused. A five-workspace profile displays a sixth empty workspace because
 niri keeps a trailing empty workspace; this is expected dynamic behavior.
 
 This is an integration preview, not a completed login installation. System bus,
@@ -243,7 +245,7 @@ still starts the guarded plain-niri configuration.
 | Night light | Pending | Protocol-based tool behind existing owner; on/off, ownership and logout reset. |
 | Screenshots | Windowed grim output passed; area/clipboard pending | Area, output and clipboard; confirm available capture protocol. |
 | Multi-monitor | Pending | Mixed scale, hotplug, focus, placement and lock coverage. |
-| X11 apps | Pending | xwayland-satellite app launch, focus, input and exit. |
+| X11 apps | Windowed forced-X11 Kitty launched; input pending | xwayland-satellite app launch, focus, input and exit. |
 
 ## Open issues and sources
 
