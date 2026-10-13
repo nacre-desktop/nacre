@@ -34,12 +34,12 @@ class PackageSetupTests(unittest.TestCase):
             )
         backend = root / "nacre/shell-tools/compositor_backends"
         backend.mkdir()
-        (backend / "hyprland_config.py").write_bytes(
-            (
-                TOOLS.parent
-                / "nacre/shell-tools/compositor_backends/hyprland_config.py"
-            ).read_bytes()
-        )
+        for name in ("hyprland_config.py", "niri_config.py"):
+            (backend / name).write_bytes(
+                (
+                    TOOLS.parent / "nacre/shell-tools/compositor_backends" / name
+                ).read_bytes()
+            )
         (root / "tools/configure.py").write_bytes((TOOLS / "configure.py").read_bytes())
         (root / "package.json.installed").write_text(
             json.dumps(
