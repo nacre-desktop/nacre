@@ -59,3 +59,9 @@ sessions/hardware, remote services and model inference remain documented limits
 with existing tests retained. Palette/CLI references were captured only after the
 Rust Orient integration landed on main. The pin and revision are recorded in the
 coverage manifest. Run `tools/check.py` for harness, parity and existing checks.
+
+The 2026-10-13 niri parity change refreshes only compositor capability/event
+references and the control-tools unavailable reason. It adds explicit limits,
+managed desktop/output/controller support and editor-compatible mode strings.
+Wire requests, IDs and other helper observations stay frozen; the prior references
+remain in Git history. Desktop-settings retains its structured-error exit convention.

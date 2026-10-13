@@ -4,6 +4,7 @@
     "colorPicker": false,
     "powerProfilesSupported": false,
     "nightLightSupported": false,
+    "nightLightReason": "Requires a controller and output gamma control.",
     "nightLightExternal": false,
     "nightLightEnabled": false
   },
