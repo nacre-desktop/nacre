@@ -87,8 +87,6 @@ jobs:
           /tmp/check-env/bin/python tools/i18n/generate.py
       - name: Source and native UI regression checks
         run: |
-          # Container root reads a runner-owned checkout; trust only this workspace.
-          git config --global --add safe.directory "$PWD"
           export NACRE_ORIENT_BINARY="$PWD/deps/orient/target/release/orient"
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/check.py
       - name: Native English and pseudo gallery

@@ -17,7 +17,9 @@ class PublicNamesTests(unittest.TestCase):
         # Split patterns so this scanner's own source is included in its scan.
         forbidden = ("siver" + "teh", "cael" + "estia")
         paths = (
-            subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT)
+            subprocess.check_output(
+                ["git", "-c", f"safe.directory={ROOT}", "ls-files", "-z"], cwd=ROOT
+            )
             .decode()
             .split("\0")
         )

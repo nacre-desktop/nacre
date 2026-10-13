@@ -55,7 +55,9 @@ Main CI must be green before further wave 1 ports land. Ubuntu 22.04 runner fix
 `2753707f` retains the Arch container/sandbox/checks; CI sandbox integrity and
 fresh install now pass. Source CI exposed host/container workspace aliasing and
 a timestamp-dependent translation test. Use actual working directory for Git
-trust/Orient; give the changed test fixture an explicit new cache timestamp.
+Orient; scope Git trust directly to the resolved read-only inventory command
+(workflow-global trust was insufficient). Give the changed test fixture an
+explicit new cache timestamp; all original assertions remain.
 Local integrated gate: 817 tests, 10 controls and all 349 frozen cases pass.
 No test/reference was skipped or weakened. Full Source CI remains pending;
 the separate headless performance workflow passed at `301a0477`.
