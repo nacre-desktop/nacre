@@ -18,6 +18,39 @@ spec.loader.exec_module(nacre_i18n)
 
 
 class TranslationTests(unittest.TestCase):
+    def test_actual_catalog_preserves_compositor_error_english_and_external_detail(
+        self,
+    ):
+        messages = nacre_i18n.english()
+        with patch.object(nacre_i18n, "language", return_value="en"):
+            self.assertEqual(
+                nacre_i18n.tr(
+                    "ui.compositor.error.minimization-unavailable", "fallback"
+                ),
+                "Window minimization is unavailable on this compositor.",
+            )
+            self.assertEqual(
+                nacre_i18n.tr("ui.niri.error.ipc-disconnected", "fallback"),
+                "Niri IPC disconnected; reconnecting.",
+            )
+            self.assertEqual(
+                nacre_i18n.tr(
+                    "ui.niri.error.action-failed",
+                    "fallback",
+                    {"detail": "IPC_ERROR /tmp/NIRI_SOCKET"},
+                ),
+                "Niri action failed: IPC_ERROR /tmp/NIRI_SOCKET",
+            )
+        self.assertIn("ui.niri.error.action-failed", messages)
+        with patch.object(nacre_i18n, "language", return_value="pseudo"):
+            translated = nacre_i18n.tr(
+                "ui.niri.error.action-failed",
+                "fallback",
+                {"detail": "IPC_ERROR /tmp/NIRI_SOCKET"},
+            )
+        self.assertIn("IPC_ERROR /tmp/NIRI_SOCKET", translated)
+        self.assertNotIn("Niri action failed", translated)
+
     def test_python_fallback_placeholders_plural_and_pseudo_protection(self):
         with (
             patch.object(

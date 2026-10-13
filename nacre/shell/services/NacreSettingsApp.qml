@@ -66,7 +66,7 @@ Singleton {
     }
     function minimize() {
         if (NacreCompositor.capabilities?.windowHide === false) {
-            error = qsTr("Window minimization is unavailable on this compositor.");
+            error = NacreI18n.tr("ui.compositor.error.minimization-unavailable", "Window minimization is unavailable on this compositor.");
             return;
         }
         const client = root.client;
