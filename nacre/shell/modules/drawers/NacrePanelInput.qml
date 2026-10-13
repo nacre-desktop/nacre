@@ -20,6 +20,8 @@ Item {
     onDockedHoverChanged: settleHover()
     readonly property bool dockedOpening: dockedHover && (visibilities.dashboard && panels.dashboard?.opening === true || visibilities.launcher && panels.launcher?.opening === true || visibilities.left && panels.leftDrawer?.opening === true || visibilities.osd && panels.osd?.opening === true)
     onDockedOpeningChanged: settleHover()
+    readonly property bool docking: NacrePearls.pendingDocks?.some(entry => (entry.window?.screen?.name || entry.origin) === screen.name) === true
+    onDockingChanged: settleHover()
     readonly property bool modal: !hidden && !visibilities.previewOnly && (visibilities.launcher && !dockedHover || visibilities.session || visibilities.dashboard && visibilities.dashboardPinned || panels.popouts.pinned && panels.popouts.hasCurrent || visibilities.edgeMenu === "dashboard" && visibilities.dashboard || visibilities.edgeMenu === "left" && visibilities.left && !visibilities.leftPinned || visibilities.edgeMenu === "osd" && visibilities.osd)
     readonly property bool autoEdges: !hidden && !modal && DesktopSettings.data.clickEdgeMenus !== true && !visibilities.launcher && !visibilities.session && !NacreHoverIntent.fullscreenFor(screen.name)
     readonly property bool lipsAvailable: !hidden && !modal && !visibilities.launcher && !visibilities.session && !visibilities.dashboardPinned && !NacreHoverIntent.fullscreenFor(screen.name)
@@ -79,7 +81,7 @@ Item {
     function settleHover() {
         if (!ready || !panels || !visibilities)
             return;
-        if (hidden || modal || dockedOpening || NacrePearls.drag?.screen === screen.name) {
+        if (hidden || modal || dockedOpening || docking || NacrePearls.drag?.screen === screen.name) {
             launcherExit.stop();
             leftExit.stop();
             dashboardExit.stop();

@@ -24,23 +24,25 @@ Item {
         target: null
         onActiveChanged: {
             if (active) {
-                const point = root.mapToItem(root.Window.window.contentItem, centroid.pressPosition.x, centroid.pressPosition.y);
-                NacrePearls.begin(root.kind, root.host, root.screen.name, root.globalPoint(point));
-                if (NacrePearls.drag)
-                    NacrePearls.update(Qt.point(NacrePearls.drag.start.x + activeTranslation.x, NacrePearls.drag.start.y + activeTranslation.y));
+                const press = root.globalPoint(centroid.scenePressPosition);
+                const current = root.globalPoint(centroid.scenePosition);
+                NacrePearls.begin(root.kind, root.host, root.screen.name, press);
+                if (NacrePearls.drag?.host === root.host)
+                    NacrePearls.update(current);
             }
         }
         onActiveTranslationChanged: {
             const drag = NacrePearls.drag;
             if (active && drag?.host === root.host)
-                NacrePearls.update(Qt.point(drag.start.x + activeTranslation.x, drag.start.y + activeTranslation.y));
+                NacrePearls.update(root.globalPoint(centroid.scenePosition));
         }
         // Losing a grab (e.g. focus/surface changes) is not a mouse release.
         onGrabChanged: (transition, point) => {
             if (transition === PointerDevice.UngrabExclusive && NacrePearls.drag?.host === root.host) {
-                if (point.state === EventPoint.Released)
+                if (point.state === EventPoint.Released) {
+                    NacrePearls.update(root.globalPoint(point.scenePosition));
                     NacrePearls.finish();
-                else if (!NacrePearls.drag.released)
+                } else if (!NacrePearls.drag.released)
                     NacrePearls.cancel();
             }
         }

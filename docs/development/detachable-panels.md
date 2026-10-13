@@ -139,3 +139,15 @@ production-QML regression tests previously observed zero size on all four panels
 The explicit binding/sizing restore is synchronous, while ordinary close and
 future fresh-open animations remain intact. The control center defers its normal
 visibility-size update until its Behavior enable binding has settled.
+
+Fast pulls use the pointer's scene press/current/release coordinates, including
+the movement that activates the gesture. They do not depend on the translation
+property being populated after activation. A fresh pull can interrupt a completed
+magnetic return, while an actual native-window handoff remains protected.
+
+Redocking keeps the floating source until two explicitly requested destination
+frames have been submitted. Hover dismissal pauses during this bounded transfer.
+Static destinations request their second frame rather than waiting for unrelated
+animation. If no destination frame arrives within500ms, keep the floating window
+and roll back the edge view; never hide an unpainted source. No idle polling or
+image readback is involved.

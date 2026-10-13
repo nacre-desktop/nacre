@@ -140,6 +140,17 @@ TestCase {
   MouseArea {anchors.fill:parent;onPressed:mouse=>mouse.accepted=true}
   NacrePanelDrag {id:sensor;parent:panel.parent;x:0;y:0;width:350;height:250;kind:"ai";host:panel;screen:({name:"test",x:0,y:0})}
  }
+ function init(){NacrePearls.drag=null;NacrePearls.starts=0;NacrePearls.finishes=0;NacrePearls.dx=0;NacrePearls.cancelOnBegin=false;panel.enabled=true;panel.x=0;lower.enabled=false;DesktopSettings.data={dragPanels:true};}
+ function test_single_motion_and_release_use_full_pointer_delta(){
+  for(let i=0;i<3;i++){
+   panel.x=0;
+   mousePress(sensor,20,20,Qt.LeftButton,Qt.MetaModifier);
+   mouseMove(sensor,120,20,0,Qt.LeftButton,Qt.MetaModifier);
+   compare(NacrePearls.dx,100);
+   mouseRelease(sensor,140,20,Qt.LeftButton,Qt.MetaModifier);
+   compare(NacrePearls.dx,120);compare(NacrePearls.finishes,i+1);
+  }
+ }
  function test_reserved_drag_and_plain_click(){
   mouseDrag(sensor,20,20,100,0,Qt.LeftButton,Qt.NoModifier);compare(NacrePearls.starts,0);
   mouseDrag(sensor,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);
@@ -418,6 +429,7 @@ TestCase {
                 .replace("import Quickshell", "")
                 .replace("import qs.modules.pearls as Pearl", "")
                 .replace("import qs.config", 'import "."')
+                .replace("import qs.widgets", 'import "."')
                 .replace("Singleton {", "Item {")
                 .replace(
                     'import "../modules/pearls/geometry.js" as Geometry',
@@ -425,11 +437,15 @@ TestCase {
                 )
             )
             source = remove_objects(
-                source, r"\b(Component|Process|IpcHandler|Connections)\s*\{"
+                source,
+                r"\b(Component(?!\s*\{\s*id:\s*frameBarrierFactory\b)|Process|IpcHandler|Connections)\s*\{",
             )
             source = source.replace(
                 "Quickshell.screens", "Environment.screens"
             ).replace("Quickshell.processId", "Environment.processId")
+            (target / "NacreFrameBarrier.qml").write_text(
+                (SHELL / "widgets/NacreFrameBarrier.qml").read_text()
+            )
             (target / "Controller.qml").write_text(source)
             (target / "geometry.js").write_text(
                 (SHELL / "modules/pearls/geometry.js").read_text()
@@ -440,10 +456,11 @@ import "."
 TestCase {
  name:"MagneticDockLifecycle";when:windowShown
  Controller {id:controller}
+ QtObject {id:surface;property bool autoFrames:true;property int requests:0;signal frameSwapped();function update(){requests++;if(autoFrames)Qt.callLater(()=>frameSwapped())}}
  property var view:({dashboard:false,dashboardPinned:false,left:false,leftPinned:false,launcher:false,osd:false,session:false,previewOnly:false,hoverDocked:false,edgeMenu:"",dashboardTab:0})
  property int destroyed:0
  property int prepared:0
- function init(){controller.entries=[];controller.drag=null;controller.nativeDrag=null;controller.niriMove=null;destroyed=0;prepared=0;NacrePanelState.hidden=false;NacrePanelState.screens={test:view};NacrePanelState.panels={test:{dashboard:{restoreAttached(){prepared++}}}};NacreCompositor.backendName="hyprland";NacreCompositor.windows=[];}
+ function init(){surface.autoFrames=true;surface.requests=0;controller.entries=[];controller.drag=null;controller.nativeDrag=null;controller.niriMove=null;destroyed=0;prepared=0;NacrePanelState.hidden=false;NacrePanelState.screens={test:view};NacrePanelState.panels={test:{dashboard:{Window:{window:surface},restoreAttached(){prepared++}}}};NacreCompositor.backendName="hyprland";NacreCompositor.windows=[];}
  function addEntry(){const e={kind:"dashboard",title:"Nacre Pearl Dashboard 12",origin:"test",window:{visible:true,ready:true,clientAddress:"niri-window:12",captureState(){return {dashboardTab:2}},destroy(){destroyed++}},destroy(){destroyed++}};controller.entries=[e];return e;}
  function packet(phase,x,y){return "nacre_pearl_drag,"+phase+",Nacre Pearl Dashboard 12,"+x+","+y+",400,300,984,740";}
  function test_native_grab_middle_docks_before_pointer_reaches_edge(){
@@ -452,7 +469,7 @@ TestCase {
    controller.nativeGesture(packet("move",900,390));
    verify(controller.nativeDrag.destination.armed);compare(controller.nativeDrag.body.y,90);
    controller.nativeGesture(packet("end",900,390));
-   compare(controller.nativeDrag,null);compare(controller.entries.length,0);
+   compare(controller.nativeDrag,null);tryVerify(()=>controller.entries.length===0);
    verify(view.dashboard);compare(view.dashboardTab,2);verify(view.hoverDocked);
    wait(1);
   }
@@ -466,7 +483,7 @@ TestCase {
    if(i) addEntry();controller.compositorMove(niriPacket("begin"));verify(controller.niriMove);
    compare(controller.landingCues.length,1);compare(controller.landingCues[0].edge,"top");compare(controller.landingCues[0].origin.y,50);compare(controller.magneticCue,null);
    wait(250);compare(controller.entries.length,1);
-   controller.compositorMove(niriPacket("end"));compare(controller.entries.length,0);
+   controller.compositorMove(niriPacket("end"));tryVerify(()=>controller.entries.length===0);
    verify(view.dashboard);verify(view.hoverDocked);compare(view.dashboardTab,2);wait(1);
   }
   compare(prepared,2);compare(destroyed,4);
@@ -482,6 +499,25 @@ TestCase {
   controller.compositorMove(niriPacket("end",{x:400,y:250,width:984,height:740}));compare(controller.entries.length,1);
   controller.compositorMove(niriPacket("begin"));const tiled=niriPacket("end");tiled.floating=false;
   controller.compositorMove(tiled);compare(controller.entries.length,1);
+ }
+ function test_dock_keeps_native_source_until_two_destination_frames(){
+  surface.autoFrames=false;const entry=addEntry();controller.dock(entry,"test");
+  compare(controller.pendingDocks.length,1);verify(entry.window.visible);verify(view.dashboard);
+  surface.frameSwapped();verify(entry.window.visible);compare(controller.entries.length,1);compare(surface.requests,2);
+  surface.frameSwapped();compare(controller.entries.length,0);verify(!entry.window.visible);wait(1);compare(destroyed,2);
+ }
+ function test_missing_destination_frame_keeps_native_window(){
+  surface.autoFrames=false;const entry=addEntry();
+  ignoreWarning("Nacre dock destination did not present; floating window retained");
+  controller.dock(entry,"test");wait(550);
+  compare(controller.entries.length,1);verify(entry.window.visible);compare(entry.transfer,null);verify(!view.dashboard);
+ }
+ function test_new_pull_interrupts_completed_magnetic_return(){
+  const body={x:400,y:50,width:984,height:740};
+  controller.drag={kind:"dashboard",host:{},screen:"test",body:body,dx:0,dy:0,ready:false,released:true,destination:null};
+  const host={canDetach:true,mapToItem(){return {x:400,y:50}},Window:{window:{contentItem:{}}}};
+  controller.begin("dashboard",host,"test",{x:600,y:200});verify(controller.drag && !controller.drag.released);
+  controller.update({x:600,y:330});compare(controller.drag.dy,130);verify(controller.drag.ready);
  }
  function test_hidden_frame_has_no_magnetic_target(){
   addEntry();NacrePanelState.hidden=true;

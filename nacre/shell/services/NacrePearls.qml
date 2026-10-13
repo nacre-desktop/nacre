@@ -6,6 +6,7 @@ import Quickshell.Io
 import "../modules/pearls/geometry.js" as Geometry
 import qs.modules.pearls as Pearl
 import qs.config
+import qs.widgets
 
 Singleton {
     id: root
@@ -15,6 +16,7 @@ Singleton {
     property int serial: 0
     property var entries: []
     property var views: []
+    readonly property var pendingDocks: entries.filter(entry => !!entry.transfer)
     property var drag: null
     property var nativeDrag: null
     property var niriMove: null
@@ -33,6 +35,10 @@ Singleton {
         Pearl.NacrePearlWindow {}
     }
     Component {
+        id: frameBarrierFactory
+        NacreFrameBarrier {}
+    }
+    Component {
         id: entryFactory
         QtObject {
             property string key
@@ -43,6 +49,7 @@ Singleton {
             property var chat: null
             property var window: null
             property var providerView: null
+            property var transfer: null
         }
     }
     function nativeGesture(payload) {
@@ -329,7 +336,7 @@ Singleton {
                 ready: true,
                 released: true,
                 destination: entry,
-                dockTarget: value.magnet?.armed ? value.magnet.screen : ""
+                dockTarget: ""
             };
             handoffTimeout.restart();
         }
@@ -362,6 +369,11 @@ Singleton {
     function remove(entry, park = true) {
         if (!entries.includes(entry))
             return;
+        if (entry.transfer) {
+            const transfer = entry.transfer;
+            entry.transfer = null;
+            Qt.callLater(() => transfer.destroy());
+        }
         if (nativeDrag?.entry === entry)
             nativeDrag = null;
         if (niriMove?.entry === entry)
@@ -377,6 +389,8 @@ Singleton {
         Qt.callLater(() => entry.destroy());
     }
     function dock(entry, destination = "") {
+        if (entry.transfer)
+            return;
         const name = destination || entry.window.screen?.name || entry.origin;
         const view = NacrePanelState.screens[name] || NacrePanelState.getForActive();
         if (!view) {
@@ -412,7 +426,40 @@ Singleton {
                     launcher: "launcher"
                 })[entry.kind]];
         panel?.restoreAttached();
-        remove(entry, false);
+        const surface = panel?.Window?.window;
+        if (!surface) {
+            rollbackDock(entry, view);
+            return;
+        }
+        entry.transfer = frameBarrierFactory.createObject(root, {
+            surface: surface,
+            commit: () => remove(entry, false),
+            reject: () => rollbackDock(entry, view)
+        });
+        entries = entries.slice();
+        entry.transfer.start();
+    }
+    function rollbackDock(entry, view) {
+        if (!entries.includes(entry))
+            return;
+        const transfer = entry.transfer;
+        entry.transfer = null;
+        if (transfer)
+            Qt.callLater(() => transfer.destroy());
+        const field = ({
+                ai: "left",
+                controls: "osd",
+                dashboard: "dashboard",
+                media: "dashboard",
+                launcher: "launcher"
+            })[entry.kind];
+        if (field && view)
+            view[field] = false;
+        if (entry.kind === "ai" && NacreAiViews.edge === entry.chat)
+            NacreAiViews.take();
+        entries = entries.slice();
+        entry.window.activate?.();
+        console.warn("Nacre dock destination did not present; floating window retained");
     }
     function bodyRect(host, name) {
         const monitor = screen(name);
@@ -425,7 +472,13 @@ Singleton {
         };
     }
     function begin(kind, host, name, point, entry = null) {
-        if (!enabled || DesktopSettings.data.dragPanels === false || drag || host?.canDetach === false)
+        if (!enabled || DesktopSettings.data.dragPanels === false || host?.canDetach === false)
+            return;
+        if (drag?.released && !drag.destination) {
+            returnDelay.stop();
+            cancel();
+        }
+        if (drag)
             return;
         lastGesture = {
             stage: "begin",
