@@ -274,6 +274,14 @@ place, not that SDDM login/logout, hardware, lock/password unlock or night light
 have passed. Select **Nacre (niri)** when all current graphical work is saved.
 Return through **Nacre (Hyprland)** or the TTY fallback at the start of this guide.
 
+Installation is complete on the test machine with a private rollback receipt at
+`~/.local/state/nacre/backups/niri-full-login-latest`. Protected common/Hyprland
+environment, profile and Hyprland config hashes match before/after; running shell
+and idle service PIDs and shared activation environment are unchanged. Native
+niri config and systemd unit verification pass. Local repository validation passes
+696 tests plus lint, format, Qt/QML, generated/boundary, palette and JavaScript
+checks. Actual login acceptance remains pending.
+
 | Area | Result | Acceptance steps |
 |---|---|---|
 | Login/logout | Pending | Select both named sessions from SDDM; verify service lifetime. |

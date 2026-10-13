@@ -9,6 +9,14 @@ belong to the separate `feature/niri-backend` task.
 
 ## Done
 
+- Installed full-login selection, namespace wrapper, explicit-lock shim and shell
+  service drop-in with private before/after receipts at
+  `~/.local/state/nacre/backups/niri-full-login-latest`. Protected Hyprland/common
+  env/profile/config bytes, active shell/idle PIDs and activation environment match.
+  Native niri config and systemd unit verification pass; no session switch/restart.
+- Full local `tools/check.py` passes 696 tests, lint/format, Qt/QML, boundary/config,
+  palette CLI and JavaScript checks. Five new login-runtime tests pass; preview
+  tests remain eight. CI must be checked on the final published head.
 - Prepared separate full-login code/config and a niri-only executable shim. UWSM
   retains lifecycle ownership; Hyprland shell startup passes through to the same
   original controller. Nested supervisor preflight loads the shell; GPU device
