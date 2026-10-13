@@ -1,0 +1,253 @@
+{
+  "application-name": {
+    "ids": [
+      "applications.ai.title",
+      "applications.brain.title",
+      "applications.colors.title",
+      "applications.lock-preview.title",
+      "applications.settings.title",
+      "applications.welcome.title"
+    ],
+    "optionsDomain": "application-name",
+    "reason": "Application/window name lookup builds an ID from its finite kind table.",
+    "reference": "tr(\"applications.\" + kind + \".title\"",
+    "source": "nacre/shell/services/NacreI18n.qml"
+  },
+  "dashboard-tab": {
+    "ids": [
+      "options.dashboard-tab.focus",
+      "options.dashboard-tab.media",
+      "options.dashboard-tab.system",
+      "options.dashboard-tab.weather"
+    ],
+    "optionsDomain": "dashboard-tab",
+    "reason": "The dashboard page model supplies tab names at runtime.",
+    "reference": "NacreI18n.option(\"dashboard-tab\"",
+    "source": "nacre/shell/modules/dashboard/NacreDashboardCustomize.qml"
+  },
+  "mode": {
+    "ids": [
+      "options.mode.dark",
+      "options.mode.light"
+    ],
+    "optionsDomain": "mode",
+    "reason": "The active palette mode supplies the lookup key.",
+    "reference": "NacreI18n.option(\"mode\"",
+    "source": "nacre/shell/modules/welcome/NacreWelcomeView.qml"
+  },
+  "palette-name": {
+    "ids": [
+      "palette.name.acid-lime",
+      "palette.name.amethyst",
+      "palette.name.apricot",
+      "palette.name.blue",
+      "palette.name.blue-tone",
+      "palette.name.blush-red",
+      "palette.name.butter-yellow",
+      "palette.name.candy-pink",
+      "palette.name.cobalt-blue",
+      "palette.name.copper",
+      "palette.name.copper-tone",
+      "palette.name.cornflower",
+      "palette.name.deep-teal",
+      "palette.name.electric-cyan",
+      "palette.name.electric-yellow",
+      "palette.name.ember",
+      "palette.name.emerald",
+      "palette.name.flame-orange",
+      "palette.name.forest",
+      "palette.name.glacier",
+      "palette.name.gold",
+      "palette.name.gold-tone",
+      "palette.name.green",
+      "palette.name.green-tone",
+      "palette.name.honey",
+      "palette.name.hot-pink",
+      "palette.name.indigo",
+      "palette.name.indigo-tone",
+      "palette.name.lilac",
+      "palette.name.lilac-tone",
+      "palette.name.neutral",
+      "palette.name.neutral-tone",
+      "palette.name.ocean",
+      "palette.name.olive",
+      "palette.name.olive-tone",
+      "palette.name.pear",
+      "palette.name.periwinkle",
+      "palette.name.rose",
+      "palette.name.rose-tone",
+      "palette.name.royal-indigo",
+      "palette.name.sage",
+      "palette.name.sea-glass",
+      "palette.name.slate",
+      "palette.name.solar-gold",
+      "palette.name.super-red",
+      "palette.name.teal",
+      "palette.name.teal-tone",
+      "palette.name.violet"
+    ],
+    "optionsDomain": "palette-name",
+    "reason": "Built-in palette entries supply their names at runtime.",
+    "reference": "NacreI18n.option(\"palette-name\"",
+    "source": "nacre/shell/modules/settings/pages/NacrePaletteTile.qml"
+  },
+  "pearl-kind": {
+    "ids": [
+      "pearl.kind.ai",
+      "pearl.kind.controls",
+      "pearl.kind.dashboard",
+      "pearl.kind.launcher",
+      "pearl.kind.media"
+    ],
+    "optionsDomain": "pearl-kind",
+    "reason": "Owned window titles supply one of the five pearl kinds.",
+    "reference": "option(\"pearl-kind\"",
+    "source": "nacre/shell/services/NacreI18n.qml"
+  },
+  "personality": {
+    "ids": [
+      "options.personality.harmony",
+      "options.personality.mist",
+      "options.personality.natural",
+      "options.personality.pearl",
+      "options.personality.pigment",
+      "options.personality.pop",
+      "options.personality.tide",
+      "options.personality.vivid"
+    ],
+    "optionsDomain": "personality",
+    "reason": "The palette personality model supplies the lookup key.",
+    "reference": "NacreI18n.option(\"personality\"",
+    "source": "nacre/shell/modules/colors/NacreColorsView.qml"
+  },
+  "personality-value": {
+    "ids": [
+      "options.personality-value.harmony",
+      "options.personality-value.mist",
+      "options.personality-value.natural",
+      "options.personality-value.pearl",
+      "options.personality-value.pigment",
+      "options.personality-value.pop",
+      "options.personality-value.tide",
+      "options.personality-value.vivid"
+    ],
+    "optionsDomain": "personality-value",
+    "reason": "The saved palette personality supplies the summary value.",
+    "reference": "NacreI18n.option(\"personality-value\"",
+    "source": "nacre/shell/modules/dashboard/NacreTodayPage.qml"
+  },
+  "prefix-hint": {
+    "ids": [
+      "options.prefix-hint.actions",
+      "options.prefix-hint.ai",
+      "options.prefix-hint.brain",
+      "options.prefix-hint.calculate",
+      "options.prefix-hint.files"
+    ],
+    "optionsDomain": "prefix-hint",
+    "reason": "Launcher prefix hints come from the runtime mode model.",
+    "reference": "NacreI18n.option(\"prefix-hint\"",
+    "source": "nacre/shell/modules/launcher/NacreAppBrowser.qml"
+  },
+  "rotation-pause": {
+    "ids": [
+      "wallpaper.rotation.paused.applying-changes",
+      "wallpaper.rotation.paused.asleep",
+      "wallpaper.rotation.paused.fewer-than-two-wallpapers",
+      "wallpaper.rotation.paused.locked",
+      "wallpaper.rotation.paused.settings-open",
+      "wallpaper.rotation.paused.wallpaper-picker-open",
+      "wallpaper.rotation.paused.welcome-demo-open"
+    ],
+    "optionsDomain": "rotation-pause",
+    "reason": "Rotation state selects one of the helper pause reasons.",
+    "reference": "NacreI18n.option(\"rotation-pause\"",
+    "source": "nacre/shell/services/NacreWallpapers.qml"
+  },
+  "shortcut-group": {
+    "ids": [
+      "options.shortcut-group.apps-and-panels",
+      "options.shortcut-group.capture-and-clipboard",
+      "options.shortcut-group.sound-display-and-locking",
+      "options.shortcut-group.windows",
+      "options.shortcut-group.workspaces-and-focus"
+    ],
+    "optionsDomain": "shortcut-group",
+    "reason": "Welcome renders named shortcut groups from its model.",
+    "reference": "NacreI18n.option(\"shortcut-group\"",
+    "source": "nacre/shell/modules/welcome/NacreWelcomeView.qml"
+  },
+  "vision": {
+    "ids": [
+      "options.vision.deutan",
+      "options.vision.normal",
+      "options.vision.protan",
+      "options.vision.tritan"
+    ],
+    "optionsDomain": "vision",
+    "reason": "The accessibility vision model supplies the lookup key.",
+    "reference": "NacreI18n.option(\"vision\"",
+    "source": "nacre/shell/modules/colors/NacreColorsView.qml"
+  },
+  "weather-description": {
+    "ids": [
+      "weather.condition.clear",
+      "weather.condition.drizzle",
+      "weather.condition.fog",
+      "weather.condition.freezing-drizzle",
+      "weather.condition.freezing-fog",
+      "weather.condition.freezing-rain",
+      "weather.condition.heavy-drizzle",
+      "weather.condition.heavy-rain",
+      "weather.condition.heavy-showers",
+      "weather.condition.heavy-snow",
+      "weather.condition.heavy-snow-showers",
+      "weather.condition.light-drizzle",
+      "weather.condition.light-rain",
+      "weather.condition.light-snow",
+      "weather.condition.mostly-clear",
+      "weather.condition.overcast",
+      "weather.condition.partly-cloudy",
+      "weather.condition.rain",
+      "weather.condition.rain-showers",
+      "weather.condition.snow",
+      "weather.condition.snow-grains",
+      "weather.condition.snow-showers",
+      "weather.condition.thunderstorm",
+      "weather.condition.thunderstorm-with-hail"
+    ],
+    "optionsDomain": "weather-description",
+    "reason": "The weather helper maps numeric weather codes to condition names.",
+    "reference": "NacreI18n.option(\"weather-description\"",
+    "source": "nacre/shell/services/NacreWeather.qml"
+  },
+  "workflow": {
+    "ids": [
+      "options.workflow.docked",
+      "options.workflow.focused",
+      "options.workflow.meeting",
+      "options.workflow.minimal",
+      "options.workflow.music",
+      "options.workflow.normal",
+      "options.workflow.presentation"
+    ],
+    "optionsDomain": "workflow",
+    "reason": "The configured workflow model supplies the lookup key.",
+    "reference": "NacreI18n.option(\"workflow\"",
+    "source": "nacre/shell/modules/settings/pages/NacreWorkflowsPage.qml"
+  },
+  "workflow-role": {
+    "ids": [
+      "options.workflow-role.brain",
+      "options.workflow-role.browser",
+      "options.workflow-role.discord",
+      "options.workflow-role.mail",
+      "options.workflow-role.nacre-ai",
+      "options.workflow-role.spotify"
+    ],
+    "optionsDomain": "workflow-role",
+    "reason": "Workflow application roles supply the lookup key.",
+    "reference": "NacreI18n.option(\"workflow-role\"",
+    "source": "nacre/shell/modules/settings/pages/NacreWorkflowsPage.qml"
+  }
+}

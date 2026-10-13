@@ -303,40 +303,6 @@
       "id": "options.personality.vivid"
     }
   },
-  "personality-lower": {
-    "harmony": {
-      "fallback": "harmony",
-      "id": "options.personality-lower.harmony"
-    },
-    "mist": {
-      "fallback": "mist",
-      "id": "options.personality-lower.mist"
-    },
-    "natural": {
-      "fallback": "natural",
-      "id": "options.personality-lower.natural"
-    },
-    "pearl": {
-      "fallback": "pearl",
-      "id": "options.personality-lower.pearl"
-    },
-    "pigment": {
-      "fallback": "pigment",
-      "id": "options.personality-lower.pigment"
-    },
-    "pop": {
-      "fallback": "pop",
-      "id": "options.personality-lower.pop"
-    },
-    "tide": {
-      "fallback": "tide",
-      "id": "options.personality-lower.tide"
-    },
-    "vivid": {
-      "fallback": "vivid",
-      "id": "options.personality-lower.vivid"
-    }
-  },
   "personality-value": {
     "harmony": {
       "fallback": "harmony",
