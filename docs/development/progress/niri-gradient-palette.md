@@ -19,8 +19,11 @@
 
 ## Next
 
-- One follow-up PR and required final-head CI; local code and validation are
-  complete. Publishing credentials now verify and the task branch is pushed.
+- Direct integration/publication follows the standing policy effective
+  2026-10-13. Existing PR20 was created before that policy; no PR update/merge
+  operation is used for direct publication. Exact tested code remains `b2a8527`;
+  later status commits are documentation only. Topic-head CI38369372130 passed.
+- Verify the published main revision and its push-triggered CI result.
 - Session agent owns backed-up in-place template integration, canonical palette
   include and palette publication; no shell restart by this task.
 
