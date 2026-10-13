@@ -195,6 +195,28 @@ class WelcomeTests(unittest.TestCase):
         self.assertEqual(rows[0]["key"], "Super + 3")
         self.assertEqual(rows[0]["titleId"], "welcome.shortcut.workspace.title")
 
+    def test_all_current_shortcuts_have_actual_catalog_titles_and_stable_keys(self):
+        bindings = [
+            dict(key="F" + str(index + 1), modmask=64, description="Nacre:" + action)
+            for index, (action, _, _) in enumerate(welcome.SHORTCUTS)
+        ]
+        canonical_titles = {action: title for action, title, _ in welcome.SHORTCUTS}
+        results = []
+        for language in ("en", "pseudo"):
+            with patch.dict(welcome.os.environ, {"NACRE_LANGUAGE": language}):
+                rows = welcome.shortcut_rows(bindings)
+                self.assertEqual({row["id"] for row in rows}, set(canonical_titles))
+                for row in rows:
+                    caption = welcome.tr(row["titleId"], "wrong fallback")
+                    self.assertEqual(row["title"], canonical_titles[row["id"]])
+                    if language == "en":
+                        self.assertEqual(caption, canonical_titles[row["id"]])
+                    else:
+                        self.assertTrue(caption.startswith("["), caption)
+                results.append(rows)
+        self.assertEqual(results[0], results[1])
+        self.assertEqual(canonical_titles["put-away"], "Close with undo")
+
     def test_live_shortcut_ranges_aliases_and_related_keys(self):
         binds = [
             {"key": str(n), "modmask": 64, "description": "Nacre:workspace"}

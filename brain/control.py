@@ -814,9 +814,14 @@ class Handler(BaseHTTPRequestHandler):
                     requested = os.environ.get("NACRE_LANGUAGE", "")
                     if not requested:
                         try:
-                            requested = json.loads(
+                            preference = json.loads(
                                 (HOME / ".config/nacre/desktop.json").read_text()
-                            ).get("language", "system")
+                            )
+                            requested = (
+                                preference.get("language", "system")
+                                if isinstance(preference, dict)
+                                else "system"
+                            )
                         except (OSError, ValueError):
                             requested = "system"
                     if not isinstance(requested, str) or not re.fullmatch(

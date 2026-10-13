@@ -59,6 +59,31 @@ class BrowserAuthenticationTests(unittest.TestCase):
                     self.assertTrue(response[2])
                 with patch.dict(m.os.environ, {"NACRE_LANGUAGE": "pseudo"}):
                     self.assertIn(b'data-nacre-language="pseudo"', get("/", cookie)[2])
+                preference = state / ".config/nacre/desktop.json"
+                preference.parent.mkdir(parents=True)
+                with (
+                    patch.object(m, "HOME", state),
+                    patch.dict(m.os.environ, {"NACRE_LANGUAGE": ""}),
+                ):
+                    for value in (
+                        [],
+                        None,
+                        42,
+                        "en",
+                        {"language": []},
+                        {"language": 'en" onload="unsafe'},
+                        {"language": "en"},
+                    ):
+                        with self.subTest(preference=value):
+                            preference.write_text(json.dumps(value))
+                            response = get("/", cookie)
+                            self.assertEqual(response[0], 200)
+                            expected = "en" if value == {"language": "en"} else "system"
+                            self.assertIn(
+                                ('data-nacre-language="' + expected + '"').encode(),
+                                response[2],
+                            )
+                            self.assertNotIn(b'onload="unsafe', response[2])
                 with patch.object(m, "graph", return_value={"fixture": True}):
                     self.assertEqual(get("/api/brain", cookie)[0], 200)
                     self.assertEqual(get("/api/brain", cookie, "evil.invalid")[0], 403)
