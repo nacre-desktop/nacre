@@ -14,6 +14,9 @@ Item {
     }
     DragHandler {
         id: gesture
+        // Observe the controls through their ancestor. A sibling overlay with a
+        // passive pointer grab prevents ordinary presses reaching those controls.
+        parent: root.host
         enabled: NacrePearls.enabled && DesktopSettings.data.dragPanels !== false && root.host.visible && root.host.enabled
         onEnabledChanged: if (!enabled && NacrePearls.drag?.host === root.host && !NacrePearls.drag.released)
             NacrePearls.cancel()

@@ -131,14 +131,21 @@ QtObject {
 import QtTest
 import "."
 TestCase {
- name:"SuperPanelLift";width:400;height:300;visible:true;when:windowShown
+ id:test;name:"SuperPanelLift";width:400;height:300;visible:true;when:windowShown
+ property int presses:0;property int clicks:0
  Item {id:under;width:350;height:250;z:-1}
  NacrePanelDrag {id:lower;enabled:false;z:-1;x:0;y:0;width:350;height:250;kind:"dashboard";host:under;screen:({name:"test",x:0,y:0})}
  Item {id:panel;width:350;height:250
-  MouseArea {anchors.fill:parent;onPressed:mouse=>mouse.accepted=true}
+  MouseArea {anchors.fill:parent;onPressed:mouse=>{test.presses++;mouse.accepted=true};onClicked:test.clicks++}
   NacrePanelDrag {id:sensor;parent:panel.parent;x:0;y:0;width:350;height:250;kind:"ai";host:panel;screen:({name:"test",x:0,y:0})}
  }
- function init(){NacrePearls.drag=null;NacrePearls.starts=0;NacrePearls.finishes=0;NacrePearls.dx=0;NacrePearls.cancelOnBegin=false;panel.enabled=true;panel.x=0;lower.enabled=false;DesktopSettings.data={dragPanels:true};}
+ function init(){presses=0;clicks=0;NacrePearls.drag=null;NacrePearls.starts=0;NacrePearls.finishes=0;NacrePearls.dx=0;NacrePearls.cancelOnBegin=false;panel.enabled=true;panel.x=0;lower.enabled=false;DesktopSettings.data={dragPanels:true};}
+ function test_ordinary_click_reaches_controls_under_drag_sensor(){
+  mouseClick(sensor,20,20,Qt.LeftButton,Qt.NoModifier);
+  compare(presses,1);compare(clicks,1);compare(NacrePearls.starts,0);
+  mouseClick(panel,120,120,Qt.LeftButton,Qt.NoModifier);
+  compare(presses,2);compare(clicks,2);compare(NacrePearls.starts,0);
+ }
  function test_single_motion_and_release_use_full_pointer_delta(){
   for(let i=0;i<3;i++){
    panel.x=0;
