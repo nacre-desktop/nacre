@@ -396,6 +396,96 @@ TestCase {
             NacreWallpapers.list = original;
         }
     }
+    function test_spotlight_deck_preserves_artwork_and_focus_data() {
+        return [
+            {
+                tag: "desktop",
+                width: 1900,
+                height: 1100,
+                count: 9
+            },
+            {
+                tag: "detached",
+                width: 700,
+                height: 520,
+                count: 9
+            },
+            {
+                tag: "short",
+                width: 1000,
+                height: 360,
+                count: 9
+            },
+            {
+                tag: "single",
+                width: 700,
+                height: 520,
+                count: 1
+            },
+            {
+                tag: "pair",
+                width: 700,
+                height: 520,
+                count: 2
+            }
+        ];
+    }
+    function test_spotlight_deck_preserves_artwork_and_focus(data) {
+        const original = NacreWallpapers.list;
+        try {
+            NacreWallpapers.list = Array.from({
+                length: data.count
+            }, (_, i) => ({
+                        path: "wall" + i,
+                        name: "Wallpaper " + i,
+                        poster: original[0].poster,
+                        dynamic: false
+                    }));
+            NacreWallpapers.preference({
+                layout: "spotlight"
+            });
+            const view = createTemporaryObject(picker, test, {
+                detached: true,
+                width: data.width,
+                height: data.height
+            });
+            view.visibilities.previewOnly = true;
+            wait(40);
+            const strip = findChild(view, "spotlightStrip");
+            const hero = findChild(view, "spotlightCard0");
+            verify(hero.width > 100);
+            fuzzyCompare(hero.width / hero.height, 16 / 9, .001);
+            fuzzyCompare(hero.x + hero.width / 2, strip.width / 2, .01);
+            fuzzyCompare(strip.y - strip.topInset, (strip.availableHeight - strip.height) / 2, .01);
+            verify(strip.y + strip.height <= view.height - 40);
+            if (data.count > 1) {
+                const neighbor = findChild(view, "spotlightCard1");
+                fuzzyCompare(neighbor.width / neighbor.height, 16 / 9, .001);
+                fuzzyCompare(neighbor.y + neighbor.height / 2, hero.height / 2, .01);
+                verify(neighbor.width < hero.width);
+                verify(neighbor.z < hero.z);
+                verify(neighbor.opacity < hero.opacity);
+                // Only the exposed side of the overlapping card receives clicks.
+                const offset = view.circularOffset(1);
+                mouseClick(neighbor, offset > 0 ? neighbor.width - 8 : 8, neighbor.height / 2);
+                compare(view.currentIndex, 1);
+                wait(350);
+                fuzzyCompare(neighbor.x + neighbor.width / 2, strip.width / 2, .01);
+                fuzzyCompare(neighbor.width, strip.heroWidth, .01);
+                view.move(-1);
+                wait(350);
+                compare(view.currentIndex, 0);
+                view.move(-1);
+                wait(350);
+                compare(view.currentIndex, data.count - 1);
+                view.move(1);
+                wait(350);
+                compare(view.currentIndex, 0);
+            }
+        } finally {
+            NacreWallpapers.list = original;
+        }
+    }
     function test_theme_waits_for_matching_image_ready_and_rejects_stale_ack() {
         const view = createTemporaryObject(presentation, test);
         const first = {

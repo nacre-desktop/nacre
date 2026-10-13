@@ -271,15 +271,17 @@ Item {
         objectName: "spotlightStrip"
         x: 24
         readonly property real topInset: toolbar.y + toolbar.height + 24
-        readonly property real availableHeight: Math.max(0, root.height - toolbar.y - toolbar.height - navigation.height - 42)
-        y: toolbar.y + toolbar.height + 16
+        readonly property real availableHeight: Math.max(0, root.height - topInset - navigation.height - 40)
+        y: topInset + (availableHeight - height) / 2
         width: Math.max(0, root.width - 48)
-        height: Math.min(availableHeight, heroWidth * .625)
+        height: heroWidth * 9 / 16
         clip: true
         visible: root.layout === "spotlight"
-        readonly property real heroWidth: Math.min(width * (root.count > 1 ? .56 : .8), 1160)
-        readonly property int sideSlots: Math.max(0, Math.min(4, Math.ceil((root.count - 1) / 2)))
-        readonly property real sideWidth: Math.max(36, (width - heroWidth - Math.max(0, sideSlots * 2) * 12) / Math.max(1, sideSlots * 2))
+        // A coverflow deck keeps every preview widescreen. Side cards overlap
+        // behind the hero instead of squeezing the collection into tall strips.
+        readonly property real heroWidth: Math.min(width * (root.count > 1 ? .5 : .8), 1000, availableHeight * 16 / 9)
+        readonly property int sideSlots: Math.max(0, Math.min(2, Math.ceil((root.count - 1) / 2)))
+        readonly property real sideWidth: heroWidth * .62
         Repeater {
             model: root.entries
             Card {
@@ -287,15 +289,19 @@ Item {
                 required property var modelData
                 readonly property real offset: root.circularOffset(index)
                 readonly property real weight: Math.max(0, 1 - Math.abs(offset))
-                readonly property real centerDistance: (spotlight.heroWidth + spotlight.sideWidth) / 2 + 12
+                readonly property real distance: Math.abs(offset)
+                readonly property real centerDistance: spotlight.heroWidth * .54
                 objectName: "spotlightCard" + index
                 entry: modelData
                 decode: Math.abs(offset) <= spotlight.sideSlots + 1
-                width: spotlight.sideWidth + (spotlight.heroWidth - spotlight.sideWidth) * weight
-                height: spotlight.height
-                x: spotlight.width / 2 + Math.sign(offset) * (Math.min(1, Math.abs(offset)) * centerDistance + Math.max(0, Math.abs(offset) - 1) * (spotlight.sideWidth + 12)) - width / 2
+                width: spotlight.sideWidth * Math.max(.7, 1 - Math.max(0, distance - 1) * .15) + (spotlight.heroWidth - spotlight.sideWidth) * weight
+                height: width * 9 / 16
+                x: spotlight.width / 2 + Math.sign(offset) * (Math.min(1, distance) * centerDistance + Math.max(0, distance - 1) * spotlight.heroWidth * .2) - width / 2
+                y: (spotlight.height - height) / 2
+                z: 100 - distance
+                opacity: Math.max(0, Math.min(1, spotlight.sideSlots + 1 - distance)) * Math.max(.5, 1 - distance * .2)
                 selected: index === root.currentIndex
-                visible: x + width > 0 && x < spotlight.width
+                visible: opacity > 0 && x + width > 0 && x < spotlight.width
                 onChosen: root.select(index)
             }
         }
