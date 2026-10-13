@@ -24,6 +24,7 @@ METHODS = {
     "workspace.switch": "focus",
     "window.focus-direction": "focus",
     "window.move": "window.move",
+    "window.close": "window.close",
     "window.fullscreen": "window.fullscreen",
     "window.floating": "window.float",
     "window.pin": "window.pin",
@@ -313,11 +314,27 @@ def rule_lua(row):
 def render(contract, directory=DIRECTORY):
     fields(
         contract,
-        ("version", "extensions", "outputs"),
+        ("version", "extensions", "outputs", "profileBindings"),
         ("version", "extensions", "outputs"),
     )
     if contract["version"] != 1:
         raise ValueError("Unsupported compositor contract version")
+    if "profileBindings" in contract:
+        fields(contract["profileBindings"], ("windowTrashBindings",))
+        optional = contract["profileBindings"].get("windowTrashBindings", [])
+        if not isinstance(optional, list) or any(
+            not isinstance(row, dict) or row.get("kind") != "binding"
+            for row in optional
+        ):
+            raise ValueError("Profile bindings must be binding declarations")
+        # Validate opt-in declarations with the same compiler as defaults.
+        selected = dict(contract)
+        selected.pop("profileBindings")
+        selected["outputs"] = dict(contract["outputs"])
+        selected["outputs"]["hypr/conf/keybinding.lua"] = (
+            contract["outputs"]["hypr/conf/keybinding.lua"] + optional
+        )
+        render(selected, directory)
     fields(contract["outputs"], OUTPUTS, OUTPUTS)
     fields(contract["extensions"], EXTENSIONS, EXTENSIONS)
     for key, (path, function) in EXTENSIONS.items():

@@ -142,6 +142,8 @@ def binding_command(row):
         )
     if action == "compositor.reload":
         return action_command("reload")
+    if action == "window.close":
+        return action_command("close_window")
     if action == "workspace.switch":
         return action_command("switch_workspace", workspace_args(params["workspace"]))
     if action == "window.move":

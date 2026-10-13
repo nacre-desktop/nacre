@@ -4,30 +4,6 @@
     {
       "source": "hypr/conf/keybinding.lua",
       "kind": "binding",
-      "id": "SUPER + Q",
-      "reason": "Hyprland hide/trash/force-kill operation is not available"
-    },
-    {
-      "source": "hypr/conf/keybinding.lua",
-      "kind": "binding",
-      "id": "SUPER + SHIFT + Q",
-      "reason": "Hyprland hide/trash/force-kill operation is not available"
-    },
-    {
-      "source": "hypr/conf/keybinding.lua",
-      "kind": "binding",
-      "id": "SUPER + ALT + Q",
-      "reason": "Hyprland hide/trash/force-kill operation is not available"
-    },
-    {
-      "source": "hypr/conf/keybinding.lua",
-      "kind": "binding",
-      "id": "SUPER + CTRL + SHIFT + Q",
-      "reason": "Hyprland hide/trash/force-kill operation is not available"
-    },
-    {
-      "source": "hypr/conf/keybinding.lua",
-      "kind": "binding",
       "id": "SUPER + H",
       "reason": "Hyprland hide/trash/force-kill operation is not available"
     },

@@ -644,6 +644,7 @@
   "helper.profile-policy.invalid-profile-routes-startup-list": "Invalid profile routes/startup list",
   "helper.profile-policy.invalid-startup-arguments": "Invalid startup arguments",
   "helper.profile-policy.invalid-startup-class-list": "Invalid startup class list",
+  "helper.profile-policy.invalid-window-trash-preference": "Window trash binding preference must be a boolean",
   "helper.profile-policy.invalid-workspace-labels-icons": "Invalid workspace labels/icons",
   "helper.profile-policy.unknown-profile-fields": "Unknown profile fields",
   "helper.profile-policy.unsupported-profile-identity-version": "Unsupported profile identity/version",

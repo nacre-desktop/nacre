@@ -178,14 +178,19 @@ The opaque ID validator accepts native zero and rejects malformed/out-of-range
 IDs. The fixture suite exercises multiple outputs, focus clearing, urgency,
 workspace reordering/removal, stale windows and incremental geometry changes.
 
-The dated [complete parity audit](niri-parity.md) inventories all 107 contract
+The dated [complete parity audit](niri-parity.md) inventories the original 107 contract
 bindings, 23 other declarations, 120 shell IPC methods and 119 launcher entries.
 `works` applies only to tested scope; `degraded` also covers unverified hardware.
 The live desktop was not used. Nested Hyprland frame/X11/pearl/trash/hide checks did
-not pass; they are not silently counted as a successful baseline.
+not pass; they are not silently counted as a successful baseline. Current defaults
+have 103 bindings: plain Super+Q close replaces trash, and the four trash/undo
+actions require the `windowTrashBindings: true` profile opt-in on Hyprland.
+The general profile leaves Super+Ctrl+Q unassigned; the opt-in uses it for put-away
+and retains Shift+Q restore, Alt+Q restore-all and Ctrl+Shift+Q force-close.
 
 | Feature | Hyprland | Niri before → after | Evidence / remaining difference |
 |---|---|---|---|
+| General Super+Q close | works | missing → works | Fresh prepared defaults; actual Super+Q key event, window removal and client exit on both nested compositors. |
 | Workspace state / focus / moves | works | works → works | Nested IPC; niri indices are dynamic and output-relative, IDs stable. Startup targets names. |
 | Trash/undo, minimize, scratchpad, sticky | degraded | missing → missing | No native niri hide/special/sticky primitive; capability flags and omitted bindings. Hyprland nested hide/trash incomplete. |
 | Groups / Alt+Tab | degraded | missing → degraded / works | Native column tabs; creation-order cycle within active workspace. Group membership differs. |

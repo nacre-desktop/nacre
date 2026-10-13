@@ -179,56 +179,10 @@
       {
         "kind": "binding",
         "keys": "SUPER + Q",
-        "action": "application.launch",
-        "parameters": {
-          "command": "~/.config/hypr/scripts/window-trash.sh trash"
-        },
-        "options": {
-          "description": "Nacre:put-away"
-        }
-      },
-      {
-        "kind": "binding",
-        "keys": "SUPER + SHIFT + Q",
-        "action": "application.launch",
-        "parameters": {
-          "command": "~/.config/hypr/scripts/window-trash.sh restore-last"
-        },
-        "options": {
-          "description": "Nacre:restore"
-        }
-      },
-      {
-        "kind": "binding",
-        "keys": "SUPER + ALT + Q",
-        "action": "application.launch",
-        "parameters": {
-          "command": "~/.config/hypr/scripts/window-trash.sh restore-all"
-        },
-        "options": {
-          "description": "Nacre:restore-all"
-        }
-      },
-      {
-        "kind": "binding",
-        "keys": "SUPER + CTRL + Q",
-        "action": "application.launch",
-        "parameters": {
-          "command": "~/.config/hypr/scripts/window-close.sh"
-        },
+        "action": "window.close",
+        "parameters": {},
         "options": {
           "description": "Nacre:close"
-        }
-      },
-      {
-        "kind": "binding",
-        "keys": "SUPER + CTRL + SHIFT + Q",
-        "action": "application.launch",
-        "parameters": {
-          "command": "~/.config/hypr/scripts/window-close.sh force"
-        },
-        "options": {
-          "description": "Nacre:force-close"
         }
       },
       {
@@ -1541,6 +1495,54 @@
         "kind": "event",
         "event": "session.ready",
         "callback": "cursor.session"
+      }
+    ]
+  },
+  "profileBindings": {
+    "windowTrashBindings": [
+      {
+        "kind": "binding",
+        "keys": "SUPER + CTRL + Q",
+        "action": "application.launch",
+        "parameters": {
+          "command": "~/.config/hypr/scripts/window-trash.sh trash"
+        },
+        "options": {
+          "description": "Nacre:put-away"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + SHIFT + Q",
+        "action": "application.launch",
+        "parameters": {
+          "command": "~/.config/hypr/scripts/window-trash.sh restore-last"
+        },
+        "options": {
+          "description": "Nacre:restore"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + ALT + Q",
+        "action": "application.launch",
+        "parameters": {
+          "command": "~/.config/hypr/scripts/window-trash.sh restore-all"
+        },
+        "options": {
+          "description": "Nacre:restore-all"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + CTRL + SHIFT + Q",
+        "action": "application.launch",
+        "parameters": {
+          "command": "~/.config/hypr/scripts/window-close.sh force"
+        },
+        "options": {
+          "description": "Nacre:force-close"
+        }
       }
     ]
   }

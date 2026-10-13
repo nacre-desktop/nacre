@@ -61,6 +61,12 @@ jobs:
           pins = json.load(open("dependencies.lock.json"))["python"]
           subprocess.run(["/tmp/check-env/bin/pip", "install", "./nacre/shell-cli", "ruff==0.16.10", *[name + "==" + version for name, version in pins.items()]], check=True)
           PY
+      - name: Candidate engine for fresh-install tests
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: smoke-engine
+          path: deps/orient/target/release/orient
+          retention-days: 3
       - name: Native helper library checks
         run: |
           cargo fmt --check
@@ -92,12 +98,6 @@ jobs:
         run: |
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --download-fonts --output /tmp/nacre-pseudo-audit
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --font-directory /tmp/nacre-pseudo-audit/fonts --text-family "DejaVu Sans" --output /tmp/nacre-pseudo-wide-font colors controls launcher chat summary
-      - name: Candidate engine for fresh-install tests
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: smoke-engine
-          path: deps/orient/target/release/orient
-          retention-days: 3
       - name: Native gallery evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -108,6 +108,7 @@ jobs:
             /tmp/nacre-pseudo-wide-font
           retention-days: 7
   fresh-install:
+    if: ${{ always() }}
     needs: desktop
     runs-on: ubuntu-24.04
     container: ghcr.io/archlinux/archlinux:latest
