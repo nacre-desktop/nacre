@@ -387,9 +387,9 @@ TestCase {
             target = Path(folder)
             fixtures = {
                 "DesktopSettings": "property var data:({dragPanels:true})",
-                "Environment": 'property var screens:[{name:"test",x:0,y:0,width:1920,height:1200}]',
+                "Environment": 'property var screens:[{name:"test",x:0,y:0,width:1920,height:1200}];property int processId:88',
                 "NacreFrame": "property int headerHeight:50;property int bottom:10;property int left:10;property int right:10",
-                "NacreCompositor": "property int refreshes:0;function refreshWindows(){refreshes++}",
+                "NacreCompositor": 'property string backendName:"hyprland";property var windows:[];property int refreshes:0;function refreshWindows(){refreshes++}',
                 "NacrePearls": "property var views:[]",
                 "NacreHyprland": 'property var focusedMonitor:({name:"test"})',
             }
@@ -427,7 +427,9 @@ TestCase {
             source = remove_objects(
                 source, r"\b(Component|Process|IpcHandler|Connections)\s*\{"
             )
-            source = source.replace("Quickshell.screens", "Environment.screens")
+            source = source.replace(
+                "Quickshell.screens", "Environment.screens"
+            ).replace("Quickshell.processId", "Environment.processId")
             (target / "Controller.qml").write_text(source)
             (target / "geometry.js").write_text(
                 (SHELL / "modules/pearls/geometry.js").read_text()
@@ -440,8 +442,9 @@ TestCase {
  Controller {id:controller}
  property var view:({dashboard:false,dashboardPinned:false,left:false,leftPinned:false,launcher:false,osd:false,session:false,previewOnly:false,hoverDocked:false,edgeMenu:"",dashboardTab:0})
  property int destroyed:0
- function init(){controller.entries=[];controller.drag=null;controller.nativeDrag=null;destroyed=0;NacrePanelState.hidden=false;NacrePanelState.screens={test:view};}
- function addEntry(){const e={kind:"dashboard",title:"Nacre Pearl Dashboard 12",origin:"test",window:{visible:true,captureState(){return {dashboardTab:2}},destroy(){destroyed++}},destroy(){destroyed++}};controller.entries=[e];return e;}
+ property int prepared:0
+ function init(){controller.entries=[];controller.drag=null;controller.nativeDrag=null;controller.niriMove=null;destroyed=0;prepared=0;NacrePanelState.hidden=false;NacrePanelState.screens={test:view};NacrePanelState.panels={test:{dashboard:{prepareLift(){prepared++}}}};NacreCompositor.backendName="hyprland";NacreCompositor.windows=[];}
+ function addEntry(){const e={kind:"dashboard",title:"Nacre Pearl Dashboard 12",origin:"test",window:{visible:true,ready:true,clientAddress:"niri-window:12",captureState(){return {dashboardTab:2}},destroy(){destroyed++}},destroy(){destroyed++}};controller.entries=[e];return e;}
  function packet(phase,x,y){return "nacre_pearl_drag,"+phase+",Nacre Pearl Dashboard 12,"+x+","+y+",400,300,984,740";}
  function test_native_grab_middle_docks_before_pointer_reaches_edge(){
   for(let i=0;i<2;i++){
@@ -453,7 +456,31 @@ TestCase {
    verify(view.dashboard);compare(view.dashboardTab,2);verify(view.hoverDocked);
    wait(1);
   }
-  compare(destroyed,4);
+  compare(destroyed,4);compare(prepared,2);
+ }
+ function niriPacket(phase,body={x:400,y:90,width:984,height:740}){return {type:"window-move",phase:phase,windowId:"niri-window:12",body:body,outputId:"test",floating:true};}
+ function niriOwned(){NacreCompositor.backendName="niri";NacreCompositor.windows=[{windowId:"niri-window:12",title:"Nacre Pearl Dashboard 12",pid:88}];}
+ function test_niri_requires_observed_move_and_preserves_repeated_docks(){
+  niriOwned();addEntry();controller.compositorMove(niriPacket("end"));compare(controller.entries.length,1);
+  for(let i=0;i<2;i++){
+   if(i) addEntry();controller.compositorMove(niriPacket("begin"));verify(controller.niriMove);
+   wait(250);compare(controller.entries.length,1);
+   controller.compositorMove(niriPacket("end"));compare(controller.entries.length,0);
+   verify(view.dashboard);verify(view.hoverDocked);compare(view.dashboardTab,2);wait(1);
+  }
+  compare(prepared,2);compare(destroyed,4);
+ }
+ function test_niri_cancel_foreign_owner_and_disabled_target_are_safe(){
+  niriOwned();addEntry();NacreCompositor.windows[0].pid=99;
+  controller.compositorMove(niriPacket("begin"));compare(controller.niriMove,null);
+  NacreCompositor.windows[0].pid=88;controller.compositorMove(niriPacket("begin"));
+  controller.compositorMove(niriPacket("cancel"));controller.compositorMove(niriPacket("end"));compare(controller.entries.length,1);
+  controller.compositorMove(niriPacket("begin"));NacrePanelState.hidden=true;
+  controller.compositorMove(niriPacket("end"));compare(controller.entries.length,1);
+  NacrePanelState.hidden=false;controller.compositorMove(niriPacket("begin"));
+  controller.compositorMove(niriPacket("end",{x:400,y:250,width:984,height:740}));compare(controller.entries.length,1);
+  controller.compositorMove(niriPacket("begin"));const tiled=niriPacket("end");tiled.floating=false;
+  controller.compositorMove(tiled);compare(controller.entries.length,1);
  }
  function test_hidden_frame_has_no_magnetic_target(){
   addEntry();NacrePanelState.hidden=true;

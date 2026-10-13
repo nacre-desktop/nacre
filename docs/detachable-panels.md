@@ -40,3 +40,9 @@ system cards bounded. App tiles retain their spacing as a launcher grows. Detach
 wallpaper pickers fit their current window, and grow within the monitor's usable
 area when switching to Spotlight or Hexagons. No decorative frame bumps are drawn;
 the flat top-center and side-center hover targets remain available.
+
+Reattachment restores the panel directly, without repeating its opening animation.
+On Niri 26.04, drag a floating panel back near its matching frame edge and release
+it to dock. Niri hides a native drag's position until release, so its magnetic
+feedback appears at the drop rather than following the whole native drag. Ordinary
+window moves and pauses while holding the button do not attach a panel.

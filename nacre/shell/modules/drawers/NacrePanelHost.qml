@@ -84,6 +84,7 @@ Item {
     readonly property var popupPosition: Layout.popout(x, width, popouts.currentCenter, popouts.width, popouts.targetWidth, NacreFrame.rounding)
     Extras.LeftDrawer {
         id: left
+        restoreImmediately: root.visibilities.hoverDocked === true
         enabled: root.visibilities.left
         screen: root.screen
         visibilities: root.visibilities
@@ -117,6 +118,7 @@ Item {
     }
     Osd.NacreOsdPanel {
         id: osd
+        restoreImmediately: root.visibilities.hoverDocked === true
         enabled: visibility
         section: root.visibilities.controlSection || "home"
         keyboardActive: root.visibilities.edgeMenu === "osd" && !root.visibilities.previewOnly
@@ -161,6 +163,7 @@ Item {
     }
     Dashboard.NacreDashboardPanel {
         id: dashboard
+        restoreImmediately: root.visibilities.hoverDocked === true
         screenName: root.screen.name
         enabled: root.visibilities.dashboard
         visibilities: root.visibilities
@@ -210,6 +213,7 @@ Item {
     }
     Launcher.NacreLauncherPanel {
         id: launcher
+        restoreImmediately: root.visibilities.hoverDocked === true
         screenName: root.screen.name
         enabled: root.visibilities.launcher
         visibilities: root.visibilities

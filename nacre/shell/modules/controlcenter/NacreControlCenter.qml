@@ -14,6 +14,7 @@ FocusScope {
         revealMotion.complete();
     }
     readonly property bool opening: visibility && revealMotion.running
+    property bool restoreImmediately: false
     property bool handoffHidden: false
     opacity: handoffHidden ? 0 : 1
     onEnabledChanged: if (enabled)
@@ -51,7 +52,7 @@ FocusScope {
         Qt.callLater(focusExplicit);
     }
     Behavior on presentedWidth {
-        enabled: NacreTokens.motionEnabled
+        enabled: NacreTokens.motionEnabled && (!root.restoreImmediately || !root.visibility)
         NumberAnimation {
             id: revealMotion
             duration: 280

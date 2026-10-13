@@ -52,6 +52,34 @@ class NiriStateTests(unittest.TestCase):
         self.assertFalse(value["activeWindow"]["urgent"])
         self.assertFalse(value["activeWindow"]["fullscreenKnown"])
 
+    def test_interactive_move_is_distinct_from_missing_tiled_geometry(self):
+        value = state()
+        key = "niri-window:9007199254740995"
+        original = copy.deepcopy(value.windows[key])
+        moved = copy.deepcopy(original)
+        moved["workspace_id"] = None
+        moved["layout"]["tile_pos_in_workspace_view"] = None
+        value.apply({"WindowOpenedOrChanged": {"window": moved}})
+        window = next(
+            row for row in value.snapshot()["windows"] if row["windowId"] == key
+        )
+        self.assertTrue(window["moving"])
+        self.assertFalse(window["geometryKnown"])
+        # Niri also omits some tiled positions; those are not pointer moves.
+        moved["workspace_id"] = original["workspace_id"]
+        value.apply({"WindowOpenedOrChanged": {"window": moved}})
+        window = next(
+            row for row in value.snapshot()["windows"] if row["windowId"] == key
+        )
+        self.assertFalse(window["moving"])
+        self.assertFalse(window["geometryKnown"])
+        value.apply({"WindowOpenedOrChanged": {"window": original}})
+        window = next(
+            row for row in value.snapshot()["windows"] if row["windowId"] == key
+        )
+        self.assertFalse(window["moving"])
+        self.assertTrue(window["geometryKnown"])
+
     def test_inactive_output_activation_does_not_change_focused_workspace(self):
         value = state()
         value.apply(FIXTURE["events"][2])

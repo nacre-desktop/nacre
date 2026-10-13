@@ -141,6 +141,7 @@ def run_fixture_smoke(repo, binary):
         environment = {
             **os.environ,
             "QT_QPA_PLATFORM": "offscreen",
+            "QT_LOGGING_RULES": "qml.debug=true",
             "NACRE_COMPOSITOR": "niri",
             "NIRI_SOCKET": str(path),
             "NACRE_COMPOSITOR_TOOLS": str(repo / "nacre/shell-tools"),

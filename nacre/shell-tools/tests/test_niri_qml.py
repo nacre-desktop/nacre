@@ -123,7 +123,8 @@ Item {
  TestCase {
   name:"NiriBackendContract"; when:windowShown
   property var backend:null
-  function init(){NacreI18n.language="en";backend=factory.createObject(null);verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))))}
+  SignalSpy {id:moveEvents;target:backend;signalName:"event"}
+  function init(){NacreI18n.language="en";backend=factory.createObject(null);verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))));moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear()}
   function cleanup(){backend.destroy();backend=null;wait(1)}
   function test_state_identity_focus_and_reconciliation(){
    compare(backend.activeWorkspace.id,"niri-workspace:9007199254740993")
@@ -133,6 +134,32 @@ Item {
    const next=JSON.parse(JSON.stringify(Snapshots.initial));next.windows[1].title="Changed";next.activeWindow=null
    verify(backend.accept(next));compare(backend.byId[window.windowId],window);compare(window.title,"Changed");compare(backend.activeClient,null)
    next.windows=next.windows.filter(row=>row.windowId!==window.windowId);verify(backend.accept(next));verify(!backend.byId[window.windowId])
+  }
+  function test_native_move_ends_only_after_real_release_with_geometry(){
+   moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear();
+   const next=JSON.parse(JSON.stringify(Snapshots.initial));
+   const row=next.windows.find(w=>w.geometryKnown);const id=row.windowId;
+   row.moving=true;row.geometryKnown=false;row.workspaceId=null;
+   verify(backend.accept(JSON.parse(JSON.stringify(next))));compare(moveEvents.count,1);
+   compare(moveEvents.signalArguments[0][0].phase,"begin");
+   wait(250);compare(moveEvents.count,1); // Holding still is not a release.
+   row.moving=false;row.workspaceId="niri-workspace:9007199254740993";
+   verify(backend.accept(JSON.parse(JSON.stringify(next))));compare(moveEvents.count,1); // Wait for usable end geometry.
+   row.geometryKnown=true;verify(backend.accept(JSON.parse(JSON.stringify(next))));compare(moveEvents.count,2);
+   compare(moveEvents.signalArguments[1][0].phase,"end");
+   compare(moveEvents.signalArguments[1][0].body,row.geometry);
+   row.geometry.x+=30;verify(backend.accept(JSON.parse(JSON.stringify(next))));compare(moveEvents.count,2); // Programmatic movement never docks.
+   row.moving=true;row.geometryKnown=false;verify(backend.accept(JSON.parse(JSON.stringify(next))));compare(moveEvents.count,3);
+   row.moving=false;row.geometryKnown=true;verify(backend.accept(JSON.parse(JSON.stringify(next))));compare(moveEvents.count,4);
+   row.moving=true;row.geometryKnown=false;verify(backend.accept(next));
+   next.windows=next.windows.filter(w=>w.windowId!==id);verify(backend.accept(next));
+   compare(moveEvents.signalArguments[5][0].phase,"cancel");
+  }
+  function test_starting_during_a_move_does_not_invent_a_begin(){
+   backend.destroy();backend=factory.createObject(null);moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear();
+   const next=JSON.parse(JSON.stringify(Snapshots.initial));const row=next.windows.find(w=>w.geometryKnown);
+   row.moving=true;row.geometryKnown=false;verify(backend.accept(JSON.parse(JSON.stringify(next))));compare(moveEvents.count,0);
+   row.moving=false;row.geometryKnown=true;verify(backend.accept(JSON.parse(JSON.stringify(next))));compare(moveEvents.count,0);
   }
   function test_actions_are_serialized_and_stale_ids_rejected(){
    verify(!backend.focusWindow("niri-window:404"))

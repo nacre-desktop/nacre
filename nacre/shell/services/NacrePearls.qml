@@ -17,6 +17,7 @@ Singleton {
     property var views: []
     property var drag: null
     property var nativeDrag: null
+    property var niriMove: null
     property var lastGesture: ({})
     property string error: ""
     readonly property var magneticCue: !enabled || NacrePanelState.hidden ? null : drag && !drag.released ? drag.magnet : nativeDrag?.ready ? nativeDrag.magnet : null
@@ -86,8 +87,54 @@ Singleton {
             }
         }
     }
+    function compositorMove(value) {
+        if (NacreCompositor.backendName !== "niri" || value?.type !== "window-move")
+            return;
+        if (value.phase === "cancel") {
+            if (!value.windowId || niriMove?.windowId === value.windowId)
+                niriMove = null;
+            return;
+        }
+        const client = NacreCompositor.windows.find(item => item.windowId === value.windowId);
+        const entry = entries.find(item => item.window?.clientAddress === value.windowId && item.window?.ready && client?.pid === Quickshell.processId && client?.title === item.title);
+        if (!entry)
+            return;
+        if (value.phase === "begin") {
+            niriMove = {
+                entry: entry,
+                windowId: value.windowId
+            };
+            return;
+        }
+        if (value.phase !== "end" || niriMove?.entry !== entry)
+            return;
+        niriMove = null;
+        const body = value.body;
+        const monitor = monitors().find(item => item.name === value.outputId);
+        if (!enabled || NacrePanelState.hidden || value.floating !== true || !monitor || !body || ![body.x, body.y, body.width, body.height].every(Number.isFinite))
+            return;
+        // Niri publishes the completed move geometry, but no live drag cursor.
+        // Select its reported output; the common target still uses panel edges.
+        const point = {
+            x: Geometry.clamp(body.x + body.width / 2, monitor.x, monitor.x + monitor.width - 1),
+            y: Geometry.clamp(body.y + body.height / 2, monitor.y, monitor.y + monitor.height - 1)
+        };
+        const magnet = Geometry.magnet(entry.kind, body, point, [monitor]);
+        if (magnet?.armed) {
+            nativeDrag = {
+                entry: entry,
+                ready: true,
+                magnet: magnet
+            };
+            dock(entry, magnet.screen);
+        } else
+            saveSoon();
+    }
     Connections {
         target: NacreCompositor
+        function onEvent(value) {
+            root.compositorMove(value);
+        }
         function onPanelGesture(data) {
             root.nativeGesture(data);
         }
@@ -311,6 +358,8 @@ Singleton {
             return;
         if (nativeDrag?.entry === entry)
             nativeDrag = null;
+        if (niriMove?.entry === entry)
+            niriMove = null;
         if (park && entry.kind === "ai")
             NacreAiViews.park(entry.chat);
         entries = entries.filter(value => value !== entry);
@@ -347,6 +396,16 @@ Singleton {
             Qt.callLater(() => panel?.restoreState(data));
         }
         NacrePanelState.dockAsHover(view);
+        // Docking restores an existing panel; it is not a fresh menu opening.
+        // Complete the destination before removing the native source surface.
+        const panel = NacrePanelState.panels[name]?.[({
+                    ai: "leftDrawer",
+                    controls: "osd",
+                    dashboard: "dashboard",
+                    media: "dashboard",
+                    launcher: "launcher"
+                })[entry.kind]];
+        panel?.prepareLift();
         remove(entry, false);
     }
     function bodyRect(host, name) {

@@ -79,6 +79,7 @@ Rectangle {
  property string screenName
  property var visibilities
  property string section:"home"
+ property bool restoreImmediately:false
  property bool keyboardActive:false
  property bool visibility:false
  property bool hovered:false
