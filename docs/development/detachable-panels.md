@@ -170,3 +170,10 @@ gradient on focus or hover. It is inside the reveal-controlled client surface.
 Neither Niri nor Hyprland draws an additional border for these owned windows, so
 a transparent destination cannot leak an independently moving outline. Ordinary
 application decorations remain compositor-owned.
+
+The drag observer retains a passive first press even if an on-demand Wayland
+focus handoff delays the modifier state. Its threshold is enabled only while
+Super is reported; ordinary presses never reach the reserved gesture threshold.
+This permits the original press to become a Super-drag as soon as modifiers
+arrive, instead of requiring a second press. Bare clicks and normal control
+drags remain covered by the native Qt interaction tests.

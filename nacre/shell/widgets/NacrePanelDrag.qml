@@ -17,13 +17,16 @@ Item {
         enabled: NacrePearls.enabled && DesktopSettings.data.dragPanels !== false && root.host.visible && root.host.enabled
         onEnabledChanged: if (!enabled && NacrePearls.drag?.host === root.host && !NacrePearls.drag.released)
             NacrePearls.cancel()
-        acceptedModifiers: Qt.MetaModifier
+        // An on-demand Wayland panel may learn the held modifier only after
+        // its first press activates keyboard focus. Retain that passive press.
+        acceptedModifiers: Qt.AnyModifier
+        dragThreshold: centroid.modifiers & Qt.MetaModifier ? 16 : 32767
         acceptedButtons: Qt.LeftButton
         cursorShape: Qt.ClosedHandCursor
         grabPermissions: PointerHandler.CanTakeOverFromItems
         target: null
         onActiveChanged: {
-            if (active) {
+            if (active && (centroid.modifiers & Qt.MetaModifier)) {
                 const press = root.globalPoint(centroid.scenePressPosition);
                 const current = root.globalPoint(centroid.scenePosition);
                 NacrePearls.begin(root.kind, root.host, root.screen.name, press);

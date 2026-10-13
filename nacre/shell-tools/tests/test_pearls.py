@@ -151,6 +151,13 @@ TestCase {
    compare(NacrePearls.dx,120);compare(NacrePearls.finishes,i+1);
   }
  }
+ function test_modifier_handoff_after_initial_panel_focus(){
+  mousePress(sensor,20,20,Qt.LeftButton,Qt.NoModifier);
+  mouseMove(sensor,120,20,0,Qt.LeftButton,Qt.MetaModifier);
+  compare(NacrePearls.starts,1);compare(NacrePearls.dx,100);
+  mouseRelease(sensor,120,20,Qt.LeftButton,Qt.MetaModifier);
+  compare(NacrePearls.finishes,1);
+ }
  function test_reserved_drag_and_plain_click(){
   mouseDrag(sensor,20,20,100,0,Qt.LeftButton,Qt.NoModifier);compare(NacrePearls.starts,0);
   mouseDrag(sensor,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);
