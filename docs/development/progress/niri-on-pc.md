@@ -1,7 +1,7 @@
 # Niri on PC progress
 
 Updated: 2026-10-13. Status: merged backend consumed in windowed Nacre preview;
-operator requests iterative Nacre/niri testing while Hyprland/chats keep running.
+operator now prefers a prepared full Nacre login test, rather than nested input testing.
 Actual session transition, lock/idle/night light and real-login integration remain pending.
 Branch: `feature/niri-preview` (follow-up PR18; original PR7 merged). Own worktree:
 `nacre-niri-on-pc` under the normal private task-worktree root. One open PR for session/tooling/docs work; backend changes
@@ -9,6 +9,15 @@ belong to the separate `feature/niri-backend` task.
 
 ## Done
 
+- Prepared separate full-login code/config and a niri-only executable shim. UWSM
+  retains lifecycle ownership; Hyprland shell startup passes through to the same
+  original controller. Nested supervisor preflight loads the shell; GPU device
+  access in the real code namespace passes. No backend code edited.
+- Explicit Lock can invoke hyprlock in niri while automatic idle stays gated;
+  unlock remains physically unverified. Separate observer gate prevents unsupported
+  monitor restoration; reproducible issue reported on PR12.
+- Closed the nested interactive preview at the operator's request. Actual logout
+  has not been performed; other graphical chats remain running.
 - PR7 preparation and PR12 backend are now merged. New preview work is a follow-up
   because merged PR7 cannot receive new changes. Preview baseline: main `3c87a61`.
 - Added an isolated preview runner and regression tests for session isolation,
@@ -56,8 +65,9 @@ belong to the separate `feature/niri-backend` task.
 ## Next
 
 1. Keep the current Hyprland desktop and all parallel graphical agents running.
-2. Let the operator test the prepared windowed Nacre preview; record input/UI
-   feedback and fix wrapper issues or report reproducible backend defects on PR12.
+2. Complete/verify full-login preparation, save backup receipts and exact CI head,
+   then let the operator test through SDDM. Record feedback and fix wrapper issues
+   or report reproducible backend defects on PR12.
 3. When the operator is ready, restart the private recorder, save all work and
    perform TTY recovery + actual niri SDDM login/logout + return to Hyprland.
 4. Resume this same task and inspect recorder evidence. Review generated-lock
