@@ -20,7 +20,7 @@ Item {
         if (!showWindowHints)
             return result;
         const active = NacreCompositor.activeWsId;
-        const count = NacreCompositor.windows.filter(client => client.workspace?.id === active).length;
+        const count = NacreCompositor.capabilities?.perOutputWorkspaces ? NacreCompositor.windowsForWorkspace(active).length : NacreCompositor.windows.filter(client => client.workspace?.id === active).length;
         const base = displayIds.length * 32 + Math.max(0, displayIds.length - 1) * 2 + (count ? 4 : 0);
         let shown = Math.min(3, count, Math.max(0, Math.floor((availableWidth - base) / 18)));
         while (shown > 0 && base + shown * 18 + (shown < count ? 20 : 0) > availableWidth)
@@ -39,6 +39,8 @@ Item {
         }
     }
     readonly property var workspaceIds: {
+        if (NacreCompositor.capabilities?.perOutputWorkspaces)
+            return NacreCompositor.workspaces.values.filter(value => value.outputId === NacreCompositor.focusedMonitor?.name).map(value => value.index).sort((a, b) => a - b);
         const ids = new Set(Array.from({
             length: NacreBar.workspaceCount
         }, (_, index) => index + 1));
@@ -138,10 +140,10 @@ Item {
                 required property int modelData
                 readonly property int workspaceId: modelData
                 readonly property bool selected: NacreCompositor.activeWsId === workspaceId
-                readonly property var windows: NacreCompositor.windows.filter(client => client.workspace?.id === workspaceId)
+                readonly property var windows: NacreCompositor.capabilities?.perOutputWorkspaces ? NacreCompositor.windowsForWorkspace(workspaceId) : NacreCompositor.windows.filter(client => client.workspace?.id === workspaceId)
                 readonly property int windowCount: windows.length
                 readonly property bool occupied: windowCount > 0
-                readonly property bool urgent: windows.some(client => client.urgent === true)
+                readonly property bool urgent: windows.some(client => client.urgent === true) || (NacreCompositor.capabilities?.perOutputWorkspaces === true && NacreCompositor.workspaceUrgent(workspaceId))
                 readonly property var shownWindows: windows.slice(0, root.iconAllocation[workspaceId] ?? 0)
                 readonly property int overflow: selected && root.showWindowHints ? Math.max(0, windowCount - shownWindows.length) : 0
                 readonly property color accent: root.tint(index, workspaceId)

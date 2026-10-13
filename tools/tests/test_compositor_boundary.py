@@ -22,6 +22,8 @@ class CompositorBoundaryTests(unittest.TestCase):
                 "expression.py": 'expression="hl.dispatch(hl.dsp.exit())"\n',
                 "Window.qml": "import Quickshell.Hyprland\nItem {}\n",
                 "picker.sh": "#!/bin/sh\nhyprctl clients -j\n",
+                "niri.py": 'command=["niri","msg","windows"]\n',
+                "niri.sh": "#!/bin/sh\nniri msg windows\n",
                 "version.py": 'command=["Hyprland","--version"]\n',
             }
             for name, text in samples.items():

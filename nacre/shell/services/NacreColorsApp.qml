@@ -9,7 +9,7 @@ Singleton {
     property bool visible: false
     property var window: null
     readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Colors" && c.wmClass === "org.quickshell") || null
-    readonly property bool active: visible && !!window && !window.minimized && (client?.workspace?.id ?? 1) > 0
+    readonly property bool active: visible && !!window && !window.minimized && (NacreCompositor.capabilities?.perOutputWorkspaces === true || (client?.workspace?.id ?? 1) > 0)
     property var options: ({
             mode: "dark",
             personality: "natural",
@@ -203,6 +203,10 @@ Singleton {
         actionJob.running = true;
     }
     function minimize() {
+        if (NacreCompositor.capabilities?.windowHide === false) {
+            error = qsTr("Window minimization is unavailable on this compositor.");
+            return;
+        }
         if (!client || minJob.running)
             return;
         minJob.command = NacreCompositor.hideWindowCommand(client.windowId);

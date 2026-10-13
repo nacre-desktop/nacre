@@ -26,11 +26,13 @@ EXCLUDED = {
     "dist",
     ".venv",
 }
-NATIVE_PROGRAMS = {"hyprctl", "Hyprland", "hyprshutdown"}
+NATIVE_PROGRAMS = {"hyprctl", "Hyprland", "hyprshutdown", "niri"}
 TEXT_NATIVE = re.compile(
     r"import\s+Quickshell\.Hyprland|\bNative\.Hyprland|\bhl\.(?:dsp|dispatch|config|monitor|window_rule|bind)\b"
 )
-SHELL_NATIVE = re.compile(r"(?<![\w.-])(?:hyprctl|Hyprland|hyprshutdown)(?=$|[\s\"'])")
+SHELL_NATIVE = re.compile(
+    r"(?<![\w.-])(?:hyprctl|Hyprland|hyprshutdown|niri)(?=$|[\s\"'])"
+)
 
 
 def allowed(relative):

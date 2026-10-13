@@ -9,11 +9,29 @@ Hyprland snapshots remain during the compatibility migration.
 import argparse
 import importlib.util
 import json
+import os
 from pathlib import Path
+
+
+def select_backend(environment=None):
+    """Select once at startup; imports never query a compositor session."""
+    environment = os.environ if environment is None else environment
+    explicit = environment.get("NACRE_COMPOSITOR", "").lower()
+    if explicit:
+        if explicit not in ("hyprland", "niri"):
+            raise ValueError("Unknown NACRE_COMPOSITOR backend")
+        return explicit
+    desktops = environment.get("XDG_CURRENT_DESKTOP", "").lower().split(":")
+    if "niri" in desktops:
+        return "niri"
+    if environment.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        return "hyprland"
+    return "niri" if environment.get("NIRI_SOCKET") else "hyprland"
+
 
 _BACKEND_SPEC = importlib.util.spec_from_file_location(
     "nacre_compositor_backend",
-    Path(__file__).with_name("compositor_backends") / "hyprland.py",
+    Path(__file__).with_name("compositor_backends") / (select_backend() + ".py"),
 )
 _backend_module = importlib.util.module_from_spec(_BACKEND_SPEC)
 _BACKEND_SPEC.loader.exec_module(_backend_module)
@@ -72,6 +90,8 @@ for _name in (
     "reload",
     "switch_workspace",
     "focus_window",
+    "focus_direction",
+    "move_direction",
     "move_window",
     "move_workspace",
     "close_window",
@@ -112,6 +132,8 @@ for _name in (
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("events", help="Stream canonical state and compositor events")
+    commands.add_parser("capabilities", help="Describe the selected backend")
     queries = commands.add_parser("query")
     queries.add_argument("name", choices=_backend_module.QUERIES)
     actions = commands.add_parser("action")
@@ -122,9 +144,12 @@ def main():
             "logout",
             "switch_workspace",
             "focus_window",
+            "focus_direction",
+            "move_direction",
             "close_window",
             "kill_window",
             "move_window",
+            "place_window",
             "move_workspace",
             "fullscreen_window",
             "resize_window",
@@ -139,6 +164,7 @@ def main():
         ),
     )
     for name in (
+        "direction",
         "window",
         "workspace",
         "monitor",
@@ -153,9 +179,19 @@ def main():
         actions.add_argument("--" + name)
     for name in ("width", "height", "x", "y", "size", "icon", "timeout-ms"):
         actions.add_argument("--" + name, type=int)
+    actions.add_argument("--relative", choices=("true", "false"), default="false")
     actions.add_argument("--follow", choices=("true", "false"), default="false")
     actions.add_argument("--current-monitor", choices=("true", "false"), default="true")
     args = parser.parse_args()
+    if args.command == "action" and args.workspace and args.workspace.startswith("{"):
+        args.workspace = json.loads(args.workspace)
+    if args.command == "events":
+        for value in backend.events():
+            print(json.dumps(value, allow_nan=False), flush=True)
+        return
+    if args.command == "capabilities":
+        print(json.dumps({"backend": backend_name, "capabilities": capabilities}))
+        return
     if args.command == "query":
         print(json.dumps(query(args.name)))
         return
@@ -178,7 +214,15 @@ def main():
     elif args.name == "fullscreen_window":
         method(args.window or "", mode=args.mode or "fullscreen")
     elif args.name == "resize_window":
-        method(args.window or "", args.width, args.height)
+        method(
+            args.window or "", args.width, args.height, relative=args.relative == "true"
+        )
+    elif args.name in ("focus_direction", "move_direction"):
+        method(args.direction)
+    elif args.name == "place_window":
+        method(
+            args.window or "", x=args.x, y=args.y, width=args.width, height=args.height
+        )
     elif args.name in ("focus_window", "close_window", "kill_window"):
         method(args.window or "")
     elif args.name in ("float_window", "pin_window"):
