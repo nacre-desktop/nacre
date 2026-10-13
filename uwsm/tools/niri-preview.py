@@ -21,6 +21,11 @@ SAFE_CONFIG = (
     "lock.json",
     "launcher.json",
     "shortcuts.lua",
+    "dashboard.json",
+    "colors.json",
+    "kitty-colors.conf",
+    "welcome.json",
+    "cli.json",
 )
 SAFE_STATE = ("scheme.json", "presentation.json", "wallpaper")
 
@@ -37,10 +42,49 @@ def private_copy(source, target):
         return
     target.parent.mkdir(parents=True, exist_ok=True)
     if source.is_dir():
-        shutil.copytree(source, target, symlinks=True, dirs_exist_ok=True)
+        shutil.copytree(source, target, symlinks=False, dirs_exist_ok=True)
     else:
         shutil.copyfile(source, target)
         target.chmod(0o600)
+
+
+def copy_cached_presentation(home, state, cache):
+    """Copy only cache assets referenced by the saved presentation, not all caches."""
+    root = (home / ".cache/nacre").resolve()
+
+    def visit(value):
+        if isinstance(value, dict):
+            for child in value.values():
+                visit(child)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child)
+        elif isinstance(value, str) and value.startswith(str(root) + "/"):
+            source = Path(value).resolve()
+            if source.is_relative_to(root) and source.is_file():
+                private_copy(source, cache / source.relative_to(root))
+
+    for name in ("presentation.json", "wallpaper/media.json"):
+        path = state / name
+        if path.is_file():
+            visit(json.loads(path.read_text()))
+
+
+def preview_bindings(home, names):
+    """Accessible aliases when the parent compositor consumes Super shortcuts."""
+    controller = json.dumps(str(home / ".local/bin/nacre-shell"))
+    rows = [
+        "    Alt+Space { spawn " + controller + ' "launcher"; }',
+        "    Alt+O { spawn " + controller + ' "toggle"; }',
+        '    Alt+Return { spawn "kitty"; }',
+        "    Alt+Shift+Escape { quit skip-confirmation=true; }",
+    ]
+    rows.extend(
+        "    Alt+" + str(number) + " { focus-workspace " + json.dumps(name) + "; }"
+        for number, name in names.items()
+        if number <= 9
+    )
+    return "binds {\n" + "\n".join(rows) + "\n}\n"
 
 
 def prepare(backend, destination, home):
@@ -65,7 +109,10 @@ def prepare(backend, destination, home):
     cache.mkdir(mode=0o700)
     for name in SAFE_STATE:
         private_copy(home / ".local/state/nacre" / name, state / name)
+    copy_cached_presentation(home, state, cache)
     private_copy(home / ".cache/nacre/weather.json", cache / "weather.json")
+    private_copy(home / ".config/kitty", tree / ".config/kitty")
+    (destination / "kitty-cache").mkdir(mode=0o700)
     shell = tree / ".local/share/nacre/shell"
     private_copy(home / ".local/share/nacre/shell/bin", shell / "bin")
     controllers = tree / ".local/bin"
@@ -138,11 +185,12 @@ def prepare(backend, destination, home):
     )
     text += "\n".join("workspace " + json.dumps(name) for name in names.values()) + "\n"
     text += (
-        'spawn-at-startup "quickshell" "-p" '
-        + json.dumps(str(home / ".local/share/nacre/shell/source/shell.qml"))
+        'spawn-at-startup "quickshell" "-n" "-p" '
+        + json.dumps(str(home / ".config/quickshell/nacre/shell.qml"))
         + "\n"
     )
-    text += "binds { Alt+Shift+Escape { quit skip-confirmation=true; } }\n"
+    text += "hotkey-overlay {\n    skip-at-startup\n}\n"
+    text += preview_bindings(home, names)
     (generated_dir / "config.kdl").write_text(text)
     (tree / ".config/nacre/niri-on-pc/preview").mkdir(parents=True, exist_ok=True)
     for name in ("palette-runtime", "branding", "ai", "control"):
@@ -167,6 +215,8 @@ def prepare(backend, destination, home):
         "ddcutil",
         "pkexec",
         "sudo",
+        "hyprlock",
+        "hypridle",
     ):
         (binary / name).write_text(
             '#!/bin/sh\necho "System/session actions are disabled in the isolated preview" >&2\nexit 1\n'
@@ -225,14 +275,13 @@ def command(destination, home, environment, runtime):
         (tree / ".config/nacre", home / ".config/nacre"),
         (tree / ".config/hypr", home / ".config/hypr"),
         (tree / ".config/quickshell", home / ".config/quickshell"),
+        (tree / ".config/kitty", home / ".config/kitty"),
         (destination / "state", home / ".local/state/nacre"),
         (destination / "cache", home / ".cache/nacre"),
+        (destination / "kitty-cache", home / ".cache/kitty"),
     ):
         args += ["--bind", str(source), str(target)]
     args += [
-        "--ro-bind",
-        str(tree / ".local/share/nacre/shell"),
-        str(home / ".local/share/nacre/shell"),
         "--ro-bind",
         str(destination / "config"),
         str(home / ".config/nacre/niri-on-pc/preview"),
@@ -257,7 +306,7 @@ def command(destination, home, environment, runtime):
         WAYLAND_DISPLAY=str(parent),
         NACRE_COMPOSITOR_TOOLS=str(home / ".local/share/nacre/shell/tools"),
         NACRE_PEARL_TOOLS=str(home / ".local/share/nacre/shell/tools"),
-        NACRE_QS_CONFIG=str(home / ".local/share/nacre/shell/source/shell.qml"),
+        NACRE_QS_CONFIG=str(home / ".config/quickshell/nacre/shell.qml"),
         NACRE_QS_BIN=shutil.which("quickshell") or "/usr/bin/quickshell",
         PATH=str(destination / "bin") + ":" + environment.get("PATH", os.defpath),
     )
