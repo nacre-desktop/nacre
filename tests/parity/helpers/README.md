@@ -65,3 +65,14 @@ references and the control-tools unavailable reason. It adds explicit limits,
 managed desktop/output/controller support and editor-compatible mode strings.
 Wire requests, IDs and other helper observations stay frozen; the prior references
 remain in Git history. Desktop-settings retains its structured-error exit convention.
+
+## Intended XDG path difference
+
+Rust `Paths` follows `NacrePaths.qml`: accept absolute `XDG_CONFIG_HOME`,
+`XDG_STATE_HOME` and `XDG_CACHE_HOME`, otherwise use HOME defaults. Append `/nacre`
+to each root. Installation/share paths remain HOME-relative. Legacy Python
+helpers that ignored custom XDG roots intentionally differ. The current frozen
+cases set only the default XDG roots, so none are excluded or re-recorded.
+`contracts.json` records this policy; any future case using custom XDG folders
+must declare the intended difference and assert the redirected output/writes.
+This policy does not normalize other paths or permit unrelated parity changes.

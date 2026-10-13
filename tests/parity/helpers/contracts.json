@@ -1695,5 +1695,13 @@
       "scope": "recognized computational Orient RPC transport only; all outputs, source/options, versions, writes, modes and other actions exact",
       "evidence": "deps/orient/tests/parity and crates/orient-core/tests plus native CLI/decoder tests at orient_revision"
     }
+  },
+  "intended_differences": {
+    "absolute_xdg_roots": {
+      "reason": "Rust Paths follows NacrePaths.qml: absolute XDG_CONFIG_HOME/XDG_STATE_HOME/XDG_CACHE_HOME override HOME defaults; unset, empty and relative values retain defaults. Legacy Python helpers that ignored custom XDG roots intentionally differ.",
+      "scope": "configuration, state and cache roots only; HOME-relative installation/share paths stay unchanged",
+      "affected_frozen_cases": [],
+      "coverage": "Current frozen cases use default XDG roots; no existing reference changed or excluded. Custom-XDG cases must explicitly declare this intended difference and verify the redirected files/output."
+    }
   }
 }

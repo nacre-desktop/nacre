@@ -44,6 +44,12 @@ menu-cli; gate deferred with owner conditions, Rust modules not started yet.
 Frozen helper corpus: `tests/parity/helpers` (separate parity task; do not regenerate).
 API: execute(&[String], Option<Value>) -> Result<Option<Value>>; custom text as needed.
 
-Next: publish busy-machine wave 0 tables/status, fetch workspace `e4ca136`,
+Follow-up: Rust Paths accepts absolute config/state/cache XDG roots, otherwise
+HOME defaults, matching QML. Custom-XDG behavior is an intended parity difference;
+current frozen cases use defaults and remain unchanged.
+Main CI must be green before further wave 1 ports land. Parity harness CI failure
+is under investigation; do not skip or weaken assertions without a tracked reason.
+
+Next: validate/publish Paths and repair the failing CI harness, verify green main,
 then use frozen current-Python contracts before each assigned helper port.
 No live machine/QML/config changes by this task; no tags or package uploads.
