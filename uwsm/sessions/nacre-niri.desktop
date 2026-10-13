@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Nacre (niri)
+Comment=Nacre niri acceptance session, managed by UWSM
+Exec=uwsm start -e -D niri niri.desktop
+TryExec=niri-session
+Type=Application
+DesktopNames=niri
