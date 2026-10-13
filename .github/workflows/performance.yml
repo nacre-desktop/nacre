@@ -15,14 +15,23 @@ jobs:
   shell:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    container: ghcr.io/archlinux/archlinux:latest
+    container:
+      image: ghcr.io/archlinux/archlinux:latest
+      # Only this disposable runner needs a virtual DRM device for software GLES.
+      options: --cap-add=SYS_MODULE --device-cgroup-rule="c 226:* rmw" --volume /lib/modules:/lib/modules:ro --volume /dev/dri:/dev/dri
+    env:
+      WLR_RENDER_DRM_DEVICE: /dev/dri/card0
     strategy:
       fail-fast: false
       matrix:
         backend: [hyprland, niri]
     steps:
       - name: Install disposable performance session tools
-        run: pacman -Syu --noconfirm --needed git python python-pillow quickshell qt6-wayland qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats labwc wlr-randr wtype hyprland niri mesa dbus ffmpeg ttf-dejavu gcc pkgconf rust lcms2 cmake make
+        run: pacman -Syu --noconfirm --needed git python python-pillow quickshell qt6-wayland qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats labwc wlr-randr wtype hyprland niri mesa dbus ffmpeg ttf-dejavu gcc pkgconf rust lcms2 cmake make kmod
+      - name: Create a disposable virtual display device
+        run: |
+          modprobe vkms
+          test -e /dev/dri/card0
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           submodules: recursive

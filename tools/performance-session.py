@@ -386,11 +386,13 @@ def run(args, directory):
         parent_env = dict(
             env,
             WLR_BACKENDS="headless",
-            WLR_RENDERER="gles2",
             WLR_RENDERER_ALLOW_SOFTWARE="1",
             WLR_LIBINPUT_NO_DEVICES="1",
             WLR_HEADLESS_OUTPUTS="1",
         )
+        parent_env.pop("WLR_RENDERER", None)
+        if args.parent_renderer != "auto":
+            parent_env["WLR_RENDERER"] = args.parent_renderer
         if args.labwc_libraries:
             parent_env["LD_LIBRARY_PATH"] = str(args.labwc_libraries)
         empty = directory / "empty"
@@ -500,6 +502,7 @@ def run(args, directory):
                 versions[name] = "unavailable"
         report = {
             "versions": versions,
+            "parent_renderer": args.parent_renderer,
             "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "sampler_sha256": hashlib.sha256(
                 Path(performance.__file__).read_bytes()
@@ -715,6 +718,17 @@ def run(args, directory):
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2) + "\n")
         return report
+    except Exception:
+        for name in ("parent", "compositor"):
+            log = directory / (name + ".log")
+            if log.exists():
+                print(
+                    name
+                    + " startup diagnostics:\n"
+                    + "\n".join(log.read_text(errors="replace").splitlines()[-15:]),
+                    file=sys.stderr,
+                )
+        raise
     finally:
         for process in reversed(processes):
             if process.poll() is None:
@@ -792,6 +806,12 @@ def main():
     parser.add_argument("--backend", choices=("hyprland", "niri"), default="hyprland")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--labwc", default="labwc")
+    parser.add_argument(
+        "--parent-renderer",
+        choices=("auto", "gles2", "pixman"),
+        default="auto",
+        help="Outer headless renderer; auto permits runners without a DRM render node",
+    )
     parser.add_argument("--labwc-libraries", type=Path)
     parser.add_argument("--wlr-randr", default="wlr-randr")
     parser.add_argument("--sample-seconds", type=float, default=5)
