@@ -17,7 +17,7 @@ Super+Z hides or shows the shell frame and panels. The wallpaper stays visible,
 and tiled windows expand into the space freed by the frame. Toggling it back
 restores the frame reservation without changing your configured window gaps.
 
-Use Super+Q to close with a 30-second undo: Super+Shift+Q restores the window
+On Hyprland, use Super+Q to close with a 30-second undo: Super+Shift+Q restores the window
 before it closes. Super+Ctrl+Q closes immediately. Super+M maximizes the window.
 Super+Tab opens overview; Super+Ctrl+Left/Right switches workspaces.
 Super+L locks the desktop; Super+Escape (or Super+X) opens the power menu.
@@ -25,6 +25,18 @@ The launcher can show the current key bindings under Learn. Actual keys can diff
 with private overrides. Notifications expire and can be reviewed in history;
 Do not disturb controls popup presentation. Night light warms display colors;
 Stay awake temporarily inhibits idle actions. Quick controls show their state.
+
+On niri, use Super+Ctrl+Q to close immediately. Trash/undo, minimize, scratchpad
+and sticky-window bindings are unavailable. Number keys select existing workspaces
+on the focused output; their display numbers can change. Super+G switches a column
+to tabs, and Super+Ctrl+Page Up/Down cycles its tabs. Alt+Tab cycles windows in the
+active workspace by creation order. Native overview hover titles require the
+niri overview companion; stock niri explains that limit. Live thumbnails are disabled.
+Print opens niri's screenshot picker; Super+Print saves the focused output. The
+launcher capture helper retains full-desktop capture. Niri display controls support
+scale, mode and extension with automatic rollback; mirroring is disabled. Night
+light requires wlsunset and output gamma control. [Acceptance details](development/niri-parity.md)
+cover the remaining hardware/session checks.
 
 AI and Brain are optional. Core Nacre works without either. Installing their code
 does not sign into providers, download models or populate your memory vault.

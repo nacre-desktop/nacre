@@ -19,7 +19,7 @@ Item {
             NacrePearls.cancel()
         // An on-demand Wayland panel may learn the held modifier only after
         // its first press activates keyboard focus. Retain that passive press.
-        acceptedModifiers: Qt.AnyModifier
+        acceptedModifiers: Qt.KeyboardModifierMask
         dragThreshold: centroid.modifiers & Qt.MetaModifier ? 16 : 32767
         acceptedButtons: Qt.LeftButton
         cursorShape: Qt.ClosedHandCursor

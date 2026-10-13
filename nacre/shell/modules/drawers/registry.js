@@ -1,7 +1,7 @@
 .pragma library
 
 function register(service, name, state, host) {
-    if (!service || !name)
+    if (!service || typeof name !== "string")
         return;
     service.screens = Object.assign({}, service.screens, {
         [name]: state

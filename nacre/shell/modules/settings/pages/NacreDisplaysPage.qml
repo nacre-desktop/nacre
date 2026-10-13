@@ -6,12 +6,12 @@ NacreSettingsPage {
     id: root
     property string page: "displays"
     property string primary: DesktopSettings.monitors[0]?.name || ""
-    readonly property bool blocked: DesktopSettings.pending || DesktopSettings.busy === true
+    readonly property bool blocked: NacreCompositor.capabilities?.monitorConfiguration === false || DesktopSettings.pending || DesktopSettings.busy === true
     function connected(name) {
         return DesktopSettings.monitors.some(m => m.name === name);
     }
     function layout(mode) {
-        if (!blocked && DesktopSettings.monitors.length > 1 && connected(primary))
+        if (!blocked && (mode !== "mirror" || NacreCompositor.capabilities?.monitorMirroring !== false) && DesktopSettings.monitors.length > 1 && connected(primary))
             DesktopSettings.request(["display", mode, primary]);
     }
     function edit(name, scale, mode) {
@@ -20,7 +20,7 @@ NacreSettingsPage {
     }
     NacreSettingsSection {
         title: NacreI18n.tr("ui.displays-page.title.displays", "Displays")
-        description: NacreI18n.tr("ui.displays-page.description.choose-a-primary-monitor-then-extend-or-mirror-connecte", "Choose a primary monitor, then extend or mirror connected screens.")
+        description: NacreCompositor.capabilities?.monitorConfiguration === false ? NacreI18n.tr("ui.compositor.niri-display-limits", "Display transactions are unavailable on this compositor. Configure outputs in its output settings.") : NacreCompositor.capabilities?.monitorMirroring === false ? NacreI18n.tr("ui.compositor.niri-mirroring-limit", "Choose a primary monitor, then extend connected screens. Output mirroring is unavailable on niri.") : NacreI18n.tr("ui.displays-page.description.choose-a-primary-monitor-then-extend-or-mirror-connecte", "Choose a primary monitor, then extend or mirror connected screens.")
         Flow {
             width: parent.width
             spacing: 8
@@ -49,7 +49,7 @@ NacreSettingsPage {
             }
             ActionButton {
                 text: NacreI18n.tr("ui.displays-page.text.mirror", "Mirror")
-                enabled: !root.blocked && DesktopSettings.monitors.length > 1
+                enabled: !root.blocked && NacreCompositor.capabilities?.monitorMirroring !== false && DesktopSettings.monitors.length > 1
                 onClicked: root.layout("mirror")
             }
         }

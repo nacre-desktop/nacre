@@ -9,8 +9,10 @@ import math
 import os
 from pathlib import Path
 import re
+import shutil
 import socket
 import subprocess
+import tempfile
 
 MAX_BYTES = 4 * 1024 * 1024
 QUERIES = dict.fromkeys(
@@ -26,7 +28,18 @@ QUERIES = dict.fromkeys(
         "bindings",
     )
 )
-DESKTOP_OPTIONS = {}
+DESKTOP_OPTIONS = dict.fromkeys(
+    (
+        "animations",
+        "blur",
+        "shadow",
+        "followMouse",
+        "naturalScroll",
+        "gapsIn",
+        "borderSize",
+        "rounding",
+    )
+)
 CAPABILITIES = {
     "stableWorkspaceIndices": False,
     "globalWorkspaces": False,
@@ -35,14 +48,26 @@ CAPABILITIES = {
     "floatingPlacement": True,
     "pinWindow": False,
     "windowCapture": False,
+    "nativeWindowScreenshot": True,
+    "shapedBackgroundBlur": False,
     "cursorPosition": False,
     "nativePanelDrag": False,
     "windowHide": False,
+    "windowTrash": False,
+    "scratchpad": False,
+    "windowGroups": True,
+    "windowForceKill": False,
+    "pseudoTiling": False,
+    "layoutSplit": False,
+    "keymaps": False,
+    "nonConsumingShortcuts": False,
+    "bindingIntrospection": False,
     "fullscreenState": False,
     "shortcutRelease": False,
-    "desktopOptions": [],
-    "monitorConfiguration": False,
-    "nightLightController": False,
+    "desktopOptions": list(DESKTOP_OPTIONS),
+    "monitorConfiguration": True,
+    "monitorMirroring": False,
+    "nightLightController": True,
 }
 
 
@@ -286,7 +311,7 @@ class State:
                         None,
                     ),
                     "availableModes": [
-                        f"{mode['width']}x{mode['height']}@{mode['refresh_rate'] / 1000:.3f}"
+                        f"{mode['width']}x{mode['height']}@{mode['refresh_rate'] / 1000:.3f}Hz"
                         for mode in modes
                     ],
                 }
@@ -378,6 +403,9 @@ class Backend:
     display_name = "niri"
     query_names = tuple(QUERIES)
     capabilities = CAPABILITIES
+    night_light_tool = "wlsunset"
+    night_light_service = "nacre-night-light.service"
+    portal_service = "xdg-desktop-portal-gnome.service"
 
     def session_id(self):
         return os.environ.get("NIRI_SOCKET", "")
@@ -501,7 +529,28 @@ class Backend:
     def query(self, name, *, timeout=10, max_bytes=None):
         if name not in QUERIES:
             raise ValueError("Unknown compositor query")
-        if name in ("cursor", "instances", "bindings"):
+        if name == "bindings":
+            result = []
+            for path in self.binding_source_files(Path.home()):
+                for record in self.capture_bindings(path):
+                    pieces = record["keys"].split("+")
+                    result.append(
+                        {
+                            "modmask": sum(
+                                {"SUPER": 64, "CTRL": 4, "ALT": 8, "SHIFT": 1}.get(
+                                    part, 0
+                                )
+                                for part in pieces[:-1]
+                            ),
+                            "key": pieces[-1],
+                            "submap": "",
+                            "description": record["flags"]["description"],
+                            "dispatcher": "__lua",
+                            "arg": "",
+                        }
+                    )
+            return result
+        if name in ("cursor", "instances"):
             raise RuntimeError(
                 "niri does not expose " + name + " through this interface"
             )
@@ -625,6 +674,33 @@ class Backend:
             raise ValueError("Invalid focus direction")
         return self._action(names[direction], timeout=timeout)
 
+    def cycle_window(self, direction="next", *, timeout=10):
+        if direction not in ("next", "previous"):
+            raise ValueError("Invalid cycle direction")
+        state = self._state(timeout)
+        active = state["activeWorkspace"]
+        windows = sorted(
+            (
+                row
+                for row in state["windows"]
+                if active and row["workspaceId"] == active["id"]
+            ),
+            key=lambda row: native_id(row["windowId"], "window"),
+        )
+        if not windows:
+            raise ValueError("No windows in the active workspace")
+        current = state["activeWindow"]
+        index = next(
+            (
+                i
+                for i, row in enumerate(windows)
+                if current and row["windowId"] == current["windowId"]
+            ),
+            -1,
+        )
+        target = windows[(index + (1 if direction == "next" else -1)) % len(windows)]
+        return self.focus_window(target["windowId"], timeout=timeout)
+
     def move_direction(self, direction, *, timeout=10):
         names = {
             "left": "MoveColumnLeft",
@@ -644,6 +720,21 @@ class Backend:
     def close_window(self, window="", *, timeout=10):
         return self._action(
             "CloseWindow", {"id": self._window_id(window, timeout)}, timeout=timeout
+        )
+
+    def screenshot_window(self, path, window="", *, timeout=10):
+        path = Path(path)
+        if not path.is_absolute():
+            raise ValueError("Screenshot path must be absolute")
+        return self._action(
+            "ScreenshotWindow",
+            {
+                "id": self._window_id(window, timeout),
+                "path": str(path),
+                "write_to_disk": True,
+                "show_pointer": False,
+            },
+            timeout=timeout,
         )
 
     def move_workspace(self, workspace, monitor, *, timeout=10):
@@ -877,6 +968,8 @@ class Backend:
     def config_path(self, home, kind):
         if kind not in ("palette", "desktop", "monitor", "profile"):
             raise ValueError("Unknown compositor configuration")
+        if kind == "desktop" and os.environ.get("NACRE_NIRI_DESKTOP_CONFIG"):
+            return Path(os.environ["NACRE_NIRI_DESKTOP_CONFIG"])
         return Path(home) / ".config/nacre/niri" / (kind + ".kdl")
 
     def render_keyboard(self, values):
@@ -896,10 +989,409 @@ class Backend:
         return Path(__file__).with_name("niri") / "palette.kdl.in"
 
     def binding_source_files(self, home):
+        if os.environ.get("NACRE_NIRI_CONFIG"):
+            return sorted(
+                Path(os.environ["NACRE_NIRI_CONFIG"]).parent.glob("*bindings*.kdl")
+            )
         return sorted((Path(home) / ".config/nacre/niri").glob("*bindings*.kdl"))
+
+    def capture_bindings(self, path, kind="bindings"):
+        if kind != "bindings":
+            raise ValueError("Only generated niri bindings can be inspected")
+        text = Path(path).read_text()
+        if not text.startswith("// Generated from compositor-contract.json;"):
+            raise RuntimeError("Private KDL overrides require niri's hotkey overlay")
+        records = []
+        pattern = (
+            r'^\s+(\S+)\s+(.+?)\s+\{\s+(spawn-sh "(?:[^"\\]|\\.)*"|[a-z-]+);\s+\}$'
+        )
+        for line in text.splitlines():
+            match = re.fullmatch(pattern, line)
+            if not match:
+                continue
+            key, flags, action = match.groups()
+            key = (
+                key.replace("Super", "SUPER")
+                .replace("Ctrl", "CTRL")
+                .replace("Alt", "ALT")
+                .replace("Shift", "SHIFT")
+            )
+            description = re.search(r'hotkey-overlay-title=("(?:[^"\\]|\\.)*")', flags)
+            records.append(
+                {
+                    "keys": key,
+                    "submap": "",
+                    "flags": {
+                        "description": json.loads(description[1]) if description else ""
+                    },
+                    "action": {
+                        "method": "exec_cmd"
+                        if action.startswith("spawn-sh ")
+                        else action,
+                        "args": [json.loads(action[9:])]
+                        if action.startswith("spawn-sh ")
+                        else [],
+                    },
+                }
+            )
+        return records
+
+    def render_desktop_options(self, preferences):
+        lines = []
+        for key in DESKTOP_OPTIONS:
+            if key not in preferences:
+                continue
+            value = preferences[key]
+            if key in ("gapsIn", "borderSize", "rounding"):
+                if (
+                    type(value) not in (int, float)
+                    or not math.isfinite(value)
+                    or not 0 <= value <= 100
+                ):
+                    raise ValueError("Invalid compositor dimension")
+            elif type(value) is not bool:
+                raise ValueError("Invalid compositor toggle")
+        if "animations" in preferences:
+            lines.append(
+                "animations { " + ("" if preferences["animations"] else "off;") + " }"
+            )
+        layout = []
+        if "gapsIn" in preferences:
+            layout.append("gaps " + str(preferences["gapsIn"]))
+        if "borderSize" in preferences:
+            layout.append("border { width " + str(preferences["borderSize"]) + "; }")
+            layout.append(
+                "focus-ring { width " + str(preferences["borderSize"]) + "; }"
+            )
+        if layout:
+            lines.append("layout {\n    " + "\n    ".join(layout) + "\n}")
+        rules = []
+        if "rounding" in preferences:
+            lines.append(
+                'window-rule {\n    exclude app-id="^org[.]quickshell$" title="^Nacre Pearl "\n    geometry-corner-radius '
+                + str(preferences["rounding"])
+                + "\n    clip-to-geometry true\n}"
+            )
+        if "shadow" in preferences:
+            rules.append(
+                "shadow { " + ("on" if preferences["shadow"] else "off") + "; }"
+            )
+        if "blur" in preferences:
+            value = str(bool(preferences["blur"])).lower()
+            rules.append("background-effect { blur " + value + "; }")
+            lines.append(
+                'layer-rule {\n    match namespace="^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$"\n    background-effect { blur '
+                + value
+                + "; }\n}"
+            )
+        if rules:
+            lines.append("window-rule {\n    " + "\n    ".join(rules) + "\n}")
+        input_rules = []
+        if "followMouse" in preferences:
+            if preferences["followMouse"]:
+                input_rules.append("focus-follows-mouse")
+        if "naturalScroll" in preferences:
+            input_rules.append(
+                "touchpad { "
+                + (
+                    "natural-scroll; scroll-factor 0.25;"
+                    if preferences["naturalScroll"]
+                    else "scroll-factor 0.25;"
+                )
+                + " }"
+            )
+        if input_rules or "followMouse" in preferences:
+            lines.append("input {\n    " + "\n    ".join(input_rules) + "\n}")
+        return "\n".join(lines) + "\n"
+
+    def render_monitors(self, monitors):
+        lines = []
+        for monitor in monitors:
+            name = monitor.get("name")
+            if (
+                not isinstance(name, str)
+                or not name
+                or any(ord(char) < 32 for char in name)
+            ):
+                raise ValueError("Invalid output name")
+            if monitor.get("mirrorOf") not in (None, "", "none"):
+                raise ValueError("Output mirroring is unavailable on niri")
+            if monitor.get("disabled"):
+                raise ValueError(
+                    "Disabling outputs is unavailable in this display transaction"
+                )
+            for key in (
+                "width",
+                "height",
+                "scale",
+                "refreshRate",
+                "x",
+                "y",
+                "transform",
+            ):
+                value = monitor.get(key, 0)
+                if type(value) not in (int, float) or not math.isfinite(value):
+                    raise ValueError("Invalid output geometry")
+            if (
+                not 0 < monitor["scale"] <= 10
+                or not 0 < monitor["width"] <= 32768
+                or not 0 < monitor["height"] <= 32768
+                or not 0 <= monitor.get("refreshRate", 0) <= 1000
+                or monitor.get("transform", 0) not in range(8)
+            ):
+                raise ValueError("Invalid output geometry")
+            transforms = (
+                "normal",
+                "90",
+                "180",
+                "270",
+                "flipped",
+                "flipped-90",
+                "flipped-180",
+                "flipped-270",
+            )
+            lines.append("output " + json.dumps(name) + " {")
+            if monitor.get("refreshRate"):
+                lines.append(
+                    f'    mode "{int(monitor["width"])}x{int(monitor["height"])}@{monitor["refreshRate"]:.3f}"'
+                )
+            lines += [
+                "    scale " + str(monitor["scale"]),
+                f"    position x={int(monitor['x'])} y={int(monitor['y'])}",
+                "    transform "
+                + json.dumps(transforms[int(monitor.get("transform", 0))]),
+                "}",
+            ]
+        return "\n".join(lines) + ("\n" if lines else "")
+
+    def configure_monitors(self, records, *, timeout=10):
+        self.render_monitors(records)  # Validate the whole transaction before mutation.
+        previous = {row["name"]: row for row in self.query("monitors", timeout=timeout)}
+        if any(row["name"] not in previous for row in records):
+            raise ValueError("Selected display is disconnected")
+        transforms = (
+            "Normal",
+            "90",
+            "180",
+            "270",
+            "Flipped",
+            "Flipped90",
+            "Flipped180",
+            "Flipped270",
+        )
+
+        def actions(row):
+            result = []
+            if row.get("refreshRate"):
+                result.append(
+                    {
+                        "Mode": {
+                            "mode": {
+                                "Specific": {
+                                    "width": int(row["width"]),
+                                    "height": int(row["height"]),
+                                    "refresh": row["refreshRate"],
+                                }
+                            }
+                        }
+                    }
+                )
+            return result + [
+                {"Scale": {"scale": {"Specific": row["scale"]}}},
+                {"Transform": {"transform": transforms[int(row.get("transform", 0))]}},
+                {
+                    "Position": {
+                        "position": {
+                            "Specific": {"x": int(row["x"]), "y": int(row["y"])}
+                        }
+                    }
+                },
+            ]
+
+        try:
+            for row in records:
+                for action in actions(row):
+                    response = self._request(
+                        {"Output": {"output": row["name"], "action": action}},
+                        timeout=timeout,
+                    )
+                    if response != {"OutputConfigChanged": "Applied"}:
+                        raise RuntimeError("Output configuration was not applied")
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+            # Restore even an output removed during the transaction: niri queues
+            # its original values for reconnection rather than the failed plan.
+            for row in records:
+                for action in actions(previous[row["name"]]):
+                    response = self._request(
+                        {"Output": {"output": row["name"], "action": action}},
+                        timeout=timeout,
+                    )
+                    if response not in (
+                        {"OutputConfigChanged": "Applied"},
+                        {"OutputConfigChanged": "OutputWasMissing"},
+                    ):
+                        raise RuntimeError(
+                            "Output change failed and rollback was not accepted"
+                        ) from error
+            raise
+        return subprocess.CompletedProcess([], 0, "ok\n", "")
+
+    def ensure_desktop_loader(self, home):
+        config = Path(
+            os.environ.get(
+                "NACRE_NIRI_CONFIG", str(Path(home) / ".config/nacre/niri/config.kdl")
+            )
+        )
+        if not config.exists() or 'include "desktop.kdl"' not in config.read_text():
+            raise RuntimeError(
+                "Managed niri desktop include missing; regenerate the isolated session configuration"
+            )
+
+    def set_desktop_options(self, preferences, *, timeout=10):
+        home = Path.home()
+        self.ensure_desktop_loader(home)
+        state = home / ".config/nacre/desktop.json"
+        values = json.loads(state.read_text()) if state.exists() else {}
+        values.update(preferences)
+        target = self.config_path(home, "desktop")
+        descriptor, temporary = tempfile.mkstemp(dir=target.parent)
+        previous = target.read_bytes() if target.exists() else None
+        try:
+            with os.fdopen(descriptor, "w") as stream:
+                stream.write(self.render_desktop_options(values))
+                monitors = values.get("compositorDisplays", {}).get("niri")
+                if monitors is None:
+                    monitors = self.query("monitors", timeout=timeout)
+                stream.write(self.render_monitors(monitors))
+            subprocess.run(
+                ["niri", "validate", "-c", temporary],
+                check=True,
+                capture_output=True,
+                timeout=timeout,
+            )
+            os.replace(temporary, target)
+            try:
+                return self.reload(timeout=timeout)
+            except (OSError, RuntimeError, subprocess.SubprocessError):
+                if previous is None:
+                    target.unlink(missing_ok=True)
+                else:
+                    target.write_bytes(previous)
+                raise
+        finally:
+            Path(temporary).unlink(missing_ok=True)
+
+    def get_desktop_option(self, key, *, timeout=8):
+        raise RuntimeError("Niri does not expose resolved configuration options")
 
     def legacy_power_binding(self):
         return ""
+
+    def night_light_available(self):
+        if not shutil.which(self.night_light_tool) or not shutil.which("wayland-info"):
+            return False
+        try:
+            result = subprocess.run(
+                ["wayland-info"], capture_output=True, text=True, timeout=3
+            )
+            return (
+                result.returncode == 0
+                and "zwlr_gamma_control_manager_v1" in result.stdout
+            )
+        except (OSError, subprocess.SubprocessError):
+            return False
+
+    def night_light_configured_elsewhere(self, home):
+        return any(
+            (Path(home) / ".config" / name).exists()
+            for name in ("gammastep/config.ini", "wlsunset/config")
+        )
+
+    def night_light_external_socket(self, active):
+        # Gamma controllers have no common control socket. Inspect only this
+        # display's processes, excluding the exact owned unit's MainPID.
+        own = ""
+        if active:
+            own = subprocess.run(
+                [
+                    "systemctl",
+                    "--user",
+                    "show",
+                    self.night_light_service,
+                    "-p",
+                    "MainPID",
+                    "--value",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=3,
+            ).stdout.strip()
+        display = os.environ.get("WAYLAND_DISPLAY", "")
+        if not display:
+            return False
+        for process in Path("/proc").glob("[0-9]*"):
+            if process.name == own:
+                continue
+            try:
+                command = process.joinpath("cmdline").read_bytes().split(b"\0")[0]
+                if Path(os.fsdecode(command)).name not in (
+                    "wlsunset",
+                    "gammastep",
+                    "hyprsunset",
+                ):
+                    continue
+                environment = process.joinpath("environ").read_bytes().split(b"\0")
+                if (
+                    os.fsencode("WAYLAND_DISPLAY=" + display) in environment
+                    and os.fsencode(
+                        "XDG_RUNTIME_DIR=" + os.environ.get("XDG_RUNTIME_DIR", "")
+                    )
+                    in environment
+                ):
+                    return True
+            except OSError:
+                continue
+        return False
+
+    def night_light_command(self, enabled):
+        if not enabled:
+            return ["systemctl", "--user", "stop", self.night_light_service]
+        return [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=" + self.night_light_service,
+            "--property=PartOf=graphical-session.target",
+            "--setenv=WAYLAND_DISPLAY=" + os.environ.get("WAYLAND_DISPLAY", ""),
+            "--setenv=XDG_RUNTIME_DIR=" + os.environ.get("XDG_RUNTIME_DIR", ""),
+            # Adjacent warm endpoints avoid schedule-dependent color changes;
+            # wlsunset requires high > low. Stopping releases gamma ownership.
+            "wlsunset",
+            "-t",
+            "4500",
+            "-T",
+            "4501",
+            "-S",
+            "00:00",
+            "-s",
+            "23:59",
+            "-d",
+            "0",
+        ]
+
+    def set_night_light_temperature(self, enabled, *, timeout=1):
+        if enabled:
+            if not self.night_light_available():
+                raise RuntimeError(
+                    "Night light requires gamma control on a physical output"
+                )
+            return subprocess.CompletedProcess([], 0, "", "")
+        return subprocess.run(
+            self.night_light_command(False),
+            check=True,
+            capture_output=True,
+            timeout=timeout,
+        )
 
     def _unsupported(self, *args, **kwargs):
         raise RuntimeError(
@@ -908,11 +1400,4 @@ class Backend:
 
     pin_window = kill_window = fullscreen_state = set_cursor = notify = _unsupported
     set_animations = set_performance = set_options = render_options = _unsupported
-    render_desktop_options = set_desktop_options = get_desktop_option = _unsupported
-    render_monitors = configure_monitors = apply_config = ensure_desktop_loader = (
-        _unsupported
-    )
-    night_light_command = night_light_configured_elsewhere = (
-        night_light_external_socket
-    ) = _unsupported
-    set_night_light_temperature = capture_bindings = _unsupported
+    apply_config = _unsupported

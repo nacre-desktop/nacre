@@ -5,6 +5,16 @@ import "layout.js" as Layout
 
 TestCase {
     name: "PanelOwnership"
+    function test_unnamed_nested_output_keeps_its_panel_state() {
+        const service = createTemporaryObject(store, this);
+        const state = createTemporaryObject(value, this);
+        const host = createTemporaryObject(value, this);
+        Registry.register(service, "", state, host);
+        compare(service.screens[""], state);
+        compare(service.panels[""], host);
+        Registry.release(service, "", state, host);
+        verify(!("" in service.screens));
+    }
     function test_replacement_then_old_teardown_keeps_new_output_and_other_screen() {
         const service = createTemporaryObject(store, this);
         const oldState = createTemporaryObject(value, this);

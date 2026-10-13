@@ -12,13 +12,9 @@ OUTPUTS = ("niri/bindings.kdl", "niri/window-rules.kdl", "niri/unsupported.json"
 SKIPPED_ACTIONS = {
     "window.pin",
     "window.pseudo",
-    "group.toggle",
-    "group.previous",
-    "group.next",
     "layout.toggle-split",
     "workspace.scratchpad",
     "keymap.switch",
-    "window.cycle",
     "panel.drag.begin",
     "panel.drag.finish",
 }
@@ -112,6 +108,10 @@ def binding_command(row):
             return action_command("close_window")
         if description == "Nacre:overview":
             return "niri msg action toggle-overview"
+        if description == "Nacre:screenshot":
+            return "niri msg action screenshot"
+        if description == "Nacre:save-screenshot":
+            return 'mkdir -p "$HOME/Pictures/Screenshots" && niri msg action screenshot-screen --show-pointer false --path "$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png"'
         if description in SKIPPED_LAUNCHES or "/window-minimize.sh" in command:
             raise NotImplementedError(
                 "Hyprland hide/trash/force-kill operation is not available"
@@ -119,6 +119,19 @@ def binding_command(row):
         if not isinstance(command, str):
             raise ValueError("Invalid launch command")
         return command
+    if action.startswith("group."):
+        return (
+            "niri msg action "
+            + {
+                "group.toggle": "toggle-column-tabbed-display",
+                "group.previous": "focus-window-up-or-bottom",
+                "group.next": "focus-window-down-or-top",
+            }[action]
+        )
+    if action == "window.cycle":
+        return action_command(
+            "cycle_window", ["--direction", "next" if params["next"] else "previous"]
+        )
     if action == "shell.shortcut":
         return (
             'if [ -n "${NACRE_QS_CONFIG:-}" ]; then exec "${NACRE_QS_BIN:-$HOME/.local/share/nacre/shell/bin/qs}" -p "$NACRE_QS_CONFIG" ipc call nacreCompositor shortcut '
@@ -208,8 +221,29 @@ def rule_kdl(row):
                 "Niri initial window routes require a named workspace, not a changing index"
             )
         parts.append("    open-on-workspace " + quoted(target["name"]))
-    # Pinned, centered and expression/percentage sizing have no exact semantic
-    # match. Floating placement remains caller-owned via measured IPC geometry.
+    if "size" in effects:
+        size = effects["size"]
+        dimensions = size.split() if isinstance(size, str) else size
+        if not isinstance(dimensions, list) or len(dimensions) != 2:
+            raise ValueError("Invalid window size rule")
+        for key, dimension, axis in zip(
+            ("default-column-width", "default-window-height"),
+            dimensions,
+            ("w", "h"),
+            strict=True,
+        ):
+            dimension = str(dimension)
+            if re.fullmatch(r"[1-9]\d*", dimension):
+                value = "fixed " + dimension
+            elif re.fullmatch(r"(?:\d+(?:\.\d+)?)%", dimension):
+                value = "proportion " + str(float(dimension[:-1]) / 100)
+            elif re.fullmatch(r"monitor_" + axis + r"\*(?:\d+(?:\.\d+)?)", dimension):
+                value = "proportion " + dimension.split("*")[1]
+            else:
+                raise NotImplementedError("Unmapped size expression: " + dimension)
+            parts.append("    " + key + " { " + value + "; }")
+    # New floating windows are centered by niri itself. Sticky windows have no
+    # equivalent; do not substitute a normal named workspace.
     parts.append("}")
     return "\n".join(parts)
 
@@ -260,9 +294,17 @@ def render(contract, directory=None):
                     )
                 elif kind == "window-rule":
                     rules.append(rule_kdl(row))
-                    differing = sorted(
-                        set(row.get("effects", {})) & {"centered", "pinned", "size"}
-                    )
+                    differing = sorted(set(row.get("effects", {})) & {"pinned"})
+                    effects = row.get("effects", {})
+                    if effects.get("centered") is False:
+                        differing.append(
+                            "centered=false (niri centers new floating windows)"
+                        )
+                    if "size" in effects and (
+                        "%" in str(effects["size"])
+                        or "monitor_" in str(effects["size"])
+                    ):
+                        differing.append("size proportions use niri's working area")
                     if differing:
                         unsupported.append(
                             {
@@ -273,6 +315,24 @@ def render(contract, directory=None):
                                 + ", ".join(differing),
                             }
                         )
+                elif kind == "layer-rule" and row.get("backend", {}).get("niri"):
+                    effect = row["backend"]["niri"]
+                    if (
+                        set(effect) - {"blur", "namespace_regex"}
+                        or type(effect.get("blur")) is not bool
+                    ):
+                        raise ValueError("Invalid niri layer effect")
+                    rules.append(
+                        "layer-rule {\n    match namespace="
+                        + quoted(
+                            effect.get(
+                                "namespace_regex", row["selector"]["namespace_regex"]
+                            )
+                        )
+                        + "\n    background-effect { blur "
+                        + str(effect["blur"]).lower()
+                        + "; }\n}"
+                    )
                 elif kind in (
                     "extension",
                     "layer-rule",

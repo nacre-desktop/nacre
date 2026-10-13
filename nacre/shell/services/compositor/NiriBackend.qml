@@ -16,14 +16,26 @@ Singleton {
             floatingPlacement: true,
             pinWindow: false,
             windowCapture: false,
+            shapedBackgroundBlur: false,
             cursorPosition: false,
             nativePanelDrag: false,
             shortcutRelease: false,
             fullscreenState: false,
             windowHide: false,
-            desktopOptions: [],
-            monitorConfiguration: false,
-            nightLightController: false
+            windowTrash: false,
+            scratchpad: false,
+            windowGroups: true,
+            windowForceKill: false,
+            pseudoTiling: false,
+            layoutSplit: false,
+            keymaps: false,
+            nonConsumingShortcuts: false,
+            bindingIntrospection: false,
+            desktopOptions: ["animations", "blur", "shadow", "followMouse", "naturalScroll", "gapsIn", "borderSize", "rounding"],
+            monitorConfiguration: true,
+            monitorMirroring: false,
+            nativeWindowScreenshot: true,
+            nightLightController: true
         })
     readonly property string toolsPath: NacrePaths.compositorTools
     readonly property var workspaces: ({

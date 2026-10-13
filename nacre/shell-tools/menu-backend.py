@@ -498,6 +498,25 @@ def cancel_reminder(unit):
 
 def capture_window():
     current = compositor.query("active_window", timeout=5)
+    if compositor.capabilities.get("nativeWindowScreenshot"):
+        if not current.get("windowId"):
+            raise ValueError("Focus the window you want to capture first")
+        folder = HOME / "Pictures/Screenshots"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / (
+            "screenshot_" + datetime.now().strftime("%Y%m%d_%H%M%S_%f") + ".png"
+        )
+        compositor.screenshot_window(path, current["windowId"], timeout=5)
+        # Native capture is asynchronous. Do not read a nonexistent or partial
+        # file; niri also owns copying the completed image to the clipboard.
+        deadline = time.monotonic() + 5
+        while not path.exists():
+            if time.monotonic() >= deadline:
+                raise RuntimeError("Window capture did not finish")
+            time.sleep(0.05)
+        return tr(
+            "helper.menu-backend.window-saved-and-copied", "Window saved and copied"
+        )
     position = current.get("at", [])
     size = current.get("size", [])
     if (

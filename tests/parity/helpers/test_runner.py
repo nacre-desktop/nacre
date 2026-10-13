@@ -28,6 +28,19 @@ class RunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "live-host fallback"):
                 runner.execute({"helper": "launcher-preferences"}, None)
 
+    def test_sandbox_start_failure_surfaces_stderr(self):
+        with patch.object(runner.subprocess, "Popen") as spawn:
+            process = spawn.return_value.__enter__.return_value
+            process.returncode = 1
+            process.communicate.return_value = (
+                "",
+                "bwrap: Creating new namespace failed: Operation not permitted\n",
+            )
+            with self.assertRaisesRegex(
+                RuntimeError, "Parity sandbox.*Operation not permitted"
+            ):
+                runner.execute({"helper": "fixture"}, "python3 -c pass")
+
     def test_clean_environment_and_filesystem_observation(self):
         script = (
             "import json,os,pathlib; "

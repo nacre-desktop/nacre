@@ -42,7 +42,7 @@ Singleton {
         refresh()
     Component.onCompleted: refresh()
     FileView {
-        path: NacrePaths.state + "/control-tools.json"
+        path: NacrePaths.state + "/control-tools" + (NacreCompositor.backendName === "niri" ? "-niri" : "") + ".json"
         watchChanges: true
         printErrors: false
         onFileChanged: {

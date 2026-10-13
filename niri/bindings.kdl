@@ -12,13 +12,18 @@ binds {
     XF86KbdBrightnessDown repeat=false hotkey-overlay-title="Nacre:keyboard-down" { spawn-sh "~/.local/bin/nacre-shell keyboard-light down"; }
     Super+period repeat=false hotkey-overlay-title="Nacre:emoji" { spawn-sh "~/.local/bin/nacre-menu actions.emoji"; }
     Super+Ctrl+E repeat=false hotkey-overlay-title="Nacre:emoji" { spawn-sh "~/.local/bin/nacre-menu actions.emoji"; }
-    Print repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""; }
-    Super+Shift+S repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""; }
-    Super+Print repeat=false hotkey-overlay-title="Nacre:save-screenshot" { spawn-sh "grim ~/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S).png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Saved to Pictures/Screenshots\""; }
+    Print repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "niri msg action screenshot"; }
+    Super+Shift+S repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "niri msg action screenshot"; }
+    Super+Print repeat=false hotkey-overlay-title="Nacre:save-screenshot" { spawn-sh "mkdir -p \"$HOME/Pictures/Screenshots\" && niri msg action screenshot-screen --show-pointer false --path \"$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png\""; }
     Super+Ctrl+Q repeat=false hotkey-overlay-title="Nacre:close" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action close_window"; }
     Super+F repeat=false hotkey-overlay-title="Nacre:fullscreen" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action fullscreen_window --mode fullscreen"; }
     Super+M repeat=false hotkey-overlay-title="Nacre:maximize" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action fullscreen_window --mode maximized"; }
     Super+T repeat=false hotkey-overlay-title="Nacre:float" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action float_window --action toggle"; }
+    Super+G repeat=false hotkey-overlay-title="Nacre:group" { spawn-sh "niri msg action toggle-column-tabbed-display"; }
+    Super+Ctrl+Page_Up repeat=false hotkey-overlay-title="Nacre:group-cycle" { spawn-sh "niri msg action focus-window-up-or-bottom"; }
+    Super+Ctrl+Page_Down repeat=false hotkey-overlay-title="Nacre:group-cycle" { spawn-sh "niri msg action focus-window-down-or-top"; }
+    Alt+TAB repeat=false hotkey-overlay-title="Nacre:cycle-window" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action cycle_window --direction next"; }
+    Alt+Shift+TAB repeat=false hotkey-overlay-title="Nacre:cycle-window" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action cycle_window --direction previous"; }
     Super+1 repeat=false hotkey-overlay-title="Nacre:workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action switch_workspace --workspace 1"; }
     Super+Shift+1 repeat=false hotkey-overlay-title="Nacre:move-workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action move_window --workspace 1"; }
     Super+2 repeat=false hotkey-overlay-title="Nacre:workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action switch_workspace --workspace 2"; }

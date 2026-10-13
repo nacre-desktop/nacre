@@ -123,9 +123,12 @@ QtObject { property bool visible:true;property string page:"welcome";property va
  function jump(name){page=name}function advance(){if(step<4)page=steps[step+1];else finish()}function back(){if(page==="help")page="ready";else if(step>0)page=steps[step-1];else close()}function finish(){actions=[...actions,"finish"]}
  function close(){actions=[...actions,"close"]}
 }""")
+            (fixtures / "NacreCompositor.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject {property var capabilities:({})}"
+            )
             with (fixtures / "qmldir").open("a") as stream:
                 stream.write(
-                    "\nBrandLogo 1.0 BrandLogo.qml\nsingleton NacreWelcomeApp 1.0 NacreWelcomeApp.qml\n"
+                    "\nBrandLogo 1.0 BrandLogo.qml\nsingleton NacreWelcomeApp 1.0 NacreWelcomeApp.qml\nsingleton NacreCompositor 1.0 NacreCompositor.qml\n"
                 )
             stub = fixtures / "NacreWelcomeApp.qml"
             shortcuts = [

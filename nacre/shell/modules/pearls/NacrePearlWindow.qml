@@ -195,6 +195,10 @@ FloatingWindow {
         };
     }
     function pin() {
+        if (NacreCompositor.capabilities?.pinWindow === false) {
+            error = NacreI18n.tr("ui.compositor.pin-unavailable", "Sticky windows are unavailable on this compositor.");
+            return;
+        }
         if (!worker.running) {
             worker.action = "pin";
             worker.running = true;

@@ -12,6 +12,14 @@ spec.loader.exec_module(m)
 
 
 class StartupTests(unittest.TestCase):
+    def test_niri_startup_targets_names_instead_of_changing_display_indices(self):
+        profile = m.POLICY.validate({"version": 1, "workspaceNames": ["", "Work"]})
+        with patch.dict(m.compositor.capabilities, {"perOutputWorkspaces": True}):
+            self.assertEqual(m.workspace_target(profile, 2), {"name": "Work"})
+            self.assertEqual(m.workspace_target(profile, 1), {"name": "nacre-1"})
+        with patch.dict(m.compositor.capabilities, {"perOutputWorkspaces": False}):
+            self.assertEqual(m.workspace_target(profile, 2), 2)
+
     def test_generic_profile_starts_no_personal_apps(self):
         self.assertEqual(m.plan([], {"version": 1}), [])
 

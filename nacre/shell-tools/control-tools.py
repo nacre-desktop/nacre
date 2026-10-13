@@ -15,7 +15,21 @@ import tempfile
 
 
 def record_path(home=None):
-    return (home or Path.home()) / ".local/state/nacre/control-tools.json"
+    name = (
+        "control-tools-niri.json"
+        if compositor.backend_name == "niri"
+        else "control-tools.json"
+    )
+    if home is not None:
+        root = Path(home) / ".local/state"
+    else:
+        configured = os.environ.get("XDG_STATE_HOME", "")
+        root = (
+            Path(configured)
+            if configured.startswith("/")
+            else Path.home() / ".local/state"
+        )
+    return root / "nacre" / name
 
 
 def service():
@@ -24,7 +38,7 @@ def service():
             "systemctl",
             "--user",
             "show",
-            "hyprsunset.service",
+            compositor.night_light_service,
             "-p",
             "ActiveState",
             "-p",
@@ -81,7 +95,7 @@ def apply_temperature(enabled, owner, starting):
         try:
             compositor.set_night_light_temperature(enabled, timeout=1)
             return
-        except subprocess.SubprocessError:
+        except (RuntimeError, subprocess.SubprocessError):
             if not starting or attempt == 11 or service()[1] != owner:
                 raise
             time.sleep(0.05)
@@ -89,15 +103,23 @@ def apply_temperature(enabled, owner, starting):
 
 def state(home=None):
     supported = compositor.capabilities.get("nightLightController", True)
-    available = supported and bool(shutil.which("hyprsunset"))
-    active, owner = service() if available else (False, "")
+    available = supported and compositor.night_light_available()
+    active, owner = (
+        service()
+        if supported and (available or compositor.backend_name == "niri")
+        else (False, "")
+    )
     data = load(home)
     owned = active and bool(owner) and data.get("owner") == owner
     return {
         "screenshot": bool(shutil.which("grim") and shutil.which("slurp")),
         "colorPicker": bool(shutil.which("hyprpicker")),
         "powerProfilesSupported": bool(shutil.which("powerprofilesctl")),
-        "nightLightSupported": available,
+        "nightLightSupported": available
+        or (owned and compositor.backend_name == "niri"),
+        "nightLightReason": ""
+        if available
+        else "Requires a controller and output gamma control.",
         "nightLightExternal": (active and not owned)
         or (supported and configured_elsewhere(home))
         or (supported and unmanaged_socket(active)),
@@ -106,11 +128,13 @@ def state(home=None):
 
 
 def night_light(enabled, home=None):
-    if not shutil.which("hyprsunset"):
+    if not compositor.capabilities.get("nightLightController", True) or (
+        enabled and not compositor.night_light_available()
+    ):
         raise ValueError(
             tr(
                 "helper.control-tools.install-the-system-hyprsunset-package-for-night-light",
-                "Install the system hyprsunset package for Night light",
+                "Night light requires a compatible controller and output gamma control",
             )
         )
     active, owner = service()
@@ -129,7 +153,9 @@ def night_light(enabled, home=None):
     started = False
     if enabled and not active:
         subprocess.run(
-            ["systemctl", "--user", "start", "hyprsunset.service"],
+            compositor.night_light_command(True)
+            if compositor.backend_name == "niri"
+            else ["systemctl", "--user", "start", compositor.night_light_service],
             check=True,
             capture_output=True,
             timeout=10,
@@ -152,12 +178,14 @@ def night_light(enabled, home=None):
             # Undo a partial startup, but only while the invocation still belongs to us.
             if started and service()[1] == owner:
                 subprocess.run(
-                    ["systemctl", "--user", "stop", "hyprsunset.service"],
+                    ["systemctl", "--user", "stop", compositor.night_light_service],
                     check=True,
                     capture_output=True,
                     timeout=10,
                 )
             raise
+    if not enabled and compositor.backend_name == "niri":
+        active, owner = False, ""
     save({"owner": owner if active else "", "enabled": bool(enabled and active)}, home)
     return state(home)
 

@@ -15,6 +15,7 @@ NacreSettingsPage {
             "nacre-brain-sync.timer": "Knowledge sync",
             "xdg-desktop-portal.service": "Desktop portal",
             "xdg-desktop-portal-hyprland.service": "Screen sharing",
+            "xdg-desktop-portal-gnome.service": "Screen sharing",
             "xdg-document-portal.service": "File access"
         })
     Component.onCompleted: Maintenance.refresh()

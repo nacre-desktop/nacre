@@ -14,7 +14,7 @@ Item {
     readonly property Item child: caption
     property string previousWindowId: ""
     readonly property var client: NacreCompositor.overviewHoverWindow || NacreCompositor.overviewSelectedWindow || WindowTitle.displayWindow(NacreCompositor.activeWindow, NacreCompositor.windows, NacreCompositor.activeWorkspaceId, previousWindowId, NacreCompositor.backendName)
-    readonly property string displayTitle: client ? NacreI18n.windowCaption(WindowTitle.caption(client.title || client.wmClass, client.wmClass, ChatWindowTitle.titles[client.pid]), client.wmClass) : NacreI18n.tr("desktop.title.empty", "Desktop")
+    readonly property string displayTitle: NacreCompositor.backendName === "niri" && NacreCompositor.overviewOpen && !NacreCompositor.overviewHoverSupported ? NacreI18n.tr("ui.compositor.hover-title-unavailable", "Hover titles require the niri overview companion") : client ? NacreI18n.windowCaption(WindowTitle.caption(client.title || client.wmClass, client.wmClass, ChatWindowTitle.titles[client.pid]), client.wmClass) : NacreI18n.tr("desktop.title.empty", "Desktop")
     function rememberWindow() {
         if (NacreCompositor.activeWindow?.windowId)
             previousWindowId = NacreCompositor.activeWindow.windowId;

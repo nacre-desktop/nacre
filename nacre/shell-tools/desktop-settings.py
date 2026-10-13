@@ -20,7 +20,11 @@ spec.loader.exec_module(palette)
 HOME = Path.home()
 STATE = HOME / ".config/nacre/desktop.json"
 LUA = compositor.config_path(HOME, "desktop")
-PENDING = STATE.with_name("display-pending.json")
+PENDING = STATE.with_name(
+    "display-pending-niri.json"
+    if compositor.backend_name == "niri"
+    else "display-pending.json"
+)
 DEFAULTS = dict(
     animations=True,
     blur=True,
@@ -118,6 +122,10 @@ def load():
         {**DEFAULTS, **json.loads(STATE.read_text())} if STATE.exists() else initial()
     )
     data.pop("wallpaperTransition", None)
+    if compositor.capabilities.get("perOutputWorkspaces"):
+        data["displays"] = data.get("compositorDisplays", {}).get(
+            compositor.backend_name, []
+        )
     if isinstance(data.get("normalSnapshot"), dict):
         data["normalSnapshot"].pop("wallpaperTransition", None)
     return data
@@ -156,10 +164,28 @@ def config_lua(data):
 
 
 def persist(data):
-    palette.atomic_write(STATE, json.dumps(data, indent=2) + "\n")
-    palette.atomic_write(
-        LUA, config_lua(data) + monitor_lua(data.get("displays", [])) + "\n"
+    if (
+        compositor.capabilities.get("perOutputWorkspaces")
+        and compositor.capabilities.get("monitorConfiguration")
+        and not data.get("displays")
+    ):
+        data = {**data, "displays": monitor_state()}
+    monitors = (
+        []
+        if compositor.capabilities.get("monitorConfiguration") is False
+        else data.get("displays", [])
     )
+    text = config_lua(data) + monitor_lua(monitors) + "\n"
+    stored = dict(data)
+    if compositor.capabilities.get("perOutputWorkspaces"):
+        previous = json.loads(STATE.read_text()) if STATE.exists() else {}
+        stored["compositorDisplays"] = {
+            **previous.get("compositorDisplays", {}),
+            compositor.backend_name: data.get("displays", []),
+        }
+        stored["displays"] = previous.get("displays", [])
+    palette.atomic_write(STATE, json.dumps(stored, indent=2) + "\n")
+    palette.atomic_write(LUA, text)
 
 
 def ensure_include():
@@ -251,6 +277,24 @@ def main():
                 ensure_include()
             elif a.action == "set":
                 key, raw = a.args
+                if (
+                    key
+                    in {
+                        "animations",
+                        "blur",
+                        "shadow",
+                        "followMouse",
+                        "naturalScroll",
+                        "gapsIn",
+                        "gapsOut",
+                        "borderSize",
+                        "rounding",
+                    }
+                    and key not in OPTIONS
+                ):
+                    raise ValueError(
+                        "This compositor setting is unavailable; configure it in the compositor instead"
+                    )
                 value = validate(key, json.loads(raw))
                 data = load()
                 data[key] = value
@@ -348,6 +392,13 @@ def main():
                 monitors = monitor_state()
                 if a.action == "display":
                     mode, primary = a.args
+                    if (
+                        mode == "mirror"
+                        and compositor.capabilities.get("monitorMirroring") is False
+                    ):
+                        raise ValueError(
+                            "Output mirroring is unavailable on this compositor"
+                        )
                     plan = display_plan(monitors, primary, mode)
                 else:
                     name, scale, mode = a.args
@@ -378,15 +429,37 @@ def main():
                 )
                 palette.atomic_write(PENDING, json.dumps(saved))
                 data["displays"] = plan
-                subprocess.Popen(
+                rollback_environment = []
+                rollback_script = __file__
+                if compositor.capabilities.get("perOutputWorkspaces"):
+                    rollback_environment.append(
+                        "--setenv=NACRE_COMPOSITOR=" + compositor.backend_name
+                    )
+                    for name in (
+                        "NACRE_COMPOSITOR",
+                        "NIRI_SOCKET",
+                        "NACRE_NIRI_CONFIG",
+                        "NACRE_NIRI_DESKTOP_CONFIG",
+                    ):
+                        if name != "NACRE_COMPOSITOR" and os.environ.get(name):
+                            rollback_environment.append(
+                                "--setenv=" + name + "=" + os.environ[name]
+                            )
+                    if os.environ.get("NACRE_NIRI_TOOLS_SOURCE"):
+                        rollback_script = str(
+                            Path(os.environ["NACRE_NIRI_TOOLS_SOURCE"])
+                            / "desktop-settings.py"
+                        )
+                rollback_worker = subprocess.Popen(
                     [
                         "systemd-run",
                         "--user",
                         "--collect",
                         "--quiet",
                         "--unit=nacre-display-revert-" + token,
+                        *rollback_environment,
                         sys.executable,
-                        __file__,
+                        rollback_script,
                         "rollback-after",
                         token,
                     ],
@@ -394,6 +467,15 @@ def main():
                     stderr=subprocess.DEVNULL,
                     start_new_session=True,
                 )
+                if compositor.capabilities.get("perOutputWorkspaces"):
+                    try:
+                        if rollback_worker.wait(timeout=5) != 0:
+                            raise RuntimeError(
+                                "Automatic display rollback could not be armed"
+                            )
+                    except (RuntimeError, subprocess.SubprocessError):
+                        PENDING.unlink(missing_ok=True)
+                        raise
                 try:
                     compositor.configure_monitors(plan, timeout=8)
                     persist(data)

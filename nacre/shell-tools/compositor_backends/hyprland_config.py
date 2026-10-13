@@ -282,7 +282,15 @@ def rule_lua(row):
             )
         rule[EFFECTS[key]] = value
     backend = row.get("backend", {})
-    fields(backend, ("hyprland",))
+    fields(backend, ("hyprland", "niri"))
+    if "niri" in backend:
+        fields(backend["niri"], ("blur", "namespace_regex"))
+        if type(backend["niri"].get("blur")) is not bool:
+            raise ValueError("Invalid niri blur effect")
+        if "namespace_regex" in backend["niri"] and not isinstance(
+            backend["niri"]["namespace_regex"], str
+        ):
+            raise ValueError("Invalid niri layer selector")
     if "hyprland" in backend:
         fields(
             backend["hyprland"],

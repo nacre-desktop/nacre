@@ -20,6 +20,17 @@ Singleton {
             floatingPlacement: true,
             pinWindow: true,
             windowCapture: true,
+            windowHide: true,
+            windowTrash: true,
+            scratchpad: true,
+            windowGroups: true,
+            windowForceKill: true,
+            pseudoTiling: true,
+            layoutSplit: true,
+            keymaps: true,
+            nonConsumingShortcuts: true,
+            bindingIntrospection: true,
+            monitorMirroring: true,
             fullscreenState: true
         })
     property var clients: []

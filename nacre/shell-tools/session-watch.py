@@ -77,6 +77,8 @@ def check(event="manual"):
 
 
 def restore_connected_displays():
+    if compositor.capabilities.get("monitorConfiguration") is False:
+        return  # Niri restores outputs from its own configuration.
     config = HOME / ".config/nacre/desktop.json"
     if not config.exists():
         return

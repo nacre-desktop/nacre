@@ -59,3 +59,20 @@ sessions/hardware, remote services and model inference remain documented limits
 with existing tests retained. Palette/CLI references were captured only after the
 Rust Orient integration landed on main. The pin and revision are recorded in the
 coverage manifest. Run `tools/check.py` for harness, parity and existing checks.
+
+The 2026-10-13 niri parity change refreshes only compositor capability/event
+references and the control-tools unavailable reason. It adds explicit limits,
+managed desktop/output/controller support and editor-compatible mode strings.
+Wire requests, IDs and other helper observations stay frozen; the prior references
+remain in Git history. Desktop-settings retains its structured-error exit convention.
+
+## Intended XDG path difference
+
+Rust `Paths` follows `NacrePaths.qml`: accept absolute `XDG_CONFIG_HOME`,
+`XDG_STATE_HOME` and `XDG_CACHE_HOME`, otherwise use HOME defaults. Append `/nacre`
+to each root. Installation/share paths remain HOME-relative. Legacy Python
+helpers that ignored custom XDG roots intentionally differ. The current frozen
+cases set only the default XDG roots, so none are excluded or re-recorded.
+`contracts.json` records this policy; any future case using custom XDG folders
+must declare the intended difference and assert the redirected output/writes.
+This policy does not normalize other paths or permit unrelated parity changes.

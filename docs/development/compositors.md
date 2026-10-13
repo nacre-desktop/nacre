@@ -178,18 +178,52 @@ The opaque ID validator accepts native zero and rejects malformed/out-of-range
 IDs. The fixture suite exercises multiple outputs, focus clearing, urgency,
 workspace reordering/removal, stale windows and incremental geometry changes.
 
-| Concept | Niri behavior / capability |
-|---|---|
-| Workspaces | Per-output dynamic indices, stable opaque IDs; `perOutputWorkspaces=true`, `stableWorkspaceIndices=false`. Numeric shortcuts resolve on the focused output. Named or `{id}` and `{output,index}` references are explicit. |
-| Directional focus/move | Left/right use columns, up/down use windows within columns; niri owns floating-layout interpretation. |
-| Floating pearls | Keep title+PID ownership checks. Enable floating, resize, then use measured global geometry and relative movement; cross-output moves requery geometry. Unknown geometry fails rather than assuming a coordinate. |
-| Floating coordinates | Native fixed positions include working-area offsets; measured relative deltas avoid guessing reservations, border offsets or scale. All geometry is in logical pixels. |
-| Docking | Existing application-owned lift/release and `pearls detach/dock` IPC remain. Niri-native Mod+mouse moves do not emit Hyprland's drag-end hook; `nativePanelDrag=false`. Use the existing detach toggle on a focused pearl to dock. |
-| Shortcuts | Generated binds invoke the facade/helper or shell IPC. Registration activation emits a pulse, never a claim of physical key holding; `shortcutRelease=false`. Non-consuming and Hyprland submap/pointer hooks are not generated. |
-| Fullscreen/maximize | Fullscreen and maximize-to-edges are distinct actions. The 26.04 window record has no fullscreen bit; `fullscreenState=false` and `fullscreenKnown=false` make that limitation explicit. Normal bar/frame surfaces use the Top layer so Niri covers them during fullscreen; explicitly opened modal menus use Overlay and return to Top when dismissed. |
-| Pin / hide / force-kill | Unsupported and fail explicitly; `pinWindow=false`, `windowHide=false`. Do not substitute floating for sticky windows or signals for owned force-kill. |
-| Cursor / per-window capture | No global cursor-position query or unambiguous niri-ID-to-Quickshell capture mapping; `cursorPosition=false`, `windowCapture=false`. No fabricated native handle. |
-| Settings / night light | The niri backend does not expose runtime desktop-option writes, monitor transactions or a night-light controller; capabilities advertise these limits. Session/controller integration belongs to its own task. |
+The dated [complete parity audit](niri-parity.md) inventories all 107 contract
+bindings, 23 other declarations, 120 shell IPC methods and 119 launcher entries.
+`works` applies only to tested scope; `degraded` also covers unverified hardware.
+The live desktop was not used. Nested Hyprland frame/X11/pearl/trash/hide checks did
+not pass; they are not silently counted as a successful baseline.
+
+| Feature | Hyprland | Niri before → after | Evidence / remaining difference |
+|---|---|---|---|
+| Workspace state / focus / moves | works | works → works | Nested IPC; niri indices are dynamic and output-relative, IDs stable. Startup targets names. |
+| Trash/undo, minimize, scratchpad, sticky | degraded | missing → missing | No native niri hide/special/sticky primitive; capability flags and omitted bindings. Hyprland nested hide/trash incomplete. |
+| Groups / Alt+Tab | degraded | missing → degraded / works | Native column tabs; creation-order cycle within active workspace. Group membership differs. |
+| Float / resize / maximize | works | works → works | Nested facade actions; logical measured geometry. Fullscreen metadata remains unknown; compositor layer ordering covers chrome. |
+| Overview / hover / live previews | degraded | degraded → degraded | Both overview routes open; companion hover/QML caption passed. Stock hover and niri live thumbnails unavailable and explained. |
+| Pearls / explicit docking | degraded | works → works | Nested floating pearl/dock lifecycle; native modifier dragging remains unverified. |
+| Launcher / palette / clipboard / frame / OSD | works | works → works | Nested panel-state assertions; real contents and hardware events still need acceptance. |
+| Capture | degraded | degraded → degraded | Niri native window + grim PNGs pass; native picker/focused-output save keys emitted. Area interaction/multiple outputs pending. |
+| Lock / idle | degraded | degraded → degraded | Nested session-lock acknowledgement passes; isolated hypridle timeout fails. Password, inhibitors, lid and suspend pending. |
+| Night light | degraded | missing → degraded | Owned wlsunset behind gamma-control availability; absent nested gamma disables UI. Physical color/reset pending. |
+| Startup / X11 / portals | degraded | degraded → degraded | Named startup routes; forced-X11 launch/focus/close passes in niri. Input, login lifetime and screen sharing pending; GNOME backend absent here. |
+| Blur / window rules | degraded | degraded → degraded | KDL bar/floating blur, sizes/corners; working-area proportions declared. Full-output drawers excluded; shaped panel blur unavailable. |
+| Settings / shortcut list | degraded | missing → degraded | Nested preference/effect saves pass; generated keys inspectable, private overrides unverified. Outer gaps disabled. |
+| Output configuration / hotplug | degraded | missing → degraded | Nested scale roundtrip and rollback fixtures. Mode, two outputs and hotplug pending; mirroring disabled. |
+
+Niri exposes `windowHide`, `windowTrash`, `scratchpad`, `pinWindow`,
+`windowForceKill`, `pseudoTiling`, `layoutSplit`, `keymaps`,
+`nonConsumingShortcuts`, `shortcutRelease`, `windowCapture`, `cursorPosition`
+and `monitorMirroring` limits explicitly. `overviewHoverSupported` is negotiated;
+stock overview captions explain the missing extension. Normal frame/bar surfaces use Top so niri covers them during fullscreen; explicitly opened modal menus use Overlay and return to Top when dismissed. `shapedBackgroundBlur=false`
+excludes full-output drawer blur until Nacre can request a client blur shape through
+ext-background-effect. Bar and floating-window blur use compositor rules.
+
+Supported effects/input settings are emitted into the managed `desktop.kdl` include.
+Output scale/mode/position use native temporary output IPC with rollback; saved
+niri layouts and pending transactions do not overwrite Hyprland's display records.
+Mirroring has no native equivalent. The prepared session passes its exact socket,
+config and source helper to the rollback unit and refuses to change outputs if
+that unit cannot be armed. Real output modes and logout/hotplug still need the
+[owner-run acceptance steps](niri-parity.md#owner-run-acceptance--explicit-approval-required).
+
+Night light uses an owned `nacre-night-light.service` running wlsunset with warm
+endpoints (4500/4501 K). It checks gamma-control availability and external owners;
+stopping the owned controller releases gamma control, and graphical-session stop
+ends the service. Native screenshot bindings use niri's picker/focused-output
+capture; the existing grim helper retains full-desktop capture. These are distinct
+scopes. Python action process starts are retained.
+
 
 ## Niri configuration and source testing
 
@@ -267,7 +301,7 @@ The palette template sets the active focus-ring and border gradient from Orient
 angle. It retains solid primary fallback, inactive `outlineVariant` and urgent
 `error` colors, leaving enabled state and widths to the user. Niri gives gradients
 precedence over solid colors; an explicit user gradient can be included afterward.
-The unsupported report lists pin/center/size effects, native layer extensions,
+The unsupported report lists sticky effects, working-area sizing differences, native layer extensions,
 submaps and actions without exact niri equivalents. Unknown declaration kinds
 fail generation; unsupported known semantics are reported rather than silently
 converted. Floating pearls are emitted as floating window rules, with final
@@ -292,8 +326,7 @@ indices. Floating behavior and available actions are described in the
 Before enabling a backend, test multiple outputs, output removal, stale IDs,
 workspace reordering, native app focus, fullscreen/overview layering, detached
 panel drag/docking, screen capture, keyboard registration and suspend/resume.
-Session startup, portals, dependency selection and backend-specific settings
-capabilities remain separately owned integration work. A backend must not read another backend's private state
+Session activation, portal dependencies and real-hardware acceptance remain separately owned integration work. A backend must not read another backend's private state
 or start a second shell that competes for notification/clipboard ownership.
 
 ## Remaining ecosystem tools
@@ -306,13 +339,13 @@ and Nacre's integration separately before replacing it.
 |---|---|---|
 | `hyprlock` | Generated lock config, output sizing, snapshot/theme and login1 launch policy. | `swaylock` uses the standard session-lock protocol. A replacement needs its own config/theme renderer and lock-ready acknowledgement; retaining hyprlock is also an option if protocol compatibility is verified. |
 | `hypridle` | Private idle config and DPMS/lock callbacks. | `swayidle` uses idle-notify and login1; route DPMS through the compositor interface and preserve inhibitor/before-sleep behavior. |
-| `hyprsunset` | Owned service, native temperature command/socket and external-controller protection. | `wlsunset` or `gammastep` through gamma-control; preserve ownership checks, enabled state and external-controller protection. |
+| `hyprsunset` | Hyprland owned service and native temperature IPC. | Niri uses owned `wlsunset` through gamma-control, with external-controller protection; physical acceptance is pending. |
 | `hyprpicker` | Current color-picker tool selection. | Use backend-native color picking or a compatible Wayland picker after checking available protocols. |
 
 The primary [swaylock](https://github.com/swaywm/swaylock) and
 [swayidle](https://github.com/swaywm/swayidle) documentation describes their standard
 Wayland interfaces. Niri's [gamma-control announcement](https://github.com/niri-wm/niri/discussions/272)
-identifies wlsunset/gammastep compatibility. No replacements are made by this task.
+identifies wlsunset/gammastep compatibility. Niri uses wlsunset through the existing owned night-light control; lock and idle tools remain unchanged pending real-session acceptance.
 Legacy helper script names remain compatibility entrypoints that delegate to the
 Python interface; they do not contain native transport or selector logic.
 

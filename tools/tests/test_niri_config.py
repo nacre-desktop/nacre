@@ -23,6 +23,25 @@ spec.loader.exec_module(niri)
 
 
 class NiriConfigTests(unittest.TestCase):
+    def test_tabs_capture_cycle_and_floating_sizes_are_lowered(self):
+        generated = config.render(config.load(), backend="niri")
+        binds = generated["niri/bindings.kdl"]
+        for action in (
+            "toggle-column-tabbed-display",
+            "focus-window-up-or-bottom",
+            "focus-window-down-or-top",
+            "cycle_window --direction next",
+            "screenshot-screen --show-pointer false --path",
+        ):
+            self.assertIn(action, binds)
+        rules = generated["niri/window-rules.kdl"]
+        self.assertIn("default-column-width { fixed 700; }", rules)
+        self.assertIn("default-window-height { proportion 0.75; }", rules)
+        self.assertIn("background-effect { blur true; }", rules)
+        unsupported = json.loads(generated["niri/unsupported.json"])["unsupported"]
+        self.assertFalse(any("group." in row["reason"] for row in unsupported))
+        self.assertTrue(any("scratchpad" in row["reason"] for row in unsupported))
+
     def test_hyprland_bytes_and_native_registration_contract_remain_unchanged(self):
         original = config.render(config.load(), backend="hyprland")
         self.assertEqual(set(original), set(config.OUTPUTS))
