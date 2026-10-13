@@ -26,7 +26,7 @@ class BindingContractTests(unittest.TestCase):
         self.assertEqual(
             normalize(actual), normalize(expected["hypr/conf/keybinding.lua"])
         )
-        self.assertEqual(len(actual), 97)
+        self.assertEqual(len(actual), 93)
 
     def test_defaults_have_no_conflicts_or_personal_app_commands(self):
         root = TOOLS.parent
@@ -54,6 +54,17 @@ class BindingContractTests(unittest.TestCase):
         ):
             self.assertFalse(any(name in command for command in commands), name)
         keys = {row["keys"]: row for row in rows if not row["submap"]}
+        self.assertEqual(keys["SUPER + Q"]["flags"]["description"], "Nacre:close")
+        self.assertEqual(
+            keys["SUPER + Q"]["action"], {"method": "window.close", "args": {}}
+        )
+        self.assertNotIn("SUPER + CTRL + Q", keys)
+        for action in ("put-away", "restore", "restore-all", "force-close"):
+            self.assertFalse(
+                any(
+                    row["flags"].get("description") == "Nacre:" + action for row in rows
+                )
+            )
         for key, role in (
             ("SUPER + RETURN", "terminal"),
             ("SUPER + E", "files"),

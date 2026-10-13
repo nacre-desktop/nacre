@@ -68,10 +68,25 @@ class NiriConfigTests(unittest.TestCase):
             self.assertNotIn("focus_direction --direction " + direction, text)
         self.assertNotIn("hyprctl", text)
         self.assertIn("action close_window", text)
+        self.assertIn('Super+Q repeat=false hotkey-overlay-title="Nacre:close"', text)
+        self.assertNotIn("Super+Ctrl+Q ", text)
         self.assertNotIn("window-close.sh", text)
         self.assertIn("niri msg action toggle-overview", text)
         self.assertNotIn("nacre-shell overview", text)
         unsupported = json.loads(generated["niri/unsupported.json"])["unsupported"]
+        self.assertFalse(any(row.get("keys") == "SUPER + Q" for row in unsupported))
+        self.assertFalse(
+            any(
+                row.get("description")
+                in {
+                    "Nacre:put-away",
+                    "Nacre:restore",
+                    "Nacre:restore-all",
+                    "Nacre:force-close",
+                }
+                for row in unsupported
+            )
+        )
         self.assertTrue(any("window.pin" in row["reason"] for row in unsupported))
         self.assertTrue(any("pointer" in row["reason"] for row in unsupported))
 

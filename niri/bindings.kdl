@@ -15,7 +15,7 @@ binds {
     Print repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "niri msg action screenshot"; }
     Super+Shift+S repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "niri msg action screenshot"; }
     Super+Print repeat=false hotkey-overlay-title="Nacre:save-screenshot" { spawn-sh "mkdir -p \"$HOME/Pictures/Screenshots\" && niri msg action screenshot-screen --show-pointer false --path \"$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png\""; }
-    Super+Ctrl+Q repeat=false hotkey-overlay-title="Nacre:close" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action close_window"; }
+    Super+Q repeat=false hotkey-overlay-title="Nacre:close" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action close_window"; }
     Super+F repeat=false hotkey-overlay-title="Nacre:fullscreen" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action fullscreen_window --mode fullscreen"; }
     Super+M repeat=false hotkey-overlay-title="Nacre:maximize" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action fullscreen_window --mode maximized"; }
     Super+T repeat=false hotkey-overlay-title="Nacre:float" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action float_window --action toggle"; }

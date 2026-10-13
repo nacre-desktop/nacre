@@ -123,7 +123,14 @@ def render_keyboard(values, backend="hyprland"):
 def render_profile(profile, backend="hyprland", workspace_names=None):
     rules = profile_rules(profile)
     if backend == "hyprland":
-        return "\n".join(rule_lua(rule) for rule in rules) + ("\n" if rules else "")
+        text = "\n".join(rule_lua(rule) for rule in rules) + ("\n" if rules else "")
+        if profile.get("windowTrashBindings", False):
+            contract = load()
+            bindings = contract.pop("profileBindings")["windowTrashBindings"]
+            contract["outputs"] = {name: [] for name in OUTPUTS}
+            contract["outputs"]["hypr/conf/keybinding.lua"] = bindings
+            text += render(contract)["hypr/conf/keybinding.lua"]
+        return text
     if backend != "niri":
         raise ValueError("Unknown compositor backend")
     workspace_names = workspace_names or {}

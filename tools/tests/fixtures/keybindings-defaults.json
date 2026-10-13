@@ -190,67 +190,13 @@
     },
     {
       "action": {
-        "args": [
-          "~/.config/hypr/scripts/window-trash.sh trash"
-        ],
-        "method": "exec_cmd"
-      },
-      "flags": {
-        "description": "Nacre:put-away"
-      },
-      "keys": "SUPER + Q",
-      "submap": ""
-    },
-    {
-      "action": {
-        "args": [
-          "~/.config/hypr/scripts/window-trash.sh restore-last"
-        ],
-        "method": "exec_cmd"
-      },
-      "flags": {
-        "description": "Nacre:restore"
-      },
-      "keys": "SUPER + SHIFT + Q",
-      "submap": ""
-    },
-    {
-      "action": {
-        "args": [
-          "~/.config/hypr/scripts/window-trash.sh restore-all"
-        ],
-        "method": "exec_cmd"
-      },
-      "flags": {
-        "description": "Nacre:restore-all"
-      },
-      "keys": "SUPER + ALT + Q",
-      "submap": ""
-    },
-    {
-      "action": {
-        "args": [
-          "~/.config/hypr/scripts/window-close.sh"
-        ],
-        "method": "exec_cmd"
+        "args": {},
+        "method": "window.close"
       },
       "flags": {
         "description": "Nacre:close"
       },
-      "keys": "SUPER + CTRL + Q",
-      "submap": ""
-    },
-    {
-      "action": {
-        "args": [
-          "~/.config/hypr/scripts/window-close.sh force"
-        ],
-        "method": "exec_cmd"
-      },
-      "flags": {
-        "description": "Nacre:force-close"
-      },
-      "keys": "SUPER + CTRL + SHIFT + Q",
+      "keys": "SUPER + Q",
       "submap": ""
     },
     {

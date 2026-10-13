@@ -13,7 +13,8 @@
     "routes": [],
     "brainWorkspace": null,
     "aiWorkspace": null,
-    "aiFullAccess": false
+    "aiFullAccess": false,
+    "windowTrashBindings": false
   },
   "exit": 0,
   "files": {},

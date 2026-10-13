@@ -29,6 +29,7 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(profile["startup"], [])
         self.assertEqual(profile["routes"], [])
         self.assertFalse(profile["aiFullAccess"])
+        self.assertFalse(profile["windowTrashBindings"])
         self.assertIsNone(profile["brainWorkspace"])
         self.assertIsNone(profile["aiWorkspace"])
         self.assertNotIn("hl.window_rule", policy.lua(profile))
@@ -41,9 +42,19 @@ class ProfileTests(unittest.TestCase):
             {"workspaceNames": [5]},
             {"startup": [{"argv": "shell string"}]},
             {"unknown": True},
+            {"windowTrashBindings": "true"},
         ):
             with self.assertRaises(ValueError):
                 policy.validate(value)
+
+    def test_trash_bindings_are_explicit_and_preserve_plain_close(self):
+        generic = policy.lua(policy.validate({}))
+        self.assertNotIn("window-trash.sh", generic)
+        personal = policy.lua(policy.validate({"windowTrashBindings": True}))
+        self.assertIn('"SUPER + CTRL + Q"', personal)
+        self.assertNotIn('"SUPER + Q"', personal)
+        for action in ("put-away", "restore", "restore-all", "force-close"):
+            self.assertIn("Nacre:" + action, personal)
 
     def test_core_prepare_installs_no_optional_services_or_personal_data(self):
         with tempfile.TemporaryDirectory() as directory:

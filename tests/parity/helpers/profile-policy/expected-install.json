@@ -13,7 +13,8 @@
     "routes": [],
     "brainWorkspace": null,
     "aiWorkspace": null,
-    "aiFullAccess": false
+    "aiFullAccess": false,
+    "windowTrashBindings": false
   },
   "exit": 0,
   "files": {
@@ -27,7 +28,7 @@
     },
     "home/.config/nacre/profile.json": {
       "mode": "0o600",
-      "text": "{\n  \"version\": 1,\n  \"id\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\"\n  ],\n  \"workspaceCount\": 5,\n  \"workspaceNames\": [],\n  \"workspaceIcons\": [],\n  \"startup\": [],\n  \"routes\": [],\n  \"brainWorkspace\": null,\n  \"aiWorkspace\": null,\n  \"aiFullAccess\": false\n}\n"
+      "text": "{\n  \"version\": 1,\n  \"id\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\"\n  ],\n  \"workspaceCount\": 5,\n  \"workspaceNames\": [],\n  \"workspaceIcons\": [],\n  \"startup\": [],\n  \"routes\": [],\n  \"brainWorkspace\": null,\n  \"aiWorkspace\": null,\n  \"aiFullAccess\": false,\n  \"windowTrashBindings\": false\n}\n"
     },
     "home/.config/nacre/profile.lua": {
       "mode": "0o600",

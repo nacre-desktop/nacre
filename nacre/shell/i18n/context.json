@@ -632,6 +632,7 @@
   "helper.profile-policy.invalid-profile-routes-startup-list": "nacre/shell-tools/profile-policy.py: helper UI message; not a command identifier.",
   "helper.profile-policy.invalid-startup-arguments": "nacre/shell-tools/profile-policy.py: helper UI message; not a command identifier.",
   "helper.profile-policy.invalid-startup-class-list": "nacre/shell-tools/profile-policy.py: helper UI message; not a command identifier.",
+  "helper.profile-policy.invalid-window-trash-preference": "Profile validation error for a non-boolean windowTrashBindings option.",
   "helper.profile-policy.invalid-workspace-labels-icons": "nacre/shell-tools/profile-policy.py: helper UI message; not a command identifier.",
   "helper.profile-policy.unknown-profile-fields": "nacre/shell-tools/profile-policy.py: helper UI message; not a command identifier.",
   "helper.profile-policy.unsupported-profile-identity-version": "nacre/shell-tools/profile-policy.py: helper UI message; not a command identifier.",
