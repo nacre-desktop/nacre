@@ -797,7 +797,9 @@ class Backend:
 
     def event_socket(self):
         requests = ["EventStream"]
-        if os.environ.get("NACRE_NIRI_HOVER_STREAM") == "1":
+        # Negotiate once at connection time, including ordinary package installs.
+        # Stock Niri rejects the opt-in request; reconnect using its legacy stream.
+        if os.environ.get("NACRE_NIRI_HOVER_STREAM", "1") != "0":
             requests.insert(0, "NacreOverviewHoverStream")
         for request in requests:
             connection = self._connection()

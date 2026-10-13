@@ -11,40 +11,79 @@ from pathlib import Path
 import subprocess
 
 HOVER_SOURCE = "8ed0da44d974c32c6877d2f4630c314da0717ecb"
+PACKAGED_HOVER = Path("/usr/lib/nacre/niri")
 
 
-def overview_hover_binary(home):
-    """Use only an explicitly enabled, verified user-owned prototype binary."""
-    root = Path(home) / ".local/share/nacre/niri-on-pc/overview-hover"
+def verified_hover_binary(root, owner, *, packaged=False):
+    """Validate the companion receipt; system packages have a separate trust root."""
     try:
-        manifest = json.loads((root / "manifest.json").read_text())
+        receipt = root / "manifest.json"
+        manifest = json.loads(receipt.read_text())
         binary = root / "niri"
         if (
             manifest.get("schema") != 1
             or manifest.get("enabled") is not True
-            or manifest.get("nestedVerified") is not True
+            or (not packaged and manifest.get("nestedVerified") is not True)
             or manifest.get("sourceRevision") != HOVER_SOURCE
             or manifest.get("protocol") != "NacreOverviewHoverStream"
             or not binary.is_file()
             or binary.is_symlink()
-            or binary.stat().st_uid != os.getuid()
+            or binary.stat().st_uid != owner
+            or receipt.is_symlink()
+            or receipt.stat().st_uid != owner
+            or (packaged and (binary.stat().st_mode | receipt.stat().st_mode) & 0o022)
             or not os.access(binary, os.X_OK)
-            or hashlib.sha256(binary.read_bytes()).hexdigest()
-            != manifest.get("binarySha256")
+            or (
+                not packaged
+                and hashlib.sha256(binary.read_bytes()).hexdigest()
+                != manifest.get("binarySha256")
+            )
         ):
             return None
         # Avoid retaining the old experiment after a packaged compositor upgrade.
-        installed = subprocess.check_output(
-            ["/usr/bin/niri", "--version"], text=True, timeout=2
-        )
-        if not installed.startswith("niri 26.04 "):
-            return None
+        if not packaged:
+            installed = subprocess.check_output(
+                ["/usr/bin/niri", "--version"], text=True, timeout=2
+            )
+            if not installed.startswith("niri 26.04 "):
+                return None
         candidate = subprocess.check_output(
             [str(binary), "--version"], text=True, timeout=2
         )
         return binary if candidate.startswith("niri 26.04 ") else None
     except (OSError, ValueError, AttributeError, subprocess.SubprocessError):
         return None
+
+
+def overview_hover_binary(home):
+    """Prefer the pacman-owned companion, then verified user builds and old receipts."""
+    packaged = verified_hover_binary(PACKAGED_HOVER, 0, packaged=True)
+    if packaged:
+        return packaged
+    for relative in (
+        ".local/share/nacre/niri/overview-hover",
+        ".local/share/nacre/niri-on-pc/overview-hover",
+    ):
+        candidate = verified_hover_binary(Path(home) / relative, os.getuid())
+        if candidate:
+            return candidate
+    return None
+
+
+def ensure_overview_hover(backend, home):
+    """Niri preparation installs the companion automatically if none is available."""
+    if overview_hover_binary(home):
+        return
+    subprocess.run(
+        [
+            "/usr/bin/python3",
+            str(Path(backend) / "tools/build-niri-overview-hover.py"),
+            "--install",
+        ],
+        check=True,
+    )
+    if not overview_hover_binary(home):
+        raise RuntimeError("Niri hover installation did not produce a usable companion")
 
 
 def host_preferences(desktop):
@@ -262,10 +301,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("prepare", "compositor", "shell", "brain"))
     parser.add_argument("--backend", type=Path)
+    parser.add_argument(
+        "--stock-niri",
+        action="store_true",
+        help="prepare without installing the hover companion",
+    )
     args = parser.parse_args()
     if args.action == "prepare":
         if args.backend is None:
             parser.error("prepare requires --backend")
+        if not args.stock_niri:
+            ensure_overview_hover(args.backend, Path.home())
         prepare(
             args.backend,
             Path.home() / ".local/share/nacre/niri-on-pc/session",

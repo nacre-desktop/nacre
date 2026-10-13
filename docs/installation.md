@@ -77,6 +77,32 @@ previous package archives and downgrade matching packages with `pacman -U` if
 system code must also be restored. Source-based live deployment still uses its
 existing live health gates and rollback behavior.
 
+## Niri overview titles
+
+The optional **`nacre-niri`** companion supplies native overview hover metadata.
+It installs alongside the distribution's Niri, under `/usr/lib/nacre/niri`, and
+does not replace `/usr/bin/niri` or its session/resources. Install the matching
+tested archive before preparing a Nacre Niri session:
+
+```sh
+sudo pacman -U nacre-niri-*.pkg.tar.zst
+```
+
+Nacre's [Niri preparation](development/niri-testing.md#full-nacre-login-preparation-2026-10-13)
+automatically selects the system companion. Without it, source preparation builds,
+verifies and installs a private companion; Rust and Niri development libraries
+are needed only for that source path. Use `prepare --stock-niri` to skip this step.
+The shell negotiates hover support when connecting, so other users get the same
+title behavior when using the companion and the current Nacre shell. Saved agent
+chat names come from each user's own chat metadata; ordinary windows use their
+application title. No maintainer account or chat data is bundled.
+
+The Niri backend's complete `nacre setup` wizard remains experimental and hidden;
+this companion does not certify lock/unlock, idle, portals or a complete login
+cycle. The package recipe is in [the Arch maintainer guide](../packaging/arch/README.md#niri-companion).
+Binary distribution/AUR publication follows the same release process as the
+other unpublished Nacre packages.
+
 ## Source path for contributors
 
 Contributors need the [source-build tools](contributing.md#build-tools), including

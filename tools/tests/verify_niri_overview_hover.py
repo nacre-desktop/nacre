@@ -279,9 +279,9 @@ def verify(binary, output):
                 )
                 bar_env = dict(
                     env,
-                    NACRE_NIRI_HOVER_STREAM="1",
                     NACRE_COMPOSITOR_TOOLS=str(repo / "nacre/shell-tools"),
                 )
+                bar_env.pop("NACRE_NIRI_HOVER_STREAM", None)
                 processes.append(
                     subprocess.Popen(
                         ["quickshell", "-p", str(qml), "-n"],

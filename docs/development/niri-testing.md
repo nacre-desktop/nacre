@@ -239,6 +239,13 @@ a separate niri shell/tool tree and personal generated configuration under
 the `source-revision` marker. The existing private profile remains live and intact;
 the prepared profile copy is only source-staging input.
 
+Preparation now prefers the optional system `nacre-niri` companion. If none is
+installed or already verified privately, it automatically builds the pinned
+companion, tests real nested overview/title behavior and installs it before
+staging the session. Run this from a working Wayland session with the source
+build prerequisites below. Add `--stock-niri` to prepare without the companion.
+This changes the next login, not the currently running compositor.
+
 When that marker is present, `uwsm/env-niri` selects the prepared config and adds
 the niri-only `session-bin` to PATH. Its niri wrapper intercepts only `--session`;
 queries/validation still use the native binary. UWSM retains session ownership.
@@ -415,7 +422,7 @@ Primary references: [niri getting started](https://niri-wm.github.io/niri/Gettin
 [niri 26.04 session wrapper](https://github.com/niri-wm/niri/blob/v26.04/resources/niri-session),
 [UWSM session management](https://github.com/Vladimir-csp/uwsm).
 
-## Optional overview hover experiment
+## Nacre Niri overview hover companion
 
 Stock Niri26.04 does not expose the preview under the pointer and deliberately
 does not follow mouse focus inside its overview. The top bar can follow the
@@ -423,7 +430,9 @@ keyboard-selected overview window with ordinary IPC. Actual preview hover needs
 additional compositor metadata. Upstream discusses the missing query in
 [discussion3390](https://github.com/niri-wm/niri/discussions/3390) and
 [PR4189](https://github.com/niri-wm/niri/pull/4189); this experiment is separate
-from those unmerged interfaces.
+from those unmerged interfaces. It is distributed as the optional `nacre-niri`
+companion package; the [package guide](../../packaging/arch/README.md#niri-companion)
+describes pinned builds and packaged-binary verification.
 
 `tools/patches/niri-26.04-overview-hover.patch` applies to official commit
 `8ed0da44d974c32c6877d2f4630c314da0717ecb`, under Niri's GPL-3.0-or-later license.
@@ -449,12 +458,15 @@ python3 tools/tests/verify_niri_overview_hover.py \
   --output /path/to/hover-proof.json
 python3 tools/build-niri-overview-hover.py --source /path/to/niri-hover-source \
   --install-with-proof /path/to/hover-proof.json
+# Or perform build, nested verification and private installation together:
+python3 tools/build-niri-overview-hover.py --install
 ```
 
 Installation accepts proof matching the exact binary and patch, including native
 hover, legacy-stream isolation, selection preservation, close cleanup and real
 QML-caption checks. It stores the optional binary and receipt privately under
-`~/.local/share/nacre/niri-on-pc/overview-hover`. The prepared-session runtime
+`~/.local/share/nacre/niri/overview-hover`. Older `niri-on-pc/overview-hover`
+receipts remain readable for migration. The prepared-session runtime
 checks its owner, checksum, execution and stock26.04 compatibility before using
 it, and enables the opt-in stream only for that prepared Niri session. Missing
 or invalid experiments fall back to packaged Niri; unsupported stream requests
@@ -463,5 +475,8 @@ fall back to ordinary IPC. Hyprland startup remains on its original path.
 This takes effect on the next Niri login and is not a hot compositor replacement.
 To disable, move `overview-hover/manifest.json` aside before the next login. The
 packaged binary, session entries, personal settings and authentication are not
-replaced. Native nested verification does not certify a complete physical login,
+replaced. A system companion takes precedence over the private build; to use
+stock Niri, remove the companion package and move private manifests aside.
+The shell negotiates the additional subscription automatically unless explicitly
+disabled with `NACRE_NIRI_HOVER_STREAM=0`. Native nested verification does not certify a complete physical login,
 lock/unlock, idle or portal acceptance cycle.

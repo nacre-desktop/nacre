@@ -391,7 +391,7 @@ class NiriTransportTests(unittest.TestCase):
             self.addCleanup(client.close)
         backend = niri.Backend()
         with (
-            patch.dict(os.environ, NACRE_NIRI_HOVER_STREAM="1"),
+            patch.dict(os.environ, {}, clear=True),
             patch.object(backend, "_connection", side_effect=clients),
         ):
             connection = backend.event_socket()

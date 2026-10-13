@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the optional pinned Niri hover experiment; never replace packaged Niri."""
+"""Build and verify Nacre's pinned Niri companion; never replace distro Niri."""
 
 import argparse
 import datetime
@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 
 SOURCE = "8ed0da44d974c32c6877d2f4630c314da0717ecb"
@@ -79,16 +80,17 @@ def install(source, proof_path, home):
         raise ValueError(
             "Installation requires matching nested native and QML hover proof"
         )
-    root = Path(home) / ".local/share/nacre/niri-on-pc/overview-hover"
+    root = Path(home) / ".local/share/nacre/niri/overview-hover"
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    for previous in (root / "niri", root / "manifest.json"):
+    for previous in (root / "niri", root / "manifest.json", root / "LICENSE.niri"):
         if previous.exists():
             shutil.copy2(previous, root / (previous.name + ".before-" + stamp))
     with tempfile.TemporaryDirectory(prefix=".install-", dir=root) as temporary:
         staged = Path(temporary)
         shutil.copyfile(binary, staged / "niri")
         (staged / "niri").chmod(0o700)
+        shutil.copyfile(Path(source) / "LICENSE", staged / "LICENSE.niri")
         manifest = {
             "schema": 1,
             "enabled": True,
@@ -103,6 +105,7 @@ def install(source, proof_path, home):
         (staged / "manifest.json").chmod(0o600)
         os.replace(staged / "niri", root / "niri")
         os.replace(staged / "manifest.json", root / "manifest.json")
+        os.replace(staged / "LICENSE.niri", root / "LICENSE.niri")
     return root
 
 
@@ -114,7 +117,13 @@ def main():
         default=Path.home() / ".local/share/nacre/niri-overview-hover/source",
     )
     parser.add_argument("--jobs", type=int, default=4)
-    parser.add_argument("--install-with-proof", type=Path)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--install-with-proof", type=Path)
+    mode.add_argument(
+        "--install",
+        action="store_true",
+        help="verify in a private nested session, then install",
+    )
     args = parser.parse_args()
     if not 1 <= args.jobs <= 64:
         parser.error("Jobs must be between1 and64")
@@ -126,6 +135,24 @@ def main():
     )
     binary = source / "target/release/niri"
     subprocess.run([str(binary), "--version"], check=True)
+    if args.install:
+        with tempfile.TemporaryDirectory(prefix="nacre-hover-proof-") as temporary:
+            proof = Path(temporary) / "proof.json"
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent / "tests/verify_niri_overview_hover.py"),
+                    "--binary",
+                    str(binary),
+                    "--output",
+                    str(proof),
+                ],
+                check=True,
+            )
+            print(
+                "Installed Nacre Niri companion:", install(source, proof, Path.home())
+            )
+        return
     if args.install_with_proof:
         print(
             "Enabled for the next prepared Niri login:",

@@ -90,6 +90,7 @@
       "ttf-dejavu"
     ],
     "core_optional": [
+      "nacre-niri: Niri companion with native overview hover titles",
       "nacre-ai: optional assistant workspace",
       "nacre-brain: optional private Markdown knowledge library"
     ],
@@ -99,6 +100,12 @@
     "brain_optional": [
       "chromium: app-window browser for Brain",
       "obsidian: alternate Markdown vault editor"
-    ]
+    ],
+    "niri": [
+      "niri", "cairo", "glib2", "glibc", "libdisplay-info", "libgcc",
+      "libinput", "libpipewire", "libxkbcommon", "mesa", "pango", "pixman",
+      "seatd", "systemd-libs"
+    ],
+    "niri_build": ["git", "python", "cargo", "clang", "pkgconf"]
   }
 }

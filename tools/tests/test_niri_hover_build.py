@@ -21,6 +21,7 @@ class HoverBuildTests(unittest.TestCase):
             binary = source / "target/release/niri"
             binary.parent.mkdir(parents=True)
             binary.write_text("test compositor artifact")
+            (source / "LICENSE").write_text("upstream license fixture")
             proof = dict.fromkeys(build.PROOF_FIELDS, True)
             proof.update(
                 sourceRevision=build.SOURCE,
