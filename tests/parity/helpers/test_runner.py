@@ -18,6 +18,43 @@ spec.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
+    def test_scripted_interpreter_version_preserves_execution_and_executable(self):
+        script = (
+            "import json,subprocess,sys; "
+            "print(json.dumps({'value':6*7,'executable':sys.executable,"
+            "'version':subprocess.check_output([sys.executable,'--version']).decode().strip()}))"
+        )
+        result = runner.execute(
+            {
+                "helper": "fixture",
+                "python_version": "Python 3.99.1",
+                "command": shlex.join(["python3", "-c", script]),
+            },
+            None,
+        )
+        self.assertEqual(result["exit"], 0)
+        self.assertEqual(
+            result["stdout"],
+            {"value": 42, "executable": "/usr/bin/python3", "version": "Python 3.99.1"},
+        )
+        self.assertEqual(result["effects"], [])
+
+    def test_root_created_ipc_socket_belongs_to_fixture_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with (
+                patch.object(runner.os, "getuid", return_value=0),
+                patch.object(runner.os, "chown") as chown,
+            ):
+                ipc = runner.IPC(root, [{"path": "runtime/fixture.sock"}])
+            try:
+                chown.assert_called_once_with(root / "runtime/fixture.sock", 1000, 1000)
+                self.assertEqual(
+                    (root / "runtime/fixture.sock").stat().st_mode & 0o777, 0o600
+                )
+            finally:
+                ipc.close()
+
     def test_fixture_cannot_write_outside_root(self):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "escapes"):

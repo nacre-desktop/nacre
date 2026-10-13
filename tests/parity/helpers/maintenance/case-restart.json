@@ -1,5 +1,6 @@
 {
   "helper": "maintenance",
+  "python_version": "Python 3.14.7",
   "args": [
     "restart"
   ],

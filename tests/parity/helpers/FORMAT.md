@@ -34,6 +34,11 @@ CI check container grants SYS_ADMIN and disables its outer seccomp filter).
 
 To add a case, put `case-NAME.json` in the helper's directory with `helper`, `args`,
 optional `stdin`/`stdin_repeat`, `fixtures`, `commands`, `env`, and `sockets`.
+Optional `python_version` controls only the interpreter's `--version` response
+for runtime diagnostics. All other execution uses the real interpreter with the
+same executable path. This fixes a host input; it never normalizes output or
+changes the frozen version. Scripted sockets belong to the fixture identity and
+have mode 0600, including when the runner starts as root in CI.
 Fixture paths are relative to the disposable root: `home/`, `proc/`, `sys/`,
 `etc/`, `runtime/`, `tmp/`, `local/`. Text supports `{home}` and `{root}` tokens;
 fixtures can set octal `mode`, `mtime`, `base64`, `link`, or `directory`.

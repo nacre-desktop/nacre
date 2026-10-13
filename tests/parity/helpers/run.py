@@ -95,6 +95,9 @@ class IPC:
             path.parent.mkdir(parents=True, exist_ok=True)
             server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             server.bind(str(path))
+            if os.getuid() == 0:
+                os.chown(path, 1000, 1000)
+            path.chmod(0o600)
             server.listen(8)
             server.settimeout(0.1)
             self.servers.append(server)
@@ -337,8 +340,31 @@ def execute(case, command, trace=None):
         # Mask all absolute application executables too (timezone and Xfconf
         # intentionally bypass PATH). Keep only the language/tooling primitives.
         sandbox += ["--tmpfs", "/usr/bin"]
+        if "python_version" in case:
+            version = case["python_version"]
+            if not isinstance(version, str) or not re.fullmatch(
+                r"Python [0-9]+\.[0-9]+\.[0-9]+", version
+            ):
+                raise ValueError("Invalid fixture interpreter version")
+            # Control the reported version, never rewrite the helper's output.
+            # Forward all real execution and preserve sys.executable's path.
+            (root / "python-real").write_bytes(
+                Path("/usr/bin/python3").resolve().read_bytes()
+            )
+            (root / "python-real").chmod(0o755)
+            (root / "python-proxy").write_text(
+                "#!/usr/bin/bash\n"
+                "if [[ $# == 1 && $1 == --version ]]; then\n"
+                f"    printf '%s\\n' {shlex.quote(version)}\n"
+                'else\n    exec -a /usr/bin/python3 /case/python-real "$@"\nfi\n'
+            )
+            (root / "python-proxy").chmod(0o755)
         for name in ("python3", "bash", "env"):
-            executable = Path("/usr/bin") / name
+            executable = (
+                root / "python-proxy"
+                if name == "python3" and "python_version" in case
+                else Path("/usr/bin") / name
+            )
             sandbox += ["--ro-bind", str(executable.resolve()), "/usr/bin/" + name]
         for alias, name in (("python", "python3"), ("sh", "bash")):
             sandbox += ["--symlink", name, "/usr/bin/" + alias]

@@ -58,8 +58,12 @@ a timestamp-dependent translation test. Use actual working directory for Git
 Orient; scope Git trust directly to the resolved read-only inventory command
 (workflow-global trust was insufficient). Give the changed test fixture an
 explicit new cache timestamp; all original assertions remain.
-Local integrated gate: 817 tests, 10 controls and all 349 frozen cases pass.
-No test/reference was skipped or weakened. Full Source CI remains pending;
+CI now passes 817 unit tests; parity exposed root-owned mock sockets and an
+uncontrolled interpreter version. Fix fixture socket ownership/mode and declare
+the frozen interpreter-version input; golden outputs stay unchanged.
+Local repaired gate: 817 tests, 12 controls and all 349 frozen cases pass.
+No test/reference was skipped or weakened.
+Full Source CI remains pending;
 the separate headless performance workflow passed at `301a0477`.
 
 Next: verify full main CI after the path/test-fixture fixes before port cutovers;
