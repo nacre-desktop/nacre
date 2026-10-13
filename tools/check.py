@@ -86,7 +86,16 @@ def main():
     for path in ROOT.rglob("*"):
         if not path.is_file() or any(
             part
-            in (".git", "__pycache__", "build", "dist", ".venv", "node_modules", "deps")
+            in (
+                ".git",
+                "__pycache__",
+                "build",
+                "dist",
+                ".venv",
+                "node_modules",
+                "deps",
+                "target",
+            )
             for part in path.parts
         ):
             continue

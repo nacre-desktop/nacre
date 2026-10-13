@@ -41,3 +41,6 @@ node_modules/
 # Reviewed public documentation screenshots.
 !/assets/screenshots/
 !/assets/screenshots/*.png
+
+# Native helper build artifacts.
+/target/

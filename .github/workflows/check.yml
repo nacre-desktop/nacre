@@ -24,6 +24,11 @@ jobs:
           pins = json.load(open("dependencies.lock.json"))["python"]
           subprocess.run(["/tmp/check-env/bin/pip", "install", "./nacre/shell-cli", "ruff==0.16.10", *[name + "==" + version for name, version in pins.items()]], check=True)
           PY
+      - name: Native helper library checks
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test --quiet
       - name: Install development-only JavaScript formatter
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Translation coverage
