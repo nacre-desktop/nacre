@@ -51,16 +51,16 @@ Follow-up: Rust Paths accepts absolute config/state/cache XDG roots, otherwise
 HOME defaults, matching QML. Custom-XDG behavior is an intended parity difference;
 current frozen cases use defaults and remain unchanged.
 Paths fix is public (`ae6a9f86`); Rust gates and default-XDG parity pass.
-Main CI must be green before further wave 1 ports land. Sandbox diagnostics
-identify startup failure, not helper output differences: Bubblewrap cannot set
-the isolated loopback address. UID/passwd and NET_ADMIN fixes were insufficient.
-Compatible Ubuntu 22.04 runner fix is integrated from the harness owner,
-with the same Arch container and checks. Integrated local gate: 817 tests,
-10 harness controls and all 349 frozen cases pass, including lint/format checks.
-No test/reference was skipped or weakened. Source CI repair remains pending;
+Main CI must be green before further wave 1 ports land. Ubuntu 22.04 runner fix
+`2753707f` retains the Arch container/sandbox/checks; CI sandbox integrity and
+fresh install now pass. Source CI exposed host/container workspace aliasing and
+a timestamp-dependent translation test. Use actual working directory for Git
+trust/Orient; give the changed test fixture an explicit new cache timestamp.
+Local integrated gate: 817 tests, 10 controls and all 349 frozen cases pass.
+No test/reference was skipped or weakened. Full Source CI remains pending;
 the separate headless performance workflow passed at `301a0477`.
 
-Next: verify the runner fix produces green main before port cutovers;
+Next: verify full main CI after the path/test-fixture fixes before port cutovers;
 integrate shared candidate, finish chat-title caller/deletion/test mapping, then
 run full correctness gates before publishing.
 No live machine/QML/config changes by this task; no tags or package uploads.
