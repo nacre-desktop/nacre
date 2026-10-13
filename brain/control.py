@@ -1025,9 +1025,10 @@ def ensure_brain(focus=False):
                     break
                 time.sleep(0.1)
             if window and compositor().valid_window_id(window["address"]):
-                compositor_action(
-                    "fullscreen_state", window["address"], internal=0, client=0
-                )
+                if compositor().capabilities.get("fullscreenState", True):
+                    compositor_action(
+                        "fullscreen_state", window["address"], internal=0, client=0
+                    )
                 if target_workspace is not None:
                     compositor_action(
                         "move_window",

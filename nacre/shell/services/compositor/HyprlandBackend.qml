@@ -18,7 +18,8 @@ Singleton {
             scrollingLayout: false,
             floatingPlacement: true,
             pinWindow: true,
-            windowCapture: true
+            windowCapture: true,
+            fullscreenState: true
         })
     property var clients: []
     property var byAddress: ({})

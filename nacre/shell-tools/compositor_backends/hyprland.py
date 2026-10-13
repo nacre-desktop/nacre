@@ -151,6 +151,7 @@ class Backend:
         "floatingPlacement": True,
         "pinWindow": True,
         "windowCapture": True,
+        "fullscreenState": True,
     }
 
     def _run(self, args, *, timeout=10, check=True):

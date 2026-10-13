@@ -227,6 +227,7 @@ class IndexTests(unittest.TestCase):
             patch.object(module, "launch") as launch,
         ):
             service.return_value.query.return_value = {"id": 2}
+            service.return_value.capabilities = {"fullscreenState": True}
             module.ensure_brain(focus=False)
             launch.assert_called_once()
             service.return_value.fullscreen_state.assert_called_once_with(
@@ -366,6 +367,34 @@ class BrainStartupTests(unittest.TestCase):
 
 
 class BrainCompositorFailureTests(unittest.TestCase):
+    def test_niri_launch_skips_unsupported_fullscreen_and_still_focuses_window(self):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.object(module, "STATE", Path(tmp)),
+            patch.object(module, "ensure_server"),
+            patch.object(module, "preferred_workspace", return_value=None),
+            patch.object(module, "bootstrap_existing_browser"),
+            patch.object(
+                module,
+                "brain_window",
+                side_effect=[None, {"address": "niri-window:42"}],
+            ),
+            patch.object(module, "browser_command", return_value=["chrome"]),
+            patch.object(module, "compositor") as service,
+            patch.object(module, "launch") as launch,
+            patch.object(module, "run") as run,
+        ):
+            service.return_value.capabilities = {"fullscreenState": False}
+            service.return_value.fullscreen_state.side_effect = RuntimeError(
+                "Operation is not supported by the niri backend"
+            )
+            module.ensure_brain(focus=True)
+            launch.assert_called_once_with(["chrome"])
+            service.return_value.fullscreen_state.assert_not_called()
+            run.assert_called_once_with(
+                [str(module.HOME / ".local/bin/nacre-shell"), "focus", "niri-window:42"]
+            )
+
     def test_housekeeping_uses_common_facade_and_keeps_transient_failure_policy(self):
         with patch.object(module, "compositor") as service:
             service.return_value.fullscreen_state.side_effect = OSError("offline")
