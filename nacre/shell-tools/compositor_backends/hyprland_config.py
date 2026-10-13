@@ -58,6 +58,7 @@ EFFECTS = {
     "size": "size",
     "workspace": "workspace",
     "corner_radius": "rounding",
+    "client_border": "border_size",
 }
 SELECTORS = {
     "app_id_regex": "class",
@@ -256,7 +257,7 @@ def rule_lua(row):
         raise ValueError("Rule selectors must be regex strings")
     if "id" in row and not isinstance(row["id"], str):
         raise ValueError("Rule identity must be a string")
-    for key in ("floating", "centered", "pinned"):
+    for key in ("floating", "centered", "pinned", "client_border"):
         if key in row["effects"] and type(row["effects"][key]) is not bool:
             raise ValueError("Invalid rule boolean")
     if "corner_radius" in row["effects"]:
@@ -268,6 +269,10 @@ def rule_lua(row):
         rule["name"] = row["id"]
     rule["match"] = {SELECTORS[key]: value for key, value in row["selector"].items()}
     for key, value in row["effects"].items():
+        if key == "client_border":
+            if value:
+                rule["border_size"] = 0
+            continue
         if key == "workspace":
             fields(value, ("target", "activate"), ("target", "activate"))
             if type(value["activate"]) is not bool:

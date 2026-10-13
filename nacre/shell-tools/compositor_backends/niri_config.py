@@ -168,6 +168,7 @@ def rule_kdl(row):
         "size",
         "workspace",
         "corner_radius",
+        "client_border",
     }:
         raise ValueError("Unknown window rule effect")
     parts = ["window-rule {"]
@@ -189,6 +190,17 @@ def rule_kdl(row):
             raise ValueError("Corner radius must be a nonnegative integer")
         parts.append("    geometry-corner-radius " + str(radius))
         parts.append("    clip-to-geometry true")
+    if "client_border" in effects:
+        if type(effects["client_border"]) is not bool:
+            raise ValueError("Client border must be a boolean")
+        if effects["client_border"]:
+            parts.extend(
+                [
+                    "    border { off; }",
+                    "    focus-ring { off; }",
+                    "    shadow { off; }",
+                ]
+            )
     if "workspace" in effects:
         target = effects["workspace"]["target"]
         if target.get("kind") != "name":

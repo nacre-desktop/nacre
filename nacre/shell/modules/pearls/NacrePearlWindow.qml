@@ -48,6 +48,7 @@ FloatingWindow {
     }
     property string error: ""
     readonly property var client: NacreCompositor.windows.find(value => value.title === root.title && value.pid === Quickshell.processId)
+    readonly property bool focused: !!client && client.windowId === NacreCompositor.activeWindow?.windowId
     readonly property bool presented: visible && !minimized && (!client || client.pinned || NacreCompositor.monitors.values.some(monitor => monitor.activeWorkspace?.id === client.workspace?.id))
     readonly property alias viewState: viewFlags
     readonly property alias providerView: lease
@@ -294,6 +295,14 @@ FloatingWindow {
             color: NacreTokens.mutedInk
             visible: !!root.error
             z: 3
+        }
+        HoverHandler {
+            id: pointer
+        }
+        NacrePearlBorder {
+            anchors.fill: parent
+            engaged: root.focused || pointer.hovered
+            z: 4
         }
         Loader {
             id: body

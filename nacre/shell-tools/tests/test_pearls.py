@@ -625,6 +625,54 @@ TestCase {
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertNotIn("QWARN", result.stdout + result.stderr)
 
+    def test_client_border_is_round_neutral_and_highlights_without_filling_body(self):
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Qt Quick Test unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder)
+            (target / "NacrePearlBorder.qml").write_text(
+                (SHELL / "widgets/NacrePearlBorder.qml").read_text()
+            )
+            (target / "NacreTokens.qml").write_text("""pragma Singleton
+import QtQuick
+QtObject {property bool motionEnabled:false;property color outline:"#777777";property color accent:"#2080e0";property color orientSecondary:"#e060a0"}
+""")
+            (target / "qmldir").write_text(
+                "singleton NacreTokens 1.0 NacreTokens.qml\n"
+            )
+            (target / "tst_border.qml").write_text("""import QtQuick
+import QtTest
+import "."
+TestCase {
+ name:"ClientPearlBorder";width:260;height:220;visible:true;when:windowShown
+ Rectangle {id:scene;anchors.fill:parent;color:"#10141b";NacrePearlBorder {id:border;x:20;y:20;width:200;height:160}}
+ function test_stroke_and_focus_gradient(){
+  wait(50);let image=grabImage(scene);
+  verify(image.pixel(120,20).a>.8);verify(Math.abs(image.pixel(120,20).r-image.pixel(120,20).b)<.03);
+  compare(image.pixel(120,100),image.pixel(10,10));compare(image.pixel(20,20),image.pixel(10,10));
+  border.engaged=true;wait(50);image=grabImage(scene);
+  verify(image.pixel(70,20).b>image.pixel(70,20).r+.1);
+  verify(image.pixel(218,140).r>image.pixel(218,140).b);
+  compare(image.pixel(120,100),image.pixel(10,10));
+ }
+}
+""")
+            result = subprocess.run(
+                [str(runner), "-input", str(target), "-o", "-,txt"],
+                env={
+                    **os.environ,
+                    "QT_QPA_PLATFORM": "offscreen",
+                    "QT_QUICK_BACKEND": "rhi",
+                    "QSG_RHI_BACKEND": "opengl",
+                },
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("QWARN", result.stdout + result.stderr)
+
     def test_private_layout_atomic_permissions_and_corruption_preservation(self):
         state = module("pearl-state")
         with tempfile.TemporaryDirectory() as directory:

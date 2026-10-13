@@ -49,8 +49,8 @@ its press geometry is frozen so translations never feed back through parent move
 Opening motion finishes before capturing body dimensions. At handoff the old view is
 suppressed rather than replaying its closing animation at the edge. Its footprint is excluded from the joined frame while lifted. On
 release, an ordinary window is created with the same body dimensions and exact
-logical coordinates, with no added header or body inset. Hyprland owns its normal
-inactive/focused border. The original stays
+logical coordinates, with no added header or body inset. The client paints its neutral/focused gradient border with the panel content.
+Compositor border and focus-ring decorations are disabled only for owned pearls. The original stays
 painted until placement completes and two explicitly requested destination frames
 have been submitted. A placement acknowledgement alone does not finish the handoff. There is no screenshot ghost or second miniature panel. A finite, input-free
 shared `NacreDockFilm` membrane stretches from the frame to the moving panel,
@@ -164,3 +164,9 @@ the destination frames. This covers the stock26.04 critically damped movement
 spring at normal speed; slower custom compositor animations may still outlast it.
 Ordinary standalone windows, Hyprland handoffs and later native drags do not use
 this interval. It creates no idle work and changes no compositor configuration.
+
+`NacrePearlBorder` paints a2px rounded neutral outline, switching to the Orient
+gradient on focus or hover. It is inside the reveal-controlled client surface.
+Neither Niri nor Hyprland draws an additional border for these owned windows, so
+a transparent destination cannot leak an independently moving outline. Ordinary
+application decorations remain compositor-owned.

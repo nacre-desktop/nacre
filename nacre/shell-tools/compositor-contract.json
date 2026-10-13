@@ -1489,7 +1489,8 @@
         },
         "effects": {
           "floating": true,
-          "corner_radius": 18
+          "corner_radius": 18,
+          "client_border": true
         },
         "backend": {
           "hyprland": {

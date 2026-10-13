@@ -1881,7 +1881,8 @@
           "title": "^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$"
         },
         "no_anim": true,
-        "rounding": 18
+        "rounding": 18,
+        "border_size": 0
       }
     },
     {

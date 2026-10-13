@@ -82,4 +82,7 @@ window-rule {
     open-floating true
     geometry-corner-radius 18
     clip-to-geometry true
+    border { off; }
+    focus-ring { off; }
+    shadow { off; }
 }
