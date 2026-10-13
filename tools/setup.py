@@ -13,6 +13,9 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
+# Also resolve the shared message runtime when invoked from installed packages.
+sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
+tr = importlib.import_module("nacre_i18n").tr
 
 
 def policy(root):
@@ -34,7 +37,10 @@ def distro(mapping, release=Path("/etc/os-release")):
         if name in mapping:
             return name
     raise RuntimeError(
-        "Package setup does not yet support this distribution; see the contributor source path"
+        tr(
+            "setup.error.unsupported-distribution",
+            "Package setup does not yet support this distribution; see the contributor source path",
+        )
     )
 
 
@@ -67,30 +73,64 @@ def selection(args, root, home, interactive):
 
     keyboard = system_keyboard()
     if interactive:
-        print("System keyboard: " + json.dumps(keyboard))
+        print(
+            tr(
+                "setup.keyboard.detected",
+                "System keyboard: {keyboard}",
+                {"keyboard": json.dumps(keyboard)},
+            )
+        )
     for name in ("layout", "variant", "model", "options"):
         value = getattr(args, name)
         if value is None and interactive:
-            value = ask("Keyboard " + name, keyboard[name])
+            value = ask(
+                tr("setup.prompt.keyboard", "Keyboard {option}", {"option": name}),
+                keyboard[name],
+            )
         if value is not None:
             if value and not re.fullmatch(r"[a-zA-Z0-9_+:,.-]{1,200}", value):
-                raise ValueError("Invalid XKB " + name)
+                raise ValueError(
+                    tr(
+                        "setup.error.invalid-xkb",
+                        "Invalid XKB {option}",
+                        {"option": name},
+                    )
+                )
             keyboard[name] = value
     if not keyboard["layout"]:
-        raise ValueError("Keyboard layout cannot be empty")
+        raise ValueError(
+            tr("setup.error.empty-layout", "Keyboard layout cannot be empty")
+        )
     choices = supported_compositors(root)
     compositor = args.compositor or (
-        ask("Compositor (" + ", ".join(choices) + ")", "hyprland")
+        ask(
+            tr(
+                "setup.prompt.compositor",
+                "Compositor ({choices})",
+                {"choices": ", ".join(choices)},
+            ),
+            "hyprland",
+        )
         if interactive
         else "hyprland"
     )
     if compositor not in choices:
-        raise ValueError("Compositor setup backend unavailable: " + compositor)
+        raise ValueError(
+            tr(
+                "setup.error.unavailable-backend",
+                "Compositor setup backend unavailable: {compositor}",
+                {"compositor": compositor},
+            )
+        )
     profiles = policy(root)
     chosen = args.profile
     if chosen is None and interactive:
         chosen = ask(
-            "Profile (default or JSON path; installed keeps current)",
+            tr(
+                "setup.prompt.profile",
+                "Profile ({default} or JSON path; {installed} keeps current)",
+                {"default": "default", "installed": "installed"},
+            ),
             "installed"
             if (home / ".config/nacre/profile.json").exists()
             else "default",
@@ -111,9 +151,22 @@ def selection(args, root, home, interactive):
             default = (
                 "yes" if name in profile["components"] or name in optional else "no"
             )
-            enabled = ask("Enable optional " + name, default).lower()
+            enabled = ask(
+                tr(
+                    "setup.prompt.optional",
+                    "Enable optional {component}",
+                    {"component": name},
+                ),
+                default,
+            ).lower()
             if enabled not in ("yes", "no", "y", "n"):
-                raise ValueError("Answer yes or no")
+                raise ValueError(
+                    tr(
+                        "setup.error.answer-yes-no",
+                        "Answer {yes} or {no}",
+                        {"yes": "yes", "no": "no"},
+                    )
+                )
             profile["components"] = [c for c in profile["components"] if c != name]
             optional = [value for value in optional if value != name]
             if enabled in ("yes", "y"):
@@ -126,7 +179,13 @@ def selection(args, root, home, interactive):
             component in profile["components"]
             and not (root / "deployment" / component).is_dir()
         ):
-            raise RuntimeError("Install nacre-" + component + " before enabling it")
+            raise RuntimeError(
+                tr(
+                    "setup.error.install-optional",
+                    "Install {package} before enabling it",
+                    {"package": "nacre-" + component},
+                )
+            )
     return profiles.validate(profile), keyboard, compositor
 
 
@@ -158,15 +217,22 @@ def missing_packages(root, profile):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=tr(
+            "setup.description",
+            "Review and deploy private Nacre configuration from prebuilt system packages.",
+        )
+    )
     parser.add_argument("--non-interactive", action="store_true")
     parser.add_argument(
-        "--yes", action="store_true", help="confirm applying the printed plan"
+        "--yes",
+        action="store_true",
+        help=tr("setup.help.yes", "confirm applying the printed plan"),
     )
     parser.add_argument(
         "--plan",
         action="store_true",
-        help="print the plan without changing any user files",
+        help=tr("setup.help.plan", "print the plan without changing any user files"),
     )
     parser.add_argument("--profile")
     parser.add_argument("--compositor")
@@ -177,14 +243,30 @@ def main(argv=None):
         parser.add_argument("--" + name)
     args = parser.parse_args(argv)
     if os.geteuid() == 0:
-        raise RuntimeError("Run nacre setup as your desktop user, without sudo")
+        raise RuntimeError(
+            tr(
+                "setup.error.run-as-desktop-user",
+                "Run {command} as your desktop user, without {sudo}",
+                {"command": "nacre setup", "sudo": "sudo"},
+            )
+        )
     if not (ROOT / "package.json.installed").is_file():
         raise RuntimeError(
-            "Install the Nacre packages first; source contributors use install.sh"
+            tr(
+                "setup.error.packages-required",
+                "Install the Nacre packages first; source contributors use {installer}",
+                {"installer": "install.sh"},
+            )
         )
     interactive = sys.stdin.isatty() and not args.non_interactive and not args.yes
     if not interactive and not (args.yes or args.plan):
-        parser.error("non-interactive setup requires --plan or --yes")
+        parser.error(
+            tr(
+                "setup.error.non-interactive",
+                "non-interactive setup requires {plan} or {yes}",
+                {"plan": "--plan", "yes": "--yes"},
+            )
+        )
     profile, keyboard, compositor = selection(args, ROOT, Path.home(), interactive)
     with tempfile.TemporaryDirectory(prefix="nacre-setup-") as temporary:
         selected = Path(temporary) / "profile.json"
@@ -197,36 +279,82 @@ def main(argv=None):
             plan = package_plan(ROOT, profile)
             missing = missing_packages(ROOT, profile)
             print(
-                f"Nacre setup: profile={profile['id']}; compositor={compositor}; components={', '.join(profile['components'])}"
+                tr(
+                    "setup.plan.summary",
+                    "Nacre setup: profile={profile}; compositor={compositor}; components={components}",
+                    {
+                        "profile": profile["id"],
+                        "compositor": compositor,
+                        "components": ", ".join(profile["components"]),
+                    },
+                )
             )
             override = Path.home() / ".config/nacre/keyboard.lua"
             print(
-                "Keyboard: "
-                + (
-                    "existing private override preserved"
-                    if override.exists() or override.is_symlink()
-                    else json.dumps(keyboard)
+                tr(
+                    "setup.keyboard.preserved",
+                    "Keyboard: existing private override preserved",
+                )
+                if override.exists() or override.is_symlink()
+                else tr(
+                    "setup.keyboard.selected",
+                    "Keyboard: {keyboard}",
+                    {"keyboard": json.dumps(keyboard)},
                 )
             )
-            print("Private file plan:")
+            print(tr("setup.plan.files", "Private file plan:"))
             for path in plan:
                 print("  " + str(path))
             if missing:
-                print("Missing packages: " + ", ".join(missing))
+                print(
+                    tr(
+                        "setup.plan.missing-packages",
+                        "Missing packages: {packages}",
+                        {"packages": ", ".join(missing)},
+                    )
+                )
             if args.plan:
                 return 0
             if missing:
-                raise RuntimeError("Install the missing packages before applying setup")
-            if not args.yes and ask("Apply this plan? (yes/no)", "no").lower() not in (
+                raise RuntimeError(
+                    tr(
+                        "setup.error.missing-packages",
+                        "Install the missing packages before applying setup",
+                    )
+                )
+            if not args.yes and ask(
+                tr(
+                    "setup.prompt.apply",
+                    "Apply this plan? ({yes}/{no})",
+                    {"yes": "yes", "no": "no"},
+                ),
+                "no",
+            ).lower() not in (
                 "yes",
                 "y",
             ):
-                print("Setup cancelled; no configuration changed.")
+                print(
+                    tr("setup.cancelled", "Setup cancelled; no configuration changed.")
+                )
                 return 0
             result = deploy_package(ROOT, profile, keyboard, compositor)
-            print("Setup applied. Rollback snapshot: " + result["release"])
             print(
-                "Log out and back in to the selected UWSM session, then open Welcome with nacre-welcome. Run nacre status or nacre rollback to inspect or restore this setup."
+                tr(
+                    "setup.applied",
+                    "Setup applied. Rollback snapshot: {release}",
+                    {"release": result["release"]},
+                )
+            )
+            print(
+                tr(
+                    "setup.next-session",
+                    "Log out and back in to the selected UWSM session, then open Welcome with {welcome}. Run {status} or {rollback} to inspect or restore this setup.",
+                    {
+                        "welcome": "nacre-welcome",
+                        "status": "nacre status",
+                        "rollback": "nacre rollback",
+                    },
+                )
             )
         finally:
             if previous is None:
@@ -240,4 +368,10 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except (OSError, RuntimeError, ValueError) as error:
-        raise SystemExit("nacre setup: " + str(error)) from error
+        raise SystemExit(
+            tr(
+                "setup.error.prefix",
+                "{command}: {error}",
+                {"command": "nacre setup", "error": str(error)},
+            )
+        ) from error
