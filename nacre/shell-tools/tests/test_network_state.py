@@ -51,6 +51,26 @@ class NetworkStateTests(unittest.TestCase):
         repeated = r"*:wifi:00\:11\:22\:33\:44\:55:50:2437:wlan0"
         self.assertEqual(len(state.access_points((repeated + "\n") * 3)), 1)
 
+    def test_nmcli_space_marker_keeps_available_networks_and_ssid_whitespace(self):
+        rows = "\n".join(
+            [
+                r"*:Connected:00\:11\:22\:33\:44\:55:40:2437 MHz:wlan0",
+                r" :Airport Guest:00\:11\:22\:33\:44\:56:65:5180 MHz:wlan0",
+                r" : Guest :00\:11\:22\:33\:44\:57:60:5975 MHz:wlan0",
+                r" : :00\:11\:22\:33\:44\:58:50:2437 MHz:wlan0",
+                r"? :Invalid:00\:11\:22\:33\:44\:59:50:2437 MHz:wlan0",
+            ]
+        )
+        points = state.access_points(rows)
+        self.assertEqual(
+            [point["ssid"] for point in points],
+            ["Connected", "Airport Guest", " Guest ", " "],
+        )
+        self.assertEqual(
+            [point["active"] for point in points], [True, False, False, False]
+        )
+        self.assertEqual(points[1]["frequency"], 5180)
+
     def test_interface_requires_connected_wifi_and_valid_name(self):
         devices = "eth0:ethernet:connected\nwlan1:wifi:disconnected\nbroken\n-bad:wifi:connected\nwlan0:wifi:connected\n"
         self.assertEqual(state.connected_interface(devices), "wlan0")
