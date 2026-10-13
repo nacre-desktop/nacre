@@ -67,14 +67,14 @@ class NiriConfigTests(unittest.TestCase):
             if row["action"] == "workspace.switch"
             and row["parameters"]["workspace"].get("number") == 2
         )
-        row["keys"] = "SUPER + 8"
-        row["parameters"]["workspace"]["number"] = 8
+        row["keys"] = "SUPER + CTRL + ALT + F12"
+        row["parameters"]["workspace"]["number"] = 42
         self.assertIn(
-            "switch_workspace --workspace 8",
+            "switch_workspace --workspace 42",
             config.render(contract, backend="niri")["niri/bindings.kdl"],
         )
         self.assertIn(
-            "SUPER + 8",
+            "SUPER + CTRL + ALT + F12",
             config.render(contract, backend="hyprland")["hypr/conf/keybinding.lua"],
         )
 

@@ -706,6 +706,7 @@ def edit_config(value):
             path.write_text(
                 json.dumps(
                     {
+                        "terminal": ["kitty"],
                         "browser": ["google-chrome-stable"],
                         "files": ["nacre-shell", "dolphin"],
                         "mail": [

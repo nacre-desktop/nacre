@@ -75,7 +75,7 @@ SHORTCUTS = (
         "Open a terminal",
         "Your terminal follows the current desktop colors.",
     ),
-    ("put-away", "Put a window away", "Restore or close it using the bindings below."),
+    ("put-away", "Close with undo", "Restore within 30 seconds before closing."),
     ("workspace", "Change workspace", "Switch to a configured workspace."),
     ("focus", "Move focus", "Focus a window in a direction."),
     ("screenshot", "Capture an area", "Pick a region to copy to the clipboard."),
@@ -90,6 +90,15 @@ SHORTCUTS = (
 
 
 SHORTCUTS += (
+    ("browser", "Open a browser", "Use your selected default browser."),
+    ("shortcuts", "Keyboard shortcuts", "Browse the current session bindings."),
+    ("palette", "Command palette", "Search desktop commands."),
+    ("overview", "Window overview", "Browse windows and workspaces."),
+    ("next-workspace", "Next workspace", "Switch on the current monitor."),
+    ("previous-workspace", "Previous workspace", "Switch on the current monitor."),
+    ("scratchpad", "Toggle scratchpad", "Show or hide the scratchpad workspace."),
+    ("move-scratchpad", "Move to scratchpad", "Send the focused window there."),
+    ("power", "Power menu", "Open session and power controls."),
     ("restore", "Restore the last window", "Bring back a window you put away."),
     ("restore-all", "Restore all windows", "Bring back all windows put away."),
     ("close", "Close a window", "Ask the application to close normally."),
@@ -224,6 +233,9 @@ def binding_labels(bindings):
             prefix = " + ".join(mods) + (" + " if mods else "")
             if len(keys) >= 3 and all(key.isdigit() for key in keys):
                 numbers = sorted(map(int, keys))
+                if numbers == list(range(10)):
+                    labels.append(prefix + "1–9, 0 (workspace 10)")
+                    continue
                 if numbers == list(range(numbers[0], numbers[-1] + 1)):
                     labels.append(prefix + str(numbers[0]) + "–" + str(numbers[-1]))
                     continue
@@ -244,7 +256,7 @@ def shortcut_rows(bindings):
         if action not in labels:
             continue
         if action == "put-away":
-            parts = []
+            parts = ["Restore within 30 seconds before the application closes."]
             for other, verb in (("restore", "Restore"), ("close", "Close")):
                 if other in labels:
                     parts.append(

@@ -134,7 +134,29 @@
       },
       {
         "kind": "binding",
+        "keys": "SUPER + CTRL + E",
+        "action": "application.launch",
+        "parameters": {
+          "command": "~/.local/bin/nacre-menu actions.emoji"
+        },
+        "options": {
+          "description": "Nacre:emoji"
+        }
+      },
+      {
+        "kind": "binding",
         "keys": "Print",
+        "action": "application.launch",
+        "parameters": {
+          "command": "grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""
+        },
+        "options": {
+          "description": "Nacre:screenshot"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + SHIFT + S",
         "action": "application.launch",
         "parameters": {
           "command": "grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""
@@ -300,7 +322,7 @@
       },
       {
         "kind": "binding",
-        "keys": "SUPER + bracketleft",
+        "keys": "SUPER + CTRL + Page_Up",
         "action": "group.previous",
         "parameters": {},
         "options": {
@@ -309,7 +331,7 @@
       },
       {
         "kind": "binding",
-        "keys": "SUPER + bracketright",
+        "keys": "SUPER + CTRL + Page_Down",
         "action": "group.next",
         "parameters": {},
         "options": {
@@ -561,7 +583,94 @@
       },
       {
         "kind": "binding",
-        "keys": "SUPER + TAB",
+        "keys": "SUPER + 8",
+        "action": "workspace.switch",
+        "parameters": {
+          "workspace": {
+            "kind": "number",
+            "number": 8
+          },
+          "current_monitor": true
+        },
+        "options": {
+          "description": "Nacre:workspace"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + SHIFT + 8",
+        "action": "window.move",
+        "parameters": {
+          "workspace": {
+            "kind": "number",
+            "number": 8
+          }
+        },
+        "options": {
+          "description": "Nacre:move-workspace"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + 9",
+        "action": "workspace.switch",
+        "parameters": {
+          "workspace": {
+            "kind": "number",
+            "number": 9
+          },
+          "current_monitor": true
+        },
+        "options": {
+          "description": "Nacre:workspace"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + SHIFT + 9",
+        "action": "window.move",
+        "parameters": {
+          "workspace": {
+            "kind": "number",
+            "number": 9
+          }
+        },
+        "options": {
+          "description": "Nacre:move-workspace"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + 0",
+        "action": "workspace.switch",
+        "parameters": {
+          "workspace": {
+            "kind": "number",
+            "number": 10
+          },
+          "current_monitor": true
+        },
+        "options": {
+          "description": "Nacre:workspace"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + SHIFT + 0",
+        "action": "window.move",
+        "parameters": {
+          "workspace": {
+            "kind": "number",
+            "number": 10
+          }
+        },
+        "options": {
+          "description": "Nacre:move-workspace"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + CTRL + right",
         "action": "workspace.switch",
         "parameters": {
           "workspace": {
@@ -571,11 +680,13 @@
           },
           "current_monitor": true
         },
-        "options": {}
+        "options": {
+          "description": "Nacre:next-workspace"
+        }
       },
       {
         "kind": "binding",
-        "keys": "SUPER + SHIFT + TAB",
+        "keys": "SUPER + CTRL + left",
         "action": "workspace.switch",
         "parameters": {
           "workspace": {
@@ -585,7 +696,9 @@
           },
           "current_monitor": true
         },
-        "options": {}
+        "options": {
+          "description": "Nacre:previous-workspace"
+        }
       },
       {
         "kind": "binding",
@@ -643,16 +756,18 @@
       },
       {
         "kind": "binding",
-        "keys": "SUPER + grave",
+        "keys": "SUPER + S",
         "action": "workspace.scratchpad",
         "parameters": {
           "name": ""
         },
-        "options": {}
+        "options": {
+          "description": "Nacre:scratchpad"
+        }
       },
       {
         "kind": "binding",
-        "keys": "SUPER + SHIFT + grave",
+        "keys": "SUPER + CTRL + S",
         "action": "window.move",
         "parameters": {
           "workspace": {
@@ -660,7 +775,9 @@
             "name": ""
           }
         },
-        "options": {}
+        "options": {
+          "description": "Nacre:move-scratchpad"
+        }
       },
       {
         "kind": "binding",
@@ -891,7 +1008,7 @@
       },
       {
         "kind": "binding",
-        "keys": "SUPER + A",
+        "keys": "SUPER + SPACE",
         "action": "application.launch",
         "parameters": {
           "command": "~/.local/bin/nacre-shell launcher"
@@ -902,12 +1019,14 @@
       },
       {
         "kind": "binding",
-        "keys": "SUPER + D",
+        "keys": "SUPER + TAB",
         "action": "application.launch",
         "parameters": {
           "command": "~/.local/bin/nacre-shell overview"
         },
-        "options": {}
+        "options": {
+          "description": "Nacre:overview"
+        }
       },
       {
         "kind": "binding",
@@ -951,7 +1070,7 @@
       },
       {
         "kind": "binding",
-        "keys": "SUPER + S",
+        "keys": "SUPER + I",
         "action": "application.launch",
         "parameters": {
           "command": "~/.local/bin/nacre-settings"
@@ -976,11 +1095,24 @@
         "parameters": {
           "command": "~/.local/bin/nacre-menu power"
         },
-        "options": {}
+        "options": {
+          "description": "Nacre:power"
+        }
       },
       {
         "kind": "binding",
         "keys": "SUPER + ESCAPE",
+        "action": "application.launch",
+        "parameters": {
+          "command": "~/.local/bin/nacre-menu power"
+        },
+        "options": {
+          "description": "Nacre:power"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + L",
         "action": "application.launch",
         "parameters": {
           "command": "loginctl lock-session"
@@ -998,28 +1130,10 @@
       },
       {
         "kind": "binding",
-        "keys": "SUPER + CTRL + M",
+        "keys": "SUPER + RETURN",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.config/hypr/scripts/matrix-rest.sh"
-        },
-        "options": {}
-      },
-      {
-        "kind": "binding",
-        "keys": "SUPER + ALT + C",
-        "action": "application.launch",
-        "parameters": {
-          "command": "~/.config/hypr/scripts/startup-apps.sh"
-        },
-        "options": {}
-      },
-      {
-        "kind": "binding",
-        "keys": "SUPER + SHIFT + T",
-        "action": "application.launch",
-        "parameters": {
-          "command": "uwsm app -- kitty"
+          "command": "uwsm app -- ~/.local/bin/nacre-app terminal"
         },
         "options": {
           "description": "Nacre:terminal"
@@ -1030,49 +1144,15 @@
         "keys": "SUPER + SHIFT + B",
         "action": "application.launch",
         "parameters": {
-          "command": "uwsm app -- google-chrome-stable"
+          "command": "uwsm app -- ~/.local/bin/nacre-app browser"
         },
-        "options": {}
+        "options": {
+          "description": "Nacre:browser"
+        }
       },
       {
         "kind": "binding",
-        "keys": "SUPER + SHIFT + C",
-        "action": "application.launch",
-        "parameters": {
-          "command": "uwsm app -- code"
-        },
-        "options": {}
-      },
-      {
-        "kind": "binding",
-        "keys": "SUPER + SHIFT + V",
-        "action": "application.launch",
-        "parameters": {
-          "command": "uwsm app -- cursor"
-        },
-        "options": {}
-      },
-      {
-        "kind": "binding",
-        "keys": "SUPER + SHIFT + D",
-        "action": "application.launch",
-        "parameters": {
-          "command": "uwsm app -- discord"
-        },
-        "options": {}
-      },
-      {
-        "kind": "binding",
-        "keys": "SUPER + SHIFT + S",
-        "action": "application.launch",
-        "parameters": {
-          "command": "uwsm app -- spotify"
-        },
-        "options": {}
-      },
-      {
-        "kind": "binding",
-        "keys": "SUPER + SHIFT + F",
+        "keys": "SUPER + E",
         "action": "application.launch",
         "parameters": {
           "command": "~/.local/bin/nacre-app files"
@@ -1335,12 +1415,14 @@
     "nacre/shell-tools/shortcuts.lua": [
       {
         "kind": "binding",
-        "keys": "SUPER + SPACE",
+        "keys": "SUPER + CTRL + SPACE",
         "action": "application.launch",
         "parameters": {
           "command": "~/.local/bin/nacre-shell palette"
         },
-        "options": {}
+        "options": {
+          "description": "Nacre:palette"
+        }
       },
       {
         "kind": "binding",
@@ -1349,11 +1431,24 @@
         "parameters": {
           "command": "~/.local/bin/nacre-menu learn.shortcuts"
         },
-        "options": {}
+        "options": {
+          "description": "Nacre:shortcuts"
+        }
       },
       {
         "kind": "binding",
-        "keys": "SUPER + CTRL + B",
+        "keys": "SUPER + F1",
+        "action": "application.launch",
+        "parameters": {
+          "command": "~/.local/bin/nacre-menu learn.shortcuts"
+        },
+        "options": {
+          "description": "Nacre:shortcuts"
+        }
+      },
+      {
+        "kind": "binding",
+        "keys": "SUPER + A",
         "action": "application.launch",
         "parameters": {
           "command": "~/.local/bin/nacre-shell left"
