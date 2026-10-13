@@ -160,7 +160,7 @@ def prepare(backend, destination, home):
     palette = (
         backend / "nacre/shell-tools/compositor_backends/niri/palette.kdl.in"
     ).read_text()
-    for role in ("primary", "outlineVariant", "error"):
+    for role in ("primary", "secondary", "outlineVariant", "error"):
         color = scheme["colours"][role].lstrip("#")
         if len(color) not in (6, 8) or any(
             char not in "0123456789abcdefABCDEF" for char in color

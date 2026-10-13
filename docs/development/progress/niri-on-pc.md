@@ -16,7 +16,12 @@ belong to the separate `feature/niri-backend` task.
   probes no longer break the right controls panel's report. Staged only this tool,
   no shell restart. Detached dashboard and current chats remain running.
 - Replaced stale seeded colors include with the existing live palette output;
-  gradient-template fidelity gap sent to backend owner. No backend code edits.
+  consumed backend owner's tested `b2a8527` gradient template into staged source;
+  pure palette render/native reload pass without restart. No backend code edits.
+- Seeded full-width new columns and saved outer gutters/border width. Super+M uses
+  native maximize-column for tiled windows; prior maximize-to-edges removes gaps.
+  Existing columns keep width until resized; floating/explicit-target facade parity
+  remains with backend owner.
 - First local validation rerun hit an inherited `QT_LOGGING_RULES=*.debug=false`
   suppressing the benchmark's console results. Rerun with that test-process
   logging override removed; do not change the user's runtime logging preference.
@@ -84,10 +89,9 @@ belong to the separate `feature/niri-backend` task.
 ## Next
 
 1. Keep the current niri desktop, detached dashboard and parallel chats running.
-2. Finish validation/publish current fixes; GitHub CLI credential is invalid in the
-   new session, while the supported GitHub connector can read PR18. Try the existing
-   Git push route before using connector publication; never modify account auth.
-3. Consume the backend owner's tested gradient follow-up when ready; coordinate
+2. Finish exact-revision validation/publish current fixes. Operator renewed GitHub
+   authentication; normal CLI API now succeeds. No account/auth changes by this task.
+3. Coordinate
    staged tool/QML updates with the separate redocking task. Do not restart the shell
    or overwrite its staged tools independently.
 3. When the operator is ready, restart the private recorder, save all work and

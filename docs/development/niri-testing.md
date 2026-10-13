@@ -321,6 +321,8 @@ Use this short physical checklist, recording failures before changing more setti
 | Pan one workspace | Three fingers left/right; Super+Left/Right | Open three windows; reach each without switching workspace. Swipe direction passed by operator. |
 | Workspaces | Three fingers up/down; Super+1/2; Super+Ctrl+Left/Right | Switch out and back; window stays on its intended workspace. Swipe direction passed by operator. |
 | Native bird's-eye view | Four fingers up/down; Super+Ctrl+Tab | See live windows, select one, drag between workspaces, exit. |
+| New tiled windows | Open an app/terminal | Default column uses the full usable width, with saved outer gaps. Existing columns retain their old width until resized. |
+| Tiled maximize | Super+M | Maximize column while retaining gaps/frame; real fullscreen remains separate. Floating-window maximize parity remains a backend follow-up. |
 | Nacre window overview | Super+Tab | Nacre's existing searchable window grid; separate from native overview. |
 | Mouse navigation | Super+middle-button drag; Super+Shift+wheel | Pan horizontally; the new wheel alias focuses columns within one workspace. Super+wheel retains workspace switching. |
 | Shell | Launcher, dashboard, notification, detached panel | Open/close repeatedly; preserve state/focus and normal appearance. |
@@ -336,9 +338,18 @@ was updated in place, preserving the running code mount and detached panel.
 
 Niri colors now include the live palette publisher's canonical output instead
 of a preparation-time snapshot, so wallpaper colors can follow the shell.
-The backend's solid-color template still needs primary-to-secondary gradient
-support to match the existing Hyprland appearance; reported to its owner, without
-editing backend code here. Native niri supports that gradient. Settings can also
+Consumed only the backend owner's tested `b2a8527` palette template into the
+separate staged code, restoring primary-to-secondary 45-degree active gradients.
+Its full 709-check validation and native parse pass; this task did not edit or
+commit backend source. Current palette rendering/native reload pass, with the
+same compositor/shell PIDs. Preparer role validation now includes `secondary`.
+
+The prior Super+M facade mapped to `MaximizeWindowToEdges`, which intentionally
+removes gaps. The prepared session overrides that key with native
+`maximize-column`, seeds `default-column-width` at 100%, and uses the existing
+saved outer gap/border width. The backend owner is assessing explicit-window and
+floating maximize semantics separately; native column maximization affects the
+focused tiled column. Settings can also
 retain a cached monitor readout after an external config reload even though
 native IPC confirms the new scale; runtime monitor-editing support remains gated.
 

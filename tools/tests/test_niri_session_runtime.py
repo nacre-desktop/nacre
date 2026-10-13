@@ -37,6 +37,10 @@ class NiriRuntimeTests(unittest.TestCase):
         self.assertIn("scale 1.5", text)
         self.assertIn("toggle-overview", text)
         self.assertIn("focus-column-left", text)
+        self.assertIn("default-column-width { proportion 1.0; }", text)
+        self.assertIn("Super+M { maximize-column; }", text)
+        self.assertIn("gaps 12", text)
+        self.assertIn("focus-ring { width 1; }", text)
         self.assertNotIn(".config/hypr", text)
         self.assertNotIn(
             "natural-scroll", runtime.host_preferences({"naturalScroll": False})
@@ -47,6 +51,8 @@ class NiriRuntimeTests(unittest.TestCase):
             {"naturalScroll": "false"},
             {"displays": [{"name": "eDP-1", "scale": float("nan")}]},
             {"displays": [{"name": "eDP-1", "scale": True}]},
+            {"gapsOut": -1},
+            {"borderSize": "wide"},
         ):
             with self.assertRaises(ValueError):
                 runtime.host_preferences(data)
