@@ -286,7 +286,7 @@ def runner(command, **kwargs):
 
 def audit_dashboard():
     from test_media_performance_ui import prepare_pages
-    from qml_source import install_i18n
+    from qml_source import install_i18n, install_paths
 
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder)
@@ -344,6 +344,7 @@ def audit_dashboard():
                     text + "\nsingleton " + name + " 1.0 " + name + ".qml\n"
                 )
         install_i18n(fixtures)
+        install_paths(fixtures)
         code = (
             """import QtQuick
  import QtTest
