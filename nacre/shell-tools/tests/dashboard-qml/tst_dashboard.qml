@@ -23,6 +23,7 @@ TestCase {
         DesktopSettings.data = {
             animations: true
         };
+        NacrePanelState.hidden = false;
         NacreDashboardState.tabs = ["today", "weather", "media", "system", "focus"];
     }
     function test_pages_and_immediate_navigation_pinning() {
@@ -92,6 +93,23 @@ TestCase {
         compare(view.currentIndex, 3);
         view.select(0);
         compare(view.currentIndex, 0);
+    }
+    function test_occluded_attached_and_minimized_pearl_release_pages() {
+        const view = createTemporaryObject(panel, test);
+        wait(30);
+        const loader = findChild(view, "dashboardPage");
+        verify(loader.item);
+        NacrePanelState.hidden = true;
+        compare(loader.active, false);
+        compare(loader.item, null);
+        NacrePanelState.hidden = false;
+        tryVerify(() => !!loader.item);
+        view.detached = true;
+        view.hostActive = false;
+        compare(loader.active, false);
+        compare(loader.item, null);
+        view.hostActive = true;
+        tryVerify(() => !!loader.item);
     }
     function test_viewport_and_reduced_motion() {
         DesktopSettings.data = {

@@ -31,7 +31,8 @@ def prepare_pages(target):
     )
     for name, body in {
         "NacreMediaDetails": 'property var palette:({});property var lines:[];property var spectrum:[];property string message:""',
-        "NacreDashboardState": "property var preferences:({albumPalette:true});function save(key,value){}",
+        "NacreDashboardState": "property var preferences:({albumPalette:true});function save(key,value){preferences=Object.assign({},preferences,{[key]:value})}",
+        "NacreAudio": "property var outputs:[];property var sink:null;function chooseOutput(id){sink=outputs.find(node=>String(node.id)===id);return !!sink}",
     }.items():
         (fixtures / (name + ".qml")).write_text(
             "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
@@ -50,6 +51,10 @@ def prepare_pages(target):
         )
         source = source.replace("import qs.widgets", 'import "fixtures"').replace(
             "import qs.services", ""
+        )
+        source = source.replace(
+            'Quickshell.iconPath(segment.modelData.desktopEntry || "multimedia-player", true)',
+            '""',
         )
         source = source.replace(
             "required property PersistentProperties visibilities",

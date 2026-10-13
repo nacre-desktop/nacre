@@ -36,6 +36,8 @@ jobs:
         run: |
           pacman -S --noconfirm --needed bubblewrap
           /tmp/check-env/bin/pip install dbus-next==0.2.3
+      - name: Helper sandbox integrity
+        run: /tmp/check-env/bin/python -m unittest discover -s tests/parity/helpers -p test_runner.py
       - name: Install development-only JavaScript formatter
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Translation coverage

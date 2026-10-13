@@ -92,7 +92,7 @@ NacreSurface {
             id: page
             objectName: "dashboardPage"
             asynchronous: true
-            active: root.detached || root.visibilities.dashboard || root.presentedHeight > 0
+            active: root.hostActive && (root.detached || root.visibilities.dashboard || root.presentedHeight > 0) && (root.detached || NacrePanelState.hidden !== true)
             width: parent.width
             height: parent.height
             focus: true

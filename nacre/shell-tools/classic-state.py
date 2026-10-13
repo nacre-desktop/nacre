@@ -712,13 +712,17 @@ def _reload_desktop_consumers(data, icon_theme, lua, live):
                 ],
                 capture_output=True,
             )
-        result = compositor.apply_config(lua, check=False, timeout=None)
-        if result.returncode:
-            print(
-                "Palette saved; live window-border update failed: "
-                + result.stderr.strip(),
-                file=sys.stderr,
-            )
+        if compositor.backend_name == "hyprland":
+            result = compositor.apply_config(lua, check=False, timeout=None)
+            if result.returncode:
+                print(
+                    "Palette saved; live window-border update failed: "
+                    + result.stderr.strip(),
+                    file=sys.stderr,
+                )
+        else:
+            # Niri reads the generated KDL include through its configuration API.
+            compositor.reload()
 
 
 def _apply_palette(home, wallpaper=None, live=True):
