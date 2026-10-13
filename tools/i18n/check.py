@@ -19,6 +19,7 @@ def references(root):
         + list((root / "nacre/shell").rglob("*.qml"))
         + list((root / "nacre/shell").rglob("*.js"))
         + list((root / "nacre/shell-tools").glob("*.py"))
+        + list((root / "tools").glob("*.py"))
         + list((root / "hypr/scripts").glob("*.py"))
         + list((root / "hypr/scripts").glob("*.sh"))
         + list((root / "brain/web").glob("*.js"))
