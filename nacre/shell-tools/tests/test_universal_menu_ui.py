@@ -131,7 +131,7 @@ TestCase {
   const before = NacreControlTools.refreshes;
   first.prepare("home","",true);first.prepare("home","",true);
   compare(NacreControlTools.refreshes,before);
-  tryCompare(first,"openRefreshCount",before+1,1000);
+  tryCompare(NacreControlTools,"refreshes",before+1);
  }
  function test_queries_are_local_and_catalogue_is_shared(){
   first.fileQuery="one";first.fileRows=[{name:"First"}];
