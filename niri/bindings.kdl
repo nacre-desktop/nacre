@@ -45,10 +45,10 @@ binds {
     Super+WheelScrollUp repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action switch_workspace --workspace '{\"relative\": -1}'"; }
     Super+Ctrl+Shift+Left repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action move_window --workspace '{\"relative\": -1}'"; }
     Super+Ctrl+Shift+Right repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action move_window --workspace '{\"relative\": 1}'"; }
-    Super+Left repeat=false hotkey-overlay-title="Nacre:focus" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action focus_direction --direction left"; }
+    Super+Left repeat=true cooldown-ms=120 hotkey-overlay-title="Nacre:focus" { focus-column-left; }
     Super+Shift+Left repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action move_direction --direction left"; }
     Super+Alt+Left repeat=true { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action resize_window --width -30 --height 0 --relative true"; }
-    Super+Right repeat=false hotkey-overlay-title="Nacre:focus" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action focus_direction --direction right"; }
+    Super+Right repeat=true cooldown-ms=120 hotkey-overlay-title="Nacre:focus" { focus-column-right; }
     Super+Shift+Right repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action move_direction --direction right"; }
     Super+Alt+Right repeat=true { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action resize_window --width 30 --height 0 --relative true"; }
     Super+Up repeat=false hotkey-overlay-title="Nacre:focus" { spawn-sh "exec env NACRE_COMPOSITOR=niri python3 \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\" action focus_direction --direction up"; }

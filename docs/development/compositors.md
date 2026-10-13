@@ -117,6 +117,10 @@ no workspace assignments; custom profiles remain explicit opt-ins. The generator
 never changes an installed profile, starts apps, signs into accounts or changes
 assistant access. Existing private overrides still load after managed config.
 
+Super+Left and Super+Right repeat while held. Niri lowers horizontal focus bindings
+to native column-focus actions with a 120 ms cooldown, avoiding a helper process
+for every repeated step without changing the keyboard's typing repeat rate.
+
 ## Hyprland to niri mapping
 
 `NiriBackend.qml` consumes the Python backend's canonical stream through one

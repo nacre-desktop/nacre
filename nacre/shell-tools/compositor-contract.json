@@ -787,7 +787,8 @@
           "direction": "left"
         },
         "options": {
-          "description": "Nacre:focus"
+          "description": "Nacre:focus",
+          "repeating": true
         }
       },
       {
@@ -820,7 +821,8 @@
           "direction": "right"
         },
         "options": {
-          "description": "Nacre:focus"
+          "description": "Nacre:focus",
+          "repeating": true
         }
       },
       {

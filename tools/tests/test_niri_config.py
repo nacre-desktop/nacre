@@ -40,7 +40,13 @@ class NiriConfigTests(unittest.TestCase):
         self.assertIn("NACRE_COMPOSITOR_TOOLS", text)
         self.assertIn("switch_workspace --workspace 2", text)
         self.assertIn("move_window --workspace 2", text)
-        self.assertIn("focus_direction --direction left", text)
+        for direction in ("left", "right"):
+            self.assertIn(
+                f'Super+{direction.title()} repeat=true cooldown-ms=120 hotkey-overlay-title="Nacre:focus" '
+                f"{{ focus-column-{direction}; }}",
+                text,
+            )
+            self.assertNotIn("focus_direction --direction " + direction, text)
         self.assertNotIn("hyprctl", text)
         self.assertIn("action close_window", text)
         self.assertNotIn("window-close.sh", text)

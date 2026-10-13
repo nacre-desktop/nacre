@@ -216,6 +216,14 @@ def render(contract, directory=None):
                     seen.add(key)
                     options = row.get("options", {})
                     flags = ["repeat=" + str(bool(options.get("repeating"))).lower()]
+                    body = "spawn-sh " + quoted(command)
+                    direction = row.get("parameters", {}).get("direction")
+                    if row.get("action") == "window.focus-direction" and direction in (
+                        "left",
+                        "right",
+                    ):
+                        body = "focus-column-" + direction
+                        flags.append("cooldown-ms=120")
                     if options.get("locked"):
                         flags.append("allow-when-locked=true")
                     if options.get("description"):
@@ -223,13 +231,7 @@ def render(contract, directory=None):
                             "hotkey-overlay-title=" + quoted(options["description"])
                         )
                     binds.append(
-                        "    "
-                        + key
-                        + " "
-                        + " ".join(flags)
-                        + " { spawn-sh "
-                        + quoted(command)
-                        + "; }"
+                        "    " + key + " " + " ".join(flags) + " { " + body + "; }"
                     )
                 elif kind == "window-rule":
                     rules.append(rule_kdl(row))
