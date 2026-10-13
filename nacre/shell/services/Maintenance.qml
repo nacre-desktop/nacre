@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 
@@ -19,12 +20,12 @@ Singleton {
         if (busy)
             return;
 
-        worker.command = ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/maintenance.py", action];
+        worker.command = ["python3", NacrePaths.tools + "/maintenance.py", action];
         worker.running = true;
     }
 
     function recover(action) {
-        AppLaunch.run(["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/maintenance.py", action]);
+        AppLaunch.run(["python3", NacrePaths.tools + "/maintenance.py", action]);
     }
 
     Component.onCompleted: refresh()

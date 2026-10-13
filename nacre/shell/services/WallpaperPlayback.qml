@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Services.UPower
 import Quickshell.Io
@@ -30,7 +31,7 @@ Singleton {
     }
     Process {
         running: true
-        command: ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/wallpaper-media.py", "session"]
+        command: ["python3", NacrePaths.tools + "/wallpaper-media.py", "session"]
 
         stdout: SplitParser {
             splitMarker: ""
@@ -39,7 +40,9 @@ Singleton {
                     const value = JSON.parse(line);
                     root.locked = value.locked ?? false;
                     root.sessionPath = value.path ?? "";
-                } catch (e) {}
+                } catch (e) {
+                    console.warn("WallpaperPlayback: Cannot decode wallpaper session state:", e);
+                }
             }
         }
     }

@@ -99,7 +99,7 @@ Singleton {
     Process {
         id: reader
         objectName: "weatherReader"
-        command: ["python3", (Quickshell.env("NACRE_DASHBOARD_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/weather.py"]
+        command: ["python3", NacrePaths.dashboardTools + "/weather.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 if (root.requestLocation === root.desiredLocation)

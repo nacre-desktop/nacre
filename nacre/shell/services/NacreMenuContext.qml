@@ -1,4 +1,5 @@
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
@@ -11,7 +12,7 @@ Scope {
     property string brainWanted: ""
     property string brainQuery: ""
     property var notes: []
-    readonly property string tools: Quickshell.env("HOME") + "/.local/share/nacre/shell/tools"
+    readonly property string tools: NacrePaths.tools
     property string defaultText: ""
     property string extensionText: ""
     property var catalog: shared ? shared.catalog : ({
@@ -928,7 +929,9 @@ Scope {
                     root.ownership = Object.assign({}, root.ownership, {
                         [ownershipWorker.ident]: data.package
                     });
-            } catch (failure) {}
+            } catch (failure) {
+                console.warn("NacreMenuContext: Cannot decode application package ownership:", failure);
+            }
         }
         onExited: if (root.ownershipWanted !== ident) {
             ident = root.ownershipWanted;

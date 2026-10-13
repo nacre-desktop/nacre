@@ -1,4 +1,4 @@
-from qml_source import install_i18n
+from qml_source import install_i18n, install_paths
 
 """Actual lock presentation snapshot uses native battery fraction correctly."""
 
@@ -57,6 +57,7 @@ class LockSnapshotTests(unittest.TestCase):
                 .replace("import Quickshell.Services.UPower", 'import "fixtures"')
                 .replace("import Quickshell.Io", "")
                 .replace("import Quickshell", "")
+                .replace("import qs.utils", 'import "fixtures"')
                 .replace("Singleton {", "Item {")
                 .replace('Quickshell.env("HOME")', '"/isolated"')
             )
@@ -80,6 +81,7 @@ Item {
  }
 }""")
             install_i18n(fixtures)
+            install_paths(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target)],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

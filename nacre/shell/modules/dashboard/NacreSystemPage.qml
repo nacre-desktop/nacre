@@ -1,4 +1,5 @@
 import QtQuick
+import qs.utils
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Quickshell
@@ -85,7 +86,7 @@ Flickable {
                 text: NacreI18n.tr("dashboard.system-page.text.update", "Update")
                 icon: "system_update"
                 compact: true
-                onClicked: Quickshell.execDetached([Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/control.sh", "updates"])
+                onClicked: Quickshell.execDetached([NacrePaths.tools + "/control.sh", "updates"])
             }
             ActionButton {
                 text: NacreI18n.tr("dashboard.system-page.text.maintenance", "Maintenance")

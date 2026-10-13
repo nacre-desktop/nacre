@@ -27,6 +27,9 @@ def benchmark(services, tools, count):
         shutil.copytree(
             tools, installed, ignore=shutil.ignore_patterns("tests", "__pycache__")
         )
+        utils = root / "utils"
+        utils.mkdir()
+        shutil.copy2(services.parent / "utils/NacrePaths.qml", utils / "NacrePaths.qml")
         for name in ("NacreDashboardState", "NacreHelpers", "NacreHelperTask"):
             source = services / (name + ".qml")
             if source.exists():

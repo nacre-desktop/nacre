@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import qs.widgets
 import Quickshell.Io
@@ -51,7 +52,7 @@ Singleton {
             discoveryPending = true;
             return;
         }
-        discovery.command = ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/light-devices.py", "discover", JSON.stringify(Quickshell.screens.map(screen => screen.name))];
+        discovery.command = ["python3", NacrePaths.tools + "/light-devices.py", "discover", JSON.stringify(Quickshell.screens.map(screen => screen.name))];
         discovery.running = true;
     }
     property bool discoveryPending: false

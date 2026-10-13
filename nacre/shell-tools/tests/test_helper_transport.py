@@ -35,6 +35,11 @@ class HelperTransportTests(unittest.TestCase):
             runtime.symlink_to(sys.executable)
             services = root / "services"
             services.mkdir()
+            utils = root / "utils"
+            utils.mkdir()
+            shutil.copy2(
+                SERVICES.parent / "utils/NacrePaths.qml", utils / "NacrePaths.qml"
+            )
             for name in ("NacreHelpers", "NacreHelperTask"):
                 shutil.copy2(SERVICES / (name + ".qml"), services)
             for name in ("helper-service", "launcher-preferences"):

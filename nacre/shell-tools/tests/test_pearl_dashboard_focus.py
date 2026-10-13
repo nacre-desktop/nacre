@@ -1,4 +1,4 @@
-from qml_source import install_i18n
+from qml_source import install_i18n, install_paths
 
 """Actual native focus service: ownership, deadlines, no duplicate completion."""
 
@@ -41,6 +41,7 @@ class PearlFocusTests(unittest.TestCase):
                 source.replace("pragma Singleton\n", "")
                 .replace("import Quickshell.Io", "")
                 .replace("import Quickshell", 'import "fixtures"')
+                .replace("import qs.utils", 'import "fixtures"')
                 .replace("Singleton {", "Item {")
                 .replace("Quickshell.", "Environment.")
             )
@@ -95,6 +96,7 @@ TestCase {
 }
 """)
             install_i18n(fixtures)
+            install_paths(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

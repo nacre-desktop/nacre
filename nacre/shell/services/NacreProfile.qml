@@ -28,7 +28,9 @@ Singleton {
                 const value = JSON.parse(text());
                 if (value.version === 1 && Number.isInteger(value.workspaceCount) && value.workspaceCount > 0 && value.workspaceCount <= 10 && Array.isArray(value.components))
                     root.data = value;
-            } catch (_) {}
+            } catch (_) {
+                console.warn("NacreProfile: Cannot decode desktop profile:", _);
+            }
         }
     }
 }

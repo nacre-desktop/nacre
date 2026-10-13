@@ -1,4 +1,4 @@
-from qml_source import install_i18n
+from qml_source import install_i18n, install_paths
 
 """Production request owners: rapid settings, stale preview replies and teardown."""
 
@@ -56,6 +56,7 @@ class ResponsiveServiceTests(unittest.TestCase):
                     source.replace("import Quickshell.Io", "")
                     .replace("import Quickshell", "")
                     .replace("import qs.services", 'import "fixtures"')
+                    .replace("import qs.utils", 'import "fixtures"')
                     .replace("Singleton {", "QtObject {", 1)
                 )
                 if 'import "fixtures"' not in source:
@@ -132,6 +133,7 @@ TestCase {
  }
 }""")
             install_i18n(fixtures)
+            install_paths(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(root), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

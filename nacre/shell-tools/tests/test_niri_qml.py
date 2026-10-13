@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import unittest
 
-from qml_source import install_i18n
+from qml_source import install_i18n, install_paths
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKENDS = ROOT.parent / "shell/services/compositor"
@@ -89,12 +89,14 @@ class NiriQmlTests(unittest.TestCase):
                 + "}"
             )
             install_i18n(fixtures)
+            install_paths(fixtures)
             source = (
                 (BACKENDS / "NiriBackend.qml")
                 .read_text()
                 .replace("pragma Singleton\n", "")
                 .replace("import Quickshell.Io", 'import "fixtures"')
                 .replace("import qs.services", 'import "fixtures"')
+                .replace("import qs.utils", 'import "fixtures"')
                 .replace("import Quickshell\n", "")
                 .replace("Singleton {", "Item {")
             )

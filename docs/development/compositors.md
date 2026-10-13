@@ -321,3 +321,14 @@ required executable names from the backend, retaining the report collector's
 redaction and timeout policy. Panel dragging declares an explicit, modifier-free
 left-button release callback in the neutral contract so release cleanup also runs
 after Super is released. Its Lua extension preserves the native drag lifecycle.
+
+## Installed shell paths
+
+QML commands use the filesystem paths exposed by `qs.utils.NacrePaths`: `share`,
+`tools`, `shellBin` and `palettePython`. `compositorTools`, `pearlTools` and
+`dashboardTools` retain the existing isolated-test overrides; compositor tools
+prefer `NACRE_COMPOSITOR_TOOLS`, then `NACRE_PEARL_TOOLS`, then the installed tools.
+The installer still uses the existing home-relative share location. Config,
+state, cache and picture properties remain file URLs for media/FileView users.
+Change the installed helper location in this singleton rather than constructing
+it in each service or widget.

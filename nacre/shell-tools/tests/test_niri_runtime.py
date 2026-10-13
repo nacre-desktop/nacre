@@ -95,6 +95,11 @@ def run_fixture_smoke(repo, binary):
             repo / "nacre/shell/services/NacreCompositor.qml",
             services / "NacreCompositor.qml",
         )
+        utils = root / "utils"
+        utils.mkdir()
+        shutil.copy2(
+            repo / "nacre/shell/utils/NacrePaths.qml", utils / "NacrePaths.qml"
+        )
         (services / "qmldir").write_text(
             "singleton NacreCompositor 1.0 NacreCompositor.qml\n"
         )

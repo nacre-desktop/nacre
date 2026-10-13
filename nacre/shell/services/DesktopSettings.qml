@@ -2,6 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.utils
 
 Singleton {
     id: root
@@ -51,7 +52,7 @@ Singleton {
         if (!worker.running && queue.length) {
             worker.change = queue[0];
             queue = queue.slice(1);
-            worker.command = ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/desktop-settings.py", ...worker.change.arguments];
+            worker.command = ["python3", NacrePaths.tools + "/desktop-settings.py", ...worker.change.arguments];
             worker.running = true;
         }
     }
@@ -95,7 +96,9 @@ Singleton {
         onLoaded: {
             try {
                 root.persistedData = JSON.parse(text());
-            } catch (e) {}
+            } catch (e) {
+                console.warn("DesktopSettings: Cannot decode persisted desktop settings:", e);
+            }
         }
     }
     readonly property bool visibleSettings: NacrePanelState.settingsVisible

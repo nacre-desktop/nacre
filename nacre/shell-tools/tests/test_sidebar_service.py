@@ -1,4 +1,4 @@
-from qml_source import install_i18n
+from qml_source import install_i18n, install_paths
 
 """Actual sidebar QML isolates asynchronous attachment results by composer."""
 
@@ -37,6 +37,7 @@ class SidebarServiceTests(unittest.TestCase):
                 source.replace("pragma Singleton", "")
                 .replace("import Quickshell.Io", 'import "fixtures"')
                 .replace("import Quickshell", "")
+                .replace("import qs.utils", 'import "fixtures"')
                 .replace("Scope {", "Item {")
                 .replace('Quickshell.env("HOME")', '"/isolated"')
             )
@@ -82,6 +83,7 @@ Item {
  }
 }""")
             install_i18n(fixtures)
+            install_paths(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target)],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

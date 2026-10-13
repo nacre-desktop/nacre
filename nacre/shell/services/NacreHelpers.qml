@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 
@@ -60,7 +61,9 @@ Singleton {
                 record.task.complete(1, 0, JSON.stringify({
                     error: message
                 }));
-            } catch (error) {}
+            } catch (error) {
+                console.warn("NacreHelpers: Cannot complete failed helper request:", error);
+            }
         }
     }
     function receive(text) {
@@ -93,7 +96,7 @@ Singleton {
     Process {
         id: server
         objectName: "helperService"
-        command: [Quickshell.env("HOME") + "/.local/share/nacre/palette-runtime/venv/bin/python", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/helper-service.py"]
+        command: [NacrePaths.palettePython, NacrePaths.tools + "/helper-service.py"]
         stdinEnabled: true
         running: true
         stdout: SplitParser {

@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import QtQuick.Window
 import Quickshell
 import Quickshell.Io
@@ -210,7 +211,7 @@ Singleton {
     Process {
         id: layoutReader
         running: NacreProfile.ready
-        command: ["python3", (Quickshell.env("NACRE_PEARL_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/pearl-state.py", "load"]
+        command: ["python3", NacrePaths.pearlTools + "/pearl-state.py", "load"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -225,7 +226,7 @@ Singleton {
         id: layoutWriter
         property var value
         stdinEnabled: true
-        command: ["python3", (Quickshell.env("NACRE_PEARL_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/pearl-state.py", "save"]
+        command: ["python3", NacrePaths.pearlTools + "/pearl-state.py", "save"]
         onStarted: write(JSON.stringify(value) + "\n")
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0)

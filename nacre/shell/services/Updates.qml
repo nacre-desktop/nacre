@@ -2,6 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.utils
 
 Singleton {
     id: root
@@ -15,7 +16,7 @@ Singleton {
 
     Process {
         id: check
-        command: ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/updates.py"]
+        command: ["python3", NacrePaths.tools + "/updates.py"]
         running: true
     }
     Timer {
