@@ -30,8 +30,9 @@ namespaces. The checkout and libraries are read-only. PATH and `/usr/bin` contai
 only fixture executables and the Python/shell primitives; absolute application
 calls cannot reach live executables. There is no live compositor, bus, display,
 or internet fallback. Containers must permit nested user/mount namespaces (the
-CI check container grants SYS_ADMIN/NET_ADMIN and disables its outer
-seccomp/AppArmor restrictions; see [CI jobs and owners](../../../docs/development/ci.md)).
+CI check container needs no added capabilities on Ubuntu 22.04; its outer
+seccomp/AppArmor restrictions permit the inner sandbox; see
+[CI jobs and owners](../../../docs/development/ci.md)).
 
 To add a case, put `case-NAME.json` in the helper's directory with `helper`, `args`,
 optional `stdin`/`stdin_repeat`, `fixtures`, `commands`, `env`, and `sockets`.

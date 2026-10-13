@@ -17,17 +17,24 @@ require status checks before a push (see [community settings](community-settings
 
 All cases remain sandboxed and mandatory. The Arch correctness container runs on
 Ubuntu 22.04: the Ubuntu 24.04 trial failed creating Bubblewrap's network namespace
-(`RTM_NEWADDR: Operation not permitted`). Its only additional capabilities are
-`SYS_ADMIN` for nested namespace/mount setup and `NET_ADMIN` for the private
-loopback interface; outer seccomp/AppArmor restrictions are disabled for this
-job. It is not a privileged container. Bubblewrap still supplies a disposable
+(`RTM_NEWADDR: Operation not permitted`). A separate full Source run verified
+that Ubuntu 22.04 needs neither added `SYS_ADMIN` nor `NET_ADMIN`: those grants
+are removed. Outer seccomp/AppArmor restrictions are disabled for this job;
+the inner user namespace supplies the sandbox's namespace permissions.
+Bubblewrap still supplies a disposable
 filesystem, UID 1000, private PID/network/IPC namespaces, a masked executable
 search path and strict fixture peers. There is no non-sandboxed CI fallback.
 
-Moving parity alone to the Ubuntu VM would also require reproducing its pinned
-Arch Python/native-engine environment. Keep the now-working target-platform
-sandbox rather than running a different reference environment to hide a failure.
+The container retains the pinned Arch Python/native-engine environment. Running
+parity directly on the Ubuntu VM would require a matching interpreter and native
+runtime; the tested container now works with no added capabilities.
 See [fixture isolation](../../tests/parity/helpers/FORMAT.md).
+
+Niri's validator, Fastfetch and FFmpeg are installed in the correctness job so
+their six existing configuration/video regressions execute rather than skip.
+The [capability probe](https://github.com/nacre-desktop/nacre/actions/runs/38467056106)
+passed all 834 existing suite tests, 12 harness controls and 349 frozen cases,
+with no dependency skips, plus the strict fresh-install smoke test.
 
 CI scripts run at `nice -n 10`; Cargo builds/tests use `-j2`. GPU jobs must not
 load VKMS, request broad device privileges or turn an unavailable compositor into
@@ -46,7 +53,7 @@ task's work or regenerate frozen expectations to make the check green.
 | Fix / evidence | Check / cause | Status |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `2753707f` | Earlier Ubuntu 24.04 runner denied Bubblewrap namespace setup                                                                      | Runner moved to Ubuntu 22.04; sandbox integrity passes                                                          |
-| `6416d052` | Root-created fixture UNIX sockets denied UID 1000 connections; uncontrolled Python patch version changed one maintenance reference | Socket ownership and version input made deterministic; all 349 references retained; hosted confirmation pending |
+| `6416d052` | Root-created fixture UNIX sockets denied UID 1000 connections; uncontrolled Python patch version changed one maintenance reference | Socket ownership and version input made deterministic; all 349 references retained; Source passed on `ec9ed146` and the capability probe |
 
 Private overnight observations and the morning status belong in `.git/handoff-ci.md`,
 not public test logs or personal machine inventories.
