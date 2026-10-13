@@ -86,7 +86,7 @@ Singleton {
     Component.onCompleted: reload()
 
     FileView {
-        path: Quickshell.env("HOME") + "/.cache/nacre/weather.json"
+        path: NacrePaths.cache + "/weather.json"
         printErrors: false
         onLoaded: root.publish(text(), true)
     }

@@ -6,6 +6,7 @@ import ast
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -67,9 +68,25 @@ def test_environment():
     return environment
 
 
+def check_home_paths(root=ROOT):
+    """Keep every QML/JavaScript HOME lookup in the shared path singleton."""
+    owner = root / "nacre/shell/utils/NacrePaths.qml"
+    pattern = re.compile(r"\bQuickshell\s*\.\s*env\s*\(\s*(['\"])HOME\1\s*\)")
+    for path in (root / "nacre").rglob("*"):
+        if path == owner or path.suffix not in (".qml", ".js"):
+            continue
+        source = path.read_text()
+        if match := pattern.search(source):
+            line = source[: match.start()].count("\n") + 1
+            raise RuntimeError(
+                f"{path.relative_to(root)}:{line}: HOME lookup outside NacrePaths.qml; use NacrePaths"
+            )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args()
+    check_home_paths()
     for path in RETIRED:
         if (ROOT / path).exists():
             raise RuntimeError("Retired desktop tree reintroduced: " + path)

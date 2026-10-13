@@ -339,7 +339,7 @@ Singleton {
         }
     }
     FileView {
-        path: Quickshell.env("HOME") + "/.config/nacre/colors.json"
+        path: NacrePaths.config + "/colors.json"
         watchChanges: true
         printErrors: false
         onFileChanged: reload()

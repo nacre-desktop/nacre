@@ -42,7 +42,7 @@ Singleton {
         refresh()
     Component.onCompleted: refresh()
     FileView {
-        path: Quickshell.env("HOME") + "/.local/state/nacre/control-tools.json"
+        path: NacrePaths.state + "/control-tools.json"
         watchChanges: true
         printErrors: false
         onFileChanged: {

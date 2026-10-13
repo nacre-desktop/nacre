@@ -390,7 +390,7 @@ def audit_dashboard():
 
 def audit_extras():
     from test_universal_menu_ui import stage
-    from qml_source import install_i18n, remove_objects
+    from qml_source import install_i18n, install_paths, remove_objects
 
     with tempfile.TemporaryDirectory() as directory:
         target = Path(directory)
@@ -406,7 +406,7 @@ def audit_extras():
             source = (root / "nacre/shell/modules/extras" / (name + ".qml")).read_text()
             for imported in ("Quickshell.Io", "Quickshell.Wayland", "Quickshell"):
                 source = source.replace("import " + imported + "\n", "")
-            for imported in ("qs.services", "qs.widgets", "qs.config"):
+            for imported in ("qs.services", "qs.widgets", "qs.config", "qs.utils"):
                 source = source.replace("import " + imported, 'import "fixtures"')
             source = source.replace(
                 "required property PersistentProperties", "required property var"
@@ -462,6 +462,7 @@ def audit_extras():
         with (fixtures / "qmldir").open("a") as stream:
             stream.write("\nScreencopyView 1.0 ScreencopyView.qml\n")
         install_i18n(fixtures)
+        install_paths(fixtures)
         prepare_widgets(target)
         code = (
             """import QtQuick

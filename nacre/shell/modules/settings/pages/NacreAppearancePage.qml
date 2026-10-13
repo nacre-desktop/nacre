@@ -16,7 +16,7 @@ NacreSettingsPage {
         AppLaunch.run([NacrePaths.shellBin + "/nacre_shell", "scheme", "set", flag, value]);
     }
     FileView {
-        path: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/nacre/scheme.json"
+        path: NacrePaths.state + "/scheme.json"
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
@@ -73,7 +73,7 @@ NacreSettingsPage {
                 ActionButton {
                     text: NacreI18n.tr("ui.appearance-page.text.wallpaper-picker", "Wallpaper picker")
                     icon: "wallpaper"
-                    onClicked: AppLaunch.run([Quickshell.env("HOME") + "/.local/bin/nacre-shell", "wallpaper"])
+                    onClicked: AppLaunch.run([NacrePaths.userBin + "/nacre-shell", "wallpaper"])
                 }
             }
         }
@@ -329,7 +329,7 @@ NacreSettingsPage {
         ActionButton {
             text: NacreI18n.tr("ui.appearance-page.text.explore-in-nacre-colors", "Explore in Nacre Colors")
             icon: "palette"
-            onClicked: AppLaunch.run([Quickshell.env("HOME") + "/.local/bin/nacre-colors"])
+            onClicked: AppLaunch.run([NacrePaths.userBin + "/nacre-colors"])
         }
         NacreText {
             width: parent.width

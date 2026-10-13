@@ -1,4 +1,5 @@
 import QtQuick
+import qs.utils
 import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
@@ -43,7 +44,7 @@ SearchSurface {
 
     Process {
         running: root.visibilities.launcher && root.visibilities.launcherMode === "clipboard"
-        command: ["inotifywait", "-q", "-m", "-e", "close_write,moved_to", "--format", "%f", Quickshell.env("HOME") + "/.cache/cliphist"]
+        command: ["inotifywait", "-q", "-m", "-e", "close_write,moved_to", "--format", "%f", NacrePaths.cacheRoot.slice(7) + "/cliphist"]
 
         stdout: SplitParser {
             onRead: name => {

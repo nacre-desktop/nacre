@@ -90,7 +90,7 @@ Singleton {
     }
     Component.onCompleted: request(["state"])
     FileView {
-        path: Quickshell.env("HOME") + "/.config/nacre/desktop.json"
+        path: NacrePaths.config + "/desktop.json"
         watchChanges: true
         onFileChanged: reload()
         onLoaded: {

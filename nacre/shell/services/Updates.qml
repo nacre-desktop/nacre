@@ -26,7 +26,7 @@ Singleton {
         onTriggered: root.refresh()
     }
     FileView {
-        path: Quickshell.env("HOME") + "/.cache/nacre/updates.json"
+        path: NacrePaths.cache + "/updates.json"
         watchChanges: true
         onFileChanged: reload()
         onLoaded: {

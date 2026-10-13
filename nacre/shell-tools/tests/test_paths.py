@@ -47,14 +47,23 @@ Item {
             compare(paths.pearlTools, paths.tools);
             compare(paths.dashboardTools, paths.tools);
             compare(paths.config, "file:///test home/.config/nacre");
+            compare(paths.configRoot, "file:///test home/.config");
+            compare(paths.cacheRoot, "file:///test home/.cache");
+            compare(paths.cache, "file:///test home/.cache/nacre");
+            compare(paths.state, "file:///test home/.local/state/nacre");
+            compare(paths.userBin, "/test home/.local/bin");
         }
         function test_overrides() {
-            Environment.values = {HOME: "/test home", NACRE_PEARL_TOOLS: "/pearl", NACRE_DASHBOARD_TOOLS: "/dashboard", XDG_CONFIG_HOME: "/config", XDG_DATA_HOME: "/data"};
+            Environment.values = {HOME: "/test home", NACRE_PEARL_TOOLS: "/pearl", NACRE_DASHBOARD_TOOLS: "/dashboard", XDG_CONFIG_HOME: "/config", XDG_STATE_HOME: "/state", XDG_CACHE_HOME: "/cache", XDG_DATA_HOME: "/data"};
             compare(paths.compositorTools, "/pearl");
             compare(paths.pearlTools, "/pearl");
             compare(paths.dashboardTools, "/dashboard");
             compare(paths.tools, "/test home/.local/share/nacre/shell/tools");
             compare(paths.config, "file:///config/nacre");
+            compare(paths.configRoot, "file:///config");
+            compare(paths.cacheRoot, "file:///cache");
+            compare(paths.cache, "file:///cache/nacre");
+            compare(paths.state, "file:///state/nacre");
             Environment.values = Object.assign({}, Environment.values, {NACRE_COMPOSITOR_TOOLS: "/compositor"});
             compare(paths.compositorTools, "/compositor");
             compare(paths.pearlTools, "/pearl");

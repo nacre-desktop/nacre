@@ -145,21 +145,23 @@ def install_paths(directory):
             line
             for line in definitions.splitlines()
             if "property string" in line
-            and line.split("property string ", 1)[1].split(":", 1)[0]
-            in (
-                "share",
-                "tools",
-                "shellBin",
-                "palettePython",
-                "compositorTools",
-                "pearlTools",
-                "dashboardTools",
+            and not re.search(
+                r"\bproperty\s+string\s+"
+                + re.escape(line.split("property string ", 1)[1].split(":", 1)[0])
+                + r"\s*:",
+                current,
             )
-            and line.split("property string ", 1)[1].split(":", 1)[0] + ":"
-            not in current
         )
+        file_root = definitions[definitions.index("    function fileRoot") :].rsplit(
+            "}", 1
+        )[0]
         target.write_text(
-            current.replace("QtObject {", "QtObject {\n" + lookup + additions + "\n", 1)
+            re.sub(
+                r"\bQtObject\s*\{",
+                lambda match: match[0] + "\n" + lookup + additions + "\n" + file_root,
+                current,
+                count=1,
+            )
         )
     else:
         target.write_text(definitions)

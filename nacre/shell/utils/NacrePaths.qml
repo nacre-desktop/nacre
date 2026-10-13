@@ -13,10 +13,13 @@ QtObject {
     readonly property string compositorTools: Quickshell.env("NACRE_COMPOSITOR_TOOLS") || Quickshell.env("NACRE_PEARL_TOOLS") || tools
     readonly property string pearlTools: Quickshell.env("NACRE_PEARL_TOOLS") || tools
     readonly property string dashboardTools: Quickshell.env("NACRE_DASHBOARD_TOOLS") || tools
+    readonly property string userBin: home.slice(7) + "/.local/bin"
+    readonly property string configRoot: fileRoot("XDG_CONFIG_HOME", "/.config")
+    readonly property string cacheRoot: fileRoot("XDG_CACHE_HOME", "/.cache")
     readonly property string pictures: home + "/Pictures"
-    readonly property string config: fileRoot("XDG_CONFIG_HOME", "/.config") + "/nacre"
+    readonly property string config: configRoot + "/nacre"
     readonly property string state: fileRoot("XDG_STATE_HOME", "/.local/state") + "/nacre"
-    readonly property string cache: fileRoot("XDG_CACHE_HOME", "/.cache") + "/nacre"
+    readonly property string cache: cacheRoot + "/nacre"
     function fileRoot(variable, fallback): string {
         const value = Quickshell.env(variable);
         return "file://" + (value && value.startsWith("/") ? value : Quickshell.env("HOME") + fallback);

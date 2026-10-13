@@ -330,5 +330,9 @@ QML commands use the filesystem paths exposed by `qs.utils.NacrePaths`: `share`,
 prefer `NACRE_COMPOSITOR_TOOLS`, then `NACRE_PEARL_TOOLS`, then the installed tools.
 The installer still uses the existing home-relative share location. Config,
 state, cache and picture properties remain file URLs for media/FileView users.
+`configRoot` and `cacheRoot` locate sibling directories such as Hyprland and
+Cliphist; commands strip the `file://` prefix. `userBin` is the normal user
+launcher directory, while `shellBin` is the installed palette CLI directory.
+`tools/check.py` rejects direct Qt `HOME` lookups outside this singleton.
 Change the installed helper location in this singleton rather than constructing
 it in each service or widget.

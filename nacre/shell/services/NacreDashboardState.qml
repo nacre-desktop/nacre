@@ -182,7 +182,7 @@ Singleton {
         }
     }
     FileView {
-        path: Quickshell.env("HOME") + "/.config/nacre/dashboard.json"
+        path: NacrePaths.config + "/dashboard.json"
         watchChanges: true
         printErrors: false
         onFileChanged: root.refresh()

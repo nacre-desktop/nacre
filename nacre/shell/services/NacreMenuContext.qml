@@ -953,7 +953,7 @@ Scope {
         }
     }
     FileView {
-        path: root.shared ? "" : Quickshell.env("HOME") + "/.config/nacre/launcher-menu.json"
+        path: root.shared ? "" : NacrePaths.config + "/launcher-menu.json"
         preload: true
         printErrors: false
         watchChanges: true
