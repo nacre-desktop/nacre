@@ -11,7 +11,21 @@ import os
 
 def command(action, value=""):
     if action == "wifi-scan":
-        return ["nmcli", "device", "wifi", "rescan"]
+        # rescan only requests a scan; list waits for the fresh AP results.
+        return [
+            "nmcli",
+            "--wait",
+            "15",
+            "--colors",
+            "no",
+            "--fields",
+            "IN-USE",
+            "device",
+            "wifi",
+            "list",
+            "--rescan",
+            "yes",
+        ]
     if action == "wifi-radio" and value in ("on", "off"):
         return ["nmcli", "radio", "wifi", value]
     if action == "wifi-disconnect" and re.fullmatch(
@@ -94,7 +108,12 @@ def main():
             word in output.lower() for word in ("failed", "not available", "not ready")
         ):
             raise RuntimeError(output.strip()[:400] or "Device action failed")
-        print(json.dumps(dict(message=output.strip()[:400] or "Device updated")))
+        message = (
+            "Wi-Fi scan complete."
+            if a.action == "wifi-scan"
+            else output.strip()[:400] or "Device updated"
+        )
+        print(json.dumps(dict(message=message)))
     except (
         OSError,
         ValueError,
