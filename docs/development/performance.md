@@ -508,3 +508,35 @@ state-restoration, preload, muted-video and transition tests. CI uses the pinned
 engine. The benchmark source hash evidence and distributions are summarized in
 [performance-memory-results.json](performance-memory-results.json). Performance
 work changes no visible strings, geometry, AI permissions or live user settings.
+
+
+## Persistent Orient RPC
+
+The native SDK retains one `orient --rpc --serve` child per helper process,
+serializes concurrent requests, verifies the first reply's engine pin, and checks
+every reply ID. Timeouts/cancellation discard and reap the child; a subsequent
+call starts a fresh child. Idle Orient blocks on stdin and exits on EOF.
+
+Warm medians of 31 runs on Linux x86_64 (dev5 one-shot versus dev6 persistent):
+
+| Operation | Before (ms) | After (ms) | RPC calls |
+| --- | ---: | ---: | ---: |
+| `image_colors`, aurora.jpg | 107.22 | 2.01 | 68 |
+| `image_colors`, coast-day.png | 71.73 | 0.93 | 32 |
+| `image_colors`, warm-room.png | 15.26 | 0.23 | 8 |
+| `lch`, per call | 1.42 | 0.031 | 1 |
+| Full isolated palette apply | 89.86 | 62.35 | 5 |
+
+Measurements include Python/pipe overhead and were taken while other development
+work was running. Preview results and generated apply files match exactly after
+normalizing temporary home/source paths and engine provenance. Apply uses `live=False` and a fixed
+empty monitor response; it includes branding and configuration writes, but not
+compositor reloads. The remaining apply time is largely outside Orient RPC.
+Child startup is paid on the first call rather than on each call.
+
+Run the same harness in each revision with its matching native binary and SDK:
+
+```sh
+NACRE_ORIENT_BINARY=/path/to/matching/orient python tools/benchmark_orient_rpc.py \
+  --output /tmp/orient-rpc.json
+```
