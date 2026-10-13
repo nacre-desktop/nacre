@@ -15,7 +15,21 @@ def host_preferences(desktop):
     natural = desktop.get("naturalScroll", True)
     if type(natural) is not bool:
         raise ValueError("Invalid natural scrolling preference")
-    text = "input {\n    touchpad {\n"
+    gap = desktop.get("gapsOut", 12)
+    border = desktop.get("borderSize", 1)
+    if any(
+        type(value) not in (int, float)
+        or not math.isfinite(value)
+        or not 0 <= value <= 100
+        for value in (gap, border)
+    ):
+        raise ValueError("Invalid saved window margins")
+    text = (
+        "layout {\n    gaps " + str(gap) + "\n"
+        "    default-column-width { proportion 1.0; }\n"
+        "    focus-ring { width " + str(border) + "; }\n}\n"
+    )
+    text += "input {\n    touchpad {\n"
     if natural:
         text += "        natural-scroll\n"
     # Match Nacre's existing Hyprland touchpad defaults.
@@ -36,6 +50,7 @@ def host_preferences(desktop):
     text += (
         "binds {\n"
         "    Super+Ctrl+Tab { toggle-overview; }\n"
+        "    Super+M { maximize-column; }\n"
         "    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n"
         "    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n"
         "}\n"
@@ -141,7 +156,7 @@ def prepare(backend, destination, home):
     palette = (
         backend / "nacre/shell-tools/compositor_backends/niri/palette.kdl.in"
     ).read_text()
-    for role in ("primary", "outlineVariant", "error"):
+    for role in ("primary", "secondary", "outlineVariant", "error"):
         color = scheme["colours"][role].lstrip("#")
         if len(color) not in (6, 8) or any(
             c not in "0123456789abcdefABCDEF" for c in color
