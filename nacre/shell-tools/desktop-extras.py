@@ -392,10 +392,65 @@ DESCRIPTIONS = {
 }
 
 
+DESCRIPTION_IDS = {
+    "SUPER+A": {"descriptionId": "shortcuts.description.ai-sidebar"},
+    "SUPER+SPACE": {"descriptionId": "shortcuts.description.applications"},
+    "SUPER+CTRL+SPACE": {"descriptionId": "shortcuts.description.command-palette"},
+    "SUPER+V": {"descriptionId": "shortcuts.description.clipboard-history"},
+    "SUPER+K": {"descriptionId": "shortcuts.description.keyboard-shortcuts"},
+    "SUPER+I": {"descriptionId": "shortcuts.description.desktop-settings"},
+    "SUPER+SHIFT+O": {"descriptionId": "shortcuts.description.desktop-settings"},
+    "SUPER+O": {"descriptionId": "shortcuts.description.dashboard"},
+    "SUPER+W": {"descriptionId": "shortcuts.description.wallpaper-gallery"},
+    "SUPER+Z": {"descriptionId": "shortcuts.description.hide-show-desktop-shell"},
+    "SUPER+B": {"descriptionId": "shortcuts.description.open-brain"},
+    "SUPER+N": {"descriptionId": "shortcuts.description.capture-a-thought"},
+    "SUPER+X": {"descriptionId": "shortcuts.description.power-menu"},
+    "SUPER+ESCAPE": {"descriptionId": "shortcuts.description.power-menu"},
+    "SUPER+L": {"descriptionId": "shortcuts.description.lock-screen"},
+    "SUPER+R": {"descriptionId": "shortcuts.description.resize-mode"},
+    "SUPER+Q": {"descriptionId": "shortcuts.description.close-with-undo"},
+    "SUPER+SHIFT+Q": {
+        "descriptionId": "shortcuts.description.restore-last-trashed-window"
+    },
+    "SUPER+CTRL+Q": {"descriptionId": "shortcuts.description.close-window"},
+    "SUPER+F": {"descriptionId": "shortcuts.description.fullscreen"},
+    "SUPER+M": {"descriptionId": "shortcuts.description.maximize"},
+    "SUPER+T": {"descriptionId": "shortcuts.description.toggle-floating"},
+    "SUPER+P": {"descriptionId": "shortcuts.description.pin-window"},
+    "SUPER+TAB": {"descriptionId": "shortcuts.description.window-overview"},
+    "SUPER+CTRL+right": {"descriptionId": "shortcuts.description.next-workspace"},
+    "SUPER+CTRL+left": {"descriptionId": "shortcuts.description.previous-workspace"},
+    "SUPER+RETURN": {"descriptionId": "shortcuts.description.terminal"},
+    "SUPER+SHIFT+B": {"descriptionId": "shortcuts.description.browser"},
+    "SUPER+SHIFT+S": {
+        "descriptionId": "shortcuts.description.screenshot-selection-to-clipboard"
+    },
+    "SUPER+E": {"descriptionId": "shortcuts.description.file-manager"},
+    "SUPER+H": {"descriptionId": "shortcuts.description.hide-window"},
+    "SUPER+SHIFT+H": {"descriptionId": "shortcuts.description.restore-hidden-window"},
+    "Print": {
+        "descriptionId": "shortcuts.description.screenshot-selection-to-clipboard"
+    },
+}
+
+
+def binding_description(key):
+    row = DESCRIPTION_IDS.get(key)
+    return (
+        tr(row["descriptionId"], DESCRIPTIONS[key], {"shortcut": "Super+Shift+Q"})
+        if row
+        else None
+    )
+
+
 def bindings():
     source = {}
     source_routes = {}
-    descriptions = {"Nacre:" + action: title for action, title, _ in welcome.SHORTCUTS}
+    descriptions = {
+        "Nacre:" + action: tr(welcome.SHORTCUT_IDS[action]["titleId"], title)
+        for action, title, _ in welcome.SHORTCUTS
+    }
     for file in compositor.binding_source_files(HOME):
         try:
             records = compositor.capture_bindings(file)
@@ -411,29 +466,39 @@ def bindings():
             semantic = descriptions.get(record.get("flags", {}).get("description"))
             desc = (
                 semantic
-                or DESCRIPTIONS.get(key)
+                or binding_description(key)
                 or action["method"].replace(".", " ").replace("_", " ")
             )
             if command and key not in DESCRIPTIONS and not semantic:
                 desc = Path(command.split()[0]).stem.replace("-", " ").replace("_", " ")
             if action["method"] == "submap" and arguments == ["reset"]:
-                desc = "Exit resize mode"
+                desc = tr("shortcuts.resize.exit", "Exit resize mode")
             if "wpctl" in command:
                 desc = (
-                    "Toggle microphone mute"
+                    tr("shortcuts.audio.microphone-mute", "Toggle microphone mute")
                     if "@DEFAULT_AUDIO_SOURCE@" in command
-                    else "Toggle speaker mute"
+                    else tr("shortcuts.audio.speaker-mute", "Toggle speaker mute")
                     if "set-mute" in command
-                    else "Volume " + ("down" if "5%-" in command else "up")
+                    else tr("shortcuts.audio.volume-down", "Volume down")
+                    if "5%-" in command
+                    else tr("shortcuts.audio.volume-up", "Volume up")
                 )
             if (
                 "nacre-shell brightness " in command
                 or "nacre-shell keyboard-light " in command
             ):
                 desc = (
-                    ("Keyboard" if "keyboard-light" in command else "Screen")
-                    + " brightness "
-                    + command.split()[-1]
+                    tr(
+                        "shortcuts.brightness.keyboard",
+                        "Keyboard brightness {step}",
+                        {"step": command.split()[-1]},
+                    )
+                    if "keyboard-light" in command
+                    else tr(
+                        "shortcuts.brightness.screen",
+                        "Screen brightness {step}",
+                        {"step": command.split()[-1]},
+                    )
                 )
             source[(record["submap"], key)] = desc
             source_routes[(record["submap"], key)] = menu_route(command)
@@ -449,16 +514,24 @@ def bindings():
         combo = "+".join([*parts, key])
         desc = (
             source.get((b.get("submap", ""), combo))
-            or DESCRIPTIONS.get(combo)
+            or binding_description(combo)
             or b.get("description")
             or b.get("dispatcher", "")
         )
         if b.get("submap"):
             desc = b["submap"] + " · " + desc
         if key.isdigit() and b["modmask"] == 64:
-            desc = "Go to workspace " + ("10" if key == "0" else key)
+            desc = tr(
+                "shortcuts.workspace.go",
+                "Go to workspace {workspace}",
+                {"workspace": "10" if key == "0" else key},
+            )
         if key.isdigit() and b["modmask"] == 65:
-            desc = "Move window to workspace " + ("10" if key == "0" else key)
+            desc = tr(
+                "shortcuts.workspace.move",
+                "Move window to workspace {workspace}",
+                {"workspace": "10" if key == "0" else key},
+            )
         result.append(
             dict(
                 key=combo,
