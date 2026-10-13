@@ -40,7 +40,6 @@ Flickable {
                 cache: true
                 retainWhileLoading: true
                 sourceSize.width: 1440
-                sourceSize.height: 960
             }
             Loader {
                 anchors.fill: parent
