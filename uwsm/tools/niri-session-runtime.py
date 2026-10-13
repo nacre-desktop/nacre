@@ -62,6 +62,7 @@ def host_preferences(desktop):
     ):
         raise ValueError("Invalid saved window margins")
     text = (
+        "prefer-no-csd\n"
         "layout {\n    gaps " + str(gap) + "\n"
         "    default-column-width { proportion 0.5; }\n"
         "    preset-column-widths {\n"

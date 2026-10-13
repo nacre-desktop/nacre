@@ -70,6 +70,7 @@ class NiriRuntimeTests(unittest.TestCase):
             {"naturalScroll": True, "displays": [{"name": "eDP-1", "scale": 1.5}]}
         )
         self.assertIn("natural-scroll", text)
+        self.assertTrue(text.startswith("prefer-no-csd\n"))
         self.assertIn("scale 1.5", text)
         self.assertIn("toggle-overview", text)
         self.assertIn("focus-column-left", text)

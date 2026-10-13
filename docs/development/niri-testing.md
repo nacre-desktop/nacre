@@ -325,6 +325,12 @@ rollback. Verify the health endpoint, actual window creation, repeated-open
 reuse and automatic recovery after stopping only the Brain server. These checks
 do not establish cold-login acceptance.
 
+The host-session configuration sets `prefer-no-csd` so Chrome app windows such
+as Brain can negotiate a frame without their own title bar. This preference also
+applies to other compatible clients. Restart only the affected app to apply it:
+niri changes decoration-protocol visibility for new client connections, so a
+configuration reload alone cannot remove an existing Chrome title bar.
+
 ### First real niri login and navigation checks (2026-10-13)
 
 The operator selected niri at login. `wayland-wm@niri.desktop.service` and
