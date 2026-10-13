@@ -57,6 +57,7 @@ EFFECTS = {
     "pinned": "pin",
     "size": "size",
     "workspace": "workspace",
+    "corner_radius": "rounding",
 }
 SELECTORS = {
     "app_id_regex": "class",
@@ -258,6 +259,10 @@ def rule_lua(row):
     for key in ("floating", "centered", "pinned"):
         if key in row["effects"] and type(row["effects"][key]) is not bool:
             raise ValueError("Invalid rule boolean")
+    if "corner_radius" in row["effects"]:
+        radius = row["effects"]["corner_radius"]
+        if type(radius) is not int or radius < 0:
+            raise ValueError("Corner radius must be a nonnegative integer")
     rule = {}
     if "id" in row:
         rule["name"] = row["id"]

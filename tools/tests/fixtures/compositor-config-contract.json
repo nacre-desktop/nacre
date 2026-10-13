@@ -1880,7 +1880,8 @@
           "class": "^org[.]quickshell$",
           "title": "^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$"
         },
-        "no_anim": true
+        "no_anim": true,
+        "rounding": 18
       }
     },
     {

@@ -50,3 +50,7 @@ window moves and pauses while holding the button do not attach a panel.
 
 On Niri, first pulls and later floating-window pulls use the same landing glow.
 Hyprland additionally shows its stretching membrane, supported on both paths.
+
+Detached panels use the same 18-logical-pixel corners as their attached surfaces.
+Their window border follows that radius, and Niri clips the full window content
+to it so opaque backgrounds or previews cannot leave square corners.

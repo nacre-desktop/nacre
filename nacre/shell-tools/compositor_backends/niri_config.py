@@ -161,7 +161,14 @@ def rule_kdl(row):
     if set(selector) - {"app_id_regex", "title_regex"}:
         raise NotImplementedError("No matching window selector on niri")
     effects = row.get("effects", {})
-    if set(effects) - {"floating", "centered", "pinned", "size", "workspace"}:
+    if set(effects) - {
+        "floating",
+        "centered",
+        "pinned",
+        "size",
+        "workspace",
+        "corner_radius",
+    }:
         raise ValueError("Unknown window rule effect")
     parts = ["window-rule {"]
     attributes = {"app_id_regex": "app-id", "title_regex": "title"}
@@ -176,6 +183,12 @@ def rule_kdl(row):
         if type(effects["floating"]) is not bool:
             raise ValueError("Invalid floating rule")
         parts.append("    open-floating " + str(effects["floating"]).lower())
+    if "corner_radius" in effects:
+        radius = effects["corner_radius"]
+        if type(radius) is not int or radius < 0:
+            raise ValueError("Corner radius must be a nonnegative integer")
+        parts.append("    geometry-corner-radius " + str(radius))
+        parts.append("    clip-to-geometry true")
     if "workspace" in effects:
         target = effects["workspace"]["target"]
         if target.get("kind") != "name":

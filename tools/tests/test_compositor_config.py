@@ -83,6 +83,32 @@ class CompositorConfigTests(unittest.TestCase):
             self.assertFalse(observed["float"])
             self.assertEqual(observed["workspace"], "8 silent")
 
+    def test_detached_panels_share_attached_corner_radius_on_both_backends(self):
+        row = next(
+            row
+            for rows in config.load()["outputs"].values()
+            for row in rows
+            if row.get("selector", {})
+            .get("title_regex", "")
+            .startswith("^Nacre Pearl ")
+        )
+        self.assertEqual(row["effects"]["corner_radius"], 18)
+        self.assertIn("rounding=18", config.rule_lua(row))
+        output = config.niri.rule_kdl(row)
+        self.assertIn("geometry-corner-radius 18", output)
+        self.assertIn("clip-to-geometry true", output)
+        plain = copy.deepcopy(row)
+        plain["effects"].pop("corner_radius")
+        self.assertNotIn("clip-to-geometry", config.niri.rule_kdl(plain))
+        for invalid in (True, -1, 1.5, "18"):
+            broken = copy.deepcopy(row)
+            broken["effects"]["corner_radius"] = invalid
+            with self.subTest(radius=invalid):
+                with self.assertRaises(ValueError):
+                    config.rule_lua(broken)
+                with self.assertRaises(ValueError):
+                    config.niri.rule_kdl(broken)
+
     def test_workspace_targets_keep_monitor_scope_and_dynamic_intent(self):
         self.assertEqual(config.workspace_target({"kind": "number", "number": 3}), 3)
         for scope, expected in (

@@ -1488,7 +1488,8 @@
           "title_regex": "^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$"
         },
         "effects": {
-          "floating": true
+          "floating": true,
+          "corner_radius": 18
         },
         "backend": {
           "hyprland": {

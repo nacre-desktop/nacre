@@ -80,4 +80,6 @@ window-rule {
 window-rule {
     match app-id="^org[.]quickshell$" title="^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$"
     open-floating true
+    geometry-corner-radius 18
+    clip-to-geometry true
 }
