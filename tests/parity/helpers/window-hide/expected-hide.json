@@ -1,0 +1,55 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {
+    "home/.cache": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/hypr-minimize": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.cache/hypr-minimize/.lock": {
+      "mode": "0o600",
+      "text": ""
+    },
+    "home/.cache/hypr-minimize/0x123": {
+      "mode": "0o600",
+      "text": "2\n"
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "clients",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "eval",
+        "hl.dispatch(hl.dsp.window.move({window=\"address:0x123\",workspace=\"special:hidden\",follow=false}))"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "notify-send",
+      "argv": [
+        "-a",
+        "Nacre Windows",
+        "-i",
+        "nacre-notifications",
+        "-t",
+        "2000",
+        "Window hidden"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

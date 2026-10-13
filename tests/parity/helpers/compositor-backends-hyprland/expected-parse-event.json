@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "type": "window-focus",
+    "windowId": "0x123"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

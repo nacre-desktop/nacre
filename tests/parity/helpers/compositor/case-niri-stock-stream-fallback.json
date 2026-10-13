@@ -1,0 +1,30 @@
+{
+  "helper": "compositor",
+  "args": [
+    "events"
+  ],
+  "stdout": "jsonl",
+  "env": {
+    "NACRE_COMPOSITOR": "niri",
+    "NIRI_SOCKET": "/case/runtime/niri.sock"
+  },
+  "sockets": [
+    {
+      "path": "runtime/niri.sock",
+      "connections": [
+        {
+          "text": "{\"Err\": \"unknown request\"}\n"
+        },
+        {
+          "text": "{\"Ok\": \"Handled\"}\n{\"WorkspacesChanged\": {\"workspaces\": [{\"id\": 101, \"idx\": 1, \"name\": null, \"output\": \"DP-1\", \"is_active\": true, \"is_focused\": false, \"is_urgent\": false, \"active_window_id\": 1}, {\"id\": 102, \"idx\": 2, \"name\": null, \"output\": \"DP-1\", \"is_active\": false, \"is_focused\": false, \"is_urgent\": false, \"active_window_id\": null}, {\"id\": 9007199254740993, \"idx\": 1, \"name\": \"coding\", \"output\": \"DP-2\", \"is_active\": true, \"is_focused\": true, \"is_urgent\": false, \"active_window_id\": 9007199254740995}, {\"id\": 202, \"idx\": 2, \"name\": null, \"output\": \"DP-2\", \"is_active\": false, \"is_focused\": false, \"is_urgent\": true, \"active_window_id\": 3}, {\"id\": 203, \"idx\": 3, \"name\": null, \"output\": \"DP-2\", \"is_active\": false, \"is_focused\": false, \"is_urgent\": false, \"active_window_id\": null}]}}\n{\"WindowsChanged\": {\"windows\": [{\"id\": 1, \"title\": \"Test 1\", \"app_id\": \"org.example.Test\", \"pid\": 123, \"workspace_id\": 101, \"is_focused\": false, \"is_floating\": false, \"is_urgent\": true, \"layout\": {\"pos_in_scrolling_layout\": [1, 1], \"tile_size\": [508, 408], \"window_size\": [500, 400], \"tile_pos_in_workspace_view\": [24, 40], \"window_offset_in_tile\": [4, 4]}, \"focus_timestamp\": null}, {\"id\": 9007199254740995, \"title\": \"Test 9007199254740995\", \"app_id\": \"org.example.Test\", \"pid\": 123, \"workspace_id\": 9007199254740993, \"is_focused\": true, \"is_floating\": true, \"is_urgent\": false, \"layout\": {\"pos_in_scrolling_layout\": null, \"tile_size\": [508, 408], \"window_size\": [500, 400], \"tile_pos_in_workspace_view\": [24, 40], \"window_offset_in_tile\": [4, 4]}, \"focus_timestamp\": null}, {\"id\": 3, \"title\": \"Test 3\", \"app_id\": \"org.example.Test\", \"pid\": 123, \"workspace_id\": 202, \"is_focused\": false, \"is_floating\": false, \"is_urgent\": true, \"layout\": {\"pos_in_scrolling_layout\": [1, 1], \"tile_size\": [508, 408], \"window_size\": [500, 400], \"tile_pos_in_workspace_view\": [24, 40], \"window_offset_in_tile\": [4, 4]}, \"focus_timestamp\": null}]}}\n{\"WorkspaceActivated\": {\"id\": 102, \"focused\": false}}\n{\"WindowFocusChanged\": {\"id\": null}}\n{\"WindowUrgencyChanged\": {\"id\": 9007199254740995, \"urgent\": true}}\n{\"WindowLayoutsChanged\": {\"changes\": [[9007199254740995, {\"pos_in_scrolling_layout\": null, \"tile_size\": [508, 408], \"window_size\": [500, 400], \"tile_pos_in_workspace_view\": [40, 60], \"window_offset_in_tile\": [4, 4]}]]}}\n{\"FutureEvent\": {\"ignored\": true}}\n{\"WindowClosed\": {\"id\": 1}}\n{\"WindowLayoutsChanged\": {\"changes\": [[1, {\"pos_in_scrolling_layout\": [1, 1], \"tile_size\": [508, 408], \"window_size\": [500, 400], \"tile_pos_in_workspace_view\": [24, 40], \"window_offset_in_tile\": [4, 4]}]]}}\n"
+        },
+        {
+          "text": "{\"Ok\": {\"Outputs\": {\"DP-1\": {\"name\": \"DP-1\", \"logical\": {\"x\": -1920, \"y\": 0, \"width\": 1920, \"height\": 1080, \"scale\": 1, \"transform\": \"Normal\"}, \"modes\": [{\"width\": 1920, \"height\": 1080, \"refresh_rate\": 120000}], \"current_mode\": 0}, \"DP-2\": {\"name\": \"DP-2\", \"logical\": {\"x\": 0, \"y\": 0, \"width\": 960, \"height\": 1706, \"scale\": 1.5, \"transform\": \"90\"}, \"modes\": [{\"width\": 2560, \"height\": 1440, \"refresh_rate\": 120000}], \"current_mode\": 0}}}}\n"
+        },
+        {
+          "text": "{\"Ok\": {\"Outputs\": {\"DP-1\": {\"name\": \"DP-1\", \"logical\": {\"x\": -1920, \"y\": 0, \"width\": 1920, \"height\": 1080, \"scale\": 1, \"transform\": \"Normal\"}, \"modes\": [{\"width\": 1920, \"height\": 1080, \"refresh_rate\": 120000}], \"current_mode\": 0}, \"DP-2\": {\"name\": \"DP-2\", \"logical\": {\"x\": 0, \"y\": 0, \"width\": 960, \"height\": 1706, \"scale\": 1.5, \"transform\": \"90\"}, \"modes\": [{\"width\": 2560, \"height\": 1440, \"refresh_rate\": 120000}], \"current_mode\": 0}}}}\n"
+        }
+      ]
+    }
+  ]
+}

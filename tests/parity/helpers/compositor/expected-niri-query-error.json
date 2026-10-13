@@ -1,0 +1,13 @@
+{
+  "stdout": "",
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [
+    {
+      "socket": "runtime/niri.sock",
+      "message": "\"Outputs\"\n"
+    }
+  ]
+}

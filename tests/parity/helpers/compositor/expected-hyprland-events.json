@@ -1,0 +1,64 @@
+{
+  "stdout": [
+    {
+      "type": "snapshot",
+      "monitors": [],
+      "workspaces": [],
+      "windows": [],
+      "activeWindow": {}
+    },
+    {
+      "type": "window-focus",
+      "windowId": "0x123"
+    },
+    {
+      "type": "workspace-monitor-change"
+    },
+    {
+      "type": "other"
+    }
+  ],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "monitors",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "workspaces",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "clients",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "activewindow",
+        "-j"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": [
+    {
+      "socket": "runtime/hypr/fixture/.socket2.sock",
+      "message": ""
+    }
+  ]
+}

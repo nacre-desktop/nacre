@@ -1,0 +1,49 @@
+{
+  "stdout": [
+    {
+      "address": "0x123",
+      "title": "Demo",
+      "class": "demo",
+      "workspace": {
+        "id": 2
+      },
+      "at": [
+        10,
+        20
+      ],
+      "size": [
+        800,
+        600
+      ],
+      "monitor": 0,
+      "windowId": "0x123",
+      "id": "0x123",
+      "appId": "demo",
+      "workspaceId": 2,
+      "hidden": false,
+      "pinned": false,
+      "fullscreenMode": 0,
+      "outputId": 0,
+      "geometry": {
+        "x": 10,
+        "y": 20,
+        "width": 800,
+        "height": 600
+      }
+    }
+  ],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "clients",
+        "-j"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

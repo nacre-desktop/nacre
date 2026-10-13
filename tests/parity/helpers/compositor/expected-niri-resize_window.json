@@ -1,0 +1,17 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [
+    {
+      "socket": "runtime/niri.sock",
+      "message": "{\"Action\": {\"SetWindowWidth\": {\"id\": 123, \"change\": {\"SetFixed\": 800}}}}\n"
+    },
+    {
+      "socket": "runtime/niri.sock",
+      "message": "{\"Action\": {\"SetWindowHeight\": {\"id\": 123, \"change\": {\"SetFixed\": 600}}}}\n"
+    }
+  ]
+}

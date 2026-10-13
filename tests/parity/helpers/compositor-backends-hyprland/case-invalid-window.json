@@ -1,0 +1,8 @@
+{
+  "helper": "compositor-backends-hyprland",
+  "args": [
+    "Backend.valid_window_id",
+    "{\"args\": [\"bad\\nwindow\"], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/compositor_backends/hyprland.py"
+}

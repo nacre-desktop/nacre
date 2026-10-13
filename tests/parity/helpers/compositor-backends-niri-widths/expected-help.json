@@ -1,0 +1,8 @@
+{
+  "stdout": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\n\nRelax advisory X11 minimum widths only for ordinary Niri tiled windows. New\nconstrained windows receive one proportional opening-width correction. Later\ngeometry, application zoom, maximum sizes and height hints stay intact. The\nobserver starts only from main(), never when imported.\n\noptions:\n  -h, --help            show this help message and exit\n  --check-session\n  --opening-width OPENING_WIDTH\n                        Initial width percentage for newly constrained tiled\n                        X11 windows\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

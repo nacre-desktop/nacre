@@ -1,0 +1,13 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [
+    {
+      "socket": "runtime/niri.sock",
+      "message": "{\"Action\": {\"PowerOffMonitors\": {}}}\n"
+    }
+  ]
+}

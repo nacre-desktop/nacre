@@ -1,0 +1,55 @@
+{
+  "stdout": {
+    "address": "0x123",
+    "x": 10,
+    "y": 20,
+    "width": 800,
+    "height": 600
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "clients",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "eval",
+        "hl.dispatch(hl.dsp.window.float({window=\"address:0x123\",action=\"enable\"}))"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "eval",
+        "hl.dispatch(hl.dsp.window.resize({x=800,y=600,relative=false,window=\"address:0x123\"}))"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "eval",
+        "hl.dispatch(hl.dsp.window.move({window=\"address:0x123\",x=10,y=20,relative=false}))"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "clients",
+        "-j"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

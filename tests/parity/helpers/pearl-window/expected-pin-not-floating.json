@@ -1,0 +1,19 @@
+{
+  "stdout": {
+    "error": "Float the window before pinning it"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "clients",
+        "-j"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

@@ -1,0 +1,51 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {
+    "home/.cache": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/hypr-minimize": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.cache/hypr-minimize/.lock": {
+      "mode": "0o600",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "clients",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "hyprctl",
+      "argv": [
+        "activeworkspace",
+        "-j"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "notify-send",
+      "argv": [
+        "-a",
+        "Nacre Windows",
+        "-i",
+        "nacre-notifications",
+        "-t",
+        "2000",
+        "No hidden windows to restore"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

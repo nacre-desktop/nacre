@@ -1,0 +1,8 @@
+{
+  "helper": "compositor-backends-hyprland-config",
+  "args": [
+    "lua_value",
+    "{\"args\": [{\"key\": \"a\\\"b\\n\", \"enabled\": true}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/compositor_backends/hyprland_config.py"
+}

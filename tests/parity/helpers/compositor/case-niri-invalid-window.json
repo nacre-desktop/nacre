@@ -1,0 +1,20 @@
+{
+  "helper": "compositor",
+  "args": [
+    "action",
+    "focus_window",
+    "--window",
+    "bad"
+  ],
+  "stdout": "text",
+  "env": {
+    "NACRE_COMPOSITOR": "niri",
+    "NIRI_SOCKET": "/case/runtime/niri.sock"
+  },
+  "sockets": [
+    {
+      "path": "runtime/niri.sock",
+      "connections": []
+    }
+  ]
+}

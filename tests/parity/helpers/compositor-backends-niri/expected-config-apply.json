@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "Operation is not supported by the niri backend; check compositor capabilities",
+    "type": "RuntimeError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

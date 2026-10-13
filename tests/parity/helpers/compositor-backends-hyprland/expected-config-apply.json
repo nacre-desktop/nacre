@@ -1,0 +1,21 @@
+{
+  "stdout": {
+    "code": 0,
+    "stdout": "ok\n",
+    "stderr": ""
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "hyprctl",
+      "argv": [
+        "eval",
+        "hl.config({ general = { gaps_in = 4 } })"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

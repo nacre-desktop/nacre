@@ -1,0 +1,27 @@
+{
+  "stdout": {
+    "backend": "niri",
+    "capabilities": {
+      "stableWorkspaceIndices": false,
+      "globalWorkspaces": false,
+      "perOutputWorkspaces": true,
+      "scrollingLayout": true,
+      "floatingPlacement": true,
+      "pinWindow": false,
+      "windowCapture": false,
+      "cursorPosition": false,
+      "nativePanelDrag": false,
+      "windowHide": false,
+      "fullscreenState": false,
+      "shortcutRelease": false,
+      "desktopOptions": [],
+      "monitorConfiguration": false,
+      "nightLightController": false
+    }
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

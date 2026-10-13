@@ -1,0 +1,8 @@
+{
+  "helper": "compositor-backends-niri-config",
+  "args": [
+    "workspace_args",
+    "{\"args\": [{\"kind\": \"number\", \"number\": 2}], \"kwargs\": {}}"
+  ],
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/compositor_backends/niri_config.py"
+}

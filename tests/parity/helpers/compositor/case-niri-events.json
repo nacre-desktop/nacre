@@ -1,0 +1,24 @@
+{
+  "helper": "compositor",
+  "args": [
+    "events"
+  ],
+  "stdout": "jsonl",
+  "env": {
+    "NACRE_COMPOSITOR": "niri",
+    "NIRI_SOCKET": "/case/runtime/niri.sock"
+  },
+  "sockets": [
+    {
+      "path": "runtime/niri.sock",
+      "connections": [
+        {
+          "text": "{\"Ok\": \"Handled\"}\n"
+        },
+        {
+          "text": "{\"Ok\": {\"Outputs\": {}}}\n"
+        }
+      ]
+    }
+  ]
+}

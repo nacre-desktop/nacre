@@ -1,0 +1,8 @@
+{
+  "helper": "compositor-backends-niri-widths",
+  "args": [
+    "--help"
+  ],
+  "stdout": "text",
+  "command": "python3 nacre/shell-tools/compositor_backends/niri_widths.py"
+}
