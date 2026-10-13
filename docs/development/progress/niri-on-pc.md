@@ -3,12 +3,23 @@
 Updated: 2026-10-13. Status: first real Nacre/niri login confirmed. Live scale and
 touchpad/two-/three-finger direction fixes applied and confirmed by the operator.
 Return-to-Hyprland, lock/idle/night light and full acceptance remain pending.
-Branch: `feature/niri-preview` (follow-up PR18; original PR7 merged). Own worktree:
-`nacre-niri-on-pc` under the normal private task-worktree root. One open PR for session/tooling/docs work; backend changes
+Branch: `feature/niri-preview` (historical PR18; direct integration into main under
+the operator's updated 2026-10-13 policy). Original PR7 merged. Own worktree:
+`nacre-niri-on-pc` under the normal private task-worktree root. No new/updated PRs;
+backend changes
 belong to the separate `feature/niri-backend` task.
 
 ## Done
 
+- Operator requests full-width ordinary apps but half-width Nacre AI launcher and
+  chat/app windows. Added scoped native opening rules for both actual AI classes;
+  fresh dashboard/task probes measure 932 logical pixels. Added native Super+R
+  width cycling (one-third, half, two-thirds, full); existing fine/mouse resizing
+  stays available. AI/profile access policy and launcher scripts are unchanged.
+- Published prior live fixes at `6dd866e`; local 726 tests and exact-head desktop
+  CI `38369266679` pass. Later AI-width additions need final integrated validation.
+  Backend gradient is now on main `220745d` with passing CI. Redock task owns its
+  controlled source reload and receipt; this task keeps host config separate.
 - Confirmed actual niri UWSM compositor and Nacre shell are active after greeter
   login. Imported saved host scale/natural-scroll and native overview/wheel aliases
   through live config reload. Operator confirms scale and scroll directions.
@@ -89,8 +100,9 @@ belong to the separate `feature/niri-backend` task.
 ## Next
 
 1. Keep the current niri desktop, detached dashboard and parallel chats running.
-2. Finish exact-revision validation/publish current fixes. Operator renewed GitHub
-   authentication; normal CLI API now succeeds. No account/auth changes by this task.
+2. Commit/rebase on the latest default main, validate and push a normal fast-forward
+   main update under the operator's direct-publication policy; monitor CI. No PR
+   creation/update or bulk existing-PR merging. Operator renewed GitHub auth.
 3. Coordinate
    staged tool/QML updates with the separate redocking task. Do not restart the shell
    or overwrite its staged tools independently.

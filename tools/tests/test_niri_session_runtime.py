@@ -41,6 +41,9 @@ class NiriRuntimeTests(unittest.TestCase):
         self.assertIn("Super+M { maximize-column; }", text)
         self.assertIn("gaps 12", text)
         self.assertIn("focus-ring { width 1; }", text)
+        self.assertIn('match app-id="^nacre-ai-(dashboard|task)$"', text)
+        self.assertIn("default-column-width { proportion 0.5; }", text)
+        self.assertIn("Super+R { switch-preset-column-width; }", text)
         self.assertNotIn(".config/hypr", text)
         self.assertNotIn(
             "natural-scroll", runtime.host_preferences({"naturalScroll": False})

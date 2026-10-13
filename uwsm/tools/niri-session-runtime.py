@@ -27,6 +27,9 @@ def host_preferences(desktop):
     text = (
         "layout {\n    gaps " + str(gap) + "\n"
         "    default-column-width { proportion 1.0; }\n"
+        "    preset-column-widths {\n"
+        "        proportion 0.33333\n        proportion 0.5\n"
+        "        proportion 0.66667\n        proportion 1.0\n    }\n"
         "    focus-ring { width " + str(border) + "; }\n}\n"
     )
     text += "input {\n    touchpad {\n"
@@ -48,9 +51,13 @@ def host_preferences(desktop):
             raise ValueError("Invalid saved display scale")
         text += "output " + json.dumps(name) + " {\n    scale " + str(scale) + "\n}\n"
     text += (
+        "window-rule {\n"
+        '    match app-id="^nacre-ai-(dashboard|task)$"\n'
+        "    default-column-width { proportion 0.5; }\n}\n"
         "binds {\n"
         "    Super+Ctrl+Tab { toggle-overview; }\n"
         "    Super+M { maximize-column; }\n"
+        "    Super+R { switch-preset-column-width; }\n"
         "    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n"
         "    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n"
         "}\n"
