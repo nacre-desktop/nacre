@@ -7,7 +7,7 @@ import Quickshell.Io
 Singleton {
     id: root
     property var preferences: ({
-            tabs: ["today", "weather", "media", "system", "focus"],
+            tabs: ["today", "media", "weather", "system"],
             lyrics: true,
             albumPalette: true,
             focusMinutes: 25
@@ -34,8 +34,67 @@ Singleton {
     property bool focusWriteFailed: false
     property bool enablingDnd: false
     readonly property bool busy: worker.running
-    readonly property var tabs: preferences.tabs || ["today", "weather", "media", "system", "focus"]
+    property var enabledExtras: []
+    property var extraOrder: NacreDashboardRegistry.extras.map(page => page.id)
+    property bool extrasReady: false
+    readonly property var coreTabs: {
+        const saved = preferences.tabs || [];
+        const legacy = JSON.stringify(saved) === JSON.stringify(["today", "weather", "media", "system", "focus"]);
+        const core = legacy || !saved.length ? NacreDashboardRegistry.core : saved.filter(id => NacreDashboardRegistry.core.includes(id));
+        return core.length ? core : ["today"];
+    }
+    readonly property var tabs: [...coreTabs, ...extraOrder.filter(id => enabledExtras.includes(id))]
+    function restoreExtras(text) {
+        try {
+            const state = JSON.parse(text), known = NacreDashboardRegistry.extras.map(page => page.id);
+            if (state.version !== 1 || !Array.isArray(state.enabled) || !Array.isArray(state.order))
+                throw new Error();
+            enabledExtras = [...new Set(state.enabled.filter(id => known.includes(id)))];
+            extraOrder = [...new Set([...state.order.filter(id => known.includes(id)), ...known])];
+            extrasReady = true;
+        } catch (error) {
+            message = NacreI18n.tr("dashboard.state.extras-read-error", "Optional pages could not be read.");
+        }
+    }
+    function saveExtras() {
+        if (extrasReady)
+            extraFile.setText(JSON.stringify({
+                version: 1,
+                enabled: enabledExtras,
+                order: extraOrder
+            }));
+    }
+    function toggleExtra(id) {
+        if (!NacreDashboardRegistry.entry(id) || !extrasReady)
+            return;
+        enabledExtras = enabledExtras.includes(id) ? enabledExtras.filter(value => value !== id) : [...enabledExtras, id];
+        saveExtras();
+    }
+    function reorderExtra(id, delta) {
+        const items = [...extraOrder], before = items.indexOf(id), after = Math.max(0, Math.min(items.length - 1, before + delta));
+        if (before < 0 || before === after)
+            return;
+        items.splice(before, 1);
+        items.splice(after, 0, id);
+        extraOrder = items;
+        saveExtras();
+    }
+    FileView {
+        id: extraFile
+        path: NacrePaths.config + "/dashboard-extras.json"
+        atomicWrites: true
+        watchChanges: true
+        printErrors: false
+        onLoaded: root.restoreExtras(text())
+        onFileChanged: reload()
+        onLoadFailed: error => {
+            if (error === FileViewError.FileNotFound)
+                root.extrasReady = true;
+        }
+        onSaveFailed: root.message = NacreI18n.tr("dashboard.state.extras-save-error", "Optional pages could not be saved.")
+    }
     readonly property bool shown: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard))
+    readonly property bool brainShown: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && view.dashboard && view.dashboardTab === 11)
     readonly property bool focusShown: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard && view.dashboardTab === 4))
     readonly property bool running: focusState.status === "running"
     readonly property real remaining: running ? Math.max(0, (focusState.deadline || 0) - now) : focusState.status === "paused" ? focusState.remaining || 0 : 0
@@ -55,7 +114,7 @@ Singleton {
     }
     function refresh() {
         if (!worker.running && !queue.length)
-            request(focusShown ? "context" : "read");
+            request(focusShown || brainShown ? "context" : "read");
     }
     function saveMany(values) {
         preferences = Object.assign({}, preferences, values);
@@ -67,7 +126,7 @@ Singleton {
         });
     }
     function reorder(name, delta) {
-        const values = [...tabs], index = values.indexOf(name), nextIndex = Math.max(0, Math.min(values.length - 1, index + delta));
+        const values = [...coreTabs], index = values.indexOf(name), nextIndex = Math.max(0, Math.min(values.length - 1, index + delta));
         if (index < 0 || ![-1, 1].includes(delta))
             return;
         values.splice(index, 1);
@@ -75,7 +134,7 @@ Singleton {
         save("tabs", values);
     }
     function toggleTab(name) {
-        const values = tabs.includes(name) ? tabs.filter(value => value !== name) : [...tabs, name];
+        const values = coreTabs.includes(name) ? coreTabs.filter(value => value !== name) : [...coreTabs, name];
         if (values.length)
             save("tabs", values);
     }
@@ -165,6 +224,8 @@ Singleton {
     }
     onShownChanged: if (shown)
         Qt.callLater(root.refresh)
+    onBrainShownChanged: if (brainShown)
+        request("context")
     onFocusShownChanged: if (focusShown)
         request("context")
     Component.onCompleted: refresh()

@@ -38,9 +38,21 @@ class DashboardAssemblyTests(unittest.TestCase):
                     SHELL / "modules/dashboard" / (name + ".qml"),
                     target / (name + ".qml"),
                 )
-            (fixtures / "NacreDashboardState.qml").write_text(
-                'pragma Singleton\nimport QtQuick\nQtObject {property var tabs:["today","weather","media","system","focus"]}'
+            stage_qml(
+                SHELL / "widgets/NacreTextField.qml", fixtures / "NacreTextField.qml"
             )
+            stage_qml(
+                SHELL / "services/NacreDashboardRegistry.qml",
+                fixtures / "NacreDashboardRegistry.qml",
+            )
+            (fixtures / "NacreDashboardState.qml").write_text(
+                'pragma Singleton\nimport QtQuick\nQtObject {property var tabs:["today","weather","media","system","focus"];property var preferences:({focusMinutes:25});property var focusState:({});property real progress:0;property bool running:false;property string timerText:"25:00";property string message:"";function start(value){}function end(value){}function request(value){} }'
+            )
+            (fixtures / "DesktopExtras.qml").write_text(
+                'pragma Singleton\nimport QtQuick\nQtObject {property var busy:({});property string captured:"";property string message:"";function request(action,data){}}'
+            )
+            with (fixtures / "qmldir").open("a") as manifest:
+                manifest.write("\nsingleton DesktopExtras 1.0 DesktopExtras.qml\n")
             (fixtures / "NacrePanelState.qml").write_text(
                 "pragma Singleton\nimport QtQuick\nQtObject {property bool hidden:false;function openSettings(value){}}"
             )

@@ -2,47 +2,43 @@ import QtQuick
 import qs.widgets
 import qs.services
 
-Item {
+Flickable {
     id: root
     property int currentIndex: 0
     property var order: NacreDashboardState.tabs
-    readonly property var names: ["today", "weather", "media", "system", "focus"]
-    readonly property var labels: ["Dashboard", "Weather", "Media", "System", "Focus"]
-    readonly property var icons: ["dashboard", "partly_cloudy_day", "queue_music", "speed", "timer"]
+    readonly property var names: NacreDashboardRegistry.names
     readonly property int selectedSlot: Math.max(0, order.indexOf(names[currentIndex]))
+    readonly property real slotWidth: Math.max(58, Math.min(170, width / Math.min(6, order.length)))
     signal selected(int index)
     implicitHeight: 44
+    contentWidth: Math.max(width, order.length * slotWidth)
+    contentHeight: height
+    clip: true
+    boundsBehavior: Flickable.StopAtBounds
+    flickableDirection: Flickable.HorizontalFlick
     function step(delta) {
         const index = Math.max(0, Math.min(order.length - 1, selectedSlot + delta));
         selected(names.indexOf(order[index]));
     }
+    function revealSelection() {
+        const left = selectedSlot * slotWidth, right = left + slotWidth;
+        if (left < contentX)
+            contentX = left;
+        else if (right > contentX + width)
+            contentX = Math.max(0, right - width);
+    }
+    onSelectedSlotChanged: revealSelection()
+    onWidthChanged: revealSelection()
     Rectangle {
         objectName: "dashboardSelection"
-        x: root.selectedSlot * root.width / root.order.length + (root.width / root.order.length - width) / 2
-        y: 34
+        x: root.selectedSlot * root.slotWidth + (root.slotWidth - width) / 2
+        y: 36
         width: 7
         height: 7
         radius: 3.5
-        color: "#f2efee"
-        gradient: Gradient {
-            GradientStop {
-                position: 0
-                color: "#fffdfb"
-            }
-            GradientStop {
-                position: 1
-                color: Qt.tint("#d0d1d6", Qt.alpha(NacreTokens.orientSecondary, .22))
-            }
-        }
-        Behavior on x {
-            NumberAnimation {
-                duration: NacreTokens.motionEnabled ? 180 : 0
-                easing.type: Easing.OutCubic
-            }
-        }
+        color: NacreTokens.accent
     }
     Row {
-        anchors.fill: parent
         Repeater {
             model: root.order
             delegate: Item {
@@ -50,26 +46,26 @@ Item {
                 required property int index
                 readonly property int pageIndex: root.names.indexOf(modelData)
                 objectName: "dashboardTab" + pageIndex
-                width: root.width / root.order.length
+                width: root.slotWidth
                 height: root.height
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: 6
-                    spacing: 8
+                    spacing: 7
                     NacreIcon {
-                        text: root.icons[parent.parent.pageIndex]
+                        text: NacreDashboardRegistry.icon(parent.parent.modelData)
                         font.pointSize: 14
                         color: root.currentIndex === parent.parent.pageIndex ? NacreTokens.accent : NacreTokens.mutedInk
                     }
                     NacreText {
-                        visible: root.width / root.order.length >= 94
-                        text: root.labels[parent.parent.pageIndex]
-                        font.pointSize: 11
+                        visible: root.slotWidth >= 94
+                        text: NacreDashboardRegistry.title(parent.parent.modelData)
+                        font.pointSize: 10
                         color: root.currentIndex === parent.parent.pageIndex ? NacreTokens.ink : NacreTokens.mutedInk
                     }
                 }
                 NacreInteraction {
-                    accessibleName: root.labels[parent.pageIndex]
+                    accessibleName: NacreDashboardRegistry.title(parent.modelData)
                     function onClicked() {
                         root.selected(parent.pageIndex);
                     }

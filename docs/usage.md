@@ -196,3 +196,18 @@ deadline, a window that resists closing can be forcibly terminated; save work fi
 | Super + Ctrl + Shift + Q | Force close the window (opt-in) |
 
 <!-- END GENERATED KEYBINDINGS -->
+
+### Optional dashboard pages
+
+The default dashboard tabs are Dashboard, Media, Weather and System. Open the
+dashboard's customize button or Settings → Workflows → Dashboard extras to enable
+Focus, Notifications, Clipboard, Devices, Network, AI usage, Screenshots or Brain.
+Extras start off and load only while selected. Both places share the same order.
+Number keys 1–9 and 0 select the first ten visible tabs; Ctrl+Tab cycles through
+all enabled pages. The tab strip scrolls horizontally when necessary.
+
+System CPU process ranking uses recent counter changes among the existing
+helper's memory-heavy process candidates. GPU readings depend on driver support;
+Intel uses shared memory, while supported AMD/NVIDIA devices show VRAM. Screenshot
+delete moves the chosen capture to the trash. AI usage uses the existing
+provider-supported reports; Claude's cached limits appear after a response.

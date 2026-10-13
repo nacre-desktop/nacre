@@ -25,7 +25,7 @@ NacreSurface {
     property bool hostActive: true
     readonly property real viewportWidth: parent?.width ?? 1200
     readonly property real viewportHeight: parent?.height ?? 1000
-    readonly property var names: ["today", "weather", "media", "system", "focus"]
+    readonly property var names: NacreDashboardRegistry.names
     readonly property int currentIndex: names[visibilities.dashboardTab] && NacreDashboardState.tabs.includes(names[visibilities.dashboardTab]) ? visibilities.dashboardTab : Math.max(0, names.indexOf(NacreDashboardState.tabs[0]))
     readonly property bool updating: hostActive && visibilities.dashboard && visible && (detached || NacrePanelState.hidden !== true)
     readonly property real contentWidth: Math.max(0, Math.min(detached ? viewportWidth : viewportWidth - 48, 984))
@@ -43,7 +43,15 @@ NacreSurface {
         if (visibilities.dashboardTab !== currentIndex)
             visibilities.dashboardTab = currentIndex;
     }
-    onCurrentIndexChanged: Qt.callLater(syncIndex)
+    function focusPage() {
+        if (!root.updating || root.customizing)
+            return;
+        (root.currentIndex >= 4 ? extra : page).forceActiveFocus();
+    }
+    onCurrentIndexChanged: {
+        Qt.callLater(syncIndex);
+        Qt.callLater(focusPage);
+    }
     function select(index) {
         if (!names[index] || !NacreDashboardState.tabs.includes(names[index]))
             return;
@@ -92,11 +100,44 @@ NacreSurface {
             id: page
             objectName: "dashboardPage"
             asynchronous: true
-            active: root.hostActive && (root.detached || root.visibilities.dashboard || root.presentedHeight > 0) && (root.detached || NacrePanelState.hidden !== true)
             width: parent.width
             height: parent.height
             focus: true
-            sourceComponent: root.customizing ? customization : [today, weather, media, system, focusPage][root.currentIndex]
+            onLoaded: Qt.callLater(root.focusPage)
+            sourceComponent: root.customizing ? customization : root.currentIndex < 4 ? [today, weather, media, system][root.currentIndex] : null
+            active: root.currentIndex < 4 || root.customizing ? root.hostActive && (root.detached || root.visibilities.dashboard || root.presentedHeight > 0) && (root.detached || NacrePanelState.hidden !== true) : false
+        }
+    }
+    Loader {
+        id: extra
+        objectName: "dashboardExtraPage"
+        x: stage.x
+        y: stage.y
+        width: stage.width
+        height: stage.height
+        asynchronous: true
+        active: root.updating && !root.customizing && root.currentIndex >= 4
+        focus: active
+        function loadPage() {
+            const descriptor = NacreDashboardRegistry.entry(root.names[root.currentIndex]);
+            if (!active || !descriptor) {
+                source = "";
+                return;
+            }
+            setSource(Qt.resolvedUrl("extras/" + descriptor.page), {
+                shouldUpdate: root.updating
+            });
+        }
+        onActiveChanged: loadPage()
+        Connections {
+            target: root
+            function onCurrentIndexChanged() {
+                extra.loadPage();
+            }
+        }
+        onLoaded: {
+            item.shouldUpdate = Qt.binding(() => root.updating);
+            Qt.callLater(root.focusPage);
         }
     }
     ParallelAnimation {
@@ -152,12 +193,6 @@ NacreSurface {
         }
     }
     Component {
-        id: focusPage
-        NacreFocusPage {
-            shouldUpdate: root.updating
-        }
-    }
-    Component {
         id: customization
         NacreDashboardCustomize {}
     }
@@ -170,8 +205,12 @@ NacreSurface {
         }
     }
     Keys.onPressed: event => {
-        if (event.key >= Qt.Key_1 && event.key <= Qt.Key_5 && !event.modifiers && !root.customizing) {
-            const name = NacreDashboardState.tabs[event.key - Qt.Key_1];
+        if (!root.customizing && (event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_Tab) {
+            const order = NacreDashboardState.tabs, before = order.indexOf(root.names[root.currentIndex]), delta = event.modifiers & Qt.ShiftModifier ? -1 : 1;
+            root.select(root.names.indexOf(order[(before + delta + order.length) % order.length]));
+            event.accepted = true;
+        } else if ((event.key >= Qt.Key_1 && event.key <= Qt.Key_9 || event.key === Qt.Key_0) && !event.modifiers && !root.customizing) {
+            const name = NacreDashboardState.tabs[event.key === Qt.Key_0 ? 9 : event.key - Qt.Key_1];
             if (name)
                 root.select(root.names.indexOf(name));
             event.accepted = true;

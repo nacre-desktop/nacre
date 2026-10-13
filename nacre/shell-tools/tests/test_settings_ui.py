@@ -76,6 +76,7 @@ class SettingsUITests(unittest.TestCase):
             with (target / "fixtures/qmldir").open("a") as manifest:
                 manifest.write("\nNacreScrollBar 1.0 NacreScrollBar.qml\n")
             services = {
+                "NacreDashboardState": 'property var enabledExtras:[];property var extraOrder:["focus","notifications","clipboard","devices","network","ai-usage","screenshots","brain"];function toggleExtra(id){enabledExtras=enabledExtras.includes(id)?enabledExtras.filter(x=>x!==id):[...enabledExtras,id]}function reorderExtra(id,delta){const items=[...extraOrder],index=items.indexOf(id),next=Math.max(0,Math.min(items.length-1,index+delta));items.splice(index,1);items.splice(next,0,id);extraOrder=items}',
                 "NacreCompositor": "property var capabilities:({})",
                 "NacrePanelState": 'property string settingsPage:"appearance";function openSettings(page){settingsPage=page}',
                 "TimezoneSettings": 'property var status:({timezone:"UTC",localTime:"12:34",automatic:false,installed:false});property string message:"";property bool busy:false;property var changes:[];function refresh(){} function change(kind,value){changes=[...changes,[kind,value]]}',
@@ -129,6 +130,14 @@ class SettingsUITests(unittest.TestCase):
             )
             shutil.copy2(
                 ROOT / "tests/qml/tst_settings.qml", target / "tst_settings.qml"
+            )
+            stage_qml(
+                ROOT.parent / "shell/services/NacreDashboardRegistry.qml",
+                target / "fixtures/NacreDashboardRegistry.qml",
+            )
+            stage_qml(
+                ROOT.parent / "shell/modules/dashboard/NacreDashboardExtrasOptions.qml",
+                target / "NacreDashboardExtrasOptions.qml",
             )
             install_i18n(target / "fixtures")
             result = run_qml(

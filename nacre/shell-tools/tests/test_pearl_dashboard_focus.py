@@ -86,6 +86,10 @@ TestCase {
  }
 }
 """)
+            stage_qml(
+                SHELL / "services/NacreDashboardRegistry.qml",
+                fixtures / "NacreDashboardRegistry.qml",
+            )
             install_i18n(fixtures)
             result = run_qml(
                 [str(runner), "-input", str(target), "-o", "-,txt"],

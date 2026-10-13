@@ -315,13 +315,16 @@ def audit_dashboard():
         definitions = {
             "NacrePaths": 'property string tools:"/fixture/tools"',
             "NacreDashboardState": 'property var home:({events:[]});property var focusState:({status:"idle"});property bool running:false;property real progress:.3;property string timerText:"24:12";property string message:"";property var brain:({available:false,nodes:[],links:[]});property var preferences:({albumPalette:true});function save(k,v){}function start(value){}function end(value){}function request(value){}function openNote(value){}',
-            "NacreDashboardSystem": 'property var disks:[];property var processes:[];property var network:[];property string message:"";function end(pid,start){}',
+            "NacreDashboardSystem": 'property var filesystems:[];property var cpuByPid:({});property string interfaceName:"";property var disks:[];property var processes:[];property var network:[];property string message:"";function end(pid,start){}',
             "NacreWeather": 'property var reading:({hours:[],days:[],code:0});property real temperature:22;property string displayTemperature:"22°C";property string description:NacreI18n.option("weather-description","Clear");property string icon:"sunny";property string location:"Fixture city";property bool stale:false;property bool busy:false;property string detail:"";property string range:"";property string error:"";function degrees(value){return value===undefined?"—":value+"°C"}function reload(){}',
             "NacreWallpapers": 'property string poster:"";property string displayPreview:"";property string displayPath:"";property bool displayDynamic:false;property bool displayAnimated:false;property bool rotationReady:true;property bool themeBusy:false;property var preferences:({palettePersonality:"natural"});function previousWallpaper(){}function advanceRotation(value){}function toggleMotion(){}',
             "WallpaperPlayback": "property bool paused:false;property bool sleeping:false;property bool locked:false;property bool batteryPaused:false",
             "NacreColorsApp": "function open(){}",
             "NacrePanelState": "function openMode(value){}",
-            "Updates": "property int count:8",
+            "Updates": 'property int count:8;property real checked:0;property string message:"";function refresh(){}',
+            "NacreNetwork": 'property var active:null;property string wifiInterface:""',
+            "NacreControlTools": "property var data:({});function refresh(){}",
+            "DesktopExtras": 'property var busy:({});property string message:"";property string captured:"";function request(kind,payload){}',
             "Environment": 'function env(key){return "fixture-user"}function execDetached(args){}',
             "AppLaunch": "function run(args){}",
         }

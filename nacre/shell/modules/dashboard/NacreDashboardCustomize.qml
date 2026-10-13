@@ -30,7 +30,7 @@ Flickable {
             color: NacreTokens.mutedInk
         }
         Repeater {
-            model: ["today", "weather", "media", "system", "focus"]
+            model: NacreDashboardRegistry.core
             Row {
                 required property string modelData
                 width: content.width
@@ -44,16 +44,23 @@ Flickable {
                 ActionButton {
                     text: NacreI18n.tr("dashboard.dashboard-customize.text.earlier", "Earlier")
                     compact: true
-                    enabled: NacreDashboardState.tabs.indexOf(parent.modelData) > 0
+                    enabled: NacreDashboardState.coreTabs.indexOf(parent.modelData) > 0
                     onClicked: NacreDashboardState.reorder(parent.modelData, -1)
                 }
                 ActionButton {
                     text: NacreI18n.tr("dashboard.dashboard-customize.text.later", "Later")
                     compact: true
-                    enabled: NacreDashboardState.tabs.includes(parent.modelData) && NacreDashboardState.tabs.indexOf(parent.modelData) < NacreDashboardState.tabs.length - 1
+                    enabled: NacreDashboardState.tabs.includes(parent.modelData) && NacreDashboardState.coreTabs.indexOf(parent.modelData) < NacreDashboardState.coreTabs.length - 1
                     onClicked: NacreDashboardState.reorder(parent.modelData, 1)
                 }
             }
+        }
+        NacreText {
+            text: NacreI18n.tr("dashboard.customize.extras", "Optional pages")
+            font.pointSize: 14
+        }
+        NacreDashboardExtrasOptions {
+            width: parent.width
         }
         Row {
             spacing: 10

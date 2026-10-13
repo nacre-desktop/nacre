@@ -55,6 +55,29 @@ TestCase {
             setting: "dnd"
         }
     }
+    Component {
+        id: extraOptions
+        NacreDashboardExtrasOptions {
+            width: 650
+        }
+    }
+    function test_dashboard_extras_share_toggle_and_order_state() {
+        NacreDashboardState.enabledExtras = [];
+        NacreDashboardState.extraOrder = ["focus", "notifications", "clipboard", "devices", "network", "ai-usage", "screenshots", "brain"];
+        const first = createTemporaryObject(extraOptions, test);
+        const second = createTemporaryObject(extraOptions, test, {
+            y: 400
+        });
+        wait(30);
+        mouseClick(findChild(first, "dashboardExtraToggle-focus"), 30, 18);
+        verify(NacreDashboardState.enabledExtras.includes("focus"));
+        verify(findChild(second, "dashboardExtraToggle-focus").selected);
+        mouseClick(findChild(second, "dashboardExtraLater-focus"), 30, 18);
+        compare(NacreDashboardState.extraOrder[1], "focus");
+        wait(30);
+        mouseClick(findChild(first, "dashboardExtraToggle-focus"), 30, 18);
+        compare(findChild(second, "dashboardExtraToggle-focus").selected, false);
+    }
     function test_shared_section_bounds_collapse_and_user_only_toggle() {
         const section = createTemporaryObject(sharedSection, test);
         wait(30);

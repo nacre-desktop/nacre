@@ -41,7 +41,10 @@ TestCase {
             compare(navigation.currentIndex, index);
             tryCompare(marker, "x", index * navigation.width / 5 + (navigation.width / 5 - marker.width) / 2);
             compare(view.visibilities.dashboardPinned, false);
-            compare(loader.item.pageName, name);
+            if (index < 4)
+                tryVerify(() => loader.item?.pageName === name);
+            else
+                tryVerify(() => !!findChild(view, "dashboardExtraPage").item);
         }
         mouseClick(findChild(view, "dashboardTab0"), 35, 15);
         compare(view.visibilities.dashboardPinned, false);
@@ -86,7 +89,7 @@ TestCase {
         view.visibilities.dashboardTab = 4;
         wait(30);
         compare(view.currentIndex, 4);
-        compare(findChild(view, "dashboardPage").item.pageName, "NacreFocusPage");
+        tryVerify(() => !!findChild(view, "dashboardExtraPage").item);
         NacreDashboardState.tabs = ["system", "today"];
         wait(30);
         compare(view.currentIndex, 3);
@@ -111,6 +114,22 @@ TestCase {
         compare(loader.item, null);
         view.hostActive = true;
         tryVerify(() => !!loader.item);
+    }
+    function test_disabled_extra_releases_content_and_overflow_stays_reachable() {
+        const view = createTemporaryObject(panel, test);
+        NacreDashboardState.tabs = ["today", "media", "weather", "system", "focus"];
+        view.select(4);
+        const extra = findChild(view, "dashboardExtraPage");
+        tryVerify(() => !!extra.item);
+        NacreDashboardState.tabs = ["today", "media", "weather", "system"];
+        tryCompare(extra, "active", false);
+        compare(extra.item, null);
+        const nav = findChild(view, "dashboardNavigation");
+        nav.width = 260;
+        nav.order = ["today", "media", "weather", "system", "focus", "notifications", "clipboard", "devices", "network", "ai-usage", "screenshots", "brain"];
+        verify(nav.contentWidth > nav.width);
+        nav.currentIndex = 11;
+        verify(nav.contentX > 0);
     }
     function test_viewport_and_reduced_motion() {
         DesktopSettings.data = {

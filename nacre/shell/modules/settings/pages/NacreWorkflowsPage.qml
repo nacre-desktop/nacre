@@ -1,5 +1,6 @@
 import QtQuick
 import qs.widgets
+import qs.modules.dashboard as Dashboard
 import qs.services
 
 NacreSettingsPage {
@@ -48,6 +49,13 @@ NacreSettingsPage {
                     onClicked: root.toggleRole(modelData)
                 }
             }
+        }
+    }
+    NacreSettingsSection {
+        title: NacreI18n.tr("dashboard.settings.extras", "Dashboard extras")
+        description: NacreI18n.tr("dashboard.settings.extras-detail", "Enable the optional pages you use and arrange their order. These choices also appear in the dashboard customizer.")
+        Dashboard.NacreDashboardExtrasOptions {
+            width: parent.width
         }
     }
     NacreText {
