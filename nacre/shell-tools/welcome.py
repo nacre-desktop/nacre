@@ -153,6 +153,15 @@ SHORTCUTS += (
 
 
 SHORTCUT_IDS = {
+    "browser": {"titleId": "welcome.shortcut.browser.title"},
+    "shortcuts": {"titleId": "welcome.shortcut.shortcuts.title"},
+    "palette": {"titleId": "welcome.shortcut.palette.title"},
+    "overview": {"titleId": "welcome.shortcut.overview.title"},
+    "next-workspace": {"titleId": "welcome.shortcut.next-workspace.title"},
+    "previous-workspace": {"titleId": "welcome.shortcut.previous-workspace.title"},
+    "scratchpad": {"titleId": "welcome.shortcut.scratchpad.title"},
+    "move-scratchpad": {"titleId": "welcome.shortcut.move-scratchpad.title"},
+    "power": {"titleId": "welcome.shortcut.power.title"},
     "launcher": {"titleId": "welcome.shortcut.launcher.title"},
     "wallpaper": {"titleId": "welcome.shortcut.wallpaper.title"},
     "settings": {"titleId": "welcome.shortcut.settings.title"},
