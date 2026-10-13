@@ -19,16 +19,18 @@
 
 ## Next
 
-- Restore authorized GitHub publishing credentials, push this branch, create one
-  follow-up PR and run required CI. Local code is complete; remote CI not run.
+- One follow-up PR and required final-head CI; local code and validation are
+  complete. Publishing credentials now verify and the task branch is pushed.
 - Session agent owns backed-up in-place template integration, canonical palette
   include and palette publication; no shell restart by this task.
 
 ## Open questions / boundaries
 
-- Publication blocked: GitHub CLI/GraphQL 401, HTTPS missing Git credentials,
-  SSH public-key denied. Session agent also reports connector writes return 403.
-  No authentication/profile or pre-push guard changes by this task.
+- Earlier CLI/Git authentication failures were resolved by the operator; existing
+  credentials now verify. No authentication/profile or guard edits by this task.
+- Session agent reports consuming only code commit `b2a8527`'s tested template with
+  private backups, pure palette publication, native validation/config reload and
+  unchanged shell/compositor PIDs. No runtime/staged writes by this task.
 - No running shell restart, staged-tool overwrite, session/profile edits or changes
   to Hyprland generated output. This is the requested appearance-parity correction.
 - Runtime deployment and visual acceptance remain with the session agent (PR18).
