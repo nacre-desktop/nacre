@@ -27,14 +27,6 @@ def block(widget, monitor="", **options):
     )
 
 
-def output_width(monitor):
-    return round(
-        monitor.get("height", 1080)
-        if monitor.get("transform", 0) % 2
-        else monitor.get("width", 1920)
-    )
-
-
 def panel_key(monitor):
     import hashlib
 

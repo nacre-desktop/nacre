@@ -96,6 +96,11 @@ python3 tools/check.py
 ```
 
 CI rejects unwrapped owned QML/catalog literals and missing/unused English IDs.
+Runtime-built IDs need an explicit entry in `tools/i18n/dynamic.json`, with a
+finite ID list, reason and the source/caller text that reaches them. The checker
+rejects stale caller evidence, missing messages and orphan translator context.
+An `options.json` row alone does not exempt an unused ID. Remove retired messages
+from English, context, option mappings and the allowlist together.
 Native tests exercise the message engine, locale formatting, English fallback,
 pseudo protection and existing English interactions. New UI needs a message ID and
 a translation test alongside its behavior tests.

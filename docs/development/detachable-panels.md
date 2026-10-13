@@ -1,7 +1,10 @@
-# Detachable panel design and research
+# Detachable panel implementation
 
-This feature uses existing, owned Nacre components in normal Quickshell windows.
-It does not embed terminal windows or introduce another desktop/settings owner.
+The [user guide](../detachable-panels.md) describes gestures, shortcuts and view
+behavior. This contract covers surface ownership, compositor integration,
+handoff timing and regression acceptance for the existing Nacre components.
+
+## Surface ownership and movement
 
 Primary references:
 - Quickshell FloatingWindow: https://quickshell.org/docs/v0.3.2/types/Quickshell/FloatingWindow/
@@ -11,10 +14,9 @@ Primary references:
 - Quickshell implementation confirms window-wide app IDs rather than a per-window
   FloatingWindow.appId: https://github.com/outfoxxed/quickshell/blob/master/src/window/floatingwindow.hpp
 
-Nacre targets Hyprland, so initial placement and intentional docking use its real
+Placement and docking delegate to `NacreCompositor` and its backend-reported
 client geometry. Each window has a unique, human-readable Nacre Pearl title; only
-owned titles/processes are manipulated. A title rule floats them by default; tiling
-is a user choice. Never take an arbitrary focused window for placement or pinning.
+owned titles/processes are manipulated. The backend's generated title rule floats pearls by default. Never take an arbitrary focused window for placement or pinning.
 
 Super+left-drag is routed by an owned Lua binding. It passes the press only
 inside the shell's published popup rectangles, with a mapped-layer/PID guard.
@@ -64,6 +66,8 @@ A short pull or release within the magnetic zone animates back without opening a
 window on the same output. Crossing to another output keeps the existing tested
 window handoff before docking there, preserving view state.
 
+## View state and validation
+
 View state is independent of shared providers. Launcher contexts share catalogues
 and system snapshots, with local query results. Provider visibility combines edge
 and visible detached views, retaining one Cava/resource/control sampler. AI view
@@ -81,8 +85,8 @@ reported honestly. Publish upstream first, then update the personal consumer pin
 
 Detached layouts use actual viewport dimensions. The Dashboard page bounds its
 content width and summary/card height, allocating spare space to the wallpaper hero.
-Launcher rows stay within72–100 logical pixels; they are not one-fifth of an
-arbitrarily tall window. Gallery switching can grow an undersized owned window via
+Launcher row sizing is clamped to 72–100 logical pixels rather than growing
+with viewport height. Gallery switching can grow an undersized owned window via
 `pearl-window.py fit`, with scaled/rotated monitor and reserved-area bounds; maximized
 windows are left alone. Full handoff positions are aligned to compositor logical
 pixels, and geometry helpers read their resulting state after writes.

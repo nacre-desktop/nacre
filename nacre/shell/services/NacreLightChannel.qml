@@ -1,4 +1,5 @@
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 
@@ -54,7 +55,7 @@ QtObject {
         if (!isDdc)
             readNative();
         else if (!reader.running) {
-            reader.command = ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/light-devices.py", "read-ddc", JSON.stringify(descriptor)];
+            reader.command = ["python3", NacrePaths.tools + "/light-devices.py", "read-ddc", JSON.stringify(descriptor)];
             reader.running = true;
         }
     }
@@ -76,7 +77,7 @@ QtObject {
         const value = pending;
         pending = -1;
         inFlightEpoch = epoch;
-        writer.command = ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/light-devices.py", "set", JSON.stringify(Object.assign({}, descriptor, {
+        writer.command = ["python3", NacrePaths.tools + "/light-devices.py", "set", JSON.stringify(Object.assign({}, descriptor, {
                 maximum: maximum
             })), String(value)];
         writer.running = true;

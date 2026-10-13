@@ -1,4 +1,4 @@
-from qml_source import install_i18n
+from qml_source import install_i18n, install_paths
 
 """Production notification cards and stack with service-owned fixture entries."""
 
@@ -23,6 +23,7 @@ def install_history_owner(target, fixtures):
         "Quickshell.Io",
         "Quickshell",
         "qs.widgets",
+        "qs.utils",
         "qs.config",
     ):
         source = source.replace("import " + module, 'import "fixtures"')
@@ -76,9 +77,13 @@ class NotificationUITests(unittest.TestCase):
             install_foundation_interaction(fixtures, SHELL / "widgets")
             for name in ("NacreNotice", "NacreNotificationStack"):
                 source = (SHELL / "modules/notifications" / (name + ".qml")).read_text()
-                source = source.replace("import Quickshell", "")
+                source = source.replace("import Quickshell", "").replace(
+                    "import qs.utils", 'import "fixtures"'
+                )
                 source = source.replace("import qs.widgets", 'import "fixtures"')
-                source = source.replace("import qs.services", "")
+                source = source.replace("import qs.services", "").replace(
+                    "import qs.utils", ""
+                )
                 source = source.replace("import qs.config", "")
                 source = source.replace(
                     "Quickshell.iconPath(root.modelData.appIcon, true)", '""'
@@ -87,7 +92,9 @@ class NotificationUITests(unittest.TestCase):
             for name in ("NacreSurface", "NacreText", "ActionButton", "FastScroll"):
                 source = (SHELL / "widgets" / (name + ".qml")).read_text()
                 (fixtures / (name + ".qml")).write_text(
-                    source.replace("import qs.services", 'import "."')
+                    source.replace("import qs.services", 'import "."').replace(
+                        "import qs.utils", 'import "."'
+                    )
                 )
             (fixtures / "BrandLogo.qml").write_text(
                 'import QtQuick\nItem {property bool notifications:false;property color background:"black"}'
@@ -108,6 +115,7 @@ class NotificationUITests(unittest.TestCase):
                 target / "tst_notifications.qml",
             )
             install_i18n(fixtures)
+            install_paths(fixtures)
             if with_history:
                 install_history_owner(target, fixtures)
                 shutil.copy2(

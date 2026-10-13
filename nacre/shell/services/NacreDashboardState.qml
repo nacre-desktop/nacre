@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 
@@ -49,7 +50,7 @@ Singleton {
             return;
         const item = queue.shift();
         activeAction = item[0];
-        worker.command = ["python3", (Quickshell.env("NACRE_DASHBOARD_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/dashboard-data.py", ...item];
+        worker.command = ["python3", NacrePaths.dashboardTools + "/dashboard-data.py", ...item];
         worker.running = true;
     }
     function refresh() {

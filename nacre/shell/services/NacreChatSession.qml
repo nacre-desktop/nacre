@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.utils
 
 Scope {
     id: root
@@ -82,7 +83,7 @@ Scope {
         composerWorker.contextKey = request.contextKey;
         composerWorker.action = request.action;
         composerWorker.payload = request.payload;
-        composerWorker.command = ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/composer.py", request.action];
+        composerWorker.command = ["python3", NacrePaths.tools + "/composer.py", request.action];
         composerWorker.running = true;
     }
     function saveDraft() {
@@ -337,7 +338,7 @@ Scope {
     Process {
         id: wire
         stdinEnabled: true
-        command: ["python3", (Quickshell.env("NACRE_PEARL_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/sidebar-chat.py", "client"].concat(root.channel ? ["--channel", root.channel] : [])
+        command: ["python3", NacrePaths.pearlTools + "/sidebar-chat.py", "client"].concat(root.channel ? ["--channel", root.channel] : [])
         stdout: SplitParser {
             onRead: line => {
                 try {

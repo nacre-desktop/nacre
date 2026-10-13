@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 
@@ -10,7 +11,7 @@ Singleton {
     property var queued: []
     readonly property bool active: !!request
     readonly property var ownerView: request ? NacrePanelState.screens[request.screenName] || null : null
-    readonly property string cli: Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/menu-cli.py"
+    readonly property string cli: NacrePaths.tools + "/menu-cli.py"
     function open(ident) {
         if (!/^[0-9a-f]{32}$/.test(ident))
             return;

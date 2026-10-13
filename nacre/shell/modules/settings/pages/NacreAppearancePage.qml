@@ -1,4 +1,5 @@
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 import qs.widgets
@@ -12,7 +13,7 @@ NacreSettingsPage {
             flavour: "default"
         })
     function changeScheme(flag, value) {
-        AppLaunch.run([Quickshell.env("HOME") + "/.local/share/nacre/shell/bin/nacre_shell", "scheme", "set", flag, value]);
+        AppLaunch.run([NacrePaths.shellBin + "/nacre_shell", "scheme", "set", flag, value]);
     }
     FileView {
         path: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/nacre/scheme.json"
@@ -22,7 +23,9 @@ NacreSettingsPage {
         onLoaded: {
             try {
                 root.scheme = JSON.parse(text());
-            } catch (error) {}
+            } catch (error) {
+                console.warn("NacreAppearancePage: Cannot decode appearance scheme:", error);
+            }
         }
     }
     readonly property var prefs: NacreWallpapers.appearancePreferences ?? NacreWallpapers.preferences

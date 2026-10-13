@@ -10,7 +10,7 @@ Singleton {
     id: root
     readonly property string currentNamePath: NacrePaths.state.slice(7) + "/wallpaper/last.txt"
     readonly property string path: NacrePaths.pictures.slice(7) + "/Wallpapers"
-    readonly property string tool: Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/wallpaper-media.py"
+    readonly property string tool: NacrePaths.tools + "/wallpaper-media.py"
     property var list: []
     readonly property bool demoRestoring: demoRestore.running
     signal demoRestored
@@ -363,7 +363,9 @@ Singleton {
                 const data = root.result(text());
                 if (root.validEntry(data))
                     root.media = data;
-            } catch (failure) {}
+            } catch (failure) {
+                console.warn("NacreWallpapers: Cannot decode current wallpaper state:", failure);
+            }
         }
     }
     Process {
@@ -509,7 +511,7 @@ Singleton {
     Process {
         id: watcher
         objectName: "wallpaperWatcher"
-        command: ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/wallpaper-watch.py"]
+        command: ["python3", NacrePaths.tools + "/wallpaper-watch.py"]
         running: true
         stdout: SplitParser {
             onRead: {

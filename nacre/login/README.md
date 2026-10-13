@@ -29,3 +29,9 @@ The only user-writable system data is /var/lib/nacre/login/appearance: a generat
 Tests: python3 -m unittest discover -s nacre/shell-tools/tests and QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input nacre/login/tests. The harness uses fake authentication; successful real password login must be checked at the next login.
 
 The shared Logo.qml and LogoData.js derive from nacre/shell/branding/nacre-master.svg. Run python3 nacre/shell-tools/branding.py --build after editing that approved master. The same shell geometry feeds web, Qt, Kitty and lock outputs, with primary/secondary/tertiary chamber roles and a pearl highlight. The root-owned theme includes both generated files; changing source never restarts SDDM or changes authentication.
+
+The repository theme stays self-contained for SDDM test-mode previews and the
+root-owned installer. `LogoData.js` and `translation.js` are checked byte for byte
+against the shell sources by the regression suite. Branding generation refreshes
+the logo copy; `python3 tools/i18n/generate.py --write` refreshes the translation
+copy. Edit the shell sources rather than the login copies.

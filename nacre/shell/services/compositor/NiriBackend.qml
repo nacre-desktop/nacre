@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import qs.services
 import Quickshell
 import Quickshell.Io
@@ -24,7 +25,7 @@ Singleton {
             monitorConfiguration: false,
             nightLightController: false
         })
-    readonly property string toolsPath: Quickshell.env("NACRE_COMPOSITOR_TOOLS") || Quickshell.env("NACRE_PEARL_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools"
+    readonly property string toolsPath: NacrePaths.compositorTools
     readonly property var workspaces: ({
             values: workspaceValues
         })

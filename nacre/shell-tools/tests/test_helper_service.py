@@ -44,7 +44,7 @@ class HelperServiceTests(unittest.TestCase):
     def test_renderer_worker_uses_managed_palette_interpreter(self):
         source = (TOOLS.parent / "shell/services/NacreHelpers.qml").read_text()
         self.assertIn(
-            'command: [Quickshell.env("HOME") + "/.local/share/nacre/palette-runtime/venv/bin/python",',
+            "command: [NacrePaths.palettePython,",
             source,
         )
 

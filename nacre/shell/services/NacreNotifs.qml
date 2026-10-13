@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import qs.widgets
 import Quickshell.Io
@@ -29,7 +30,7 @@ Singleton {
             feedbackSummaries: [],
             feedbackPatterns: []
         })
-    readonly property string helper: Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/notification-history.py"
+    readonly property string helper: NacrePaths.tools + "/notification-history.py"
     function shouldRetain(app, summary, transient) {
         if (transient)
             return false;
@@ -180,12 +181,14 @@ Singleton {
         }
     }
     FileView {
-        path: Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/notification-policy.json"
+        path: NacrePaths.tools + "/notification-policy.json"
         printErrors: false
         onLoaded: {
             try {
                 root.policy = JSON.parse(text());
-            } catch (failure) {}
+            } catch (failure) {
+                console.warn("NacreNotifs: Cannot decode notification policy:", failure);
+            }
         }
     }
     Timer {

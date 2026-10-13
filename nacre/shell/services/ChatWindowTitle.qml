@@ -2,6 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.utils
 
 Singleton {
     id: root
@@ -74,7 +75,7 @@ Singleton {
     Process {
         id: reader
         property int requestPid
-        command: ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/window-chat-title.py", requestPid.toString()]
+        command: ["python3", NacrePaths.tools + "/window-chat-title.py", requestPid.toString()]
         stdout: SplitParser {
             splitMarker: ""
             onRead: data => {
@@ -84,7 +85,9 @@ Singleton {
                     ids[reader.requestPid] = record.threadId;
                     root.titles = updated;
                     root.threadIds = ids;
-                } catch (e) {}
+                } catch (e) {
+                    console.warn("ChatWindowTitle: Cannot decode window conversation title:", e);
+                }
             }
         }
         onExited: root.next()

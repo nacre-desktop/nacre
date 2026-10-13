@@ -318,13 +318,6 @@ def prune_releases(keep=10):
     return removed
 
 
-def release_disk_usage():
-    result = subprocess.run(
-        ["du", "-s", "-B1", str(STATE)], capture_output=True, text=True, check=True
-    )
-    return int(result.stdout.split()[0])
-
-
 def retire_native_runtimes(release):
     """Move recognized obsolete package trees out of active paths after live gates."""
     candidates = ((HOME / ".local/share/nacre/palette-runtime/usr", "bin/quickshell"),)

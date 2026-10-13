@@ -2,6 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.utils
 import "../utils/scripts/view-state.js" as Views
 
 Singleton {
@@ -128,12 +129,12 @@ Singleton {
     }
     Process {
         id: lockLayout
-        command: ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/lock-config.py"]
+        command: ["python3", NacrePaths.tools + "/lock-config.py"]
     }
     Process {
         id: fallback
         stdinEnabled: true
-        command: ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/display-recover.py", "-"]
+        command: ["python3", NacrePaths.tools + "/display-recover.py", "-"]
         onStarted: write(JSON.stringify({
             version: 2,
             screens: root.saved,

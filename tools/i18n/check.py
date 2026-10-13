@@ -99,22 +99,46 @@ def references(root):
             for field in ("label", "description", "confirm"):
                 if row.get(field + "Id"):
                     result.add(row[field + "Id"])
-    for domain in json.loads(
-        (root / "nacre/shell/i18n/options.json").read_text()
-    ).values():
-        result.update(row["id"] for row in domain.values())
+    return result
+
+
+def dynamic_references(root):
+    """Finite runtime IDs, with caller evidence so stale exemptions fail."""
+    path = root / "tools/i18n/dynamic.json"
+    if not path.exists():
+        return set()
+    result = set()
+    options = json.loads((root / "nacre/shell/i18n/options.json").read_text())
+    for name, group in json.loads(path.read_text()).items():
+        source = root / group["source"]
+        if (
+            not group.get("reason")
+            or not source.is_file()
+            or group["reference"] not in source.read_text()
+        ):
+            raise ValueError("Stale dynamic message allowlist: " + name)
+        if domain := group.get("optionsDomain"):
+            declared = {row["id"] for row in options.get(domain, {}).values()}
+            if set(group["ids"]) != declared:
+                raise ValueError("Stale dynamic option IDs: " + name)
+        for key in group["ids"]:
+            if key in result:
+                raise ValueError("Duplicate dynamic message ID: " + key)
+            result.add(key)
     return result
 
 
 def check(root=ROOT):
     english = json.loads((root / "nacre/shell/i18n/en.json").read_text())
     context = json.loads((root / "nacre/shell/i18n/context.json").read_text())
-    used = references(root)
+    used = references(root) | dynamic_references(root)
     errors = []
     for key in sorted(used - english.keys()):
         errors.append("Missing English ID: " + key)
     for key in sorted(english.keys() - used):
         errors.append("Unused English ID: " + key)
+    for key in sorted(context.keys() - english.keys()):
+        errors.append("Unused translator context: " + key)
     for key in sorted(used - context.keys()):
         errors.append("Missing translator context: " + key)
     for key, value in english.items():
@@ -153,6 +177,12 @@ def check(root=ROOT):
                             + "."
                             + field
                         )
+    for domain in json.loads(
+        (root / "nacre/shell/i18n/options.json").read_text()
+    ).values():
+        for row in domain.values():
+            if row["id"] not in english:
+                errors.append("Missing option message ID: " + row["id"])
     for relative in (
         "modules/settings/settings-catalog.js",
         "modules/welcome/welcome-catalog.js",

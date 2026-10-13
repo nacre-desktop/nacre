@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 import qs.widgets
@@ -26,8 +27,8 @@ Singleton {
     property string plain: ""
     property string message: ""
     property var spectrum: []
-    readonly property string python: Quickshell.env("HOME") + "/.local/share/nacre/palette-runtime/venv/bin/python"
-    readonly property string tool: (Quickshell.env("NACRE_DASHBOARD_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/dashboard-media.py"
+    readonly property string python: NacrePaths.palettePython
+    readonly property string tool: NacrePaths.dashboardTools + "/dashboard-media.py"
     function load() {
         if (!shown || !player || details.running || loadedKey === trackKey)
             return;

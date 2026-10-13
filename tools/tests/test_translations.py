@@ -104,6 +104,47 @@ class CoverageTests(unittest.TestCase):
             )
             self.assertEqual(guard.references(root), {"test.active", "test.inactive"})
 
+    def test_dynamic_ids_need_explicit_live_caller_evidence(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.fixture(root, {"test.dynamic": "Hello"}, "Item {}")
+            allowlist = root / "tools/i18n/dynamic.json"
+            allowlist.parent.mkdir(parents=True)
+            caller = root / "nacre/shell/Runtime.qml"
+            caller.write_text('Item {function label(kind){return tr("test." + kind)}}')
+            group = {
+                "source": "nacre/shell/Runtime.qml",
+                "reference": 'tr("test." + kind)',
+                "reason": "Runtime fixture builds a finite ID",
+                "ids": ["test.dynamic"],
+            }
+            allowlist.write_text(json.dumps({"runtime": group}))
+            guard.check(root)
+            group["optionsDomain"] = "runtime"
+            allowlist.write_text(json.dumps({"runtime": group}))
+            with self.assertRaisesRegex(ValueError, "Stale dynamic option IDs"):
+                guard.check(root)
+            del group["optionsDomain"]
+            allowlist.write_text(json.dumps({"runtime": group}))
+            caller.write_text("Item {}")
+            with self.assertRaisesRegex(ValueError, "Stale dynamic"):
+                guard.check(root)
+            caller.write_text('Item {function label(kind){return tr("test." + kind)}}')
+            group["ids"] = ["test.deleted"]
+            allowlist.write_text(json.dumps({"runtime": group}))
+            with self.assertRaisesRegex(ValueError, "Missing English ID"):
+                guard.check(root)
+
+    def test_option_tables_do_not_exempt_unused_ids(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.fixture(root, {"test.unused": "Hello"}, "Item {}")
+            (root / "nacre/shell/i18n/options.json").write_text(
+                json.dumps({"unused": {"value": {"id": "test.unused"}}})
+            )
+            with self.assertRaisesRegex(ValueError, "Unused English ID"):
+                guard.check(root)
+
     def test_language_preference_and_pseudo_gate(self):
         from unittest.mock import patch
 

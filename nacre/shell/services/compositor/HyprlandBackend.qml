@@ -328,7 +328,9 @@ Singleton {
                     const point = JSON.parse(text);
                     if (Number.isFinite(point.x) && Number.isFinite(point.y))
                         root.cursorPos = Qt.point(point.x, point.y);
-                } catch (failure) {}
+                } catch (failure) {
+                    console.warn("HyprlandBackend: Cannot decode compositor cursor position:", failure);
+                }
             }
         }
     }
@@ -343,7 +345,9 @@ Singleton {
                     const window = JSON.parse(text);
                     if (focusReader.generation === root.focusRevision)
                         root.observeFocus(window.address);
-                } catch (failure) {}
+                } catch (failure) {
+                    console.warn("HyprlandBackend: Cannot decode compositor active window:", failure);
+                }
             }
         }
     }

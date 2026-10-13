@@ -3,6 +3,7 @@ import "services"
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.utils
 import qs.services
 
 ShellRoot {
@@ -162,7 +163,7 @@ ShellRoot {
                         }
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: AppLaunch.run(["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/lock-info.py", parent.modelData.action])
+                            onClicked: AppLaunch.run(["python3", NacrePaths.tools + "/lock-info.py", parent.modelData.action])
                         }
                     }
                 }
@@ -177,7 +178,9 @@ ShellRoot {
                 onRead: line => {
                     try {
                         window.widgetData = JSON.parse(line);
-                    } catch (e) {}
+                    } catch (e) {
+                        console.warn("lock-preview: Cannot read lock dashboard preview:", e);
+                    }
                 }
             }
         }

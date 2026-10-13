@@ -27,6 +27,9 @@ def assets(root=ROOT):
         .removeprefix(".pragma library\n")
     )
     return {
+        Path("nacre/login/translation.js"): (
+            root / "nacre/shell/i18n/translation.js"
+        ).read_text(),
         Path("nacre/login/messages.js"): ".pragma library\n\nconst english = "
         + json.dumps(login, indent=2, ensure_ascii=False, sort_keys=True)
         + ";\n",

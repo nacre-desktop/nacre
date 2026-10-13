@@ -1,4 +1,4 @@
-from qml_source import install_i18n
+from qml_source import install_i18n, install_paths
 
 """Native summary layout keeps calendar, gauges and real-spectrum baselines aligned."""
 
@@ -43,6 +43,7 @@ class DashboardSummaryTests(unittest.TestCase):
                     .read_text()
                     .replace("import qs.widgets", 'import "fixtures"')
                     .replace("import qs.services", "")
+                    .replace("import qs.utils", "")
                     .replace("import Quickshell", "")
                     .replace("Quickshell.", "Environment.")
                 )
@@ -87,6 +88,7 @@ TestCase {
 }
 """)
             install_i18n(fixtures)
+            install_paths(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 capture_output=True,

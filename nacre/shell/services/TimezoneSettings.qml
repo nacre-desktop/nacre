@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 
@@ -9,7 +10,7 @@ Singleton {
     property var status: ({})
     property string message: ""
     readonly property bool busy: action.running
-    readonly property string helper: Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/timezone.py"
+    readonly property string helper: NacrePaths.tools + "/timezone.py"
 
     function refresh() {
         if (!reader.running)

@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 
@@ -10,7 +11,7 @@ Singleton {
     property bool refreshQueued: false
     property string action: "state"
     property string value: ""
-    readonly property string tool: Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/control-tools.py"
+    readonly property string tool: NacrePaths.tools + "/control-tools.py"
     readonly property bool busy: worker.running
     readonly property bool visibleControls: NacrePanelState.providerViews.some(view => view.osd)
     function refresh() {

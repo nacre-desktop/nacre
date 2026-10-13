@@ -56,8 +56,8 @@ makechrootpkg -c -r /var/tmp/nacre-chroot \
 namcap PKGBUILD ./*.pkg.tar.zst
 ```
 
-Record exact commits, package hashes and check summaries in
-`docs/development/progress/packaging.md`. Review every namcap diagnostic; Python
+Record exact commits, package hashes and check summaries in the release
+validation record, following this [clean-chroot checklist](#clean-chroot-and-fresh-user-proof). Review every namcap diagnostic; Python
 entry-point module detection can produce false positives, which require wheel
 smoke evidence rather than suppression.
 
@@ -168,3 +168,16 @@ flag its build-ID symlinks to native modules shipped in `nacre`, because those
 runtime files are outside the debug archive. Verify both packages installed
 together and resolve every link in the combined root. The three runtime
 packages are the user installation path; keep Arch's debug generation enabled.
+
+## Installation verification details
+
+Shared package templates must remain readable by fresh users (0644 for files,
+0755 for directories and executables). Verify managed file and symlink ownership
+before snapshot/apply. Rollback restores private files and runtime references;
+pacman-owned references remain system links rather than copied private runtimes.
+A package downgrade needs the previous archives as well as setup rollback.
+
+Native Qt checks need a private 0700 `XDG_RUNTIME_DIR`. Run graphical chroot checks
+serially and close stdin for non-interactive suites; a competing display or an
+unanswered failure prompt is not a test result. Archive extraction and nested
+rendering do not replace runtime-only fresh-user and cold-login validation.

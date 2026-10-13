@@ -12,7 +12,7 @@ Singleton {
             return;
         lastAction = args[0];
         message = NacreI18n.tr("ui.device-actions.message.working", "Working…");
-        worker.command = ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/device-actions.py", ...args];
+        worker.command = ["python3", NacrePaths.tools + "/device-actions.py", ...args];
         worker.running = true;
     }
     function connectWifi(ssid) {
@@ -20,7 +20,7 @@ Singleton {
             return;
         lastAction = "wifi-connect";
         message = NacreI18n.tr("ui.device-actions.message.finish-connecting", "Finish connecting in the Wi-Fi window.");
-        connector.command = ["systemd-run", "--user", "--scope", "--collect", "--quiet", "env", "-u", "LD_LIBRARY_PATH", "-u", "QML_IMPORT_PATH", "-u", "QML2_IMPORT_PATH", "-u", "QT_PLUGIN_PATH", "-u", "NACRE_LIB_DIR", "kitty", "--title", "Connect to Wi-Fi", "python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/device-actions.py", "wifi-connect", ssid];
+        connector.command = ["systemd-run", "--user", "--scope", "--collect", "--quiet", "env", "-u", "LD_LIBRARY_PATH", "-u", "QML_IMPORT_PATH", "-u", "QML2_IMPORT_PATH", "-u", "QT_PLUGIN_PATH", "-u", "NACRE_LIB_DIR", "kitty", "--title", "Connect to Wi-Fi", "python3", NacrePaths.tools + "/device-actions.py", "wifi-connect", ssid];
         connector.running = true;
     }
     Process {

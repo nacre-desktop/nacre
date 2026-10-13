@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 
@@ -46,8 +47,8 @@ Singleton {
     property string exportDirectory: ""
     readonly property bool previewBusy: queued || inFlight
     readonly property bool actionBusy: actionJob.running
-    readonly property string python: Quickshell.env("HOME") + "/.local/share/nacre/palette-runtime/venv/bin/python"
-    readonly property string tool: Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/colors.py"
+    readonly property string python: NacrePaths.palettePython
+    readonly property string tool: NacrePaths.tools + "/colors.py"
     readonly property bool ready: !!preview.id && preview.request === options && !previewBusy && !error
     readonly property bool applied: !!preview.id && saved.lastApplied === preview.id && NacreWallpapers.actualCurrent === preview.image && NacrePresentation.active.colours?.surface === preview.palette?.colours?.surface
     function open(image = "") {

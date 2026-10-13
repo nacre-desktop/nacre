@@ -47,11 +47,11 @@ class WelcomePreloadTests(unittest.TestCase):
                 + json.dumps(demos)
                 + ";function close(){visible=false;active=false}}"
             )
-            (services / "NacreHyprland.qml").write_text(
+            (services / "NacreCompositor.qml").write_text(
                 "pragma Singleton\nimport QtQuick\nQtObject {property var focusedMonitor:null}"
             )
             (services / "qmldir").write_text(
-                "singleton NacreWelcomeApp 1.0 NacreWelcomeApp.qml\nsingleton NacreHyprland 1.0 NacreHyprland.qml\n"
+                "singleton NacreWelcomeApp 1.0 NacreWelcomeApp.qml\nsingleton NacreCompositor 1.0 NacreCompositor.qml\n"
             )
             (target / "shell.qml").write_text("""import QtQuick
 import Quickshell

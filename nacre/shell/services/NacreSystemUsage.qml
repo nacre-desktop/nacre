@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 import "resource-data.js" as Data
@@ -144,7 +145,7 @@ Singleton {
     Process {
         id: slow
         objectName: "resourceReader"
-        command: ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/resource-state.py"]
+        command: ["python3", NacrePaths.tools + "/resource-state.py"]
         stdout: StdioCollector {
             onStreamFinished: root.slowSample(text)
         }

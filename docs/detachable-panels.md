@@ -6,8 +6,8 @@ to detach; a shorter pull returns smoothly. Super reserves the gesture, so it do
 not need the longer distance used by an ordinary pull grip. **Super+Ctrl+D**
 lifts the open panel in place, retaining its dimensions and position.
 
-Floating panels keep their original content, with no added title strip. Hyprland
-provides the same inactive and focused borders as other windows. Use ordinary
+Floating panels keep their original content, with no added title strip. Their
+rounded border uses the desktop's neutral and focused colors. Use ordinary
 Super-drag to move, Super+right-drag to resize, and the normal tiling/pinning keys.
 Bring either a lifted panel or a floating window near its matching edge. The
 same pearly film bridges the panel and frame on every pull; release while it is
@@ -54,3 +54,6 @@ Hyprland additionally shows its stretching membrane, supported on both paths.
 Detached panels use the same 18-logical-pixel corners as their attached surfaces.
 Their window border follows that radius, and Niri clips the full window content
 to it so opaque backgrounds or previews cannot leave square corners.
+
+For implementation details, compositor differences and regression checks, see
+[the developer docking contract](development/detachable-panels.md).

@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 
@@ -11,7 +12,7 @@ Singleton {
     property var network: []
     property var previous: null
     property string message: ""
-    readonly property string tool: (Quickshell.env("NACRE_DASHBOARD_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/dashboard-system.py"
+    readonly property string tool: NacrePaths.dashboardTools + "/dashboard-system.py"
     function refresh() {
         if (!reader.running) {
             reader.command = ["python3", tool];

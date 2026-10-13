@@ -1,4 +1,4 @@
-from qml_source import install_i18n
+from qml_source import install_i18n, install_paths
 
 """Exercise actual independent service code with native dependency fixtures."""
 
@@ -102,6 +102,7 @@ class DeviceServiceTests(unittest.TestCase):
                         .read_text()
                         .replace("import Quickshell.Io", 'import "fixtures"')
                         .replace("import Quickshell", "")
+                        .replace("import qs.utils", 'import "fixtures"')
                         .replace('Quickshell.env("HOME")', '"/fixture"')
                         .replace('Quickshell.env("NACRE_DASHBOARD_TOOLS")', '""')
                     )
@@ -138,7 +139,9 @@ class DeviceServiceTests(unittest.TestCase):
                 )
                 widget = (ROOT.parent / "shell/widgets/NacreShortcut.qml").read_text()
                 (target / "NacreShortcut.qml").write_text(
-                    widget.replace("import qs.services", 'import "fixtures"')
+                    widget.replace("import qs.services", 'import "fixtures"').replace(
+                        "import qs.utils", 'import "fixtures"'
+                    )
                 )
                 environment = fixtures / "Environment.qml"
                 environment.write_text(
@@ -258,6 +261,7 @@ QtObject {
                 target / "tst_service.qml",
             )
             install_i18n(fixtures)
+            install_paths(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

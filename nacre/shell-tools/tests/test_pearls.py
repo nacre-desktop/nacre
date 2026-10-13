@@ -112,6 +112,7 @@ print("PANEL_ROUTING_OK")
                 (SHELL / "widgets/NacrePanelDrag.qml")
                 .read_text()
                 .replace("import qs.services", 'import "."')
+                .replace("import qs.utils", 'import "."')
             )
             (target / "NacrePanelDrag.qml").write_text(source)
             (target / "NacrePearls.qml").write_text("""pragma Singleton
@@ -353,6 +354,7 @@ TestCase {
                 (SHELL / "widgets/NacreDockFilm.qml")
                 .read_text()
                 .replace("import qs.services", 'import "."')
+                .replace("import qs.utils", 'import "."')
             )
             (target / "NacreTokens.qml").write_text("""pragma Singleton
 import QtQuick
@@ -396,7 +398,7 @@ TestCase {
             self.assertNotIn("QWARN", result.stdout + result.stderr)
 
     def test_actual_service_shares_snap_zone_and_preserves_release_lifecycle(self):
-        from qml_source import remove_objects
+        from qml_source import remove_objects, install_paths
 
         runner = Path("/usr/lib/qt6/bin/qmltestrunner")
         if not runner.exists():
@@ -407,9 +409,8 @@ TestCase {
                 "DesktopSettings": "property var data:({dragPanels:true})",
                 "Environment": 'property var screens:[{name:"test",x:0,y:0,width:1920,height:1200}];property int processId:88',
                 "NacreFrame": "property int headerHeight:50;property int bottom:10;property int left:10;property int right:10",
-                "NacreCompositor": 'property string backendName:"hyprland";property var windows:[];property int refreshes:0;function refreshWindows(){refreshes++}',
+                "NacreCompositor": 'property string backendName:"hyprland";property var windows:[];property var focusedMonitor:({name:"test"});property int refreshes:0;function refreshWindows(){refreshes++}',
                 "NacrePearls": "property var views:[]",
-                "NacreHyprland": 'property var focusedMonitor:({name:"test"})',
             }
             manifest = ""
             for name, body in fixtures.items():
@@ -421,6 +422,7 @@ TestCase {
                 (SHELL / "services/NacrePanelState.qml")
                 .read_text()
                 .replace("import Quickshell", "")
+                .replace("import qs.utils", 'import "."')
                 .replace("Singleton {", "Item {")
             )
             (target / "NacrePanelState.qml").write_text(
@@ -428,12 +430,14 @@ TestCase {
             )
             manifest += "singleton NacrePanelState 1.0 NacrePanelState.qml\n"
             (target / "qmldir").write_text(manifest)
+            install_paths(target)
             source = (
                 (SHELL / "services/NacrePearls.qml")
                 .read_text()
                 .replace("pragma Singleton", "")
                 .replace("import Quickshell.Io", "")
                 .replace("import Quickshell", "")
+                .replace("import qs.utils", 'import "."')
                 .replace("import qs.modules.pearls as Pearl", "")
                 .replace("import qs.config", 'import "."')
                 .replace("import qs.widgets", 'import "."')

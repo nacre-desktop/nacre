@@ -1,4 +1,5 @@
 import QtQuick
+import qs.utils
 import Quickshell
 import qs.widgets
 import qs.services
@@ -43,7 +44,7 @@ Item {
         kernel: NacreSystemUsage.kernel
         color: "transparent"
         onSystemRequested: root.systemRequested()
-        onUpdateRequested: Quickshell.execDetached([Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/control.sh", "updates"])
+        onUpdateRequested: Quickshell.execDetached([NacrePaths.tools + "/control.sh", "updates"])
     }
     Row {
         id: metrics

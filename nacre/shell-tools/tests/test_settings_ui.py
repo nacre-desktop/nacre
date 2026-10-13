@@ -1,4 +1,4 @@
-from qml_source import install_i18n
+from qml_source import install_i18n, install_paths
 from qml_source import remove_objects, install_foundation_interaction
 
 """Exercise settings navigation and the shared wheel handler in native Qt."""
@@ -27,6 +27,7 @@ class SettingsUITests(unittest.TestCase):
                     path.read_text()
                     .replace("import qs.widgets", 'import "' + imports + '"')
                     .replace("import qs.services", "")
+                    .replace("import qs.utils", "")
                     .replace("import qs.config", "")
                     .replace("import Quickshell.Io", "")
                     .replace("import Quickshell.Services.Pipewire", "")
@@ -187,6 +188,7 @@ class SettingsUITests(unittest.TestCase):
                 ROOT / "tests/qml/tst_settings.qml", target / "tst_settings.qml"
             )
             install_i18n(target / "fixtures")
+            install_paths(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env=dict(os.environ, QT_QPA_PLATFORM="offscreen"),

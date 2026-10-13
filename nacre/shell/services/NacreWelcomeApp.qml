@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 
@@ -125,7 +126,7 @@ Singleton {
             const args = queue[0];
             queue = queue.slice(1);
             worker.job = args;
-            worker.command = args[0] === "demo-start" ? ["python3", NacreWallpapers.tool, "demo-start"] : ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/welcome.py", ...args];
+            worker.command = args[0] === "demo-start" ? ["python3", NacreWallpapers.tool, "demo-start"] : ["python3", NacrePaths.tools + "/welcome.py", ...args];
             worker.running = true;
         }
     }

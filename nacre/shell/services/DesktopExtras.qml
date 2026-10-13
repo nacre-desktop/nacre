@@ -2,6 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.utils
 
 Singleton {
     id: root
@@ -60,7 +61,7 @@ Singleton {
             required property string action
             required property var payload
             stdinEnabled: true
-            command: ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/desktop-extras.py", action]
+            command: ["python3", NacrePaths.tools + "/desktop-extras.py", action]
             Component.onCompleted: running = true
             onStarted: {
                 write(JSON.stringify(payload));

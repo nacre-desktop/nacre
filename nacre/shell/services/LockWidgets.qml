@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.utils
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
@@ -82,7 +83,7 @@ Singleton {
         id: writer
 
         stdinEnabled: true
-        command: ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/lock-prepare.py"]
+        command: ["python3", NacrePaths.tools + "/lock-prepare.py"]
         onStarted: write(root.presentation + "\n")
         onExited: {
             if (root.dirty)

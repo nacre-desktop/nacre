@@ -54,8 +54,8 @@ window fields include `windowId`, `appId`, `workspaceId`, `outputId`, `geometry`
 Compatibility snapshot keys (`address`, `class`, `at`, `size`, `workspace`, etc.)
 remain for current helper data contracts. A new backend must provide compatible
 views until those consumers migrate; the keys no longer imply native address
-syntax. Likewise `NacreHyprland` is a forwarding compatibility shim;
-`activeWsId` remains the current numeric display alias. New logic should use
+syntax. Runtime widgets use `NacreCompositor` directly; `activeWsId` remains
+the current numeric display alias. New logic should use
 `activeWorkspaceId` and explicit workspace references.
 
 A workspace reference distinguishes stable identity, a name, and an index on an
@@ -186,7 +186,7 @@ workspace reordering/removal, stale windows and incremental geometry changes.
 | Floating coordinates | Native fixed positions include working-area offsets; measured relative deltas avoid guessing reservations, border offsets or scale. All geometry is in logical pixels. |
 | Docking | Existing application-owned lift/release and `pearls detach/dock` IPC remain. Niri-native Mod+mouse moves do not emit Hyprland's drag-end hook; `nativePanelDrag=false`. Use the existing detach toggle on a focused pearl to dock. |
 | Shortcuts | Generated binds invoke the facade/helper or shell IPC. Registration activation emits a pulse, never a claim of physical key holding; `shortcutRelease=false`. Non-consuming and Hyprland submap/pointer hooks are not generated. |
-| Fullscreen/maximize | Fullscreen and maximize-to-edges are distinct actions. The 26.04 window record has no fullscreen bit; `fullscreenState=false` and `fullscreenKnown=false` make that limitation explicit. |
+| Fullscreen/maximize | Fullscreen and maximize-to-edges are distinct actions. The 26.04 window record has no fullscreen bit; `fullscreenState=false` and `fullscreenKnown=false` make that limitation explicit. Normal bar/frame surfaces use the Top layer so Niri covers them during fullscreen; explicitly opened modal menus use Overlay and return to Top when dismissed. |
 | Pin / hide / force-kill | Unsupported and fail explicitly; `pinWindow=false`, `windowHide=false`. Do not substitute floating for sticky windows or signals for owned force-kill. |
 | Cursor / per-window capture | No global cursor-position query or unambiguous niri-ID-to-Quickshell capture mapping; `cursorPosition=false`, `windowCapture=false`. No fabricated native handle. |
 | Settings / night light | The niri backend does not expose runtime desktop-option writes, monitor transactions or a night-light controller; capabilities advertise these limits. Session/controller integration belongs to its own task. |
@@ -321,3 +321,14 @@ required executable names from the backend, retaining the report collector's
 redaction and timeout policy. Panel dragging declares an explicit, modifier-free
 left-button release callback in the neutral contract so release cleanup also runs
 after Super is released. Its Lua extension preserves the native drag lifecycle.
+
+## Installed shell paths
+
+QML commands use the filesystem paths exposed by `qs.utils.NacrePaths`: `share`,
+`tools`, `shellBin` and `palettePython`. `compositorTools`, `pearlTools` and
+`dashboardTools` retain the existing isolated-test overrides; compositor tools
+prefer `NACRE_COMPOSITOR_TOOLS`, then `NACRE_PEARL_TOOLS`, then the installed tools.
+The installer still uses the existing home-relative share location. Config,
+state, cache and picture properties remain file URLs for media/FileView users.
+Change the installed helper location in this singleton rather than constructing
+it in each service or widget.

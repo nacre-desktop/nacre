@@ -105,3 +105,65 @@ QtObject {
     value = manifest.read_text() if manifest.exists() else ""
     if "singleton NacreI18n " not in value:
         manifest.write_text(value + "\nsingleton NacreI18n 1.0 NacreI18n.qml\n")
+
+
+def install_paths(directory):
+    """Stage the real path definitions in plain Qt, preserving existing fixtures."""
+    import json
+    import os
+    from pathlib import Path
+
+    source = Path(__file__).resolve().parents[2] / "shell/utils/NacrePaths.qml"
+    target = directory / "NacrePaths.qml"
+    environment = {
+        key: os.environ.get(key, "")
+        for key in (
+            "HOME",
+            "XDG_CONFIG_HOME",
+            "XDG_STATE_HOME",
+            "XDG_CACHE_HOME",
+            "NACRE_COMPOSITOR_TOOLS",
+            "NACRE_PEARL_TOOLS",
+            "NACRE_DASHBOARD_TOOLS",
+        )
+    }
+    lookup = (
+        "function fixtureEnv(key) {return "
+        + json.dumps(environment)
+        + '[key] || "";}\n'
+    )
+    definitions = (
+        source.read_text()
+        .replace("import Quickshell\n", "")
+        .replace("Quickshell.env(", "fixtureEnv(")
+        .replace("QtObject {", "QtObject {\n" + lookup, 1)
+    )
+    if target.exists():
+        # Existing fixture state/pictures fields remain owned by their tests.
+        current = target.read_text()
+        additions = "\n".join(
+            line
+            for line in definitions.splitlines()
+            if "property string" in line
+            and line.split("property string ", 1)[1].split(":", 1)[0]
+            in (
+                "share",
+                "tools",
+                "shellBin",
+                "palettePython",
+                "compositorTools",
+                "pearlTools",
+                "dashboardTools",
+            )
+            and line.split("property string ", 1)[1].split(":", 1)[0] + ":"
+            not in current
+        )
+        target.write_text(
+            current.replace("QtObject {", "QtObject {\n" + lookup + additions + "\n", 1)
+        )
+    else:
+        target.write_text(definitions)
+    manifest = directory / "qmldir"
+    value = manifest.read_text() if manifest.exists() else ""
+    if "singleton NacrePaths " not in value:
+        manifest.write_text(value + "\nsingleton NacrePaths 1.0 NacrePaths.qml\n")

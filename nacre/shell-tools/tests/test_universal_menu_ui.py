@@ -1,4 +1,4 @@
-from qml_source import install_i18n
+from qml_source import install_i18n, install_paths
 
 """Real universal menu and model, with only external owners replaced by fixtures."""
 
@@ -17,6 +17,7 @@ SHELL = TOOLS.parent / "shell"
 
 
 def adapt(source):
+    source = source.replace("import qs.utils", 'import "."')
     for name in ("Quickshell.Services.UPower", "Quickshell.Io", "Quickshell"):
         source = source.replace("import " + name + "\n", "")
     for name in ("qs.widgets", "qs.services"):
@@ -146,6 +147,7 @@ class UniversalMenuUITests(unittest.TestCase):
             target = Path(folder)
             stage(target)
             install_i18n(target / "fixtures")
+            install_paths(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 capture_output=True,
@@ -207,6 +209,7 @@ TestCase {
  }
 }""")
             install_i18n(target / "fixtures")
+            install_paths(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target)],
                 capture_output=True,

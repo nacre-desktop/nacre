@@ -1,4 +1,5 @@
 import QtQuick
+import qs.utils
 import QtQuick.Window
 import Quickshell
 import Quickshell.Io
@@ -80,7 +81,7 @@ FloatingWindow {
     }
     Process {
         id: fitWorker
-        command: ["python3", (Quickshell.env("NACRE_PEARL_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/pearl-window.py", "fit", root.title, Quickshell.processId.toString(), "0", "0", Math.min(640, root.screen.width - 40).toString(), Math.min(root.screen.height - 100, Math.max(500, Math.min(820, root.width * .58 + 96))).toString()]
+        command: ["python3", NacrePaths.pearlTools + "/pearl-window.py", "fit", root.title, Quickshell.processId.toString(), "0", "0", Math.min(640, root.screen.width - 40).toString(), Math.min(root.screen.height - 100, Math.max(500, Math.min(820, root.width * .58 + 96))).toString()]
         onExited: {
             NacreCompositor.refreshWindows();
             NacrePearls.saveSoon();
@@ -214,7 +215,7 @@ FloatingWindow {
     }
     Process {
         id: focusWorker
-        command: ["python3", (Quickshell.env("NACRE_PEARL_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/pearl-window.py", "focus", root.title, Quickshell.processId.toString()]
+        command: ["python3", NacrePaths.pearlTools + "/pearl-window.py", "focus", root.title, Quickshell.processId.toString()]
         onExited: {
             if (body.item?.focusExplicit)
                 body.item.focusExplicit();
@@ -228,7 +229,7 @@ FloatingWindow {
         property string action: "place"
         property real px: 0
         property real py: 0
-        command: ["python3", (Quickshell.env("NACRE_PEARL_TOOLS") || Quickshell.env("HOME") + "/.local/share/nacre/shell/tools") + "/pearl-window.py", action, root.title, Quickshell.processId.toString(), px.toString(), py.toString(), root.ready ? "0" : root.implicitWidth.toString(), root.ready ? "0" : root.implicitHeight.toString()]
+        command: ["python3", NacrePaths.pearlTools + "/pearl-window.py", action, root.title, Quickshell.processId.toString(), px.toString(), py.toString(), root.ready ? "0" : root.implicitWidth.toString(), root.ready ? "0" : root.implicitHeight.toString()]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
