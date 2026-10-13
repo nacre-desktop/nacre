@@ -12,6 +12,7 @@ Item {
     function prepareLift() {
         edgeOpening.complete();
     }
+    readonly property bool opening: visibilities.launcher && edgeOpening.running
     property bool handoffHidden: false
     opacity: handoffHidden ? 0 : 1
     onEnabledChanged: if (enabled)
