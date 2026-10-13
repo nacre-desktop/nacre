@@ -407,9 +407,8 @@ TestCase {
                 "DesktopSettings": "property var data:({dragPanels:true})",
                 "Environment": 'property var screens:[{name:"test",x:0,y:0,width:1920,height:1200}];property int processId:88',
                 "NacreFrame": "property int headerHeight:50;property int bottom:10;property int left:10;property int right:10",
-                "NacreCompositor": 'property string backendName:"hyprland";property var windows:[];property int refreshes:0;function refreshWindows(){refreshes++}',
+                "NacreCompositor": 'property string backendName:"hyprland";property var windows:[];property var focusedMonitor:({name:"test"});property int refreshes:0;function refreshWindows(){refreshes++}',
                 "NacrePearls": "property var views:[]",
-                "NacreHyprland": 'property var focusedMonitor:({name:"test"})',
             }
             manifest = ""
             for name, body in fixtures.items():

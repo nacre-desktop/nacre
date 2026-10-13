@@ -54,8 +54,8 @@ window fields include `windowId`, `appId`, `workspaceId`, `outputId`, `geometry`
 Compatibility snapshot keys (`address`, `class`, `at`, `size`, `workspace`, etc.)
 remain for current helper data contracts. A new backend must provide compatible
 views until those consumers migrate; the keys no longer imply native address
-syntax. Likewise `NacreHyprland` is a forwarding compatibility shim;
-`activeWsId` remains the current numeric display alias. New logic should use
+syntax. Runtime widgets use `NacreCompositor` directly; `activeWsId` remains
+the current numeric display alias. New logic should use
 `activeWorkspaceId` and explicit workspace references.
 
 A workspace reference distinguishes stable identity, a name, and an index on an

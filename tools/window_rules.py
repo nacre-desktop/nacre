@@ -14,32 +14,6 @@ from pathlib import Path
 STRING = r'"(?:[^"\\]|\\.)*"|\x27(?:[^\x27\\]|\\.)*\x27'
 
 
-def balanced(source, start):
-    opening = source[start]
-    closing = {"{": "}", "(": ")"}[opening]
-    depth = 0
-    quote = None
-    escaped = False
-    for index in range(start, len(source)):
-        char = source[index]
-        if quote:
-            if escaped:
-                escaped = False
-            elif char == "\\":
-                escaped = True
-            elif char == quote:
-                quote = None
-        elif char in '"\x27':
-            quote = char
-        elif char == opening:
-            depth += 1
-        elif char == closing:
-            depth -= 1
-            if depth == 0:
-                return index + 1
-    raise ValueError("Unclosed window rule table")
-
-
 def fields(table):
     values = {}
     for match in re.finditer(r"\b(\w+)\s*=\s*(" + STRING + r"|true|false)", table):

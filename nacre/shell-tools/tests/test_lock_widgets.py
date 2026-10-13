@@ -179,17 +179,6 @@ class LockAndDeviceTests(unittest.TestCase):
             self.assertEqual(output.count("input-field {"), 1)
             self.assertNotIn("unlock-session", output)
 
-    def test_control_center_uses_native_pixel_coordinates_and_rotation(self):
-        self.assertEqual(
-            config.output_width({"width": 2880, "height": 1800, "scale": 1.5}), 2880
-        )
-        self.assertEqual(
-            config.output_width(
-                {"width": 2880, "height": 1800, "scale": 1.5, "transform": 1}
-            ),
-            1800,
-        )
-
     def test_device_names_are_arguments_and_actions_are_bounded(self):
         self.assertEqual(
             devices.command("wifi-connect", "$(anything); space")[-1],
