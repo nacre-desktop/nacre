@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Provider credentials and conversation files created by the CLI are private.
+umask 077
 exec "$HOME/.local/share/nacre/ai/codex/packages/0.159.2/bin/codex" "$@"

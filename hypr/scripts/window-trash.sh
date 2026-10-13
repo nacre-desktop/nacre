@@ -10,7 +10,10 @@ STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/hypr-trash"
 TRASH_WORKSPACE="special:trash"
 TTL_SECONDS=30
 
-mkdir -p "$STATE_DIR"
+umask 077
+[[ ! -L "$STATE_DIR" ]] || exit 1
+mkdir -p -- "$STATE_DIR"
+chmod 700 -- "$STATE_DIR"
 
 nacre_message() {
     python3 "$HOME/.local/share/nacre/shell/tools/nacre_i18n.py" "$@" 2>/dev/null || python3 -c 'import json,re,sys; values=json.loads(sys.argv[2] or "{}"); print(re.sub(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", lambda match: str(values.get(match[1], match[0])), sys.argv[1]), end="")' "$2" "${3-}"
@@ -37,6 +40,7 @@ dispatch_focus() {
 }
 
 state_file() {
+    compositor valid-window-id "$1" >/dev/null 2>&1 || return 1
     printf '%s/%s' "$STATE_DIR" "$1"
 }
 
@@ -67,25 +71,37 @@ write_state() {
     local trashed_at="$4"
     local file
 
-    file="$(state_file "$address")"
-    {
-        printf 'address=%q\n' "$address"
-        printf 'workspace_id=%q\n' "$workspace_id"
-        printf 'workspace_name=%q\n' "$workspace_name"
-        printf 'trashed_at=%q\n' "$trashed_at"
-    } > "${file}.tmp"
-    mv "${file}.tmp" "$file"
+    local temporary
+    file="$(state_file "$address")" || return 1
+    temporary=$(mktemp "$STATE_DIR/.record.XXXXXXXX")
+    if ! jq -n --arg address "$address" --arg workspace_id "$workspace_id" \
+        --arg workspace_name "$workspace_name" --arg trashed_at "$trashed_at" \
+        '{address: $address, workspace_id: $workspace_id, workspace_name: $workspace_name, trashed_at: $trashed_at}' > "$temporary"; then
+        rm -f -- "$temporary"
+        return 1
+    fi
+    mv -- "$temporary" "$file"
 }
 
 load_state() {
     local address="$1"
     local file
 
-    file="$(state_file "$address")"
-    [[ -f "$file" ]] || return 1
-
-    # shellcheck disable=SC1090
-    source "$file"
+    local record
+    file="$(state_file "$address")" || return 1
+    [[ -f "$file" && ! -L "$file" ]] || return 1
+    # This short-lived cache is data, never shell code. Old shell records are
+    # ignored rather than evaluated; already-trashed windows remain closable.
+    record=$(jq -ce --arg address "$address" '
+        select(type == "object" and .address == $address)
+        | select((.workspace_id | type) == "string" and (.workspace_id | test("^-?(0|[1-9][0-9]{0,9})$")))
+        | select((.workspace_name | type) == "string" and (.workspace_name | length) <= 1024)
+        | select((.trashed_at | type) == "string" and (.trashed_at | test("^(0|[1-9][0-9]{0,9})$")))
+    ' "$file" 2>/dev/null) || return 1
+    [[ $(printf '%s\n' "$record" | wc -l) == 1 ]] || return 1
+    workspace_id=$(jq -r '.workspace_id' <<< "$record")
+    workspace_name=$(jq -r '.workspace_name' <<< "$record")
+    trashed_at=$(jq -r '.trashed_at' <<< "$record")
 }
 
 target_workspace() {

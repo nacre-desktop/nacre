@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 # The older, still-running CLI owns this home. Never migrate it through this wrapper.
 legacy_home=$(realpath -m "$HOME/.codex")
 selected_home=$(realpath -m "${CODEX_HOME:-$HOME/.local/share/nacre/ai/codex-home}")
