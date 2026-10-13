@@ -69,6 +69,12 @@ TestCase {
         }
     }
     function init() {
+        NacreMediaDetails.lines = [];
+        NacreDashboardState.preferences = {
+            albumPalette: true
+        };
+        NacreAudio.outputs = [];
+        NacreAudio.sink = null;
         NacrePlayers.list = [];
         NacrePlayers.active = null;
         NacrePlayers.manualActive = null;
@@ -232,15 +238,84 @@ TestCase {
         compare(view.artwork, "");
         compare(view.sampling, false);
     }
-    function test_narrow_media_pages() {
-        for (const width of [300, 508, 766, 835]) {
-            const media = createTemporaryObject(page, test, {
-                width,
-                height: 400
-            });
-            wait(10);
-            const title = findChild(media, "fullMediaTitle");
-            verify(title.mapToItem(media, 0, 0).x + title.width <= width + .01);
+    function test_layout_fits_attached_and_small_pearl() {
+        const {
+            actor,
+            view
+        } = setup();
+        for (const size of [[940, 562], [516, 472], [300, 400], [1400, 800]]) {
+            view.width = size[0];
+            view.height = size[1];
+            wait(20);
+            for (const name of ["fullAlbum", "fullMediaTitle", "mediaTransport", "mediaSecondary", "fullPlayerChoices"]) {
+                const item = findChild(view, name);
+                const point = item.mapToItem(view, 0, 0);
+                verify(point.x >= 0 && point.y >= 0, name + " begins inside the page");
+                verify(point.x + item.width <= view.width + .01, name + " fits width");
+                verify(point.y + item.height <= view.height + .01, name + " fits height");
+            }
+            const title = findChild(view, "fullMediaTitle");
+            const transport = findChild(view, "mediaTransport");
+            verify(title.mapToItem(view, 0, title.height).y <= transport.mapToItem(view, 0, 0).y, "metadata stays above controls");
         }
+    }
+    function test_palette_toggle_and_inline_output() {
+        const {
+            view
+        } = setup();
+        mouseClick(findChild(view, "mediaAlbumColors"), 20, 15);
+        compare(NacreDashboardState.preferences.albumPalette, false);
+        mouseClick(findChild(view, "mediaAlbumColors"), 20, 15);
+        compare(NacreDashboardState.preferences.albumPalette, true);
+        NacreAudio.outputs = [
+            {
+                id: 1,
+                description: "Speakers"
+            },
+            {
+                id: 2,
+                description: "Headphones"
+            }
+        ];
+        NacreAudio.sink = NacreAudio.outputs[0];
+        const output = findChild(view, "mediaOutput");
+        compare(output.displayText, "Speakers");
+        output.forceActiveFocus();
+        keyClick(Qt.Key_Space);
+        tryCompare(output.popup, "visible", true);
+        keyClick(Qt.Key_Down);
+        keyClick(Qt.Key_Enter);
+        compare(output.displayText, "Headphones");
+        view.shouldUpdate = false;
+        output.activated(0);
+        compare(output.displayText, "Headphones");
+    }
+    function test_lyrics_follow_position_and_details_replace_them() {
+        const {
+            actor,
+            view
+        } = setup();
+        NacreMediaDetails.lines = [
+            {
+                time: 0,
+                text: "First"
+            },
+            {
+                time: 100,
+                text: "Second"
+            },
+            {
+                time: 200,
+                text: "Third"
+            }
+        ];
+        const lyrics = findChild(view, "mediaLyrics");
+        compare(view.lyricIndex, 1);
+        compare(lyrics.currentIndex, 1);
+        actor.position = 220;
+        compare(lyrics.currentIndex, 2);
+        NacreMediaDetails.lines = [];
+        compare(lyrics.visible, false);
+        verify(findChild(view, "mediaTrackDetails").visible);
     }
 }

@@ -9,7 +9,7 @@ Singleton {
     id: root
     readonly property var player: NacrePlayers.active
     readonly property bool shown: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard && view.dashboardTab === 2))
-    readonly property bool spectrumVisible: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.mediaMini || view.dashboard && [0, 2].includes(view.dashboardTab)))
+    readonly property bool spectrumVisible: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.mediaMini || view.dashboard && view.dashboardTab === 0))
     readonly property string trackKey: JSON.stringify({
         title: player?.trackTitle || "",
         artist: player?.trackArtist || "",
