@@ -493,8 +493,7 @@ def main():
                     dict(data=load(), error=str(error), pending=PENDING.exists())
                 )
             )
-            return 1
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
