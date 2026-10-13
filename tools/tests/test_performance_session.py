@@ -21,12 +21,15 @@ def report():
     sample = {
         "pss_mib": {"shell": {"max": 200}},
         "delivered_video_fps": 24,
-        "memory_valid_samples": {"pss": {"shell": 2}},
+        "memory_valid_samples": {"pss": {"shell": 2}, "swap_pss": {"shell": 2}},
+        "swap_pss_mib": {"shell": {"max": 0}},
         "samples": [{}, {}],
         "cpu_percent_one_core": {"shell": {"mean": 0.1}},
     }
     timing = {"frame_ms": {"p95": 400}, "synchronous_ms": {"p95": 80}, "samples": [{}]}
     return {
+        "paging_start": {"pswpin": 100, "pswpout": 200},
+        "paging_end": {"pswpin": 100, "pswpout": 200},
         "scenarios": {name: copy.deepcopy(sample) for name in BUDGETS["ci_pss_mib"]},
         "latency": {
             label: {
@@ -44,7 +47,7 @@ class BudgetTests(unittest.TestCase):
     def test_unknown_memory_is_never_treated_as_zero(self):
         for change in (
             {"pss_mib": {"shell": None}},
-            {"memory_valid_samples": {"pss": {"shell": 1}}},
+            {"memory_valid_samples": {"pss": {"shell": 1}, "swap_pss": {"shell": 2}}},
             {"samples": []},
         ):
             with self.subTest(change=change):
@@ -65,6 +68,14 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(len(failures), 2)
         self.assertIn("shell PSS", failures[0])
         self.assertIn("frame p95", failures[1])
+
+    def test_paging_cannot_masquerade_as_memory_savings(self):
+        data = report()
+        data["scenarios"]["video"]["swap_pss_mib"]["shell"]["max"] = 1
+        self.assertIn("swapped shell memory", session.check_report(data, BUDGETS)[0])
+        data = report()
+        data["paging_end"]["pswpin"] += 1
+        self.assertIn("host paging", session.check_report(data, BUDGETS)[0])
 
     def test_stalled_video_cannot_pass_with_low_memory(self):
         data = report()

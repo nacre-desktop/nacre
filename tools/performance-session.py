@@ -148,6 +148,14 @@ def mapping(pid):
     return dict(groups)
 
 
+def paging():
+    """Host swap traffic disqualifies small memory/latency comparisons."""
+    fields = dict(
+        line.split() for line in Path("/proc/vmstat").read_text().splitlines()
+    )
+    return {key: int(fields[key]) for key in ("pswpin", "pswpout")}
+
+
 def fixture(home, source, video=False):
     poster = home / "Pictures/Wallpapers/static.png"
     media = {
@@ -466,6 +474,8 @@ def run(args, directory):
         time.sleep(10)
         ipc("nacre", "close")
         report = {
+            "paging_start": paging(),
+            "paging_end": paging(),
             "revision": args.revision
             or subprocess.check_output(
                 ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
@@ -513,6 +523,7 @@ def run(args, directory):
                     video_after["measuredFrames"] - video_before["measuredFrames"]
                 ) / (time.monotonic() - sampled_at)
             data["mapping_pss_mib"] = mapping(pid)
+            report["paging_end"] = paging()
             meta = state("performanceFrame", "state")
             data["output"] = {
                 key: meta[key] for key in ("screen", "width", "height", "favorites")
@@ -551,16 +562,24 @@ def run(args, directory):
                         check=True,
                         capture_output=True,
                     )
-                    result = wait_for(
-                        lambda previous=previous: (
-                            value
-                            if (value := state("performanceFrame", "state"))
-                            and "frameMs" in value
-                            and value.get("sequence", 0) > previous
-                            else None
-                        ),
-                        action + " rendered frame",
-                    )
+                    try:
+                        result = wait_for(
+                            lambda previous=previous: (
+                                value
+                                if (value := state("performanceFrame", "state"))
+                                and "frameMs" in value
+                                and value.get("sequence", 0) > previous
+                                else None
+                            ),
+                            action + " rendered frame",
+                        )
+                    except RuntimeError as failure:
+                        diagnostic = json.dumps(state("performanceFrame", "state"))[
+                            :1500
+                        ]
+                        raise RuntimeError(
+                            f"{failure}; panel state: {diagnostic}"
+                        ) from failure
                     if action == "launcher" and result.get("readyImages", 0) < 12:
                         raise RuntimeError("Launcher fixture icons are not ready")
                     timings.append(result)
@@ -662,6 +681,7 @@ def run(args, directory):
         )
         time.sleep(6)
         sample("static_after_video")
+        report["paging_end"] = paging()
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2) + "\n")
         return report
@@ -680,6 +700,10 @@ def run(args, directory):
 def check_report(report, budgets):
     """Missing coverage or latency is a failure, not a zero-cost run."""
     failures = []
+    if not report.get("paging_start") or not report.get("paging_end"):
+        failures.append("missing host paging coverage")
+    elif report["paging_start"] != report["paging_end"]:
+        failures.append("host paging invalidates the performance comparison")
     for name, ceiling in budgets["ci_pss_mib"].items():
         sample = report.get("scenarios", {}).get(name, {})
         memory = sample.get("pss_mib", {}).get("shell")
@@ -687,7 +711,15 @@ def check_report(report, budgets):
         count = len(sample.get("samples", []))
         if not memory or not count or coverage != count:
             failures.append(name + ": incomplete shell PSS coverage")
-        elif memory["max"] > ceiling:
+        swap = sample.get("swap_pss_mib", {}).get("shell")
+        swap_coverage = (
+            sample.get("memory_valid_samples", {}).get("swap_pss", {}).get("shell", 0)
+        )
+        if not swap or not count or swap_coverage != count:
+            failures.append(name + ": incomplete shell SwapPss coverage")
+        elif swap["max"] > 0:
+            failures.append(name + ": swapped shell memory invalidates the comparison")
+        if memory and memory["max"] > ceiling:
             failures.append(
                 f"{name}: shell PSS {memory['max']:.1f} MiB exceeds {ceiling} MiB"
             )
