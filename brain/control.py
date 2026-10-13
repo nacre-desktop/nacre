@@ -577,6 +577,46 @@ def palette():
         return "#808080"
 
 
+def theme_css():
+    """Supply the current palette before the first paint, without indexing notes."""
+    colours = desktop_theme()
+    if not isinstance(colours, dict):
+        return ""
+    roles = {
+        "bg": "surface",
+        "panel": "surfaceContainer",
+        "raised": "surfaceContainerHigh",
+        "text": "onSurface",
+        "muted": "onSurfaceVariant",
+        "line": "outlineVariant",
+        "accent": "primary",
+        "secondary": "secondary",
+        "tertiary": "tertiary",
+        "on-accent": "onPrimary",
+    }
+    valid = {
+        role: "#" + value.lstrip("#")
+        for role, value in colours.items()
+        if isinstance(value, str) and re.fullmatch(r"#?[0-9a-fA-F]{6}", value)
+    }
+    declarations = [
+        "--" + name + ":" + valid[role] + ";"
+        for name, role in roles.items()
+        if role in valid
+    ]
+    surface = valid.get("surface", "#151310")
+    light = sum(int(surface[i : i + 2], 16) for i in (1, 3, 5)) > 420
+    declarations.extend(
+        (
+            "color-scheme:" + ("light" if light else "dark") + ";",
+            "--logo-highlight:"
+            + valid.get("primary" if light else "primaryFixed", "#eee9f4")
+            + ";",
+        )
+    )
+    return "\n:root{" + "".join(declarations) + "}\n"
+
+
 def action(name, value=""):
     if name == "notes":
         launch_app(["env", "NACRE_BRAIN_VIEW=notes", "nacre-ai", "brain"])
@@ -810,6 +850,8 @@ class Handler(BaseHTTPRequestHandler):
             if path.path in assets:
                 name = assets[path.path]
                 content = (ROOT / "web" / name).read_bytes()
+                if name == "style.css":
+                    content += theme_css().encode()
                 if name == "index.html":
                     requested = os.environ.get("NACRE_LANGUAGE", "")
                     if not requested:
@@ -1067,13 +1109,12 @@ def watch_brain():
         except BlockingIOError:
             return
         while True:
-            # A missing compositor is a session boundary, not a reason to open
-            # browser windows outside the desktop session.
+            # Keep the local server ready; opening a window requires an explicit
+            # launcher action. Closing the browser is not a recovery condition.
             try:
-                if compositor().query("active_workspace", timeout=3):
-                    ensure_brain(focus=False)
+                ensure_server()
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
-                pass  # Retry next poll, without opening another window.
+                pass  # Retry server startup next poll, without opening a window.
             time.sleep(3)
 
 

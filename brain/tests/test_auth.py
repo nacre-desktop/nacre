@@ -16,6 +16,48 @@ spec.loader.exec_module(m)
 
 
 class BrowserAuthenticationTests(unittest.TestCase):
+    def test_initial_stylesheet_uses_current_palette_without_waiting_for_index(self):
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch.object(m, "graph", side_effect=AssertionError("Index not ready")),
+            patch.object(
+                m,
+                "desktop_theme",
+                return_value={
+                    "surface": "fafafa",
+                    "primary": "#123456",
+                    "onSurface": "112233",
+                    "secondary": "bad; } body { display:none",
+                },
+            ),
+        ):
+            server = m.BrainServer(("127.0.0.1", 0), Path(directory))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                connection = http.client.HTTPConnection(
+                    "127.0.0.1", server.server_port, timeout=3
+                )
+                connection.request("GET", "/style.css")
+                response = connection.getresponse()
+                content = response.read().decode()
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.getheader("Cache-Control"), "no-store")
+                self.assertIn(
+                    "style-src 'self'", response.getheader("Content-Security-Policy")
+                )
+                self.assertIn("--bg:#fafafa;", content)
+                self.assertIn("--accent:#123456;", content)
+                self.assertIn("color-scheme:light;", content)
+                self.assertIn("--logo-highlight:#123456;", content)
+                self.assertNotIn("display:none", content)
+                connection.close()
+                m.graph.assert_not_called()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=3)
+
     def test_cookie_is_required_bootstrap_is_private_and_restart_keeps_session(self):
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)

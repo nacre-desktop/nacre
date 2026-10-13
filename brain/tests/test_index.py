@@ -367,6 +367,23 @@ class BrainStartupTests(unittest.TestCase):
 
 
 class BrainCompositorFailureTests(unittest.TestCase):
+    def test_watcher_recovers_server_without_querying_or_reopening_windows(self):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.object(module, "STATE", Path(tmp)),
+            patch.object(
+                module, "ensure_server", side_effect=[OSError("stopped"), None]
+            ) as server,
+            patch.object(module, "ensure_brain") as browser,
+            patch.object(module, "compositor") as service,
+            patch.object(module.time, "sleep", side_effect=[None, InterruptedError]),
+        ):
+            with self.assertRaises(InterruptedError):
+                module.watch_brain()
+            self.assertEqual(server.call_count, 2)
+            browser.assert_not_called()
+            service.assert_not_called()
+
     def test_niri_launch_skips_unsupported_fullscreen_and_still_focuses_window(self):
         with (
             tempfile.TemporaryDirectory() as tmp,

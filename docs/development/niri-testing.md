@@ -332,6 +332,11 @@ rollback. Verify the health endpoint, actual window creation, repeated-open
 reuse and automatic recovery after stopping only the Brain server. These checks
 do not establish cold-login acceptance.
 
+The watcher maintains only the local server. Closing Brain stays closed until an
+explicit launch; window disappearance is not a recovery condition. The initial
+stylesheet includes the current palette before indexing, so the loading view
+does not briefly show the fallback colors.
+
 The host-session configuration sets `prefer-no-csd` so Chrome app windows such
 as Brain can negotiate a frame without their own title bar. This preference also
 applies to other compatible clients. Restart only the affected app to apply it:
