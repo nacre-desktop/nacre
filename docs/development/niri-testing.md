@@ -321,8 +321,8 @@ Use this short physical checklist, recording failures before changing more setti
 | Pan one workspace | Three fingers left/right; Super+Left/Right | Open three windows; reach each without switching workspace. Swipe direction passed by operator. |
 | Workspaces | Three fingers up/down; Super+1/2; Super+Ctrl+Left/Right | Switch out and back; window stays on its intended workspace. Swipe direction passed by operator. |
 | Native bird's-eye view | Four fingers up/down; Super+Ctrl+Tab | See live windows, select one, drag between workspaces, exit. |
-| New tiled windows | Open an app/terminal | Default column uses the full usable width, with saved outer gaps. Existing columns retain their old width until resized. |
-| Nacre AI launcher/chat windows | Open Nacre AI or a chat | `nacre-ai-dashboard` and `nacre-ai-task` start at native half-width; both classes measured 932 logical pixels. Ordinary apps remain full-width. |
+| New tiled windows | Open an app/terminal | Standard niri half-width, with saved outer gaps; operator later reverted the earlier full-width experiment. Existing columns retain their old width until resized. |
+| Nacre AI launcher/chat windows | Open Nacre AI or a chat | `nacre-ai-dashboard` and `nacre-ai-task` start at native half-width; both classes measured 932 logical pixels. |
 | Width adjustment | Super+R; Super+Alt+Left/Right; Super+right-button drag | Cycle one-third, half, two-thirds, full; adjust 30 logical pixels; or drag the resize edge. |
 | Tiled maximize | Super+M | Maximize column while retaining gaps/frame; real fullscreen remains separate. Floating-window maximize parity remains a backend follow-up. |
 | Nacre window overview | Super+Tab | Nacre's existing searchable window grid; separate from native overview. |
@@ -359,7 +359,10 @@ The operator then requested standard half-width columns specifically for both
 Nacre AI launcher/dashboard and chat/app windows. A host-session opening rule
 matches only `nacre-ai-dashboard` and `nacre-ai-task`, the actual launcher classes.
 Fresh windows of both classes measured 932 logical pixels, while the earlier
-ordinary Kitty probe measured 1876. AI remains tiled; no launcher/profile/AI
+ordinary Kitty probe measured 1876 under the full-width experiment. The operator
+subsequently requested the standard half-width default for all apps, superseding
+that experiment. The live config and saved generator now use 0.5; explicit AI
+opening rules retain both launcher and chat defaults. AI remains tiled; no launcher/profile/AI
 permission change is needed. New columns get their initial width from the rule;
 existing columns remain adjustable. Half-width lets two chat columns fit together
 before the scrolling layout extends off-screen. Native width presets and the

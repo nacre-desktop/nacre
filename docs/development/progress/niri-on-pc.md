@@ -11,8 +11,9 @@ belong to the separate `feature/niri-backend` task.
 
 ## Done
 
-- Operator requests full-width ordinary apps but half-width Nacre AI launcher and
-  chat/app windows. Added scoped native opening rules for both actual AI classes;
+- Operator first requested full-width ordinary apps with half-width Nacre AI, then
+  explicitly reverted all apps to standard niri half-width. Saved generator now
+  matches the final 0.5 live default. Added scoped rules for both AI classes;
   fresh dashboard/task probes measure 932 logical pixels. Added native Super+R
   width cycling (one-third, half, two-thirds, full); existing fine/mouse resizing
   stays available. AI/profile access policy and launcher scripts are unchanged.
@@ -29,7 +30,8 @@ belong to the separate `feature/niri-backend` task.
 - Replaced stale seeded colors include with the existing live palette output;
   consumed backend owner's tested `b2a8527` gradient template into staged source;
   pure palette render/native reload pass without restart. No backend code edits.
-- Seeded full-width new columns and saved outer gutters/border width. Super+M uses
+- Tested full-width new columns, then reverted the default to 0.5 on the operator's
+  newer request. Saved outer gutters/border width remain. Super+M uses
   native maximize-column for tiled windows; prior maximize-to-edges removes gaps.
   Existing columns keep width until resized; floating/explicit-target facade parity
   remains with backend owner.

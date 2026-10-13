@@ -26,7 +26,7 @@ def host_preferences(desktop):
         raise ValueError("Invalid saved window margins")
     text = (
         "layout {\n    gaps " + str(gap) + "\n"
-        "    default-column-width { proportion 1.0; }\n"
+        "    default-column-width { proportion 0.5; }\n"
         "    preset-column-widths {\n"
         "        proportion 0.33333\n        proportion 0.5\n"
         "        proportion 0.66667\n        proportion 1.0\n    }\n"

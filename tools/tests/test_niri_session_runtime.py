@@ -37,7 +37,7 @@ class NiriRuntimeTests(unittest.TestCase):
         self.assertIn("scale 1.5", text)
         self.assertIn("toggle-overview", text)
         self.assertIn("focus-column-left", text)
-        self.assertIn("default-column-width { proportion 1.0; }", text)
+        self.assertIn("layout {\n    gaps 12\n    default-column-width { proportion 0.5; }", text)
         self.assertIn("Super+M { maximize-column; }", text)
         self.assertIn("gaps 12", text)
         self.assertIn("focus-ring { width 1; }", text)
