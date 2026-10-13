@@ -1,5 +1,32 @@
 # Niri parity audit — 2026-10-13
 
+Keybinding follow-up supersedes the Q-family rows in the original inventory below:
+
+| General binding | Hyprland before → after | Niri before → after |
+|---|---|---|
+| Super+Q | trash/undo → plain close, works | missing → plain close, works |
+| Super+Ctrl+Q | plain close → unassigned | plain close → unassigned |
+| Shift+Q / Alt+Q / Ctrl+Shift+Q with Super | personal actions in defaults → opt-in only | unsupported entries → absent from defaults/report |
+
+Both close results use fresh default preparations, full generated bindings, an
+actual Super+Q key event, window removal and client exit. The opt-in probe uses
+a private headless labwc parent, private buses and disposable HOME directories:
+
+```sh
+python tools/tests/verify_plain_close.py --backend hyprland --output /tmp/close-hyprland.json
+python tools/tests/verify_plain_close.py --backend niri --output /tmp/close-niri.json
+```
+
+It requires labwc, the compositor binaries, Kitty, a C compiler, wayland-scanner
+and Wayland/XKB development libraries. `--parent` and `--parent-libraries` accept
+an isolated labwc build. The test downloads a pinned, checksum-verified virtual
+keyboard protocol; niri receives standard key codes through the private parent,
+since direct virtual-keyboard input bypasses its compositor bindings. Hyprland
+receives virtual-keyboard input on its private child socket. No live desktop
+socket or input device is used. Kitty's test client disables its close prompt.
+The `windowTrashBindings` profile opt-in retains the four personal actions on
+Hyprland and never overrides Super+Q. Niri still lacks trash/force-kill primitives.
+
 Scope: the shared compositor contract, usage guide, shell IPC handlers and launcher
 catalog. Baseline is `0ecb3bb7`; after is this change. **works** means the stated
 nested scope passed; **degraded** includes a semantic difference or incomplete

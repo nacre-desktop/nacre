@@ -17,8 +17,9 @@ Super+Z hides or shows the shell frame and panels. The wallpaper stays visible,
 and tiled windows expand into the space freed by the frame. Toggling it back
 restores the frame reservation without changing your configured window gaps.
 
-On Hyprland, use Super+Q to close with a 30-second undo: Super+Shift+Q restores the window
-before it closes. Super+Ctrl+Q closes immediately. Super+M maximizes the window.
+Use Super+Q to close the current window on both compositors. Trash/undo shortcuts
+are an explicit personal-profile opt-in on Hyprland; the general profile does not
+assign them or Super+Ctrl+Q. On Hyprland, Super+M maximizes the window.
 Super+Tab opens overview; Super+Ctrl+Left/Right switches workspaces.
 Super+L locks the desktop; Super+Escape (or Super+X) opens the power menu.
 The launcher can show the current key bindings under Learn. Actual keys can differ
@@ -26,7 +27,7 @@ with private overrides. Notifications expire and can be reviewed in history;
 Do not disturb controls popup presentation. Night light warms display colors;
 Stay awake temporarily inhibits idle actions. Quick controls show their state.
 
-On niri, use Super+Ctrl+Q to close immediately. Trash/undo, minimize, scratchpad
+On niri, trash/undo, minimize, scratchpad
 and sticky-window bindings are unavailable. Number keys select existing workspaces
 on the focused output; their display numbers can change. Super+G switches a column
 to tabs, and Super+Ctrl+Page Up/Down cycles its tabs. Alt+Tab cycles windows in the
