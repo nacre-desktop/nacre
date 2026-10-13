@@ -7,6 +7,7 @@ import json
 import re
 import subprocess
 import os
+import sys
 
 
 def command(action, value=""):
@@ -99,8 +100,7 @@ def main():
         cmd = command(a.action, a.value)
         if a.action == "wifi-connect":
             subprocess.run(cmd, check=True)
-            input("\nPress Enter to close.")
-            return
+            return 0
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
         # bluetoothctl can return zero for an unsuccessful operation.
         output = result.stdout + result.stderr
@@ -122,8 +122,12 @@ def main():
         RuntimeError,
         subprocess.SubprocessError,
     ) as e:
+        if a.action == "wifi-connect":
+            print("\nCould not connect to Wi-Fi. Check the network and credentials.")
+            input("\nPress Enter to close.")
+            return 1
         print(json.dumps(dict(error=str(e))))
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

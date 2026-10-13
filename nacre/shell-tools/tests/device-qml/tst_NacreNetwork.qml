@@ -45,7 +45,7 @@ TestCase {
         };
         verify(state.publish(JSON.stringify(snapshot)));
         compare(state.networks.length, 4);
-        compare(state.visibleNetworks.length, 2);
+        compare(state.visibleNetworks.length, 3);
         compare(state.active.ssid, "Mesh");
         verify(state.visibleNetworks[0].active);
         compare(state.visibleNetworks[0].strength, 30);

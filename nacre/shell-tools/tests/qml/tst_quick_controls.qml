@@ -228,6 +228,9 @@ TestCase {
         compare(DeviceActions.lastRequest.join("|"), "wifi-connect|Guest");
         findChild(popup, "quickWifiPower").clicked();
         compare(DeviceActions.lastRequest.join("|"), "wifi-radio|off");
+        const scan = findChild(popup, "quickWifiScan");
+        mouseClick(scan, scan.width / 2, scan.height / 2);
+        compare(DeviceActions.lastRequest[0], "wifi-scan");
         verify(!findChild(popup, "quickSettingsLink"));
         NacrePanelState.openDeviceSettings("network");
         compare(NacrePanelState.screens.test.controlSection, "network");

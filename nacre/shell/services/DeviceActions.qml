@@ -6,7 +6,7 @@ Singleton {
     id: root
     property string message: ""
     property string lastAction: ""
-    readonly property bool busy: worker.running
+    readonly property bool busy: worker.running || connector.running
     function request(args) {
         if (busy)
             return;
@@ -16,7 +16,20 @@ Singleton {
         worker.running = true;
     }
     function connectWifi(ssid) {
-        AppLaunch.run(["kitty", "--title", "Connect to Wi-Fi", "python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/device-actions.py", "wifi-connect", ssid]);
+        if (busy)
+            return;
+        lastAction = "wifi-connect";
+        message = NacreI18n.tr("ui.device-actions.message.finish-connecting", "Finish connecting in the Wi-Fi window.");
+        connector.command = ["systemd-run", "--user", "--scope", "--collect", "--quiet", "env", "-u", "LD_LIBRARY_PATH", "-u", "QML_IMPORT_PATH", "-u", "QML2_IMPORT_PATH", "-u", "QT_PLUGIN_PATH", "-u", "NACRE_LIB_DIR", "kitty", "--title", "Connect to Wi-Fi", "python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/device-actions.py", "wifi-connect", ssid];
+        connector.running = true;
+    }
+    Process {
+        id: connector
+        objectName: "wifiConnector"
+        onExited: (exitCode, exitStatus) => {
+            root.message = exitCode === 0 && exitStatus === 0 ? "" : NacreI18n.tr("ui.device-actions.message.connection-window-failed", "The Wi-Fi window closed or could not connect. Try again or open the connection editor.");
+            NacreNetwork.refresh();
+        }
     }
     Process {
         id: worker

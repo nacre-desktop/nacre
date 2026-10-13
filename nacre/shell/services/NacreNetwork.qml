@@ -31,7 +31,7 @@ Singleton {
             if (!before || (!before.active && (point.active || point.strength > before.strength)))
                 grouped.set(key, point);
         }
-        return [...grouped.values()].filter(point => point.ssid || point.active).sort((left, right) => Number(right.active) - Number(left.active) || right.strength - left.strength || left.ssid.localeCompare(right.ssid) || left.bssid.localeCompare(right.bssid));
+        return [...grouped.values()].sort((left, right) => Number(right.active) - Number(left.active) || right.strength - left.strength || left.ssid.localeCompare(right.ssid) || left.bssid.localeCompare(right.bssid));
     }
     function publish(text) {
         try {

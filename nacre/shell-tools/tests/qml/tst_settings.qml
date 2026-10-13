@@ -464,6 +464,8 @@ TestCase {
         const view = createTemporaryObject(settings, test);
         const network = {
             ssid: "Fixture network",
+            bssid: "00:11:22:33:44:55",
+            interface: "wlan0",
             strength: 80,
             active: false
         };
@@ -471,6 +473,7 @@ TestCase {
         view.open("network");
         wait(20);
         const wifi = findChild(view, "settingsPage").item;
+        DeviceActions.requests = [];
         compare(DeviceActions.requests.length, 0);
         compare(DeviceActions.connectedSSID, "");
         DeviceActions.busy = true;
@@ -479,7 +482,7 @@ TestCase {
         compare(DeviceActions.requests.length, 0);
         compare(DeviceActions.connectedSSID, "");
         DeviceActions.busy = false;
-        wifi.connect(network);
+        wifi.connect(Object.assign({}, network));
         compare(DeviceActions.connectedSSID, "Fixture network");
         NacreNetwork.visibleNetworks = [];
         DeviceActions.connectedSSID = "";
@@ -509,6 +512,55 @@ TestCase {
         NacreBluetooth.devices = [];
         bt.deviceAction(device, "trust");
         compare(DeviceActions.requests.length, 2);
+    }
+    function test_network_settings_buttons_use_real_pointer_actions() {
+        const priorNetworks = NacreNetwork.visibleNetworks;
+        const connected = {
+            ssid: "Home",
+            bssid: "00:11:22:33:44:55",
+            interface: "wlan0",
+            strength: 60,
+            active: true
+        };
+        const guest = {
+            ssid: "Guest",
+            bssid: "00:11:22:33:44:56",
+            interface: "wlan0",
+            strength: 80,
+            active: false
+        };
+        NacreNetwork.visibleNetworks = [connected, guest];
+        NacreNetwork.active = connected;
+        NacreNetwork.wifiInterface = "wlan0";
+        DeviceActions.busy = false;
+        const view = createTemporaryObject(settings, test);
+        view.open("network");
+        wait(30);
+        const wifi = findChild(view, "settingsWifiControls");
+        verify(wifi);
+        compare(wifi.nearby.length, 2);
+        DeviceActions.requests = [];
+        DeviceActions.connectedSSID = "";
+        const connect = findChild(wifi, "availableWifiAction");
+        mouseClick(connect, connect.width / 2, connect.height / 2);
+        compare(DeviceActions.connectedSSID, "Guest");
+        const disconnect = findChild(wifi, "connectedWifiAction");
+        verify(disconnect.enabled);
+        compare(disconnect.text, "Disconnect");
+        mouseClick(disconnect, disconnect.width / 2, disconnect.height / 2);
+        compare(DeviceActions.requests[0].join("|"), "wifi-disconnect|wlan0");
+        const scan = findChild(wifi, "quickWifiScan");
+        mouseClick(scan, scan.width / 2, scan.height / 2);
+        compare(DeviceActions.requests[1][0], "wifi-scan");
+        const radio = findChild(wifi, "quickWifiPower");
+        mouseClick(radio, radio.width / 2, radio.height / 2);
+        compare(DeviceActions.requests[2].join("|"), "wifi-radio|off");
+        DeviceActions.busy = true;
+        verify(!connect.enabled && !disconnect.enabled && !scan.enabled && !radio.enabled);
+        DeviceActions.busy = false;
+        NacreNetwork.visibleNetworks = priorNetworks;
+        NacreNetwork.active = null;
+        NacreNetwork.wifiInterface = "";
     }
     function test_history_requires_confirmation_and_preserves_long_card_bounds() {
         NacreNotifs.list = [

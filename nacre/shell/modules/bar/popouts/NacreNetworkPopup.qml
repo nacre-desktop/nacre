@@ -5,18 +5,35 @@ import qs.services
 Item {
     id: root
     readonly property var nearby: NacreNetwork.visibleNetworks
+    property real maximumListHeight: 210
+    Component.onCompleted: {
+        NacreNetwork.refresh();
+        request("wifi-scan");
+    }
     implicitWidth: 352
     implicitHeight: body.implicitHeight
+    function request(action, value) {
+        if (DeviceActions.busy || !NacreNetwork.wifiAvailable)
+            return false;
+        if (action === "wifi-scan" && !NacreNetwork.wifiEnabled)
+            return false;
+        if (action === "wifi-disconnect" && (!NacreNetwork.active || !value || value !== NacreNetwork.wifiInterface))
+            return false;
+        if (!["wifi-radio", "wifi-scan", "wifi-disconnect"].includes(action))
+            return false;
+        DeviceActions.request(value === undefined ? [action] : [action, value]);
+        return true;
+    }
     function activate(point) {
-        const current = nearby.find(entry => point?.bssid && entry.bssid === point.bssid);
-        if (DeviceActions.busy || !NacreNetwork.wifiEnabled || !current)
+        const current = nearby.find(entry => point?.bssid && entry.bssid === point.bssid && entry.interface === point.interface);
+        if (DeviceActions.busy || !NacreNetwork.wifiAvailable || !NacreNetwork.wifiEnabled || !current)
             return false;
-        if (current.active && NacreNetwork.wifiInterface)
-            DeviceActions.request(["wifi-disconnect", NacreNetwork.wifiInterface]);
-        else if (current.ssid)
-            DeviceActions.connectWifi(current.ssid);
+        if (current.active)
+            return request("wifi-disconnect", current.interface || NacreNetwork.wifiInterface);
+        if (!current.ssid)
+            DesktopActions.execute("network");
         else
-            return false;
+            DeviceActions.connectWifi(current.ssid);
         return true;
     }
     Column {
@@ -27,10 +44,18 @@ Item {
             width: parent.width
             spacing: 12
             NacreText {
-                width: Math.max(0, parent.width - radioButton.width - parent.spacing)
+                width: Math.max(0, parent.width - radioButton.width - scanButton.width - 2 * parent.spacing)
                 anchors.verticalCenter: parent.verticalCenter
                 text: NacreI18n.tr("popouts.network-popup.text.wi-fi", "Wi-Fi")
                 font.pointSize: 14
+            }
+            ActionButton {
+                id: scanButton
+                objectName: "quickWifiScan"
+                text: NacreI18n.tr("ui.network-page.text.scan-networks", "Scan networks")
+                compact: true
+                enabled: !DeviceActions.busy && NacreNetwork.wifiAvailable && NacreNetwork.wifiEnabled
+                onClicked: root.request("wifi-scan")
             }
             ActionButton {
                 id: radioButton
@@ -38,8 +63,7 @@ Item {
                 text: NacreNetwork.wifiEnabled ? NacreI18n.tr("popouts.network-popup.text.turn-off", "Turn off") : NacreI18n.tr("popouts.network-popup.text.turn-on", "Turn on")
                 compact: true
                 enabled: !DeviceActions.busy && NacreNetwork.wifiAvailable
-                onClicked: if (enabled)
-                    DeviceActions.request(["wifi-radio", NacreNetwork.wifiEnabled ? "off" : "on"])
+                onClicked: root.request("wifi-radio", NacreNetwork.wifiEnabled ? "off" : "on")
             }
         }
         NacreText {
@@ -49,6 +73,8 @@ Item {
             color: NacreTokens.mutedInk
         }
         NacreQuickList {
+            objectName: "wifiNetworkList"
+            maximumHeight: root.maximumListHeight
             width: parent.width
             Column {
                 width: parent.width
@@ -58,7 +84,7 @@ Item {
                     delegate: NacreSurface {
                         required property var modelData
                         width: parent.width - 10
-                        height: 48
+                        height: Math.max(48, connectionButton.implicitHeight + 12)
                         radius: 12
                         color: modelData.active ? Qt.alpha(NacreTokens.accent, 0.12) : "transparent"
                         NacreText {
@@ -75,9 +101,9 @@ Item {
                             anchors.right: parent.right
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
-                            text: parent.modelData.active ? NacreI18n.tr("popouts.network-popup.text.disconnect", "Disconnect") : NacreI18n.tr("popouts.network-popup.text.connect", "Connect")
+                            text: parent.modelData.active ? NacreI18n.tr("popouts.network-popup.text.disconnect", "Disconnect") : parent.modelData.ssid ? NacreI18n.tr("popouts.network-popup.text.connect", "Connect") : NacreI18n.tr("ui.network-page.text.connection-editor", "Connection editor")
                             compact: true
-                            enabled: !DeviceActions.busy && NacreNetwork.wifiEnabled
+                            enabled: !DeviceActions.busy && NacreNetwork.wifiAvailable && NacreNetwork.wifiEnabled
                             onClicked: root.activate(parent.modelData)
                         }
                     }

@@ -31,6 +31,10 @@ class SettingsUITests(unittest.TestCase):
                     .replace("import Quickshell.Io", "")
                     .replace("import Quickshell.Services.Pipewire", "")
                     .replace("import Quickshell", "")
+                    .replace(
+                        "import qs.modules.bar.popouts as Connectivity",
+                        'import "../connectivity" as Connectivity',
+                    )
                     .replace("Quickshell.screens[0].height", "1080")
                     .replace("Quickshell.screens[0].width", "1920")
                     .replace('Quickshell.env("HOME")', '"/fixture"')
@@ -59,6 +63,15 @@ class SettingsUITests(unittest.TestCase):
                 if path.name == "NacreAppearancePage.qml":
                     source = remove_objects(source, r"\bFileView\s*\{")
                 (pages / path.name).write_text(source)
+            connectivity = target / "connectivity"
+            connectivity.mkdir()
+            for name in ("NacreNetworkPopup", "NacreQuickList"):
+                (connectivity / (name + ".qml")).write_text(
+                    adapted(
+                        ROOT.parent / "shell/modules/bar/popouts" / (name + ".qml"),
+                        "../fixtures",
+                    )
+                )
             for folder, names in {
                 "media": ["NacreMediaSlider", "NacreMediaButton"],
                 "notifications": ["NacreNotice"],
@@ -114,6 +127,11 @@ class SettingsUITests(unittest.TestCase):
             (target / "fixtures/ActionButton.qml").write_text(
                 adapted(ROOT.parent / "shell/widgets/ActionButton.qml", ".")
             )
+            (target / "fixtures/NacreScrollBar.qml").write_text(
+                (ROOT.parent / "shell/widgets/NacreScrollBar.qml").read_text()
+            )
+            with (target / "fixtures/qmldir").open("a") as manifest:
+                manifest.write("\nNacreScrollBar 1.0 NacreScrollBar.qml\n")
             services = {
                 "NacrePanelState": 'property string settingsPage:"appearance";function openSettings(page){settingsPage=page}',
                 "TimezoneSettings": 'property var status:({timezone:"UTC",localTime:"12:34",automatic:false,installed:false});property string message:"";property bool busy:false;property var changes:[];function refresh(){} function change(kind,value){changes=[...changes,[kind,value]]}',
