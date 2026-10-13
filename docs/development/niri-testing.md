@@ -167,26 +167,81 @@ none. Startup and observation additions have nine focused tests.
 
 ## Phase 2: backend branch and personal preferences
 
-The backend agent owns the compositor implementation and generated config. Wait
-for its exact tested revision and command before consuming it. Do not modify its
+The backend agent owns the compositor implementation and generated config. PR12
+is merged at `ccc86d3`; the preview consumes public main `3c87a61`, including
+the standard binding update. Do not modify its
 backend as a local workaround; report reproducible problems on its PR. Keep the
 maintainer's personal profile, private preferences and AI access policy byte-for-byte
 unless an explicit, scoped migration is required. Use a separate niri shell source
 so a failed niri experiment cannot overwrite the working Hyprland source.
+
+### Windowed Nacre preview (2026-10-13)
+
+The operator now requests full Nacre testing while preserving the active Hyprland
+desktop and parallel chats. `uwsm/tools/niri-preview.py` stages the merged shell,
+backend, generated keyboard/profile/bindings/rules, private appearance and panel
+preferences, palette runtime and installed launch controllers in a separate tree.
+Original configuration remains untouched. The explicit personal AI access setting
+is retained; the preview does not change the real profile or account policy.
+
+From this task worktree, choose a new empty private destination:
+
+```sh
+python3 uwsm/tools/niri-preview.py prepare --backend "$PWD" \
+  --destination "$HOME/.local/share/nacre/niri-on-pc/preview-test"
+python3 uwsm/tools/niri-preview.py run \
+  --destination "$HOME/.local/share/nacre/niri-on-pc/preview-test"
+```
+
+`bwrap` supplies a read-only host filesystem with writable private configuration,
+Nacre state/cache and Kitty cache. A private runtime directory and `dbus-run-session`
+separate display, clipboard, notifications and bus ownership. Run plain `niri`,
+never `niri --session` or UWSM start, inside the active desktop. No global
+activation environment is imported. Resolved installed-runtime symlinks are
+mounted into normal directories so hiding real release state does not break the
+palette interpreter. Startup and generated shortcut IPC use the same Quickshell
+configuration path as installed controllers.
+
+Focus the niri window. Preview-only aliases are **Alt+Space** (launcher),
+**Alt+O** (dashboard), **Alt+Enter** (Kitty), **Alt+1…9** (available named
+workspaces), and **Alt+Shift+Escape** (exit just the preview). Generated Super
+bindings are retained, but Hyprland may consume them first. These aliases do not
+change real-login bindings or any Hyprland configuration. The normal Nacre bar,
+launcher and panels retain their existing appearance.
+
+Windowed checks passed: native config validation; loaded shell and live workspace
+state; launcher open/controller palette route; dashboard IPC open with pinning;
+detached launcher represented by a real niri window; Wayland Kitty window;
+private notification delivery visibly captured; and `grim` output capture.
+Unpinned dashboard disappears without hover by existing design; automation pins
+it for the state assertion. User-manager environment bytes match before/after,
+and the running Hyprland services stay active. Physical key/input acceptance is
+still pending. A five-workspace profile displays a sixth empty workspace because
+niri keeps a trailing empty workspace; this is expected dynamic behavior.
+
+This is an integration preview, not a completed login installation. System bus,
+PipeWire, power/brightness/session operations, manual lock and idle commands are
+unavailable here; UPower/Bluetooth/audio/portal warnings reflect that isolation.
+Private AI accounts/history are not copied and real chat writes are read-only.
+Custom Hyprland Lua is copied for reference, not executed or automatically
+translated. Generated compositor bindings are provided by the merged backend.
+Real lock/unlock, idle, night light, mixed-output testing and SDDM service lifetime
+remain gated on a later real-session cycle. **Nacre (niri)** at login currently
+still starts the guarded plain-niri configuration.
 
 | Area | Result | Acceptance steps |
 |---|---|---|
 | Login/logout | Pending | Select both named sessions from SDDM; verify service lifetime. |
 | Shortcuts | Pending | Terminal, launcher, settings, overview, close, screenshot and logout. |
 | Workspaces | Pending | Focus/move windows, dynamic IDs, saved named-workspace behavior. |
-| Launcher | Pending | Search, app launch, Escape, settings routes; no stale Hyprland IPC. |
-| Dashboard | Pending | Open/close, tabs, gauges and focus; preserve appearance. |
-| Notifications | Pending | Delivery, timeout, history, focus and placement. |
-| Detached panels | Pending | Detach, move, resize, return; floating focus and placement. |
+| Launcher | Windowed open/controller route passed; input pending | Search, app launch, Escape, settings routes; no stale Hyprland IPC. |
+| Dashboard | Windowed pinned IPC open passed; interaction pending | Open/close, tabs, gauges and focus; preserve appearance. |
+| Notifications | Windowed delivery/capture passed; remaining pending | Delivery, timeout, history, focus and placement. |
+| Detached panels | Windowed launcher/floating window passed; movement pending | Detach, move, resize, return; floating focus and placement. |
 | Manual lock/unlock | Pending | Standard session-lock protocol, password authentication, all outputs. |
 | Idle | Pending, automatic locking gated | Test manual unlock first, then idle and suspend hooks. |
 | Night light | Pending | Protocol-based tool behind existing owner; on/off, ownership and logout reset. |
-| Screenshots | Pending | Area, output and clipboard; confirm available capture protocol. |
+| Screenshots | Windowed grim output passed; area/clipboard pending | Area, output and clipboard; confirm available capture protocol. |
 | Multi-monitor | Pending | Mixed scale, hotplug, focus, placement and lock coverage. |
 | X11 apps | Pending | xwayland-satellite app launch, focus, input and exit. |
 

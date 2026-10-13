@@ -1,13 +1,24 @@
 # Niri on PC progress
 
-Updated: 2026-10-12. Status: phase 1 installed/preflight-tested; operator requests keeping Hyprland running.
-Actual session transition and phase 2 remain pending.
+Updated: 2026-10-13. Status: merged backend consumed in windowed Nacre preview;
+operator requests iterative Nacre/niri testing while Hyprland/chats keep running.
+Actual session transition, lock/idle/night light and real-login integration remain pending.
 Branch: `feature/niri-on-pc`. Own worktree: `nacre-niri-on-pc` under the normal
 private task-worktree root. One PR for session/tooling/docs work; backend changes
 belong to the separate `feature/niri-backend` task.
 
 ## Done
 
+- PR7 preparation and PR12 backend are now merged. New preview work is a follow-up
+  because merged PR7 cannot receive new changes. Preview baseline: main `3c87a61`.
+- Added an isolated preview runner and regression tests for session isolation,
+  profile preservation, resolved release mounts, wallpaper assets and native KDL.
+  Preserves personal profile and AI permission; no live source replacement.
+- Generated personal niri config validates. Nested shell loads; launcher/controller,
+  pinned dashboard, detached launcher/window, notification capture, Wayland app and
+  grim output probes pass. Global activation environment remains unchanged.
+- Corrected preview-only runtime-symlink and Quickshell config-path mismatches;
+  no backend source edits. Added accessible Alt aliases and private Kitty cache.
 - Read repository/workflow instructions and inspected actual SDDM/UWSM startup.
 - Wrote TTY recovery first in [niri-testing.md](../niri-testing.md).
 - Created private backups and before/after configuration fingerprints. Pointer:
@@ -43,16 +54,21 @@ belong to the separate `feature/niri-backend` task.
 ## Next
 
 1. Keep the current Hyprland desktop and all parallel graphical agents running.
-2. When the operator is ready, restart the private recorder, save all work and
+2. Let the operator test the prepared windowed Nacre preview; record input/UI
+   feedback and fix wrapper issues or report reproducible backend defects on PR12.
+3. When the operator is ready, restart the private recorder, save all work and
    perform TTY recovery + actual niri SDDM login/logout + return to Hyprland.
-3. Resume this same task and inspect recorder evidence. Review generated-lock
+4. Resume this same task and inspect recorder evidence. Review generated-lock
    appearance drift rather than silently resetting current preferences.
-4. Only after phase-1 acceptance: consume the backend agent's confirmed ready
-   revision, isolated source/personal generated config, manual lock/unlock, then
-   idle and protocol-based night light. Use the verified backend revision below,
-   then recheck its current PR/CI state at resume.
+5. Only after real phase-1 acceptance: integrate the isolated source/personal config
+   into actual niri startup, manual lock/unlock, then idle and protocol-based night
+   light. Preserve Hyprland policy and private preferences.
 
 ## Verified backend handoff (2026-10-12)
+
+Superseded for source selection by merged PR12 `ccc86d3` and preview baseline
+`3c87a61` (2026-10-13). Historical CI evidence below remains useful; actual login
+and packaged setup readiness remain unverified.
 
 [PR12](https://github.com/nacre-desktop/nacre/pull/12) at
 `c37401543cf98043fe4e79fe2e0b1f5c4def2cdf` has
