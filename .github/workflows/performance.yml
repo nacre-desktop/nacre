@@ -15,49 +15,51 @@ jobs:
   shell:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    container:
-      image: ghcr.io/archlinux/archlinux:latest
-      # Only this disposable runner needs a virtual DRM device for software GLES.
-      options: --cap-add=SYS_MODULE --device-cgroup-rule="c 226:* rmw" --volume /lib/modules:/lib/modules:ro --volume /dev/dri:/dev/dri
-    env:
-      WLR_RENDER_DRM_DEVICE: /dev/dri/card0
     strategy:
       fail-fast: false
       matrix:
         backend: [hyprland, niri]
     steps:
-      - name: Install disposable performance session tools
-        run: pacman -Syu --noconfirm --needed git python python-pillow quickshell qt6-wayland qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats labwc wlr-randr wtype hyprland niri mesa dbus ffmpeg ttf-dejavu gcc pkgconf rust lcms2 cmake make kmod
-      - name: Create a disposable virtual display device
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Create a virtual DRM device on the disposable runner
         run: |
-          modprobe vkms
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq "linux-modules-extra-$(uname -r)"
+          sudo modprobe vkms
           for attempt in $(seq 1 50); do
             test -e /dev/dri/card0 && break
             sleep 0.1
           done
           test -e /dev/dri/card0
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          submodules: recursive
-          fetch-depth: 0
-      - name: Build the pinned engine for public color fixtures
+      - name: Start the isolated target-platform runtime
         run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          cargo build --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
+          mkdir -p "$RUNNER_TEMP/nacre-performance"
+          docker run -d --name nacre-performance --device /dev/dri/card0 --volume "$GITHUB_WORKSPACE:/workspace" --volume "$RUNNER_TEMP/nacre-performance:/artifacts" --workdir /workspace --env WLR_RENDER_DRM_DEVICE=/dev/dri/card0 ghcr.io/archlinux/archlinux:latest sleep infinity
+          docker exec nacre-performance pacman -Syu --noconfirm --needed git python python-pillow quickshell qt6-wayland qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats labwc wlr-randr wtype hyprland niri mesa dbus ffmpeg ttf-dejavu gcc pkgconf rust lcms2 cmake make
+          docker exec nacre-performance git config --global --add safe.directory /workspace
+      - name: Build the pinned engine for public color fixtures
+        run: docker exec nacre-performance cargo build --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
       - name: Measure the reference in the same disposable runner
         if: github.event_name == 'workflow_dispatch' && inputs.reference_revision != ''
         env:
           REFERENCE_REVISION: ${{ inputs.reference_revision }}
         run: |
           reference=$(git rev-parse --verify --end-of-options "${REFERENCE_REVISION}^{commit}")
-          python tools/performance-session.py --backend ${{ matrix.backend }} --orient-binary deps/orient/target/release/orient --revision "$reference" --quick --repeats 5 --idle-seconds 15 --check-budgets --output /tmp/performance-${{ matrix.backend }}-before.json
+          docker exec nacre-performance python tools/performance-session.py --backend ${{ matrix.backend }} --orient-binary deps/orient/target/release/orient --revision "$reference" --quick --repeats 5 --idle-seconds 15 --check-budgets --output /artifacts/performance-${{ matrix.backend }}-before.json
       - name: Measure shell memory and key event to complete frame
-        run: |
-          python tools/performance-session.py --backend ${{ matrix.backend }} --orient-binary deps/orient/target/release/orient --quick --repeats 5 --idle-seconds 15 --check-budgets --output /tmp/performance-${{ matrix.backend }}.json
+        run: docker exec nacre-performance python tools/performance-session.py --backend ${{ matrix.backend }} --orient-binary deps/orient/target/release/orient --quick --repeats 5 --idle-seconds 15 --check-budgets --output /artifacts/performance-${{ matrix.backend }}.json
       - name: Preserve measured distributions
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: shell-performance-${{ matrix.backend }}
-          path: /tmp/performance-${{ matrix.backend }}*.json
+          path: ${{ runner.temp }}/nacre-performance/*.json
           if-no-files-found: error
+      - name: Stop the task runtime
+        if: always()
+        run: |
+          docker stop nacre-performance || true
+          docker rm nacre-performance || true
