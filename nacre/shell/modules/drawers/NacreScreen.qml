@@ -15,7 +15,9 @@ NacreWindow {
     anchors.bottom: true
     anchors.left: true
     anchors.right: true
-    WlrLayershell.layer: WlrLayer.Overlay
+    // Niri covers Top surfaces with fullscreen windows. Explicit menus still
+    // need Overlay so the launcher/session controls can open above those apps.
+    WlrLayershell.layer: NacreCompositor.backendName === "niri" && !inputController.modal ? WlrLayer.Top : WlrLayer.Overlay
     visible: !NacreHoverIntent.fullscreenFor(outputName) || inputController.modal
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     // Launchers retain keyboard ownership after docking. Their separate hover
