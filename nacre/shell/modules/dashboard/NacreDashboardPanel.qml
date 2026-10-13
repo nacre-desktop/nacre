@@ -11,6 +11,7 @@ NacreSurface {
     function prepareLift() {
         edgeOpening.complete();
     }
+    readonly property bool opening: visibilities.dashboard && edgeOpening.running
     property bool handoffHidden: false
     opacity: handoffHidden ? 0 : 1
     onEnabledChanged: if (enabled)

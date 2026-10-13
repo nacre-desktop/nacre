@@ -13,6 +13,7 @@ FocusScope {
     function prepareLift() {
         revealMotion.complete();
     }
+    readonly property bool opening: visibility && revealMotion.running
     property bool handoffHidden: false
     opacity: handoffHidden ? 0 : 1
     onEnabledChanged: if (enabled)
