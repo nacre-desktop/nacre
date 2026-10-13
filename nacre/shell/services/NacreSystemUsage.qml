@@ -8,6 +8,12 @@ import "resource-data.js" as Data
 Singleton {
     id: root
     readonly property bool visibleDashboard: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard && [0, 3].includes(view.dashboardTab ?? 0)))
+    property var cpuHistory: []
+    property var memoryHistory: []
+    onCpuPercChanged: if (visibleDashboard && Number.isFinite(cpuPerc))
+        cpuHistory = [...cpuHistory.slice(-31), cpuPerc]
+    onMemPercChanged: if (visibleDashboard && Number.isFinite(memPerc))
+        memoryHistory = [...memoryHistory.slice(-31), memPerc]
     property string kernel: ""
     property string loadAverage: ""
     property real cpuPerc: NaN

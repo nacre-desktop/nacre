@@ -6,6 +6,7 @@ import qs.utils
 
 Singleton {
     id: root
+    property real checked: 0
     property int count: 0
     property string message: ""
 
@@ -38,6 +39,7 @@ Singleton {
             try {
                 const data = JSON.parse(text());
                 root.message = data.message ?? "";
+                root.checked = Number(data.checked || data.timestamp || 0);
                 root.count = parseInt(String(data.text ?? 0).match(/\d+/)?.[0] ?? "0");
             } catch (error) {
                 root.count = 0;
