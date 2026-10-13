@@ -2,6 +2,7 @@
 """Private notification snapshots; native action handles stay in the renderer."""
 
 import json
+from nacre_i18n import tr
 import sys
 import importlib.util
 import re
@@ -30,13 +31,23 @@ def load(path=PATH):
         return []
     rows = json.loads(path.read_text())
     if not isinstance(rows, list):
-        raise ValueError("Invalid notification history")
+        raise ValueError(
+            tr(
+                "helper.notification-history.invalid-notification-history",
+                "Invalid notification history",
+            )
+        )
     return [row for row in rows if retained(row)]
 
 
 def save(rows, path=PATH):
     if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
-        raise ValueError("Invalid notification history")
+        raise ValueError(
+            tr(
+                "helper.notification-history.invalid-notification-history",
+                "Invalid notification history",
+            )
+        )
     # Serialize display data only, never action objects or application handles.
     rows = [
         {key: row[key] for key in FIELDS if key in row} for row in rows if retained(row)
@@ -58,4 +69,9 @@ if __name__ == "__main__":
     elif sys.argv[1] == "save":
         save(json.loads(sys.stdin.readline()))
     else:
-        raise ValueError("Unknown history action")
+        raise ValueError(
+            tr(
+                "helper.notification-history.unknown-history-action",
+                "Unknown history action",
+            )
+        )

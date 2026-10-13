@@ -85,7 +85,7 @@ Flickable {
                     color: "#fffdfa"
                 }
                 NacreText {
-                    text: NacreTime.format("dddd, d MMMM")
+                    text: NacreTime.format(NacreI18n.tr("dashboard.today-page.text.dddd-d-mmmm", "dddd, d MMMM"))
                     font.pointSize: 13
                     color: "#fffdfa"
                 }
@@ -96,7 +96,7 @@ Flickable {
                         color: "#fffdfa"
                     }
                     NacreText {
-                        text: NacreWeather.displayTemperature ? NacreWeather.displayTemperature + "  " + NacreWeather.description + " · " + NacreWeather.location : "Weather unavailable"
+                        text: NacreWeather.displayTemperature ? NacreWeather.displayTemperature + "  " + NacreWeather.description + " · " + NacreWeather.location : NacreI18n.tr("dashboard.today-page.text.weather-unavailable", "Weather unavailable")
                         color: "#fffdfa"
                         font.pointSize: 11
                     }
@@ -106,7 +106,10 @@ Flickable {
                 anchors.right: parent.right
                 anchors.rightMargin: 24
                 y: 38
-                text: NacreDashboardState.home.time ? "Home · " + NacreDashboardState.home.label + "  " + NacreDashboardState.home.time : ""
+                text: NacreDashboardState.home.time ? NacreI18n.tr("ui.today-page.text.home-value0-value1", "Home · {value0}  {value1}", {
+                    value0: NacreDashboardState.home.label,
+                    value1: NacreDashboardState.home.time
+                }) : ""
                 color: "#fffdfa"
                 font.pointSize: 11
                 visible: !root.narrow
@@ -128,7 +131,7 @@ Flickable {
                         color: modelData
                         anchors.verticalCenter: parent.verticalCenter
                         NacreInteraction {
-                            accessibleName: "Open wallpaper colors"
+                            accessibleName: NacreI18n.tr("dashboard.today-page.accessibleName.open-wallpaper-colors", "Open wallpaper colors")
                             function onClicked() {
                                 NacreColorsApp.open();
                             }
@@ -136,7 +139,7 @@ Flickable {
                     }
                 }
                 NacreText {
-                    text: (NacreWallpapers.preferences.palettePersonality || "natural") + " · " + (NacreColours.light ? "Light" : "Dark")
+                    text: NacreI18n.option("personality-value", NacreWallpapers.preferences.palettePersonality || "natural") + " · " + (NacreColours.light ? NacreI18n.tr("dashboard.today-page.text.light", "Light") : NacreI18n.tr("dashboard.today-page.text.dark", "Dark"))
                     color: "#fffdfa"
                     font.pointSize: 10
                     anchors.verticalCenter: parent.verticalCenter
@@ -157,14 +160,14 @@ Flickable {
                     spacing: 6
                     WallpaperAction {
                         objectName: "dashboardWallpapers"
-                        text: "Wallpapers"
+                        text: NacreI18n.tr("dashboard.today-page.text.wallpapers", "Wallpapers")
                         icon: "wallpaper"
                         compact: true
                         onClicked: NacrePanelState.openMode("wallpaper")
                     }
                     WallpaperAction {
                         objectName: "dashboardColors"
-                        text: "Colors"
+                        text: NacreI18n.tr("dashboard.today-page.text.colors", "Colors")
                         icon: "palette"
                         compact: true
                         onClicked: NacreColorsApp.open()
@@ -183,7 +186,7 @@ Flickable {
                         WallpaperControl {
                             objectName: "dashboardPreviousWallpaper"
                             icon: "chevron_left"
-                            label: "Previous wallpaper"
+                            label: NacreI18n.tr("dashboard.today-page.label.previous-wallpaper", "Previous wallpaper")
                             available: NacreWallpapers.rotationReady
                             onActivated: NacreWallpapers.previousWallpaper()
                         }
@@ -191,7 +194,7 @@ Flickable {
                             x: parent.width / 3
                             objectName: "dashboardPauseWallpaper"
                             icon: !NacreWallpapers.displayDynamic ? "image" : WallpaperPlayback.paused ? "play_arrow" : "pause"
-                            label: !NacreWallpapers.displayDynamic ? "Static wallpaper" : WallpaperPlayback.paused ? "Resume wallpaper" : "Pause wallpaper"
+                            label: !NacreWallpapers.displayDynamic ? NacreI18n.tr("dashboard.today-page.label.static-wallpaper", "Static wallpaper") : WallpaperPlayback.paused ? NacreI18n.tr("dashboard.today-page.label.resume-wallpaper", "Resume wallpaper") : NacreI18n.tr("dashboard.today-page.label.pause-wallpaper", "Pause wallpaper")
                             emphasized: true
                             informational: !NacreWallpapers.displayDynamic
                             available: NacreWallpapers.displayDynamic && !NacreWallpapers.themeBusy && !WallpaperPlayback.sleeping && !WallpaperPlayback.locked
@@ -201,7 +204,7 @@ Flickable {
                             x: parent.width * 2 / 3
                             objectName: "dashboardNextWallpaper"
                             icon: "chevron_right"
-                            label: "Next wallpaper"
+                            label: NacreI18n.tr("dashboard.today-page.label.next-wallpaper", "Next wallpaper")
                             available: NacreWallpapers.rotationReady
                             onActivated: NacreWallpapers.advanceRotation(true)
                         }

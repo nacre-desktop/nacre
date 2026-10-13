@@ -4,6 +4,7 @@
 import compositor
 
 import fcntl
+from nacre_i18n import tr
 import json
 import os
 import re
@@ -63,21 +64,43 @@ def publication_lock(home):
 def validated_colors(data):
     """Reject incomplete or malformed public roles before any consumer output."""
     if not isinstance(data, dict) or data.get("mode") not in ("light", "dark"):
-        raise ValueError("Invalid palette mode")
+        raise ValueError(
+            tr("helper.classic-state.invalid-palette-mode", "Invalid palette mode")
+        )
     values = data.get("colours")
     roles = json.loads(Path(__file__).with_name("reference-style.json").read_text())[
         "colours"
     ]
     if not isinstance(values, dict) or not roles.keys() <= values.keys():
-        raise ValueError("Palette is missing required color roles")
+        raise ValueError(
+            tr(
+                "helper.classic-state.palette-is-missing-required-color-roles",
+                "Palette is missing required color roles",
+            )
+        )
     for key, value in values.items():
         if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", key):
-            raise ValueError("Invalid palette role name")
+            raise ValueError(
+                tr(
+                    "helper.classic-state.invalid-palette-role-name",
+                    "Invalid palette role name",
+                )
+            )
         if not isinstance(value, str) or not re.fullmatch(r"#?[0-9a-fA-F]{6}", value):
-            raise ValueError("Invalid palette color")
+            raise ValueError(
+                tr(
+                    "helper.classic-state.invalid-palette-color",
+                    "Invalid palette color",
+                )
+            )
     for name in ("source", "input"):
         if name in data and not isinstance(data[name], dict):
-            raise ValueError("Invalid palette metadata")
+            raise ValueError(
+                tr(
+                    "helper.classic-state.invalid-palette-metadata",
+                    "Invalid palette metadata",
+                )
+            )
     return {key: value.lstrip("#") for key, value in values.items()}
 
 
@@ -199,14 +222,25 @@ def restore_demo(home, snapshot, live=True):
     media = snapshot["media"]
     if not poster.is_absolute() or not poster.is_file():
         raise ValueError(
-            "The starting wallpaper is unavailable. Restore its file and try again."
+            tr(
+                "helper.classic-state.the-starting-wallpaper-is-unavailable-restore-its-file-and-try-ag",
+                "The starting wallpaper is unavailable. Restore its file and try again.",
+            )
         )
     if media.get("poster") != str(poster) or not Path(media.get("path", "")).is_file():
         raise ValueError(
-            "The starting wallpaper source is unavailable. Restore its file and try again."
+            tr(
+                "helper.classic-state.the-starting-wallpaper-source-is-unavailable-restore-its-file-and",
+                "The starting wallpaper source is unavailable. Restore its file and try again.",
+            )
         )
     if set(snapshot["preferences"]) - set(DEMO_PREFERENCES):
-        raise ValueError("Invalid demo preference snapshot")
+        raise ValueError(
+            tr(
+                "helper.classic-state.invalid-demo-preference-snapshot",
+                "Invalid demo preference snapshot",
+            )
+        )
     pref_path = home / ".config/nacre/wallpaper-picker.json"
     with publication_lock(home):
         files = [
@@ -303,7 +337,12 @@ def render_template(home, name, colors):
     ]
     source = next((p for p in candidates if p.is_file()), None)
     if source is None:
-        raise RuntimeError("Orient template renderer is missing; run ./install.sh")
+        raise RuntimeError(
+            tr(
+                "helper.classic-state.orient-template-renderer-is-missing-run-install-sh",
+                "Orient template renderer is missing; run ./install.sh",
+            )
+        )
     spec = importlib.util.spec_from_file_location("orient_templates", source)
     renderer = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(renderer)
@@ -721,7 +760,12 @@ def _apply_palette(home, wallpaper=None, live=True):
         chosen = next((item for item in presets if item["id"] == preset), None)
         mode = options.get("paletteMode", "dark")
         if chosen is None or mode not in ("dark", "light"):
-            raise ValueError("Invalid fixed palette preference")
+            raise ValueError(
+                tr(
+                    "helper.classic-state.invalid-fixed-palette-preference",
+                    "Invalid fixed palette preference",
+                )
+            )
         data = dict(data, mode=mode, colours=chosen["modes"][mode])
     colors = validated_colors(data)
     if fixed:

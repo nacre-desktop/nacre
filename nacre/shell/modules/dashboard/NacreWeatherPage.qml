@@ -46,7 +46,7 @@ Flickable {
                 width: parent.width * .55
                 spacing: 9
                 NacreText {
-                    text: NacreWeather.location || "Weather"
+                    text: NacreWeather.location || NacreI18n.tr("dashboard.weather-page.text.weather", "Weather")
                     font.pointSize: 14
                     color: NacreTokens.mutedInk
                 }
@@ -56,7 +56,7 @@ Flickable {
                     font.weight: Font.Light
                 }
                 NacreText {
-                    text: NacreWeather.description || "Weather unavailable"
+                    text: NacreWeather.description || NacreI18n.tr("dashboard.weather-page.text.weather-unavailable", "Weather unavailable")
                     font.pointSize: 16
                     color: NacreTokens.accent
                 }
@@ -105,7 +105,10 @@ Flickable {
                 x: parent.width * .58
                 y: 210
                 width: parent.width * .37
-                text: root.days.length ? root.days[0].sunrise.slice(11, 16) + "   Sunrise / sunset   " + root.days[0].sunset.slice(11, 16) : "Sunrise / sunset unavailable"
+                text: root.days.length ? NacreI18n.tr("ui.weather-page.text.value0-sunrise-sunset-value1", "{value0}   Sunrise / sunset   {value1}", {
+                    value0: root.days[0].sunrise.slice(11, 16),
+                    value1: root.days[0].sunset.slice(11, 16)
+                }) : NacreI18n.tr("dashboard.weather-page.text.sunrise-sunset-unavailable", "Sunrise / sunset unavailable")
                 font.pointSize: 9
                 color: NacreTokens.mutedInk
                 horizontalAlignment: Text.AlignHCenter
@@ -113,7 +116,7 @@ Flickable {
             }
         }
         NacreText {
-            text: "Next 24 hours"
+            text: NacreI18n.tr("dashboard.weather-page.text.next-24-hours", "Next 24 hours")
             font.pointSize: 15
             color: NacreTokens.accent
         }
@@ -169,12 +172,12 @@ Flickable {
             NacreText {
                 anchors.centerIn: parent
                 visible: root.hours.length === 0
-                text: "Forecast unavailable"
+                text: NacreI18n.tr("dashboard.weather-page.text.forecast-unavailable", "Forecast unavailable")
                 color: NacreTokens.mutedInk
             }
         }
         NacreText {
-            text: "10-day outlook"
+            text: NacreI18n.tr("dashboard.weather-page.text.10-day-outlook", "10-day outlook")
             font.pointSize: 15
             color: NacreTokens.accent
         }
@@ -186,7 +189,7 @@ Flickable {
                 spacing: 14
                 NacreText {
                     Layout.preferredWidth: 90
-                    text: Qt.formatDate(new Date(parent.modelData.date + "T12:00:00"), "ddd d")
+                    text: NacreI18n.date(new Date(parent.modelData.date + "T12:00:00"), "ddd d")
                     font.pointSize: 10
                 }
                 NacreIcon {
@@ -250,29 +253,31 @@ Flickable {
             Repeater {
                 model: [
                     {
-                        label: "Wind",
+                        label: NacreI18n.tr("dashboard.weather-page.label.wind", "Wind"),
                         value: root.value(root.weather.wind, " km/h"),
-                        note: root.value(root.weather.direction, "° direction")
+                        note: Number.isFinite(root.weather.direction) ? NacreI18n.tr("weather.wind-direction", "{direction}° direction", {
+                            direction: Math.round(root.weather.direction)
+                        }) : "—"
                     },
                     {
-                        label: "UV",
+                        label: NacreI18n.tr("dashboard.weather-page.label.uv", "UV"),
                         value: root.value(root.days[0]?.uv, ""),
-                        note: "Peak ultraviolet index"
+                        note: NacreI18n.tr("ui.weather-page.note.peak-ultraviolet-index", "Peak ultraviolet index")
                     },
                     {
-                        label: "Humidity",
+                        label: NacreI18n.tr("dashboard.weather-page.label.humidity", "Humidity"),
                         value: root.value(root.weather.humidity, "%"),
-                        note: "Moisture in the air"
+                        note: NacreI18n.tr("ui.weather-page.note.moisture-in-the-air", "Moisture in the air")
                     },
                     {
-                        label: "Air quality",
+                        label: NacreI18n.tr("dashboard.weather-page.label.air-quality", "Air quality"),
                         value: root.value(root.weather.aqi, " AQI"),
-                        note: "US air quality index"
+                        note: NacreI18n.tr("ui.weather-page.note.us-air-quality-index", "US air quality index")
                     },
                     {
-                        label: "Pressure",
+                        label: NacreI18n.tr("dashboard.weather-page.label.pressure", "Pressure"),
                         value: root.value(root.weather.pressure, " hPa"),
-                        note: "Local surface pressure"
+                        note: NacreI18n.tr("ui.weather-page.note.local-surface-pressure", "Local surface pressure")
                     }
                 ]
                 Rectangle {
@@ -310,19 +315,21 @@ Flickable {
         Row {
             spacing: 12
             NacreText {
-                text: "Weather data: Open-Meteo" + (NacreWeather.stale ? " · Cached" : "")
+                text: NacreI18n.tr("ui.weather-page.text.weather-data-open-meteo-value0", "Weather data: Open-Meteo{value0}", {
+                    value0: (NacreWeather.stale ? NacreI18n.tr("dashboard.weather-page.text.cached", " · Cached") : "")
+                })
                 font.pointSize: 9
                 color: NacreTokens.mutedInk
                 anchors.verticalCenter: parent.verticalCenter
             }
             ActionButton {
-                text: "Refresh"
+                text: NacreI18n.tr("dashboard.weather-page.text.refresh", "Refresh")
                 compact: true
                 enabled: !NacreWeather.busy
                 onClicked: NacreWeather.reload()
             }
             ActionButton {
-                text: "Location"
+                text: NacreI18n.tr("dashboard.weather-page.text.location", "Location")
                 compact: true
                 onClicked: NacrePanelState.openSettings("time")
             }

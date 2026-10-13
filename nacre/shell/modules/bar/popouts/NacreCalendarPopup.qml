@@ -28,20 +28,20 @@ Item {
         x: 38
         width: root.width - 76
         height: 34
-        text: Qt.formatDate(root.displayed, "MMMM yyyy")
+        text: NacreI18n.date(root.displayed, "MMMM yyyy")
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }
     MonthButton {
         x: 0
-        label: "Previous month"
+        label: NacreI18n.tr("popouts.calendar-popup.label.previous-month", "Previous month")
         icon: "chevron_left"
         onActivated: root.changeMonth(-1)
     }
     MonthButton {
         x: root.width - width
-        label: "Next month"
+        label: NacreI18n.tr("popouts.calendar-popup.label.next-month", "Next month")
         icon: "chevron_right"
         onActivated: root.changeMonth(1)
     }
@@ -55,7 +55,9 @@ Item {
                 required property int index
                 width: root.width / 7
                 height: 28
-                text: Qt.locale().dayName(((root.firstWeekday + index) % 7) || 7, Locale.ShortFormat)
+                text: NacreI18n.dayName(((root.firstWeekday + index) % 7) || 7, Locale.ShortFormat)
+                fontSizeMode: Text.Fit
+                minimumPointSize: 6
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 font.pointSize: 10
@@ -78,7 +80,7 @@ Item {
                 }
                 NacreText {
                     anchors.fill: parent
-                    text: parent.modelData.day
+                    text: NacreI18n.number(parent.modelData.day)
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     font.pointSize: 11

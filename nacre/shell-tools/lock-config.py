@@ -2,6 +2,7 @@
 """Render the Nacre Hyprlock layout; PAM and session locking stay Hyprlock-owned."""
 
 import json
+from nacre_i18n import tr
 import shlex
 import subprocess
 from pathlib import Path
@@ -10,15 +11,19 @@ import compositor
 
 
 def block(widget, monitor="", **options):
-    return (
-        widget
-        + " {\n    monitor = "
-        + monitor
-        + "\n"
-        + "".join(
-            "    " + key + " = " + str(value) + "\n" for key, value in options.items()
-        )
-        + "}\n"
+    return tr(
+        "helper.lock-config.value0-monitor-value1-value2",
+        "{value0} {\n    monitor = {value1}\n{value2}}\n",
+        {
+            "value0": widget,
+            "value1": monitor,
+            "value2": "".join(
+                (
+                    "    " + key + " = " + str(value) + "\n"
+                    for key, value in options.items()
+                )
+            ),
+        },
     )
 
 
@@ -52,7 +57,12 @@ def render(
     colors, wallpaper, preferences, helper, monitors=None, ready=None, artwork=None
 ):
     if any(c in wallpaper for c in "\n\r"):
-        raise ValueError("Unsupported wallpaper path")
+        raise ValueError(
+            tr(
+                "helper.lock-config.unsupported-wallpaper-path",
+                "Unsupported wallpaper path",
+            )
+        )
     colors = {key: value.lstrip("#") for key, value in colors.items()}
     ready = ready or Path.home() / ".cache/nacre/lock-ready"
     result = (
@@ -81,7 +91,11 @@ def render(
             return str(round((x - 720) * scale)) + ", " + str(round((405 - y) * scale))
 
         def rgba(key, alpha="ff"):
-            return "rgba(" + colors[key] + alpha + ")"
+            return tr(
+                "helper.lock-config.rgba-value0-value1",
+                "rgba({value0}{value1})",
+                {"value0": colors[key], "value1": alpha},
+            )
 
         def label(text, x, y, size, role="onSurface", name=name, scale=scale, **extra):
             return block(
@@ -215,7 +229,12 @@ def monitor_layout(home=None):
     try:
         monitors = compositor.query("monitors", timeout=2)
         if not isinstance(monitors, list) or not monitors:
-            raise ValueError("No current lock outputs")
+            raise ValueError(
+                tr(
+                    "helper.lock-config.no-current-lock-outputs",
+                    "No current lock outputs",
+                )
+            )
         cache.parent.mkdir(parents=True, exist_ok=True)
         temporary = cache.with_suffix(".next")
         temporary.write_text(json.dumps(monitors))

@@ -6,7 +6,7 @@ import qs.services
 
 FloatingWindow {
     id: root
-    title: "Nacre Welcome"
+    title: NacreWelcomeApp.nativeTitle
     visible: NacreWelcomeApp.visible
     minimumSize: Qt.size(720, 540)
     implicitWidth: Math.min(1020, Math.max(720, (screen?.width || 1920) * .64))
@@ -30,15 +30,15 @@ FloatingWindow {
     onWindowConnected: activate()
     onClosed: NacreWelcomeApp.close()
     NacreAppHeader {
-        title: "Nacre Welcome"
+        title: NacreWelcomeApp.windowTitle
         width: parent.width
         section: ({
-                welcome: "Welcome",
-                colors: "Your colors",
-                shortcuts: "Getting around",
-                apps: "Nacre apps",
-                ready: "You're ready",
-                help: "Help"
+                welcome: NacreI18n.tr("ui.welcome-window.section.welcome", "Welcome"),
+                colors: NacreI18n.tr("ui.welcome-window.section.your-colors", "Your colors"),
+                shortcuts: NacreI18n.tr("ui.welcome-window.section.getting-around", "Getting around"),
+                apps: NacreI18n.tr("ui.welcome-window.section.nacre-apps", "Nacre apps"),
+                ready: NacreI18n.tr("ui.welcome-window.section.you-re-ready", "You're ready"),
+                help: NacreI18n.tr("ui.welcome-window.section.help", "Help")
             })[NacreWelcomeApp.page] || ""
         onMoveRequested: root.contentItem.Window.window.startSystemMove()
     }

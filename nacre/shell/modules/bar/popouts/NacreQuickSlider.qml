@@ -1,10 +1,11 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import qs.widgets
+import qs.services
 
 Slider {
     id: root
-    property string label: "Level"
+    property string label: NacreI18n.tr("popouts.quick-slider.label.level", "Level")
     from: 0
     to: 1
     stepSize: 0.01

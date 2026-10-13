@@ -6,6 +6,7 @@ import compositor
 import argparse
 import fcntl
 import json
+import os
 import subprocess
 import sys
 import time
@@ -54,9 +55,12 @@ DEFAULTS = dict(
     weatherLocation="",
     weatherFahrenheit=False,
     interfaceFont="",
+    language="system",
 )
 PRESET_KEYS = [
-    key for key in DEFAULTS if not key.startswith(("lock", "weather", "interface"))
+    key
+    for key in DEFAULTS
+    if key != "language" and not key.startswith(("lock", "weather", "interface"))
 ]
 OPTIONS = set(compositor.desktop_option_keys())
 
@@ -126,6 +130,11 @@ def validate(key, value):
         low, high = RANGES[key]
         if type(value) is not int or not low <= value <= high:
             raise ValueError(f"{key} must be an integer from {low} to {high}")
+    elif key == "language":
+        if value not in ("system", "en", "pseudo") or (
+            value == "pseudo" and os.environ.get("NACRE_DEVELOPER_MODE") != "1"
+        ):
+            raise ValueError("Choose System default or English")
     elif key in ("weatherLocation", "interfaceFont"):
         if (
             not isinstance(value, str)

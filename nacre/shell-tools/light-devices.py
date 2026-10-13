@@ -2,6 +2,7 @@
 """Bounded light discovery/actions; native QML owns reads and write coalescing."""
 
 import argparse
+from nacre_i18n import tr
 import hashlib
 import json
 from pathlib import Path
@@ -45,7 +46,12 @@ def ddc_read(bus):
     )
     match = re.search(r"^VCP\s+10\s+C\s+(\d+)\s+(\d+)\s*$", result.stdout, re.M)
     if not match or not 0 <= int(match[1]) <= int(match[2]) or int(match[2]) <= 0:
-        raise ValueError("Display brightness response was invalid")
+        raise ValueError(
+            tr(
+                "helper.light-devices.display-brightness-response-was-invalid",
+                "Display brightness response was invalid",
+            )
+        )
     return int(match[1]), int(match[2])
 
 
@@ -109,7 +115,12 @@ def discover(screens, root=SYS):
 
 def write(descriptor, value, root=SYS):
     if not isinstance(descriptor, dict) or type(value) is not int:
-        raise ValueError("Invalid brightness request")
+        raise ValueError(
+            tr(
+                "helper.light-devices.invalid-brightness-request",
+                "Invalid brightness request",
+            )
+        )
     kind = descriptor.get("kind")
     if kind in ("backlight", "keyboard"):
         device = descriptor.get("device", "")
@@ -118,13 +129,20 @@ def write(descriptor, value, root=SYS):
             or not re.fullmatch(r"[A-Za-z0-9_.:+-]{1,128}", device)
             or (kind == "keyboard" and "kbd_backlight" not in device)
         ):
-            raise ValueError("Invalid light device")
+            raise ValueError(
+                tr("helper.light-devices.invalid-light-device", "Invalid light device")
+            )
         path = (
             root / "class" / ("backlight" if kind == "backlight" else "leds") / device
         )
         current = sys_device(path, kind)
         if not current or current["maximum"] != descriptor.get("maximum"):
-            raise ValueError("Light device changed or is unavailable")
+            raise ValueError(
+                tr(
+                    "helper.light-devices.light-device-changed-or-is-unavailable",
+                    "Light device changed or is unavailable",
+                )
+            )
         minimum = 1 if kind == "backlight" else 0
         value = max(minimum, min(current["maximum"], value))
         subprocess.run(
@@ -144,7 +162,12 @@ def write(descriptor, value, root=SYS):
         )
         result = sys_device(path, kind)
         if not result:
-            raise ValueError("Light device disappeared after the write")
+            raise ValueError(
+                tr(
+                    "helper.light-devices.light-device-disappeared-after-the-write",
+                    "Light device disappeared after the write",
+                )
+            )
         return result
     if kind == "ddc":
         bus = descriptor.get("bus")
@@ -155,17 +178,32 @@ def write(descriptor, value, root=SYS):
             or not isinstance(connector, str)
             or not re.fullmatch(r"card\d+-[A-Za-z0-9_.-]+", connector)
         ):
-            raise ValueError("Invalid display control")
+            raise ValueError(
+                tr(
+                    "helper.light-devices.invalid-display-control",
+                    "Invalid display control",
+                )
+            )
         path = root / "class/drm" / connector
         if (
             (path / "status").read_text().strip() != "connected"
             or (path / "ddc").resolve().name != "i2c-" + str(bus)
             or fingerprint(path) != descriptor.get("identity")
         ):
-            raise ValueError("Display changed or disconnected")
+            raise ValueError(
+                tr(
+                    "helper.light-devices.display-changed-or-disconnected",
+                    "Display changed or disconnected",
+                )
+            )
         _, maximum = ddc_read(bus)
         if maximum != descriptor.get("maximum"):
-            raise ValueError("Display brightness range changed")
+            raise ValueError(
+                tr(
+                    "helper.light-devices.display-brightness-range-changed",
+                    "Display brightness range changed",
+                )
+            )
         value = max(0, min(maximum, value))
         subprocess.run(
             ["ddcutil", "--bus", str(bus), "setvcp", "10", str(value)],
@@ -176,7 +214,9 @@ def write(descriptor, value, root=SYS):
         )
         current, maximum = ddc_read(bus)
         return dict(descriptor, current=current, maximum=maximum)
-    raise ValueError("Unsupported light device")
+    raise ValueError(
+        tr("helper.light-devices.unsupported-light-device", "Unsupported light device")
+    )
 
 
 def main():
@@ -189,7 +229,12 @@ def main():
         data = json.loads(args.data)
         if args.action == "discover":
             if not isinstance(data, list):
-                raise ValueError("Invalid display list")
+                raise ValueError(
+                    tr(
+                        "helper.light-devices.invalid-display-list",
+                        "Invalid display list",
+                    )
+                )
             result = discover(data)
         elif args.action == "set":
             result = write(data, args.value)
@@ -200,7 +245,12 @@ def main():
                 or type(data.get("bus")) is not int
                 or not 0 <= data["bus"] <= 65535
             ):
-                raise ValueError("Invalid display control")
+                raise ValueError(
+                    tr(
+                        "helper.light-devices.invalid-display-control",
+                        "Invalid display control",
+                    )
+                )
             current, maximum = ddc_read(data["bus"])
             result = dict(data, current=current, maximum=maximum)
         print(json.dumps(result))
@@ -208,7 +258,10 @@ def main():
         print(
             json.dumps(
                 {
-                    "error": "Light control failed; refresh the controls and check device access."
+                    "error": tr(
+                        "helper.light-devices.light-control-failed-refresh-the-controls-and-check-device-access",
+                        "Light control failed; refresh the controls and check device access.",
+                    )
                 }
             )
         )

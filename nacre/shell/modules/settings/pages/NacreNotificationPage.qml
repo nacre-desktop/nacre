@@ -8,29 +8,31 @@ NacreSettingsPage {
     property string page: "notifications"
     property bool confirmClear: false
     NacreSettingsSection {
-        title: "Notification preferences"
+        title: NacreI18n.tr("ui.notification-page.title.notification-preferences", "Notification preferences")
         NacreSettingToggle {
-            label: "Do not disturb"
+            label: NacreI18n.tr("ui.notification-page.label.do-not-disturb", "Do not disturb")
             setting: "dnd"
         }
         NacreSettingToggle {
-            label: "Show notifications on the lock screen"
+            label: NacreI18n.tr("ui.notification-page.label.show-notifications-on-the-lock-screen", "Show notifications on the lock screen")
             setting: "lockNotifications"
         }
         NacreSettingToggle {
-            label: "Show message contents on the lock screen"
+            label: NacreI18n.tr("ui.notification-page.label.show-message-contents-on-the-lock-screen", "Show message contents on the lock screen")
             setting: "lockNotificationContents"
         }
     }
     NacreSettingsSection {
-        title: "Notification history"
-        description: NacreNotifs.retained.length + " saved notifications"
+        title: NacreI18n.tr("ui.notification-page.title.notification-history", "Notification history")
+        description: NacreI18n.tr("ui.notification-page.description.value0-saved-notifications", "{value0} saved notifications", {
+            value0: NacreNotifs.retained.length
+        })
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
                 objectName: "requestClearHistory"
-                text: root.confirmClear ? "Clear saved notifications" : "Clear history"
+                text: root.confirmClear ? NacreI18n.tr("ui.notification-page.text.clear-saved-notifications", "Clear saved notifications") : NacreI18n.tr("ui.notification-page.text.clear-history", "Clear history")
                 enabled: NacreNotifs.retained.length > 0
                 onClicked: {
                     if (root.confirmClear) {
@@ -41,7 +43,7 @@ NacreSettingsPage {
                 }
             }
             ActionButton {
-                text: "Cancel"
+                text: NacreI18n.tr("ui.notification-page.text.cancel", "Cancel")
                 visible: root.confirmClear
                 onClicked: root.confirmClear = false
             }
@@ -56,7 +58,7 @@ NacreSettingsPage {
         NacreText {
             width: parent.width
             visible: NacreNotifs.retained.length === 0
-            text: "New message notifications will appear here."
+            text: NacreI18n.tr("ui.notification-page.text.new-message-notifications-will-appear-here", "New message notifications will appear here.")
             wrapMode: Text.Wrap
             color: NacreTokens.mutedInk
         }

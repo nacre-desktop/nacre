@@ -64,7 +64,9 @@ Column {
                         }
                     }
                     NacreInteraction {
-                        accessibleName: "Use wallpaper " + tile.modelData.name
+                        accessibleName: NacreI18n.tr("ui.welcome-demo.accessibleName.use-wallpaper-value0", "Use wallpaper {value0}", {
+                            value0: tile.modelData.name
+                        })
                         function onClicked() {
                             NacreWelcomeApp.selectDemo(tile.modelData.path);
                         }
@@ -87,7 +89,11 @@ Column {
                     wrapMode: Text.Wrap
                     color: NacreTokens.mutedInk
                     linkColor: NacreTokens.mutedInk
-                    text: tile.modelData.artist ? "<a href=\"" + tile.modelData.source + "\">" + tile.modelData.artist + "</a> · " + tile.modelData.license.replace(/-/g, " ") : ""
+                    text: tile.modelData.artist ? NacreI18n.tr("ui.welcome-demo.text.a-href-value0-value1-a-value2", "<a href=\"{value0}\">{value1}</a> · {value2}", {
+                        value0: tile.modelData.source,
+                        value1: tile.modelData.artist,
+                        value2: tile.modelData.license.replace(/-/g, " ")
+                    }) : ""
                     onLinkActivated: url => NacreWelcomeApp.openCredit(url)
                 }
             }
@@ -95,7 +101,7 @@ Column {
     }
     NacreText {
         visible: !root.entries.length
-        text: NacreWelcomeApp.demoStarting ? "Preparing the demo…" : NacreWelcomeApp.demoError
+        text: NacreWelcomeApp.demoStarting ? NacreI18n.tr("welcome.welcome-demo.text.preparing-the-demo", "Preparing the demo…") : NacreWelcomeApp.demoError
         font.pointSize: 10
         color: NacreTokens.mutedInk
     }
@@ -108,7 +114,7 @@ Column {
             width: parent.width - 90
             spacing: 6
             NacreText {
-                text: "Style"
+                text: NacreI18n.tr("welcome.welcome-demo.text.style", "Style")
                 font.pointSize: 11
                 height: 34
                 verticalAlignment: Text.AlignVCenter
@@ -119,7 +125,7 @@ Column {
                 ActionButton {
                     required property string modelData
                     objectName: "welcomePersonality_" + modelData
-                    text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                    text: NacreI18n.option("personality", modelData)
                     compact: true
                     selected: (NacreWelcomeApp.requestedPersonality || NacreWelcomeApp.appearance.palettePersonality) === modelData
                     enabled: !NacreWelcomeApp.demoBusy
@@ -137,7 +143,7 @@ Column {
                     required property string modelData
                     objectName: "welcomeMode_" + modelData
                     text: ""
-                    accessibleLabel: modelData === "dark" ? "Dark colors" : "Light colors"
+                    accessibleLabel: modelData === "dark" ? NacreI18n.tr("welcome.welcome-demo.accessibleLabel.dark-colors", "Dark colors") : NacreI18n.tr("welcome.welcome-demo.accessibleLabel.light-colors", "Light colors")
                     icon: modelData === "dark" ? "dark_mode" : "light_mode"
                     compact: true
                     selected: (NacreWelcomeApp.requestedMode || NacreWelcomeApp.appearance.paletteMode) === modelData
@@ -152,15 +158,15 @@ Column {
         width: parent.width
         wrapMode: Text.Wrap
         text: ({
-                natural: "The original balance of the wallpaper's own colors",
-                pigment: "Colors balanced by image coverage and detail",
-                harmony: "Related accents for a calm, unified desktop",
-                mist: "Soft, nearly neutral colors for focus",
-                vivid: "Stronger colors, with readable text",
-                tide: "Colors gently warmed or cooled with the time of day",
-                pop: "A bold contrasting detail becomes the accent",
-                pearl: "Neutral surfaces and Nacre's mother-of-pearl tones"
-            })[NacreWelcomeApp.requestedPersonality || NacreWelcomeApp.appearance.palettePersonality] || "Your chosen color style"
+                natural: NacreI18n.tr("welcome.welcome-demo.text.the-original-balance-of-the-wallpaper-s-own-colors", "The original balance of the wallpaper's own colors"),
+                pigment: NacreI18n.tr("welcome.welcome-demo.text.colors-balanced-by-image-coverage-and-detail", "Colors balanced by image coverage and detail"),
+                harmony: NacreI18n.tr("welcome.welcome-demo.text.related-accents-for-a-calm-unified-desktop", "Related accents for a calm, unified desktop"),
+                mist: NacreI18n.tr("welcome.welcome-demo.text.soft-nearly-neutral-colors-for-focus", "Soft, nearly neutral colors for focus"),
+                vivid: NacreI18n.tr("welcome.welcome-demo.text.stronger-colors-with-readable-text", "Stronger colors, with readable text"),
+                tide: NacreI18n.tr("welcome.welcome-demo.text.colors-gently-warmed-or-cooled-with-the-time-of-day", "Colors gently warmed or cooled with the time of day"),
+                pop: NacreI18n.tr("welcome.welcome-demo.text.a-bold-contrasting-detail-becomes-the-accent", "A bold contrasting detail becomes the accent"),
+                pearl: NacreI18n.tr("welcome.welcome-demo.text.neutral-surfaces-and-nacre-s-mother-of-pearl-tones", "Neutral surfaces and Nacre's mother-of-pearl tones")
+            })[NacreWelcomeApp.requestedPersonality || NacreWelcomeApp.appearance.palettePersonality] || NacreI18n.tr("welcome.welcome-demo.text.your-chosen-color-style", "Your chosen color style")
         font.pointSize: 10
         color: NacreTokens.mutedInk
     }
@@ -181,18 +187,22 @@ Column {
             model: [
                 {
                     role: "primary",
+                    nameId: "ui.nacrewelcomedemo.name.main",
                     name: "Main"
                 },
                 {
                     role: "secondary",
+                    nameId: "ui.nacrewelcomedemo.name.second",
                     name: "Second"
                 },
                 {
                     role: "tertiary",
+                    nameId: "ui.nacrewelcomedemo.name.third",
                     name: "Third"
                 },
                 {
                     role: "surface",
+                    nameId: "ui.nacrewelcomedemo.name.background",
                     name: "Background"
                 }
             ]
@@ -213,7 +223,7 @@ Column {
                     width: parent.width - 44
                     height: parent.height
                     verticalAlignment: Text.AlignVCenter
-                    text: parent.modelData.name
+                    text: NacreI18n.modelLabel(parent.modelData, "name")
                     font.pointSize: 10
                     elide: Text.ElideRight
                 }
@@ -222,7 +232,7 @@ Column {
     }
     NacreText {
         width: parent.width
-        text: NacreWelcomeApp.demoError || (NacreWelcomeApp.demoBusy ? "Applying to your desktop…" : "")
+        text: NacreWelcomeApp.demoError || (NacreWelcomeApp.demoBusy ? NacreI18n.tr("welcome.welcome-demo.text.applying-to-your-desktop", "Applying to your desktop…") : "")
         visible: !!text
         font.pointSize: 10
         wrapMode: Text.Wrap

@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Actual media page with native Qt controls and service contracts."""
 
 import os
@@ -81,6 +83,7 @@ class MediaUITests(unittest.TestCase):
                 ROOT / "tests/media-performance-qml/tst_pages.qml",
                 target / "tst_pages.qml",
             )
+            install_i18n(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

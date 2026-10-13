@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Window
+import qs.services
 
 Image {
     id: root
@@ -54,7 +55,7 @@ Image {
     Screen.onDevicePixelRatioChanged: schedule()
     onStatusChanged: {
         if (status === Image.Error) {
-            error = "Image could not be loaded.";
+            error = NacreI18n.tr("ui.image.error.image-could-not-be-loaded", "Image could not be loaded.");
             displayedSource = "";
         } else if (status === Image.Ready)
             error = "";

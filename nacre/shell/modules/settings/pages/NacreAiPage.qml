@@ -11,47 +11,47 @@ NacreSettingsPage {
             SidebarChat.setProvider(provider);
     }
     NacreSettingsSection {
-        title: "Default assistant"
-        description: "Applies to new chats. Existing conversations keep their assistant and account."
+        title: NacreI18n.tr("ui.ai-page.title.default-assistant", "Default assistant")
+        description: NacreI18n.tr("ui.ai-page.description.applies-to-new-chats-existing-conversations-keep-their", "Applies to new chats. Existing conversations keep their assistant and account.")
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Codex"
+                text: NacreI18n.tr("ui.ai-page.text.codex", "Codex")
                 selected: SidebarChat.defaultProvider === "codex"
                 onClicked: root.chooseProvider("codex")
             }
             ActionButton {
-                text: "Claude"
+                text: NacreI18n.tr("ui.ai-page.text.claude", "Claude")
                 selected: SidebarChat.defaultProvider === "claude"
                 onClicked: root.chooseProvider("claude")
             }
         }
     }
     NacreSettingsSection {
-        title: "AI sidebar"
+        title: NacreI18n.tr("ui.ai-page.title.ai-sidebar", "AI sidebar")
         NacreSettingToggle {
-            label: "Enable the AI sidebar"
+            label: NacreI18n.tr("ui.ai-page.label.enable-the-ai-sidebar", "Enable the AI sidebar")
             setting: "leftDrawer"
         }
         ActionButton {
-            text: "Open sidebar"
+            text: NacreI18n.tr("ui.ai-page.text.open-sidebar", "Open sidebar")
             enabled: DesktopSettings.data.leftDrawer !== false
             onClicked: AppLaunch.run(["nacre-shell", "left"])
         }
     }
     NacreSettingsSection {
-        title: "Accounts and workspace"
-        description: "Manage assistant accounts, usage and projects in the AI workspace."
+        title: NacreI18n.tr("ui.ai-page.title.accounts-and-workspace", "Accounts and workspace")
+        description: NacreI18n.tr("ui.ai-page.description.manage-assistant-accounts-usage-and-projects-in-the-ai", "Manage assistant accounts, usage and projects in the AI workspace.")
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Accounts, usage and projects"
+                text: NacreI18n.tr("ui.ai-page.text.accounts-usage-and-projects", "Accounts, usage and projects")
                 onClicked: AppLaunch.run(["kitty", "--class", "nacre-ai-dashboard", "--title", "Nacre AI settings", "--", "nacre-ai", "settings"])
             }
             ActionButton {
-                text: "Open Brain"
+                text: NacreI18n.tr("ui.ai-page.text.open-brain", "Open Brain")
                 onClicked: AppLaunch.run(["nacre-shell", "brain"])
             }
         }

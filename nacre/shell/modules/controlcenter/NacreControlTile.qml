@@ -8,7 +8,7 @@ NacreSurface {
     property string icon: ""
     property bool selected: false
     signal clicked
-    implicitHeight: 60
+    implicitHeight: Math.max(60, detailText.y + detailText.implicitHeight + 10)
     implicitWidth: 120
     radius: 14
     topLeftRadius: 7
@@ -25,21 +25,23 @@ NacreSurface {
         color: root.selected ? NacreTokens.accent : NacreTokens.mutedInk
     }
     NacreText {
+        id: labelText
         x: 34
         y: 8
         width: parent.width - 44
         text: root.label
         font.pointSize: 10
-        elide: Text.ElideRight
+        wrapMode: Text.Wrap
     }
     NacreText {
+        id: detailText
         x: 10
-        y: 33
+        y: Math.max(33, labelText.y + labelText.implicitHeight + 6)
         width: parent.width - 20
         text: root.detail
         font.pointSize: 9
         color: NacreTokens.mutedInk
-        elide: Text.ElideRight
+        wrapMode: Text.Wrap
     }
     NacreInteraction {
         accessibleName: root.label + " " + root.detail

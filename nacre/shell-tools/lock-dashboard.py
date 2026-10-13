@@ -6,6 +6,7 @@ Coordinates use the reference's 2048x1152 canvas. The native locker scales this
 """
 
 from datetime import datetime
+from nacre_i18n import tr
 from functools import lru_cache
 import hashlib
 import fcntl
@@ -44,7 +45,9 @@ def font(size, family="IBM Plex Sans", style="Regular"):
 def rgb(value):
     value = value.lstrip("#")
     if len(value) != 6:
-        raise ValueError("Invalid palette color")
+        raise ValueError(
+            tr("helper.lock-dashboard.invalid-palette-color", "Invalid palette color")
+        )
     return tuple(int(value[i : i + 2], 16) for i in (0, 2, 4))
 
 

@@ -2,6 +2,7 @@
 """Read-only, bounded NetworkManager snapshot for Nacre's event-driven service."""
 
 import json
+from nacre_i18n import tr
 import os
 import re
 import subprocess
@@ -20,7 +21,12 @@ def fields(line):
     for char in line:
         if escaped:
             if char not in (":", "\\"):
-                raise ValueError("Unknown nmcli escape")
+                raise ValueError(
+                    tr(
+                        "helper.network-state.unknown-nmcli-escape",
+                        "Unknown nmcli escape",
+                    )
+                )
             word.append(char)
             escaped = False
         elif char == "\\":
@@ -31,7 +37,12 @@ def fields(line):
         else:
             word.append(char)
     if escaped:
-        raise ValueError("Incomplete nmcli escape")
+        raise ValueError(
+            tr(
+                "helper.network-state.incomplete-nmcli-escape",
+                "Incomplete nmcli escape",
+            )
+        )
     result.append("".join(word))
     return result
 

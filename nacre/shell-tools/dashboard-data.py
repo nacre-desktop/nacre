@@ -2,6 +2,7 @@
 """Private dashboard preferences, bounded local context and persistent focus state."""
 
 import argparse
+from nacre_i18n import tr
 import datetime as dt
 import fcntl
 from itertools import islice
@@ -60,20 +61,34 @@ def validate(data):
                 or len(set(value)) != len(value)
                 or any(v not in PAGES for v in value)
             ):
-                raise ValueError("Keep at least one unique dashboard tab")
+                raise ValueError(
+                    tr(
+                        "helper.dashboard-data.keep-at-least-one-unique-dashboard-tab",
+                        "Keep at least one unique dashboard tab",
+                    )
+                )
         elif key in ("lyrics", "albumPalette"):
             if type(value) is not bool:
-                raise ValueError("Use true or false")
+                raise ValueError(
+                    tr("helper.dashboard-data.use-true-or-false", "Use true or false")
+                )
         elif key == "focusMinutes":
             if type(value) is not int or not 1 <= value <= 180:
-                raise ValueError("Focus duration must be1–180minutes")
+                raise ValueError(
+                    tr(
+                        "helper.dashboard-data.focus-duration-must-be1-180minutes",
+                        "Focus duration must be1–180minutes",
+                    )
+                )
         elif key in ("homeZone", "homeCity", "calendarFile"):
             if (
                 not isinstance(value, str)
                 or len(value) > 1024
                 or any(ord(c) < 32 for c in value)
             ):
-                raise ValueError("Invalid text")
+                raise ValueError(
+                    tr("helper.dashboard-data.invalid-text", "Invalid text")
+                )
             if key == "homeZone" and value:
                 ZoneInfo(value)
             if (
@@ -81,9 +96,19 @@ def validate(data):
                 and value
                 and not Path(value).expanduser().is_absolute()
             ):
-                raise ValueError("Use an absolute local calendar path")
+                raise ValueError(
+                    tr(
+                        "helper.dashboard-data.use-an-absolute-local-calendar-path",
+                        "Use an absolute local calendar path",
+                    )
+                )
         else:
-            raise ValueError("Unknown dashboard preference")
+            raise ValueError(
+                tr(
+                    "helper.dashboard-data.unknown-dashboard-preference",
+                    "Unknown dashboard preference",
+                )
+            )
         result[key] = value
     return result
 
@@ -95,7 +120,9 @@ def calendar(path, now=None):
     try:
         source = Path(path).expanduser()
         if source.stat().st_size > 2_000_000:
-            raise ValueError("Calendar exceeds2MB")
+            raise ValueError(
+                tr("helper.dashboard-data.calendar-exceeds2mb", "Calendar exceeds2MB")
+            )
         text = re.sub(r"\r?\n[ \t]", "", source.read_text())
         events = []
         recurring = False
@@ -225,7 +252,9 @@ def focus_action(kind, minutes=25, dnd=False, now=None):
     state = read(STATE, {})
     if kind == "start":
         if not 1 <= minutes <= 180:
-            raise ValueError("Choose1–180minutes")
+            raise ValueError(
+                tr("helper.dashboard-data.choose1-180minutes", "Choose1–180minutes")
+            )
         state = dict(
             status="running",
             total=minutes * 60,
@@ -248,7 +277,12 @@ def focus_action(kind, minutes=25, dnd=False, now=None):
     elif kind == "release":
         state["ownsDnd"] = False
     else:
-        raise ValueError("Focus action unavailable")
+        raise ValueError(
+            tr(
+                "helper.dashboard-data.focus-action-unavailable",
+                "Focus action unavailable",
+            )
+        )
     write(STATE, state)
     return state
 
@@ -264,7 +298,12 @@ def execute(action, value=""):
             focus_action(action[6:], data.get("minutes", 25), data.get("dnd", False))
         elif action == "capture":
             if not value.strip() or len(value) > 16000:
-                raise ValueError("Write a note up to16000characters")
+                raise ValueError(
+                    tr(
+                        "helper.dashboard-data.write-a-note-up-to16000characters",
+                        "Write a note up to16000characters",
+                    )
+                )
             subprocess.run(
                 [
                     BRAIN,
@@ -285,7 +324,12 @@ def execute(action, value=""):
                 timeout=8,
             )
         elif action not in ("read", "context"):
-            raise ValueError("Unknown dashboard action")
+            raise ValueError(
+                tr(
+                    "helper.dashboard-data.unknown-dashboard-action",
+                    "Unknown dashboard action",
+                )
+            )
         result = snapshot(action in ("context", "capture"))
     return result
 

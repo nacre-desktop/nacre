@@ -62,13 +62,13 @@ Item {
         Row {
             spacing: 8
             ActionButton {
-                text: "New chat"
+                text: NacreI18n.tr("extras.chat-pane.text.new-chat", "New chat")
                 icon: "add_comment"
                 enabled: !root.chat.busy
                 onClicked: root.chat.newChat()
             }
             ActionButton {
-                text: "Workspace"
+                text: NacreI18n.tr("extras.chat-pane.text.workspace", "Workspace")
                 icon: "open_in_new"
                 enabled: !root.chat.busy && root.chat.threadId.length > 0
                 onClicked: root.chat.workspace()
@@ -77,7 +77,7 @@ Item {
         NacreText {
             width: parent.width
             elide: Text.ElideRight
-            text: (root.chat.provider ? root.chat.provider.charAt(0).toUpperCase() + root.chat.provider.slice(1) : "Assistant") + " · " + root.chat.title
+            text: (root.chat.provider ? root.chat.provider.charAt(0).toUpperCase() + root.chat.provider.slice(1) : NacreI18n.tr("extras.chat-pane.text.assistant", "Assistant")) + " · " + root.chat.title
             color: NacreColours.palette.m3onSurfaceVariant
             font.pointSize: 10
         }
@@ -196,7 +196,7 @@ Item {
             NacreText {
                 x: 12
                 y: 9
-                text: bubble.role === "user" ? "You" : "Nacre AI"
+                text: bubble.role === "user" ? NacreI18n.tr("extras.chat-pane.text.you", "You") : NacreI18n.tr("extras.chat-pane.text.nacre-ai", "Nacre AI")
                 font.pointSize: 9
                 color: NacreColours.palette.m3primary
             }
@@ -208,14 +208,14 @@ Item {
                 anchors.right: parent.right
                 spacing: 5
                 ActionButton {
-                    text: "Copy"
+                    text: NacreI18n.tr("extras.chat-pane.text.copy", "Copy")
                     onClicked: root.chat.copy(bubble.text)
                 }
                 Repeater {
                     model: root.codeBlocks(bubble.text)
                     ActionButton {
                         required property string modelData
-                        text: "Copy code"
+                        text: NacreI18n.tr("extras.chat-pane.text.copy-code", "Copy code")
                         onClicked: root.chat.copy(modelData)
                     }
                 }
@@ -240,7 +240,7 @@ Item {
         NacreText {
             anchors.centerIn: parent
             visible: transcript.count === 0
-            text: "Start a conversation"
+            text: NacreI18n.tr("extras.chat-pane.text.start-a-conversation", "Start a conversation")
             color: NacreColours.palette.m3onSurfaceVariant
         }
     }
@@ -333,7 +333,7 @@ Item {
                             objectName: "questionAnswer-" + q.modelData.id
                             width: parent.width
                             height: 35
-                            placeholderText: "Your answer"
+                            placeholderText: NacreI18n.tr("extras.chat-pane.placeholderText.your-answer", "Your answer")
                             leftPadding: 10
                             background: NacreSurface {
                                 radius: 10
@@ -345,7 +345,7 @@ Item {
                 }
                 ActionButton {
                     objectName: "sidebarReply"
-                    text: "Reply"
+                    text: NacreI18n.tr("extras.chat-pane.text.reply", "Reply")
                     enabled: !root.chat.inWorkspace && root.chat.question !== null && root.chat.question.questions.every(q => (root.chat.answers[q.id]?.answers?.[0] ?? "").trim().length > 0)
                     onClicked: root.chat.answer()
                 }
@@ -385,7 +385,7 @@ Item {
                 text: root.chat.draft
                 onTextChanged: if (root.chat.draft !== text)
                     root.chat.draft = text
-                placeholderText: root.chat.inWorkspace ? "Chat moved to the workspace" : root.chat.busy ? "Add a message while I work" : "Message Nacre AI"
+                placeholderText: root.chat.inWorkspace ? NacreI18n.tr("extras.chat-pane.placeholderText.chat-moved-to-the-workspace", "Chat moved to the workspace") : root.chat.busy ? NacreI18n.tr("extras.chat-pane.placeholderText.add-a-message-while-i-work", "Add a message while I work") : NacreI18n.tr("extras.chat-pane.placeholderText.message-nacre-ai", "Message Nacre AI")
                 color: NacreColours.palette.m3onSurface
                 placeholderTextColor: NacreColours.palette.m3onSurfaceVariant
                 selectionColor: NacreColours.palette.m3primary
@@ -413,14 +413,14 @@ Item {
                     input.text = root.chat.draft;
             }
         }
-        Row {
+        Flow {
             objectName: "sidebarActions"
             width: parent.width
             spacing: 6
             ActionButton {
                 objectName: "sidebarSend"
                 compact: true
-                text: "Send"
+                text: NacreI18n.tr("extras.chat-pane.text.send", "Send")
                 icon: "arrow_upward"
                 selected: true
                 enabled: !root.chat.inWorkspace && (input.text.trim().length > 0 || (root.chat.attachments ?? []).length > 0)
@@ -428,14 +428,14 @@ Item {
             }
             ActionButton {
                 compact: true
-                text: "Attach"
+                text: NacreI18n.tr("extras.chat-pane.text.attach", "Attach")
                 icon: "attach_file"
                 enabled: root.chat.attachmentsSupported
                 onClicked: root.chat.pickFiles()
             }
             ActionButton {
                 compact: true
-                text: root.chat.busy ? "" : "Screenshot"
+                text: root.chat.busy ? "" : NacreI18n.tr("extras.chat-pane.text.screenshot", "Screenshot")
                 icon: "screenshot"
                 enabled: root.chat.attachmentsSupported
                 onClicked: root.chat.screenshot()
@@ -450,7 +450,7 @@ Item {
             ActionButton {
                 objectName: "sidebarLatest"
                 compact: true
-                text: "Latest"
+                text: NacreI18n.tr("extras.chat-pane.text.latest", "Latest")
                 icon: "arrow_downward"
                 onClicked: transcript.latest()
             }

@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Production request owners: rapid settings, stale preview replies and teardown."""
 
 import os
@@ -129,6 +131,7 @@ TestCase {
   model.acceptPreview(JSON.stringify({sequence:model.flightSequence,result:{id:"late"}}));compare(model.preview.id,"fresh");
  }
 }""")
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(root), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

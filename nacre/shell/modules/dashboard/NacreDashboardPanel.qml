@@ -63,7 +63,7 @@ NacreSurface {
         text: ""
         icon: "tune"
         compact: true
-        accessibleLabel: "Customize dashboard"
+        accessibleLabel: NacreI18n.tr("dashboard.dashboard-panel.accessibleLabel.customize-dashboard", "Customize dashboard")
         onClicked: root.customizing = !root.customizing
     }
     ActionButton {
@@ -72,7 +72,7 @@ NacreSurface {
         text: ""
         icon: "settings"
         compact: true
-        accessibleLabel: "Open Settings"
+        accessibleLabel: NacreI18n.tr("dashboard.dashboard-panel.accessibleLabel.open-settings", "Open Settings")
         onClicked: NacrePanelState.openSettings("")
     }
     Item {

@@ -7,239 +7,239 @@ Singleton {
     id: root
     readonly property var list: [
         {
-            "name": "Open wallpaper picker",
-            "description": "Choose a wallpaper from your collection",
+            "name": NacreI18n.tr("ui.desktop-actions.name.open-wallpaper-picker", "Open wallpaper picker"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.choose-a-wallpaper-from-your-collection", "Choose a wallpaper from your collection"),
             "icon": "wallpaper",
             "action": "wallpaper",
             "aliases": ["wallpapers", "background", "wall"]
         },
         {
-            "name": "Calculator",
-            "description": "Calculate here; Enter copies the answer",
+            "name": NacreI18n.tr("ui.desktop-actions.name.calculator", "Calculator"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.calculate-here-enter-copies-the-answer", "Calculate here; Enter copies the answer"),
             "icon": "calculate",
             "action": "calculator",
             "aliases": ["calc", "math", "maths"]
         },
         {
-            "name": "Open Nacre Colors",
-            "description": "Preview, compare and export wallpaper palettes",
+            "name": NacreI18n.tr("ui.desktop-actions.name.open-nacre-colors", "Open Nacre Colors"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.preview-compare-and-export-wallpaper-palettes", "Preview, compare and export wallpaper palettes"),
             "icon": "palette",
             "action": "colors",
             "brand": "colors",
             "aliases": ["colors", "colours", "orient", "palette"]
         },
         {
-            "name": "Open Nacre Settings",
-            "description": "Desktop, displays, sound and preferences",
+            "name": NacreI18n.tr("ui.desktop-actions.name.open-nacre-settings", "Open Nacre Settings"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.desktop-displays-sound-and-preferences", "Desktop, displays, sound and preferences"),
             "icon": "settings",
             "action": "settings",
             "brand": "settings"
         },
         {
-            "name": "Open Nacre AI",
-            "description": "Open your assistant workspace and conversations",
+            "name": NacreI18n.tr("ui.desktop-actions.name.open-nacre-ai", "Open Nacre AI"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.open-your-assistant-workspace-and-conversations", "Open your assistant workspace and conversations"),
             "icon": "neurology",
             "action": "tasks",
             "brand": "ai",
             "aliases": ["ai", "assistant", "ai workspace"]
         },
         {
-            "name": "Open Nacre Brain",
-            "description": "Browse your notes and knowledge map",
+            "name": NacreI18n.tr("ui.desktop-actions.name.open-nacre-brain", "Open Nacre Brain"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.browse-your-notes-and-knowledge-map", "Browse your notes and knowledge map"),
             "icon": "neurology",
             "action": "brain",
             "brand": "brain",
             "aliases": ["brain", "notes", "knowledge"]
         },
         {
-            "name": "Open files",
-            "description": "Browse folders and archives in your file manager",
+            "name": NacreI18n.tr("ui.desktop-actions.name.open-files", "Open files"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.browse-folders-and-archives-in-your-file-manager", "Browse folders and archives in your file manager"),
             "icon": "folder_open",
             "action": "files",
             "aliases": ["files", "file manager", "dolphin"]
         },
         {
-            "name": "Open terminal",
-            "description": "Start a new terminal window",
+            "name": NacreI18n.tr("ui.desktop-actions.name.open-terminal", "Open terminal"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.start-a-new-terminal-window", "Start a new terminal window"),
             "icon": "terminal",
             "action": "terminal",
             "aliases": ["terminal", "kitty"]
         },
         {
-            "name": "Clipboard history",
-            "description": "Find and reuse copied text or images",
+            "name": NacreI18n.tr("ui.desktop-actions.name.clipboard-history", "Clipboard history"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.find-and-reuse-copied-text-or-images", "Find and reuse copied text or images"),
             "icon": "content_paste",
             "action": "clipboard",
             "aliases": ["clipboard", "paste"]
         },
         {
-            "name": "Window overview",
-            "description": "Find and focus an open window",
+            "name": NacreI18n.tr("ui.desktop-actions.name.window-overview", "Window overview"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.find-and-focus-an-open-window", "Find and focus an open window"),
             "icon": "view_quilt",
             "action": "overview",
             "aliases": ["windows", "workspaces"]
         },
         {
-            "name": "Keyboard shortcuts",
-            "description": "Browse your current key bindings",
+            "name": NacreI18n.tr("ui.desktop-actions.name.keyboard-shortcuts", "Keyboard shortcuts"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.browse-your-current-key-bindings", "Browse your current key bindings"),
             "icon": "keyboard",
             "action": "keys",
             "aliases": ["shortcuts", "keybinds", "keys"]
         },
         {
-            "name": "Open apps",
-            "description": "Browse installed applications",
+            "name": NacreI18n.tr("ui.desktop-actions.name.open-apps", "Open apps"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.browse-installed-applications", "Browse installed applications"),
             "icon": "apps",
             "action": "apps",
             "aliases": ["apps", "applications", "launcher"]
         },
         {
-            "name": "Open Nacre Welcome",
-            "description": "Revisit the desktop tour",
+            "name": NacreI18n.tr("ui.desktop-actions.name.open-nacre-welcome", "Open Nacre Welcome"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.revisit-the-desktop-tour", "Revisit the desktop tour"),
             "icon": "waving_hand",
             "action": "welcome",
             "brand": "welcome",
             "aliases": ["welcome", "tour", "help"]
         },
         {
-            "name": "Nacre AI: New chat",
-            "description": "Start a conversation with your default assistant",
+            "name": NacreI18n.tr("ui.desktop-actions.name.nacre-ai-new-chat", "Nacre AI: New chat"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.start-a-conversation-with-your-default-assistant", "Start a conversation with your default assistant"),
             "icon": "add_comment",
             "action": "new",
             "brand": "ai",
             "aliases": ["new chat", "ai chat", "chat"]
         },
         {
-            "name": "Nacre AI: Resume chat",
-            "description": "Continue your latest assistant conversation",
+            "name": NacreI18n.tr("ui.desktop-actions.name.nacre-ai-resume-chat", "Nacre AI: Resume chat"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.continue-your-latest-assistant-conversation", "Continue your latest assistant conversation"),
             "icon": "history",
             "action": "resume",
             "brand": "ai",
             "aliases": ["resume", "continue chat"]
         },
         {
-            "name": "Nacre AI: Browse chats",
-            "description": "Choose a saved conversation to continue",
+            "name": NacreI18n.tr("ui.desktop-actions.name.nacre-ai-browse-chats", "Nacre AI: Browse chats"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.choose-a-saved-conversation-to-continue", "Choose a saved conversation to continue"),
             "icon": "forum",
             "action": "load",
             "brand": "ai",
             "aliases": ["saved chats", "load chat", "chat history"]
         },
         {
-            "name": "Nacre Brain: Capture note",
-            "description": "Save a thought to your private knowledge base",
+            "name": NacreI18n.tr("ui.desktop-actions.name.nacre-brain-capture-note", "Nacre Brain: Capture note"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.save-a-thought-to-your-private-knowledge-base", "Save a thought to your private knowledge base"),
             "icon": "edit_note",
             "action": "capture",
             "brand": "brain",
             "aliases": ["capture", "save note", "new note"]
         },
         {
-            "name": "Wi-Fi settings",
-            "description": "Manage wireless connections in Nacre Settings",
+            "name": NacreI18n.tr("ui.desktop-actions.name.wi-fi-settings", "Wi-Fi settings"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.manage-wireless-connections-in-nacre-settings", "Manage wireless connections in Nacre Settings"),
             "icon": "wifi",
             "action": "wifi",
             "aliases": ["wifi", "network", "wireless"]
         },
         {
-            "name": "Bluetooth settings",
-            "description": "Pair and manage devices in Nacre Settings",
+            "name": NacreI18n.tr("ui.desktop-actions.name.bluetooth-settings", "Bluetooth settings"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.pair-and-manage-devices-in-nacre-settings", "Pair and manage devices in Nacre Settings"),
             "icon": "bluetooth",
             "action": "bluetooth"
         },
         {
-            "name": "Sound settings",
-            "description": "Choose audio devices and volumes in Nacre Settings",
+            "name": NacreI18n.tr("ui.desktop-actions.name.sound-settings", "Sound settings"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.choose-audio-devices-and-volumes-in-nacre-settings", "Choose audio devices and volumes in Nacre Settings"),
             "icon": "volume_up",
             "action": "sound",
             "aliases": ["audio", "volume", "sound"]
         },
         {
-            "name": "Do not disturb",
-            "description": "Toggle notification popups",
+            "name": NacreI18n.tr("ui.desktop-actions.name.do-not-disturb", "Do not disturb"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.toggle-notification-popups", "Toggle notification popups"),
             "icon": "notifications_off",
             "action": "dnd",
             "aliases": ["dnd", "notifications"]
         },
         {
-            "name": "Search Nacre Brain",
-            "description": "Search notes in the sidebar",
+            "name": NacreI18n.tr("ui.desktop-actions.name.search-nacre-brain", "Search Nacre Brain"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.search-notes-in-the-sidebar", "Search notes in the sidebar"),
             "icon": "neurology",
             "action": "left",
             "brand": "brain",
             "launcher": false
         },
         {
-            "name": "Power menu",
-            "description": "Lock, log out, restart or power off",
+            "name": NacreI18n.tr("ui.desktop-actions.name.power-menu", "Power menu"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.lock-log-out-restart-or-power-off", "Lock, log out, restart or power off"),
             "icon": "power_settings_new",
             "action": "power",
             "launcher": false
         },
         {
-            "name": "Normal desktop",
-            "description": "Apply your saved desktop profile",
+            "name": NacreI18n.tr("ui.desktop-actions.name.normal-desktop", "Normal desktop"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.apply-your-saved-desktop-profile", "Apply your saved desktop profile"),
             "icon": "desktop_windows",
             "action": "preset",
             "value": "normal",
             "launcher": false
         },
         {
-            "name": "Focused desktop",
-            "description": "Apply your saved desktop profile",
+            "name": NacreI18n.tr("ui.desktop-actions.name.focused-desktop", "Focused desktop"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.apply-your-saved-desktop-profile", "Apply your saved desktop profile"),
             "icon": "center_focus_strong",
             "action": "preset",
             "value": "focused",
             "launcher": false
         },
         {
-            "name": "Presentation desktop",
-            "description": "Apply your saved desktop profile",
+            "name": NacreI18n.tr("ui.desktop-actions.name.presentation-desktop", "Presentation desktop"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.apply-your-saved-desktop-profile", "Apply your saved desktop profile"),
             "icon": "present_to_all",
             "action": "preset",
             "value": "presentation",
             "launcher": false
         },
         {
-            "name": "Minimal desktop",
-            "description": "Apply your saved desktop profile",
+            "name": NacreI18n.tr("ui.desktop-actions.name.minimal-desktop", "Minimal desktop"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.apply-your-saved-desktop-profile", "Apply your saved desktop profile"),
             "icon": "crop_square",
             "action": "preset",
             "value": "minimal",
             "launcher": false
         },
         {
-            "name": "Light theme",
-            "description": "Apply light wallpaper colors",
+            "name": NacreI18n.tr("ui.desktop-actions.name.light-theme", "Light theme"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.apply-light-wallpaper-colors", "Apply light wallpaper colors"),
             "icon": "light_mode",
             "action": "light",
             "launcher": false
         },
         {
-            "name": "Dark theme",
-            "description": "Apply dark wallpaper colors",
+            "name": NacreI18n.tr("ui.desktop-actions.name.dark-theme", "Dark theme"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.apply-dark-wallpaper-colors", "Apply dark wallpaper colors"),
             "icon": "dark_mode",
             "action": "dark",
             "launcher": false
         },
         {
-            name: DesktopSettings.data.animations === false ? "Enable animations" : "Disable animations",
-            "description": "Change desktop animations",
+            name: DesktopSettings.data.animations === false ? NacreI18n.tr("ui.desktop-actions.name.enable-animations", "Enable animations") : NacreI18n.tr("ui.desktop-actions.name.disable-animations", "Disable animations"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.change-desktop-animations", "Change desktop animations"),
             "icon": "animation",
             "action": "toggle-setting",
             "value": "animations",
             "launcher": false
         },
         {
-            name: DesktopSettings.data.blur === false ? "Enable blur" : "Disable blur",
-            "description": "Change desktop blur",
+            name: DesktopSettings.data.blur === false ? NacreI18n.tr("ui.desktop-actions.name.enable-blur", "Enable blur") : NacreI18n.tr("ui.desktop-actions.name.disable-blur", "Disable blur"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.change-desktop-blur", "Change desktop blur"),
             "icon": "blur_on",
             "action": "toggle-setting",
             "value": "blur",
             "launcher": false
         },
         {
-            name: DesktopSettings.data.shadow === false ? "Enable shadows" : "Disable shadows",
-            "description": "Change desktop shadows",
+            name: DesktopSettings.data.shadow === false ? NacreI18n.tr("ui.desktop-actions.name.enable-shadows", "Enable shadows") : NacreI18n.tr("ui.desktop-actions.name.disable-shadows", "Disable shadows"),
+            "description": NacreI18n.tr("ui.desktop-actions.description.change-desktop-shadows", "Change desktop shadows"),
             "icon": "shadow",
             "action": "toggle-setting",
             "value": "shadow",

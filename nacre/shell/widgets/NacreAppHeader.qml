@@ -3,7 +3,7 @@ import qs.services
 
 Item {
     id: root
-    property string title: "Nacre"
+    property string title: NacreI18n.tr("ui.app-header.title.nacre", "Nacre")
     property string app: ""
     property var tabs: []
     property string currentTab: ""
@@ -57,7 +57,7 @@ Item {
                     required property string modelData
                     objectName: modelData + "ModeButton"
                     text: ""
-                    accessibleLabel: modelData === "dark" ? "Dark preview" : "Light preview"
+                    accessibleLabel: modelData === "dark" ? NacreI18n.tr("ui.app-header.accessibleLabel.dark-preview", "Dark preview") : NacreI18n.tr("ui.app-header.accessibleLabel.light-preview", "Light preview")
                     icon: modelData === "dark" ? "dark_mode" : "light_mode"
                     compact: true
                     selected: root.mode === modelData

@@ -2,6 +2,7 @@
 """Automatic travel timezone updates. The UTC clock remains NTP-owned."""
 
 import argparse
+from nacre_i18n import tr
 import datetime as dt
 import json
 import os
@@ -74,7 +75,12 @@ def valid_zone(zone):
         or len(zone) > 100
         or not re.fullmatch(r"[A-Za-z0-9_+-]+(?:/[A-Za-z0-9_+-]+)*", zone)
     ):
-        raise ValueError("Use a valid IANA timezone name")
+        raise ValueError(
+            tr(
+                "helper.timezone.use-a-valid-iana-timezone-name",
+                "Use a valid IANA timezone name",
+            )
+        )
     ZoneInfo(zone)
     return zone
 
@@ -195,7 +201,10 @@ def update_locked(force=False):
                 checked=dt.datetime.now(dt.timezone.utc).isoformat(),
                 detected=zone,
                 source="Last confirmed timezone",
-                error="Device location unavailable or imprecise; kept the last confirmed timezone. IP location is not used to change the clock.",
+                error=tr(
+                    "helper.timezone.device-location-unavailable-or-imprecise-kept-the-last-confirmed",
+                    "Device location unavailable or imprecise; kept the last confirmed timezone. IP location is not used to change the clock.",
+                ),
             ),
         )
 
@@ -303,7 +312,7 @@ def install_locked(zone=None):
 def automatic(value):
     require_root()
     if value not in ("on", "off"):
-        raise ValueError("Choose on or off")
+        raise ValueError(tr("helper.timezone.choose-on-or-off", "Choose on or off"))
     with operation_lock():
         config = read(CONFIG, {})
         config["automatic"] = value == "on"
@@ -349,7 +358,12 @@ def main():
         elif a.action == "update":
             require_root()
             if a.value not in (None, "force"):
-                raise ValueError("Unsupported location refresh")
+                raise ValueError(
+                    tr(
+                        "helper.timezone.unsupported-location-refresh",
+                        "Unsupported location refresh",
+                    )
+                )
             update(force=a.value == "force")
         elif a.action == "automatic":
             automatic(a.value)

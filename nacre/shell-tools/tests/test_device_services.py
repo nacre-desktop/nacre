@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Exercise actual independent service code with native dependency fixtures."""
 
 import os
@@ -176,7 +178,10 @@ QtObject {
                     ROOT.parent / "shell/services/NacreNotificationEntry.qml"
                 ).read_text()
                 (target / "NacreNotificationEntry.qml").write_text(
-                    entry.replace("notification?.transient", "notification?.temporary")
+                    'import "fixtures"\n'
+                    + entry.replace(
+                        "notification?.transient", "notification?.temporary"
+                    )
                 )
                 (fixtures / "NotificationServer.qml").write_text(
                     "import QtQuick\nQtObject {property bool keepOnReload:false;property bool actionsSupported:false;property bool imageSupported:false;property bool persistenceSupported:false;property bool bodyMarkupSupported:false;signal notification(var notification)}"
@@ -208,6 +213,7 @@ QtObject {
                     "import Quickshell.Bluetooth as Bluez", 'import "fixtures" as Bluez'
                 )
                 .replace("import qs.widgets", 'import "fixtures"')
+                .replace("import qs.services", 'import "fixtures"')
                 .replace("import qs.utils", 'import "fixtures"')
                 .replace("Quickshell.screens", "Environment.screens")
                 .replace("target: Quickshell", "target: Environment")
@@ -239,6 +245,7 @@ QtObject {
                 ROOT / "tests/device-qml" / ("tst_" + name + ".qml"),
                 target / "tst_service.qml",
             )
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

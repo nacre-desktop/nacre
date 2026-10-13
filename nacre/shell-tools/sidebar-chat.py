@@ -2,6 +2,7 @@
 """Private persistent assistant session, independent from the desktop renderer."""
 
 import argparse
+from nacre_i18n import tr
 import re
 import json
 import os
@@ -32,7 +33,12 @@ DEFAULT_SOCKET = SOCKET
 def configure_channel(channel):
     global STATE, SOCKET, CHANNEL
     if channel and not re.fullmatch(r"[a-z0-9-]{1,48}", channel):
-        raise ValueError("Invalid assistant view channel")
+        raise ValueError(
+            tr(
+                "helper.sidebar-chat.invalid-assistant-view-channel",
+                "Invalid assistant view channel",
+            )
+        )
     CHANNEL = channel
     STATE = DEFAULT_STATE / "views" / channel if channel else DEFAULT_STATE
     SOCKET = (
@@ -127,10 +133,19 @@ def env_for(agent, account):
 def friendly_error(error):
     text = str(error).lower()
     if any(s in text for s in ("sign in", "login", "authentication", "unauthorized")):
-        return "Sign in to the selected assistant account in AI settings."
+        return tr(
+            "helper.sidebar-chat.sign-in-to-the-selected-assistant-account-in-ai-settings",
+            "Sign in to the selected assistant account in AI settings.",
+        )
     if any(s in text for s in ("usage limit", "rate limit", "quota")):
-        return "The selected assistant account has reached its current usage limit."
-    return "The assistant could not finish this request. Try again or open AI settings."
+        return tr(
+            "helper.sidebar-chat.the-selected-assistant-account-has-reached-its-current-usage-limi",
+            "The selected assistant account has reached its current usage limit.",
+        )
+    return tr(
+        "helper.sidebar-chat.the-assistant-could-not-finish-this-request-try-again-or-open-ai",
+        "The assistant could not finish this request. Try again or open AI settings.",
+    )
 
 
 def text_content(content):
@@ -275,7 +290,12 @@ class CodexPeer:
                         id="approval",
                         header="Permission",
                         question=params.get("reason") or "Allow this operation?",
-                        options=[dict(label="Allow once"), dict(label="Decline")],
+                        options=[
+                            dict(
+                                label=tr("helper.sidebar-chat.allow-once", "Allow once")
+                            ),
+                            dict(label=tr("helper.sidebar-chat.decline", "Decline")),
+                        ],
                     )
                 ],
                 "approval",
@@ -286,7 +306,10 @@ class CodexPeer:
                     "id": ident,
                     "error": {
                         "code": -32601,
-                        "message": "This client does not support that interaction.",
+                        "message": tr(
+                            "helper.sidebar-chat.this-client-does-not-support-that-interaction",
+                            "This client does not support that interaction.",
+                        ),
                     },
                 }
             )
@@ -707,7 +730,12 @@ class Manager:
             if self.peer:
                 return
             if self.metadata.get("in_workspace"):
-                raise RuntimeError("This chat is open in the workspace.")
+                raise RuntimeError(
+                    tr(
+                        "helper.sidebar-chat.this-chat-is-open-in-the-workspace",
+                        "This chat is open in the workspace.",
+                    )
+                )
             self.status = "Connecting"
             self.update()
             try:
@@ -734,7 +762,12 @@ class Manager:
             files = selected_files(files)
             self.ensure_peer()
             if not self.metadata.get("id"):
-                raise RuntimeError("No assistant session")
+                raise RuntimeError(
+                    tr(
+                        "helper.sidebar-chat.no-assistant-session",
+                        "No assistant session",
+                    )
+                )
             if self.metadata.get("title") == "New chat":
                 self.metadata["title"] = " ".join(text.split()[:7])[:80]
                 self.save()
@@ -993,7 +1026,10 @@ def client():
                     dict(
                         type="connection",
                         connected=False,
-                        error="Reopen the drawer to reconnect.",
+                        error=tr(
+                            "helper.sidebar-chat.reopen-the-drawer-to-reconnect",
+                            "Reopen the drawer to reconnect.",
+                        ),
                     )
                 )
                 return
@@ -1019,7 +1055,13 @@ def client():
         except OSError:
             sock.close()
             sock = None
-            emit(dict(type="connection", connected=False, error="Reconnecting…"))
+            emit(
+                dict(
+                    type="connection",
+                    connected=False,
+                    error=tr("helper.sidebar-chat.reconnecting", "Reconnecting…"),
+                )
+            )
 
 
 if __name__ == "__main__":

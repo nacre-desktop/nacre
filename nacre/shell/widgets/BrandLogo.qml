@@ -20,7 +20,7 @@ Item {
     property color background: NacreColours.palette.m3frame || NacreColours.palette.m3surface
     property color foreground: NacreColours.palette.m3onSurface
     property bool motionEnabled: DesktopSettings.data.animations !== false
-    Accessible.name: root.ai ? "Nacre AI" : root.brain ? "Nacre Brain" : root.settings ? "Nacre Settings" : root.colorsApp ? "Nacre Colors" : root.notifications ? "Nacre Notifications" : "Nacre"
+    Accessible.name: root.ai ? NacreI18n.tr("ui.brand-logo.name.nacre-ai", "Nacre AI") : root.brain ? NacreI18n.tr("ui.brand-logo.name.nacre-brain", "Nacre Brain") : root.settings ? NacreI18n.tr("ui.brand-logo.name.nacre-settings", "Nacre Settings") : root.colorsApp ? NacreI18n.tr("ui.brand-logo.name.nacre-colors", "Nacre Colors") : root.notifications ? NacreI18n.tr("ui.brand-logo.name.nacre-notifications", "Nacre Notifications") : NacreI18n.tr("ui.brand-logo.name.nacre", "Nacre")
     Accessible.role: Accessible.Graphic
     Image {
         id: image

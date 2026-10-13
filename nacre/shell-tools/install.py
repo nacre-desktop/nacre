@@ -2,6 +2,7 @@
 """Install or reload Nacre native shell source with a reversible cutover."""
 
 import argparse
+from nacre_i18n import tr
 import datetime as dt
 import hashlib
 import json
@@ -115,10 +116,14 @@ def deploy(code_only=False):
             )
             if result.returncode:
                 raise RuntimeError(
-                    "QML validation failed: "
-                    + str(file.relative_to(SHELL))
-                    + " "
-                    + result.stderr.strip()
+                    tr(
+                        "helper.install.qml-validation-failed-value0-value1",
+                        "QML validation failed: {value0} {value1}",
+                        {
+                            "value0": str(file.relative_to(SHELL)),
+                            "value1": result.stderr.strip(),
+                        },
+                    )
                 )
     runtime = HOME / ".local/share/nacre/palette-runtime"
     if (
@@ -126,7 +131,10 @@ def deploy(code_only=False):
         or not (runtime / "venv/bin/python").is_file()
     ):
         raise RuntimeError(
-            "Install system desktop packages and provision the palette engine first"
+            tr(
+                "helper.install.install-system-desktop-packages-and-provision-the-palette-engine",
+                "Install system desktop packages and provision the palette engine first",
+            )
         )
     # The release transaction snapshots the old runtime before this activation.
     subprocess.run(["python3", str(ROOT / "provision.py")], check=True)
@@ -321,7 +329,10 @@ def deploy(code_only=False):
         or 'load_private("palette")' not in path.read_text()
     ):
         raise RuntimeError(
-            "Managed palette loader missing; run ./install.sh --apply from the repository"
+            tr(
+                "helper.install.managed-palette-loader-missing-run-install-sh-apply-from-the-repo",
+                "Managed palette loader missing; run ./install.sh --apply from the repository",
+            )
         )
     # The reference style is code; wallpaper files remain private user assets.
     style = json.loads((ROOT / "reference-style.json").read_text())
@@ -429,7 +440,10 @@ def validate_live(expected=None):
         if ready:
             if expected is not None and source_digest(DEST / "source") != expected:
                 raise RuntimeError(
-                    "The candidate failed to load; the previous validated desktop was restored."
+                    tr(
+                        "helper.install.the-candidate-failed-to-load-the-previous-validated-desktop-was-r",
+                        "The candidate failed to load; the previous validated desktop was restored.",
+                    )
                 )
             if os.environ.get("NACRE_RELEASE_TRANSACTION"):
                 return
@@ -444,7 +458,10 @@ def validate_live(expected=None):
             return
         time.sleep(0.25)
     raise RuntimeError(
-        "Desktop did not load; the supervisor will retain or recover the last validated source."
+        tr(
+            "helper.install.desktop-did-not-load-the-supervisor-will-retain-or-recover-the-la",
+            "Desktop did not load; the supervisor will retain or recover the last validated source.",
+        )
     )
 
 
@@ -457,7 +474,13 @@ def restore():
             digest(path) != e["after_hash"]
             or (os.readlink(path) if path.is_symlink() else None) != e["after_link"]
         ):
-            raise RuntimeError("Later edit preserved: " + str(path))
+            raise RuntimeError(
+                tr(
+                    "helper.install.later-edit-preserved-value0",
+                    "Later edit preserved: {value0}",
+                    {"value0": str(path)},
+                )
+            )
     subprocess.run(["systemctl", "--user", "stop", "nacre-shell"], check=True)
     for e in reversed(entries):
         path = Path(e["target"])

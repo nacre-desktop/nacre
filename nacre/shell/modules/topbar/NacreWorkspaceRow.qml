@@ -203,7 +203,13 @@ Item {
                     color: cell.selected ? NacreColours.palette.m3onPrimary : cell.accent
                 }
                 NacreInteraction {
-                    accessibleName: "Workspace " + cell.workspaceId + (cell.selected ? ", current" : "") + ", " + cell.windowCount + (cell.windowCount === 1 ? " window" : " windows") + (cell.urgent ? ", attention requested" : "")
+                    accessibleName: NacreI18n.tr(cell.selected ? (cell.urgent ? "workspaces.description.active-urgent" : "workspaces.description.active") : (cell.urgent ? "workspaces.description.inactive-urgent" : "workspaces.description.inactive"), {
+                        one: "Workspace {workspace}, {count} window",
+                        other: "Workspace {workspace}, {count} windows"
+                    }, {
+                        workspace: cell.workspaceId,
+                        count: cell.windowCount
+                    })
                     function onClicked() {
                         root.activate(cell.workspaceId);
                     }
@@ -221,7 +227,9 @@ Item {
                             client: modelData
                             color: cell.selected ? NacreColours.palette.m3onSurface : NacreColours.palette.m3onSurfaceVariant
                             NacreInteraction {
-                                accessibleName: "Focus " + String(parent.client?.title || parent.client?.wmClass || "window")
+                                accessibleName: NacreI18n.tr("ui.workspace-row.accessibleName.focus-value0", "Focus {value0}", {
+                                    value0: String(parent.client?.title || parent.client?.wmClass || "window")
+                                })
                                 function onClicked() {
                                     NacreCompositor.focusWindow(parent.client?.windowId);
                                 }
@@ -240,7 +248,17 @@ Item {
                     id: tip
                     visible: pointer.hovered
                     delay: 450
-                    text: "Workspace " + cell.workspaceId + (cell.selected ? " · Current" : "") + " · " + cell.windowCount + (cell.windowCount === 1 ? " window" : " windows") + (cell.windowCount ? "\n" + cell.windows.slice(0, 5).map(client => String(client.title || client.wmClass || "Window").slice(0, 80)).join("\n") + (cell.windowCount > 5 ? "\n+" + (cell.windowCount - 5) + " more" : "") : "")
+                    text: NacreI18n.tr(cell.selected ? "workspaces.tooltip.active" : "workspaces.tooltip.inactive", {
+                        one: "Workspace {workspace} · {count} window{titles}{more}",
+                        other: "Workspace {workspace} · {count} windows{titles}{more}"
+                    }, {
+                        workspace: cell.workspaceId,
+                        count: cell.windowCount,
+                        titles: cell.windowCount ? "\n" + cell.windows.slice(0, 5).map(client => NacreI18n.windowCaption(String(client.title || client.wmClass || NacreI18n.tr("workspaces.window.fallback", "Window")), client.wmClass).slice(0, 80)).join("\n") : "",
+                        more: cell.windowCount > 5 ? NacreI18n.tr("workspaces.tooltip.more", "\n+{count} more", {
+                            count: cell.windowCount - 5
+                        }) : ""
+                    })
                     contentItem: NacreText {
                         text: tip.text
                         font.pointSize: 10

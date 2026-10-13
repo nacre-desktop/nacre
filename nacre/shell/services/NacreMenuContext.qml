@@ -43,9 +43,9 @@ Scope {
     property var ownership: ({})
     property string ownershipWanted: ""
     property bool refreshing: stateWorker.running
-    readonly property var rows: catalog.rows
+    readonly property var rows: NacreI18n.localize(catalog.rows)
     readonly property var navigation: Model.rail(rows)
-    readonly property var apps: NacreApps.list.map(entry => Model.application(entry))
+    readonly property var apps: NacreApps.list.map(entry => NacreI18n.applicationRow(Model.application(entry)))
     readonly property var legacy: Legacy.actions(DesktopActions.list).map(entry => Object.assign({}, entry, {
             operation: "legacy-action",
             label: entry.name,
@@ -59,9 +59,16 @@ Scope {
         if (shared || !defaultText)
             return;
         try {
+            Model.useTranslations(NacreI18n.tr);
             catalog = Model.merge(defaultText, extensionText);
         } catch (failure) {
-            message = "The menu catalog could not be loaded";
+            message = NacreI18n.tr("ui.menu-context.message.the-menu-catalog-could-not-be-loaded", "The menu catalog could not be loaded");
+        }
+    }
+    readonly property Connections languageChanges: Connections {
+        target: NacreI18n
+        function onLanguageChanged() {
+            root.parse();
         }
     }
     function refresh(force = false) {
@@ -140,9 +147,14 @@ Scope {
         result.shortcut = DesktopExtras.keys.find(item => item.menu === row.id)?.key || "";
         const checked = stateFor(row);
         result.checked = checked === true;
-        result.status = row.state === "updates" ? (Updates.count ? Updates.count + " available" : "Up to date") : typeof checked === "boolean" ? (["setting", "dnd", "night-light", "stay-awake", "mute", "mic-mute", "wifi", "bluetooth"].includes(row.state) ? (checked ? "On" : "Off") : checked ? "In use" : "") : "";
+        result.status = row.state === "updates" ? (Updates.count ? NacreI18n.tr("launcher.updates.available", {
+                one: "{count} available",
+                other: "{count} available"
+            }, {
+                count: Updates.count
+            }) : NacreI18n.tr("ui.menu-context.status.up-to-date", "Up to date")) : typeof checked === "boolean" ? (["setting", "dnd", "night-light", "stay-awake", "mute", "mic-mute", "wifi", "bluetooth"].includes(row.state) ? (checked ? NacreI18n.tr("ui.menu-context.status.on", "On") : NacreI18n.tr("ui.menu-context.status.off", "Off")) : checked ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : "") : "";
         result.disabled = !!row.capability && snapshot.capabilities[row.capability] !== true;
-        result.reason = result.disabled ? "Optional tool is not installed" : "";
+        result.reason = result.disabled ? NacreI18n.tr("launcher.disabled.optional-tool-is-not-installed", "Optional tool is not installed") : "";
         if (row.operation === "media") {
             const player = NacrePlayers.active;
             const capability = {
@@ -151,23 +163,23 @@ Scope {
                 previous: "canGoPrevious"
             }[row.value];
             result.disabled = !player || !player[capability];
-            result.reason = !player ? "No active media player" : result.disabled ? "This player does not support that action" : "";
+            result.reason = !player ? NacreI18n.tr("launcher.disabled.no-active-media-player", "No active media player") : result.disabled ? NacreI18n.tr("launcher.disabled.this-player-does-not-support-that-action", "This player does not support that action") : "";
         }
         if (row.value === "record-stop") {
             result.disabled = !snapshot.recording;
-            result.reason = result.disabled ? "No recording is running" : "";
+            result.reason = result.disabled ? NacreI18n.tr("launcher.disabled.no-recording-is-running", "No recording is running") : "";
         }
         if (row.value === "record-start" && snapshot.recording) {
             result.disabled = true;
-            result.reason = "A recording is already running";
+            result.reason = NacreI18n.tr("launcher.disabled.a-recording-is-already-running", "A recording is already running");
         }
         if (row.value === "night-light") {
             result.disabled = !NacreControlTools.data.nightLightSupported || !!NacreControlTools.data.nightLightExternal;
-            result.reason = NacreControlTools.data.nightLightExternal ? "Managed by an existing controller" : result.disabled ? "Install hyprsunset to use Night light" : "";
+            result.reason = NacreControlTools.data.nightLightExternal ? NacreI18n.tr("launcher.disabled.managed-by-an-existing-controller", "Managed by an existing controller") : result.disabled ? NacreI18n.tr("launcher.disabled.install-hyprsunset-to-use-night-light", "Install hyprsunset to use Night light") : "";
         }
         if (row.operation === "power-profile" && row.value === "performance" && !PowerProfiles.hasPerformanceProfile) {
             result.disabled = true;
-            result.reason = "Performance profile is unavailable on this device";
+            result.reason = NacreI18n.tr("launcher.disabled.performance-profile-is-unavailable-on-this-device", "Performance profile is unavailable on this device");
         }
         if (row.value === "mute")
             result.disabled = !NacreAudio.available;
@@ -175,7 +187,7 @@ Scope {
             result.disabled = !NacreAudio.micAvailable;
         if (row.operation === "toggle" && row.value === "wifi") {
             result.disabled = NacreNetwork.wifiAvailable === false;
-            result.reason = result.disabled ? "No Wi-Fi adapter" : "";
+            result.reason = result.disabled ? NacreI18n.tr("ui.menu-context.reason.no-wi-fi-adapter", "No Wi-Fi adapter") : "";
         }
         if (row.value === "bluetooth")
             result.disabled = !NacreBluetooth.available;
@@ -207,7 +219,7 @@ Scope {
     }
     function provider(route, query = "") {
         if (root.node(route)?.provider === "audio")
-            return (NacreAudio.outputs || []).map(item => valueRow(route, "output-" + item.id, item.description || item.nickname || item.name, "audio-output", String(item.id), "speaker", "Audio output", {
+            return (NacreAudio.outputs || []).map(item => valueRow(route, "output-" + item.id, item.description || item.nickname || item.name, "audio-output", String(item.id), "speaker", NacreI18n.tr("launcher.provider.audio-output", "Audio output"), {
                     checked: NacreAudio.sink === item,
                     disabled: !item.ready
                 }));
@@ -217,39 +229,47 @@ Scope {
         if (node.provider === "apps")
             return apps;
         if (node.provider === "wallpapers")
-            return NacreWallpapers.list.map(entry => valueRow(route, Qt.md5(entry.path), entry.name, "wallpaper", entry.path, "wallpaper", entry.dynamic ? "Animated wallpaper" : "Wallpaper", {
+            return NacreWallpapers.list.map(entry => valueRow(route, Qt.md5(entry.path), entry.name, "wallpaper", entry.path, "wallpaper", entry.dynamic ? NacreI18n.tr("launcher.provider.wallpaper.animated", "Animated wallpaper") : NacreI18n.tr("launcher.provider.wallpaper.static", "Wallpaper"), {
                     preview: entry.thumbnail || entry.poster,
                     checked: entry.path === NacreWallpapers.current,
-                    status: entry.path === NacreWallpapers.current ? "In use" : ""
+                    status: entry.path === NacreWallpapers.current ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : ""
                 }));
         if (node.provider === "accents")
-            return NacreWallpapers.paletteOptions.map((entry, index) => valueRow(route, "choice-" + index, entry.name || "Color " + (index + 1), "accent", entry.accent, "palette", "Use this color family", {
+            return NacreWallpapers.paletteOptions.map((entry, index) => valueRow(route, "choice-" + index, (entry.name ? NacreI18n.option("palette-name", entry.name) : "") || NacreI18n.tr("launcher.provider.color", "Color {number}", {
+                    number: NacreI18n.number(index + 1)
+                }), "accent", entry.accent, "palette", NacreI18n.tr("launcher.provider.use-this-color-family", "Use this color family"), {
                     colors: entry.colors || [],
                     checked: entry.accent === NacreWallpapers.selectedAccent,
-                    status: entry.accent === NacreWallpapers.selectedAccent ? "In use" : ""
+                    status: entry.accent === NacreWallpapers.selectedAccent ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : ""
                 }));
         if (node.provider === "fonts")
-            return [valueRow(route, "default", "Nacre default", "font", "", "text_fields", "IBM Plex Sans", {
+            return [valueRow(route, "default", NacreI18n.tr("launcher.provider.nacre-default", "Nacre default"), "font", "", "text_fields", NacreI18n.tr("ui.menu-context.description.ibm-plex-sans", "{font}", {
+                    font: "IBM Plex Sans"
+                }), {
                     checked: !DesktopSettings.data.interfaceFont
-                }), ...(snapshot.fonts || []).map(name => valueRow(route, Qt.md5(name), name, "font", name, "text_fields", "Preview this interface font", {
+                }), ...(snapshot.fonts || []).map(name => valueRow(route, Qt.md5(name), name, "font", name, "text_fields", NacreI18n.tr("launcher.provider.preview-this-interface-font", "Preview this interface font"), {
                         previewFont: name,
                         disabled: name.length > 80,
                         checked: DesktopSettings.data.interfaceFont === name
                     }))];
         if (node.provider === "windows")
-            return (NacreCompositor.windows || []).map(client => valueRow(route, String(client.windowId), client.title || client.wmClass, "focus", client.windowId, "window", "Workspace " + client.workspace?.name));
+            return (NacreCompositor.windows || []).map(client => valueRow(route, String(client.windowId), NacreI18n.windowCaption(client.title || client.wmClass, client.wmClass), "focus", client.windowId, "window", NacreI18n.tr("launcher.provider.workspace", "Workspace {workspace}", {
+                    workspace: client.workspace?.name
+                })));
         if (node.provider === "wifi")
-            return NacreNetwork.visibleNetworks.map(point => valueRow(route, point.bssid.replace(/:/g, ""), point.ssid || "Hidden network", "settings", "network", "wifi", point.strength + "% signal", {
+            return NacreNetwork.visibleNetworks.map(point => valueRow(route, point.bssid.replace(/:/g, ""), point.ssid || NacreI18n.tr("launcher.provider.hidden-network", "Hidden network"), "settings", "network", "wifi", NacreI18n.tr("launcher.provider.signal", "{strength}% signal", {
+                    strength: NacreI18n.number(point.strength)
+                }), {
                     checked: point.active,
-                    status: point.active ? "Connected" : ""
+                    status: point.active ? NacreI18n.tr("ui.menu-context.status.connected", "Connected") : ""
                 }));
         if (node.provider === "bluetooth")
-            return NacreBluetooth.devices.map(device => valueRow(route, device.address.replace(/:/g, ""), device.alias, "settings", "bluetooth", "bluetooth", device.paired ? "Paired device" : "Nearby device", {
+            return NacreBluetooth.devices.map(device => valueRow(route, device.address.replace(/:/g, ""), device.alias, "settings", "bluetooth", "bluetooth", device.paired ? NacreI18n.tr("launcher.provider.paired-device", "Paired device") : NacreI18n.tr("launcher.provider.nearby-device", "Nearby device"), {
                     checked: device.connected,
-                    status: device.connected ? "Connected" : ""
+                    status: device.connected ? NacreI18n.tr("ui.menu-context.status.connected", "Connected") : ""
                 }));
         if (node.provider === "clipboard")
-            return DesktopExtras.clips.map(entry => valueRow(route, String(entry.id), entry.label || "Clipboard item", "copy-clip", entry.id, "content_paste", entry.kind || "Copied item", {
+            return DesktopExtras.clips.map(entry => valueRow(route, String(entry.id), entry.label || NacreI18n.tr("launcher.provider.clipboard-item", "Clipboard item"), "copy-clip", entry.id, "content_paste", entry.kind || NacreI18n.tr("launcher.provider.copied-item", "Copied item"), {
                     preview: entry.preview || ""
                 }));
         if (node.provider === "keys")
@@ -258,12 +278,14 @@ Scope {
                     disabled: false
                 }));
         if (node.provider === "emoji")
-            return emojiData.map((entry, index) => valueRow(route, Qt.md5(entry.value), entry.name, "copy", entry.value, "mood", "Copy this emoji", {
+            return NacreI18n.localize(emojiData).map((entry, index) => valueRow(route, Qt.md5(entry.value), entry.name, "copy", entry.value, "mood", NacreI18n.tr("launcher.provider.copy-this-emoji", "Copy this emoji"), {
                     emoji: entry.value
                 }));
         if (node.provider === "timers")
-            return (snapshot.reminders || []).map(entry => valueRow(route, entry.unit.slice(0, -6), entry.label, "timer-cancel", entry.unit, "timer", "Cancel this reminder", {
-                    status: "Until " + Qt.formatTime(new Date(entry.due * 1000), "hh:mm")
+            return (snapshot.reminders || []).map(entry => valueRow(route, entry.unit.slice(0, -6), entry.label, "timer-cancel", entry.unit, "timer", NacreI18n.tr("launcher.provider.cancel-this-reminder", "Cancel this reminder"), {
+                    status: NacreI18n.tr("ui.menu-context.status.until-value0", "Until {value0}", {
+                        value0: NacreI18n.time(new Date(entry.due * 1000), "hh:mm")
+                    })
                 }));
         if (node.provider === "webapps")
             return (snapshot.webapps || []).map(entry => valueRow(route, entry.id, entry.label, "webapp", entry.id, "public", entry.url, {
@@ -272,20 +294,20 @@ Scope {
         if (node.provider === "installed")
             return (snapshot.packages || []).filter(entry => !query || Model.normalized(entry.name).includes(Model.normalized(query))).slice(0, 100).map(entry => valueRow(route, Qt.md5(entry.name), entry.name, "remove-package", entry.name, "inventory_2", entry.version, {
                     package: entry.name,
-                    status: "Installed"
+                    status: NacreI18n.tr("ui.menu-context.status.installed", "Installed")
                 }));
         if (node.provider === "software")
-            return catalog.software.map(entry => valueRow(route, Qt.md5(entry.package), entry.label, "install-package", entry.package, "download", entry.description, {
+            return NacreI18n.localize(catalog.software).map(entry => valueRow(route, Qt.md5(entry.package), entry.label, "install-package", entry.package, "download", entry.description, {
                     package: entry.package,
                     checked: packageNames.has(entry.package),
-                    status: packageNames.has(entry.package) ? "Installed" : "Install",
+                    status: packageNames.has(entry.package) ? NacreI18n.tr("ui.menu-context.status.installed", "Installed") : NacreI18n.tr("ui.menu-context.status.install", "Install"),
                     disabled: packageNames.has(entry.package) || !snapshot.capabilities.packages,
-                    reason: packageNames.has(entry.package) ? "Installed; use item actions to remove it" : !snapshot.capabilities.packages ? "Requires an Arch-compatible package manager" : ""
+                    reason: packageNames.has(entry.package) ? NacreI18n.tr("launcher.disabled.installed-use-item-actions-to-remove-it", "Installed; use item actions to remove it") : !snapshot.capabilities.packages ? NacreI18n.tr("launcher.disabled.requires-an-arch-compatible-package-manager", "Requires an Arch-compatible package manager") : ""
                 }));
         if (node.provider === "packages")
             return packageQuery === Model.scope(query).text ? packageRows.map(entry => valueRow(route, Qt.md5(entry.name), entry.name, "install-package", entry.name, "download", entry.description, {
                     package: entry.name,
-                    status: packageNames.has(entry.name) ? "Installed" : entry.repository,
+                    status: packageNames.has(entry.name) ? NacreI18n.tr("ui.menu-context.status.installed", "Installed") : entry.repository,
                     checked: packageNames.has(entry.name),
                     disabled: packageNames.has(entry.name)
                 })) : [];
@@ -294,162 +316,202 @@ Scope {
     readonly property var emojiData: [
         {
             value: "😀",
+            nameId: "ui.nacremenucontext.name.grinning-face",
             name: "Grinning face"
         },
         {
             value: "😂",
+            nameId: "ui.nacremenucontext.name.laughing",
             name: "Laughing"
         },
         {
             value: "🥹",
+            nameId: "ui.nacremenucontext.name.holding-back-tears",
             name: "Holding back tears"
         },
         {
             value: "😊",
+            nameId: "ui.nacremenucontext.name.smiling",
             name: "Smiling"
         },
         {
             value: "😍",
+            nameId: "ui.nacremenucontext.name.heart-eyes",
             name: "Heart eyes"
         },
         {
             value: "🤔",
+            nameId: "ui.nacremenucontext.name.thinking",
             name: "Thinking"
         },
         {
             value: "😎",
+            nameId: "ui.nacremenucontext.name.cool",
             name: "Cool"
         },
         {
             value: "😭",
+            nameId: "ui.nacremenucontext.name.crying",
             name: "Crying"
         },
         {
             value: "😅",
+            nameId: "ui.nacremenucontext.name.nervous-laugh",
             name: "Nervous laugh"
         },
         {
             value: "😴",
+            nameId: "ui.nacremenucontext.name.sleeping",
             name: "Sleeping"
         },
         {
             value: "👍",
+            nameId: "ui.nacremenucontext.name.thumbs-up",
             name: "Thumbs up"
         },
         {
             value: "👎",
+            nameId: "ui.nacremenucontext.name.thumbs-down",
             name: "Thumbs down"
         },
         {
             value: "👏",
+            nameId: "ui.nacremenucontext.name.clapping",
             name: "Clapping"
         },
         {
             value: "🙏",
+            nameId: "ui.nacremenucontext.name.thank-you",
             name: "Thank you"
         },
         {
             value: "💪",
+            nameId: "ui.nacremenucontext.name.strong",
             name: "Strong"
         },
         {
             value: "👋",
+            nameId: "ui.nacremenucontext.name.wave",
             name: "Wave"
         },
         {
             value: "❤️",
+            nameId: "ui.nacremenucontext.name.heart",
             name: "Heart"
         },
         {
             value: "💜",
+            nameId: "ui.nacremenucontext.name.purple-heart",
             name: "Purple heart"
         },
         {
             value: "💙",
+            nameId: "ui.nacremenucontext.name.blue-heart",
             name: "Blue heart"
         },
         {
             value: "💚",
+            nameId: "ui.nacremenucontext.name.green-heart",
             name: "Green heart"
         },
         {
             value: "🔥",
+            nameId: "ui.nacremenucontext.name.fire",
             name: "Fire"
         },
         {
             value: "✨",
+            nameId: "ui.nacremenucontext.name.sparkles",
             name: "Sparkles"
         },
         {
             value: "🎉",
+            nameId: "ui.nacremenucontext.name.celebrate",
             name: "Celebrate"
         },
         {
             value: "✅",
+            nameId: "ui.nacremenucontext.name.done",
             name: "Done"
         },
         {
             value: "❌",
+            nameId: "ui.nacremenucontext.name.no",
             name: "No"
         },
         {
             value: "⚠️",
+            nameId: "ui.nacremenucontext.name.warning",
             name: "Warning"
         },
         {
             value: "🚀",
+            nameId: "ui.nacremenucontext.name.rocket",
             name: "Rocket"
         },
         {
             value: "🐚",
+            nameId: "ui.nacremenucontext.name.shell",
             name: "Shell"
         },
         {
             value: "🫧",
+            nameId: "ui.nacremenucontext.name.bubbles",
             name: "Bubbles"
         },
         {
             value: "🌊",
+            nameId: "ui.nacremenucontext.name.wave-ocean",
             name: "Wave ocean"
         },
         {
             value: "☕",
+            nameId: "ui.nacremenucontext.name.coffee",
             name: "Coffee"
         },
         {
             value: "💻",
+            nameId: "ui.nacremenucontext.name.laptop",
             name: "Laptop"
         },
         {
             value: "🧠",
+            nameId: "ui.nacremenucontext.name.brain",
             name: "Brain"
         },
         {
             value: "🌙",
+            nameId: "ui.nacremenucontext.name.moon",
             name: "Moon"
         },
         {
             value: "🌈",
+            nameId: "ui.nacremenucontext.name.rainbow",
             name: "Rainbow"
         },
         {
             value: "💡",
+            nameId: "ui.nacremenucontext.name.idea",
             name: "Idea"
         },
         {
             value: "🛠️",
+            nameId: "ui.nacremenucontext.name.tools",
             name: "Tools"
         },
         {
             value: "📌",
+            nameId: "ui.nacremenucontext.name.pinned",
             name: "Pinned"
         },
         {
             value: "📷",
+            nameId: "ui.nacremenucontext.name.camera",
             name: "Camera"
         },
         {
             value: "🎵",
+            nameId: "ui.nacremenucontext.name.music",
             name: "Music"
         }
     ]
@@ -485,19 +547,19 @@ Scope {
         if (scope.kind === "brain")
             return brainRows(scope.text);
         if (scope.kind === "ai")
-            return scope.text ? [valueRow("actions.assistant", "question", "Ask Nacre AI", "ask", scope.text, "chat", scope.text, {
+            return scope.text ? [valueRow("actions.assistant", "question", NacreI18n.tr("ui.menu-context.label.ask-nacre-ai", "Ask Nacre AI"), "ask", scope.text, "chat", scope.text, {
                     brand: "ai",
                     disabled: !canAsk || !snapshot.capabilities.ai,
-                    reason: !snapshot.capabilities.ai ? "Nacre AI is optional; open Setup to add it" : !canAsk ? "An assistant task or unsent draft is active; open Nacre AI instead" : ""
+                    reason: !snapshot.capabilities.ai ? NacreI18n.tr("launcher.disabled.nacre-ai-is-optional-open-setup-to-add-it", "Nacre AI is optional; open Setup to add it") : !canAsk ? NacreI18n.tr("launcher.disabled.an-assistant-task-or-unsent-draft-is-active-open-nacre-ai-instead", "An assistant task or unsent draft is active; open Nacre AI instead") : ""
                 })] : [];
         if (scope.kind === "help")
             return [
                 {
                     id: "scope-actions",
                     kind: "action",
-                    name: "> Actions",
-                    label: "> Actions",
-                    description: "Search desktop commands",
+                    name: NacreI18n.tr("ui.menu-context.name.actions", "> Actions"),
+                    label: NacreI18n.tr("ui.menu-context.label.actions", "> Actions"),
+                    description: NacreI18n.tr("ui.menu-context.description.search-desktop-commands", "Search desktop commands"),
                     operation: "scope",
                     value: "> ",
                     icon: "bolt"
@@ -505,9 +567,9 @@ Scope {
                 {
                     id: "scope-calculator",
                     kind: "action",
-                    name: "= Calculator",
-                    label: "= Calculator",
-                    description: "Calculate and copy a result",
+                    name: NacreI18n.tr("ui.menu-context.name.calculator", "= Calculator"),
+                    label: NacreI18n.tr("ui.menu-context.label.calculator", "= Calculator"),
+                    description: NacreI18n.tr("ui.menu-context.description.calculate-and-copy-a-result", "Calculate and copy a result"),
                     operation: "scope",
                     value: "= ",
                     icon: "calculate"
@@ -515,9 +577,9 @@ Scope {
                 {
                     id: "scope-brain",
                     kind: "action",
-                    name: "# Brain",
-                    label: "# Brain",
-                    description: "Search private notes",
+                    name: NacreI18n.tr("ui.menu-context.name.brain", "# Brain"),
+                    label: NacreI18n.tr("ui.menu-context.label.brain", "# Brain"),
+                    description: NacreI18n.tr("ui.menu-context.description.search-private-notes", "Search private notes"),
                     operation: "scope",
                     value: "# ",
                     icon: "neurology"
@@ -525,9 +587,9 @@ Scope {
                 {
                     id: "scope-files",
                     kind: "action",
-                    name: ": Files",
-                    label: ": Files",
-                    description: "Search your usual folders",
+                    name: NacreI18n.tr("ui.menu-context.name.files", ": Files"),
+                    label: NacreI18n.tr("ui.menu-context.label.files", ": Files"),
+                    description: NacreI18n.tr("ui.menu-context.description.search-your-usual-folders", "Search your usual folders"),
                     operation: "scope",
                     value: ": ",
                     icon: "folder"
@@ -535,9 +597,9 @@ Scope {
                 {
                     id: "scope-ai",
                     kind: "action",
-                    name: "? Nacre AI",
-                    label: "? Nacre AI",
-                    description: "Ask an explicit question",
+                    name: NacreI18n.tr("ui.menu-context.name.nacre-ai", "? Nacre AI"),
+                    label: NacreI18n.tr("ui.menu-context.label.nacre-ai", "? Nacre AI"),
+                    description: NacreI18n.tr("ui.menu-context.description.ask-an-explicit-question", "Ask an explicit question"),
                     operation: "scope",
                     value: "? ",
                     icon: "chat"
@@ -553,7 +615,9 @@ Scope {
                 const groups = rows.filter(row => row.provider && (row.id === route || row.id.startsWith(route + ".")));
                 return ranked(local.concat(...groups.map(row => provider(row.id, scope.text))), scope.text);
             }
-            return ranked(globalRows(), scope.text).concat([valueRow("actions", "search-web", "Search the web for “" + scope.text.slice(0, 100) + "”", "search-web", scope.text, "public", "Opens your browser only when selected")]);
+            return ranked(globalRows(), scope.text).concat([valueRow("actions", "search-web", NacreI18n.tr("ui.menu-context.label.search-the-web-for-value0", "Search the web for “{value0}”", {
+                    value0: scope.text.slice(0, 100)
+                }), "search-web", scope.text, "public", NacreI18n.tr("ui.menu-context.description.opens-your-browser-only-when-selected", "Opens your browser only when selected"))]);
         }
         if (route === "home")
             return favorites();
@@ -765,7 +829,7 @@ Scope {
         if (shared)
             return shared.work(action, value, payload);
         if (actionWorker.running) {
-            message = "Another menu action is finishing";
+            message = NacreI18n.tr("ui.menu-context.message.another-menu-action-is-finishing", "Another menu action is finishing");
             return false;
         }
         actionWorker.action = action;
@@ -805,7 +869,7 @@ Scope {
                 root.fileRows = data.rows || [];
                 root.fileMessage = data.error || data.message || "";
             } catch (failure) {
-                root.message = "Could not read files result";
+                root.message = NacreI18n.tr("ui.menu-context.message.could-not-read-files-result", "Could not read files result");
             }
         }
         onExited: if (query !== root.fileWanted)
@@ -835,7 +899,7 @@ Scope {
                 root.conversionQuery = conversionWorker.query;
                 root.conversion = data;
             } catch (failure) {
-                root.message = "Could not read convert result";
+                root.message = NacreI18n.tr("ui.menu-context.message.could-not-read-convert-result", "Could not read convert result");
             }
         }
         onExited: if (query !== root.conversionWanted)
@@ -906,7 +970,7 @@ Scope {
                 else if (data.version === 1 && data.capabilities && Array.isArray(data.packages))
                     root.snapshot = data;
             } catch (failure) {
-                root.message = "Menu status could not be refreshed";
+                root.message = NacreI18n.tr("ui.menu-context.message.menu-status-could-not-be-refreshed", "Menu status could not be refreshed");
             }
         }
     }
@@ -924,7 +988,7 @@ Scope {
                     const data = JSON.parse(text);
                     root.message = data.error || data.message || "";
                 } catch (failure) {
-                    root.message = "The menu action could not be completed";
+                    root.message = NacreI18n.tr("ui.menu-context.message.the-menu-action-could-not-be-completed", "The menu action could not be completed");
                 }
             }
         }
@@ -987,7 +1051,7 @@ Scope {
                     root.brainQuery = brainWorker.query;
                     root.notes = data.result || [];
                 } catch (failure) {
-                    root.message = "Could not read Brain results";
+                    root.message = NacreI18n.tr("ui.menu-context.message.could-not-read-brain-results", "Could not read Brain results");
                 }
             }
         }

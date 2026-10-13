@@ -2,6 +2,7 @@
 """Open a Nacre menu route, or ask its shared window for a selection/text value."""
 
 import argparse
+from nacre_i18n import tr
 import fcntl
 import importlib.util
 import json
@@ -29,7 +30,9 @@ def atomic(path, data):
 
 def session_path(ident):
     if not isinstance(ident, str) or not SESSION.fullmatch(ident):
-        raise ValueError("Invalid selector session")
+        raise ValueError(
+            tr("helper.menu-cli.invalid-selector-session", "Invalid selector session")
+        )
     path = ROOT / ident
     if (
         path.is_symlink()
@@ -37,7 +40,12 @@ def session_path(ident):
         or path.stat().st_uid != os.getuid()
         or path.stat().st_mode & 0o077
     ):
-        raise ValueError("Selector session is unavailable")
+        raise ValueError(
+            tr(
+                "helper.menu-cli.selector-session-is-unavailable",
+                "Selector session is unavailable",
+            )
+        )
     return path
 
 
@@ -49,7 +57,9 @@ def load_request(ident):
         or path.stat().st_uid != os.getuid()
         or path.stat().st_mode & 0o077
     ):
-        raise ValueError("Invalid selector request")
+        raise ValueError(
+            tr("helper.menu-cli.invalid-selector-request", "Invalid selector request")
+        )
     data = json.loads(path.read_text())
     if (
         not isinstance(data, dict)
@@ -60,14 +70,23 @@ def load_request(ident):
         or not math.isfinite(data["expires"])
         or data["expires"] <= time.time()
     ):
-        raise ValueError("Selector request expired or has an invalid format")
+        raise ValueError(
+            tr(
+                "helper.menu-cli.selector-request-expired-or-has-an-invalid-format",
+                "Selector request expired or has an invalid format",
+            )
+        )
     if not isinstance(data.get("title", ""), str) or len(data.get("title", "")) > 200:
-        raise ValueError("Invalid selector title")
+        raise ValueError(
+            tr("helper.menu-cli.invalid-selector-title", "Invalid selector title")
+        )
     if (
         not isinstance(data.get("initial", ""), str)
         or len(data.get("initial", "")) > 16384
     ):
-        raise ValueError("Invalid initial input")
+        raise ValueError(
+            tr("helper.menu-cli.invalid-initial-input", "Invalid initial input")
+        )
     if data["kind"] == "pick":
         data["choices"] = choices(json.dumps(data.get("choices", [])), True)
     return data
@@ -76,10 +95,14 @@ def load_request(ident):
 def respond(ident, value):
     request = load_request(ident)
     if not isinstance(value, dict) or type(value.get("cancelled")) is not bool:
-        raise ValueError("Invalid selector response")
+        raise ValueError(
+            tr("helper.menu-cli.invalid-selector-response", "Invalid selector response")
+        )
     answer = value.get("value", "")
     if not isinstance(answer, str) or len(answer) > 16384 or "\0" in answer:
-        raise ValueError("Invalid selector value")
+        raise ValueError(
+            tr("helper.menu-cli.invalid-selector-value", "Invalid selector value")
+        )
     if (
         not value["cancelled"]
         and request["kind"] == "pick"
@@ -88,7 +111,12 @@ def respond(ident, value):
             for row in request.get("choices", [])
         )
     ):
-        raise ValueError("That choice is not part of this selector")
+        raise ValueError(
+            tr(
+                "helper.menu-cli.that-choice-is-not-part-of-this-selector",
+                "That choice is not part of this selector",
+            )
+        )
     atomic(
         session_path(ident) / "response.json",
         dict(
@@ -101,7 +129,12 @@ def respond(ident, value):
 
 def choices(text, json_input=False):
     if len(text) > 1048576:
-        raise ValueError("Selection list is too large")
+        raise ValueError(
+            tr(
+                "helper.menu-cli.selection-list-is-too-large",
+                "Selection list is too large",
+            )
+        )
     raw = (
         json.loads(text)
         if json_input
@@ -116,7 +149,12 @@ def choices(text, json_input=False):
         ]
     )
     if not isinstance(raw, list) or len(raw) > 2000:
-        raise ValueError("Use a list of at most 2000 choices")
+        raise ValueError(
+            tr(
+                "helper.menu-cli.use-a-list-of-at-most-2000-choices",
+                "Use a list of at most 2000 choices",
+            )
+        )
     result = []
     for row in raw:
         if (
@@ -124,7 +162,12 @@ def choices(text, json_input=False):
             or not isinstance(row.get("label"), str)
             or not isinstance(row.get("value", row.get("label")), str)
         ):
-            raise ValueError("Each choice needs a label and string value")
+            raise ValueError(
+                tr(
+                    "helper.menu-cli.each-choice-needs-a-label-and-string-value",
+                    "Each choice needs a label and string value",
+                )
+            )
         item = dict(
             label=row["label"],
             value=row.get("value", row["label"]),
@@ -138,7 +181,12 @@ def choices(text, json_input=False):
             or len(item["value"]) > 16384
             or any("\0" in str(v) for v in item.values())
         ):
-            raise ValueError("Invalid selection label or value")
+            raise ValueError(
+                tr(
+                    "helper.menu-cli.invalid-selection-label-or-value",
+                    "Invalid selection label or value",
+                )
+            )
         result.append(item)
     return result
 
@@ -170,7 +218,12 @@ def request(kind, title, rows=None, initial="", timeout=300):
         try:
             fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise ValueError("Another selector is already open") from None
+            raise ValueError(
+                tr(
+                    "helper.menu-cli.another-selector-is-already-open",
+                    "Another selector is already open",
+                )
+            ) from None
         ident = uuid.uuid4().hex
         path = ROOT / ident
         path.mkdir(mode=0o700)
@@ -198,7 +251,9 @@ def request(kind, title, rows=None, initial="", timeout=300):
                     print(result.get("value", ""))
                     return 0
                 time.sleep(0.05)
-            raise ValueError("Selector timed out")
+            raise ValueError(
+                tr("helper.menu-cli.selector-timed-out", "Selector timed out")
+            )
         finally:
             try:
                 ipc("menuPrompt", "cancel", ident)
@@ -240,7 +295,12 @@ def main():
             return 0
         if args.route in ("pick", "input"):
             if not 1 <= args.timeout <= 3600:
-                raise ValueError("Timeout must be between 1 and 3600 seconds")
+                raise ValueError(
+                    tr(
+                        "helper.menu-cli.timeout-must-be-between-1-and-3600-seconds",
+                        "Timeout must be between 1 and 3600 seconds",
+                    )
+                )
             return request(
                 args.route,
                 args.title,

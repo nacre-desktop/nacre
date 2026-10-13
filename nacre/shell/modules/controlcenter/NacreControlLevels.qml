@@ -8,7 +8,7 @@ Column {
     spacing: 6
     width: 388
     Level {
-        label: "Volume"
+        label: NacreI18n.tr("controlcenter.control-levels.label.volume", "Volume")
         icon: NacreAudio.muted ? "volume_off" : "volume_up"
         level: NacreAudio.volume
         usable: NacreAudio.available
@@ -17,7 +17,7 @@ Column {
         onMute: NacreAudio.toggleMute()
     }
     Level {
-        label: "Microphone"
+        label: NacreI18n.tr("controlcenter.control-levels.label.microphone", "Microphone")
         icon: NacreAudio.micMuted ? "mic_off" : "mic"
         level: NacreAudio.micVolume
         usable: NacreAudio.micAvailable
@@ -33,7 +33,7 @@ Column {
     }
     Level {
         id: display
-        label: "Display"
+        label: NacreI18n.tr("controlcenter.control-levels.label.display", "Display")
         icon: "brightness_6"
         level: root.monitor?.brightness || 0
         usable: root.monitor?.available === true
@@ -42,7 +42,7 @@ Column {
     }
     Level {
         id: keyboard
-        label: "Keyboard"
+        label: NacreI18n.tr("controlcenter.control-levels.label.keyboard", "Keyboard")
         icon: "keyboard"
         level: NacreKeyboardLight.brightness
         usable: NacreKeyboardLight.available
@@ -85,7 +85,7 @@ Column {
         NacreText {
             anchors.right: parent.right
             y: 0
-            text: row.usable ? Math.round(row.level * 100) + "%" : "Unavailable"
+            text: row.usable ? NacreI18n.number(Math.round(row.level * 100)) + "%" : NacreI18n.tr("controlcenter.control-levels.text.unavailable", "Unavailable")
             font.pointSize: 10
             color: NacreTokens.mutedInk
         }
@@ -117,7 +117,9 @@ Column {
                 font.pointSize: 14
             }
             NacreInteraction {
-                accessibleName: "Toggle " + row.label + " mute"
+                accessibleName: NacreI18n.tr("ui.control-levels.accessibleName.toggle-value0-mute", "Toggle {value0} mute", {
+                    value0: row.label
+                })
                 function onClicked() {
                     row.mute();
                 }

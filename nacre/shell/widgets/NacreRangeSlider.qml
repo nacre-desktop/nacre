@@ -4,7 +4,7 @@ import qs.services
 
 Slider {
     id: root
-    property string label: "Level"
+    property string label: NacreI18n.tr("ui.range-slider.label.level", "Level")
     from: 0
     to: 1
     stepSize: 0.01

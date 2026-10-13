@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.widgets
 import "overview.js" as Overview
+import qs.services
 
 NacreOverviewCard {
     id: root
@@ -26,17 +27,19 @@ NacreOverviewCard {
         },
         {
             icon: "desktop_windows",
-            text: "Hyprland"
+            text: NacreI18n.tr("overview.host-card.text.hyprland", "Hyprland")
         },
         {
             icon: "timer",
-            text: Overview.uptime(uptimeSeconds),
+            text: Overview.uptime(uptimeSeconds, NacreI18n.tr),
             action: "system"
         }
     ].concat(updateCount >= 0 ? [
         {
             icon: "system_update",
-            text: updateCount + " updates",
+            text: NacreI18n.tr("ui.host-card.text.value0-updates", "{value0} updates", {
+                value0: updateCount
+            }),
             action: "updates"
         }
     ] : []).concat(kernel ? [
@@ -103,13 +106,15 @@ NacreOverviewCard {
                     width: Math.max(0, parent.width - 25)
                     text: parent.modelData.text
                     font.pointSize: root.width >= 320 ? Math.min(14, Math.max(12, root.width / 44)) : 10
+                    fontSizeMode: Text.HorizontalFit
+                    minimumPointSize: 8
                     elide: Text.ElideRight
                 }
                 NacreInteraction {
                     objectName: parent.modelData.action ? "hostAction_" + parent.modelData.action : ""
                     visible: !!parent.modelData.action
                     disabled: !parent.modelData.action
-                    accessibleName: parent.modelData.action === "system" ? "Open System tab" : "Open package updates"
+                    accessibleName: parent.modelData.action === "system" ? NacreI18n.tr("overview.host-card.accessibleName.open-system-tab", "Open System tab") : NacreI18n.tr("overview.host-card.accessibleName.open-package-updates", "Open package updates")
                     function onClicked() {
                         if (parent.modelData.action === "system")
                             root.systemRequested();

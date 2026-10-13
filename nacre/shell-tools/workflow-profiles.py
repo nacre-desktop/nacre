@@ -2,6 +2,7 @@
 """Saved personal audio/display/startup intent, applied only on explicit preset use."""
 
 import json
+from nacre_i18n import tr
 import subprocess
 from pathlib import Path
 
@@ -42,12 +43,22 @@ def save(name, roles):
         "music",
         "docked",
     ):
-        raise ValueError("Unknown workflow preset")
+        raise ValueError(
+            tr(
+                "helper.workflow-profiles.unknown-workflow-preset",
+                "Unknown workflow preset",
+            )
+        )
     if not isinstance(roles, list) or any(
         r not in ("Browser", "Nacre AI", "Discord", "Spotify", "Mail", "Brain")
         for r in roles
     ):
-        raise ValueError("Invalid startup roles")
+        raise ValueError(
+            tr(
+                "helper.workflow-profiles.invalid-startup-roles",
+                "Invalid startup roles",
+            )
+        )
     profiles = load()
     profiles[name] = dict(
         sink=run(["pactl", "get-default-sink"]),

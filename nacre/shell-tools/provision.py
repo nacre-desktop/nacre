@@ -2,6 +2,7 @@
 """Provision a tested immutable Orient environment without mutating active releases."""
 
 import hashlib
+from nacre_i18n import tr
 import json
 import os
 import re
@@ -62,19 +63,31 @@ def main():
     result = subprocess.run(["pacman", "-Q", *PACKAGES], capture_output=True, text=True)
     if result.returncode:
         raise RuntimeError(
-            "Install desktop dependencies with pacman first:\n" + result.stderr
+            tr(
+                "helper.provision.install-desktop-dependencies-with-pacman-first-value0",
+                "Install desktop dependencies with pacman first:\n{value0}",
+                {"value0": result.stderr},
+            )
         )
     source = ROOT.parent / "shell-cli"
     engine = ROOT.parents[1] / "deps/orient"
     if not (engine / "pyproject.toml").is_file():
         raise RuntimeError(
-            "Initialize Orient with git submodule update --init --recursive"
+            tr(
+                "helper.provision.initialize-orient-with-git-submodule-update-init-recursive",
+                "Initialize Orient with git submodule update --init --recursive",
+            )
         )
     pillow = json.loads((ROOT.parents[1] / "dependencies.lock.json").read_text())[
         "python"
     ]["pillow"]
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", pillow):
-        raise ValueError("Invalid locked Pillow version")
+        raise ValueError(
+            tr(
+                "helper.provision.invalid-locked-pillow-version",
+                "Invalid locked Pillow version",
+            )
+        )
     identity = hashlib.sha256(
         (source_digest(source) + source_digest(engine) + pillow).encode()
     ).hexdigest()

@@ -10,15 +10,22 @@ Column {
     property bool profilesEnabled: true
     readonly property bool available: !!device && device.ready && device.isPresent !== false && device.isLaptopBattery && Number.isFinite(device.percentage) && device.percentage >= 0 && device.percentage <= 1
     readonly property int percent: available ? Math.round(device.percentage * 100) : -1
-    readonly property string estimate: available ? formatSeconds(UPower.onBattery ? device.timeToEmpty : device.timeToFull, UPower.onBattery ? "Remaining time unavailable" : "Connected to power") : "Battery unavailable"
-    readonly property string profileName: PowerProfiles.profile === PowerProfile.PowerSaver ? "Power saver" : PowerProfiles.profile === PowerProfile.Performance ? "Performance" : "Balanced"
+    readonly property string estimate: available ? formatSeconds(UPower.onBattery ? device.timeToEmpty : device.timeToFull, UPower.onBattery ? NacreI18n.tr("battery.remaining-unavailable", "Remaining time unavailable") : NacreI18n.tr("battery.connected-power", "Connected to power")) : NacreI18n.tr("battery.unavailable", "Battery unavailable")
+    readonly property string profileName: PowerProfiles.profile === PowerProfile.PowerSaver ? NacreI18n.tr("popouts.battery-popup.label.power-saver", "Power saver") : PowerProfiles.profile === PowerProfile.Performance ? NacreI18n.tr("popouts.battery-popup.label.performance", "Performance") : NacreI18n.tr("popouts.battery-popup.label.balanced", "Balanced")
     spacing: NacreAppearance.spacing.normal
     width: NacreBar.sizes.batteryWidth
     function formatSeconds(seconds, fallback) {
         if (!Number.isFinite(seconds) || seconds <= 0)
             return fallback;
         const minutes = Math.max(1, Math.ceil(seconds / 60));
-        return (minutes >= 60 ? Math.floor(minutes / 60) + "h " : "") + minutes % 60 + "m " + (UPower.onBattery ? "remaining" : "until full");
+        if (minutes >= 60)
+            return NacreI18n.tr(UPower.onBattery ? "battery.remaining-hours" : "battery.until-full-hours", UPower.onBattery ? "{hours}h {minutes}m remaining" : "{hours}h {minutes}m until full", {
+                hours: Math.floor(minutes / 60),
+                minutes: minutes % 60
+            });
+        return NacreI18n.tr(UPower.onBattery ? "battery.remaining-minutes" : "battery.until-full-minutes", UPower.onBattery ? "{minutes}m remaining" : "{minutes}m until full", {
+            minutes: minutes
+        });
     }
     function chooseProfile(profile) {
         if (!profilesEnabled || ![PowerProfile.PowerSaver, PowerProfile.Balanced, PowerProfile.Performance].includes(profile))
@@ -31,7 +38,7 @@ Column {
     NacreText {
         objectName: "nacreBatteryPercent"
         width: root.width
-        text: root.available ? root.percent + "%" : "—"
+        text: root.available ? NacreI18n.number(root.percent) + "%" : "—"
         horizontalAlignment: Text.AlignHCenter
         font.family: NacreAppearance.font.family.mono
         font.pointSize: NacreAppearance.font.size.large
@@ -59,7 +66,7 @@ Column {
     }
     NacreText {
         width: root.width
-        text: root.profilesEnabled ? root.profileName : "Power profiles unavailable"
+        text: root.profilesEnabled ? root.profileName : NacreI18n.tr("popouts.battery-popup.text.power-profiles-unavailable", "Power profiles unavailable")
         horizontalAlignment: Text.AlignHCenter
         font.pointSize: 11
     }
@@ -69,17 +76,17 @@ Column {
         ProfileButton {
             profile: PowerProfile.PowerSaver
             icon: "eco"
-            label: "Power saver"
+            label: NacreI18n.tr("popouts.battery-popup.label.power-saver", "Power saver")
         }
         ProfileButton {
             profile: PowerProfile.Balanced
             icon: "balance"
-            label: "Balanced"
+            label: NacreI18n.tr("popouts.battery-popup.label.balanced", "Balanced")
         }
         ProfileButton {
             profile: PowerProfile.Performance
             icon: "bolt"
-            label: "Performance"
+            label: NacreI18n.tr("popouts.battery-popup.label.performance", "Performance")
         }
     }
     NacreText {

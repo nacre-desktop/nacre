@@ -6,6 +6,9 @@ import "../modules/settings/settings-catalog.js" as Catalog
 
 Singleton {
     id: root
+    // Canonical native metadata is used by compositor rules; visible captions localize separately.
+    readonly property string nativeTitle: "Nacre Settings"
+    readonly property string windowTitle: NacreI18n.tr("applications.settings.title", "Nacre Settings")
     property bool created: false
     property bool visible: false
     property var window: null
@@ -13,7 +16,7 @@ Singleton {
     property int focusAttempts: 0
     property int activation: 0
     property string error: ""
-    readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === "Nacre Settings" && c.wmClass === "org.quickshell") || null
+    readonly property var client: (NacreCompositor.windows || []).find(c => c.pid === Quickshell.processId && c.title === root.nativeTitle && c.wmClass === "org.quickshell") || null
     readonly property bool active: visible && !!window && !window.minimized && (NacreCompositor.capabilities?.perOutputWorkspaces === true || (client?.workspace?.id ?? 1) > 0)
     readonly property string page: NacrePanelState.settingsPage
     onActiveChanged: NacrePanelState.settingsVisible = active
@@ -63,7 +66,7 @@ Singleton {
     }
     function minimize() {
         if (NacreCompositor.capabilities?.windowHide === false) {
-            error = qsTr("Window minimization is unavailable on this compositor.");
+            error = NacreI18n.tr("ui.compositor.error.minimization-unavailable", "Window minimization is unavailable on this compositor.");
             return;
         }
         const client = root.client;
@@ -83,7 +86,7 @@ Singleton {
                 focusDelay.restart();
             }
             if (exitCode !== 0)
-                root.error = "Could not minimize Settings. You can close it and reopen it from the launcher.";
+                root.error = NacreI18n.tr("ui.settings-app.error.could-not-minimize-settings-you-can-close-it-and-reopen", "Could not minimize Settings. You can close it and reopen it from the launcher.");
         }
     }
     Timer {

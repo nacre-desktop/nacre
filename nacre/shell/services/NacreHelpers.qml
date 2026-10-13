@@ -14,7 +14,7 @@ Singleton {
     function submit(task, input) {
         if (count >= 64) {
             Qt.callLater(() => task.complete(1, 0, JSON.stringify({
-                    error: "Helper queue is full"
+                    error: NacreI18n.tr("ui.helpers.error.helper-queue-is-full", "Helper queue is full")
                 })));
             return 0;
         }

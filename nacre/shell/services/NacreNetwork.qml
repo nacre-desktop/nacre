@@ -53,7 +53,7 @@ Singleton {
             error = "";
             return true;
         } catch (failure) {
-            error = "Could not read Wi-Fi state. Try refreshing or open the connection editor.";
+            error = NacreI18n.tr("ui.network.error.could-not-read-wi-fi-state-try-refreshing-or-open-the-c", "Could not read Wi-Fi state. Try refreshing or open the connection editor.");
             return false;
         }
     }
@@ -84,7 +84,7 @@ Singleton {
         onOutput: text => root.publish(text)
         onExited: (exitCode, exitStatus) => {
             if ((!root.received || exitCode !== 0) && !root.error)
-                root.error = "Wi-Fi refresh failed. The last available state is still shown.";
+                root.error = NacreI18n.tr("ui.network.error.wi-fi-refresh-failed-the-last-available-state-is-still", "Wi-Fi refresh failed. The last available state is still shown.");
             if (root.pending) {
                 root.pending = false;
                 root.scheduleRefresh();
@@ -108,7 +108,7 @@ Singleton {
         onStarted: stable.start()
         onExited: {
             stable.stop();
-            root.monitorError = "Network monitoring paused; retrying shortly.";
+            root.monitorError = NacreI18n.tr("ui.network.monitorError.network-monitoring-paused-retrying-shortly", "Network monitoring paused; retrying shortly.");
             retry.interval = root.retrySeconds * 1000;
             root.retrySeconds = Math.min(60, root.retrySeconds * 2);
             retry.start();

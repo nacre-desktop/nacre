@@ -12,6 +12,10 @@ TTL_SECONDS=30
 
 mkdir -p "$STATE_DIR"
 
+nacre_message() {
+    python3 "$HOME/.local/share/nacre/shell/tools/nacre_i18n.py" "$@" 2>/dev/null || python3 -c 'import json,re,sys; values=json.loads(sys.argv[2] or "{}"); print(re.sub(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", lambda match: str(values.get(match[1], match[0])), sys.argv[1]), end="")' "$2" "${3-}"
+}
+
 notify() {
     command -v notify-send >/dev/null 2>&1 && notify-send -a "Nacre Windows" -i nacre-notifications -t 2500 "$@" || true
 }
@@ -176,13 +180,13 @@ trash_active() {
     address="$(jq -r '.address // empty' <<< "$window_json")"
 
     if [[ -z "$address" || "$address" == "null" ]]; then
-        notify "No active window to trash"
+        notify "$(nacre_message "windows.notification.no-active-window-to-trash" "No active window to trash")"
         return 0
     fi
 
     workspace_name="$(jq -r '.workspace.name // empty' <<< "$window_json")"
     if [[ "$workspace_name" == "$TRASH_WORKSPACE" ]]; then
-        notify "Window is already in trash"
+        notify "$(nacre_message "windows.notification.window-is-already-in-trash" "Window is already in trash")"
         return 0
     fi
 
@@ -192,7 +196,7 @@ trash_active() {
     write_state "$address" "$workspace_id" "$workspace_name" "$trashed_at"
     dispatch_move "$address" "$TRASH_WORKSPACE" >/dev/null
     schedule_expiry "$address" "$trashed_at"
-    notify "Window moved to trash" "Press SUPER+SHIFT+Q to restore within 30 seconds"
+    notify "$(nacre_message "windows.notification.window-moved-to-trash" "Window moved to trash")" "$(nacre_message "windows.notification.press-shortcut-to-restore-within-30-seconds" "Press {shortcut} to restore within 30 seconds" '{"shortcut": "SUPER+SHIFT+Q"}')"
 }
 
 trashed_windows_by_age() {
@@ -233,12 +237,12 @@ restore_last() {
     latest="$(trashed_windows_by_age | tail -n 1 | cut -f2)"
 
     if [[ -z "$latest" ]]; then
-        notify "Trash is empty"
+        notify "$(nacre_message "windows.notification.trash-is-empty" "Trash is empty")"
         return 0
     fi
 
     restore_window "$latest"
-    notify "Window restored from trash"
+    notify "$(nacre_message "windows.notification.window-restored-from-trash" "Window restored from trash")"
 }
 
 restore_all() {
@@ -255,12 +259,12 @@ restore_all() {
     done < <(trashed_windows_by_age)
 
     if (( count == 0 )); then
-        notify "Trash is empty"
+        notify "$(nacre_message "windows.notification.trash-is-empty" "Trash is empty")"
         return 0
     fi
 
     [[ -n "$latest" ]] && dispatch_focus "$latest" >/dev/null 2>&1 || true
-    notify "Restored $count window(s) from trash"
+    notify "$(nacre_message "windows.notification.restored-count-window-s-from-trash" "Restored {count} window(s) from trash" "{\"count\":\"$count\"}")"
 }
 
 status() {

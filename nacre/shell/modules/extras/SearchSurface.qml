@@ -15,7 +15,7 @@ Item {
             visibilities.launcher = false;
     }
     property string title
-    property string placeholder: "Search"
+    property string placeholder: NacreI18n.tr("extras.search-surface.placeholder.search", "Search")
     property int bodyHeight: 450
     property alias query: search.text
     default property alias contents: body.data
@@ -44,14 +44,15 @@ Item {
         height: 30
         spacing: 12
         NacreText {
-            width: parent.width - 110
+            width: Math.max(0, parent.width - Math.max(110, closeButton.implicitWidth + parent.spacing))
             text: root.title
             font.pointSize: 17
             color: NacreColours.palette.m3primary
             anchors.verticalCenter: parent.verticalCenter
         }
         ActionButton {
-            text: "Close"
+            id: closeButton
+            text: NacreI18n.tr("extras.search-surface.text.close", "Close")
             icon: "close"
             visible: !root.detached
             onClicked: root.dismiss()

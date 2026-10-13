@@ -50,7 +50,7 @@ Item {
         if (slot.status === Image.Ready && slot.requestPath === requestedPath)
             Qt.callLater(present, slot);
         else if (slot.status === Image.Error && slot.requestPath === requestedPath)
-            failure = "Wallpaper image could not be loaded; the previous image is retained.";
+            failure = NacreI18n.tr("ui.wallpaper-scene.failure.wallpaper-image-could-not-be-loaded-the-previous-image-is-retained", "Wallpaper image could not be loaded; the previous image is retained.");
     }
     function present(slot) {
         if (slot.status !== Image.Ready || slot.requestPath !== requestedPath || transitioning)

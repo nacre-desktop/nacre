@@ -27,7 +27,7 @@ Singleton {
     function apply(data) {
         const candidate = Data.prepare(data);
         if (!candidate) {
-            error = "Palette data is incomplete or invalid; the last palette is still shown.";
+            error = NacreI18n.tr("ui.colours.error.palette-data-is-incomplete-or-invalid-the-last-palette", "Palette data is incomplete or invalid; the last palette is still shown.");
             return false;
         }
         if (ready && JSON.stringify(state.raw) === JSON.stringify(data)) {

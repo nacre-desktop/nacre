@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import qs.widgets
+import qs.services
 
 Item {
     id: root
@@ -13,7 +14,7 @@ Item {
     implicitWidth: 180
     implicitHeight: 185
     Accessible.role: Accessible.Indicator
-    Accessible.name: label + " " + (available ? Math.round(value * 100) + "% " : "Unavailable ") + detail
+    Accessible.name: label + " " + (available ? Math.round(value * 100) + "% " : NacreI18n.tr("dashboard.chamber-gauge.name.unavailable", "Unavailable ")) + detail
     Item {
         width: root.width
         height: 140
@@ -49,7 +50,7 @@ Item {
         NacreText {
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
-            text: root.available ? Math.round(root.value * 100) + "%" : "—"
+            text: root.available ? NacreI18n.number(Math.round(root.value * 100)) + "%" : "—"
             font.pointSize: 25
             color: root.first
         }

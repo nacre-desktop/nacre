@@ -2,6 +2,7 @@
 """Own the native shortcut routes without replacing personal compositor config."""
 
 from pathlib import Path
+from nacre_i18n import tr
 import datetime as dt
 import subprocess
 
@@ -45,7 +46,10 @@ def install():
     marker = "-- Nacre native desktop shortcuts"
     if marker not in text or 'load_private("shortcuts")' not in text:
         raise RuntimeError(
-            "Managed shortcuts loader missing; run ./install.sh --apply from the repository"
+            tr(
+                "helper.install-extras.managed-shortcuts-loader-missing-run-install-sh-apply-from-the-re",
+                "Managed shortcuts loader missing; run ./install.sh --apply from the repository",
+            )
         )
 
     if changed and compositor.session_id():

@@ -2,6 +2,7 @@
 """Register Nacre's Kitty logo and recolor its existing frame on palette events."""
 
 import base64
+from nacre_i18n import tr
 import json
 import os
 from pathlib import Path
@@ -16,7 +17,9 @@ ROOT = Path(__file__).resolve().parent
 def identity(pid, proc=Path("/proc")):
     directory = proc / str(pid)
     if directory.stat().st_uid != os.getuid():
-        raise ValueError("Other user process")
+        raise ValueError(
+            tr("helper.terminal-branding.other-user-process", "Other user process")
+        )
     # Fields after the final ')' begin at stat field 3; starttime is field 22.
     fields = (directory / "stat").read_text().rsplit(")", 1)[1].split()
     return fields[1], fields[4], fields[19]
@@ -81,10 +84,20 @@ def refresh(home, proc=Path("/proc")):
             record = json.loads(file.read_text())
             tty = record["tty"]
             if not re.fullmatch(r"/dev/pts/\d+", tty):
-                raise ValueError("Unexpected terminal path")
+                raise ValueError(
+                    tr(
+                        "helper.terminal-branding.unexpected-terminal-path",
+                        "Unexpected terminal path",
+                    )
+                )
             _, device, started = identity(int(record["pid"]), proc)
             if started != record["started"] or int(device) != record["device"]:
-                raise ValueError("Terminal shell ended or process id reused")
+                raise ValueError(
+                    tr(
+                        "helper.terminal-branding.terminal-shell-ended-or-process-id-reused",
+                        "Terminal shell ended or process id reused",
+                    )
+                )
             fd = os.open(tty, os.O_WRONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
             info = os.fstat(fd)
             if (
@@ -93,9 +106,16 @@ def refresh(home, proc=Path("/proc")):
                 or info.st_ino != record["inode"]
                 or info.st_rdev != record["device"]
             ):
-                raise ValueError("Terminal device changed")
+                raise ValueError(
+                    tr(
+                        "helper.terminal-branding.terminal-device-changed",
+                        "Terminal device changed",
+                    )
+                )
             if not isinstance(record["image"], int) or not 0 < record["image"] < 2**32:
-                raise ValueError("Invalid image id")
+                raise ValueError(
+                    tr("helper.terminal-branding.invalid-image-id", "Invalid image id")
+                )
             # No image creation, placement, input injection or animation playback.
             # A removed image yields a suppressed ENOENT and stays removed.
             os.write(fd, packet(record["image"], image, edit=True))

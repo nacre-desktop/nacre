@@ -2,6 +2,7 @@
 """Own only Welcome preferences/session claims; never change desktop setup."""
 
 import argparse
+from nacre_i18n import tr
 from contextlib import contextmanager
 import fcntl
 import json
@@ -50,10 +51,18 @@ def preferences(home):
     value = json.loads(path.read_text()) if path.exists() else {}
     if not isinstance(value, dict) or value.get("version", 1) != 1:
         raise ValueError(
-            "Unsupported Welcome preferences; restore welcome.json or use version 1"
+            tr(
+                "helper.welcome.unsupported-welcome-preferences-restore-welcome-json-or-use-versi",
+                "Unsupported Welcome preferences; restore welcome.json or use version 1",
+            )
         )
     if not isinstance(value.get("showAtLogin", True), bool):
-        raise ValueError("showAtLogin in welcome.json must be true or false")
+        raise ValueError(
+            tr(
+                "helper.welcome.showatlogin-in-welcome-json-must-be-true-or-false",
+                "showAtLogin in welcome.json must be true or false",
+            )
+        )
     return dict(value, version=1, showAtLogin=value.get("showAtLogin", True))
 
 
@@ -141,6 +150,56 @@ SHORTCUTS += (
     ("keyboard-up", "Keyboard light up", "Raise keyboard backlight brightness."),
     ("keyboard-down", "Keyboard light down", "Lower keyboard backlight brightness."),
 )
+
+
+SHORTCUT_IDS = {
+    "browser": {"titleId": "welcome.shortcut.browser.title"},
+    "shortcuts": {"titleId": "welcome.shortcut.shortcuts.title"},
+    "palette": {"titleId": "welcome.shortcut.palette.title"},
+    "overview": {"titleId": "welcome.shortcut.overview.title"},
+    "next-workspace": {"titleId": "welcome.shortcut.next-workspace.title"},
+    "previous-workspace": {"titleId": "welcome.shortcut.previous-workspace.title"},
+    "scratchpad": {"titleId": "welcome.shortcut.scratchpad.title"},
+    "move-scratchpad": {"titleId": "welcome.shortcut.move-scratchpad.title"},
+    "power": {"titleId": "welcome.shortcut.power.title"},
+    "launcher": {"titleId": "welcome.shortcut.launcher.title"},
+    "wallpaper": {"titleId": "welcome.shortcut.wallpaper.title"},
+    "settings": {"titleId": "welcome.shortcut.settings.title"},
+    "files": {"titleId": "welcome.shortcut.files.title"},
+    "terminal": {"titleId": "welcome.shortcut.terminal.title"},
+    "put-away": {"titleId": "welcome.shortcut.put-away.title"},
+    "workspace": {"titleId": "welcome.shortcut.workspace.title"},
+    "focus": {"titleId": "welcome.shortcut.focus.title"},
+    "screenshot": {"titleId": "welcome.shortcut.screenshot.title"},
+    "clipboard": {"titleId": "welcome.shortcut.clipboard.title"},
+    "ai-sidebar": {"titleId": "welcome.shortcut.ai-sidebar.title"},
+    "lock": {"titleId": "welcome.shortcut.lock.title"},
+    "restore": {"titleId": "welcome.shortcut.restore.title"},
+    "restore-all": {"titleId": "welcome.shortcut.restore-all.title"},
+    "close": {"titleId": "welcome.shortcut.close.title"},
+    "force-close": {"titleId": "welcome.shortcut.force-close.title"},
+    "hide": {"titleId": "welcome.shortcut.hide.title"},
+    "unhide": {"titleId": "welcome.shortcut.unhide.title"},
+    "move-workspace": {"titleId": "welcome.shortcut.move-workspace.title"},
+    "maximize": {"titleId": "welcome.shortcut.maximize.title"},
+    "fullscreen": {"titleId": "welcome.shortcut.fullscreen.title"},
+    "float": {"titleId": "welcome.shortcut.float.title"},
+    "pin": {"titleId": "welcome.shortcut.pin.title"},
+    "cycle-window": {"titleId": "welcome.shortcut.cycle-window.title"},
+    "group": {"titleId": "welcome.shortcut.group.title"},
+    "group-cycle": {"titleId": "welcome.shortcut.group-cycle.title"},
+    "split": {"titleId": "welcome.shortcut.split.title"},
+    "save-screenshot": {"titleId": "welcome.shortcut.save-screenshot.title"},
+    "emoji": {"titleId": "welcome.shortcut.emoji.title"},
+    "volume-up": {"titleId": "welcome.shortcut.volume-up.title"},
+    "volume-down": {"titleId": "welcome.shortcut.volume-down.title"},
+    "mute": {"titleId": "welcome.shortcut.mute.title"},
+    "mic-mute": {"titleId": "welcome.shortcut.mic-mute.title"},
+    "brightness-up": {"titleId": "welcome.shortcut.brightness-up.title"},
+    "brightness-down": {"titleId": "welcome.shortcut.brightness-down.title"},
+    "keyboard-up": {"titleId": "welcome.shortcut.keyboard-up.title"},
+    "keyboard-down": {"titleId": "welcome.shortcut.keyboard-down.title"},
+}
 
 
 def shortcut_group(action):
@@ -249,7 +308,12 @@ def binding_labels(bindings):
 
 def shortcut_rows(bindings):
     if not isinstance(bindings, list) or len(bindings) > 10000:
-        raise ValueError("Invalid compositor binding list")
+        raise ValueError(
+            tr(
+                "helper.welcome.invalid-compositor-binding-list",
+                "Invalid compositor binding list",
+            )
+        )
     labels = binding_labels(bindings)
     result = []
     for action, title, detail in SHORTCUTS:
@@ -277,6 +341,7 @@ def shortcut_rows(bindings):
             )
         result.append(
             {
+                **SHORTCUT_IDS[action],
                 "id": action,
                 "key": labels[action],
                 "title": title,
@@ -318,7 +383,12 @@ def state(home):
 
 def set_startup(home, value):
     if not isinstance(value, bool):
-        raise ValueError("Welcome startup choice must be a boolean")
+        raise ValueError(
+            tr(
+                "helper.welcome.welcome-startup-choice-must-be-a-boolean",
+                "Welcome startup choice must be a boolean",
+            )
+        )
     with locked(home):
         data = preferences(home)
         data["showAtLogin"] = value
@@ -334,14 +404,24 @@ def set_demo_wallpapers(home, values):
         or any(not isinstance(value, str) for value in values)
         or len(set(values)) != 4
     ):
-        raise ValueError("Choose four different local wallpapers")
+        raise ValueError(
+            tr(
+                "helper.welcome.choose-four-different-local-wallpapers",
+                "Choose four different local wallpapers",
+            )
+        )
     if any(
         not isinstance(value, str)
         or not Path(value).is_absolute()
         or not Path(value).is_file()
         for value in values
     ):
-        raise ValueError("Demo wallpapers must be existing absolute local paths")
+        raise ValueError(
+            tr(
+                "helper.welcome.demo-wallpapers-must-be-existing-absolute-local-paths",
+                "Demo wallpapers must be existing absolute local paths",
+            )
+        )
     with locked(home):
         data = preferences(home)
         data["demoWallpapers"] = values
@@ -378,7 +458,12 @@ def acknowledge_login(home, instance, claim):
         _, path = paths(home)
         previous = json.loads(path.read_text()) if path.exists() else {}
         if previous != {"instance": instance, "claim": claim}:
-            raise ValueError("Welcome activation claim is no longer current")
+            raise ValueError(
+                tr(
+                    "helper.welcome.welcome-activation-claim-is-no-longer-current",
+                    "Welcome activation claim is no longer current",
+                )
+            )
         data = preferences(home)
         data["firstRunShown"] = True
         atomic(paths(home)[0], data)

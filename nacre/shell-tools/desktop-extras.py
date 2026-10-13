@@ -2,6 +2,7 @@
 """Private, on-demand data adapters for Nacre desktop panels."""
 
 import argparse
+from nacre_i18n import tr
 import hashlib
 import json
 import os
@@ -223,7 +224,7 @@ def open_note(path):
     ).resolve()
     file = (vault / path).resolve()
     if not file.is_relative_to(vault) or file.suffix != ".md" or not file.is_file():
-        raise ValueError("Invalid note")
+        raise ValueError(tr("helper.desktop-extras.invalid-note", "Invalid note"))
     launch(["xdg-open", str(file)])
 
 
@@ -236,7 +237,9 @@ def mime(data):
         return "image/gif"
     if data.startswith(b"RIFF") and data[8:12] == b"WEBP":
         return "image/webp"
-    return "text/plain;charset=utf-8"
+    return tr(
+        "helper.desktop-extras.text-plain-charset-utf-8", "text/plain;charset=utf-8"
+    )
 
 
 def label_digest(row):
@@ -323,11 +326,21 @@ def clips():
 
 def clip_action(action, ident):
     if not re.fullmatch(r"\d+", ident):
-        raise ValueError("Invalid clipboard entry")
+        raise ValueError(
+            tr(
+                "helper.desktop-extras.invalid-clipboard-entry",
+                "Invalid clipboard entry",
+            )
+        )
     rows = run(["cliphist", "list"]).stdout.decode(errors="replace").splitlines()
     row = next((r for r in rows if r.startswith(ident + "\t")), None)
     if row is None:
-        raise ValueError("Clipboard entry no longer exists")
+        raise ValueError(
+            tr(
+                "helper.desktop-extras.clipboard-entry-no-longer-exists",
+                "Clipboard entry no longer exists",
+            )
+        )
     if action == "copy":
         data = run(["cliphist", "decode"], input=row.encode()).stdout
         run(["wl-copy", "--type", mime(data)], input=data)
@@ -379,10 +392,65 @@ DESCRIPTIONS = {
 }
 
 
+DESCRIPTION_IDS = {
+    "SUPER+A": {"descriptionId": "shortcuts.description.ai-sidebar"},
+    "SUPER+SPACE": {"descriptionId": "shortcuts.description.applications"},
+    "SUPER+CTRL+SPACE": {"descriptionId": "shortcuts.description.command-palette"},
+    "SUPER+V": {"descriptionId": "shortcuts.description.clipboard-history"},
+    "SUPER+K": {"descriptionId": "shortcuts.description.keyboard-shortcuts"},
+    "SUPER+I": {"descriptionId": "shortcuts.description.desktop-settings"},
+    "SUPER+SHIFT+O": {"descriptionId": "shortcuts.description.desktop-settings"},
+    "SUPER+O": {"descriptionId": "shortcuts.description.dashboard"},
+    "SUPER+W": {"descriptionId": "shortcuts.description.wallpaper-gallery"},
+    "SUPER+Z": {"descriptionId": "shortcuts.description.hide-show-desktop-shell"},
+    "SUPER+B": {"descriptionId": "shortcuts.description.open-brain"},
+    "SUPER+N": {"descriptionId": "shortcuts.description.capture-a-thought"},
+    "SUPER+X": {"descriptionId": "shortcuts.description.power-menu"},
+    "SUPER+ESCAPE": {"descriptionId": "shortcuts.description.power-menu"},
+    "SUPER+L": {"descriptionId": "shortcuts.description.lock-screen"},
+    "SUPER+R": {"descriptionId": "shortcuts.description.resize-mode"},
+    "SUPER+Q": {"descriptionId": "shortcuts.description.close-with-undo"},
+    "SUPER+SHIFT+Q": {
+        "descriptionId": "shortcuts.description.restore-last-trashed-window"
+    },
+    "SUPER+CTRL+Q": {"descriptionId": "shortcuts.description.close-window"},
+    "SUPER+F": {"descriptionId": "shortcuts.description.fullscreen"},
+    "SUPER+M": {"descriptionId": "shortcuts.description.maximize"},
+    "SUPER+T": {"descriptionId": "shortcuts.description.toggle-floating"},
+    "SUPER+P": {"descriptionId": "shortcuts.description.pin-window"},
+    "SUPER+TAB": {"descriptionId": "shortcuts.description.window-overview"},
+    "SUPER+CTRL+right": {"descriptionId": "shortcuts.description.next-workspace"},
+    "SUPER+CTRL+left": {"descriptionId": "shortcuts.description.previous-workspace"},
+    "SUPER+RETURN": {"descriptionId": "shortcuts.description.terminal"},
+    "SUPER+SHIFT+B": {"descriptionId": "shortcuts.description.browser"},
+    "SUPER+SHIFT+S": {
+        "descriptionId": "shortcuts.description.screenshot-selection-to-clipboard"
+    },
+    "SUPER+E": {"descriptionId": "shortcuts.description.file-manager"},
+    "SUPER+H": {"descriptionId": "shortcuts.description.hide-window"},
+    "SUPER+SHIFT+H": {"descriptionId": "shortcuts.description.restore-hidden-window"},
+    "Print": {
+        "descriptionId": "shortcuts.description.screenshot-selection-to-clipboard"
+    },
+}
+
+
+def binding_description(key):
+    row = DESCRIPTION_IDS.get(key)
+    return (
+        tr(row["descriptionId"], DESCRIPTIONS[key], {"shortcut": "Super+Shift+Q"})
+        if row
+        else None
+    )
+
+
 def bindings():
     source = {}
     source_routes = {}
-    descriptions = {"Nacre:" + action: title for action, title, _ in welcome.SHORTCUTS}
+    descriptions = {
+        "Nacre:" + action: tr(welcome.SHORTCUT_IDS[action]["titleId"], title)
+        for action, title, _ in welcome.SHORTCUTS
+    }
     for file in compositor.binding_source_files(HOME):
         try:
             records = compositor.capture_bindings(file)
@@ -398,29 +466,39 @@ def bindings():
             semantic = descriptions.get(record.get("flags", {}).get("description"))
             desc = (
                 semantic
-                or DESCRIPTIONS.get(key)
+                or binding_description(key)
                 or action["method"].replace(".", " ").replace("_", " ")
             )
             if command and key not in DESCRIPTIONS and not semantic:
                 desc = Path(command.split()[0]).stem.replace("-", " ").replace("_", " ")
             if action["method"] == "submap" and arguments == ["reset"]:
-                desc = "Exit resize mode"
+                desc = tr("shortcuts.resize.exit", "Exit resize mode")
             if "wpctl" in command:
                 desc = (
-                    "Toggle microphone mute"
+                    tr("shortcuts.audio.microphone-mute", "Toggle microphone mute")
                     if "@DEFAULT_AUDIO_SOURCE@" in command
-                    else "Toggle speaker mute"
+                    else tr("shortcuts.audio.speaker-mute", "Toggle speaker mute")
                     if "set-mute" in command
-                    else "Volume " + ("down" if "5%-" in command else "up")
+                    else tr("shortcuts.audio.volume-down", "Volume down")
+                    if "5%-" in command
+                    else tr("shortcuts.audio.volume-up", "Volume up")
                 )
             if (
                 "nacre-shell brightness " in command
                 or "nacre-shell keyboard-light " in command
             ):
                 desc = (
-                    ("Keyboard" if "keyboard-light" in command else "Screen")
-                    + " brightness "
-                    + command.split()[-1]
+                    tr(
+                        "shortcuts.brightness.keyboard",
+                        "Keyboard brightness {step}",
+                        {"step": command.split()[-1]},
+                    )
+                    if "keyboard-light" in command
+                    else tr(
+                        "shortcuts.brightness.screen",
+                        "Screen brightness {step}",
+                        {"step": command.split()[-1]},
+                    )
                 )
             source[(record["submap"], key)] = desc
             source_routes[(record["submap"], key)] = menu_route(command)
@@ -436,16 +514,24 @@ def bindings():
         combo = "+".join([*parts, key])
         desc = (
             source.get((b.get("submap", ""), combo))
-            or DESCRIPTIONS.get(combo)
+            or binding_description(combo)
             or b.get("description")
             or b.get("dispatcher", "")
         )
         if b.get("submap"):
             desc = b["submap"] + " · " + desc
         if key.isdigit() and b["modmask"] == 64:
-            desc = "Go to workspace " + ("10" if key == "0" else key)
+            desc = tr(
+                "shortcuts.workspace.go",
+                "Go to workspace {workspace}",
+                {"workspace": "10" if key == "0" else key},
+            )
         if key.isdigit() and b["modmask"] == 65:
-            desc = "Move window to workspace " + ("10" if key == "0" else key)
+            desc = tr(
+                "shortcuts.workspace.move",
+                "Move window to workspace {workspace}",
+                {"workspace": "10" if key == "0" else key},
+            )
         result.append(
             dict(
                 key=combo,
@@ -519,7 +605,9 @@ def main():
                 or not file.is_file()
                 or file.suffix != ".md"
             ):
-                raise ValueError("Invalid note")
+                raise ValueError(
+                    tr("helper.desktop-extras.invalid-note", "Invalid note")
+                )
             save(
                 STATE / "brain-focus.json",
                 dict(
@@ -538,7 +626,12 @@ def main():
         elif args.action == "capture":
             text = payload["text"].strip()
             if not text or len(text) > 16000:
-                raise ValueError("Capture must contain 1–16000 characters")
+                raise ValueError(
+                    tr(
+                        "helper.desktop-extras.capture-must-contain-1-16000-characters",
+                        "Capture must contain 1–16000 characters",
+                    )
+                )
             title = clean(text.splitlines()[0])[:80]
             run(
                 [
@@ -566,7 +659,12 @@ def main():
         elif args.action == "keys":
             result = bindings()
         else:
-            raise ValueError("Unknown desktop operation")
+            raise ValueError(
+                tr(
+                    "helper.desktop-extras.unknown-desktop-operation",
+                    "Unknown desktop operation",
+                )
+            )
         print(
             json.dumps(
                 dict(action=args.action, result=result, query=payload.get("query", ""))
@@ -584,9 +682,11 @@ def main():
             json.dumps(
                 dict(
                     action=args.action,
-                    error="Could not complete "
-                    + args.action
-                    + ". Check the selected item or try again.",
+                    error=tr(
+                        "helper.desktop-extras.could-not-complete-value0-check-the-selected-item-or-try-again",
+                        "Could not complete {value0}. Check the selected item or try again.",
+                        {"value0": args.action},
+                    ),
                     query=payload.get("query", ""),
                 )
             )

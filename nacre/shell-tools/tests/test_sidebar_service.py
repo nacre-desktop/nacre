@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Actual sidebar QML isolates asynchronous attachment results by composer."""
 
 import os
@@ -79,6 +81,7 @@ Item {
   }
  }
 }""")
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target)],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

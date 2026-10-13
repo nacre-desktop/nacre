@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Render actual independent frame geometry and input masks with Quickshell."""
 
 import json
@@ -273,6 +275,8 @@ TestCase {
                 (target / (name + ".qml")).write_text(
                     "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}\n"
                 )
+            install_i18n(target / "services")
+            (target / "services/qmldir").unlink()
             intent = (
                 (SHELL / "services/NacreHoverIntent.qml")
                 .read_text()

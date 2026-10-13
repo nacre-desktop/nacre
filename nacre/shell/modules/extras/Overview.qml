@@ -9,8 +9,8 @@ import QtQuick.Controls
 
 SearchSurface {
     id: root
-    title: "Windows"
-    placeholder: "Search windows or applications"
+    title: NacreI18n.tr("extras.overview.title.windows", "Windows")
+    placeholder: NacreI18n.tr("extras.overview.placeholder.search-windows-or-applications", "Search windows or applications")
     implicitWidth: 1020
     bodyHeight: Math.min(690, Quickshell.screens[0].height - 230)
     property int selection: 0
@@ -45,14 +45,14 @@ SearchSurface {
         ScrollBar.vertical: ScrollBar {}
         Grid {
             id: workspacesGrid
-            columns: 3
+            columns: Math.max(1, Math.min(3, Math.floor((viewport.width + spacing) / (300 + spacing))))
             spacing: 12
             Repeater {
                 model: root.workspaces
                 NacreSurface {
                     id: workspace
                     required property int modelData
-                    width: 320
+                    width: Math.min(320, (viewport.width - workspacesGrid.spacing * (workspacesGrid.columns - 1)) / workspacesGrid.columns)
                     height: 215
                     radius: 18
                     color: drop.containsDrag ? NacreColours.palette.m3primaryContainer : NacreColours.palette.m3surfaceContainer
@@ -67,7 +67,12 @@ SearchSurface {
                             color: NacreColours.palette.m3primary
                         }
                         NacreText {
-                            text: workspace.modelData + " · " + (NacreBar.workspaceNames[workspace.modelData - 1] ?? "Workspace")
+                            text: NacreBar.workspaceNames[workspace.modelData - 1] ? NacreI18n.tr("extras.overview.workspace-custom-title", "{number} · {name}", {
+                                number: workspace.modelData,
+                                name: NacreBar.workspaceNames[workspace.modelData - 1]
+                            }) : NacreI18n.tr("extras.overview.workspace-title", "{number} · Workspace", {
+                                number: workspace.modelData
+                            })
                             color: NacreColours.palette.m3primary
                         }
                     }
@@ -87,9 +92,9 @@ SearchSurface {
                         id: tiles
                         x: 10
                         y: 43
-                        width: 300
+                        width: workspace.width - 20
                         height: 160
-                        cellWidth: workspace.windows.length === 1 ? 300 : 150
+                        cellWidth: workspace.windows.length === 1 ? width : width / 2
                         cellHeight: workspace.windows.length <= 2 ? 160 : 80
                         clip: true
                         model: workspace.windows
@@ -134,7 +139,7 @@ SearchSurface {
                                 width: tile.width
                                 font.pointSize: 9
                                 elide: Text.ElideRight
-                                text: ChatWindowTitle.titles[tile.modelData.pid] || tile.modelData.title
+                                text: ChatWindowTitle.titles[tile.modelData.pid] || NacreI18n.windowCaption(tile.modelData.title, tile.modelData.wmClass)
                             }
                             Item {
                                 id: dragProxy
@@ -176,7 +181,7 @@ SearchSurface {
                     NacreText {
                         anchors.centerIn: tiles
                         visible: workspace.windows.length === 0
-                        text: "Empty"
+                        text: NacreI18n.tr("extras.overview.text.empty", "Empty")
                         color: NacreColours.palette.m3onSurfaceVariant
                         font.pointSize: 11
                     }
@@ -211,7 +216,7 @@ SearchSurface {
         Drag.hotSpot.y: 30
         NacreText {
             anchors.centerIn: parent
-            text: "Move window"
+            text: NacreI18n.tr("extras.overview.text.move-window", "Move window")
             color: NacreColours.palette.m3onPrimaryContainer
         }
     }

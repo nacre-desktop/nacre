@@ -1,3 +1,4 @@
+from qml_source import install_i18n
 from qml_source import remove_objects, install_foundation_interaction
 import os
 import shutil
@@ -117,6 +118,7 @@ class WallpaperPickerUITests(unittest.TestCase):
                 ROOT / "tests/wallpaper-qml/tst_wallpapers.qml",
                 target / "tst_wallpapers.qml",
             )
+            install_i18n(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 capture_output=True,

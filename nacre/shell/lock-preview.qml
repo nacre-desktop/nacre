@@ -3,13 +3,17 @@ import "services"
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.services
 
 ShellRoot {
+    id: root
+    // Compositor rule identifier; Nacre UI surfaces translate this caption.
+    readonly property string nativeTitle: "Nacre lock screen preview"
     FloatingWindow {
         id: window
         objectName: "lockPreviewWindow"
         visible: true
-        title: "Nacre lock screen preview"
+        title: root.nativeTitle
         implicitWidth: 1280
         implicitHeight: 800
         color: NacreColours.palette.m3surface
@@ -32,7 +36,7 @@ ShellRoot {
             NacreText {
                 x: 24
                 y: 20
-                text: "Lock screen preview · Esc to close"
+                text: NacreI18n.tr("shell.lock-preview.text.lock-screen-preview-esc-to-close", "Lock screen preview · Esc to close")
                 color: "white"
                 font.pointSize: 11
             }
@@ -105,7 +109,7 @@ ShellRoot {
                     border.color: panel.accent
                     Text {
                         anchors.centerIn: parent
-                        text: "Enter your password  →"
+                        text: NacreI18n.tr("shell.lock-preview.text.enter-your-password", "Enter your password  →")
                         font.family: "IBM Plex Sans"
                         font.pixelSize: 14
                         color: panel.foreground

@@ -14,16 +14,23 @@ Singleton {
     property string requestLocation: ""
     readonly property string desiredLocation: String(DesktopSettings.data.weatherLocation || "").trim()
     readonly property bool busy: reader.running
-    readonly property string description: reading.description || ""
+    readonly property string description: reading.description ? NacreI18n.option("weather-description", reading.description) : ""
     readonly property string location: reading.location || ""
     readonly property string icon: description ? NacreIcons.getWeatherIcon(reading.code) : "cloud_off"
     readonly property real temperature: reading.temperature ?? NaN
     readonly property var feelsLike: reading.feelsLike ?? null
     readonly property var high: reading.high ?? null
     readonly property var low: reading.low ?? null
-    readonly property string detail: feelsLike === null ? "" : "Feels like " + degrees(feelsLike)
-    readonly property string range: high === null || low === null ? "" : "High " + degrees(high) + " · Low " + degrees(low)
-    readonly property string displayTemperature: Number.isFinite(temperature) ? degrees(temperature) + (stale ? " (cached)" : "") : ""
+    readonly property string detail: feelsLike === null ? "" : NacreI18n.tr("ui.weather.detail.feels-like-value0", "Feels like {value0}", {
+        value0: degrees(feelsLike)
+    })
+    readonly property string range: high === null || low === null ? "" : NacreI18n.tr("weather.high-low", "High {high} · Low {low}", {
+        high: degrees(high),
+        low: degrees(low)
+    })
+    readonly property string displayTemperature: Number.isFinite(temperature) ? (stale ? NacreI18n.tr("weather.cached-temperature", "{temperature} (cached)", {
+            temperature: degrees(temperature)
+        }) : degrees(temperature)) : ""
 
     function degrees(value) {
         if (!Number.isFinite(value))
@@ -32,7 +39,7 @@ Singleton {
     }
     function fail(message) {
         stale = true;
-        error = String(message || "Weather unavailable; try again or set a city in Settings.").slice(0, 240);
+        error = String(message || NacreI18n.tr("ui.weather.error.weather-unavailable-try-again-or-set-a-city-in-settings", "Weather unavailable; try again or set a city in Settings.")).slice(0, 240);
     }
     function publish(text, cached) {
         try {

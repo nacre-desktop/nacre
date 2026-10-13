@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import qs.services
 
 Item {
     id: root
@@ -183,6 +184,6 @@ Item {
         onClicked: root.clicked()
     }
     Accessible.role: Accessible.Button
-    Accessible.name: edge === "top" ? "Open dashboard" : edge === "left" ? "Open assistant" : "Open control center"
+    Accessible.name: edge === "top" ? NacreI18n.tr("ui.frame-lip.name.open-dashboard", "Open dashboard") : edge === "left" ? NacreI18n.tr("ui.frame-lip.name.open-assistant", "Open assistant") : NacreI18n.tr("ui.frame-lip.name.open-control-center", "Open control center")
     Accessible.onPressAction: clicked()
 }

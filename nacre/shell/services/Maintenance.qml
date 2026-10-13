@@ -41,10 +41,12 @@ Singleton {
                         root.message = value.error;
                     } else {
                         root.data = value;
-                        root.message = "Checked " + new Date().toLocaleTimeString();
+                        root.message = NacreI18n.tr("ui.maintenance.message.checked-value0", "Checked {value0}", {
+                            value0: new Date().toLocaleTimeString()
+                        });
                     }
                 } catch (e) {
-                    root.message = "Could not read maintenance status";
+                    root.message = NacreI18n.tr("ui.maintenance.message.could-not-read-maintenance-status", "Could not read maintenance status");
                 }
             }
         }

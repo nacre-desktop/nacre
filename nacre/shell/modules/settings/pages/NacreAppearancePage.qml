@@ -27,8 +27,23 @@ NacreSettingsPage {
     }
     readonly property var prefs: NacreWallpapers.appearancePreferences ?? NacreWallpapers.preferences
     NacreSettingsSection {
-        title: "Wallpaper"
-        description: "Choose a scene from your personal collection."
+        title: NacreI18n.tr("settings.language.title", "Language")
+        Row {
+            spacing: 8
+            Repeater {
+                model: NacreI18n.developerMode ? ["system", "en", "pseudo"] : ["system", "en"]
+                ActionButton {
+                    required property string modelData
+                    text: modelData === "system" ? NacreI18n.tr("settings.language.system", "System default") : modelData === "en" ? NacreI18n.tr("settings.language.english", "English") : NacreI18n.tr("settings.language.pseudo", "Pseudo")
+                    selected: (DesktopSettings.data.language || "system") === modelData
+                    onClicked: DesktopSettings.set("language", modelData)
+                }
+            }
+        }
+    }
+    NacreSettingsSection {
+        title: NacreI18n.tr("ui.appearance-page.title.wallpaper", "Wallpaper")
+        description: NacreI18n.tr("ui.appearance-page.description.choose-a-scene-from-your-personal-collection", "Choose a scene from your personal collection.")
         Row {
             width: parent.width
             spacing: 16
@@ -48,12 +63,12 @@ NacreSettingsPage {
                 spacing: 14
                 NacreText {
                     width: parent.width
-                    text: NacreWallpapers.list.find(w => w.path === NacreWallpapers.current)?.name || NacreWallpapers.current.split("/").pop() || "Choose a wallpaper"
+                    text: NacreWallpapers.list.find(w => w.path === NacreWallpapers.current)?.name || NacreWallpapers.current.split("/").pop() || NacreI18n.tr("ui.appearance-page.text.choose-a-wallpaper", "Choose a wallpaper")
                     font.pointSize: 12
                     elide: Text.ElideRight
                 }
                 ActionButton {
-                    text: "Wallpaper picker"
+                    text: NacreI18n.tr("ui.appearance-page.text.wallpaper-picker", "Wallpaper picker")
                     icon: "wallpaper"
                     onClicked: AppLaunch.run([Quickshell.env("HOME") + "/.local/bin/nacre-shell", "wallpaper"])
                 }
@@ -61,8 +76,8 @@ NacreSettingsPage {
         }
     }
     NacreSettingsSection {
-        title: "Wallpaper motion"
-        description: "Keep the scene and colors while choosing how its background moves."
+        title: NacreI18n.tr("ui.appearance-page.title.wallpaper-motion", "Wallpaper motion")
+        description: NacreI18n.tr("ui.appearance-page.description.keep-the-scene-and-colors-while-choosing-how-its-backgr", "Keep the scene and colors while choosing how its background moves.")
         Flow {
             width: parent.width
             spacing: 8
@@ -70,20 +85,23 @@ NacreSettingsPage {
                 model: [
                     {
                         id: "full",
+                        nameId: "ui.nacreappearancepage.name.full-motion",
                         name: "Full motion"
                     },
                     {
                         id: "battery",
+                        nameId: "ui.nacreappearancepage.name.still-on-battery",
                         name: "Still on battery"
                     },
                     {
                         id: "still",
+                        nameId: "ui.nacreappearancepage.name.always-still",
                         name: "Always still"
                     }
                 ]
                 ActionButton {
                     required property var modelData
-                    text: modelData.name
+                    text: NacreI18n.modelLabel(modelData, "name")
                     selected: (root.prefs.motionMode || "full") === modelData.id
                     onClicked: NacreWallpapers.preference({
                         motionMode: modelData.id
@@ -93,27 +111,27 @@ NacreSettingsPage {
         }
     }
     NacreSettingsSection {
-        title: "Wallpaper rotation"
-        description: "Automatically change scenes while you use the desktop."
+        title: NacreI18n.tr("ui.appearance-page.title.wallpaper-rotation", "Wallpaper rotation")
+        description: NacreI18n.tr("ui.appearance-page.description.automatically-change-scenes-while-you-use-the-desktop", "Automatically change scenes while you use the desktop.")
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Manual"
+                text: NacreI18n.tr("ui.appearance-page.text.manual", "Manual")
                 selected: !root.prefs.rotationEnabled
                 onClicked: NacreWallpapers.preference({
                     rotationEnabled: false
                 })
             }
             ActionButton {
-                text: "Rotate automatically"
+                text: NacreI18n.tr("ui.appearance-page.text.rotate-automatically", "Rotate automatically")
                 selected: root.prefs.rotationEnabled === true
                 onClicked: NacreWallpapers.preference({
                     rotationEnabled: true
                 })
             }
             ActionButton {
-                text: "Next now"
+                text: NacreI18n.tr("ui.appearance-page.text.next-now", "Next now")
                 icon: "skip_next"
                 enabled: NacreWallpapers.rotationReady
                 onClicked: NacreWallpapers.advanceRotation(true)
@@ -126,7 +144,10 @@ NacreSettingsPage {
                 model: [15, 30, 60, 120]
                 ActionButton {
                     required property int modelData
-                    text: modelData + " min" + (modelData === 30 ? " · recommended" : "")
+                    text: NacreI18n.tr("ui.appearance-page.text.value0-min-value1", "{value0} min{value1}", {
+                        value0: modelData,
+                        value1: (modelData === 30 ? NacreI18n.tr("ui.appearance-page.text.recommended", " · recommended") : "")
+                    })
                     selected: (root.prefs.rotationMinutes || 30) === modelData
                     onClicked: NacreWallpapers.preference({
                         rotationMinutes: modelData
@@ -138,13 +159,13 @@ NacreSettingsPage {
             width: parent.width
             spacing: 12
             NacreText {
-                text: "Custom interval (minutes)"
+                text: NacreI18n.tr("ui.appearance-page.text.custom-interval-minutes", "Custom interval (minutes)")
                 font.pointSize: 10
                 anchors.verticalCenter: parent.verticalCenter
             }
             NacreNumberField {
                 objectName: "wallpaperInterval"
-                label: "Wallpaper interval in minutes"
+                label: NacreI18n.tr("ui.appearance-page.label.wallpaper-interval-in-minutes", "Wallpaper interval in minutes")
                 from: 5
                 to: 1440
                 value: root.prefs.rotationMinutes || 30
@@ -155,7 +176,7 @@ NacreSettingsPage {
         }
         NacreText {
             width: parent.width
-            text: "30 minutes balances variety with fewer interruptions. Longer intervals change scenes less often."
+            text: NacreI18n.tr("ui.appearance-page.text.30-minutes-balances-variety-with-fewer-interruptions-lo", "30 minutes balances variety with fewer interruptions. Longer intervals change scenes less often.")
             font.pointSize: 10
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap
@@ -167,20 +188,23 @@ NacreSettingsPage {
                 model: [
                     {
                         id: "all",
+                        nameId: "ui.nacreappearancepage.name.all-wallpapers",
                         name: "All wallpapers"
                     },
                     {
                         id: "static",
+                        nameId: "ui.nacreappearancepage.name.static-only",
                         name: "Static only"
                     },
                     {
                         id: "dynamic",
+                        nameId: "ui.nacreappearancepage.name.dynamic-only",
                         name: "Dynamic only"
                     }
                 ]
                 ActionButton {
                     required property var modelData
-                    text: modelData.name
+                    text: NacreI18n.modelLabel(modelData, "name")
                     selected: (root.prefs.rotationKind || "all") === modelData.id
                     onClicked: NacreWallpapers.preference({
                         rotationKind: modelData.id
@@ -188,14 +212,14 @@ NacreSettingsPage {
                 }
             }
             ActionButton {
-                text: "Shuffle"
+                text: NacreI18n.tr("ui.appearance-page.text.shuffle", "Shuffle")
                 selected: root.prefs.rotationShuffle !== false
                 onClicked: NacreWallpapers.preference({
                     rotationShuffle: true
                 })
             }
             ActionButton {
-                text: "In order"
+                text: NacreI18n.tr("ui.appearance-page.text.in-order", "In order")
                 selected: root.prefs.rotationShuffle === false
                 onClicked: NacreWallpapers.preference({
                     rotationShuffle: false
@@ -211,13 +235,13 @@ NacreSettingsPage {
         }
     }
     NacreSettingsSection {
-        title: "Desktop colors"
-        description: "Match the wallpaper or keep a fixed palette across scenes."
+        title: NacreI18n.tr("ui.appearance-page.title.desktop-colors", "Desktop colors")
+        description: NacreI18n.tr("ui.appearance-page.description.match-the-wallpaper-or-keep-a-fixed-palette-across-scen", "Match the wallpaper or keep a fixed palette across scenes.")
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Match wallpaper"
+                text: NacreI18n.tr("ui.appearance-page.text.match-wallpaper", "Match wallpaper")
                 selected: (root.prefs.palettePreset || "wallpaper") === "wallpaper"
                 enabled: !NacreWallpapers.themeBusy
                 onClicked: NacreWallpapers.preference({
@@ -225,7 +249,7 @@ NacreSettingsPage {
                 })
             }
             ActionButton {
-                text: "Dark"
+                text: NacreI18n.tr("ui.appearance-page.text.dark", "Dark")
                 selected: (root.prefs.paletteMode || "dark") === "dark"
                 enabled: !NacreWallpapers.themeBusy
                 onClicked: NacreWallpapers.preference({
@@ -233,7 +257,7 @@ NacreSettingsPage {
                 })
             }
             ActionButton {
-                text: "Light"
+                text: NacreI18n.tr("ui.appearance-page.text.light", "Light")
                 selected: root.prefs.paletteMode === "light"
                 enabled: !NacreWallpapers.themeBusy
                 onClicked: NacreWallpapers.preference({
@@ -246,8 +270,17 @@ NacreSettingsPage {
             width: parent.width
             text: {
                 const fixed = root.prefs.palettePreset && root.prefs.palettePreset !== "wallpaper";
-                const name = fixed ? NacreWallpapers.palettePresets.find(p => p.id === root.prefs.palettePreset)?.name : NacreWallpapers.paletteOptions.find(p => p.accent === NacreWallpapers.selectedAccent)?.name;
-                return "In use: " + (name || (fixed ? "Fixed palette" : "Wallpaper colors")) + " · " + (root.prefs.paletteMode === "light" ? "Light" : "Dark") + (fixed ? "" : " · " + ((root.prefs.palettePersonality || (root.prefs.paletteHarmony ? "harmony" : "natural")).replace(/^./, s => s.toUpperCase())));
+                const rawName = fixed ? NacreWallpapers.palettePresets.find(p => p.id === root.prefs.palettePreset)?.name : NacreWallpapers.paletteOptions.find(p => p.accent === NacreWallpapers.selectedAccent)?.name;
+                const name = rawName ? NacreI18n.option("palette-name", rawName) : fixed ? NacreI18n.tr("ui.appearance-page.text.fixed-palette", "Fixed palette") : NacreI18n.tr("ui.appearance-page.text.wallpaper-colors", "Wallpaper colors");
+                const mode = NacreI18n.option("mode", root.prefs.paletteMode === "light" ? "light" : "dark");
+                return fixed ? NacreI18n.tr("palette.summary.fixed", "In use: {name} · {mode}", {
+                    name: name,
+                    mode: mode
+                }) : NacreI18n.tr("palette.summary.wallpaper", "In use: {name} · {mode} · {style}", {
+                    name: name,
+                    mode: mode,
+                    style: NacreI18n.option("personality", root.prefs.palettePersonality || (root.prefs.paletteHarmony ? "harmony" : "natural"))
+                });
             }
             wrapMode: Text.Wrap
             font.pointSize: 11
@@ -281,7 +314,7 @@ NacreSettingsPage {
                 ActionButton {
                     required property string modelData
                     objectName: modelData + "PaletteButton"
-                    text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                    text: NacreI18n.option("personality", modelData)
                     selected: (root.prefs.palettePersonality || "natural") === modelData
                     enabled: (root.prefs.palettePreset || "wallpaper") === "wallpaper" && !NacreWallpapers.themeBusy
                     onClicked: NacreWallpapers.preference({
@@ -291,13 +324,13 @@ NacreSettingsPage {
             }
         }
         ActionButton {
-            text: "Explore in Nacre Colors"
+            text: NacreI18n.tr("ui.appearance-page.text.explore-in-nacre-colors", "Explore in Nacre Colors")
             icon: "palette"
             onClicked: AppLaunch.run([Quickshell.env("HOME") + "/.local/bin/nacre-colors"])
         }
         NacreText {
             width: parent.width
-            text: "Natural restores the original Nacre color balance. Pigment uses the newer subject-weighted color grouping. All styles are also available in Nacre Colors."
+            text: NacreI18n.tr("ui.appearance-page.text.natural-restores-the-original-nacre-color-balance-pigme", "Natural restores the original Nacre color balance. Pigment uses the newer subject-weighted color grouping. All styles are also available in Nacre Colors.")
             font.pointSize: 10
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap
@@ -306,12 +339,12 @@ NacreSettingsPage {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Vivid palettes"
+                text: NacreI18n.tr("ui.appearance-page.text.vivid-palettes", "Vivid palettes")
                 selected: root.paletteGroup === "vivid"
                 onClicked: root.paletteGroup = "vivid"
             }
             ActionButton {
-                text: "Soft palettes"
+                text: NacreI18n.tr("ui.appearance-page.text.soft-palettes", "Soft palettes")
                 selected: root.paletteGroup === "soft"
                 onClicked: root.paletteGroup = "soft"
             }
@@ -347,8 +380,8 @@ NacreSettingsPage {
         }
     }
     NacreSettingsSection {
-        title: "Palette style"
-        description: "Optional style choices from the same Orient engine."
+        title: NacreI18n.tr("ui.appearance-page.title.palette-style", "Palette style")
+        description: NacreI18n.tr("ui.appearance-page.description.optional-style-choices-from-the-same-orient-engine", "Optional style choices from the same Orient engine.")
         Flow {
             width: parent.width
             spacing: 8
@@ -356,44 +389,53 @@ NacreSettingsPage {
                 model: [
                     {
                         id: "tonalspot",
+                        nameId: "ui.nacreappearancepage.name.natural",
                         name: "Natural"
                     },
                     {
                         id: "vibrant",
+                        nameId: "ui.nacreappearancepage.name.vibrant",
                         name: "Vibrant"
                     },
                     {
                         id: "expressive",
+                        nameId: "ui.nacreappearancepage.name.expressive",
                         name: "Expressive"
                     },
                     {
                         id: "fidelity",
+                        nameId: "ui.nacreappearancepage.name.faithful",
                         name: "Faithful"
                     },
                     {
                         id: "fruitsalad",
+                        nameId: "ui.nacreappearancepage.name.fruit-salad",
                         name: "Fruit salad"
                     },
                     {
                         id: "monochrome",
+                        nameId: "ui.nacreappearancepage.name.monochrome",
                         name: "Monochrome"
                     },
                     {
                         id: "neutral",
+                        nameId: "ui.nacreappearancepage.name.neutral",
                         name: "Neutral"
                     },
                     {
                         id: "rainbow",
+                        nameId: "ui.nacreappearancepage.name.rainbow",
                         name: "Rainbow"
                     },
                     {
                         id: "content",
+                        nameId: "ui.nacreappearancepage.name.image-colors",
                         name: "Image colors"
                     }
                 ]
                 ActionButton {
                     required property var modelData
-                    text: modelData.name
+                    text: NacreI18n.modelLabel(modelData, "name")
                     selected: root.scheme.variant === modelData.id
                     enabled: !NacreWallpapers.themeBusy
                     onClicked: root.changeScheme("-v", modelData.id)
@@ -404,35 +446,35 @@ NacreSettingsPage {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Standard contrast"
+                text: NacreI18n.tr("ui.appearance-page.text.standard-contrast", "Standard contrast")
                 selected: root.scheme.flavour !== "hard"
                 onClicked: root.changeScheme("-f", "default")
             }
             ActionButton {
-                text: "High contrast"
+                text: NacreI18n.tr("ui.appearance-page.text.high-contrast", "High contrast")
                 selected: root.scheme.flavour === "hard"
                 onClicked: root.changeScheme("-f", "hard")
             }
         }
     }
     NacreSettingsSection {
-        title: "Workspace bar"
-        description: "Window symbols beside the active pearl. Turn them off for a numbered pearls-only bar."
+        title: NacreI18n.tr("ui.appearance-page.title.workspace-bar", "Workspace bar")
+        description: NacreI18n.tr("ui.appearance-page.description.window-symbols-beside-the-active-pearl-turn-them-off-fo", "Window symbols beside the active pearl. Turn them off for a numbered pearls-only bar.")
         NacreSettingToggle {
-            label: "Show window symbols"
+            label: NacreI18n.tr("ui.appearance-page.label.show-window-symbols", "Show window symbols")
             setting: "workspaceWindowHints"
             defaultChecked: true
         }
     }
     NacreSettingsSection {
-        title: "Desktop frame"
+        title: NacreI18n.tr("ui.appearance-page.title.desktop-frame", "Desktop frame")
         NacreSettingToggle {
-            label: "Frame sheen"
+            label: NacreI18n.tr("ui.appearance-page.label.frame-sheen", "Frame sheen")
             setting: "frameSheen"
         }
         NacreText {
             width: parent.width
-            text: "A soft wallpaper-color rim around the screen and open panels."
+            text: NacreI18n.tr("ui.appearance-page.text.a-soft-wallpaper-color-rim-around-the-screen-and-open-p", "A soft wallpaper-color rim around the screen and open panels.")
             wrapMode: Text.WordWrap
             color: NacreTokens.mutedInk
             font.pointSize: 10
@@ -441,12 +483,12 @@ NacreSettingsPage {
             spacing: 12
             width: parent.width
             NacreText {
-                text: "Frame width"
+                text: NacreI18n.tr("ui.appearance-page.text.frame-width", "Frame width")
                 anchors.verticalCenter: parent.verticalCenter
                 font.pointSize: 11
             }
             NacreNumberField {
-                label: "Frame width"
+                label: NacreI18n.tr("ui.appearance-page.label.frame-width", "Frame width")
                 from: 0
                 to: 30
                 value: DesktopSettings.data.frameWidth ?? 10
@@ -457,12 +499,12 @@ NacreSettingsPage {
             spacing: 12
             width: parent.width
             NacreText {
-                text: "Frame corners"
+                text: NacreI18n.tr("ui.appearance-page.text.frame-corners", "Frame corners")
                 anchors.verticalCenter: parent.verticalCenter
                 font.pointSize: 11
             }
             NacreNumberField {
-                label: "Frame corner radius"
+                label: NacreI18n.tr("ui.appearance-page.label.frame-corner-radius", "Frame corner radius")
                 from: 0
                 to: 40
                 value: DesktopSettings.data.frameRounding ?? 25
@@ -473,39 +515,39 @@ NacreSettingsPage {
             model: [
                 {
                     key: "topEdge",
-                    label: "Top menu"
+                    label: NacreI18n.tr("ui.appearance-page.label.top-menu", "Top menu")
                 },
                 {
                     key: "leftEdge",
-                    label: "Left edge"
+                    label: NacreI18n.tr("ui.appearance-page.label.left-edge", "Left edge")
                 },
                 {
                     key: "rightEdge",
-                    label: "Right edge"
+                    label: NacreI18n.tr("ui.appearance-page.label.right-edge", "Right edge")
                 },
                 {
                     key: "bottomEdge",
-                    label: "Bottom edge"
+                    label: NacreI18n.tr("ui.appearance-page.label.bottom-edge", "Bottom edge")
                 },
                 {
                     key: "leftDrawer",
-                    label: "AI sidebar"
+                    label: NacreI18n.tr("ui.appearance-page.label.ai-sidebar", "AI sidebar")
                 },
                 {
                     key: "livePreviews",
-                    label: "Live previews"
+                    label: NacreI18n.tr("ui.appearance-page.label.live-previews", "Live previews")
                 },
                 {
                     key: "nativePalette",
-                    label: "Command palette"
+                    label: NacreI18n.tr("ui.appearance-page.label.command-palette", "Command palette")
                 },
                 {
                     key: "nativeOverview",
-                    label: "Window overview"
+                    label: NacreI18n.tr("ui.appearance-page.label.window-overview", "Window overview")
                 },
                 {
                     key: "nativeClipboard",
-                    label: "Clipboard picker"
+                    label: NacreI18n.tr("ui.appearance-page.label.clipboard-picker", "Clipboard picker")
                 }
             ]
             NacreSettingToggle {
