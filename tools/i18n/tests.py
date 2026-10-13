@@ -98,7 +98,14 @@ class TranslationTests(unittest.TestCase):
                 self.assertEqual(nacre_i18n.language(), "en")
                 self.assertEqual(nacre_i18n.language(), "en")
                 self.assertEqual(nacre_i18n._preference_language.cache_info().misses, 1)
+                previous = preference.stat()
                 preference.write_text('{"language":"pseudo"}')
+                # Rapid writes can share a timestamp on a container overlay.
+                # Give this changed fixture an explicit distinct cache version.
+                os.utime(
+                    preference,
+                    ns=(previous.st_atime_ns, previous.st_mtime_ns + 2_000_000_000),
+                )
                 self.assertEqual(nacre_i18n.language(), "pseudo")
                 self.assertEqual(nacre_i18n._preference_language.cache_info().misses, 2)
 
