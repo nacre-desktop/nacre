@@ -64,13 +64,13 @@
     {
       "source": "hypr/conf/keybinding.lua",
       "kind": "binding",
-      "id": "SUPER + bracketleft",
+      "id": "SUPER + CTRL + Page_Up",
       "reason": "No equivalent niri capability for group.previous"
     },
     {
       "source": "hypr/conf/keybinding.lua",
       "kind": "binding",
-      "id": "SUPER + bracketright",
+      "id": "SUPER + CTRL + Page_Down",
       "reason": "No equivalent niri capability for group.next"
     },
     {
@@ -100,13 +100,13 @@
     {
       "source": "hypr/conf/keybinding.lua",
       "kind": "binding",
-      "id": "SUPER + grave",
+      "id": "SUPER + S",
       "reason": "No equivalent niri capability for workspace.scratchpad"
     },
     {
       "source": "hypr/conf/keybinding.lua",
       "kind": "binding",
-      "id": "SUPER + SHIFT + grave",
+      "id": "SUPER + CTRL + S",
       "reason": "Niri has no Hyprland special/scratchpad workspaces"
     },
     {
