@@ -113,6 +113,16 @@ def main():
             LIBGL_ALWAYS_SOFTWARE="1",
             WLR_RENDERER_ALLOW_SOFTWARE="1",
         )
+        with (output / "fonts.log").open("w") as log:
+            subprocess.run(
+                [sys.executable, str(shell_dir / "tools/font-setup.py"), "--apply"],
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                check=True,
+                timeout=90,
+            )
         children = []
         logs = []
 
@@ -185,7 +195,16 @@ def main():
                 env["DISPLAY"] = ":" + wait_for("private X display", x_display, [xvfb])
                 os.close(read_fd)
                 config = base / "niri.kdl"
-                config.write_text("input { keyboard { xkb {} } }\nprefer-no-csd\n")
+                config.write_text(
+                    "input {\n keyboard {\n  xkb {}\n }\n}\nprefer-no-csd\nhotkey-overlay {\n skip-at-startup\n}\n"
+                )
+                subprocess.run(
+                    ["niri", "validate", "--config", str(config)],
+                    env=env,
+                    check=True,
+                    capture_output=True,
+                    timeout=10,
+                )
                 compositor = spawn("compositor", ["niri", "--config", str(config)])
             else:
                 env.pop("DISPLAY", None)
@@ -338,8 +357,31 @@ def main():
                     diagnostic.stdout + diagnostic.stderr
                 )
                 raise
+            wait_for(
+                "wallpaper presentation",
+                lambda: matches(
+                    "presentationState",
+                    lambda row: (
+                        row.get("activeReady") and row.get("pendingMatchesActive")
+                    ),
+                ),
+                watch,
+            )
+            ipc("settingsApp", "close")
+            wait_for(
+                "settings close",
+                lambda: matches("settingsApp", lambda row: not row.get("visible")),
+                watch,
+            )
             ipc("nacre", "close")
             ipc("nacre", "tab", "0")
+            wait_for(
+                "dashboard screenshot state",
+                lambda: matches(
+                    "nacre", lambda row: row.get("dashboard") and row.get("tab") == 0
+                ),
+                watch,
+            )
             screenshot = output / "screenshot.png"
             if args.compositor == "niri":
                 subprocess.run(
