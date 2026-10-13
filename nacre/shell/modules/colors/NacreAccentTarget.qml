@@ -27,9 +27,9 @@ NacreSurface {
         x: 52
         y: 18
         text: ({
-                primary: "Main",
-                secondary: "Second",
-                tertiary: "Third"
+                primary: NacreI18n.tr("colors.accent-target.text.main", "Main"),
+                secondary: NacreI18n.tr("colors.accent-target.text.second", "Second"),
+                tertiary: NacreI18n.tr("colors.accent-target.text.third", "Third")
             })[root.role]
         font.pointSize: 10
     }
@@ -45,7 +45,11 @@ NacreSurface {
         x: parent.width - width - 10
         y: 10
         text: ""
-        accessibleLabel: root.pinned ? "Unlock " + root.role : "Lock " + root.role
+        accessibleLabel: root.pinned ? NacreI18n.tr("ui.accent-target.accessibleLabel.unlock-value0", "Unlock {value0}", {
+            value0: root.role
+        }) : NacreI18n.tr("ui.accent-target.accessibleLabel.lock-value0", "Lock {value0}", {
+            value0: root.role
+        })
         icon: root.pinned ? "lock" : "lock_open"
         onClicked: root.pinned ? root.clear() : root.assign(root.value)
     }

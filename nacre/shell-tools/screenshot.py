@@ -2,6 +2,7 @@
 """Region selection copies a PNG; full capture saves and copies without a picker."""
 
 import argparse
+from nacre_i18n import tr
 from datetime import datetime
 from pathlib import Path
 import subprocess
@@ -15,7 +16,7 @@ def notify(message):
             "Nacre Capture",
             "-i",
             "nacre-notifications",
-            "Screenshot",
+            tr("capture.notification.title", "Screenshot"),
             message,
         ],
         check=False,
@@ -34,9 +35,14 @@ def capture(mode, home=None, runner=subprocess.run):
             check=True,
         ).stdout
         runner(["wl-copy", "--type", "image/png"], input=png, check=True)
-        return "Copied selection to clipboard"
+        return tr(
+            "helper.screenshot.copied-selection-to-clipboard",
+            "Copied selection to clipboard",
+        )
     if mode != "full":
-        raise ValueError("Unknown screenshot mode")
+        raise ValueError(
+            tr("helper.screenshot.unknown-screenshot-mode", "Unknown screenshot mode")
+        )
     folder = home / "Pictures/Screenshots"
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / (
@@ -44,7 +50,10 @@ def capture(mode, home=None, runner=subprocess.run):
     )
     runner(["grim", str(path)], check=True)
     runner(["wl-copy", "--type", "image/png"], input=path.read_bytes(), check=True)
-    return "Saved to Pictures/Screenshots and copied to clipboard"
+    return tr(
+        "helper.screenshot.saved-to-pictures-screenshots-and-copied-to-clipboard",
+        "Saved to Pictures/Screenshots and copied to clipboard",
+    )
 
 
 def main():
@@ -54,7 +63,13 @@ def main():
     try:
         result = capture(args.mode)
     except (OSError, subprocess.SubprocessError) as error:
-        notify("Capture failed: " + str(error))
+        notify(
+            tr(
+                "capture.notification.failed",
+                "Capture failed: {error}",
+                {"error": str(error)},
+            )
+        )
         return 1
     if result:
         notify(result)

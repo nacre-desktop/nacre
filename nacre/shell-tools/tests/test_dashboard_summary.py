@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Native summary layout keeps calendar, gauges and real-spectrum baselines aligned."""
 
 import os
@@ -84,6 +86,7 @@ TestCase {
 
 }
 """)
+            install_i18n(fixtures)
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 capture_output=True,

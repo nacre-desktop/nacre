@@ -4,6 +4,7 @@
 import compositor
 
 import argparse
+from nacre_i18n import tr
 import json
 import os
 from pathlib import Path
@@ -105,7 +106,12 @@ def state(home=None):
 
 def night_light(enabled, home=None):
     if not shutil.which("hyprsunset"):
-        raise ValueError("Install the system hyprsunset package for Night light")
+        raise ValueError(
+            tr(
+                "helper.control-tools.install-the-system-hyprsunset-package-for-night-light",
+                "Install the system hyprsunset package for Night light",
+            )
+        )
     active, owner = service()
     data = load(home)
     if (
@@ -114,7 +120,10 @@ def night_light(enabled, home=None):
         or (active and (not owner or data.get("owner") != owner))
     ):
         raise ValueError(
-            "Night light is managed externally; use its existing controller"
+            tr(
+                "helper.control-tools.night-light-is-managed-externally-use-its-existing-controller",
+                "Night light is managed externally; use its existing controller",
+            )
         )
     started = False
     if enabled and not active:
@@ -126,7 +135,12 @@ def night_light(enabled, home=None):
         )
         active, owner = service()
         if not active or not owner:
-            raise RuntimeError("Night-light service did not become ready")
+            raise RuntimeError(
+                tr(
+                    "helper.control-tools.night-light-service-did-not-become-ready",
+                    "Night-light service did not become ready",
+                )
+            )
         started = True
         # Claim only the service this action started; never another running owner.
         save({"owner": owner, "enabled": False}, home)
@@ -159,7 +173,9 @@ def main():
             print(json.dumps(state()))
         elif args.action == "night-light":
             if args.value is None:
-                raise ValueError("Choose on or off")
+                raise ValueError(
+                    tr("helper.control-tools.choose-on-or-off", "Choose on or off")
+                )
             print(json.dumps(night_light(args.value == "on")))
         else:
             command = (

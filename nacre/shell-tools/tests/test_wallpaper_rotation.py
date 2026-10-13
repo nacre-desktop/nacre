@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Exercise the production rotation timer and shuffle logic in native Qt."""
 
 import os
@@ -78,6 +80,7 @@ class RotationTests(unittest.TestCase):
                 ROOT / "tests/qml/tst_wallpaper_rotation.qml",
                 target / "tst_wallpaper_rotation.qml",
             )
+            install_i18n(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env=dict(os.environ, QT_QPA_PLATFORM="offscreen"),

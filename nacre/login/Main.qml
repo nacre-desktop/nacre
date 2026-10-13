@@ -2,11 +2,22 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Window
 import QtQuick.Shapes
+import "translation.js" as Translation
+import "messages.js" as Messages
 
 Rectangle {
     id: root
     width: Screen.width
     height: Screen.height
+    readonly property string language: String(configuration.language || "system")
+    readonly property var locale: language === "system" || language === "pseudo" ? Qt.locale() : Qt.locale(language)
+    function tr(id, fallback, args = {}) {
+        return Translation.translate(Messages.english, language, id, fallback, args);
+    }
+    function dateTime(value, pattern) {
+        const text = new Date(value).toLocaleString(locale, pattern);
+        return language === "pseudo" && /M{3}|d{3}/.test(pattern) ? Translation.pseudo(text) : text;
+    }
     property var configuration: typeof config !== "undefined" ? config : ({})
     property var backend: typeof sddm !== "undefined" ? sddm : null
     property var usersModel: typeof userModel !== "undefined" ? userModel : []
@@ -37,7 +48,7 @@ Rectangle {
     function failed() {
         busy = false;
         password.clear();
-        message = "Password not accepted. Try again.";
+        message = root.tr("login.message.password-not-accepted-try-again", "Password not accepted. Try again.");
         password.forceActiveFocus();
     }
     function selectLast() {
@@ -79,6 +90,7 @@ Rectangle {
         }
     }
     Logo {
+        language: root.language
         x: 36
         y: 30
         width: 48
@@ -97,7 +109,7 @@ Rectangle {
         spacing: 16
         Text {
             width: parent.width
-            text: Qt.formatDateTime(root.now, "HH:mm")
+            text: root.dateTime(root.now, "HH:mm")
             horizontalAlignment: Text.AlignHCenter
             font.family: "Cantarell"
             font.pointSize: 72
@@ -105,7 +117,7 @@ Rectangle {
         }
         Text {
             width: parent.width
-            text: Qt.formatDateTime(root.now, "dddd, dd MMMM")
+            text: root.dateTime(root.now, "dddd, dd MMMM")
             horizontalAlignment: Text.AlignHCenter
             font.family: "Cantarell"
             font.pointSize: 16
@@ -153,7 +165,7 @@ Rectangle {
             height: 54
             enabled: !root.busy
             echoMode: TextInput.Password
-            placeholderText: "Enter your space"
+            placeholderText: root.tr("login.placeholderText.enter-your-space", "Enter your space")
             placeholderTextColor: root.muted
             color: root.foreground
             selectionColor: root.primary
@@ -176,7 +188,7 @@ Rectangle {
         Text {
             width: parent.width
             height: 24
-            text: root.busy ? "Signing in…" : root.message
+            text: root.busy ? root.tr("login.text.signing-in", "Signing in…") : root.message
             wrapMode: Text.Wrap
             color: root.message ? root.failure : root.muted
             font.family: "Cantarell"
@@ -186,7 +198,7 @@ Rectangle {
         Text {
             width: parent.width
             visible: typeof keyboard !== "undefined" && keyboard.capsLock
-            text: "Caps Lock is on"
+            text: root.tr("login.text.caps-lock-is-on", "Caps Lock is on")
             color: root.primary
             font.family: "Cantarell"
             font.pointSize: 11
@@ -229,7 +241,7 @@ Rectangle {
         anchors.bottomMargin: 30
         spacing: 10
         Button {
-            text: "Restart"
+            text: root.tr("login.text.restart", "Restart")
             visible: root.backend?.canReboot ?? false
             onClicked: root.backend.reboot()
             contentItem: Text {
@@ -244,7 +256,7 @@ Rectangle {
             }
         }
         Button {
-            text: "Power off"
+            text: root.tr("login.text.power-off", "Power off")
             visible: root.backend?.canPowerOff ?? false
             onClicked: root.backend.powerOff()
             contentItem: Text {

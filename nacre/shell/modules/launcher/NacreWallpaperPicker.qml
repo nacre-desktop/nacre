@@ -140,7 +140,7 @@ Item {
                 Layout.alignment: Qt.AlignHCenter
                 spacing: 8
                 ActionButton {
-                    text: "Static"
+                    text: NacreI18n.tr("launcher.wallpaper-picker.text.static", "Static")
                     compact: true
                     selected: root.kind === "static"
                     onClicked: NacreWallpapers.preference({
@@ -148,7 +148,7 @@ Item {
                     })
                 }
                 ActionButton {
-                    text: "Dynamic"
+                    text: NacreI18n.tr("launcher.wallpaper-picker.text.dynamic", "Dynamic")
                     compact: true
                     selected: root.kind === "dynamic"
                     onClicked: NacreWallpapers.preference({
@@ -168,7 +168,7 @@ Item {
                 Layout.alignment: Qt.AlignHCenter
                 spacing: 8
                 ActionButton {
-                    text: "Carousel"
+                    text: NacreI18n.tr("launcher.wallpaper-picker.text.carousel", "Carousel")
                     compact: true
                     selected: root.layout === "carousel"
                     onClicked: NacreWallpapers.preference({
@@ -176,7 +176,7 @@ Item {
                     })
                 }
                 ActionButton {
-                    text: "Spotlight"
+                    text: NacreI18n.tr("launcher.wallpaper-picker.text.spotlight", "Spotlight")
                     compact: true
                     selected: root.layout === "spotlight"
                     onClicked: NacreWallpapers.preference({
@@ -184,7 +184,7 @@ Item {
                     })
                 }
                 ActionButton {
-                    text: "Hexagons"
+                    text: NacreI18n.tr("launcher.wallpaper-picker.text.hexagons", "Hexagons")
                     compact: true
                     selected: root.layout === "hexagons"
                     onClicked: NacreWallpapers.preference({
@@ -200,7 +200,7 @@ Item {
                 color: NacreTokens.outline
             }
             ActionButton {
-                text: "Add"
+                text: NacreI18n.tr("launcher.wallpaper-picker.text.add", "Add")
                 icon: "add"
                 compact: true
                 onClicked: NacreWallpapers.pickFiles()
@@ -213,7 +213,7 @@ Item {
             width: Math.max(160, Math.min(640, root.width - 48))
             height: 40
             padding: 12
-            placeholderText: "Search wallpapers"
+            placeholderText: NacreI18n.tr("launcher.wallpaper-picker.placeholderText.search-wallpapers", "Search wallpapers")
             onTextChanged: root.reconcile()
             Keys.onLeftPressed: root.move(-1)
             Keys.onRightPressed: root.move(1)
@@ -229,7 +229,7 @@ Item {
     NacreText {
         anchors.centerIn: parent
         visible: !root.count
-        text: NacreWallpapers.loading ? "Loading wallpapers…" : "No matching wallpapers"
+        text: NacreWallpapers.loading ? NacreI18n.tr("launcher.wallpaper-picker.text.loading-wallpapers", "Loading wallpapers…") : NacreI18n.tr("launcher.wallpaper-picker.text.no-matching-wallpapers", "No matching wallpapers")
         color: root.fullScreen ? "white" : NacreColours.palette.m3onSurface
     }
     Item {

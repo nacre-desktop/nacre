@@ -1,5 +1,9 @@
 import importlib.util
 import json
+import contextlib
+import io
+import os
+import subprocess
 from pathlib import Path
 import sys
 import tempfile
@@ -51,6 +55,174 @@ class PackageSetupTests(unittest.TestCase):
         config.write_text('path="@NACRE_HOME@"\n')
         profile = setup.policy(root).load(home)
         return root, home, profile
+
+    def test_actual_english_and_pseudo_prompts_preserve_setup_values(self):
+        import keyboard
+
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            private = home / ".config/nacre/profile.json"
+            private.parent.mkdir(parents=True)
+            private.write_text(json.dumps(profile))
+            for name in ("ai", "brain"):
+                (root / "deployment" / name).mkdir(parents=True)
+            args = setup.argparse.Namespace(
+                layout=None,
+                variant=None,
+                model=None,
+                options=None,
+                compositor=None,
+                profile=None,
+                optional=[],
+            )
+            keyboard_values = {
+                "layout": "no",
+                "variant": "",
+                "model": "pc105",
+                "options": "caps:escape",
+            }
+            results = []
+            prompts = []
+            for language in ("en", "pseudo"):
+                labels = []
+
+                def answer(label, default, captured=labels):
+                    captured.append(label)
+                    return default
+
+                output = io.StringIO()
+                with (
+                    patch.dict(os.environ, {"NACRE_LANGUAGE": language}),
+                    patch.object(
+                        keyboard, "system_keyboard", return_value=keyboard_values.copy()
+                    ),
+                    patch.object(setup, "ask", side_effect=answer),
+                    contextlib.redirect_stdout(output),
+                ):
+                    results.append(setup.selection(args, root, home, True))
+                prompts.append(labels)
+                self.assertIn(json.dumps(keyboard_values), output.getvalue())
+            self.assertEqual(results[0], results[1])
+            self.assertEqual(results[0][1], keyboard_values)
+            self.assertEqual(results[0][2], "hyprland")
+            self.assertEqual(
+                prompts[0],
+                [
+                    "Keyboard layout",
+                    "Keyboard variant",
+                    "Keyboard model",
+                    "Keyboard options",
+                    "Compositor (hyprland)",
+                    "Profile (default or JSON path; installed keeps current)",
+                    "Enable optional ai",
+                    "Enable optional brain",
+                ],
+            )
+            for caption in prompts[1]:
+                self.assertTrue(caption.startswith("["), caption)
+            for token, caption in [
+                ("hyprland", prompts[1][4]),
+                ("default", prompts[1][5]),
+                ("installed", prompts[1][5]),
+                ("ai", prompts[1][6]),
+                ("brain", prompts[1][7]),
+            ]:
+                self.assertIn(token, caption)
+            with patch.dict(os.environ, {"NACRE_LANGUAGE": "en"}):
+                self.assertEqual(
+                    setup.tr(
+                        "setup.prompt.apply",
+                        "wrong fallback",
+                        {"yes": "yes", "no": "no"},
+                    ),
+                    "Apply this plan? (yes/no)",
+                )
+                self.assertEqual(
+                    setup.tr(
+                        "setup.applied",
+                        "wrong fallback",
+                        {"release": "/tmp/ROLLBACK_snapshot"},
+                    ),
+                    "Setup applied. Rollback snapshot: /tmp/ROLLBACK_snapshot",
+                )
+
+    def test_plan_keeps_original_english_output_and_never_deploys(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            keyboard_values = {
+                "layout": "no",
+                "variant": "",
+                "model": "",
+                "options": "",
+            }
+            private_path = home / ".config/nacre/FILE_untranslated.json"
+            for language in ("en", "pseudo"):
+                output = io.StringIO()
+                with (
+                    patch.dict(os.environ, {"NACRE_LANGUAGE": language}),
+                    patch.object(setup, "ROOT", root),
+                    patch.object(setup.Path, "home", return_value=home),
+                    patch.object(setup.os, "geteuid", return_value=1000),
+                    patch.object(
+                        setup,
+                        "selection",
+                        return_value=(profile, keyboard_values, "hyprland"),
+                    ),
+                    patch.object(
+                        setup, "missing_packages", return_value=["PACKAGE_untranslated"]
+                    ),
+                    patch.object(releases, "package_plan", return_value=[private_path]),
+                    patch.object(releases, "deploy_package") as deploy,
+                    contextlib.redirect_stdout(output),
+                ):
+                    self.assertEqual(setup.main(["--plan"]), 0)
+                deploy.assert_not_called()
+                text = output.getvalue()
+                if language == "en":
+                    self.assertEqual(
+                        text,
+                        f"Nacre setup: profile={profile['id']}; compositor=hyprland; components={', '.join(profile['components'])}\nKeyboard: {json.dumps(keyboard_values)}\nPrivate file plan:\n  {private_path}\nMissing packages: PACKAGE_untranslated\n",
+                    )
+                else:
+                    for value in (
+                        "hyprland",
+                        json.dumps(keyboard_values),
+                        str(private_path),
+                        "PACKAGE_untranslated",
+                    ):
+                        self.assertIn(value, text)
+                self.assertFalse(private_path.exists())
+
+    def test_staged_setup_help_imports_runtime_without_source_pythonpath(self):
+        with tempfile.TemporaryDirectory() as folder:
+            staged = Path(folder)
+            (staged / "tools").mkdir()
+            (staged / "nacre/shell-tools").mkdir(parents=True)
+            (staged / "nacre/shell/i18n").mkdir(parents=True)
+            for source, target in [
+                (TOOLS / "setup.py", staged / "tools/setup.py"),
+                (
+                    TOOLS.parent / "nacre/shell-tools/nacre_i18n.py",
+                    staged / "nacre/shell-tools/nacre_i18n.py",
+                ),
+                (
+                    TOOLS.parent / "nacre/shell/i18n/en.json",
+                    staged / "nacre/shell/i18n/en.json",
+                ),
+            ]:
+                target.write_bytes(source.read_bytes())
+            environment = {**os.environ, "NACRE_LANGUAGE": "en", "HOME": str(staged)}
+            environment.pop("PYTHONPATH", None)
+            result = subprocess.run(
+                [sys.executable, str(staged / "tools/setup.py"), "--help"],
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("confirm applying the printed plan", result.stdout)
+            self.assertIn("--compositor", result.stdout)
 
     def test_apply_is_offline_repeatable_preserves_private_state_and_rolls_back(self):
         with tempfile.TemporaryDirectory() as folder:

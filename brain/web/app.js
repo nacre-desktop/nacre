@@ -1,4 +1,5 @@
 "use strict";
+const tr = (...args) => window.NacreI18n.tr(...args);
 const $ = (id) => document.getElementById(id),
   NS = "http://www.w3.org/2000/svg";
 let graph = { nodes: [], links: [], noteCount: 0 },
@@ -154,7 +155,13 @@ async function load(force = false) {
   loading = true;
   try {
     const r = await fetch("/api/brain");
-    if (!r.ok) throw Error("Local brain unavailable");
+    if (!r.ok)
+      throw Error(
+        tr(
+          "brain.ui.literal.local-brain-unavailable",
+          "Local brain unavailable",
+        ),
+      );
     const previous = byId.get(state.selected);
     graph = await r.json();
     const signature = JSON.stringify([graph.nodes, graph.links, graph.theme]),
@@ -185,13 +192,17 @@ async function load(force = false) {
     $("loading").hidden = true;
     if (state.focus && !byId.has(state.focus)) state.focus = null;
     if (state.selected && !byId.has(state.selected)) state.selected = null;
-    $("index-status").textContent =
-      graph.noteCount +
-      " notes · " +
-      new Date(graph.generated).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+    $("index-status").textContent = tr(
+      "brain.ui.status.index",
+      "{count} notes · {time}",
+      {
+        count: graph.noteCount,
+        time: new Date(graph.generated).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
+    );
     if (changed)
       render(
         !force &&
@@ -202,8 +213,10 @@ async function load(force = false) {
   } catch (e) {
     $("index-status").textContent = e.message;
     if (!ready)
-      $("loading").textContent =
-        "Could not read your brain. Use Refresh knowledge to retry.";
+      $("loading").textContent = tr(
+        "brain.ui.label.could-not-read-your-brain-use-refresh-knowledge-to-retry",
+        "Could not read your brain. Use Refresh knowledge to retry.",
+      );
   } finally {
     loading = false;
   }
@@ -215,7 +228,13 @@ async function apiAction(name, value = "") {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, value }),
     });
-    if (!r.ok) throw Error("Could not open this action");
+    if (!r.ok)
+      throw Error(
+        tr(
+          "brain.ui.literal.could-not-open-this-action",
+          "Could not open this action",
+        ),
+      );
   } catch (e) {
     $("index-status").textContent = e.message;
   }
@@ -308,14 +327,22 @@ function renderMain() {
   const crumbs = $("breadcrumbs");
   crumbs.replaceChildren();
   if (focus) {
-    crumbs.append(button("Brain", home), el("span", "/"));
+    crumbs.append(
+      button(tr("brain.ui.literal.brain", "Brain"), home),
+      el("span", "/"),
+    );
     const parent = ancestors(focus.id).find((n) => n.kind === "hub");
     if (parent && parent.id !== focus.id)
       crumbs.append(
         button(parent.label, () => select(parent.id)),
         el("span", "/"),
       );
-    crumbs.append(el("span", focus.kind === "note" ? "Note" : focus.label));
+    crumbs.append(
+      el(
+        "span",
+        focus.kind === "note" ? tr("brain.ui.label.note", "Note") : focus.label,
+      ),
+    );
   }
   const reading =
     state.view === "read" && byId.get(state.selected)?.kind === "note";
@@ -328,15 +355,24 @@ function renderMain() {
   $("title").textContent = reading
     ? byId.get(state.selected).label
     : searching
-      ? "Search results"
-      : c?.label || "Your brain";
+      ? tr("brain.ui.label.search-results", "Search results")
+      : c?.label || tr("brain.ui.label.your-brain", "Your brain");
   $("subtitle").textContent = reading
     ? ""
     : searching
-      ? "Matching titles, topics and note content."
+      ? tr(
+          "brain.ui.label.matching-titles-topics-and-note-content",
+          "Matching titles, topics and note content.",
+        )
       : c
-        ? `${notesIn(c.id).length} notes · ${children(c.id).filter((n) => n.kind === "topic").length} topics`
-        : "The subjects you return to, connected by evidence.";
+        ? tr("brain.ui.count.notes-topics", "{notes} notes · {topics} topics", {
+            notes: notesIn(c.id).length,
+            topics: children(c.id).filter((n) => n.kind === "topic").length,
+          })
+        : tr(
+            "brain.ui.label.the-subjects-you-return-to-connected-by-evidence",
+            "The subjects you return to, connected by evidence.",
+          );
   $("back").hidden = state.history.length === 0;
   for (const b of document.querySelectorAll("[data-view]")) {
     const active = b.dataset.view === state.view;
@@ -355,8 +391,12 @@ function renderMain() {
     return;
   }
   $("view-summary").textContent = c
-    ? "Focused knowledge"
-    : subjects().length + " subjects";
+    ? tr("brain.ui.label.focused-knowledge", "Focused knowledge")
+    : tr(
+        "brain.ui.count.subjects",
+        { one: "{count} subjects", other: "{count} subjects" },
+        { count: subjects().length },
+      );
   if (!c) {
     const cards = el("div", "", "subjects-grid");
     const peak = Math.max(1, ...subjects().map((n) => n.activity || 0));
@@ -367,11 +407,20 @@ function renderMain() {
         icon(subjectIcon(n)),
         el(
           "small",
-          n.count +
-            " notes" +
-            (n.origin === "discovered" || n.origin === "promoted"
-              ? " · Suggested"
-              : ""),
+          n.origin === "discovered" || n.origin === "promoted"
+            ? tr(
+                "brain.ui.count.suggested-notes",
+                {
+                  one: "{count} notes · Suggested",
+                  other: "{count} notes · Suggested",
+                },
+                { count: n.count },
+              )
+            : tr(
+                "brain.ui.count.notes",
+                { one: "{count} notes", other: "{count} notes" },
+                { count: n.count },
+              ),
         ),
       );
       const topics = children(n.id).filter((v) => v.kind === "topic");
@@ -383,7 +432,8 @@ function renderMain() {
           topics
             .slice(0, 3)
             .map((v) => v.label)
-            .join(", ") || "Notes and ideas",
+            .join(", ") ||
+            tr("brain.ui.label.notes-and-ideas", "Notes and ideas"),
         ),
       );
       const track = el("div", "", "activity-track"),
@@ -391,21 +441,29 @@ function renderMain() {
       fill.style.width = Math.max(2, ((n.activity || 0) / peak) * 100) + "%";
       track.append(fill);
       b.append(track);
-      b.title =
-        "Recent focus from dated evidence; older knowledge remains available.";
+      b.title = tr(
+        "brain.ui.label.recent-focus-from-dated-evidence-older-knowledge-remains-available",
+        "Recent focus from dated evidence; older knowledge remains available.",
+      );
       cards.append(b);
     }
     out.append(cards);
     const caption = el("div", "", "activity-caption");
     caption.append(
-      el("span", "Recent focus"),
-      el("span", "From saved conversations and work"),
+      el("span", tr("brain.ui.label.recent-focus", "Recent focus")),
+      el(
+        "span",
+        tr(
+          "brain.ui.label.from-saved-conversations-and-work",
+          "From saved conversations and work",
+        ),
+      ),
     );
     out.append(caption);
   } else {
     const topics = children(c.id).filter((n) => n.kind === "topic");
     if (topics.length) {
-      out.append(section("Topics"));
+      out.append(section(tr("brain.ui.literal.topics", "Topics")));
       const list = el("div", "", "topics");
       for (const n of topics) {
         const b = button(n.label, () => select(n.id), "topic");
@@ -419,8 +477,8 @@ function renderMain() {
     recent = el("div"),
     related = el("div");
   recent.append(
-    section("Recent knowledge", {
-      label: "View notes",
+    section(tr("brain.ui.literal.recent-knowledge", "Recent knowledge"), {
+      label: tr("brain.ui.label.view-notes", "View notes"),
       fn: () => {
         state.view = "notes";
         renderMain();
@@ -433,11 +491,16 @@ function renderMain() {
     recent.append(
       el(
         "p",
-        "No notes here yet. New knowledge will appear as it is saved.",
+        tr(
+          "brain.ui.label.no-notes-here-yet-new-knowledge-will-appear-as-it-is-saved",
+          "No notes here yet. New knowledge will appear as it is saved.",
+        ),
         "empty",
       ),
     );
-  related.append(section("Across subjects"));
+  related.append(
+    section(tr("brain.ui.literal.across-subjects", "Across subjects")),
+  );
   const pairs = sharedSubjects(c?.kind === "hub" ? c.id : null).slice(0, 5);
   if (pairs.length) {
     for (const p of pairs) {
@@ -447,14 +510,24 @@ function renderMain() {
         "connection-row",
       );
       b.append(
-        el("small", p.count + " shared " + (p.count === 1 ? "note" : "notes")),
+        el(
+          "small",
+          tr(
+            "brain.ui.count.shared",
+            { one: "{count} shared note", other: "{count} shared notes" },
+            { count: p.count },
+          ),
+        ),
       );
       related.append(b);
     }
     related.append(
       el(
         "p",
-        "Shared notes connect subjects; they do not establish a dependency.",
+        tr(
+          "brain.ui.label.shared-notes-connect-subjects-they-do-not-establish-a-dependency",
+          "Shared notes connect subjects; they do not establish a dependency.",
+        ),
         "activity-caption",
       ),
     );
@@ -462,7 +535,10 @@ function renderMain() {
     related.append(
       el(
         "p",
-        "Explicit references and shared notes will appear here as your knowledge connects.",
+        tr(
+          "brain.ui.label.explicit-references-and-shared-notes-will-appear-here-as-your-knowledge-connects",
+          "Explicit references and shared notes will appear here as your knowledge connects.",
+        ),
         "empty",
       ),
     );
@@ -493,6 +569,18 @@ function sharedSubjects(focus) {
     .filter((p) => !focus || p.a.id === focus)
     .sort((a, b) => b.count - a.count);
 }
+function confidenceLabel(value) {
+  const labels = {
+    verified: () => tr("brain.ui.confidence.verified", "verified"),
+    reported: () => tr("brain.ui.confidence.reported", "reported"),
+    unverified: () => tr("brain.ui.confidence.unverified", "unverified"),
+  };
+  return (
+    labels[value]?.() ||
+    value ||
+    tr("brain.ui.literal.source-page", "Source page")
+  );
+}
 function noteRow(n) {
   const b = button(
     "",
@@ -501,8 +589,8 @@ function noteRow(n) {
   );
   const copy = el("div");
   copy.append(el("span", n.label, "note-title"));
-  copy.append(el("small", n.confidence || "Source page"));
-  const date = el("time", n.date || "Undated");
+  copy.append(el("small", confidenceLabel(n.confidence)));
+  const date = el("time", n.date || tr("brain.ui.label.undated", "Undated"));
   b.append(icon("note"), copy, date);
   return b;
 }
@@ -530,13 +618,17 @@ function renderNotes(out) {
           .toLowerCase()
           .split(/[\s·:]/)[0] === state.filter),
   );
-  $("view-summary").textContent = filtered.length + " notes";
+  $("view-summary").textContent = tr(
+    "brain.ui.count.notes",
+    { one: "{count} notes", other: "{count} notes" },
+    { count: filtered.length },
+  );
   const filters = el("div", "", "filters");
   for (const [value, label] of [
-    ["all", "All notes"],
-    ["verified", "Verified"],
-    ["reported", "Reported"],
-    ["unverified", "Unverified"],
+    ["all", tr("brain.ui.literal.all-notes", "All notes")],
+    ["verified", tr("brain.ui.literal.verified", "Verified")],
+    ["reported", tr("brain.ui.literal.reported", "Reported")],
+    ["unverified", tr("brain.ui.literal.unverified", "Unverified")],
   ])
     filters.append(
       button(
@@ -556,15 +648,18 @@ function renderNotes(out) {
       el(
         "p",
         searchIds === null && state.query
-          ? "Searching…"
-          : "No matching notes. Try a different search or filter.",
+          ? tr("brain.ui.label.searching", "Searching…")
+          : tr(
+              "brain.ui.label.no-matching-notes-try-a-different-search-or-filter",
+              "No matching notes. Try a different search or filter.",
+            ),
         "empty",
       ),
     );
   if (filtered.length > state.limit)
     out.append(
       button(
-        "Show more notes",
+        tr("brain.ui.literal.show-more-notes", "Show more notes"),
         () => {
           state.limit += 60;
           renderMain();
@@ -586,7 +681,10 @@ async function search() {
     const r = await fetch("/api/search?q=" + encodeURIComponent(query), {
       signal: searchController.signal,
     });
-    if (!r.ok) throw Error("Search unavailable");
+    if (!r.ok)
+      throw Error(
+        tr("brain.ui.literal.search-unavailable", "Search unavailable"),
+      );
     const result = await r.json();
     if (state.query === query) {
       searchIds = new Set(result.ids);
@@ -594,8 +692,10 @@ async function search() {
     }
   } catch (e) {
     if (e.name !== "AbortError")
-      $("index-status").textContent =
-        "Search unavailable; showing title matches.";
+      $("index-status").textContent = tr(
+        "brain.ui.label.search-unavailable-showing-title-matches",
+        "Search unavailable; showing title matches.",
+      );
   }
 }
 function svgEl(tag, attributes = {}, value) {
@@ -646,7 +746,13 @@ function mapNode(svg, n, x, y, width = 225, focus = false) {
     g.append(svgEl("text", { x: 27, y: 23 + i * 18 }, line)),
   );
   const detail =
-    n.kind === "note" ? n.date || "Evidence note" : n.count + " notes";
+    n.kind === "note"
+      ? n.date || tr("brain.ui.detail.evidence-note", "Evidence note")
+      : tr(
+          "brain.ui.count.notes",
+          { one: "{count} notes", other: "{count} notes" },
+          { count: n.count },
+        );
   g.append(svgEl("text", { class: "node-detail", x: 27, y: 69 }, detail));
   const open = () => select(n.id, { view: "map" });
   g.addEventListener("click", open);
@@ -659,14 +765,17 @@ function mapNode(svg, n, x, y, width = 225, focus = false) {
   svg.append(g);
 }
 function renderMap(out) {
-  $("view-summary").textContent = "Focused connections";
+  $("view-summary").textContent = tr(
+    "brain.ui.label.focused-connections",
+    "Focused connections",
+  );
   const controls = el("div", "", "map-controls");
   controls.append(
     button("−", () => {
       mapZoom = Math.max(0.6, mapZoom - 0.15);
       renderMain();
     }),
-    button("Reset view", () => {
+    button(tr("brain.ui.literal.reset-view", "Reset view"), () => {
       mapZoom = 1;
       renderMain();
     }),
@@ -680,7 +789,10 @@ function renderMap(out) {
     svg = svgEl("svg", {
       class: "knowledge-map",
       role: "img",
-      "aria-label": "Knowledge connections",
+      "aria-label": tr(
+        "brain.ui.literal.knowledge-connections",
+        "Knowledge connections",
+      ),
     });
   let focus = byId.get(state.focus),
     nodes,
@@ -758,7 +870,10 @@ function renderMap(out) {
           "p",
           connected.length -
             16 +
-            " more connections. Overview shows all topics; Notes shows all evidence.",
+            tr(
+              "brain.ui.label.more-connections-overview-shows-all-topics-notes-shows-all-evidence",
+              " more connections. Overview shows all topics; Notes shows all evidence.",
+            ),
           "activity-caption",
         ),
       );
@@ -766,7 +881,10 @@ function renderMap(out) {
       out.append(
         el(
           "p",
-          "No explicit references yet. Open this note to follow its subjects.",
+          tr(
+            "brain.ui.label.no-explicit-references-yet-open-this-note-to-follow-its-subjects",
+            "No explicit references yet. Open this note to follow its subjects.",
+          ),
           "empty",
         ),
       );
@@ -776,16 +894,26 @@ function renderMap(out) {
   out.append(scroll);
   const legend = el("div", "", "map-caption");
   legend.append(
-    el("span", "Topic grouping or shared notes"),
-    el("span", "Explicit note reference", "explicit"),
+    el(
+      "span",
+      tr(
+        "brain.ui.label.topic-grouping-or-shared-notes",
+        "Topic grouping or shared notes",
+      ),
+    ),
+    el(
+      "span",
+      tr("brain.ui.label.explicit-note-reference", "Explicit note reference"),
+      "explicit",
+    ),
   );
   out.append(legend);
 }
 function badge(value) {
-  const v = value || "Source page";
+  const v = value || tr("brain.ui.literal.source-page", "Source page");
   return el(
     "span",
-    v,
+    confidenceLabel(value),
     "badge" + (v.toLowerCase() === "verified" ? " verified" : ""),
   );
 }
@@ -802,12 +930,15 @@ function renderInspector() {
   const tools = el("div", "", "reader-tools");
   tools.append(
     button(
-      "Open original in Obsidian",
+      tr(
+        "brain.ui.literal.open-original-in-obsidian",
+        "Open original in Obsidian",
+      ),
       () => apiAction("open-note", n.path),
       "inspector-action",
     ),
     button(
-      "Show connections",
+      tr("brain.ui.literal.show-connections", "Show connections"),
       () => {
         state.focus = n.id;
         state.view = "map";
@@ -819,88 +950,129 @@ function renderInspector() {
   );
   panel.append(tools);
   const meta = el("div", "", "metadata");
-  meta.append(badge(n.confidence), el("span", n.date || "Undated"));
+  meta.append(
+    badge(n.confidence),
+    el("span", n.date || tr("brain.ui.label.undated", "Undated")),
+  );
   panel.append(meta);
   const grouping = el("div", "", "grouping");
-  grouping.append(el("div", "Filed under", "inspector-label"));
+  grouping.append(
+    el(
+      "div",
+      tr("brain.ui.label.filed-under", "Filed under"),
+      "inspector-label",
+    ),
+  );
   const labels = (n.memberships || [])
     .filter((m) => m.subject !== "review")
     .map((m) => byId.get(m.subject)?.label)
     .filter(Boolean);
-  const summary = el("p", labels.join(", ") || "Needs grouping");
+  const summary = el(
+    "p",
+    labels.join(", ") || tr("brain.ui.label.needs-grouping", "Needs grouping"),
+  );
   grouping.append(summary);
   const reasons = [...new Set((n.memberships || []).map((m) => m.reason))];
+  const manuallyGrouped = reasons.includes("manual grouping");
   grouping.append(
     el(
       "small",
       !labels.length
-        ? "Not enough context for a confident grouping"
-        : reasons.includes("manual grouping")
-          ? "Your grouping"
+        ? tr(
+            "brain.ui.label.not-enough-context-for-a-confident-grouping",
+            "Not enough context for a confident grouping",
+          )
+        : manuallyGrouped
+          ? tr("brain.ui.label.your-grouping", "Your grouping")
           : reasons.some(
                 (r) =>
                   r.includes("similarity") ||
                   r.includes("community") ||
                   r.includes("suggested"),
               )
-            ? "Suggested from related evidence"
-            : "From annotations and named evidence",
+            ? tr(
+                "brain.ui.label.suggested-from-related-evidence",
+                "Suggested from related evidence",
+              )
+            : tr(
+                "brain.ui.label.from-annotations-and-named-evidence",
+                "From annotations and named evidence",
+              ),
     ),
   );
-  const edit = button("Change grouping", () => {
-    edit.hidden = true;
-    const input = el("input");
-    input.value = labels.join(", ");
-    input.placeholder = "Subjects, separated by commas";
-    input.setAttribute("aria-label", "Subjects for this note");
-    const suggestions = el("datalist");
-    suggestions.id = "subject-options";
-    for (const subject of subjects().filter((s) => s.id !== "review")) {
-      const option = el("option");
-      option.value = subject.label;
-      suggestions.append(option);
-    }
-    input.setAttribute("list", suggestions.id);
-    const actions = el("div", "", "grouping-actions");
-    actions.append(
-      button(
-        "Save",
-        async () => {
-          await apiAction(
-            "assign-note",
-            JSON.stringify({
-              path: n.path,
-              subjects: input.value
-                .split(",")
-                .map((v) => v.trim())
-                .filter(Boolean),
-            }),
-          );
-          await new Promise((r) => setTimeout(r, 500));
-          load(true);
-        },
-        "primary",
-      ),
-      button("Use automatic grouping", async () => {
-        await apiAction(
-          "assign-note",
-          JSON.stringify({ path: n.path, reset: true }),
-        );
-        await new Promise((r) => setTimeout(r, 500));
-        load(true);
-      }),
-    );
-    grouping.append(input, suggestions, actions);
-    input.focus();
-  });
+  const edit = button(
+    tr("brain.ui.literal.change-grouping", "Change grouping"),
+    () => {
+      edit.hidden = true;
+      const input = el("input");
+      input.value = labels.join(", ");
+      input.placeholder = tr(
+        "brain.ui.label.subjects-separated-by-commas",
+        "Subjects, separated by commas",
+      );
+      input.setAttribute(
+        "aria-label",
+        tr("brain.ui.literal.subjects-for-this-note", "Subjects for this note"),
+      );
+      const suggestions = el("datalist");
+      suggestions.id = "subject-options";
+      for (const subject of subjects().filter((s) => s.id !== "review")) {
+        const option = el("option");
+        option.value = subject.label;
+        suggestions.append(option);
+      }
+      input.setAttribute("list", suggestions.id);
+      const actions = el("div", "", "grouping-actions");
+      actions.append(
+        button(
+          tr("brain.ui.literal.save", "Save"),
+          async () => {
+            await apiAction(
+              "assign-note",
+              JSON.stringify({
+                path: n.path,
+                subjects: input.value
+                  .split(",")
+                  .map((v) => v.trim())
+                  .filter(Boolean),
+              }),
+            );
+            await new Promise((r) => setTimeout(r, 500));
+            load(true);
+          },
+          "primary",
+        ),
+        button(
+          tr(
+            "brain.ui.literal.use-automatic-grouping",
+            "Use automatic grouping",
+          ),
+          async () => {
+            await apiAction(
+              "assign-note",
+              JSON.stringify({ path: n.path, reset: true }),
+            );
+            await new Promise((r) => setTimeout(r, 500));
+            load(true);
+          },
+        ),
+      );
+      grouping.append(input, suggestions, actions);
+      input.focus();
+    },
+  );
   grouping.append(edit);
   panel.append(grouping);
-  const reader = el("div", "Reading note…", "reader");
+  const reader = el(
+    "div",
+    tr("brain.ui.label.reading-note", "Reading note…"),
+    "reader",
+  );
   panel.append(reader);
   readNote(n, reader, noteRequest);
   for (const [field, label, opposite] of [
-    ["source", "References", "target"],
-    ["target", "Referenced by", "source"],
+    ["source", tr("brain.ui.literal.references", "References"), "target"],
+    ["target", tr("brain.ui.literal.referenced-by", "Referenced by"), "source"],
   ]) {
     const related = graph.links
       .filter((e) => e.kind === "source" && e[field] === n.id)
@@ -919,7 +1091,9 @@ function renderInspector() {
     ).values(),
   ];
   if (hubs.length) {
-    panel.append(el("div", "Subjects", "inspector-label"));
+    panel.append(
+      el("div", tr("brain.ui.label.subjects", "Subjects"), "inspector-label"),
+    );
     for (const h of hubs)
       panel.append(button(h.label, () => select(h.id), "topic"));
   }
@@ -928,15 +1102,18 @@ function renderInspector() {
 async function readNote(n, container, token) {
   try {
     const r = await fetch("/api/note?path=" + encodeURIComponent(n.path));
-    if (!r.ok) throw Error("Note unavailable");
+    if (!r.ok)
+      throw Error(tr("brain.ui.literal.note-unavailable", "Note unavailable"));
     const data = await r.json();
     if (token !== noteRequest) return;
     container.replaceChildren();
     markdown(container, data.text, n.path);
   } catch (e) {
     if (token === noteRequest)
-      container.textContent =
-        "Could not read this note. Try selecting it again.";
+      container.textContent = tr(
+        "brain.ui.label.could-not-read-this-note-try-selecting-it-again",
+        "Could not read this note. Try selecting it again.",
+      );
   }
 }
 function resolveNote(target, base) {
@@ -1075,7 +1252,9 @@ function markdown(container, body, base) {
       flush();
       if (!details) {
         details = el("details");
-        details.append(el("summary", "Note details"));
+        details.append(
+          el("summary", tr("brain.ui.label.note-details", "Note details")),
+        );
         container.append(details);
       }
       const row = el("div", "", "source-field");

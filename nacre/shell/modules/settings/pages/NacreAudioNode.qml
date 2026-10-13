@@ -10,7 +10,7 @@ Column {
     property var dragNode: null
     readonly property bool present: !!node && Pipewire.nodes.values.includes(node)
     readonly property bool ready: present && node.ready && !!node.audio
-    readonly property string caption: node ? (node.description || node.nickname || node.name || "Audio device") : "Disconnected"
+    readonly property string caption: node ? (node.description || node.nickname || node.name || NacreI18n.tr("ui.audio-node.caption.audio-device", "Audio device")) : NacreI18n.tr("ui.audio-node.caption.disconnected", "Disconnected")
     width: parent.width
     spacing: 8
     function setVolume(target, fraction) {
@@ -40,7 +40,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
         }
         ActionButton {
-            text: "Default"
+            text: NacreI18n.tr("ui.audio-node.text.default", "Default")
             visible: root.node && !root.node.isStream
             enabled: root.ready
             selected: root.node && (root.node.isSink ? Pipewire.defaultAudioSink === root.node : Pipewire.defaultAudioSource === root.node)
@@ -52,7 +52,9 @@ Column {
         spacing: 12
         NacreMediaButton {
             icon: root.ready && root.node.audio.muted ? "volume_off" : "volume_up"
-            label: "Mute " + root.caption
+            label: NacreI18n.tr("ui.audio-node.label.mute-value0", "Mute {value0}", {
+                value0: root.caption
+            })
             selected: root.ready && root.node.audio.muted
             available: root.ready
             onClicked: root.toggleMute()
@@ -62,7 +64,9 @@ Column {
             width: Math.max(0, parent.width - 118)
             anchors.verticalCenter: parent.verticalCenter
             enabled: root.ready
-            label: root.caption + " volume"
+            label: NacreI18n.tr("ui.audio-node.label.value0-volume", "{value0} volume", {
+                value0: root.caption
+            })
             progress: root.ready ? root.node.audio.volume : 0
             onDragBegan: root.dragNode = root.node
             onDragEnded: fraction => {
@@ -74,7 +78,7 @@ Column {
         NacreText {
             width: 52
             anchors.verticalCenter: parent.verticalCenter
-            text: root.ready ? Math.round(root.node.audio.volume * 100) + "%" : "—"
+            text: root.ready ? NacreI18n.number(Math.round(root.node.audio.volume * 100)) + "%" : "—"
             font.pointSize: 10
             horizontalAlignment: Text.AlignRight
         }

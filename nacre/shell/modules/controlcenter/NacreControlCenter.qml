@@ -94,12 +94,12 @@ FocusScope {
                     RowLayout {
                         width: parent.width
                         NacreText {
-                            text: "Controls"
+                            text: NacreI18n.tr("controlcenter.control-center.text.controls", "Controls")
                             font.pointSize: 18
                             Layout.fillWidth: true
                         }
                         ActionButton {
-                            text: "Settings"
+                            text: NacreI18n.tr("controlcenter.control-center.text.settings", "Settings")
                             icon: "settings"
                             compact: true
                             onClicked: NacrePanelState.openSettings("")
@@ -118,9 +118,9 @@ FocusScope {
                             objectName: "controlWifi"
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
-                            label: "Wi-Fi"
+                            label: NacreI18n.tr("controlcenter.control-center.label.wi-fi", "Wi-Fi")
                             icon: "wifi"
-                            detail: NacreNetwork.active?.ssid || (NacreNetwork.wifiEnabled ? "Not connected" : "Off")
+                            detail: NacreNetwork.active?.ssid || (NacreNetwork.wifiEnabled ? NacreI18n.tr("controlcenter.control-center.detail.not-connected", "Not connected") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off"))
                             selected: root.section === "network"
                             onClicked: root.sectionRequested(root.section === "network" ? "home" : "network")
                         }
@@ -128,9 +128,9 @@ FocusScope {
                             objectName: "controlBluetooth"
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
-                            label: "Bluetooth"
+                            label: NacreI18n.tr("controlcenter.control-center.label.bluetooth", "Bluetooth")
                             icon: "bluetooth"
-                            detail: NacreBluetooth.powered ? "On" : "Off"
+                            detail: NacreBluetooth.powered ? NacreI18n.tr("controlcenter.control-center.detail.on", "On") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off")
                             selected: root.section === "bluetooth"
                             onClicked: root.sectionRequested(root.section === "bluetooth" ? "home" : "bluetooth")
                         }
@@ -139,9 +139,9 @@ FocusScope {
                             visible: NacreControlTools.data.powerProfilesSupported === true
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
-                            label: "Power"
+                            label: NacreI18n.tr("controlcenter.control-center.label.power", "Power")
                             icon: "battery_full"
-                            detail: PowerProfiles.profile === PowerProfile.PowerSaver ? "Saver" : PowerProfiles.profile === PowerProfile.Performance ? "Performance" : "Balanced"
+                            detail: PowerProfiles.profile === PowerProfile.PowerSaver ? NacreI18n.tr("controlcenter.control-center.detail.saver", "Saver") : PowerProfiles.profile === PowerProfile.Performance ? NacreI18n.tr("controlcenter.control-center.detail.performance", "Performance") : NacreI18n.tr("controlcenter.control-center.detail.balanced", "Balanced")
                             selected: root.section === "battery"
                             onClicked: root.sectionRequested(root.section === "battery" ? "home" : "battery")
                         }
@@ -149,9 +149,9 @@ FocusScope {
                             objectName: "controlDnd"
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
-                            label: "DND"
+                            label: NacreI18n.tr("controlcenter.control-center.label.dnd", "DND")
                             icon: "do_not_disturb_on"
-                            detail: NacreNotifs.dnd ? "On" : "Off"
+                            detail: NacreNotifs.dnd ? NacreI18n.tr("controlcenter.control-center.detail.on", "On") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off")
                             selected: NacreNotifs.dnd
                             onClicked: DesktopSettings.set("dnd", !NacreNotifs.dnd)
                         }
@@ -159,9 +159,9 @@ FocusScope {
                             objectName: "controlNightLight"
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
-                            label: "Night light"
+                            label: NacreI18n.tr("controlcenter.control-center.label.night-light", "Night light")
                             icon: "nightlight"
-                            detail: NacreControlTools.data.nightLightExternal ? "External" : NacreControlTools.data.nightLightEnabled ? "Warm" : "Off"
+                            detail: NacreControlTools.data.nightLightExternal ? NacreI18n.tr("controlcenter.control-center.detail.external", "External") : NacreControlTools.data.nightLightEnabled ? NacreI18n.tr("controlcenter.control-center.detail.warm", "Warm") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off")
                             visible: NacreControlTools.data.nightLightSupported === true
                             enabled: !NacreControlTools.busy && !NacreControlTools.data.nightLightExternal
                             selected: NacreControlTools.data.nightLightEnabled === true
@@ -171,9 +171,9 @@ FocusScope {
                             objectName: "controlSound"
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
-                            label: "Devices"
+                            label: NacreI18n.tr("controlcenter.control-center.label.devices", "Devices")
                             icon: "speaker"
-                            detail: "Audio output"
+                            detail: NacreI18n.tr("controlcenter.control-center.detail.audio-output", "Audio output")
                             selected: root.section === "audio"
                             onClicked: root.sectionRequested(root.section === "audio" ? "home" : "audio")
                         }
@@ -184,7 +184,7 @@ FocusScope {
                         columnSpacing: 6
                         rowSpacing: 6
                         ActionButton {
-                            text: "Capture"
+                            text: NacreI18n.tr("controlcenter.control-center.text.capture", "Capture")
                             icon: "screenshot"
                             compact: true
                             Layout.fillWidth: true
@@ -193,14 +193,14 @@ FocusScope {
                             onClicked: NacreControlTools.capture("screenshot")
                         }
                         ActionButton {
-                            text: "Clipboard"
+                            text: NacreI18n.tr("controlcenter.control-center.text.clipboard", "Clipboard")
                             compact: true
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
                             onClicked: NacrePanelState.openMode("clipboard")
                         }
                         ActionButton {
-                            text: "Colors"
+                            text: NacreI18n.tr("controlcenter.control-center.text.colors", "Colors")
                             icon: "palette"
                             compact: true
                             Layout.fillWidth: true
@@ -208,7 +208,7 @@ FocusScope {
                             onClicked: NacrePanelState.openMode("palette")
                         }
                         ActionButton {
-                            text: "Picker"
+                            text: NacreI18n.tr("controlcenter.control-center.text.picker", "Picker")
                             icon: "colorize"
                             compact: true
                             Layout.fillWidth: true
@@ -235,12 +235,12 @@ FocusScope {
                 width: parent.width - content.inset * 2
                 NacreText {
                     Layout.fillWidth: true
-                    text: root.section === "home" || root.section === "notifications" ? "Notifications" : "Connection details"
+                    text: root.section === "home" || root.section === "notifications" ? NacreI18n.tr("controlcenter.control-center.text.notifications", "Notifications") : NacreI18n.tr("controlcenter.control-center.text.connection-details", "Connection details")
                     font.pointSize: 11
                     color: NacreTokens.mutedInk
                 }
                 ActionButton {
-                    text: root.section === "home" || root.section === "notifications" ? "Clear" : "Back"
+                    text: root.section === "home" || root.section === "notifications" ? NacreI18n.tr("controlcenter.control-center.text.clear", "Clear") : NacreI18n.tr("controlcenter.control-center.text.back", "Back")
                     compact: true
                     onClicked: {
                         if (root.section === "home" || root.section === "notifications")
@@ -309,7 +309,7 @@ FocusScope {
                     spacing: 8
                     NacreText {
                         width: parent.width
-                        text: "No notifications"
+                        text: NacreI18n.tr("controlcenter.control-center.text.no-notifications", "No notifications")
                         visible: NacreNotifs.retained.length === 0
                         color: NacreTokens.mutedInk
                     }

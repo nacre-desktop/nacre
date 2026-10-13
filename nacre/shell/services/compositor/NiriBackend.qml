@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.services
 import Quickshell
 import Quickshell.Io
 
@@ -54,7 +55,7 @@ Singleton {
         if (value.type !== "snapshot") {
             if (value.type === "configuration-reloaded") {
                 if (value.failed)
-                    error = qsTr("Niri configuration failed to reload.");
+                    error = NacreI18n.tr("ui.niri.error.config-reload-failed", "Niri configuration failed to reload.");
                 else
                     configurationReloaded();
             }
@@ -87,7 +88,7 @@ Singleton {
         clients = ordered;
         activeWindowId = value.activeWindow?.windowId || "";
         connected = true;
-        error = value.configFailed ? qsTr("Niri configuration failed to reload.") : "";
+        error = value.configFailed ? NacreI18n.tr("ui.niri.error.config-reload-failed", "Niri configuration failed to reload.") : "";
         reconnectAttempt = 0;
         for (const window of retired)
             Qt.callLater(() => window.destroy());
@@ -139,16 +140,16 @@ Singleton {
             onRead: data => {
                 try {
                     if (!root.accept(JSON.parse(data)))
-                        root.error = qsTr("Invalid compositor state.");
+                        root.error = NacreI18n.tr("ui.niri.error.invalid-state", "Invalid compositor state.");
                 } catch (failure) {
-                    root.error = qsTr("Invalid compositor event.");
+                    root.error = NacreI18n.tr("ui.niri.error.invalid-event", "Invalid compositor event.");
                 }
             }
         }
         onExited: (exitCode, exitStatus) => {
             root.connected = false;
             root.pendingActions = [];
-            root.error = qsTr("Niri IPC disconnected; reconnecting.");
+            root.error = NacreI18n.tr("ui.niri.error.ipc-disconnected", "Niri IPC disconnected; reconnecting.");
             root.activeWindowId = "";
             reconnect.restart();
         }
@@ -163,7 +164,7 @@ Singleton {
     }
     function action(name, args = []) {
         if (!connected || pendingActions.length >= 64) {
-            error = connected ? qsTr("Compositor action queue is full.") : qsTr("Niri IPC is unavailable.");
+            error = connected ? NacreI18n.tr("ui.niri.error.action-queue-full", "Compositor action queue is full.") : NacreI18n.tr("ui.niri.error.ipc-unavailable", "Niri IPC is unavailable.");
             return false;
         }
         pendingActions = [...pendingActions, ["python3", toolsPath + "/compositor.py", "action", name, ...args]];
@@ -186,7 +187,9 @@ Singleton {
         stderr: StdioCollector {}
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0) {
-                root.error = qsTr("Niri action failed: %1").arg(stderr.text.trim().split("\n").slice(-1)[0]);
+                root.error = NacreI18n.tr("ui.niri.error.action-failed", "Niri action failed: {detail}", {
+                    detail: stderr.text.trim().split("\n").slice(-1)[0]
+                });
                 root.pendingActions = [];
             }
             Qt.callLater(root.runNext);
@@ -248,7 +251,7 @@ Singleton {
         return action("logout");
     }
     function unsupported() {
-        error = qsTr("This operation is unavailable on niri.");
+        error = NacreI18n.tr("ui.niri.error.operation-unavailable", "This operation is unavailable on niri.");
         return false;
     }
     function pinWindow(id) {

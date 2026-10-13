@@ -61,5 +61,8 @@ Item {
         }
     }
     Accessible.role: Accessible.Button
-    Accessible.name: "Sample #" + colorHex + ", " + Math.round(entry.coverage * 1000) / 10 + " percent coverage; drag to an accent role"
+    Accessible.name: NacreI18n.tr("colors.sample.accessible", "Sample #{hex}, {coverage} percent coverage; drag to an accent role", {
+        hex: colorHex,
+        coverage: Math.round(entry.coverage * 1000) / 10
+    })
 }

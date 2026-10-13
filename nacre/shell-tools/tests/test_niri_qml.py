@@ -8,6 +8,8 @@ import subprocess
 import tempfile
 import unittest
 
+from qml_source import install_i18n
+
 ROOT = Path(__file__).resolve().parents[1]
 BACKENDS = ROOT.parent / "shell/services/compositor"
 
@@ -86,11 +88,13 @@ class NiriQmlTests(unittest.TestCase):
                 + coverage
                 + "}"
             )
+            install_i18n(fixtures)
             source = (
                 (BACKENDS / "NiriBackend.qml")
                 .read_text()
                 .replace("pragma Singleton\n", "")
                 .replace("import Quickshell.Io", 'import "fixtures"')
+                .replace("import qs.services", 'import "fixtures"')
                 .replace("import Quickshell\n", "")
                 .replace("Singleton {", "Item {")
             )
@@ -119,7 +123,7 @@ Item {
  TestCase {
   name:"NiriBackendContract"; when:windowShown
   property var backend:null
-  function init(){backend=factory.createObject(null);verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))))}
+  function init(){NacreI18n.language="en";backend=factory.createObject(null);verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))))}
   function cleanup(){backend.destroy();backend=null;wait(1)}
   function test_state_identity_focus_and_reconciliation(){
    compare(backend.activeWorkspace.id,"niri-workspace:9007199254740993")
@@ -140,6 +144,15 @@ Item {
    compare(worker.command.slice(-3),["close_window","--window","niri-window:1"])
    verify(!backend.pinWindow("niri-window:1"));verify(!backend.capabilities.pinWindow)
    verify(!backend.placeWindow("niri-window:1",{x:0,y:0,width:-1,height:10}))
+  }
+  function test_errors_use_actual_catalog_and_pseudo_keeps_machine_state(){
+   verify(!backend.pinWindow("niri-window:1"))
+   compare(backend.error,"This operation is unavailable on niri.")
+   NacreI18n.language="pseudo"
+   verify(!backend.pinWindow("niri-window:1"))
+   verify(backend.error.startsWith("["));verify(!backend.error.includes("This operation"))
+   compare(backend.activeClient.windowId,"niri-window:9007199254740995")
+   compare(backend.backendName,"niri");compare(backend.activeWorkspace.id,"niri-workspace:9007199254740993")
   }
   function test_stream_disconnect_blocks_actions_and_reconnects(){
    const stream=findChild(backend,"niriEventStream");verify(stream)

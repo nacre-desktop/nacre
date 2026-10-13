@@ -23,7 +23,7 @@ Item {
         width: root.width
         spacing: 10
         NacreText {
-            text: "Sound"
+            text: NacreI18n.tr("popouts.sound-popup.text.sound", "Sound")
             font.pointSize: 14
         }
         Row {
@@ -32,12 +32,12 @@ Item {
             NacreText {
                 width: Math.max(0, parent.width - outputMute.width - parent.spacing)
                 anchors.verticalCenter: parent.verticalCenter
-                text: NacreAudio.sink?.description || "Output unavailable"
+                text: NacreAudio.sink?.description || NacreI18n.tr("popouts.sound-popup.text.output-unavailable", "Output unavailable")
                 elide: Text.ElideMiddle
             }
             ActionButton {
                 id: outputMute
-                text: NacreAudio.muted ? "Unmute" : "Mute"
+                text: NacreAudio.muted ? NacreI18n.tr("popouts.sound-popup.text.unmute", "Unmute") : NacreI18n.tr("popouts.sound-popup.text.mute", "Mute")
                 enabled: NacreAudio.available
                 compact: true
                 onClicked: if (enabled)
@@ -47,7 +47,7 @@ Item {
         NacreQuickSlider {
             objectName: "quickOutputVolume"
             width: parent.width
-            label: "Output volume"
+            label: NacreI18n.tr("popouts.sound-popup.label.output-volume", "Output volume")
             value: NacreAudio.volume
             enabled: NacreAudio.available
             onMoved: if (enabled)
@@ -59,13 +59,13 @@ Item {
             NacreText {
                 width: Math.max(0, parent.width - micMute.width - parent.spacing)
                 anchors.verticalCenter: parent.verticalCenter
-                text: NacreAudio.micAvailable ? "Microphone" : "Microphone unavailable"
+                text: NacreAudio.micAvailable ? NacreI18n.tr("popouts.sound-popup.text.microphone", "Microphone") : NacreI18n.tr("popouts.sound-popup.text.microphone-unavailable", "Microphone unavailable")
                 elide: Text.ElideRight
             }
             ActionButton {
                 id: micMute
                 objectName: "quickMicMute"
-                text: NacreAudio.micMuted ? "Unmute" : "Mute"
+                text: NacreAudio.micMuted ? NacreI18n.tr("popouts.sound-popup.text.unmute", "Unmute") : NacreI18n.tr("popouts.sound-popup.text.mute", "Mute")
                 enabled: NacreAudio.micAvailable
                 compact: true
                 onClicked: if (enabled)
@@ -75,7 +75,7 @@ Item {
         NacreQuickSlider {
             objectName: "quickMicVolume"
             width: parent.width
-            label: "Microphone volume"
+            label: NacreI18n.tr("popouts.sound-popup.label.microphone-volume", "Microphone volume")
             value: NacreAudio.micVolume
             enabled: NacreAudio.micAvailable
             onMoved: if (enabled)
@@ -109,14 +109,16 @@ Item {
                             y: 10
                             width: parent.width - 50
                             height: parent.height - 20
-                            text: parent.modelData.description || parent.modelData.name || "Audio output"
+                            text: parent.modelData.description || parent.modelData.name || NacreI18n.tr("popouts.sound-popup.text.audio-output", "Audio output")
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideMiddle
                             font.pointSize: 11
                             color: NacreTokens.ink
                         }
                         NacreInteraction {
-                            accessibleName: "Use output " + (parent.modelData.description || parent.modelData.name || "Audio output")
+                            accessibleName: NacreI18n.tr("ui.sound-popup.accessibleName.use-output-value0", "Use output {value0}", {
+                                value0: (parent.modelData.description || parent.modelData.name || NacreI18n.tr("popouts.sound-popup.accessibleName.audio-output", "Audio output"))
+                            })
                             function onClicked() {
                                 root.chooseOutput(parent.modelData);
                             }

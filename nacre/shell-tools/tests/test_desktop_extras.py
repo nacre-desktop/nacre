@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import copy
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +15,126 @@ spec.loader.exec_module(extras)
 
 
 class DesktopExtrasTests(unittest.TestCase):
+    def test_actual_english_and_pseudo_bindings_preserve_dispatch_and_external_labels(
+        self,
+    ):
+        records = [
+            dict(
+                keys="SUPER + SPACE",
+                submap="",
+                action=dict(method="exec_cmd", args=["nacre-menu apps"]),
+                flags=dict(description="Nacre:launcher"),
+            ),
+            dict(
+                keys="ESCAPE",
+                submap="resize",
+                action=dict(method="submap", args=["reset"]),
+                flags={},
+            ),
+            dict(
+                keys="CTRL + ALT + F12",
+                submap="",
+                action=dict(method="exec_cmd", args=["public-TEST_APP --flag"]),
+                flags={},
+            ),
+            dict(
+                keys="XF86MonBrightnessUp",
+                submap="",
+                action=dict(method="exec_cmd", args=["nacre-shell brightness +"]),
+                flags={},
+            ),
+        ]
+        native = [
+            dict(key="space", modmask=64, dispatcher="__lua", arg="", submap=""),
+            dict(
+                key="ESCAPE",
+                modmask=0,
+                dispatcher="__lua",
+                arg="reset",
+                submap="resize",
+            ),
+            dict(key="F12", modmask=12, dispatcher="__lua", arg="", submap=""),
+            dict(
+                key="XF86MonBrightnessUp",
+                modmask=0,
+                dispatcher="__lua",
+                arg="",
+                submap="",
+            ),
+            dict(
+                key="L",
+                modmask=64,
+                dispatcher="exec",
+                arg="loginctl lock-session",
+                submap="",
+            ),
+            dict(key="Q", modmask=64, dispatcher="exec", arg="", submap=""),
+            dict(key="0", modmask=64, dispatcher="workspace", arg="10", submap=""),
+            dict(
+                key="0", modmask=65, dispatcher="movetoworkspace", arg="10", submap=""
+            ),
+        ]
+        original = copy.deepcopy((records, native))
+        results = []
+        for language in ("en", "pseudo"):
+            with (
+                patch.dict("os.environ", {"NACRE_LANGUAGE": language}),
+                patch.object(
+                    extras.compositor,
+                    "binding_source_files",
+                    return_value=[Path("public-fixture.lua")],
+                ),
+                patch.object(
+                    extras.compositor, "capture_bindings", return_value=records
+                ),
+                patch.object(extras.compositor, "query", return_value=native),
+            ):
+                results.append(
+                    {(row["submap"], row["key"]): row for row in extras.bindings()}
+                )
+        english, pseudo = results
+        expected = {
+            ("", "SUPER+SPACE"): "Find an application",
+            ("resize", "ESCAPE"): "resize · Exit resize mode",
+            ("", "CTRL+ALT+F12"): "public TEST APP",
+            ("", "XF86MonBrightnessUp"): "Screen brightness +",
+            ("", "SUPER+L"): "Lock screen",
+            ("", "SUPER+Q"): "Close (undo with Super+Shift+Q within 30 seconds)",
+            ("", "SUPER+0"): "Go to workspace 10",
+            ("", "SUPER+SHIFT+0"): "Move window to workspace 10",
+        }
+        self.assertEqual(
+            {key: row["description"] for key, row in english.items()}, expected
+        )
+        for key in english:
+            self.assertEqual(
+                {
+                    field: value
+                    for field, value in english[key].items()
+                    if field != "description"
+                },
+                {
+                    field: value
+                    for field, value in pseudo[key].items()
+                    if field != "description"
+                },
+            )
+            if key == ("", "CTRL+ALT+F12"):
+                self.assertEqual(
+                    pseudo[key]["description"], english[key]["description"]
+                )
+            else:
+                self.assertNotEqual(
+                    pseudo[key]["description"], english[key]["description"]
+                )
+                self.assertIn("[", pseudo[key]["description"])
+        self.assertEqual(pseudo[("", "SUPER+SPACE")]["menu"], "apps")
+        self.assertIn("Super+Shift+Q", pseudo[("", "SUPER+Q")]["description"])
+        self.assertTrue(
+            pseudo[("resize", "ESCAPE")]["description"].startswith("resize · [")
+        )
+        self.assertEqual((records, native), original)
+
     def test_brain_search_excludes_hidden_files_and_symlinks_and_requires_all_terms(
         self,
     ):

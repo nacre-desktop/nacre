@@ -30,7 +30,7 @@ Singleton {
     readonly property var activeWorkspaceId: activeWorkspace?.id ?? null
     readonly property int activeWsId: backend?.capabilities?.perOutputWorkspaces ? backend.activeWorkspace?.index ?? 1 : backend?.activeWorkspace?.id ?? 1
     readonly property point cursorPos: backend?.cursorPos ?? Qt.point(0, 0)
-    readonly property string error: backend?.error ?? qsTr("Unknown compositor backend.")
+    readonly property string error: backend?.error ?? NacreI18n.tr("ui.compositor.error.unknown-backend", "Unknown compositor backend.")
     signal event(var value)
     signal configurationReloaded
     signal panelGesture(string data)

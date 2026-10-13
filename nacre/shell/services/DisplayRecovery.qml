@@ -12,7 +12,7 @@ Singleton {
     property var rebuilding: []
     property var restoringNames: []
     property var saved: ({})
-    property string status: "Ready"
+    property string status: NacreI18n.tr("ui.display-recovery.status.ready", "Ready")
     readonly property var surfaceScreens: Quickshell.screens.filter(s => !rebuilding.includes(s.name))
     readonly property string signature: Quickshell.screens.map(s => [s.name, s.x, s.y, s.width, s.height, s.devicePixelRatio].join(":")).sort().join(";")
     function geometry() {
@@ -85,7 +85,7 @@ Singleton {
             root.restoringNames = root.pendingNames;
             root.rebuilding = root.pendingNames;
             root.pendingNames = [];
-            root.status = "Refreshing display surfaces";
+            root.status = NacreI18n.tr("ui.display-recovery.status.refreshing-display-surfaces", "Refreshing display surfaces");
             revive.start();
         }
     }
@@ -119,7 +119,7 @@ Singleton {
                 }
                 Qt.callLater(() => Views.restore(p, snapshot.ui));
             }
-            root.status = failed ? "Using full renderer recovery" : "Display surfaces refreshed";
+            root.status = failed ? NacreI18n.tr("ui.display-recovery.status.using-full-renderer-recovery", "Using full renderer recovery") : NacreI18n.tr("ui.display-recovery.status.display-surfaces-refreshed", "Display surfaces refreshed");
             if (failed)
                 fallback.running = true;
             else

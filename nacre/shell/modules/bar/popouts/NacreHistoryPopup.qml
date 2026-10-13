@@ -22,14 +22,14 @@ Item {
             NacreText {
                 width: Math.max(0, parent.width - dndToggle.width - clearButton.width - parent.spacing * 2)
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Notifications"
+                text: NacreI18n.tr("popouts.history-popup.text.notifications", "Notifications")
                 font.pointSize: 14
             }
             ActionButton {
                 id: dndToggle
                 objectName: "quickDnd"
-                text: "DND"
-                Accessible.name: NacreNotifs.dnd ? "Disable do not disturb" : "Enable do not disturb"
+                text: NacreI18n.tr("popouts.history-popup.text.dnd", "DND")
+                Accessible.name: NacreNotifs.dnd ? NacreI18n.tr("popouts.history-popup.name.disable-do-not-disturb", "Disable do not disturb") : NacreI18n.tr("popouts.history-popup.name.enable-do-not-disturb", "Enable do not disturb")
                 icon: NacreNotifs.dnd ? "do_not_disturb_on" : "notifications_active"
                 compact: true
                 selected: NacreNotifs.dnd
@@ -38,7 +38,7 @@ Item {
             ActionButton {
                 id: clearButton
                 objectName: "quickClearHistory"
-                text: "Clear"
+                text: NacreI18n.tr("popouts.history-popup.text.clear", "Clear")
                 compact: true
                 enabled: root.entries.length > 0
                 onClicked: root.clear()
@@ -48,7 +48,7 @@ Item {
         NacreText {
             width: parent.width
             visible: root.entries.length === 0
-            text: NacreNotifs.historyReady ? "No notifications" : "Loading notifications…"
+            text: NacreNotifs.historyReady ? NacreI18n.tr("popouts.history-popup.text.no-notifications", "No notifications") : NacreI18n.tr("popouts.history-popup.text.loading-notifications", "Loading notifications…")
             color: NacreTokens.mutedInk
         }
         NacreQuickList {

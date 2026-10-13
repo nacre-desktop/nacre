@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Native Welcome navigation, controls, bounded layout and keyboard dismissal."""
 
 import os
@@ -145,6 +147,7 @@ QtObject { property bool visible:true;property string page:"welcome";property va
                     "key": "Super + S\nSuper + Shift + O\nSuper + Alt + K"
                     if i == 5
                     else "Super + " + str(i),
+                    "titleId": "welcome.shortcut." + str(i) + ".title",
                     "title": "Current action " + str(i),
                     "detail": "A described binding from the current compositor.",
                 }
@@ -257,6 +260,7 @@ TestCase {id:test;name:"Welcome";width:1200;height:900;visible:true;when:windowS
                     "const prefix=" + json.dumps(prefix) + ";",
                 )
             )
+            install_i18n(fixtures)
             result = subprocess.run(
                 [
                     str(runner),

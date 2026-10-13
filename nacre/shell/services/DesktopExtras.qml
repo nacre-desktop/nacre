@@ -51,7 +51,7 @@ Singleton {
         if (action === "pin" || action === "delete")
             request("clips", {});
         if (action === "capture")
-            captured = "Saved to your brain";
+            captured = NacreI18n.tr("ui.desktop-extras.captured.saved-to-your-brain", "Saved to your brain");
     }
     Component {
         id: job
@@ -72,7 +72,7 @@ Singleton {
                     try {
                         root.accept(worker.action, JSON.parse(line));
                     } catch (e) {
-                        root.message = "Could not read desktop data";
+                        root.message = NacreI18n.tr("ui.desktop-extras.message.could-not-read-desktop-data", "Could not read desktop data");
                     }
                 }
             }

@@ -50,7 +50,7 @@ Singleton {
     }
     function accept(data) {
         if (!validate(data)) {
-            error = "Wallpaper presentation data is invalid; the previous pair is preserved.";
+            error = NacreI18n.tr("ui.presentation.error.wallpaper-presentation-data-is-invalid-the-previous-pai", "Wallpaper presentation data is invalid; the previous pair is preserved.");
             return false;
         }
         // A delayed filesystem read must not undo a newer streamed publication.
@@ -91,7 +91,7 @@ Singleton {
                 throw new Error();
             return accept(JSON.parse(text));
         } catch (failure) {
-            error = "Wallpaper presentation could not be read; the previous pair is preserved.";
+            error = NacreI18n.tr("ui.presentation.error.wallpaper-presentation-could-not-be-read-the-previous-p", "Wallpaper presentation could not be read; the previous pair is preserved.");
             return false;
         }
     }
@@ -101,7 +101,7 @@ Singleton {
         watchChanges: true
         onFileChanged: reload()
         onLoaded: root.load(text())
-        onLoadFailed: root.error = "Wallpaper presentation is not available yet."
+        onLoadFailed: root.error = NacreI18n.tr("ui.presentation.error.wallpaper-presentation-is-not-available-yet", "Wallpaper presentation is not available yet.")
     }
     IpcHandler {
         target: "presentationState"

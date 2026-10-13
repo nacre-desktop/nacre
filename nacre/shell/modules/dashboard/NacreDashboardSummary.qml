@@ -55,15 +55,15 @@ Item {
         Repeater {
             model: [
                 {
-                    label: "CPU",
+                    label: NacreI18n.tr("dashboard.dashboard-summary.label.cpu", "CPU"),
                     value: NacreSystemUsage.cpuPerc
                 },
                 {
-                    label: "Memory",
+                    label: NacreI18n.tr("dashboard.dashboard-summary.label.memory", "Memory"),
                     value: NacreSystemUsage.memPerc
                 },
                 {
-                    label: "Storage",
+                    label: NacreI18n.tr("dashboard.dashboard-summary.label.storage", "Storage"),
                     value: NacreSystemUsage.storagePerc
                 }
             ]

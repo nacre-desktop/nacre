@@ -8,25 +8,25 @@ Item {
     readonly property var actions: [
         {
             key: "lock",
-            label: "Lock",
+            label: NacreI18n.tr("session.session-controls.label.lock", "Lock"),
             icon: "lock",
             command: ["loginctl", "lock-session"]
         },
         {
             key: "logout",
-            label: "Log out",
+            label: NacreI18n.tr("session.session-controls.label.log-out", "Log out"),
             icon: "logout",
             command: null
         },
         {
             key: "restart",
-            label: "Restart",
+            label: NacreI18n.tr("session.session-controls.label.restart", "Restart"),
             icon: "restart_alt",
             command: ["systemctl", "reboot"]
         },
         {
             key: "poweroff",
-            label: "Power off",
+            label: NacreI18n.tr("session.session-controls.label.power-off", "Power off"),
             icon: "power_settings_new",
             command: ["systemctl", "poweroff"]
         }

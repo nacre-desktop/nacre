@@ -25,6 +25,36 @@ TestCase {
             animations: true
         };
     }
+    Component {
+        id: actionButton
+        ActionButton {
+            icon: "language"
+            compact: true
+            text: NacreI18n.tr("settings.language.system", "System default")
+        }
+    }
+    function test_action_button_preserves_natural_row_and_wraps_expanded_caption() {
+        const previousLanguage = NacreI18n.language;
+        try {
+            NacreI18n.language = "en";
+            const button = createTemporaryObject(actionButton, test);
+            const row = button.children.find(item => item.spacing !== undefined);
+            const icon = row.children[0], label = row.children[1];
+            compare(button.height, 34);
+            compare(row.width, row.implicitWidth);
+            compare(icon.y, 0);
+            compare(label.lineCount, 1);
+            NacreI18n.language = "pseudo";
+            button.width = 80;
+            tryVerify(() => label.lineCount > 1);
+            verify(button.height > 34);
+            verify(Math.abs(icon.y + icon.height / 2 - row.height / 2) <= 0.5);
+            verify(label.height + 12 <= button.height);
+        } finally {
+            NacreI18n.language = previousLanguage;
+        }
+    }
+
     function test_textfield_edit_selection_validation_and_escape() {
         const field = createTemporaryObject(editor, test);
         compare(field.font.family, NacreTokens.textFamily);

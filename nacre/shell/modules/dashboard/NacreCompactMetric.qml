@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import qs.widgets
+import qs.services
 
 Item {
     id: root
@@ -11,7 +12,7 @@ Item {
     readonly property real diameter: Math.max(20, Math.min(width - 12, height - 28, 64))
     implicitHeight: 92
     Accessible.role: Accessible.Indicator
-    Accessible.name: label + " " + (available ? Math.round(fraction * 100) + "%" : "Unavailable")
+    Accessible.name: label + " " + (available ? Math.round(fraction * 100) + "%" : NacreI18n.tr("dashboard.compact-metric.name.unavailable", "Unavailable"))
     Shape {
         x: (root.width - width) / 2
         width: root.diameter
@@ -62,7 +63,7 @@ Item {
         x: 0
         y: (root.diameter - height) / 2
         width: parent.width
-        text: root.available ? Math.round(root.fraction * 100) + "%" : "—"
+        text: root.available ? NacreI18n.number(Math.round(root.fraction * 100)) + "%" : "—"
         font.pointSize: 14
         horizontalAlignment: Text.AlignHCenter
         color: NacreTokens.accent

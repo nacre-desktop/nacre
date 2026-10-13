@@ -74,7 +74,7 @@ Singleton {
                         writer.response = {
                             value: "",
                             cancelled: true,
-                            error: "Close the current menu or drawer before opening a selector"
+                            error: NacreI18n.tr("ui.menu-prompt.error.close-the-current-menu-or-drawer-before-opening-a-selec", "Close the current menu or drawer before opening a selector")
                         };
                         writer.running = true;
                     } else {
@@ -83,7 +83,7 @@ Singleton {
                         NacrePanelState.openMenu("home", "", false);
                     }
                 } catch (failure) {
-                    root.message = "The selector request could not be read";
+                    root.message = NacreI18n.tr("ui.menu-prompt.message.the-selector-request-could-not-be-read", "The selector request could not be read");
                 }
             }
         }
@@ -98,7 +98,7 @@ Singleton {
         onStarted: write(JSON.stringify(response) + "\n")
         stderr: StdioCollector {
             onStreamFinished: if (text.trim())
-                root.message = "The requesting tool is no longer available"
+                root.message = NacreI18n.tr("ui.menu-prompt.message.the-requesting-tool-is-no-longer-available", "The requesting tool is no longer available")
         }
     }
     Timer {

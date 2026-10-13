@@ -11,7 +11,7 @@ Singleton {
         if (busy)
             return;
         lastAction = args[0];
-        message = "Working…";
+        message = NacreI18n.tr("ui.device-actions.message.working", "Working…");
         worker.command = ["python3", Quickshell.env("HOME") + "/.local/share/nacre/shell/tools/device-actions.py", ...args];
         worker.running = true;
     }
@@ -33,7 +33,7 @@ Singleton {
                     const data = JSON.parse(line);
                     root.message = data.error ?? data.message;
                 } catch (e) {
-                    root.message = "Could not read device status";
+                    root.message = NacreI18n.tr("ui.device-actions.message.could-not-read-device-status", "Could not read device status");
                 }
             }
         }

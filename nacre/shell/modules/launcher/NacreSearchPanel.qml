@@ -49,7 +49,7 @@ NacreSurface {
         width: parent.width - 32
         height: 42
         padding: 12
-        placeholderText: "Search apps or > actions"
+        placeholderText: NacreI18n.tr("launcher.search-panel.placeholderText.search-apps-or-actions", "Search apps or > actions")
         onTextChanged: list.currentIndex = 0
         Keys.onDownPressed: {
             list.forceActiveFocus();
@@ -139,7 +139,7 @@ NacreSurface {
         x: 24
         y: 86
         visible: !root.entries.length
-        text: "No matches"
+        text: NacreI18n.tr("launcher.search-panel.text.no-matches", "No matches")
         color: NacreColours.palette.m3onSurfaceVariant
     }
 }

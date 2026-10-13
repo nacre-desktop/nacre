@@ -17,11 +17,11 @@ NacreSurface {
             values[field.modelData.id] = field.value;
         }
         if (form.kind === "webapp" && (!values.label?.trim() || !/^https?:\/\//.test(values.url || ""))) {
-            error = "Enter an app name and an HTTP or HTTPS website URL";
+            error = NacreI18n.tr("launcher.menu-form.error.enter-an-app-name-and-an-http-or-https-website-url", "Enter an app name and an HTTP or HTTPS website URL");
             return;
         }
         if (form.kind === "reminder" && (!(Number(values.minutes) >= .1 && Number(values.minutes) <= 1440) || !values.message?.trim())) {
-            error = "Enter a duration from 0.1 to 1440 minutes and a message";
+            error = NacreI18n.tr("launcher.menu-form.error.enter-a-duration-from-0-1-to-1440-minutes-and-a-message", "Enter a duration from 0.1 to 1440 minutes and a message");
             return;
         }
         root.submitted(values);
@@ -32,7 +32,7 @@ NacreSurface {
         spacing: 16
         NacreText {
             width: parent.width
-            text: root.form.title || "Enter a value"
+            text: root.form.title || NacreI18n.tr("launcher.menu-form.text.enter-a-value", "Enter a value")
             font.pointSize: 18
             wrapMode: Text.Wrap
             textFormat: Text.PlainText
@@ -82,11 +82,11 @@ NacreSurface {
         Row {
             spacing: 10
             NacreMenuButton {
-                text: "Cancel"
+                text: NacreI18n.tr("launcher.menu-form.text.cancel", "Cancel")
                 onClicked: root.cancelled()
             }
             NacreMenuButton {
-                text: root.form.button || "Continue"
+                text: root.form.button || NacreI18n.tr("launcher.menu-form.text.continue", "Continue")
                 selected: true
                 onClicked: root.submit()
             }

@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Actual Nacre primitives with native Qt input and text/layout tests."""
 
 import json
@@ -84,6 +86,7 @@ class FoundationTests(unittest.TestCase):
                 ROOT / "tests/foundation-qml/tst_foundation.qml",
                 target / "tst_foundation.qml",
             )
+            install_i18n(services)
             result = subprocess.run(
                 [
                     str(runner),

@@ -1,3 +1,5 @@
+from qml_source import install_i18n
+
 """Real fresh mode loader/fallback view with isolated service and page contracts."""
 
 import os
@@ -98,6 +100,7 @@ class LauncherPanelTests(unittest.TestCase):
             shutil.copy2(
                 ROOT / "tests/launcher-qml/tst_panel.qml", target / "tst_panel.qml"
             )
+            install_i18n(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},

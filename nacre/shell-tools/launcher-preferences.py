@@ -2,6 +2,7 @@
 """Private launcher favorites/hidden IDs; atomic updates preserve concurrent edits."""
 
 import argparse
+from nacre_i18n import tr
 import fcntl
 import json
 import os
@@ -22,7 +23,12 @@ def load():
         not isinstance(data.get(key, []), list)
         for key in ("favorites", "hidden", "recent")
     ):
-        raise ValueError("Invalid launcher preferences; original file preserved")
+        raise ValueError(
+            tr(
+                "helper.launcher-preferences.invalid-launcher-preferences-original-file-preserved",
+                "Invalid launcher preferences; original file preserved",
+            )
+        )
     result = {
         key: list(dict.fromkeys(x for x in data.get(key, []) if isinstance(x, str)))
         for key in ("favorites", "hidden", "recent")
@@ -54,7 +60,12 @@ def change(action, value):
         or any(ord(c) < 32 for c in ident)
         or type(enabled) is not bool
     ):
-        raise ValueError("Invalid launcher preference")
+        raise ValueError(
+            tr(
+                "helper.launcher-preferences.invalid-launcher-preference",
+                "Invalid launcher preference",
+            )
+        )
     PATH.parent.mkdir(parents=True, exist_ok=True)
     with PATH.with_suffix(".lock").open("w") as guard:
         os.chmod(guard.name, 0o600)

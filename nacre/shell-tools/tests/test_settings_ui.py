@@ -1,3 +1,4 @@
+from qml_source import install_i18n
 from qml_source import remove_objects, install_foundation_interaction
 
 """Exercise settings navigation and the shared wheel handler in native Qt."""
@@ -103,8 +104,8 @@ class SettingsUITests(unittest.TestCase):
                 .replace("FloatingWindow {", "Rectangle {")
             )
             preview = re.sub(
-                r'title\s*:\s*"Nacre lock screen preview"',
-                'property string title: "Nacre lock screen preview"',
+                r"(?m)^(\s*)title\s*:\s*([^\n]+)",
+                r"\1property string title: \2",
                 preview,
             )
             preview = remove_objects(preview, r"\bProcess\s*\{\s*id\s*:\s*reader\b")
@@ -167,6 +168,7 @@ class SettingsUITests(unittest.TestCase):
             shutil.copy2(
                 ROOT / "tests/qml/tst_settings.qml", target / "tst_settings.qml"
             )
+            install_i18n(target / "fixtures")
             result = subprocess.run(
                 [str(runner), "-input", str(target), "-o", "-,txt"],
                 env=dict(os.environ, QT_QPA_PLATFORM="offscreen"),

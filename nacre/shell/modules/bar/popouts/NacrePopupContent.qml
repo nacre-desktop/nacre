@@ -1,5 +1,6 @@
 import QtQuick
 import qs.widgets
+import qs.services
 
 Item {
     id: root
@@ -20,7 +21,7 @@ Item {
         })
     readonly property bool validRoute: Object.prototype.hasOwnProperty.call(routes, currentName)
     readonly property bool loaded: body.status === Loader.Ready && !!body.item
-    readonly property string error: body.status === Loader.Error ? "This menu could not be loaded." : ""
+    readonly property string error: body.status === Loader.Error ? NacreI18n.tr("popouts.popup-content.status.this-menu-could-not-be-loaded", "This menu could not be loaded.") : ""
     readonly property real targetWidth: lastWidth + 30
     readonly property real targetHeight: lastHeight + 30
     readonly property var currentItem: body.item

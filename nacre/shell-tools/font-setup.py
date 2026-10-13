@@ -2,6 +2,7 @@
 """Provision pinned upstream fonts with verified ownership and rollback."""
 
 import argparse
+from nacre_i18n import tr
 import fcntl
 import hashlib
 import json
@@ -47,7 +48,10 @@ def entries(home, manifest):
     for directory in (canonical,):
         if directory.is_symlink():
             raise ValueError(
-                "Font directory is a symlink; reconcile it before provisioning"
+                tr(
+                    "helper.font-setup.font-directory-is-a-symlink-reconcile-it-before-provisioning",
+                    "Font directory is a symlink; reconcile it before provisioning",
+                )
             )
     known = read(registry)
     selected = []
@@ -65,18 +69,41 @@ def entries(home, manifest):
         for row in group["files"]:
             name = row["name"]
             if Path(name).name != name or name in (".", ".."):
-                raise ValueError("Invalid font asset filename")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.invalid-font-asset-filename",
+                        "Invalid font asset filename",
+                    )
+                )
             target = canonical / name
             if target.is_symlink():
-                raise ValueError(f"Font asset is a symlink: {name}")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.font-asset-is-a-symlink-value0",
+                        "Font asset is a symlink: {value0}",
+                        {"value0": f"{name}"},
+                    )
+                )
             current = digest(target)
             if target.exists() and not target.is_file():
-                raise ValueError(f"Font asset is not a file: {name}")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.font-asset-is-not-a-file-value0",
+                        "Font asset is not a file: {value0}",
+                        {"value0": f"{name}"},
+                    )
+                )
             owned = known.get("files", {}).get(name)
             if current not in (None, row["sha256"], owned) or (
                 current is not None and owned is None and current != row["sha256"]
             ):
-                raise ValueError(f"Local font edit preserved: {name}")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.local-font-edit-preserved-value0",
+                        "Local font edit preserved: {value0}",
+                        {"value0": f"{name}"},
+                    )
+                )
             selected.append(
                 dict(
                     row,
@@ -100,7 +127,13 @@ def download(row):
     with urllib.request.urlopen(row["url"], timeout=30) as response:
         raw = response.read(row["size"] + 1)
     if len(raw) != row["size"] or hashlib.sha256(raw).hexdigest() != row["sha256"]:
-        raise ValueError(f"Upstream font checksum mismatch: {row['name']}")
+        raise ValueError(
+            tr(
+                "helper.font-setup.upstream-font-checksum-mismatch-value0",
+                "Upstream font checksum mismatch: {value0}",
+                {"value0": f"{row['name']}"},
+            )
+        )
     return raw
 
 
@@ -130,17 +163,33 @@ def restore_locked(home, transaction, refresh=True):
             relative.parent == Path(".local/share/fonts/nacre")
         )
         if relative.is_absolute() or ".." in relative.parts or not allowed:
-            raise ValueError("Invalid font rollback path")
+            raise ValueError(
+                tr(
+                    "helper.font-setup.invalid-font-rollback-path",
+                    "Invalid font rollback path",
+                )
+            )
         path = home / relative
         if path.is_symlink() or digest(path) not in (
             operation["after"],
             operation["before"],
         ):
-            raise ValueError(f"Later font edit preserved: {path.name}")
+            raise ValueError(
+                tr(
+                    "helper.font-setup.later-font-edit-preserved-value0",
+                    "Later font edit preserved: {value0}",
+                    {"value0": f"{path.name}"},
+                )
+            )
         if operation["before"] is not None:
             raw = (transaction / "before" / relative).read_bytes()
             if hashlib.sha256(raw).hexdigest() != operation["before"]:
-                raise ValueError("Font rollback backup checksum mismatch")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.font-rollback-backup-checksum-mismatch",
+                        "Font rollback backup checksum mismatch",
+                    )
+                )
             payloads[operation["path"]] = raw
     for operation in reversed(record["operations"]):
         path = home / operation["path"]
@@ -189,11 +238,23 @@ def apply(home, manifest, fetch=download, refresh=True):
                 len(raw) != row["size"]
                 or hashlib.sha256(raw).hexdigest() != row["sha256"]
             ):
-                raise ValueError(f"Font asset checksum mismatch: {row['name']}")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.font-asset-checksum-mismatch-value0",
+                        "Font asset checksum mismatch: {value0}",
+                        {"value0": f"{row['name']}"},
+                    )
+                )
             payloads[row["name"]] = raw
         for row in selected:
             if digest(row["target"]) != row["current"]:
-                raise ValueError(f"Font changed during staging: {row['name']}")
+                raise ValueError(
+                    tr(
+                        "helper.font-setup.font-changed-during-staging-value0",
+                        "Font changed during staging: {value0}",
+                        {"value0": f"{row['name']}"},
+                    )
+                )
         transaction = state / "backups" / uuid.uuid4().hex
         transaction.mkdir(parents=True, mode=0o700)
         operations = []
@@ -244,7 +305,12 @@ def main():
     home = Path.home()
     if args.rollback:
         if not args.rollback.isalnum():
-            raise ValueError("Invalid font transaction ID")
+            raise ValueError(
+                tr(
+                    "helper.font-setup.invalid-font-transaction-id",
+                    "Invalid font transaction ID",
+                )
+            )
         restore(home, home / ".local/state/nacre/fonts/backups" / args.rollback)
         return
     manifest = read(MANIFEST)

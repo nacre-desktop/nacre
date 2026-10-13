@@ -19,8 +19,8 @@ NacreSettingsPage {
             DesktopSettings.request(["display-edit", name, String(scale), mode]);
     }
     NacreSettingsSection {
-        title: "Displays"
-        description: "Choose a primary monitor, then extend or mirror connected screens."
+        title: NacreI18n.tr("ui.displays-page.title.displays", "Displays")
+        description: NacreI18n.tr("ui.displays-page.description.choose-a-primary-monitor-then-extend-or-mirror-connecte", "Choose a primary monitor, then extend or mirror connected screens.")
         Flow {
             width: parent.width
             spacing: 8
@@ -38,17 +38,17 @@ NacreSettingsPage {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Extend right"
+                text: NacreI18n.tr("ui.displays-page.text.extend-right", "Extend right")
                 enabled: !root.blocked && DesktopSettings.monitors.length > 1
                 onClicked: root.layout("extend-right")
             }
             ActionButton {
-                text: "Extend left"
+                text: NacreI18n.tr("ui.displays-page.text.extend-left", "Extend left")
                 enabled: !root.blocked && DesktopSettings.monitors.length > 1
                 onClicked: root.layout("extend-left")
             }
             ActionButton {
-                text: "Mirror"
+                text: NacreI18n.tr("ui.displays-page.text.mirror", "Mirror")
                 enabled: !root.blocked && DesktopSettings.monitors.length > 1
                 onClicked: root.layout("mirror")
             }
@@ -59,8 +59,13 @@ NacreSettingsPage {
         NacreSettingsSection {
             id: monitor
             required property var modelData
-            title: modelData.name + " · " + modelData.width + "×" + modelData.height + " · " + Math.round(modelData.refreshRate || 0) + " Hz"
-            description: "Display changes revert after 20 seconds unless you keep them."
+            title: NacreI18n.tr("ui.displays-page.title.value0-value1-value2-value3-hz", "{value0} · {value1}×{value2} · {value3} Hz", {
+                value0: modelData.name,
+                value1: modelData.width,
+                value2: modelData.height,
+                value3: Math.round(modelData.refreshRate || 0)
+            })
+            description: NacreI18n.tr("ui.displays-page.description.display-changes-revert-after-20-seconds-unless-you-keep", "Display changes revert after 20 seconds unless you keep them.")
             Flow {
                 width: parent.width
                 spacing: 8
@@ -68,7 +73,7 @@ NacreSettingsPage {
                     model: [1, 1.25, 1.5, 1.75, 2, 2.5, 3]
                     ActionButton {
                         required property real modelData
-                        text: Math.round(modelData * 100) + "%"
+                        text: NacreI18n.number(Math.round(modelData * 100)) + "%"
                         selected: monitor.modelData.scale === modelData
                         enabled: !root.blocked
                         onClicked: root.edit(monitor.modelData.name, modelData, "")
@@ -91,17 +96,17 @@ NacreSettingsPage {
         }
     }
     NacreSettingsSection {
-        title: "Keep this display change?"
+        title: NacreI18n.tr("ui.displays-page.title.keep-this-display-change", "Keep this display change?")
         visible: DesktopSettings.pending
         Flow {
             width: parent.width
             spacing: 8
             ActionButton {
-                text: "Keep"
+                text: NacreI18n.tr("ui.displays-page.text.keep", "Keep")
                 onClicked: DesktopSettings.request(["confirm"])
             }
             ActionButton {
-                text: "Revert"
+                text: NacreI18n.tr("ui.displays-page.text.revert", "Revert")
                 onClicked: DesktopSettings.request(["revert"])
             }
         }

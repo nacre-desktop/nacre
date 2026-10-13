@@ -13,15 +13,15 @@ NacreSettingsPage {
     Repeater {
         model: [
             {
-                title: "Output devices",
+                title: NacreI18n.tr("ui.sound-page.title.output-devices", "Output devices"),
                 kind: "output"
             },
             {
-                title: "Microphones",
+                title: NacreI18n.tr("ui.sound-page.title.microphones", "Microphones"),
                 kind: "input"
             },
             {
-                title: "Application audio",
+                title: NacreI18n.tr("ui.sound-page.title.application-audio", "Application audio"),
                 kind: "stream"
             }
         ]
@@ -40,17 +40,17 @@ NacreSettingsPage {
             NacreText {
                 width: parent.width
                 visible: section.devices.length === 0
-                text: section.modelData.kind === "stream" ? "No applications are playing or recording audio." : "No audio devices available."
+                text: section.modelData.kind === "stream" ? NacreI18n.tr("ui.sound-page.text.no-applications-are-playing-or-recording-audio", "No applications are playing or recording audio.") : NacreI18n.tr("ui.sound-page.text.no-audio-devices-available", "No audio devices available.")
                 color: NacreTokens.mutedInk
                 wrapMode: Text.Wrap
             }
         }
     }
     NacreSettingsSection {
-        title: "Advanced audio"
-        description: "Change device profiles and application routing in the audio manager."
+        title: NacreI18n.tr("ui.sound-page.title.advanced-audio", "Advanced audio")
+        description: NacreI18n.tr("ui.sound-page.description.change-device-profiles-and-application-routing-in-the-a", "Change device profiles and application routing in the audio manager.")
         ActionButton {
-            text: "Open audio manager"
+            text: NacreI18n.tr("ui.sound-page.text.open-audio-manager", "Open audio manager")
             onClicked: DesktopActions.execute("audio")
         }
     }

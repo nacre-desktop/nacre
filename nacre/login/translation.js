@@ -1,0 +1,1 @@
+../shell/i18n/translation.js

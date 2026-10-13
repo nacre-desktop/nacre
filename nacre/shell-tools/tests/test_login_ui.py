@@ -17,7 +17,13 @@ class LoginUITests(unittest.TestCase):
             self.skipTest("Qt Quick Test unavailable")
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
-            for name in ("Main.qml", "Logo.qml", "LogoData.js"):
+            for name in (
+                "Main.qml",
+                "Logo.qml",
+                "LogoData.js",
+                "translation.js",
+                "messages.js",
+            ):
                 shutil.copy2(ROOT.parent / "login" / name, target / name)
             shutil.copy2(
                 ROOT / "tests/login-qml/tst_login.qml", target / "tst_login.qml"

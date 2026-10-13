@@ -2,6 +2,7 @@
 """One bounded Open-Meteo snapshot for shell and lock weather consumers."""
 
 import json
+from nacre_i18n import tr
 import time
 import urllib.parse
 import urllib.request
@@ -47,7 +48,12 @@ def fetch_json(url):
     ) as response:
         data = response.read(512001)
         if len(data) > 512000:
-            raise ValueError("Weather response too large")
+            raise ValueError(
+                tr(
+                    "helper.weather.weather-response-too-large",
+                    "Weather response too large",
+                )
+            )
         return json.loads(data)
 
 
@@ -60,7 +66,9 @@ def normalize(forecast, location, latitude, longitude, now=None):
     daily = forecast["daily"]
     hourly = forecast["hourly"]
     checked = time.time() if now is None else now
-    description, legacy = WMO.get(current["weather_code"], ("Weather", 122))
+    description, legacy = WMO.get(
+        current["weather_code"], (tr("weather.condition.unknown", "Weather"), 122)
+    )
     stamp = current["time"]
     hours = []
     days = []
@@ -131,7 +139,12 @@ def refresh():
         if not location:
             location = fetch_json("https://ipinfo.io/json").get("city", "")
         if not location:
-            raise ValueError("Set a weather city in Settings")
+            raise ValueError(
+                tr(
+                    "helper.weather.set-a-weather-city-in-settings",
+                    "Set a weather city in Settings",
+                )
+            )
         if previous.get("location") == location and "latitude" in previous:
             latitude, longitude = previous["latitude"], previous["longitude"]
         else:
@@ -145,7 +158,12 @@ def refresh():
                 )
             ).get("results", [])
             if not choices:
-                raise ValueError("Weather city not found")
+                raise ValueError(
+                    tr(
+                        "helper.weather.weather-city-not-found",
+                        "Weather city not found",
+                    )
+                )
             latitude, longitude = choices[0]["latitude"], choices[0]["longitude"]
         forecast = fetch_json(
             url(

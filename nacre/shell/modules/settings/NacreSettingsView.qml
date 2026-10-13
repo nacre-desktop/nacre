@@ -41,12 +41,22 @@ Item {
     property bool active: true
     property string page: NacrePanelState.settingsPage
     property string query: ""
-    readonly property var pages: Catalog.pages
-    readonly property var current: Catalog.find(page)
-    readonly property var matches: Catalog.search(query)
+    readonly property var pages: Catalog.localize(Catalog.pages, NacreI18n.tr)
+    readonly property var current: Catalog.find(page, NacreI18n.tr)
+    readonly property var matches: Catalog.search(query, NacreI18n.tr)
     readonly property bool narrow: width < 760
+    readonly property real navigationLabelWidth: Math.max(120, ...pages.map(row => Math.ceil(navigationMetrics.advanceWidth(row.label))))
     implicitWidth: 1120
     implicitHeight: 740
+    FontMetrics {
+        id: navigationMetrics
+        font.family: NacreTokens.textFamily
+        font.pointSize: 10
+    }
+    FontMetrics {
+        id: searchMetrics
+        font: search.font
+    }
     function open(id) {
         const target = Catalog.find(id).id;
         page = target;
@@ -73,7 +83,7 @@ Item {
         id: rail
         x: 0
         y: 0
-        width: root.narrow ? root.width : 208
+        width: root.narrow ? root.width : Math.max(208, root.navigationLabelWidth + 68, Math.ceil(searchMetrics.advanceWidth(search.placeholderText)) + 52)
         height: root.narrow ? 118 : root.height
         radius: 18
         color: NacreColours.palette.m3surfaceContainer
@@ -86,7 +96,7 @@ Item {
             height: 40
             padding: 10
             text: root.query
-            placeholderText: "Search settings"
+            placeholderText: NacreI18n.tr("settings.settings-view.placeholderText.search-settings", "Search settings")
             onTextEdited: root.query = text
             onAccepted: if (root.matches.length)
                 root.open(root.matches[0].id)
@@ -105,7 +115,7 @@ Item {
             boundsBehavior: Flickable.StopAtBounds
             delegate: NacreSurface {
                 required property var modelData
-                width: root.narrow ? 130 : categories.width
+                width: root.narrow ? Math.max(130, navigationMetrics.advanceWidth(modelData.label) + 56) : categories.width
                 height: 38
                 radius: 19
                 color: root.page === modelData.id ? NacreColours.palette.m3secondaryContainer : "transparent"
@@ -119,7 +129,7 @@ Item {
                     }
                     NacreText {
                         text: parent.parent.modelData.label
-                        width: root.narrow ? 88 : 120
+                        width: parent.parent.width - 56
                         font.pointSize: 10
                         elide: Text.ElideRight
                     }
@@ -139,7 +149,7 @@ Item {
     Flickable {
         id: scroll
         objectName: "settingsScroll"
-        x: root.narrow ? 0 : 232
+        x: root.narrow ? 0 : rail.width + 24
         y: root.narrow ? 130 : 0
         width: Math.max(0, parent.width - x)
         height: Math.max(0, parent.height - y)
@@ -157,14 +167,16 @@ Item {
             spacing: 20
             NacreText {
                 width: parent.width
-                text: root.query.trim() ? "Search results" : root.current.label
+                text: root.query.trim() ? NacreI18n.tr("settings.settings-view.text.search-results", "Search results") : root.current.label
                 font.pointSize: 21
                 color: NacreTokens.accent
                 wrapMode: Text.Wrap
             }
             NacreText {
                 width: parent.width
-                text: root.query.trim() ? root.matches.length + " matching sections" : root.current.detail
+                text: root.query.trim() ? NacreI18n.tr("ui.settings-view.text.value0-matching-sections", "{value0} matching sections", {
+                    value0: root.matches.length
+                }) : root.current.detail
                 font.pointSize: 11
                 color: NacreTokens.mutedInk
                 wrapMode: Text.Wrap

@@ -2,6 +2,7 @@
 """Bounded menu discovery and explicit user-selected tools; no search-text execution."""
 
 import argparse
+from nacre_i18n import tr
 import hashlib
 import fcntl
 from functools import wraps
@@ -73,7 +74,9 @@ def read(path, fallback):
 
 def package_name(value):
     if not isinstance(value, str) or not PACKAGE.fullmatch(value):
-        raise ValueError("Invalid package name")
+        raise ValueError(
+            tr("helper.menu-backend.invalid-package-name", "Invalid package name")
+        )
     return value
 
 
@@ -207,7 +210,10 @@ def search_packages(query):
     if len(query) < 2:
         return {
             "rows": [],
-            "message": "Type at least two characters to search packages",
+            "message": tr(
+                "helper.menu-backend.type-at-least-two-characters-to-search-packages",
+                "Type at least two characters to search packages",
+            ),
         }
     rows = []
     if shutil.which("pacman"):
@@ -303,7 +309,12 @@ def package_command(action, value):
             value,
         ]
     if not shutil.which("pacman"):
-        raise ValueError("Package management requires an Arch-compatible system")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.package-management-requires-an-arch-compatible-system",
+                "Package management requires an Arch-compatible system",
+            )
+        )
     return [
         "pkexec",
         "pacman",
@@ -321,9 +332,19 @@ def create_webapp(label, url):
         or not 1 <= len(label.strip()) <= 80
         or any(ord(c) < 32 for c in label)
     ):
-        raise ValueError("Choose a short application name")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.choose-a-short-application-name",
+                "Choose a short application name",
+            )
+        )
     if not isinstance(url, str) or len(url) > 4096 or any(ord(c) < 32 for c in url):
-        raise ValueError("Enter a valid website URL")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.enter-a-valid-website-url",
+                "Enter a valid website URL",
+            )
+        )
     parsed = urlparse(url)
     if (
         parsed.scheme not in ("https", "http")
@@ -331,7 +352,12 @@ def create_webapp(label, url):
         or parsed.username
         or parsed.password
     ):
-        raise ValueError("Use an HTTP or HTTPS website URL without credentials")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.use-an-http-or-https-website-url-without-credentials",
+                "Use an HTTP or HTTPS website URL without credentials",
+            )
+        )
     ident = uuid.uuid4().hex
     rows = webapps()
     row = dict(id=ident, label=label.strip(), url=url)
@@ -346,31 +372,47 @@ def create_webapp(label, url):
     path.write_text(body)
     path.chmod(0o600)
     CACHE.joinpath("state.json").unlink(missing_ok=True)
-    return {"message": "Web app added to All apps"}
+    return {
+        "message": tr(
+            "helper.menu-backend.web-app-added-to-all-apps", "Web app added to All apps"
+        )
+    }
 
 
 @registry_lock("webapps")
 def remove_webapp(ident):
     if not re.fullmatch("[0-9a-f]{32}", str(ident)):
-        raise ValueError("Invalid web app")
+        raise ValueError(tr("helper.menu-backend.invalid-web-app", "Invalid web app"))
     rows = webapps()
     if not any(row["id"] == ident for row in rows):
-        raise ValueError("Web app no longer exists")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.web-app-no-longer-exists",
+                "Web app no longer exists",
+            )
+        )
     atomic(STATE / "webapps.json", [row for row in rows if row["id"] != ident])
     (HOME / ".local/share/applications" / ("nacre-web-" + ident + ".desktop")).unlink(
         missing_ok=True
     )
     CACHE.joinpath("state.json").unlink(missing_ok=True)
-    return {"message": "Web app removed"}
+    return {"message": tr("helper.menu-backend.web-app-removed", "Web app removed")}
 
 
 def launch_webapp(ident):
     row = next((row for row in webapps() if row["id"] == ident), None)
     if not row:
-        raise ValueError("Web app no longer exists")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.web-app-no-longer-exists",
+                "Web app no longer exists",
+            )
+        )
     url = row["url"]
     if urlparse(url).scheme not in ("http", "https"):
-        raise ValueError("Invalid saved website")
+        raise ValueError(
+            tr("helper.menu-backend.invalid-saved-website", "Invalid saved website")
+        )
     browser = next(
         (
             shutil.which(name)
@@ -381,7 +423,7 @@ def launch_webapp(ident):
     )
     command = [browser, "--app=" + url] if browser else ["nacre-app", "browser", url]
     subprocess.Popen(["uwsm", "app", "--", *command], start_new_session=True)
-    return {"message": "Web app opened"}
+    return {"message": tr("helper.menu-backend.web-app-opened", "Web app opened")}
 
 
 @registry_lock("reminders")
@@ -394,10 +436,18 @@ def set_reminder(minutes, message):
         or "\0" in message
     ):
         raise ValueError(
-            "Use a duration between 0.1 and 1440 minutes and a short message"
+            tr(
+                "helper.menu-backend.use-a-duration-between-0-1-and-1440-minutes-and-a-short-message",
+                "Use a duration between 0.1 and 1440 minutes and a short message",
+            )
         )
     if not shutil.which("notify-send"):
-        raise ValueError("Desktop notifications are unavailable")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.desktop-notifications-are-unavailable",
+                "Desktop notifications are unavailable",
+            )
+        )
     unit = "nacre-reminder-" + uuid.uuid4().hex
     run(
         [
@@ -412,7 +462,7 @@ def set_reminder(minutes, message):
             "Nacre Reminders",
             "-i",
             "nacre-notifications",
-            "Reminder",
+            tr("reminder.notification.title", "Reminder"),
             message.strip(),
         ],
         check=True,
@@ -425,7 +475,7 @@ def set_reminder(minutes, message):
     )
     atomic(STATE / "reminders.json", rows)
     CACHE.joinpath("state.json").unlink(missing_ok=True)
-    return {"message": "Reminder set"}
+    return {"message": tr("helper.menu-backend.reminder-set", "Reminder set")}
 
 
 @registry_lock("reminders")
@@ -435,13 +485,15 @@ def cancel_reminder(unit):
         or not UNIT.fullmatch(unit)
         or not any(row["unit"] == unit for row in reminders())
     ):
-        raise ValueError("Unknown Nacre reminder")
+        raise ValueError(
+            tr("helper.menu-backend.unknown-nacre-reminder", "Unknown Nacre reminder")
+        )
     run(["systemctl", "--user", "stop", unit], check=True)
     atomic(
         STATE / "reminders.json", [row for row in reminders() if row["unit"] != unit]
     )
     CACHE.joinpath("state.json").unlink(missing_ok=True)
-    return {"message": "Reminder canceled"}
+    return {"message": tr("helper.menu-backend.reminder-canceled", "Reminder canceled")}
 
 
 def capture_window():
@@ -454,7 +506,12 @@ def capture_window():
         or any(type(v) is not int for v in position + size)
         or any(v <= 0 or v > 32768 for v in size)
     ):
-        raise ValueError("Focus the window you want to capture first")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.focus-the-window-you-want-to-capture-first",
+                "Focus the window you want to capture first",
+            )
+        )
     folder = HOME / "Pictures/Screenshots"
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / (
@@ -465,7 +522,7 @@ def capture_window():
     subprocess.run(
         ["wl-copy", "--type", "image/png"], input=path.read_bytes(), check=True
     )
-    return "Window saved and copied"
+    return tr("helper.menu-backend.window-saved-and-copied", "Window saved and copied")
 
 
 def read_screen(kind):
@@ -526,7 +583,12 @@ def unit_owner(unit):
 @registry_lock("recording")
 def record_start():
     if active("nacre-screen-recording.service"):
-        raise ValueError("A Nacre recording is already running")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.a-nacre-recording-is-already-running",
+                "A Nacre recording is already running",
+            )
+        )
     selection = run(["slurp"], timeout=180)
     if selection.returncode or not selection.stdout.strip():
         return ""
@@ -556,10 +618,18 @@ def record_start():
             break
         time.sleep(0.1)
     if not owner:
-        raise ValueError("Recording could not start")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.recording-could-not-start",
+                "Recording could not start",
+            )
+        )
     atomic(STATE / "recording.json", dict(owner=owner, path=str(path)))
     CACHE.joinpath("state.json").unlink(missing_ok=True)
-    return "Recording started; use Actions › Capture › Stop recording"
+    return tr(
+        "helper.menu-backend.recording-started-use-actions-capture-stop-recording",
+        "Recording started; use Actions › Capture › Stop recording",
+    )
 
 
 @registry_lock("recording")
@@ -567,9 +637,17 @@ def record_stop():
     data = read(STATE / "recording.json", {})
     owner = unit_owner("nacre-screen-recording.service")
     if not owner:
-        return "No Nacre recording is running"
+        return tr(
+            "helper.menu-backend.no-nacre-recording-is-running",
+            "No Nacre recording is running",
+        )
     if not isinstance(data, dict) or data.get("owner") != owner:
-        raise ValueError("This recording belongs to another controller")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.this-recording-belongs-to-another-controller",
+                "This recording belongs to another controller",
+            )
+        )
     run(
         [
             "systemctl",
@@ -585,9 +663,17 @@ def record_stop():
             break
         time.sleep(0.1)
     else:
-        raise ValueError("Recording is still finishing; try again shortly")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.recording-is-still-finishing-try-again-shortly",
+                "Recording is still finishing; try again shortly",
+            )
+        )
     CACHE.joinpath("state.json").unlink(missing_ok=True)
-    return "Recording saved in Videos/Recordings"
+    return tr(
+        "helper.menu-backend.recording-saved-in-videos-recordings",
+        "Recording saved in Videos/Recordings",
+    )
 
 
 @registry_lock("stay-awake")
@@ -597,7 +683,12 @@ def stay_awake():
     record = read(STATE / "stay-awake.json", {})
     if owner:
         if not isinstance(record, dict) or record.get("owner") != owner:
-            raise ValueError("Stay awake belongs to another controller")
+            raise ValueError(
+                tr(
+                    "helper.menu-backend.stay-awake-belongs-to-another-controller",
+                    "Stay awake belongs to another controller",
+                )
+            )
         run(["systemctl", "--user", "stop", unit], check=True)
         message = "Normal idle behavior restored"
     else:
@@ -623,7 +714,12 @@ def stay_awake():
                 break
             time.sleep(0.1)
         if not owner:
-            raise ValueError("Stay awake could not start")
+            raise ValueError(
+                tr(
+                    "helper.menu-backend.stay-awake-could-not-start",
+                    "Stay awake could not start",
+                )
+            )
         atomic(STATE / "stay-awake.json", dict(owner=owner))
         message = "Stay awake enabled until you turn it off or log out"
     CACHE.joinpath("state.json").unlink(missing_ok=True)
@@ -670,7 +766,7 @@ def tool(value):
         return record_stop()
     if value == "color-picker":
         subprocess.run(["hyprpicker", "-a"], check=True)
-        return "Color copied"
+        return tr("helper.menu-backend.color-copied", "Color copied")
     if value == "stay-awake":
         return stay_awake()
     if value == "focus-timer":
@@ -689,12 +785,17 @@ def tool(value):
                 "--no-pager",
             ]
         )
-    raise ValueError("Unknown menu tool")
+    raise ValueError(tr("helper.menu-backend.unknown-menu-tool", "Unknown menu tool"))
 
 
 def edit_config(value):
     if value not in ("defaults", "shortcuts"):
-        raise ValueError("Unknown configuration route")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.unknown-configuration-route",
+                "Unknown configuration route",
+            )
+        )
     path = HOME / (
         ".config/nacre/apps.json"
         if value == "defaults"
@@ -731,7 +832,12 @@ def edit_config(value):
         )
     )
     if not command:
-        raise ValueError("Install a text editor such as Neovim to edit configuration")
+        raise ValueError(
+            tr(
+                "helper.menu-backend.install-a-text-editor-such-as-neovim-to-edit-configuration",
+                "Install a text editor such as Neovim to edit configuration",
+            )
+        )
     return subprocess.call([*command, str(path)])
 
 
@@ -741,9 +847,17 @@ def search_files(query):
         or len(query) > 160
         or any(ord(c) < 32 for c in query)
     ):
-        raise ValueError("Invalid file search")
+        raise ValueError(
+            tr("helper.menu-backend.invalid-file-search", "Invalid file search")
+        )
     if len(query.strip()) < 2:
-        return {"rows": [], "message": "Type two or more characters to find files"}
+        return {
+            "rows": [],
+            "message": tr(
+                "helper.menu-backend.type-two-or-more-characters-to-find-files",
+                "Type two or more characters to find files",
+            ),
+        }
     roots = [
         str(HOME / name)
         for name in ("Documents", "Downloads", "Pictures", "Desktop", "Projects")
@@ -752,7 +866,13 @@ def search_files(query):
     if not roots:
         return {"rows": []}
     if not shutil.which("fd"):
-        return {"rows": [], "message": "Install fd to search files"}
+        return {
+            "rows": [],
+            "message": tr(
+                "helper.menu-backend.install-fd-to-search-files",
+                "Install fd to search files",
+            ),
+        }
     result = run(
         [
             "fd",
@@ -793,11 +913,20 @@ def convert_units(expression):
         or not re.fullmatch(r"[+\-]?[0-9][A-Za-z0-9µ°% .+*/^()\-]*", expression)
         or not re.search(r"\b(to|in)\b", expression)
     ):
-        return {"ok": False, "error": "Try a conversion such as 10 km to miles"}
+        return {
+            "ok": False,
+            "error": tr(
+                "helper.menu-backend.try-a-conversion-such-as-10-km-to-miles",
+                "Try a conversion such as 10 km to miles",
+            ),
+        }
     if not shutil.which("qalc"):
         return {
             "ok": False,
-            "error": "Install libqalculate for unit and currency conversions",
+            "error": tr(
+                "helper.menu-backend.install-libqalculate-for-unit-and-currency-conversions",
+                "Install libqalculate for unit and currency conversions",
+            ),
         }
     result = subprocess.run(
         [
@@ -831,11 +960,20 @@ def convert_units(expression):
         or len(value) > 2048
         or "error" in result.stderr.lower()
     ):
-        return {"ok": False, "error": "Could not convert these units"}
+        return {
+            "ok": False,
+            "error": tr(
+                "helper.menu-backend.could-not-convert-these-units",
+                "Could not convert these units",
+            ),
+        }
     return {
         "ok": True,
         "value": value,
-        "description": "Enter to copy · currencies use stored Qalculate rates",
+        "description": tr(
+            "helper.menu-backend.enter-to-copy-currencies-use-stored-qalculate-rates",
+            "Enter to copy · currencies use stored Qalculate rates",
+        ),
     }
 
 

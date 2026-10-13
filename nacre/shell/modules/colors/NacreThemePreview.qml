@@ -1,5 +1,6 @@
 import QtQuick
 import qs.widgets
+import qs.services
 
 Rectangle {
     id: root
@@ -69,7 +70,7 @@ Rectangle {
     Text {
         x: parent.width - 73
         y: 10
-        text: "Nacre"
+        text: NacreI18n.tr("colors.theme-preview.text.nacre", "Nacre")
         font.pointSize: 9
         color: root.c("onSurface")
     }
@@ -89,14 +90,14 @@ Rectangle {
         Text {
             x: 12
             y: 6
-            text: "Files"
+            text: NacreI18n.tr("colors.theme-preview.text.files", "Files")
             font.pointSize: 9
             color: root.c("onSurface")
         }
         Text {
             x: 12
             y: 40
-            text: root.condensed ? "Documents\nPictures" : "Documents\nPictures\nProjects"
+            text: root.condensed ? NacreI18n.tr("colors.theme-preview.text.documents-pictures", "Documents\nPictures") : NacreI18n.tr("colors.theme-preview.text.documents-pictures-projects", "Documents\nPictures\nProjects")
             font.pointSize: 9
             color: root.c("onSurface")
             lineHeight: 1.3
@@ -110,7 +111,7 @@ Rectangle {
             color: root.c("primary")
             Text {
                 anchors.centerIn: parent
-                text: "Open"
+                text: NacreI18n.tr("colors.theme-preview.text.open", "Open")
                 font.pointSize: 9
                 color: root.c("onPrimary")
             }
@@ -135,7 +136,7 @@ Rectangle {
         Text {
             x: 9
             y: root.condensed ? 7 : 9
-            text: "$ build"
+            text: NacreI18n.tr("colors.theme-preview.text.build", "$ build")
             font.family: "JetBrains Mono NF"
             font.pointSize: 8
             color: root.c("onSurface")
@@ -143,14 +144,14 @@ Rectangle {
         Text {
             x: 9
             y: root.condensed ? 27 : 31
-            text: "✓ Ready"
+            text: NacreI18n.tr("colors.theme-preview.text.ready", "✓ Ready")
             font.pointSize: 8
             color: root.c("green")
         }
         Text {
             x: 9
             y: root.condensed ? 45 : 53
-            text: "! Warning"
+            text: NacreI18n.tr("colors.theme-preview.text.warning", "! Warning")
             font.pointSize: 8
             color: root.c("yellow")
         }
@@ -168,12 +169,12 @@ Rectangle {
             x: 9
             y: 9
             width: parent.width - 18
-            text: "Message\nYour theme is ready"
+            text: NacreI18n.tr("colors.theme-preview.text.message-your-theme-is-ready", "Message\nYour theme is ready")
             wrapMode: Text.Wrap
             font.pointSize: 8
             color: root.c("onPrimaryContainer")
         }
     }
     Accessible.role: Accessible.Graphic
-    Accessible.name: "Desktop preview with bar, window, terminal and notification"
+    Accessible.name: NacreI18n.tr("ui.nacrethemepreview.name.desktop-preview-with-bar-window-terminal-and-notification", "Desktop preview with bar, window, terminal and notification")
 }

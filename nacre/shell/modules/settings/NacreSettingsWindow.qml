@@ -6,7 +6,7 @@ import qs.services
 
 FloatingWindow {
     id: root
-    title: "Nacre Settings"
+    title: NacreSettingsApp.nativeTitle
     objectName: "nacreSettingsWindow"
     readonly property var view: content.item
     readonly property string searchQuery: view?.query ?? content.savedState?.query ?? ""
@@ -35,7 +35,7 @@ FloatingWindow {
     onWindowConnected: activate()
     NacreAppHeader {
         id: header
-        title: "Nacre Settings"
+        title: NacreSettingsApp.windowTitle
         app: "settings"
         width: parent.width
         section: view?.current?.name || view?.current?.title || ""

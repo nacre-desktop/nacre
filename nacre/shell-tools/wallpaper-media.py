@@ -2,6 +2,7 @@
 """Local wallpaper catalog, video posters, private picker preferences and selection."""
 
 import argparse
+from nacre_i18n import tr
 import functools
 import fcntl
 import hashlib
@@ -120,12 +121,22 @@ def theme(value):
             "paletteBackgroundFromWallpaper",
         }
     ):
-        raise ValueError("Unknown appearance preference")
+        raise ValueError(
+            tr(
+                "helper.wallpaper-media.unknown-appearance-preference",
+                "Unknown appearance preference",
+            )
+        )
     accent = value.get("paletteAccent")
     if accent is not None and (
         not isinstance(accent, str) or not re.fullmatch(r"auto|[0-9a-fA-F]{6}", accent)
     ):
-        raise ValueError("Choose a valid wallpaper accent")
+        raise ValueError(
+            tr(
+                "helper.wallpaper-media.choose-a-valid-wallpaper-accent",
+                "Choose a valid wallpaper accent",
+            )
+        )
     previous = settings()
     changes = {key: item for key, item in value.items() if key != "paletteAccent"}
     if "paletteHarmony" in value:
@@ -141,7 +152,12 @@ def theme(value):
         path = STATE / "last.txt"
         poster = path.read_text().strip() if path.exists() else ""
     if not poster or not Path(poster).is_file():
-        raise ValueError("Choose a wallpaper before changing its palette")
+        raise ValueError(
+            tr(
+                "helper.wallpaper-media.choose-a-wallpaper-before-changing-its-palette",
+                "Choose a wallpaper before changing its palette",
+            )
+        )
     result = preference(changes)
     try:
         cli = HOME / ".local/share/nacre/shell/bin/nacre_shell"
@@ -216,14 +232,34 @@ def preference(value):
     if not isinstance(value, dict) or any(
         k not in (*allowed, *boolean_keys, "rotationMinutes") for k in value
     ):
-        raise ValueError("Unknown picker preference")
+        raise ValueError(
+            tr(
+                "helper.wallpaper-media.unknown-picker-preference",
+                "Unknown picker preference",
+            )
+        )
     for k, v in value.items():
         if k in allowed and v not in allowed[k]:
-            raise ValueError("Invalid picker preference")
+            raise ValueError(
+                tr(
+                    "helper.wallpaper-media.invalid-picker-preference",
+                    "Invalid picker preference",
+                )
+            )
         if k in boolean_keys and type(v) is not bool:
-            raise ValueError("Expected a boolean preference")
+            raise ValueError(
+                tr(
+                    "helper.wallpaper-media.expected-a-boolean-preference",
+                    "Expected a boolean preference",
+                )
+            )
         if k == "rotationMinutes" and (type(v) is not int or not 5 <= v <= 1440):
-            raise ValueError("Choose a wallpaper interval between 5 and 1440 minutes")
+            raise ValueError(
+                tr(
+                    "helper.wallpaper-media.choose-a-wallpaper-interval-between-5-and-1440-minutes",
+                    "Choose a wallpaper interval between 5 and 1440 minutes",
+                )
+            )
     PREFS.parent.mkdir(parents=True, exist_ok=True)
     with PREFS.with_suffix(".lock").open("w") as lock:
         os.chmod(lock.name, 0o600)
@@ -273,7 +309,12 @@ def previews(poster):
 def describe(path):
     path = Path(path).expanduser().resolve()
     if not path.is_file() or path.suffix.lower() not in IMAGES | VIDEOS:
-        raise ValueError("Select a local image, GIF or video")
+        raise ValueError(
+            tr(
+                "helper.wallpaper-media.select-a-local-image-gif-or-video",
+                "Select a local image, GIF or video",
+            )
+        )
     animated = False
     if path.suffix.lower() == ".gif":
         with Image.open(path) as image:
@@ -752,7 +793,10 @@ def demo_start():
             poster = str(blank)
         if not Path(poster).is_file():
             raise ValueError(
-                "Your starting wallpaper is unavailable. Restore its file before trying the demo."
+                tr(
+                    "helper.wallpaper-media.your-starting-wallpaper-is-unavailable-restore-its-file-before-tr",
+                    "Your starting wallpaper is unavailable. Restore its file before trying the demo.",
+                )
             )
         if not original:
             original = describe(poster)
@@ -792,11 +836,19 @@ def demo_start():
 
 def demo_restore(token):
     if not isinstance(token, str) or not re.fullmatch(r"[0-9a-f]{32}", token):
-        raise ValueError("Reopen Welcome to capture a starting point.")
+        raise ValueError(
+            tr(
+                "helper.wallpaper-media.reopen-welcome-to-capture-a-starting-point",
+                "Reopen Welcome to capture a starting point.",
+            )
+        )
     snapshot = read(HOME / ".local/state/nacre/welcome/demo" / (token + ".json"), {})
     if snapshot.get("version") != 1:
         raise ValueError(
-            "The demo starting point expired. Reopen Welcome to try again."
+            tr(
+                "helper.wallpaper-media.the-demo-starting-point-expired-reopen-welcome-to-try-again",
+                "The demo starting point expired. Reopen Welcome to try again.",
+            )
         )
     item = demo_module("classic-state").restore_demo(HOME, snapshot)
     return {"media": item, "preferences": settings()}
@@ -813,7 +865,12 @@ def serve(input_stream=None, output_stream=None):
     for line in input_stream:
         try:
             if len(line) > 65536:
-                raise ValueError("Palette request is too large")
+                raise ValueError(
+                    tr(
+                        "helper.wallpaper-media.palette-request-is-too-large",
+                        "Palette request is too large",
+                    )
+                )
             request = json.loads(line)
             action, value = request["action"], request["value"]
             with contextlib.redirect_stdout(output_stream):
@@ -822,7 +879,12 @@ def serve(input_stream=None, output_stream=None):
                 elif action in ("theme", "preferences") and isinstance(value, dict):
                     result = theme(value) if action == "theme" else preference(value)
                 else:
-                    raise ValueError("Invalid palette request")
+                    raise ValueError(
+                        tr(
+                            "helper.wallpaper-media.invalid-palette-request",
+                            "Invalid palette request",
+                        )
+                    )
             response = {"done": True, "code": 0, "result": result}
         except (
             OSError,

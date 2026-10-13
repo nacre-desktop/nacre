@@ -12,7 +12,8 @@ Singleton {
     readonly property int minutes: clock.minutes
     readonly property int seconds: clock.seconds
     function format(pattern) {
-        return Qt.formatDateTime(date, pattern);
+        const value = NacreI18n.dateTime(date, pattern);
+        return /M{3}|d{3}/.test(pattern) ? NacreI18n.displayValue(value) : value;
     }
     SystemClock {
         id: clock

@@ -2,7 +2,7 @@
 
 const operations = ["tool", "route", "calculator", "legacy", "scope", "toggle", "next-wallpaper", "personality", "background", "palette-mode", "setting-toggle", "settings", "config", "form", "maintenance", "info", "url", "power", "power-profile", "command", "media"];
 const providers = ["apps", "wallpapers", "accents", "fonts", "software", "packages", "installed", "windows", "wifi", "bluetooth", "clipboard", "keys", "emoji", "timers", "webapps", "audio"];
-const fields = ["id", "kind", "label", "description", "icon", "operation", "value", "provider", "capability", "state", "confirm", "brand", "aliases", "hidden", "arguments"];
+const fields = ["labelId", "descriptionId", "confirmId", "id", "kind", "label", "description", "icon", "operation", "value", "provider", "capability", "state", "confirm", "brand", "aliases", "hidden", "arguments"];
 const aliases = {
     favorites: "home",
     all: "apps",
@@ -29,38 +29,44 @@ function validId(id) {
 }
 function validate(row, partial) {
     if (!row || typeof row !== "object" || Array.isArray(row) || !validId(row.id))
-        throw new Error("Menu entries need a lowercase dotted ID");
+        throw new Error(tr("launcher.validation.menu-entries-need-a-lowercase-dotted-id", "Menu entries need a lowercase dotted ID"));
     for (const key of Object.keys(row)) {
         if (!fields.includes(key))
-            throw new Error("Unknown menu field: " + key);
+            throw new Error(tr("launcher.validation.unknown-menu-field", "Unknown menu field: {key}", {
+                key: key
+            }));
         if (["hidden"].includes(key) && typeof row[key] !== "boolean")
-            throw new Error("Hidden must be true or false");
+            throw new Error(tr("launcher.validation.hidden-must-be-true-or-false", "Hidden must be true or false"));
         if (!["hidden", "arguments", "aliases"].includes(key) && !plain(row[key]))
-            throw new Error("Invalid menu text: " + key);
+            throw new Error(tr("launcher.validation.invalid-menu-text", "Invalid menu text: {key}", {
+                key: key
+            }));
     }
     if (!partial && (!["group", "action"].includes(row.kind) || !row.label?.trim()))
-        throw new Error("Every menu entry needs a kind and label");
+        throw new Error(tr("launcher.validation.every-menu-entry-needs-a-kind-and-label", "Every menu entry needs a kind and label"));
     if (row.kind !== undefined && !["group", "action"].includes(row.kind))
-        throw new Error("Unknown menu kind");
+        throw new Error(tr("launcher.validation.unknown-menu-kind", "Unknown menu kind"));
     if (row.operation !== undefined && !operations.includes(row.operation))
-        throw new Error("Unknown menu operation");
+        throw new Error(tr("launcher.validation.unknown-menu-operation", "Unknown menu operation"));
     if (row.provider !== undefined && !providers.includes(row.provider))
-        throw new Error("Unknown menu provider");
+        throw new Error(tr("launcher.validation.unknown-menu-provider", "Unknown menu provider"));
     for (const field of ["aliases", "arguments"]) {
         if (row[field] !== undefined && (!Array.isArray(row[field]) || row[field].length > 32 || row[field].some(value => !plain(value) || !value)))
-            throw new Error("Invalid " + field);
+            throw new Error(tr("launcher.validation.invalid-field", "Invalid {field}", {
+                field: field
+            }));
     }
     if (!partial && row.kind === "action" && !operations.includes(row.operation))
-        throw new Error("An action needs a supported operation");
+        throw new Error(tr("launcher.validation.an-action-needs-a-supported-operation", "An action needs a supported operation"));
     if (row.operation === "command" && (!row.arguments?.length || row.arguments[0].startsWith("-")))
-        throw new Error("Commands use an explicit executable and argument array");
+        throw new Error(tr("launcher.validation.commands-use-an-explicit-executable-and-argument-array", "Commands use an explicit executable and argument array"));
 }
 function document(text) {
     if (typeof text !== "string" || text.length > 2097152)
-        throw new Error("Menu file is too large");
+        throw new Error(tr("launcher.validation.menu-file-is-too-large", "Menu file is too large"));
     const value = JSON.parse(text);
     if (!value || value.version !== 1 || !Array.isArray(value.entries) || value.entries.length > 1000)
-        throw new Error("Unsupported menu format");
+        throw new Error(tr("launcher.validation.unsupported-menu-format", "Unsupported menu format"));
     return value;
 }
 function merge(baseText, userText) {
@@ -68,7 +74,7 @@ function merge(baseText, userText) {
     rows.forEach(row => validate(row, false));
     const ids = new Map(rows.map((row, index) => [row.id, index]));
     if (ids.size !== rows.length)
-        throw new Error("Duplicate menu ID");
+        throw new Error(tr("launcher.validation.duplicate-menu-id", "Duplicate menu ID"));
     let error = "";
     if (userText?.trim()) {
         try {
@@ -77,11 +83,15 @@ function merge(baseText, userText) {
             for (const row of extension.entries) {
                 validate(row, positions.has(row.id));
                 if (seen.has(row.id))
-                    throw new Error("Duplicate extension ID");
+                    throw new Error(tr("launcher.validation.duplicate-extension-id", "Duplicate extension ID"));
                 seen.add(row.id);
-                if (positions.has(row.id))
-                    candidate[positions.get(row.id)] = Object.assign({}, candidate[positions.get(row.id)], row);
-                else {
+                if (positions.has(row.id)) {
+                    const previous = Object.assign({}, candidate[positions.get(row.id)]);
+                    for (const field of ["label", "description", "confirm"])
+                        if (row[field] !== undefined && row[field + "Id"] === undefined)
+                            delete previous[field + "Id"];
+                    candidate[positions.get(row.id)] = Object.assign(previous, row);
+                } else {
                     positions.set(row.id, candidate.length);
                     candidate.push(Object.assign({}, row));
                 }
@@ -93,7 +103,9 @@ function merge(baseText, userText) {
                 error: ""
             };
         } catch (failure) {
-            error = "Menu extension: " + failure.message + ". Built-in entries remain available.";
+            error = tr("launcher.validation.extension", "Menu extension: {error}. Built-in entries remain available.", {
+                error: failure.message
+            });
         }
     }
     checkTree(rows);
@@ -110,18 +122,18 @@ function checkTree(rows) {
     const entries = new Map(rows.map(row => [row.id, row]));
     const routeAliases = new Map();
     if (entries.get("home")?.kind !== "group" || entries.get("home").hidden)
-        throw new Error("Home must remain available");
+        throw new Error(tr("launcher.validation.home-must-remain-available", "Home must remain available"));
     for (const row of rows) {
         validate(row, false);
         const parent = parentOf(row.id);
         if (parent && entries.get(parent)?.kind !== "group")
-            throw new Error("Missing group for " + row.id);
+            throw new Error(tr("launcher.validation.missing-group-for", "Missing group for ") + row.id);
         for (const alias of row.aliases || []) {
             const key = alias.trim().toLowerCase();
             if (routeAliases.has(key) && routeAliases.get(key) !== row.id)
-                throw new Error("Ambiguous menu alias");
+                throw new Error(tr("launcher.validation.ambiguous-menu-alias", "Ambiguous menu alias"));
             if (aliases[key] && aliases[key] !== row.id)
-                throw new Error("Reserved route alias");
+                throw new Error(tr("launcher.validation.reserved-route-alias", "Reserved route alias"));
             routeAliases.set(key, row.id);
         }
     }
@@ -289,4 +301,12 @@ function entry(row, rows) {
         name: row.label,
         breadcrumb: trail(parentOf(row.id), rows).map(item => item.label).join(" › ")
     });
+}
+
+var translator = null;
+function useTranslations(value) {
+    translator = value;
+}
+function tr(id, fallback, args = {}) {
+    return translator ? translator(id, fallback, args) : fallback.replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (match, key) => Object.prototype.hasOwnProperty.call(args, key) ? String(args[key]) : match);
 }

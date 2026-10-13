@@ -799,14 +799,49 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(json.dumps(dict(text=p.read_text(errors="replace"))))
             if path.path == "/api/health":
                 return self.send('{"ready":true,"authVersion":1}')
-            assets = {"/": "index.html", "/app.js": "app.js", "/style.css": "style.css"}
+            assets = {
+                "/": "index.html",
+                "/app.js": "app.js",
+                "/style.css": "style.css",
+                "/i18n.js": "i18n.js",
+                "/i18n-data.js": "i18n-data.js",
+                "/translation-engine.js": "translation-engine.js",
+            }
             if path.path in assets:
                 name = assets[path.path]
+                content = (ROOT / "web" / name).read_bytes()
+                if name == "index.html":
+                    requested = os.environ.get("NACRE_LANGUAGE", "")
+                    if not requested:
+                        try:
+                            preference = json.loads(
+                                (HOME / ".config/nacre/desktop.json").read_text()
+                            )
+                            requested = (
+                                preference.get("language", "system")
+                                if isinstance(preference, dict)
+                                else "system"
+                            )
+                        except (OSError, ValueError):
+                            requested = "system"
+                    if not isinstance(requested, str) or not re.fullmatch(
+                        r"system|pseudo|[a-z]{2,3}(?:[-_][A-Za-z0-9]+)*", requested
+                    ):
+                        requested = "system"
+                    content = content.replace(
+                        b'<html lang="en"',
+                        (
+                            '<html lang="en" data-nacre-language="' + requested + '"'
+                        ).encode(),
+                    )
                 return self.send(
-                    (ROOT / "web" / name).read_bytes(),
+                    content,
                     {
                         "index.html": "text/html; charset=utf-8",
                         "app.js": "text/javascript",
+                        "i18n.js": "text/javascript",
+                        "i18n-data.js": "text/javascript",
+                        "translation-engine.js": "text/javascript",
                         "style.css": "text/css",
                     }[name],
                 )

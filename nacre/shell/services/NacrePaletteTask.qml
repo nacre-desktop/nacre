@@ -94,7 +94,7 @@ QtObject {
             channelReady = false;
             stopping = true;
             complete(1, 0, {
-                error: "Could not read the palette publisher response"
+                error: NacreI18n.tr("ui.palette-task.error.could-not-read-the-palette-publisher-response", "Could not read the palette publisher response")
             }, false);
             server.running = false;
         }

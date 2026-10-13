@@ -64,7 +64,7 @@ Singleton {
                         root.error = "";
                     }
                 } catch (failure) {
-                    root.error = "Could not read control tools";
+                    root.error = NacreI18n.tr("ui.control-tools.error.could-not-read-control-tools", "Could not read control tools");
                 }
             }
         }

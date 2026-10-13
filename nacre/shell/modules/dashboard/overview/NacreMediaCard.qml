@@ -169,7 +169,7 @@ NacreOverviewCard {
         NacreText {
             objectName: "mediaTitle"
             width: parent.width
-            text: root.player ? root.player.trackTitle || "Unknown track" : "No media playing"
+            text: root.player ? root.player.trackTitle || NacreI18n.tr("overview.media-card.text.unknown-track", "Unknown track") : NacreI18n.tr("overview.media-card.text.no-media-playing", "No media playing")
             font.pointSize: 12
             color: NacreColours.palette.m3primary
             elide: Text.ElideRight
@@ -186,9 +186,11 @@ NacreOverviewCard {
         }
         NacreText {
             width: parent.width
-            text: root.player ? root.player.trackArtist || root.player.identity : "Open a music or video app"
+            text: root.player ? root.player.trackArtist || root.player.identity : NacreI18n.tr("overview.media-card.text.open-a-music-or-video-app", "Open a music or video app")
             color: NacreColours.palette.m3secondary
             font.pointSize: 10
+            fontSizeMode: root.player ? Text.FixedSize : Text.HorizontalFit
+            minimumPointSize: 8
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
         }
@@ -201,21 +203,21 @@ NacreOverviewCard {
         Transport {
             objectName: "mediaPrevious"
             icon: "skip_previous"
-            label: "Previous track"
+            label: NacreI18n.tr("overview.media-card.label.previous-track", "Previous track")
             available: !!(root.active && root.player?.canControl && root.player?.canGoPrevious)
             onActivated: root.perform("previous")
         }
         Transport {
             objectName: "mediaToggle"
             icon: root.player?.isPlaying ? "pause" : "play_arrow"
-            label: root.player?.isPlaying ? "Pause" : "Play"
+            label: root.player?.isPlaying ? NacreI18n.tr("overview.media-card.label.pause", "Pause") : NacreI18n.tr("overview.media-card.label.play", "Play")
             available: !!(root.active && root.player?.canControl && root.player?.canTogglePlaying)
             onActivated: root.perform("toggle")
         }
         Transport {
             objectName: "mediaNext"
             icon: "skip_next"
-            label: "Next track"
+            label: NacreI18n.tr("overview.media-card.label.next-track", "Next track")
             available: !!(root.active && root.player?.canControl && root.player?.canGoNext)
             onActivated: root.perform("next")
         }

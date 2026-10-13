@@ -69,7 +69,7 @@ Singleton {
             pending = result.pending ?? false;
             message = result.error ?? result.message ?? "";
         } catch (e) {
-            message = "Could not read desktop settings";
+            message = NacreI18n.tr("ui.desktop-settings.message.could-not-read-desktop-settings", "Could not read desktop settings");
         }
     }
     function finish(code) {
@@ -80,7 +80,7 @@ Singleton {
             desired = values;
         }
         if (code !== 0 && !message)
-            message = "Could not save desktop settings";
+            message = NacreI18n.tr("ui.desktop-settings.message.could-not-save-desktop-settings", "Could not save desktop settings");
         next();
     }
     function refresh() {

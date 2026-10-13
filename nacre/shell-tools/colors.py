@@ -3,6 +3,7 @@
 """Nacre Colors: private previews, saved choices and the existing publisher."""
 
 import argparse
+from nacre_i18n import tr
 from contextlib import contextmanager
 import fcntl
 import hashlib
@@ -89,7 +90,9 @@ def signature(path):
 
 def validate_request(request):
     if not isinstance(request, dict):
-        raise ValueError("Invalid color request")
+        raise ValueError(
+            tr("helper.colors.invalid-color-request", "Invalid color request")
+        )
     result = {
         "mode": "dark",
         "personality": "natural",
@@ -110,17 +113,36 @@ def validate_request(request):
         result["mode"] not in ("dark", "light")
         or result["personality"] not in PERSONALITIES
     ):
-        raise ValueError("Choose a supported color personality and mode")
+        raise ValueError(
+            tr(
+                "helper.colors.choose-a-supported-color-personality-and-mode",
+                "Choose a supported color personality and mode",
+            )
+        )
     if not isinstance(result.get("image"), str) or not Path(result["image"]).is_file():
-        raise ValueError("Choose a local wallpaper")
+        raise ValueError(
+            tr("helper.colors.choose-a-local-wallpaper", "Choose a local wallpaper")
+        )
     if type(result["hour"]) is not int or not 0 <= result["hour"] <= 23:
-        raise ValueError("Choose an hour from zero to 23")
+        raise ValueError(
+            tr(
+                "helper.colors.choose-an-hour-from-zero-to-23",
+                "Choose an hour from zero to 23",
+            )
+        )
     for key in ("brightness", "saturation"):
         if not isinstance(result[key], (int, float)) or not math.isfinite(result[key]):
-            raise ValueError("Invalid color adjustment")
+            raise ValueError(
+                tr("helper.colors.invalid-color-adjustment", "Invalid color adjustment")
+            )
     for key in ("autoMode", "tideAutomatic", "workspaceColors", "timeTint"):
         if type(result[key]) is not bool:
-            raise ValueError("Expected a boolean option")
+            raise ValueError(
+                tr(
+                    "helper.colors.expected-a-boolean-option",
+                    "Expected a boolean option",
+                )
+            )
     if result["tideAutomatic"]:
         result["hour"] = time.localtime().tm_hour
     if (result["personality"] == "tide" or result["timeTint"]) and result["autoMode"]:
@@ -196,7 +218,12 @@ def stage(request):
         (f for f in saved["favorites"] if f["id"] == request.get("favoriteId")), None
     )
     if request.get("favoriteId") and not favorite:
-        raise ValueError("That saved palette no longer exists")
+        raise ValueError(
+            tr(
+                "helper.colors.that-saved-palette-no-longer-exists",
+                "That saved palette no longer exists",
+            )
+        )
     identity = hashlib.sha256(
         json.dumps([ENGINE_ID, stamp, request, favorite], sort_keys=True).encode()
     ).hexdigest()
@@ -268,7 +295,12 @@ def stage(request):
         "favorite": bool(favorite),
     }
     if signature(request["image"]) != stamp:
-        raise ValueError("Wallpaper changed while previewing; try again")
+        raise ValueError(
+            tr(
+                "helper.colors.wallpaper-changed-while-previewing-try-again",
+                "Wallpaper changed while previewing; try again",
+            )
+        )
     media.atomic(CACHE / (identity + ".json"), record)
     # Staging is private and bounded; never a recurring cleanup timer.
     for stale in sorted(
@@ -298,14 +330,28 @@ def preview_result(identity, record):
 
 def record(identity):
     if not isinstance(identity, str) or not re.fullmatch("[0-9a-f]{64}", identity):
-        raise ValueError("Preview is not valid")
+        raise ValueError(
+            tr("helper.colors.preview-is-not-valid", "Preview is not valid")
+        )
     data = load(CACHE / (identity + ".json"), {})
     if data.get("version") != 1 or data.get("engine") != ENGINE_ID:
-        raise ValueError("Preview expired; preview it again")
+        raise ValueError(
+            tr(
+                "helper.colors.preview-expired-preview-it-again",
+                "Preview expired; preview it again",
+            )
+        )
     if signature(data["request"]["image"]) != data["signature"]:
-        raise ValueError("Wallpaper changed; preview it again")
+        raise ValueError(
+            tr(
+                "helper.colors.wallpaper-changed-preview-it-again",
+                "Wallpaper changed; preview it again",
+            )
+        )
     if data["palette"].get("formatVersion") != FORMAT_VERSION:
-        raise ValueError("Unsupported palette format")
+        raise ValueError(
+            tr("helper.colors.unsupported-palette-format", "Unsupported palette format")
+        )
     validate(data["palette"]["colours"])
     return data
 
@@ -446,7 +492,10 @@ def apply(identity, live=True):
                 allow_mode_change=True,
             ):
                 raise ValueError(
-                    "The desktop cannot apply that prepared palette; choose a wallpaper palette first"
+                    tr(
+                        "helper.colors.the-desktop-cannot-apply-that-prepared-palette-choose-a-wallpaper",
+                        "The desktop cannot apply that prepared palette; choose a wallpaper palette first",
+                    )
                 )
             item["appliedAtMs"] = int(time.time() * 1000)
             media.atomic(media.STATE / "media.json", item)
@@ -549,11 +598,21 @@ def serve(input_stream=None, output_stream=None):
         sequence = -1
         try:
             if len(line) > 65536:
-                raise ValueError("Preview request is too large")
+                raise ValueError(
+                    tr(
+                        "helper.colors.preview-request-is-too-large",
+                        "Preview request is too large",
+                    )
+                )
             request = json.loads(line)
             sequence = request["sequence"]
             if type(sequence) is not int or sequence < 0:
-                raise ValueError("Invalid preview sequence")
+                raise ValueError(
+                    tr(
+                        "helper.colors.invalid-preview-sequence",
+                        "Invalid preview sequence",
+                    )
+                )
             result = stage(request["request"])
             response = {"sequence": sequence, "result": result}
         except (OSError, ValueError, KeyError, TypeError) as error:

@@ -6,7 +6,9 @@
       "kind": "group",
       "label": "Home",
       "icon": "home",
-      "description": "Favorites and recent destinations"
+      "description": "Favorites and recent destinations",
+      "labelId": "launcher.catalog.home.label",
+      "descriptionId": "launcher.catalog.home.description"
     },
     {
       "id": "apps",
@@ -14,63 +16,81 @@
       "label": "All apps",
       "icon": "apps",
       "description": "Your installed applications",
-      "provider": "apps"
+      "provider": "apps",
+      "labelId": "launcher.catalog.apps.label",
+      "descriptionId": "launcher.catalog.apps.description"
     },
     {
       "id": "actions",
       "kind": "group",
       "label": "Actions",
       "icon": "bolt",
-      "description": "Capture, tools and quick controls"
+      "description": "Capture, tools and quick controls",
+      "labelId": "launcher.catalog.actions.label",
+      "descriptionId": "launcher.catalog.actions.description"
     },
     {
       "id": "style",
       "kind": "group",
       "label": "Style",
       "icon": "palette",
-      "description": "Wallpapers, Orient and appearance"
+      "description": "Wallpapers, Orient and appearance",
+      "labelId": "launcher.catalog.style.label",
+      "descriptionId": "launcher.catalog.style.description"
     },
     {
       "id": "setup",
       "kind": "group",
       "label": "Setup",
       "icon": "tune",
-      "description": "Devices and desktop preferences"
+      "description": "Devices and desktop preferences",
+      "labelId": "launcher.catalog.setup.label",
+      "descriptionId": "launcher.catalog.setup.description"
     },
     {
       "id": "software",
       "kind": "group",
       "label": "Software",
       "icon": "download",
-      "description": "Discover and manage software"
+      "description": "Discover and manage software",
+      "labelId": "launcher.catalog.software.label",
+      "descriptionId": "launcher.catalog.software.description"
     },
     {
       "id": "health",
       "kind": "group",
       "label": "Health",
       "icon": "build",
-      "description": "Updates, checks and recovery"
+      "description": "Updates, checks and recovery",
+      "labelId": "launcher.catalog.health.label",
+      "descriptionId": "launcher.catalog.health.description"
     },
     {
       "id": "learn",
       "kind": "group",
       "label": "Learn",
       "icon": "help",
-      "description": "Shortcuts, the tour and guides"
+      "description": "Shortcuts, the tour and guides",
+      "labelId": "launcher.catalog.learn.label",
+      "descriptionId": "launcher.catalog.learn.description"
     },
     {
       "id": "power",
       "kind": "group",
       "label": "Power",
       "icon": "power_settings_new",
-      "description": "Lock and session controls"
+      "description": "Lock and session controls",
+      "labelId": "launcher.catalog.power.label",
+      "descriptionId": "launcher.catalog.power.description"
     },
     {
       "id": "actions.capture",
       "kind": "group",
       "label": "Capture",
       "icon": "screenshot",
-      "description": "Screenshots, recording and reading the screen"
+      "description": "Screenshots, recording and reading the screen",
+      "labelId": "launcher.catalog.actions.capture.label",
+      "descriptionId": "launcher.catalog.actions.capture.description"
     },
     {
       "id": "actions.capture.area",
@@ -80,7 +100,9 @@
       "operation": "tool",
       "value": "capture-area",
       "description": "Save in Pictures/Screenshots",
-      "capability": "capture"
+      "capability": "capture",
+      "labelId": "launcher.catalog.actions.capture.area.label",
+      "descriptionId": "launcher.catalog.actions.capture.area.description"
     },
     {
       "id": "actions.capture.screen",
@@ -90,7 +112,9 @@
       "operation": "tool",
       "value": "capture-screen",
       "description": "Save in Pictures/Screenshots",
-      "capability": "capture"
+      "capability": "capture",
+      "labelId": "launcher.catalog.actions.capture.screen.label",
+      "descriptionId": "launcher.catalog.actions.capture.screen.description"
     },
     {
       "id": "actions.capture.window",
@@ -100,7 +124,9 @@
       "operation": "tool",
       "value": "capture-window",
       "description": "Save in Pictures/Screenshots",
-      "capability": "capture"
+      "capability": "capture",
+      "labelId": "launcher.catalog.actions.capture.window.label",
+      "descriptionId": "launcher.catalog.actions.capture.window.description"
     },
     {
       "id": "actions.capture.record",
@@ -110,7 +136,9 @@
       "operation": "tool",
       "value": "record-start",
       "description": "Record to Videos/Recordings",
-      "capability": "record"
+      "capability": "record",
+      "labelId": "launcher.catalog.actions.capture.record.label",
+      "descriptionId": "launcher.catalog.actions.capture.record.description"
     },
     {
       "id": "actions.capture.stop",
@@ -120,7 +148,9 @@
       "operation": "tool",
       "value": "record-stop",
       "description": "Record to Videos/Recordings",
-      "capability": "record"
+      "capability": "record",
+      "labelId": "launcher.catalog.actions.capture.stop.label",
+      "descriptionId": "launcher.catalog.actions.capture.stop.description"
     },
     {
       "id": "actions.capture.text",
@@ -130,7 +160,9 @@
       "operation": "tool",
       "value": "capture-text",
       "description": "Copy the result",
-      "capability": "ocr"
+      "capability": "ocr",
+      "labelId": "launcher.catalog.actions.capture.text.label",
+      "descriptionId": "launcher.catalog.actions.capture.text.description"
     },
     {
       "id": "actions.capture.qr",
@@ -140,7 +172,9 @@
       "operation": "tool",
       "value": "capture-qr",
       "description": "Copy the result",
-      "capability": "qr"
+      "capability": "qr",
+      "labelId": "launcher.catalog.actions.capture.qr.label",
+      "descriptionId": "launcher.catalog.actions.capture.qr.description"
     },
     {
       "id": "actions.capture.color",
@@ -150,7 +184,9 @@
       "operation": "tool",
       "value": "color-picker",
       "description": "Copy the result",
-      "capability": "color-picker"
+      "capability": "color-picker",
+      "labelId": "launcher.catalog.actions.capture.color.label",
+      "descriptionId": "launcher.catalog.actions.capture.color.description"
     },
     {
       "id": "actions.clipboard",
@@ -158,7 +194,9 @@
       "label": "Clipboard history",
       "icon": "content_paste",
       "description": "Reuse copied text and images",
-      "provider": "clipboard"
+      "provider": "clipboard",
+      "labelId": "launcher.catalog.actions.clipboard.label",
+      "descriptionId": "launcher.catalog.actions.clipboard.description"
     },
     {
       "id": "actions.emoji",
@@ -166,7 +204,9 @@
       "label": "Emoji",
       "icon": "mood",
       "description": "Choose an emoji and copy it",
-      "provider": "emoji"
+      "provider": "emoji",
+      "labelId": "launcher.catalog.actions.emoji.label",
+      "descriptionId": "launcher.catalog.actions.emoji.description"
     },
     {
       "id": "actions.calculator",
@@ -175,7 +215,9 @@
       "icon": "calculate",
       "operation": "calculator",
       "value": "",
-      "description": "Type = followed by an expression"
+      "description": "Type = followed by an expression",
+      "labelId": "launcher.catalog.actions.calculator.label",
+      "descriptionId": "launcher.catalog.actions.calculator.description"
     },
     {
       "id": "actions.windows",
@@ -183,7 +225,9 @@
       "label": "Windows",
       "icon": "view_quilt",
       "description": "Focus an open window",
-      "provider": "windows"
+      "provider": "windows",
+      "labelId": "launcher.catalog.actions.windows.label",
+      "descriptionId": "launcher.catalog.actions.windows.description"
     },
     {
       "id": "actions.reminders",
@@ -191,7 +235,9 @@
       "label": "Reminders",
       "icon": "timer",
       "description": "Small timers and reminders",
-      "provider": "timers"
+      "provider": "timers",
+      "labelId": "launcher.catalog.actions.reminders.label",
+      "descriptionId": "launcher.catalog.actions.reminders.description"
     },
     {
       "id": "actions.reminders.new",
@@ -200,7 +246,9 @@
       "icon": "add_alarm",
       "operation": "form",
       "value": "reminder",
-      "description": "Choose a duration and message"
+      "description": "Choose a duration and message",
+      "labelId": "launcher.catalog.actions.reminders.new.label",
+      "descriptionId": "launcher.catalog.actions.reminders.new.description"
     },
     {
       "id": "actions.reminders.focus",
@@ -209,14 +257,18 @@
       "icon": "hourglass_top",
       "operation": "tool",
       "value": "focus-timer",
-      "description": "A reminder when it is time for a break"
+      "description": "A reminder when it is time for a break",
+      "labelId": "launcher.catalog.actions.reminders.focus.label",
+      "descriptionId": "launcher.catalog.actions.reminders.focus.description"
     },
     {
       "id": "actions.assistant",
       "kind": "group",
       "label": "Nacre AI and Brain",
       "icon": "neurology",
-      "description": "Your assistant and private knowledge"
+      "description": "Your assistant and private knowledge",
+      "labelId": "launcher.catalog.actions.assistant.label",
+      "descriptionId": "launcher.catalog.actions.assistant.description"
     },
     {
       "id": "actions.assistant.ai",
@@ -232,7 +284,9 @@
         "ai",
         "assistant",
         "ai workspace"
-      ]
+      ],
+      "labelId": "launcher.catalog.actions.assistant.ai.label",
+      "descriptionId": "launcher.catalog.actions.assistant.ai.description"
     },
     {
       "id": "actions.assistant.new",
@@ -243,7 +297,9 @@
       "value": "new",
       "description": "Start a conversation",
       "brand": "ai",
-      "capability": "ai"
+      "capability": "ai",
+      "labelId": "launcher.catalog.actions.assistant.new.label",
+      "descriptionId": "launcher.catalog.actions.assistant.new.description"
     },
     {
       "id": "actions.assistant.resume",
@@ -254,7 +310,9 @@
       "value": "resume",
       "description": "Continue the latest conversation",
       "brand": "ai",
-      "capability": "ai"
+      "capability": "ai",
+      "labelId": "launcher.catalog.actions.assistant.resume.label",
+      "descriptionId": "launcher.catalog.actions.assistant.resume.description"
     },
     {
       "id": "actions.assistant.chats",
@@ -265,7 +323,9 @@
       "value": "load",
       "description": "Choose a saved conversation",
       "brand": "ai",
-      "capability": "ai"
+      "capability": "ai",
+      "labelId": "launcher.catalog.actions.assistant.chats.label",
+      "descriptionId": "launcher.catalog.actions.assistant.chats.description"
     },
     {
       "id": "actions.assistant.brain",
@@ -281,7 +341,9 @@
         "brain",
         "notes",
         "knowledge"
-      ]
+      ],
+      "labelId": "launcher.catalog.actions.assistant.brain.label",
+      "descriptionId": "launcher.catalog.actions.assistant.brain.description"
     },
     {
       "id": "actions.assistant.capture",
@@ -292,7 +354,9 @@
       "value": "capture",
       "description": "Save a thought",
       "brand": "brain",
-      "capability": "brain"
+      "capability": "brain",
+      "labelId": "launcher.catalog.actions.assistant.capture.label",
+      "descriptionId": "launcher.catalog.actions.assistant.capture.description"
     },
     {
       "id": "actions.assistant.search",
@@ -303,7 +367,9 @@
       "value": "# ",
       "description": "Search private notes",
       "brand": "brain",
-      "capability": "brain"
+      "capability": "brain",
+      "labelId": "launcher.catalog.actions.assistant.search.label",
+      "descriptionId": "launcher.catalog.actions.assistant.search.description"
     },
     {
       "id": "actions.assistant.ask",
@@ -314,14 +380,18 @@
       "value": "? ",
       "description": "Compose an explicit question",
       "brand": "ai",
-      "capability": "ai"
+      "capability": "ai",
+      "labelId": "launcher.catalog.actions.assistant.ask.label",
+      "descriptionId": "launcher.catalog.actions.assistant.ask.description"
     },
     {
       "id": "actions.controls",
       "kind": "group",
       "label": "Quick controls",
       "icon": "toggle_on",
-      "description": "Live desktop controls"
+      "description": "Live desktop controls",
+      "labelId": "launcher.catalog.actions.controls.label",
+      "descriptionId": "launcher.catalog.actions.controls.description"
     },
     {
       "id": "actions.controls.dnd",
@@ -331,7 +401,9 @@
       "operation": "toggle",
       "value": "dnd",
       "description": "Change it without leaving the launcher",
-      "state": "dnd"
+      "state": "dnd",
+      "labelId": "launcher.catalog.actions.controls.dnd.label",
+      "descriptionId": "launcher.catalog.actions.controls.dnd.description"
     },
     {
       "id": "actions.controls.night-light",
@@ -341,7 +413,9 @@
       "operation": "toggle",
       "value": "night-light",
       "description": "Change it without leaving the launcher",
-      "state": "night-light"
+      "state": "night-light",
+      "labelId": "launcher.catalog.actions.controls.night-light.label",
+      "descriptionId": "launcher.catalog.actions.controls.night-light.description"
     },
     {
       "id": "actions.controls.stay-awake",
@@ -351,7 +425,9 @@
       "operation": "toggle",
       "value": "stay-awake",
       "description": "Change it without leaving the launcher",
-      "state": "stay-awake"
+      "state": "stay-awake",
+      "labelId": "launcher.catalog.actions.controls.stay-awake.label",
+      "descriptionId": "launcher.catalog.actions.controls.stay-awake.description"
     },
     {
       "id": "actions.controls.mute",
@@ -361,7 +437,9 @@
       "operation": "toggle",
       "value": "mute",
       "description": "Change it without leaving the launcher",
-      "state": "mute"
+      "state": "mute",
+      "labelId": "launcher.catalog.actions.controls.mute.label",
+      "descriptionId": "launcher.catalog.actions.controls.mute.description"
     },
     {
       "id": "actions.controls.mic-mute",
@@ -371,7 +449,9 @@
       "operation": "toggle",
       "value": "mic-mute",
       "description": "Change it without leaving the launcher",
-      "state": "mic-mute"
+      "state": "mic-mute",
+      "labelId": "launcher.catalog.actions.controls.mic-mute.label",
+      "descriptionId": "launcher.catalog.actions.controls.mic-mute.description"
     },
     {
       "id": "actions.controls.wifi",
@@ -381,7 +461,9 @@
       "operation": "toggle",
       "value": "wifi",
       "description": "Change it without leaving the launcher",
-      "state": "wifi"
+      "state": "wifi",
+      "labelId": "launcher.catalog.actions.controls.wifi.label",
+      "descriptionId": "launcher.catalog.actions.controls.wifi.description"
     },
     {
       "id": "actions.controls.bluetooth",
@@ -391,7 +473,9 @@
       "operation": "toggle",
       "value": "bluetooth",
       "description": "Change it without leaving the launcher",
-      "state": "bluetooth"
+      "state": "bluetooth",
+      "labelId": "launcher.catalog.actions.controls.bluetooth.label",
+      "descriptionId": "launcher.catalog.actions.controls.bluetooth.description"
     },
     {
       "id": "style.wallpapers",
@@ -399,7 +483,9 @@
       "label": "Wallpapers",
       "icon": "wallpaper",
       "description": "Preview and choose from your collection",
-      "provider": "wallpapers"
+      "provider": "wallpapers",
+      "labelId": "launcher.catalog.style.wallpapers.label",
+      "descriptionId": "launcher.catalog.style.wallpapers.description"
     },
     {
       "id": "style.wallpapers.picker",
@@ -408,7 +494,9 @@
       "icon": "wallpaper",
       "operation": "route",
       "value": "wallpaper",
-      "description": "Open the full wallpaper view"
+      "description": "Open the full wallpaper view",
+      "labelId": "launcher.catalog.style.wallpapers.picker.label",
+      "descriptionId": "launcher.catalog.style.wallpapers.picker.description"
     },
     {
       "id": "style.wallpapers.next",
@@ -417,14 +505,18 @@
       "icon": "skip_next",
       "operation": "next-wallpaper",
       "value": "",
-      "description": "Move to the next image in your collection"
+      "description": "Move to the next image in your collection",
+      "labelId": "launcher.catalog.style.wallpapers.next.label",
+      "descriptionId": "launcher.catalog.style.wallpapers.next.description"
     },
     {
       "id": "style.personality",
       "kind": "group",
       "label": "Orient personality",
       "icon": "palette",
-      "description": "How Nacre uses the wallpaper colors"
+      "description": "How Nacre uses the wallpaper colors",
+      "labelId": "launcher.catalog.style.personality.label",
+      "descriptionId": "launcher.catalog.style.personality.description"
     },
     {
       "id": "style.personality.natural",
@@ -434,7 +526,9 @@
       "operation": "personality",
       "value": "natural",
       "description": "The original balance of wallpaper colors",
-      "state": "personality"
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.natural.label",
+      "descriptionId": "launcher.catalog.style.personality.natural.description"
     },
     {
       "id": "style.personality.pigment",
@@ -444,7 +538,9 @@
       "operation": "personality",
       "value": "pigment",
       "description": "Coverage-weighted color families",
-      "state": "personality"
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.pigment.label",
+      "descriptionId": "launcher.catalog.style.personality.pigment.description"
     },
     {
       "id": "style.personality.harmony",
@@ -454,7 +550,9 @@
       "operation": "personality",
       "value": "harmony",
       "description": "Related supporting accents",
-      "state": "personality"
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.harmony.label",
+      "descriptionId": "launcher.catalog.style.personality.harmony.description"
     },
     {
       "id": "style.personality.pop",
@@ -464,7 +562,9 @@
       "operation": "personality",
       "value": "pop",
       "description": "A striking contrasting detail",
-      "state": "personality"
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.pop.label",
+      "descriptionId": "launcher.catalog.style.personality.pop.description"
     },
     {
       "id": "style.personality.mist",
@@ -474,7 +574,9 @@
       "operation": "personality",
       "value": "mist",
       "description": "Soft, quiet colors",
-      "state": "personality"
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.mist.label",
+      "descriptionId": "launcher.catalog.style.personality.mist.description"
     },
     {
       "id": "style.personality.vivid",
@@ -484,7 +586,9 @@
       "operation": "personality",
       "value": "vivid",
       "description": "Stronger wallpaper colors",
-      "state": "personality"
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.vivid.label",
+      "descriptionId": "launcher.catalog.style.personality.vivid.description"
     },
     {
       "id": "style.personality.pearl",
@@ -494,7 +598,9 @@
       "operation": "personality",
       "value": "pearl",
       "description": "Nacre mother-of-pearl tones",
-      "state": "personality"
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.pearl.label",
+      "descriptionId": "launcher.catalog.style.personality.pearl.description"
     },
     {
       "id": "style.personality.tide",
@@ -504,14 +610,18 @@
       "operation": "personality",
       "value": "tide",
       "description": "Colors that shift with the time of day",
-      "state": "personality"
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.tide.label",
+      "descriptionId": "launcher.catalog.style.personality.tide.description"
     },
     {
       "id": "style.background",
       "kind": "group",
       "label": "Background tint",
       "icon": "gradient",
-      "description": "Choose where panel background colors come from"
+      "description": "Choose where panel background colors come from",
+      "labelId": "launcher.catalog.style.background.label",
+      "descriptionId": "launcher.catalog.style.background.description"
     },
     {
       "id": "style.background.accent",
@@ -521,7 +631,9 @@
       "operation": "background",
       "value": "accent",
       "description": "Subtle tint from the main accent",
-      "state": "background"
+      "state": "background",
+      "labelId": "launcher.catalog.style.background.accent.label",
+      "descriptionId": "launcher.catalog.style.background.accent.description"
     },
     {
       "id": "style.background.wallpaper",
@@ -530,15 +642,19 @@
       "icon": "image",
       "operation": "background",
       "value": "wallpaper",
-      "description": "Tint from the image\u2019s own tones",
-      "state": "background"
+      "description": "Tint from the image’s own tones",
+      "state": "background",
+      "labelId": "launcher.catalog.style.background.wallpaper.label",
+      "descriptionId": "launcher.catalog.style.background.wallpaper.description"
     },
     {
       "id": "style.appearance",
       "kind": "group",
       "label": "Light and dark",
       "icon": "contrast",
-      "description": "Desktop brightness"
+      "description": "Desktop brightness",
+      "labelId": "launcher.catalog.style.appearance.label",
+      "descriptionId": "launcher.catalog.style.appearance.description"
     },
     {
       "id": "style.appearance.dark",
@@ -548,7 +664,8 @@
       "operation": "palette-mode",
       "value": "dark",
       "description": "",
-      "state": "palette-mode"
+      "state": "palette-mode",
+      "labelId": "launcher.catalog.style.appearance.dark.label"
     },
     {
       "id": "style.appearance.light",
@@ -558,7 +675,8 @@
       "operation": "palette-mode",
       "value": "light",
       "description": "",
-      "state": "palette-mode"
+      "state": "palette-mode",
+      "labelId": "launcher.catalog.style.appearance.light.label"
     },
     {
       "id": "style.appearance.auto",
@@ -568,7 +686,8 @@
       "operation": "palette-mode",
       "value": "auto",
       "description": "",
-      "state": "palette-mode"
+      "state": "palette-mode",
+      "labelId": "launcher.catalog.style.appearance.auto.label"
     },
     {
       "id": "style.accents",
@@ -576,7 +695,9 @@
       "label": "Accent choice",
       "icon": "color_lens",
       "description": "Choose a color family from this wallpaper",
-      "provider": "accents"
+      "provider": "accents",
+      "labelId": "launcher.catalog.style.accents.label",
+      "descriptionId": "launcher.catalog.style.accents.description"
     },
     {
       "id": "style.fonts",
@@ -584,7 +705,9 @@
       "label": "Interface font",
       "icon": "text_fields",
       "description": "Preview installed font families",
-      "provider": "fonts"
+      "provider": "fonts",
+      "labelId": "launcher.catalog.style.fonts.label",
+      "descriptionId": "launcher.catalog.style.fonts.description"
     },
     {
       "id": "style.animations",
@@ -594,7 +717,8 @@
       "operation": "setting-toggle",
       "value": "animations",
       "description": "",
-      "state": "setting"
+      "state": "setting",
+      "labelId": "launcher.catalog.style.animations.label"
     },
     {
       "id": "style.blur",
@@ -604,7 +728,8 @@
       "operation": "setting-toggle",
       "value": "blur",
       "description": "",
-      "state": "setting"
+      "state": "setting",
+      "labelId": "launcher.catalog.style.blur.label"
     },
     {
       "id": "style.shadow",
@@ -614,7 +739,8 @@
       "operation": "setting-toggle",
       "value": "shadow",
       "description": "",
-      "state": "setting"
+      "state": "setting",
+      "labelId": "launcher.catalog.style.shadow.label"
     },
     {
       "id": "style.colors",
@@ -629,7 +755,9 @@
         "colors",
         "colours",
         "orient"
-      ]
+      ],
+      "labelId": "launcher.catalog.style.colors.label",
+      "descriptionId": "launcher.catalog.style.colors.description"
     },
     {
       "id": "setup.appearance",
@@ -639,7 +767,9 @@
       "operation": "settings",
       "value": "appearance",
       "description": "Wallpaper, colors and frame",
-      "brand": "settings"
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.appearance.label",
+      "descriptionId": "launcher.catalog.setup.appearance.description"
     },
     {
       "id": "setup.desktop",
@@ -655,7 +785,9 @@
         "keyboard",
         "mouse",
         "desktop settings"
-      ]
+      ],
+      "labelId": "launcher.catalog.setup.desktop.label",
+      "descriptionId": "launcher.catalog.setup.desktop.description"
     },
     {
       "id": "setup.displays",
@@ -665,7 +797,9 @@
       "operation": "settings",
       "value": "displays",
       "description": "Resolution, scaling and arrangement",
-      "brand": "settings"
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.displays.label",
+      "descriptionId": "launcher.catalog.setup.displays.description"
     },
     {
       "id": "setup.sound",
@@ -675,7 +809,9 @@
       "operation": "settings",
       "value": "sound",
       "description": "Speakers, microphones and apps",
-      "brand": "settings"
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.sound.label",
+      "descriptionId": "launcher.catalog.setup.sound.description"
     },
     {
       "id": "setup.network",
@@ -690,7 +826,9 @@
         "wifi",
         "wireless",
         "network settings"
-      ]
+      ],
+      "labelId": "launcher.catalog.setup.network.label",
+      "descriptionId": "launcher.catalog.setup.network.description"
     },
     {
       "id": "setup.bluetooth",
@@ -700,7 +838,9 @@
       "operation": "settings",
       "value": "bluetooth",
       "description": "Pair and manage devices",
-      "brand": "settings"
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.bluetooth.label",
+      "descriptionId": "launcher.catalog.setup.bluetooth.description"
     },
     {
       "id": "setup.notifications",
@@ -710,7 +850,9 @@
       "operation": "settings",
       "value": "notifications",
       "description": "Messages and quiet mode",
-      "brand": "settings"
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.notifications.label",
+      "descriptionId": "launcher.catalog.setup.notifications.description"
     },
     {
       "id": "setup.workflows",
@@ -720,7 +862,9 @@
       "operation": "settings",
       "value": "workflows",
       "description": "Application routes and workspace roles",
-      "brand": "settings"
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.workflows.label",
+      "descriptionId": "launcher.catalog.setup.workflows.description"
     },
     {
       "id": "setup.lock",
@@ -730,7 +874,9 @@
       "operation": "settings",
       "value": "lock",
       "description": "Appearance and idle behavior",
-      "brand": "settings"
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.lock.label",
+      "descriptionId": "launcher.catalog.setup.lock.description"
     },
     {
       "id": "setup.time",
@@ -740,7 +886,9 @@
       "operation": "settings",
       "value": "time",
       "description": "Time zone and travel",
-      "brand": "settings"
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.time.label",
+      "descriptionId": "launcher.catalog.setup.time.description"
     },
     {
       "id": "setup.ai",
@@ -750,7 +898,9 @@
       "operation": "settings",
       "value": "ai",
       "description": "Assistant integration",
-      "brand": "settings"
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.ai.label",
+      "descriptionId": "launcher.catalog.setup.ai.description"
     },
     {
       "id": "setup.wifi-networks",
@@ -758,7 +908,9 @@
       "label": "Wi-Fi networks",
       "icon": "wifi",
       "description": "Nearby connections",
-      "provider": "wifi"
+      "provider": "wifi",
+      "labelId": "launcher.catalog.setup.wifi-networks.label",
+      "descriptionId": "launcher.catalog.setup.wifi-networks.description"
     },
     {
       "id": "setup.bluetooth-devices",
@@ -766,7 +918,9 @@
       "label": "Bluetooth devices",
       "icon": "bluetooth",
       "description": "Paired and nearby devices",
-      "provider": "bluetooth"
+      "provider": "bluetooth",
+      "labelId": "launcher.catalog.setup.bluetooth-devices.label",
+      "descriptionId": "launcher.catalog.setup.bluetooth-devices.description"
     },
     {
       "id": "setup.shortcuts",
@@ -775,7 +929,9 @@
       "icon": "keyboard",
       "operation": "config",
       "value": "shortcuts",
-      "description": "Open your private Hyprland override"
+      "description": "Open your private Hyprland override",
+      "labelId": "launcher.catalog.setup.shortcuts.label",
+      "descriptionId": "launcher.catalog.setup.shortcuts.description"
     },
     {
       "id": "setup.defaults",
@@ -784,7 +940,9 @@
       "icon": "apps",
       "operation": "config",
       "value": "defaults",
-      "description": "Choose the apps used by Nacre"
+      "description": "Choose the apps used by Nacre",
+      "labelId": "launcher.catalog.setup.defaults.label",
+      "descriptionId": "launcher.catalog.setup.defaults.description"
     },
     {
       "id": "software.discover",
@@ -792,7 +950,9 @@
       "label": "Recommended software",
       "icon": "apps",
       "description": "A small catalog, with installed status",
-      "provider": "software"
+      "provider": "software",
+      "labelId": "launcher.catalog.software.discover.label",
+      "descriptionId": "launcher.catalog.software.discover.description"
     },
     {
       "id": "software.packages",
@@ -800,7 +960,9 @@
       "label": "Search packages",
       "icon": "search",
       "description": "Search official and community repositories",
-      "provider": "packages"
+      "provider": "packages",
+      "labelId": "launcher.catalog.software.packages.label",
+      "descriptionId": "launcher.catalog.software.packages.description"
     },
     {
       "id": "software.installed",
@@ -808,7 +970,9 @@
       "label": "Installed packages",
       "icon": "inventory_2",
       "description": "Search installed software and remove it",
-      "provider": "installed"
+      "provider": "installed",
+      "labelId": "launcher.catalog.software.installed.label",
+      "descriptionId": "launcher.catalog.software.installed.description"
     },
     {
       "id": "software.webapps",
@@ -816,7 +980,9 @@
       "label": "Web apps",
       "icon": "public",
       "description": "Your website shortcuts",
-      "provider": "webapps"
+      "provider": "webapps",
+      "labelId": "launcher.catalog.software.webapps.label",
+      "descriptionId": "launcher.catalog.software.webapps.description"
     },
     {
       "id": "software.webapps.new",
@@ -825,7 +991,9 @@
       "icon": "add",
       "operation": "form",
       "value": "webapp",
-      "description": "Add a website to the application launcher"
+      "description": "Add a website to the application launcher",
+      "labelId": "launcher.catalog.software.webapps.new.label",
+      "descriptionId": "launcher.catalog.software.webapps.new.description"
     },
     {
       "id": "health.updates",
@@ -835,7 +1003,9 @@
       "operation": "tool",
       "value": "updates",
       "description": "Review and install available updates",
-      "state": "updates"
+      "state": "updates",
+      "labelId": "launcher.catalog.health.updates.label",
+      "descriptionId": "launcher.catalog.health.updates.description"
     },
     {
       "id": "health.nacre",
@@ -845,7 +1015,9 @@
       "operation": "settings",
       "value": "maintenance",
       "description": "Desktop releases, checks and rollback",
-      "brand": "settings"
+      "brand": "settings",
+      "labelId": "launcher.catalog.health.nacre.label",
+      "descriptionId": "launcher.catalog.health.nacre.description"
     },
     {
       "id": "health.check",
@@ -854,7 +1026,9 @@
       "icon": "health_and_safety",
       "operation": "maintenance",
       "value": "check",
-      "description": "Run the existing desktop health checks"
+      "description": "Run the existing desktop health checks",
+      "labelId": "launcher.catalog.health.check.label",
+      "descriptionId": "launcher.catalog.health.check.description"
     },
     {
       "id": "health.status",
@@ -863,7 +1037,9 @@
       "icon": "monitor_heart",
       "operation": "info",
       "value": "health",
-      "description": "Show the current services and release"
+      "description": "Show the current services and release",
+      "labelId": "launcher.catalog.health.status.label",
+      "descriptionId": "launcher.catalog.health.status.description"
     },
     {
       "id": "health.support-report",
@@ -872,7 +1048,9 @@
       "icon": "content_copy",
       "operation": "tool",
       "value": "support-report",
-      "description": "Copy redacted hardware, software and recent errors"
+      "description": "Copy redacted hardware, software and recent errors",
+      "labelId": "launcher.catalog.health.support-report.label",
+      "descriptionId": "launcher.catalog.health.support-report.description"
     },
     {
       "id": "health.logs",
@@ -881,7 +1059,9 @@
       "icon": "article",
       "operation": "tool",
       "value": "logs",
-      "description": "Open the recent shell log"
+      "description": "Open the recent shell log",
+      "labelId": "launcher.catalog.health.logs.label",
+      "descriptionId": "launcher.catalog.health.logs.description"
     },
     {
       "id": "health.restart",
@@ -891,7 +1071,10 @@
       "operation": "maintenance",
       "value": "restart",
       "description": "Reload shell software; apps remain running",
-      "confirm": "Restart the Nacre shell?"
+      "confirm": "Restart the Nacre shell?",
+      "labelId": "launcher.catalog.health.restart.label",
+      "descriptionId": "launcher.catalog.health.restart.description",
+      "confirmId": "launcher.catalog.health.restart.confirm"
     },
     {
       "id": "health.rollback",
@@ -901,7 +1084,9 @@
       "operation": "settings",
       "value": "maintenance",
       "description": "Review the saved release before restoring it",
-      "brand": "settings"
+      "brand": "settings",
+      "labelId": "launcher.catalog.health.rollback.label",
+      "descriptionId": "launcher.catalog.health.rollback.description"
     },
     {
       "id": "learn.shortcuts",
@@ -909,7 +1094,9 @@
       "label": "Keyboard shortcuts",
       "icon": "keyboard",
       "description": "Read your actual current bindings",
-      "provider": "keys"
+      "provider": "keys",
+      "labelId": "launcher.catalog.learn.shortcuts.label",
+      "descriptionId": "launcher.catalog.learn.shortcuts.description"
     },
     {
       "id": "learn.welcome",
@@ -919,7 +1106,9 @@
       "operation": "legacy",
       "value": "welcome",
       "description": "Revisit the desktop tour",
-      "brand": "welcome"
+      "brand": "welcome",
+      "labelId": "launcher.catalog.learn.welcome.label",
+      "descriptionId": "launcher.catalog.learn.welcome.description"
     },
     {
       "id": "learn.nacre",
@@ -928,7 +1117,9 @@
       "icon": "help",
       "operation": "info",
       "value": "guide",
-      "description": "Getting around the universal launcher"
+      "description": "Getting around the universal launcher",
+      "labelId": "launcher.catalog.learn.nacre.label",
+      "descriptionId": "launcher.catalog.learn.nacre.description"
     },
     {
       "id": "learn.hyprland",
@@ -937,7 +1128,8 @@
       "icon": "public",
       "operation": "url",
       "value": "https://wiki.hypr.land/",
-      "description": ""
+      "description": "",
+      "labelId": "launcher.catalog.learn.hyprland.label"
     },
     {
       "id": "learn.arch",
@@ -946,7 +1138,8 @@
       "icon": "public",
       "operation": "url",
       "value": "https://wiki.archlinux.org/",
-      "description": ""
+      "description": "",
+      "labelId": "launcher.catalog.learn.arch.label"
     },
     {
       "id": "learn.quickshell",
@@ -955,7 +1148,8 @@
       "icon": "public",
       "operation": "url",
       "value": "https://quickshell.org/docs/",
-      "description": ""
+      "description": "",
+      "labelId": "launcher.catalog.learn.quickshell.label"
     },
     {
       "id": "learn.news",
@@ -964,7 +1158,8 @@
       "icon": "public",
       "operation": "url",
       "value": "https://github.com/nacre-desktop/nacre",
-      "description": ""
+      "description": "",
+      "labelId": "launcher.catalog.learn.news.label"
     },
     {
       "id": "power.lock",
@@ -973,7 +1168,9 @@
       "icon": "lock",
       "operation": "power",
       "value": "lock",
-      "description": "Keep your apps running"
+      "description": "Keep your apps running",
+      "labelId": "launcher.catalog.power.lock.label",
+      "descriptionId": "launcher.catalog.power.lock.description"
     },
     {
       "id": "power.suspend",
@@ -983,7 +1180,10 @@
       "operation": "power",
       "value": "suspend",
       "description": "Suspend and resume later",
-      "confirm": "Sleep?"
+      "confirm": "Sleep?",
+      "labelId": "launcher.catalog.power.suspend.label",
+      "descriptionId": "launcher.catalog.power.suspend.description",
+      "confirmId": "launcher.catalog.power.suspend.confirm"
     },
     {
       "id": "power.logout",
@@ -993,7 +1193,10 @@
       "operation": "power",
       "value": "logout",
       "description": "Close this desktop session",
-      "confirm": "Log out?"
+      "confirm": "Log out?",
+      "labelId": "launcher.catalog.power.logout.label",
+      "descriptionId": "launcher.catalog.power.logout.description",
+      "confirmId": "launcher.catalog.power.logout.confirm"
     },
     {
       "id": "power.reboot",
@@ -1003,7 +1206,10 @@
       "operation": "power",
       "value": "reboot",
       "description": "Close apps and restart",
-      "confirm": "Restart?"
+      "confirm": "Restart?",
+      "labelId": "launcher.catalog.power.reboot.label",
+      "descriptionId": "launcher.catalog.power.reboot.description",
+      "confirmId": "launcher.catalog.power.reboot.confirm"
     },
     {
       "id": "power.poweroff",
@@ -1013,7 +1219,10 @@
       "operation": "power",
       "value": "poweroff",
       "description": "Close apps and turn off",
-      "confirm": "Shut down?"
+      "confirm": "Shut down?",
+      "labelId": "launcher.catalog.power.poweroff.label",
+      "descriptionId": "launcher.catalog.power.poweroff.description",
+      "confirmId": "launcher.catalog.power.poweroff.confirm"
     },
     {
       "id": "actions.files",
@@ -1027,7 +1236,9 @@
         "files",
         "file manager",
         "dolphin"
-      ]
+      ],
+      "labelId": "launcher.catalog.actions.files.label",
+      "descriptionId": "launcher.catalog.actions.files.description"
     },
     {
       "id": "actions.terminal",
@@ -1040,7 +1251,9 @@
       "aliases": [
         "terminal",
         "kitty"
-      ]
+      ],
+      "labelId": "launcher.catalog.actions.terminal.label",
+      "descriptionId": "launcher.catalog.actions.terminal.description"
     },
     {
       "id": "actions.apps",
@@ -1049,14 +1262,18 @@
       "icon": "apps",
       "operation": "route",
       "value": "apps",
-      "description": "Browse installed applications"
+      "description": "Browse installed applications",
+      "labelId": "launcher.catalog.actions.apps.label",
+      "descriptionId": "launcher.catalog.actions.apps.description"
     },
     {
       "id": "actions.controls.profile",
       "kind": "group",
       "label": "Power profile",
       "icon": "battery_full",
-      "description": "Choose battery life or responsiveness"
+      "description": "Choose battery life or responsiveness",
+      "labelId": "launcher.catalog.actions.controls.profile.label",
+      "descriptionId": "launcher.catalog.actions.controls.profile.description"
     },
     {
       "id": "actions.controls.profile.power-saver",
@@ -1065,7 +1282,8 @@
       "icon": "battery_full",
       "operation": "power-profile",
       "value": "power-saver",
-      "state": "power-profile"
+      "state": "power-profile",
+      "labelId": "launcher.catalog.actions.controls.profile.power-saver.label"
     },
     {
       "id": "actions.controls.profile.balanced",
@@ -1074,7 +1292,8 @@
       "icon": "battery_full",
       "operation": "power-profile",
       "value": "balanced",
-      "state": "power-profile"
+      "state": "power-profile",
+      "labelId": "launcher.catalog.actions.controls.profile.balanced.label"
     },
     {
       "id": "actions.controls.profile.performance",
@@ -1083,7 +1302,8 @@
       "icon": "battery_full",
       "operation": "power-profile",
       "value": "performance",
-      "state": "power-profile"
+      "state": "power-profile",
+      "labelId": "launcher.catalog.actions.controls.profile.performance.label"
     },
     {
       "id": "actions.media",
@@ -1091,7 +1311,9 @@
       "label": "Media and audio",
       "description": "Playback and output devices",
       "icon": "volume_up",
-      "provider": "audio"
+      "provider": "audio",
+      "labelId": "launcher.catalog.actions.media.label",
+      "descriptionId": "launcher.catalog.actions.media.description"
     },
     {
       "id": "actions.media.play-pause",
@@ -1100,7 +1322,9 @@
       "description": "Control the current player",
       "icon": "play_arrow",
       "operation": "media",
-      "value": "playPause"
+      "value": "playPause",
+      "labelId": "launcher.catalog.actions.media.play-pause.label",
+      "descriptionId": "launcher.catalog.actions.media.play-pause.description"
     },
     {
       "id": "actions.media.next",
@@ -1109,7 +1333,9 @@
       "description": "Control the current player",
       "icon": "skip_next",
       "operation": "media",
-      "value": "next"
+      "value": "next",
+      "labelId": "launcher.catalog.actions.media.next.label",
+      "descriptionId": "launcher.catalog.actions.media.next.description"
     },
     {
       "id": "actions.media.previous",
@@ -1118,7 +1344,9 @@
       "description": "Control the current player",
       "icon": "skip_previous",
       "operation": "media",
-      "value": "previous"
+      "value": "previous",
+      "labelId": "launcher.catalog.actions.media.previous.label",
+      "descriptionId": "launcher.catalog.actions.media.previous.description"
     },
     {
       "id": "actions.find-files",
@@ -1127,149 +1355,207 @@
       "description": "Search Documents, Downloads, Pictures, Desktop and Projects",
       "icon": "folder",
       "operation": "scope",
-      "value": ": "
+      "value": ": ",
+      "labelId": "launcher.catalog.actions.find-files.label",
+      "descriptionId": "launcher.catalog.actions.find-files.description"
     }
   ],
   "software": [
     {
       "package": "firefox",
       "label": "Firefox",
-      "description": "Web browser"
+      "description": "Web browser",
+      "labelId": "launcher.catalog.firefox.label",
+      "descriptionId": "launcher.catalog.firefox.description"
     },
     {
       "package": "chromium",
       "label": "Chromium",
-      "description": "Web browser"
+      "description": "Web browser",
+      "labelId": "launcher.catalog.chromium.label",
+      "descriptionId": "launcher.catalog.chromium.description"
     },
     {
       "package": "zen-browser-bin",
       "label": "Zen",
-      "description": "Web browser"
+      "description": "Web browser",
+      "labelId": "launcher.catalog.zen-browser-bin.label",
+      "descriptionId": "launcher.catalog.zen-browser-bin.description"
     },
     {
       "package": "code",
       "label": "Visual Studio Code",
-      "description": "Code editor"
+      "description": "Code editor",
+      "labelId": "launcher.catalog.code.label",
+      "descriptionId": "launcher.catalog.code.description"
     },
     {
       "package": "neovim",
       "label": "Neovim",
-      "description": "Terminal editor"
+      "description": "Terminal editor",
+      "labelId": "launcher.catalog.neovim.label",
+      "descriptionId": "launcher.catalog.neovim.description"
     },
     {
       "package": "helix",
       "label": "Helix",
-      "description": "Terminal editor"
+      "description": "Terminal editor",
+      "labelId": "launcher.catalog.helix.label",
+      "descriptionId": "launcher.catalog.helix.description"
     },
     {
       "package": "btop",
       "label": "btop",
-      "description": "System monitor"
+      "description": "System monitor",
+      "labelId": "launcher.catalog.btop.label",
+      "descriptionId": "launcher.catalog.btop.description"
     },
     {
       "package": "tmux",
       "label": "tmux",
-      "description": "Terminal sessions"
+      "description": "Terminal sessions",
+      "labelId": "launcher.catalog.tmux.label",
+      "descriptionId": "launcher.catalog.tmux.description"
     },
     {
       "package": "ripgrep",
       "label": "ripgrep",
-      "description": "Search files"
+      "description": "Search files",
+      "labelId": "launcher.catalog.ripgrep.label",
+      "descriptionId": "launcher.catalog.ripgrep.description"
     },
     {
       "package": "fd",
       "label": "fd",
-      "description": "Find files"
+      "description": "Find files",
+      "labelId": "launcher.catalog.fd.label",
+      "descriptionId": "launcher.catalog.fd.description"
     },
     {
       "package": "bat",
       "label": "bat",
-      "description": "Read files"
+      "description": "Read files",
+      "labelId": "launcher.catalog.bat.label",
+      "descriptionId": "launcher.catalog.bat.description"
     },
     {
       "package": "obs-studio",
       "label": "OBS Studio",
-      "description": "Capture and stream"
+      "description": "Capture and stream",
+      "labelId": "launcher.catalog.obs-studio.label",
+      "descriptionId": "launcher.catalog.obs-studio.description"
     },
     {
       "package": "vlc",
       "label": "VLC",
-      "description": "Media player"
+      "description": "Media player",
+      "labelId": "launcher.catalog.vlc.label",
+      "descriptionId": "launcher.catalog.vlc.description"
     },
     {
       "package": "mpv",
       "label": "mpv",
-      "description": "Media player"
+      "description": "Media player",
+      "labelId": "launcher.catalog.mpv.label",
+      "descriptionId": "launcher.catalog.mpv.description"
     },
     {
       "package": "spotify",
       "label": "Spotify",
-      "description": "Music"
+      "description": "Music",
+      "labelId": "launcher.catalog.spotify.label",
+      "descriptionId": "launcher.catalog.spotify.description"
     },
     {
       "package": "gimp",
       "label": "GIMP",
-      "description": "Image editor"
+      "description": "Image editor",
+      "labelId": "launcher.catalog.gimp.label",
+      "descriptionId": "launcher.catalog.gimp.description"
     },
     {
       "package": "krita",
       "label": "Krita",
-      "description": "Painting"
+      "description": "Painting",
+      "labelId": "launcher.catalog.krita.label",
+      "descriptionId": "launcher.catalog.krita.description"
     },
     {
       "package": "inkscape",
       "label": "Inkscape",
-      "description": "Vector graphics"
+      "description": "Vector graphics",
+      "labelId": "launcher.catalog.inkscape.label",
+      "descriptionId": "launcher.catalog.inkscape.description"
     },
     {
       "package": "steam",
       "label": "Steam",
-      "description": "Games"
+      "description": "Games",
+      "labelId": "launcher.catalog.steam.label",
+      "descriptionId": "launcher.catalog.steam.description"
     },
     {
       "package": "lutris",
       "label": "Lutris",
-      "description": "Game library"
+      "description": "Game library",
+      "labelId": "launcher.catalog.lutris.label",
+      "descriptionId": "launcher.catalog.lutris.description"
     },
     {
       "package": "heroic-games-launcher-bin",
       "label": "Heroic",
-      "description": "Game launcher"
+      "description": "Game launcher",
+      "labelId": "launcher.catalog.heroic-games-launcher-bin.label",
+      "descriptionId": "launcher.catalog.heroic-games-launcher-bin.description"
     },
     {
       "package": "localsend",
       "label": "LocalSend",
-      "description": "Share files locally"
+      "description": "Share files locally",
+      "labelId": "launcher.catalog.localsend.label",
+      "descriptionId": "launcher.catalog.localsend.description"
     },
     {
       "package": "tailscale",
       "label": "Tailscale",
-      "description": "Private network"
+      "description": "Private network",
+      "labelId": "launcher.catalog.tailscale.label",
+      "descriptionId": "launcher.catalog.tailscale.description"
     },
     {
       "package": "keepassxc",
       "label": "KeePassXC",
-      "description": "Password manager"
+      "description": "Password manager",
+      "labelId": "launcher.catalog.keepassxc.label",
+      "descriptionId": "launcher.catalog.keepassxc.description"
     },
     {
       "package": "wf-recorder",
       "label": "Screen recording",
-      "description": "Record Wayland screens"
+      "description": "Record Wayland screens",
+      "labelId": "launcher.catalog.wf-recorder.label",
+      "descriptionId": "launcher.catalog.wf-recorder.description"
     },
     {
       "package": "tesseract",
       "label": "Screen text recognition",
-      "description": "Read text in screenshots"
+      "description": "Read text in screenshots",
+      "labelId": "launcher.catalog.tesseract.label",
+      "descriptionId": "launcher.catalog.tesseract.description"
     },
     {
       "package": "zbar",
       "label": "QR recognition",
-      "description": "Read QR codes"
+      "description": "Read QR codes",
+      "labelId": "launcher.catalog.zbar.label",
+      "descriptionId": "launcher.catalog.zbar.description"
     },
     {
       "package": "hyprpicker",
       "label": "Screen color picker",
-      "description": "Copy a color from the screen"
+      "description": "Copy a color from the screen",
+      "labelId": "launcher.catalog.hyprpicker.label",
+      "descriptionId": "launcher.catalog.hyprpicker.description"
     }
   ]
 }

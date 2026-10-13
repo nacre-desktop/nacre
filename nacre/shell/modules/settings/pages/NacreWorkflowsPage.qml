@@ -13,7 +13,7 @@ NacreSettingsPage {
         DesktopSettings.request(["save-workflow", DesktopSettings.data.preset || "normal", JSON.stringify(roles)]);
     }
     NacreSettingsSection {
-        title: "Desktop presets"
+        title: NacreI18n.tr("ui.workflows-page.title.desktop-presets", "Desktop presets")
         Flow {
             width: parent.width
             spacing: 8
@@ -21,7 +21,7 @@ NacreSettingsPage {
                 model: ["normal", "focused", "presentation", "minimal", "meeting", "music", "docked"]
                 ActionButton {
                     required property string modelData
-                    text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                    text: NacreI18n.option("workflow", modelData)
                     selected: (DesktopSettings.data.preset || "normal") === modelData
                     onClicked: DesktopSettings.request(["preset", modelData])
                 }
@@ -29,10 +29,10 @@ NacreSettingsPage {
         }
     }
     NacreSettingsSection {
-        title: "Personal workflow setup"
-        description: "Save current audio and display choices for this preset. Only connected devices are recalled; microphone mute stays unchanged. Startup apps are opt-in."
+        title: NacreI18n.tr("ui.workflows-page.title.personal-workflow-setup", "Personal workflow setup")
+        description: NacreI18n.tr("ui.workflows-page.description.save-current-audio-and-display-choices-for-this-preset", "Save current audio and display choices for this preset. Only connected devices are recalled; microphone mute stays unchanged. Startup apps are opt-in.")
         ActionButton {
-            text: "Save current audio and display setup"
+            text: NacreI18n.tr("ui.workflows-page.text.save-current-audio-and-display-setup", "Save current audio and display setup")
             enabled: DesktopSettings.busy !== true
             onClicked: root.save()
         }
@@ -43,7 +43,7 @@ NacreSettingsPage {
                 model: ["Browser", "Nacre AI", "Discord", "Spotify", "Mail", "Brain"]
                 ActionButton {
                     required property string modelData
-                    text: modelData
+                    text: NacreI18n.option("workflow-role", modelData)
                     selected: root.roles.includes(modelData)
                     onClicked: root.toggleRole(modelData)
                 }

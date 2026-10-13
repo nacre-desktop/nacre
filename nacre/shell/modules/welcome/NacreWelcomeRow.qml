@@ -8,7 +8,7 @@ NacreSurface {
     required property string detail
     property string icon: ""
     property real leadingSpace: root.icon ? 56 : 18
-    property string buttonText: "Open"
+    property string buttonText: NacreI18n.tr("welcome.welcome-row.buttonText.open", "Open")
     property bool available: true
     property bool optional: false
     property bool showGlyph: true
@@ -52,7 +52,7 @@ NacreSurface {
         anchors.right: parent.right
         anchors.rightMargin: 18
         y: root.stacked ? description.y + description.implicitHeight + 12 : (parent.height - height) / 2
-        text: root.available ? root.buttonText : "Not installed"
+        text: root.available ? root.buttonText : NacreI18n.tr("welcome.welcome-row.buttonText.not-installed", "Not installed")
         enabled: root.available
         onClicked: root.clicked()
     }

@@ -2,6 +2,7 @@
 """Bounded system location lookup; timezone mapping stays offline, coordinates ephemeral."""
 
 import json
+from nacre_i18n import tr
 import math
 import time
 import threading
@@ -13,13 +14,33 @@ def validate_fix(fix, now=None):
     if not all(
         isinstance(v, (int, float)) and math.isfinite(v) for v in (lat, lon, accuracy)
     ):
-        raise ValueError("Invalid device location")
+        raise ValueError(
+            tr(
+                "helper.device-location.invalid-device-location",
+                "Invalid device location",
+            )
+        )
     if not -90 <= lat <= 90 or not -180 <= lon <= 180 or not 0 <= accuracy <= 5000:
-        raise ValueError("Device location is too imprecise")
+        raise ValueError(
+            tr(
+                "helper.device-location.device-location-is-too-imprecise",
+                "Device location is too imprecise",
+            )
+        )
     if not -60 <= now - fix["timestamp"] <= 300:
-        raise ValueError("Device location is stale")
+        raise ValueError(
+            tr(
+                "helper.device-location.device-location-is-stale",
+                "Device location is stale",
+            )
+        )
     if "geoip" in fix.get("description", "").lower():
-        raise ValueError("IP-only location is not trusted")
+        raise ValueError(
+            tr(
+                "helper.device-location.ip-only-location-is-not-trusted",
+                "IP-only location is not trusted",
+            )
+        )
     return fix
 
 
@@ -38,12 +59,22 @@ def zone_for_fix(fix, world):
         longitude = ((lon + east * longitude_delta + 180) % 360) - 180
         place = world.find_nearest_city(latitude, longitude)
         if place is None or not place.get_timezone_str():
-            raise ValueError("No reliable local timezone")
+            raise ValueError(
+                tr(
+                    "helper.device-location.no-reliable-local-timezone",
+                    "No reliable local timezone",
+                )
+            )
         zones.add(place.get_timezone_str())
         if city is None:
             city = place.get_city_name() or place.get_name()
     if len(zones) != 1:
-        raise ValueError("Location is near an uncertain timezone boundary")
+        raise ValueError(
+            tr(
+                "helper.device-location.location-is-near-an-uncertain-timezone-boundary",
+                "Location is near an uncertain timezone boundary",
+            )
+        )
     return {
         "timezone": zones.pop(),
         "city": city,
@@ -81,7 +112,12 @@ def detect():
             def value(name):
                 variant = location.get_cached_property(name)
                 if variant is None:
-                    raise ValueError("Incomplete device fix")
+                    raise ValueError(
+                        tr(
+                            "helper.device-location.incomplete-device-fix",
+                            "Incomplete device fix",
+                        )
+                    )
                 return variant.unpack()
 
             try:
@@ -110,7 +146,12 @@ def detect():
             timeout = GLib.timeout_add(remaining, expired)
             loop.run()
         if not result:
-            raise RuntimeError("No fresh, accurate device location available")
+            raise RuntimeError(
+                tr(
+                    "helper.device-location.no-fresh-accurate-device-location-available",
+                    "No fresh, accurate device location available",
+                )
+            )
         return result
     finally:
         timer.cancel()
@@ -127,5 +168,14 @@ if __name__ == "__main__":
     try:
         print(json.dumps(detect()))
     except Exception:  # noqa: BLE001 — GI/service boundary may raise backend-specific errors; location is optional.
-        print(json.dumps({"error": "No trustworthy device location available"}))
+        print(
+            json.dumps(
+                {
+                    "error": tr(
+                        "helper.device-location.no-trustworthy-device-location-available",
+                        "No trustworthy device location available",
+                    )
+                }
+            )
+        )
         raise SystemExit(1) from None
