@@ -91,6 +91,7 @@ NacreSurface {
         Loader {
             id: page
             objectName: "dashboardPage"
+            asynchronous: true
             active: root.detached || root.visibilities.dashboard || root.presentedHeight > 0
             width: parent.width
             height: parent.height
