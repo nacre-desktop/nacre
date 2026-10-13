@@ -36,14 +36,13 @@ def call(operation, **payload):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        start_new_session=os.name == "posix",
     )
     try:
         output, error = process.communicate(json.dumps({"operation": operation, "payload": payload}), timeout=120)
     except BaseException:
         if process.poll() is None:
             if os.name == "posix":
-                os.killpg(process.pid, signal.SIGINT)
+                process.send_signal(signal.SIGINT)
             else:
                 process.terminate()
             try:
