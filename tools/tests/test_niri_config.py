@@ -42,6 +42,10 @@ class NiriConfigTests(unittest.TestCase):
         self.assertIn("move_window --workspace 2", text)
         self.assertIn("focus_direction --direction left", text)
         self.assertNotIn("hyprctl", text)
+        self.assertIn("action close_window", text)
+        self.assertNotIn("window-close.sh", text)
+        self.assertIn("niri msg action toggle-overview", text)
+        self.assertNotIn("nacre-shell overview", text)
         unsupported = json.loads(generated["niri/unsupported.json"])["unsupported"]
         self.assertTrue(any("window.pin" in row["reason"] for row in unsupported))
         self.assertTrue(any("pointer" in row["reason"] for row in unsupported))

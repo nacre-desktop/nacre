@@ -1,4 +1,5 @@
 import QtQuick
+import "../../utils/scripts/window-title.js" as WindowTitle
 import QtQuick.Controls.Basic
 import qs.widgets
 import qs.services
@@ -228,7 +229,7 @@ Item {
                             color: cell.selected ? NacreColours.palette.m3onSurface : NacreColours.palette.m3onSurfaceVariant
                             NacreInteraction {
                                 accessibleName: NacreI18n.tr("ui.workspace-row.accessibleName.focus-value0", "Focus {value0}", {
-                                    value0: String(parent.client?.title || parent.client?.wmClass || "window")
+                                    value0: WindowTitle.caption(parent.client?.title || parent.client?.wmClass || "window", parent.client?.wmClass, ChatWindowTitle.titles[parent.client?.pid])
                                 })
                                 function onClicked() {
                                     NacreCompositor.focusWindow(parent.client?.windowId);
@@ -254,7 +255,7 @@ Item {
                     }, {
                         workspace: cell.workspaceId,
                         count: cell.windowCount,
-                        titles: cell.windowCount ? "\n" + cell.windows.slice(0, 5).map(client => NacreI18n.windowCaption(String(client.title || client.wmClass || NacreI18n.tr("workspaces.window.fallback", "Window")), client.wmClass).slice(0, 80)).join("\n") : "",
+                        titles: cell.windowCount ? "\n" + cell.windows.slice(0, 5).map(client => NacreI18n.windowCaption(WindowTitle.caption(client.title || client.wmClass || NacreI18n.tr("workspaces.window.fallback", "Window"), client.wmClass, ChatWindowTitle.titles[client.pid]), client.wmClass).slice(0, 80)).join("\n") : "",
                         more: cell.windowCount > 5 ? NacreI18n.tr("workspaces.tooltip.more", "\n+{count} more", {
                             count: cell.windowCount - 5
                         }) : ""

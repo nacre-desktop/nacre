@@ -57,6 +57,7 @@ Item {
  Column {Item{id:a;width:24;height:24}Item{id:n;width:24;height:24}Item{id:b;width:24;height:24}Item{id:c;width:24;height:36}Item{id:d;width:24;height:36}}
 }""")
             definitions = {
+                "ChatWindowTitle": "property var titles:({})",
                 "NacrePresentation": "property var active:({workspaceColors:false})",
                 "NacreIcons": 'function getDesktopEntry(name){return {categories:name==="kitty"?["System","TerminalEmulator"]:name==="firefox"?["Network","WebBrowser"]:name==="discord"?["Network","InstantMessaging"]:[]}}function getAppCategoryIcon(name,fallback){return name==="editor"?"code":fallback}',
                 "NacreCompositor": 'property int activeWsId:2;property var windows:[];property var focusedMonitor:({name:"test"});property var activeWindow:null;property var requests:[];function switchWorkspace(value){requests=[...requests,"workspace "+value];return true}function focusWindow(address){requests=[...requests,"focus "+address];return true}',
@@ -110,7 +111,13 @@ Item {
                 source = remove_objects(
                     source.replace("import Quickshell.Io", ""), r"\bIpcHandler\s*\{"
                 )
+                source = source.replace(
+                    "../../utils/scripts/window-title.js", "window-title.js"
+                )
                 (target / (name + ".qml")).write_text(source)
+            shutil.copy2(
+                SHELL / "utils/scripts/window-title.js", target / "window-title.js"
+            )
             shutil.copy2(
                 ROOT / "tests/header-qml/tst_header.qml", target / "tst_header.qml"
             )

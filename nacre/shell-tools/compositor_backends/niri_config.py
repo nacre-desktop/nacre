@@ -108,6 +108,10 @@ def binding_command(row):
     if action == "application.launch":
         command = params["command"]
         description = row.get("options", {}).get("description", "")
+        if description == "Nacre:close":
+            return action_command("close_window")
+        if description == "Nacre:overview":
+            return "niri msg action toggle-overview"
         if description in SKIPPED_LAUNCHES or "/window-minimize.sh" in command:
             raise NotImplementedError(
                 "Hyprland hide/trash/force-kill operation is not available"

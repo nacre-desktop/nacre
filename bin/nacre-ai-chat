@@ -178,7 +178,7 @@ def chat_records(threads, sessions):
     return result
 
 
-def cache_title(thread_id, title):
+def cache_title(thread_id, title, cwd=None):
     if not re.fullmatch(r"[a-zA-Z0-9-]{1,100}", thread_id or ""):
         raise ValueError("Invalid title cache ID")
     import tempfile
@@ -187,8 +187,36 @@ def cache_title(thread_id, title):
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     fd, temp = tempfile.mkstemp(dir=root, prefix=".title-")
     with os.fdopen(fd, "w") as output:
-        json.dump({"title": label(title)}, output)
+        record = {"title": label(title)}
+        if cwd:
+            record["cwd"] = str(cwd)
+        json.dump(record, output)
     os.replace(temp, root / f"{thread_id}.json")
+    if cwd:
+        directory = Path(cwd)
+        if (
+            directory.parent == Path.home() / ".local/share/nacre/ai/chats"
+            and re.fullmatch(r"[0-9a-f]{32}", directory.name)
+        ):
+            index = root / "directories"
+            index.mkdir(mode=0o700, exist_ok=True)
+            fd, temp = tempfile.mkstemp(dir=index, prefix=".directory-")
+            with os.fdopen(fd, "w") as output:
+                json.dump({"threadId": thread_id}, output)
+            os.replace(temp, index / f"{directory.name}.json")
+
+
+def cache_named_thread(codex, thread_id, title):
+    # Metadata only: never request conversation turns or inspect account secrets.
+    cwd = None
+    try:
+        thread = codex.call(
+            "thread/read", {"threadId": thread_id, "includeTurns": False}
+        )["thread"]
+        cwd = thread.get("cwd")
+    except (OSError, ValueError, KeyError):
+        pass
+    cache_title(thread_id, title, cwd)
 
 
 def set_title(thread_id, title, env):
@@ -199,7 +227,7 @@ def set_title(thread_id, title, env):
         raise ValueError("A title is required")
     with Codex(env) as codex:
         codex.call("thread/name/set", {"threadId": thread_id, "name": name})
-    cache_title(thread_id, name)
+        cache_named_thread(codex, thread_id, name)
 
 
 def knowledge_tools():
@@ -543,7 +571,7 @@ def main():
                     "Run in a Codex tool session or pass --thread-id, plus a short title"
                 )
             codex.call("thread/name/set", {"threadId": a.thread_id, "name": name})
-            cache_title(a.thread_id, name)
+            cache_named_thread(codex, a.thread_id, name)
             print("Chat title saved")
         else:
             if not a.path or not a.project:

@@ -1,8 +1,10 @@
 import QtQuick
+import Quickshell.Io
 import qs.widgets
 import qs.services
 import qs.config
 import qs.utils
+import "../../../utils/scripts/window-title.js" as WindowTitle
 
 Item {
     id: root
@@ -10,8 +12,31 @@ Item {
     property bool horizontal: false
     property color colour: NacreColours.palette.m3primary
     readonly property Item child: caption
-    readonly property var client: NacreCompositor.activeWindow
-    readonly property string displayTitle: client ? NacreI18n.windowCaption(String(client.title || client.wmClass), client.wmClass) : NacreI18n.tr("desktop.title.empty", "Desktop")
+    property string previousWindowId: ""
+    readonly property var client: WindowTitle.displayWindow(NacreCompositor.activeWindow, NacreCompositor.windows, NacreCompositor.activeWorkspaceId, previousWindowId, NacreCompositor.backendName)
+    readonly property string displayTitle: client ? NacreI18n.windowCaption(WindowTitle.caption(client.title || client.wmClass, client.wmClass, ChatWindowTitle.titles[client.pid]), client.wmClass) : NacreI18n.tr("desktop.title.empty", "Desktop")
+    function rememberWindow() {
+        if (NacreCompositor.activeWindow?.windowId)
+            previousWindowId = NacreCompositor.activeWindow.windowId;
+        else if (!previousWindowId && NacreCompositor.backendName === "niri")
+            previousWindowId = NacreCompositor.activeWorkspace?.activeWindowId || "";
+    }
+    IpcHandler {
+        target: "windowTitle-" + (root.monitor?.name || "default")
+        function state(): string {
+            return JSON.stringify({
+                title: root.displayTitle,
+                retained: !NacreCompositor.activeWindow && !!root.client
+            });
+        }
+    }
+    Component.onCompleted: rememberWindow()
+    Connections {
+        target: NacreCompositor
+        function onActiveWindowChanged() {
+            root.rememberWindow();
+        }
+    }
     implicitWidth: glyph.width + caption.implicitWidth + row.spacing
     implicitHeight: 30
     Accessible.role: Accessible.StaticText

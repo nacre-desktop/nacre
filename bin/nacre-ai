@@ -647,6 +647,9 @@ def ssh_exec(host, command):
 
 def worker_window(args):
     """Keep startup failures visible instead of losing the new terminal."""
+    if sys.stdout.isatty():
+        initial_title = "New chat" if args.worker_command == "new" else "Load chat"
+        print("\033]2;" + initial_title + "\007", end="", flush=True)
     if args.worker_command in ("latest", "sessions"):
         child = [sys.executable, str(Path(__file__).resolve()), args.worker_command]
         if args.project:
@@ -797,8 +800,6 @@ def dashboard(args):
                     "kitty",
                     "--class",
                     "nacre-ai-task",
-                    "--title",
-                    choice,
                     "--",
                     *child,
                 ]
@@ -823,8 +824,6 @@ def dashboard(args):
                 "kitty",
                 "--class",
                 "nacre-ai-task",
-                "--title",
-                "New chat",
                 "--",
                 *child,
             ]

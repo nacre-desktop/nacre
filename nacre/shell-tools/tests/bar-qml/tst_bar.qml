@@ -11,6 +11,10 @@ TestCase {
     when: windowShown
     function init() {
         NacreCompositor.activeWindow = null;
+        NacreCompositor.windows = [];
+        NacreCompositor.backendName = "hyprland";
+        NacreCompositor.activeWorkspaceId = null;
+        ChatWindowTitle.titles = ({});
         NacreAudio.volume = .5;
         NacreAudio.writes = [];
         NacreAudio.muted = false;
@@ -97,6 +101,47 @@ TestCase {
         const writes = NacreAudio.writes.length;
         view.adjustVolume(NaN);
         compare(NacreAudio.writes.length, writes);
+    }
+    function test_named_chat_preserves_spinner_without_directory_suffix() {
+        const view = createTemporaryObject(title, test);
+        NacreCompositor.activeWindow = {
+            windowId: "niri-window:7",
+            workspaceId: "niri-workspace:2",
+            wmClass: "nacre-ai-task",
+            pid: 123,
+            title: "⠹ Fix the terminal titles | 7ce71273f1db4999bf221..."
+        };
+        compare(view.displayTitle, "⠹ Fix the terminal titles");
+        ChatWindowTitle.titles = ({
+                123: "Name saved by the agent"
+            });
+        compare(view.displayTitle, "⠹ Name saved by the agent");
+        NacreCompositor.activeWindow = Object.assign({}, NacreCompositor.activeWindow, {
+            title: "Name saved by the agent | /home/user/project"
+        });
+        compare(view.displayTitle, "Name saved by the agent");
+    }
+    function test_screenshot_focus_loss_keeps_caption_without_stale_empty_workspace_title() {
+        NacreCompositor.backendName = "niri";
+        NacreCompositor.activeWorkspaceId = "niri-workspace:2";
+        const client = {
+            windowId: "niri-window:7",
+            workspaceId: "niri-workspace:2",
+            wmClass: "kitty",
+            title: "Terminal"
+        };
+        NacreCompositor.windows = [client];
+        NacreCompositor.activeWindow = client;
+        const view = createTemporaryObject(title, test);
+        compare(view.displayTitle, "Terminal");
+        NacreCompositor.activeWindow = null;
+        compare(view.displayTitle, "Terminal");
+        NacreCompositor.activeWorkspaceId = "niri-workspace:3";
+        compare(view.displayTitle, "Desktop");
+        NacreCompositor.activeWorkspaceId = "niri-workspace:2";
+        compare(view.displayTitle, "Terminal");
+        NacreCompositor.windows = [];
+        compare(view.displayTitle, "Desktop");
     }
     function test_short_title_painted_group_is_centered_and_resizes() {
         const view = createTemporaryObject(title, test, {

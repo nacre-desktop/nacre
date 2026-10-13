@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from types import SimpleNamespace
 from test_workflow import module
 
@@ -85,6 +85,43 @@ class ChatTitles(unittest.TestCase):
             )
             with self.assertRaises(ValueError):
                 chat.account_env("../other")
+
+    def test_named_thread_caches_metadata_without_reading_turns(self):
+        import json
+
+        chat = module("nacre-ai-chat")
+        api = Mock()
+        api.call.return_value = {"thread": {"cwd": "/chat"}}
+        with (
+            tempfile.TemporaryDirectory() as home,
+            patch.dict(os.environ, HOME=home),
+        ):
+            chat.cache_named_thread(api, "thread-one", "Title")
+            api.call.assert_called_once_with(
+                "thread/read", {"threadId": "thread-one", "includeTurns": False}
+            )
+            file = Path(home) / ".local/state/nacre/ai/chat-titles/thread-one.json"
+            self.assertEqual(
+                json.loads(file.read_text()), {"title": "Title", "cwd": "/chat"}
+            )
+
+    def test_directory_identity_survives_older_title_only_cache_writers(self):
+        import json
+
+        chat = module("nacre-ai-chat")
+        thread = "11111111-1111-1111-1111-111111111111"
+        with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, HOME=home):
+            directory = Path(home) / ".local/share/nacre/ai/chats" / ("a" * 32)
+            chat.cache_title(thread, "First name", str(directory))
+            chat.cache_title(thread, "Renamed chat")
+            root = Path(home) / ".local/state/nacre/ai/chat-titles"
+            identity = root / "directories" / f"{directory.name}.json"
+            self.assertEqual(json.loads(identity.read_text()), {"threadId": thread})
+            self.assertEqual(identity.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(
+                json.loads((root / f"{thread}.json").read_text()),
+                {"title": "Renamed chat"},
+            )
 
     def test_failed_handshake_always_cleans_child(self):
         chat = module("nacre-ai-chat")

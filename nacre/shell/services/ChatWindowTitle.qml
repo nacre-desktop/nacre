@@ -9,6 +9,7 @@ Singleton {
     property var titles: ({})
     property var threadIds: ({})
     property var pending: []
+    property string scannedPids: ""
     IpcHandler {
         target: "chatTitle"
         function state(): string {
@@ -24,10 +25,14 @@ Singleton {
     readonly property bool resolved: pid === 0 || titles[pid] !== undefined
 
     // Resolve open chat windows before focus, and retain their names across switches.
-    function scan() {
+    function scan(force = true) {
         const pids = NacreCompositor.windows.filter(c => c.wmClass === "nacre-ai-task").map(c => c.pid);
         if (pid && !pids.includes(pid))
             pids.unshift(pid);
+        const key = pids.slice().sort((a, b) => a - b).join(",");
+        if (!force && key === scannedPids)
+            return;
+        scannedPids = key;
         const retained = {};
         for (const p of pids)
             if (titles[p] !== undefined)
@@ -56,7 +61,7 @@ Singleton {
     Connections {
         target: NacreCompositor
         function onWindowsChanged() {
-            root.scan();
+            root.scan(false);
         }
     }
     Timer {

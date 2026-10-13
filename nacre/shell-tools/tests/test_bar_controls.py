@@ -36,7 +36,8 @@ class BarControlsTests(unittest.TestCase):
             )
             definitions = {
                 "NacreBar": "property var sizes:({batteryWidth:200})",
-                "NacreCompositor": "property var activeWindow:null",
+                "NacreCompositor": 'property var activeWindow:null;property var windows:[];property var activeWorkspaceId:null;property string backendName:"hyprland"',
+                "ChatWindowTitle": "property var titles:({})",
                 "NacreIcons": 'function getAppCategoryIcon(name,fallback){return name==="editor"?"code":fallback}function getNetworkIcon(strength){return strength>50?"signal_wifi_4_bar":"signal_wifi_0_bar"}',
                 "NacreAudio": "property real volume:.5;property bool muted:false;property var writes:[];function setVolume(value){writes=[...writes,value];volume=value}",
                 "NacreNetwork": "property var active:null",
@@ -63,6 +64,9 @@ class BarControlsTests(unittest.TestCase):
             shutil.copy2(
                 SHELL / "modules/dashboard/overview/overview.js", target / "overview.js"
             )
+            shutil.copy2(
+                SHELL / "utils/scripts/window-title.js", target / "window-title.js"
+            )
             for area, name in (
                 ("components", "NacreActiveTitle"),
                 ("components", "NacreStatusIcons"),
@@ -81,6 +85,9 @@ class BarControlsTests(unittest.TestCase):
                     source = source.replace("import " + imported, 'import "fixtures"')
                 source = source.replace(
                     "../../dashboard/overview/overview.js", "overview.js"
+                )
+                source = source.replace(
+                    "../../../utils/scripts/window-title.js", "window-title.js"
                 )
                 source = source.replace("import Quickshell.Io", "")
                 source = remove_objects(source, r"\bIpcHandler\s*\{")
