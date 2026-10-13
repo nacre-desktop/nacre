@@ -3,8 +3,8 @@
 Updated: 2026-10-13. Status: merged backend consumed in windowed Nacre preview;
 operator requests iterative Nacre/niri testing while Hyprland/chats keep running.
 Actual session transition, lock/idle/night light and real-login integration remain pending.
-Branch: `feature/niri-on-pc`. Own worktree: `nacre-niri-on-pc` under the normal
-private task-worktree root. One PR for session/tooling/docs work; backend changes
+Branch: `feature/niri-preview` (follow-up PR18; original PR7 merged). Own worktree:
+`nacre-niri-on-pc` under the normal private task-worktree root. One open PR for session/tooling/docs work; backend changes
 belong to the separate `feature/niri-backend` task.
 
 ## Done
@@ -15,8 +15,10 @@ belong to the separate `feature/niri-backend` task.
   profile preservation, resolved release mounts, wallpaper assets and native KDL.
   Preserves personal profile and AI permission; no live source replacement.
 - Generated personal niri config validates. Nested shell loads; launcher/controller,
-  pinned dashboard, detached launcher/window, notification capture, Wayland app and
+  pinned dashboard, detached launcher/window, notification capture, Wayland/X11 apps and
   grim output probes pass. Global activation environment remains unchanged.
+- Synthetic wtype events inside nested niri did not activate the Alt aliases;
+  native parsing passes, but real focused-window keyboard testing remains pending.
 - Corrected preview-only runtime-symlink and Quickshell config-path mismatches;
   no backend source edits. Added accessible Alt aliases and private Kitty cache.
 - Read repository/workflow instructions and inspected actual SDDM/UWSM startup.
