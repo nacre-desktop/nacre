@@ -307,6 +307,7 @@ def audit_dashboard():
                 (root / "nacre/shell/modules/dashboard" / f"{name}.qml")
                 .read_text()
                 .replace("import qs.widgets", 'import "fixtures"')
+                .replace("import qs.utils", 'import "fixtures"')
                 .replace("import qs.services", 'import "fixtures"')
                 .replace("import Quickshell\n", "")
                 .replace("Quickshell.", "Environment.")
@@ -320,6 +321,7 @@ def audit_dashboard():
                 .replace("import qs.services", 'import "fixtures"')
             )
         definitions = {
+            "NacrePaths": 'property string tools:"/fixture/tools"',
             "NacreDashboardState": 'property var home:({events:[]});property var focusState:({status:"idle"});property bool running:false;property real progress:.3;property string timerText:"24:12";property string message:"";property var brain:({available:false,nodes:[],links:[]});property var preferences:({albumPalette:true});function save(k,v){}function start(value){}function end(value){}function request(value){}function openNote(value){}',
             "NacreDashboardSystem": 'property var disks:[];property var processes:[];property var network:[];property string message:"";function end(pid,start){}',
             "NacreWeather": 'property var reading:({hours:[],days:[],code:0});property real temperature:22;property string displayTemperature:"22°C";property string description:NacreI18n.option("weather-description","Clear");property string icon:"sunny";property string location:"Fixture city";property bool stale:false;property bool busy:false;property string detail:"";property string range:"";property string error:"";function degrees(value){return value===undefined?"—":value+"°C"}function reload(){}',
