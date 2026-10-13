@@ -601,3 +601,257 @@ The dashboard-owner harness now uses a private runtime directory, full XDG state
 and a private D-Bus session. It explicitly enables its `qml.debug` result marker;
 inherited debug suppression previously hid successful runs. These are test-harness
 changes and do not change the UI or readiness boundary.
+
+
+## Phase D: current shell memory and complete-frame guard (2026-10-13)
+
+The 15 commits on `perf/shell-memory-budget` were already squash-integrated as
+`22bb7dcc` (#10). The closed-panel release, lazy multimedia, measured apps warm
+policy, visible-only tour posters and proportional-memory sampler are present in
+current main; replaying those commits would duplicate the work. This pass keeps
+those policies and measures the complete production shell on both backends.
+
+### Reproduction and measurement boundary
+
+`tools/performance-session.py` starts a headless labwc parent and a nested
+Hyprland or Niri compositor, with a disposable HOME, XDG directories, private
+D-Bus, output and shell source copy. It never calls the live desktop. The memory
+sampler is `tools/performance.py`; every scenario retains RSS/PSS/USS distributions
+and PSS coverage. Shell descendants are recorded separately from the shell
+process; the tables below budget the shell process alone.
+
+Fixtures are one 1920×1080 output at scale 1, a generated 3840×2160 static PNG,
+a local 1920×1080 H.264 clip at 24 fps, 48 generated application entries with
+128×128 icons and 12 favorites, plus the distribution's installed applications.
+The full cycle visits the launcher, five dashboard tabs, settings, colors,
+welcome, wallpaper picker and AI panel, closing each and allowing six seconds
+for the existing five-second release grace period. Static idle is then sampled
+for 30 seconds; other endpoints use five seconds at 250 ms intervals.
+
+The copied shell receives F8/F9 from a virtual keyboard. The clock starts in the
+Qt key handler and ends at `frameSwapped` after panel geometry, opening animation,
+page Loader, data queue and images settle. A 16 ms probe timer requests frames
+while waiting. This includes probe overhead and uses a 1 ms clock; it excludes
+physical keyboard delivery, the real shortcut's CLI/IPC dispatch and compositor presentation, so it is **not an
+input-to-photon measurement**. Synchronous handler time is reported separately.
+Hyprland's fixture disables animations; Niri retains them. Compare before/after
+within each backend, rather than treating backend frame medians as equivalent.
+
+Run with the pinned native engine and installed performance-session prerequisites:
+
+```sh
+PATH="$PWD/.venv/bin:$PATH" python tools/performance-session.py \
+  --backend hyprland --quick --check-budgets --output /tmp/shell-hyprland.json
+PATH="$PWD/.venv/bin:$PATH" python tools/performance-session.py \
+  --backend niri --quick --check-budgets --output /tmp/shell-niri.json
+```
+
+Use `--revision COMMIT` for an immutable source comparison while keeping the same
+harness, engine and host. For concurrent development, `--control` disables only
+this pass in the copied current source: hidden-decoder release, deferred refresh,
+asynchronous dashboard construction. The rest of
+current main, including unrelated UI changes, remains identical. Extra snapshot
+properties/methods remain in both copies, so this is a conservative behavioral
+control rather than a byte-for-byte reconstruction of an old shell. `--quick` skips individual panel endpoint samples,
+while still visiting every panel. Omit it to retain those intermediate samples.
+A matching native executable can be supplied with `--orient-binary PATH`.
+
+### Attribution and chosen changes
+
+Anonymous native mappings dominate this fixture. They combine QML/JavaScript,
+C++ objects, decoded images, font raster caches, codec allocations and renderer
+pools. File-backed Qt/QML or font mappings measure resident library/font pages,
+not all engine or text memory. Shared-memory mappings identify some display
+buffers; unmapped GPU allocations are outside PSS. The summary JSON retains the
+mapping categories rather than inventing an exact per-component heap breakdown.
+
+Closed panels already unload their large content. Wallpaper thumbnails, album
+covers and media cards already have bounded `sourceSize` and Qt's shared image
+cache for equivalent source/size requests; different decode sizes can still use
+separate entries. Adding a separate cache would duplicate ownership. A live hero-size trial
+caused additional decodes while geometry changed and was rejected. A fixed
+1440×960 hero trial also increased the native 16:9 decode from 1440×810 to
+1707×960 with `PreserveAspectCrop`, so the existing width-only cap is retained.
+Qt documents both [shared image caching and decode sizing](https://doc.qt.io/qt-6/qml-qtquick-image.html).
+
+The new decoder release applies after five seconds of fullscreen coverage,
+lock or sleep, captures playback position, and lazily restores it on return.
+Manual pause and ordinary tiled coverage retain the frozen frame, because the
+wallpaper can remain visible through gaps. Native tests cover release, a brief
+cover, partial coverage, picker visibility, muted playback and seek restoration.
+Static selection continues to destroy the video component.
+
+An experimental child-only 128 KiB glibc mmap threshold was tested to make large
+buffers independently releasable. The same-source software comparison did not
+establish a memory saving and post-video PSS was higher, so the default is removed.
+Explicit allocator controls remain available in the isolated harness for future
+GPU experiments; no allocator policy is changed in the user's session. See
+[glibc allocation tunables](https://sourceware.org/glibc/manual/latest/html_node/Memory-Allocation-Tunables.html).
+
+Dashboard pages now incubate asynchronously; dashboard data refresh and
+coalesced launcher refresh run on the next event-loop turn. Geometry, opening
+animation, reset behavior and data providers are unchanged. Python helper
+migration is outside this pass.
+
+Qt already selects hardware decode backends according to availability. A
+standalone VA-API decode succeeded on the measurement host, but that does not
+prove every Qt clip uses VA-API. No backend is forced, no codec protection is
+bypassed, and no source video is transcoded. Qt's QML MediaPlayer does not expose
+a portable output-resolution decode control. A low-latency playback-intent trial
+increased active PSS from 311.2 to 316.7 MiB, so it was rejected. Qt's backend
+switches are [private configuration](https://doc.qt.io/qt-6/advanced-ffmpeg-configuration.html),
+not a portable shell memory policy.
+
+### Budget tiers and CI
+
+`tools/performance-budgets.json` separates one-output reference ceilings from
+generous guard ceilings. Reference values guide GPU development; the software
+CI tier is calibrated separately. The guard uses peak
+PSS, not a median that could hide a spike.
+
+| Shell state | GPU reference PSS (MiB) | GPU lab maximum (MiB) | Software CI maximum (MiB) |
+| --- | ---: | ---: | ---: |
+| Fresh static | 250 | 450 | 1200 |
+| Closed after all panels / settled static | 350 | 650 | 1700 |
+| Active / manually paused / resumed 1080p video | 550 | 900 | 2000 |
+| Fully hidden video / static after video | 500 | 850 | 1900 |
+
+The existing two-output video reference remains 650 MiB, with roughly 50 MiB
+additional static allowance per equivalent output and up to 10 MiB per warmed
+apps view. Multi-output, high-DPI, GIF, HDR and higher-resolution video need
+separate calibration; these are not GPU limits.
+
+The separate **Headless shell performance** workflow runs the full production
+shell in nested Niri on a pixman headless parent, exercises the full panel/video
+cycle and retains JSON artifacts. Mesa OpenGL software rendering is explicit;
+this profile is not comparable with the GPU lab reference. A calibration capture
+used 792 MiB fresh and 1238 MiB after video, so its generous regression ceilings
+are a separate `--budget-tier software`, rather than silently changing the GPU
+budget. Tests verify that selecting this tier does not relax the default guard.
+
+Current Hyprland's nested backend requires DMA-BUF/render-node support absent
+from ordinary hosted runners. A pixman parent starts, but its Hyprland child
+fails before the shell. A tested VKMS device provides a primary KMS node, not
+the render node required by wlroots GLES2. The portable CI guard therefore uses
+Niri; GPU Hyprland captures remain separate lab validation. No kernel-module
+installation or privileged graphics setup is required by the final CI job.
+Cold/reopen complete-frame p95 ceilings are 2000/1200 ms; synchronous-handler
+p95 ceilings are 500/300 ms. Static idle CPU must average at most 5% of one core.
+Video must deliver at least 10 fps during active and resumed sampling so a stalled
+or missing player cannot pass merely by using little memory. Missing PSS coverage,
+missing key/frame samples, memory peaks, latency tails, shell SwapPss and host
+swap traffic fail the guard; focused
+negative-control tests verify those failure paths. A manual workflow run defaults to the same-source control; an optional ancestor
+commit instead captures that revision. Both capture a sequential before/after
+pair on the same fresh runner and pinned runtime. This avoids using
+a busy developer desktop as conclusive latency or resident-memory evidence.
+
+CI uses shorter 15-second idle
+and five-reopen captures to detect large regressions, rather than certify small
+performance differences.
+
+
+### First same-source software comparison
+
+The [first paired workflow](https://github.com/nacre-desktop/nacre/actions/runs/38453798008)
+used `f29bd4bd` on both sides, with the control described above. Versions were
+Quickshell 0.3.2, Qt 6.12.0, Niri 26.04 and the dev6 native engine. Both runs had
+complete shell PSS/SwapPss coverage, zero sampled SwapPss and unchanged host swap
+counters. These software-rendered values are not GPU desktop budgets. This trial
+still included the experimental allocator default, which has since been removed.
+
+| Shell scenario | Control PSS / USS (MiB) | Trial PSS / USS (MiB) |
+| --- | ---: | ---: |
+| Fresh static | 842.7 / 790.3 | 844.1 / 790.7 |
+| After every panel, closed | 1116.3 / 1049.2 | 1129.7 / 1061.6 |
+| Settled static after open profile | 1123.6 / 1056.2 | 1134.1 / 1065.8 |
+| Active 1080p video | 1205.9 / 1133.6 | 1219.3 / 1146.0 |
+| Fully hidden video | 1205.2 / 1132.8 | 1207.2 / 1133.9 |
+| Static after video | 1200.1 / 1127.7 | 1238.8 / 1165.5 |
+
+| Complete-frame/open-path metric | Control | Trial |
+| --- | ---: | ---: |
+| Cold launcher complete frame (ms; one sample) | 631 | 633 |
+| Warm launcher frame median / p95 (ms; five samples) | 431 / 494 | 402 / 546 |
+| Warm launcher synchronous handler median (ms) | 6 | 6 |
+| Cold dashboard complete frame (ms; one sample) | 619 | 554 |
+| Warm dashboard frame median / p95 (ms; five samples) | 425 / 468 | 386 / 402 |
+| Warm dashboard synchronous handler median (ms) | 42 | 4 |
+| Settled shell CPU mean (% of one core; 15 s) | 0.0 | 0.0 |
+
+Zero sampled CPU means below Linux tick resolution in this interval, rather than
+proof of no work. Launcher median and tail moved in opposite directions and its
+handler did not improve, so no reliable launcher speedup is claimed. Dashboard
+frame median improved by 39 ms (9.2%) and its synchronous handler by 38 ms; this
+supports moving construction and refresh out of the synchronous open handler.
+The short series is a regression fixture, not a statistical guarantee on hardware.
+
+This trial shows **no overall software memory saving**: fresh memory is unchanged
+and post-video median PSS is 38.7 MiB higher. The allocator default is removed;
+confirmation results follow separately. Decoder unloading is validated as a
+lifecycle behavior, with no GPU memory saving claimed from this software pair.
+A larger video benefit, startup footprint and full Hyprland/Niri GPU A/B/A/B
+comparison remain deferred until the owner announces a quiet window. Busy-host
+captures with swapping are retained privately for diagnosis, not counted as
+performance evidence. The original ~555 MiB RSS and ~105/115 ms action figures
+use different warming/output and acknowledgement boundaries and are not this
+pair's baseline.
+
+The public [numeric summary](performance-session-results.json) retains distributions,
+versions, hashes and coverage; it omits process arguments and private fixture
+paths. No live shell, account or machine setup was changed.
+
+
+### Confirmation with the allocator default restored
+
+The [confirmation workflow](https://github.com/nacre-desktop/nacre/actions/runs/38455925163)
+uses the same-source control at `301a0477`; both copies retain glibc's ordinary
+adaptive allocator. The native engine and graphics versions match the first
+pair. Both captures again have zero sampled shell SwapPss and no host swap
+traffic. The normal [regression guard](https://github.com/nacre-desktop/nacre/actions/runs/38455923539)
+also passes on that revision.
+
+| Shell scenario | Control PSS / USS (MiB) | Final PSS / USS (MiB) |
+| --- | ---: | ---: |
+| Fresh static | 830.5 / 774.2 | 828.2 / 775.0 |
+| After every panel, closed | 1131.8 / 1060.8 | 1133.9 / 1066.2 |
+| Settled static | 1128.4 / 1057.1 | 1123.3 / 1055.3 |
+| Active 1080p video | 1218.7 / 1146.5 | 1205.8 / 1132.9 |
+| Manually paused video | 1217.1 / 1144.9 | 1198.4 / 1125.4 |
+| Fully hidden video | 1218.9 / 1146.7 | 1194.7 / 1121.8 |
+| Resumed video | 1201.8 / 1129.6 | 1242.3 / 1169.4 |
+| Static after video | 1197.1 / 1125.0 | 1226.1 / 1153.2 |
+
+| Complete-frame/open-path metric | Control | Final |
+| --- | ---: | ---: |
+| Cold launcher complete frame (ms; one sample) | 637 | 517 |
+| Warm launcher frame median / p95 (ms; five samples) | 387 / 535 | 395 / 552 |
+| Warm launcher synchronous handler median (ms) | 8 | 2 |
+| Cold dashboard complete frame (ms; one sample) | 635 | 515 |
+| Warm dashboard frame median / p95 (ms; five samples) | 434 / 532 | 382 / 395 |
+| Warm dashboard synchronous handler median (ms) | 36 | 3 |
+| Settled shell CPU mean (% of one core; 15 s) | 0.0 | 0.0 |
+
+Dashboard frame median improves by **52 ms (12.0%)**, while its synchronous
+handler improves by **33 ms**. Both pairs support this direction; their short
+sample counts still limit precision. Warm launcher frame median/tail are slightly
+higher, so the cold single-sample improvement is not treated as a reliable overall
+launcher speedup. Coalescing refresh reduces duplicate open-path work, with no
+large launcher frame benefit claimed.
+
+There is **no overall software memory reduction**. Fresh/all-panel endpoints are
+similar; active video is 12.9 MiB lower and hidden video 24.2 MiB lower in this pair,
+but post-video PSS is **29.0 MiB higher**. Paused-to-hidden unloading itself returns
+only about 3.7 MiB in the optimized software sequence. Anonymous native/graphics
+pools dominate, and component destruction need not promptly return their pages.
+These state differences are observed process endpoints, not exact per-object byte
+counts or proof of a hardware saving. The hidden decoder lifecycle is tested;
+its GPU memory benefit and post-resume tradeoff remain for the announced quiet
+window. No idle CPU reduction is claimed from the tick-quantized zeroes.
+
+The committed changes buy a shorter dashboard open handler and complete-frame
+latency, deferred/coalesced refresh, and a decoder lifetime limited to visibility
+with position restoration. They do not establish a smaller startup shell, a
+faster warm launcher, or a broad video-memory saving. The earlier merged panel
+and visible-tour-poster work remains in place; its historical measurements are
+in Phase C. The allocator and hero decode trials are rejected rather than shipped.

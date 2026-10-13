@@ -1,0 +1,4064 @@
+{
+  "version": 1,
+  "date": "2026-10-13",
+  "profile": "Nested Niri, software OpenGL, pixman headless parent, one 1920x1080 output at scale 1; same-source behavioral control; 48 generated apps, 12 favorites, 4K PNG and 1080p 24fps H.264; all 11 panel/tab visits; five reopened actions and 15s idle.",
+  "measurement_boundary": "Qt key-handler receipt to frameSwapped after geometry, animation, data and images settle. Excludes physical keyboard transport, actual shortcut CLI/IPC dispatch and compositor presentation. Probe requests frames every 16ms.",
+  "workflow": "https://github.com/nacre-desktop/nacre/actions/runs/38455925163",
+  "captures": {
+    "before": {
+      "revision": "301a047724f13518780902b6eeb2aafbfba33c44",
+      "control": true,
+      "versions": {
+        "quickshell": "Quickshell 0.3.2 (revision , distributed by Arch Linux)",
+        "compositor": "niri 26.04 (8ed0da4)",
+        "qt": "6.12.0",
+        "orient": "orient-0.1.0.dev6-55b192008cc8-c8a5bd24dad2"
+      },
+      "harness_sha256": "a3cc8f43213fbd263a23277ced9276810b78cf3a1ad32c7c8f24ae73556261a7",
+      "sampler_sha256": "c57c31e3896f96353fe717c80b9f0cefa9383b27b53d081cb5d27aa5f0719632",
+      "shell_sha256": "02a6c2d25f0a933a9c292861a10df31f049a22d1965b65760b6d8be37106587a",
+      "allocator_mmap_threshold": "glibc adaptive default",
+      "budget_tier": "software",
+      "parent_renderer": "pixman",
+      "paging_start": {
+        "pswpin": 0,
+        "pswpout": 0
+      },
+      "paging_end": {
+        "pswpin": 0,
+        "pswpout": 0
+      },
+      "scenarios": {
+        "fresh_static": {
+          "duration_s": 5.000088898000001,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 894.66015625,
+              "median": 894.66015625,
+              "p95": 894.66015625,
+              "max": 894.66015625
+            },
+            "all": {
+              "mean": 983.19140625,
+              "median": 983.19140625,
+              "p95": 983.19140625,
+              "max": 983.19140625
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 830.515625,
+              "median": 830.515625,
+              "p95": 830.515625,
+              "max": 830.515625
+            },
+            "all": {
+              "mean": 888.1240234375,
+              "median": 888.1240234375,
+              "p95": 888.1240234375,
+              "max": 888.1240234375
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 774.19140625,
+              "median": 774.19140625,
+              "p95": 774.19140625,
+              "max": 774.19140625
+            },
+            "all": {
+              "mean": 824.2578125,
+              "median": 824.2578125,
+              "p95": 824.2578125,
+              "max": 824.2578125
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 19,
+              "all": 19
+            },
+            "pss": {
+              "shell": 19,
+              "all": 19
+            },
+            "uss": {
+              "shell": 19,
+              "all": 19
+            },
+            "swap_pss": {
+              "shell": 19,
+              "all": 19
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 19.43359375,
+            "anonymous": 702.84375,
+            "shared_buffers": 34.365234375,
+            "fonts": 0.5302734375,
+            "qt_qml": 37.875,
+            "mesa_llvm": 35.384765625
+          },
+          "sample_count": 19,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        },
+        "all_panels_closed": {
+          "duration_s": 5.000113354000007,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1213.84765625,
+              "median": 1213.84765625,
+              "p95": 1213.84765625,
+              "max": 1213.84765625
+            },
+            "all": {
+              "mean": 1302.4453125,
+              "median": 1302.4453125,
+              "p95": 1302.4453125,
+              "max": 1302.4453125
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1131.755859375,
+              "median": 1131.755859375,
+              "p95": 1131.755859375,
+              "max": 1131.755859375
+            },
+            "all": {
+              "mean": 1189.3681640625,
+              "median": 1189.3681640625,
+              "p95": 1189.3681640625,
+              "max": 1189.3681640625
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1060.80859375,
+              "median": 1060.80859375,
+              "p95": 1060.80859375,
+              "max": 1060.80859375
+            },
+            "all": {
+              "mean": 1110.87890625,
+              "median": 1110.87890625,
+              "p95": 1110.87890625,
+              "max": 1110.87890625
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 19,
+              "all": 19
+            },
+            "pss": {
+              "shell": 19,
+              "all": 19
+            },
+            "uss": {
+              "shell": 19,
+              "all": 19
+            },
+            "swap_pss": {
+              "shell": 19,
+              "all": 19
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 20.04296875,
+            "anonymous": 982.52734375,
+            "shared_buffers": 53.23828125,
+            "fonts": 1.103515625,
+            "qt_qml": 39.23046875,
+            "mesa_llvm": 35.5234375
+          },
+          "sample_count": 19,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        },
+        "static_after_latency": {
+          "duration_s": 14.977037048999932,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1213.2878327546296,
+              "median": 1210.640625,
+              "p95": 1216.6171875,
+              "max": 1216.6171875
+            },
+            "all": {
+              "mean": 1302.0065827546296,
+              "median": 1299.359375,
+              "p95": 1305.3359375,
+              "max": 1305.3359375
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1130.6347294560185,
+              "median": 1128.3564453125,
+              "p95": 1133.5029296875,
+              "max": 1133.5029296875
+            },
+            "all": {
+              "mean": 1188.3681278935185,
+              "median": 1186.08984375,
+              "p95": 1191.236328125,
+              "max": 1191.236328125
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1059.3837528935185,
+              "median": 1057.11328125,
+              "p95": 1062.2421875,
+              "max": 1062.2421875
+            },
+            "all": {
+              "mean": 1109.5751591435185,
+              "median": 1107.3046875,
+              "p95": 1112.43359375,
+              "max": 1112.43359375
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 54,
+              "all": 54
+            },
+            "pss": {
+              "shell": 54,
+              "all": 54
+            },
+            "uss": {
+              "shell": 54,
+              "all": 54
+            },
+            "swap_pss": {
+              "shell": 54,
+              "all": 54
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 20.04296875,
+            "anonymous": 977.6953125,
+            "shared_buffers": 54.7578125,
+            "fonts": 1.01953125,
+            "qt_qml": 39.23046875,
+            "mesa_llvm": 35.5234375
+          },
+          "sample_count": 54,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        },
+        "video": {
+          "duration_s": 5.000076865000096,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 160.28614985239597,
+              "median": 159.38548481701514,
+              "p95": 210.54279123325193,
+              "max": 210.54279123325193
+            },
+            "all": {
+              "mean": 160.28614985239597,
+              "median": 159.38548481701514,
+              "p95": 210.54279123325193,
+              "max": 210.54279123325193
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1301.79052734375,
+              "median": 1302.01953125,
+              "p95": 1302.2421875,
+              "max": 1302.2421875
+            },
+            "all": {
+              "mean": 1390.50927734375,
+              "median": 1390.73828125,
+              "p95": 1390.9609375,
+              "max": 1390.9609375
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1218.45361328125,
+              "median": 1218.6826171875,
+              "p95": 1218.9052734375,
+              "max": 1218.9052734375
+            },
+            "all": {
+              "mean": 1276.17138671875,
+              "median": 1276.400390625,
+              "p95": 1276.623046875,
+              "max": 1276.623046875
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1146.27099609375,
+              "median": 1146.5,
+              "p95": 1146.72265625,
+              "max": 1146.72265625
+            },
+            "all": {
+              "mean": 1196.46240234375,
+              "median": 1196.69140625,
+              "p95": 1196.9140625,
+              "max": 1196.9140625
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 16,
+              "all": 16
+            },
+            "pss": {
+              "shell": 16,
+              "all": 16
+            },
+            "uss": {
+              "shell": 16,
+              "all": 16
+            },
+            "swap_pss": {
+              "shell": 16,
+              "all": 16
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 32.279296875,
+            "anonymous": 1042.44921875,
+            "multimedia": 10.55078125,
+            "shared_buffers": 55.95703125,
+            "fonts": 1.017578125,
+            "qt_qml": 39.23046875,
+            "mesa_llvm": 35.5234375
+          },
+          "sample_count": 16,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          },
+          "delivered_video_fps": 24.058474080008274
+        },
+        "video_paused": {
+          "duration_s": 4.984712039999977,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1300.390625,
+              "median": 1300.390625,
+              "p95": 1300.390625,
+              "max": 1300.390625
+            },
+            "all": {
+              "mean": 1389.109375,
+              "median": 1389.109375,
+              "p95": 1389.109375,
+              "max": 1389.109375
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1217.0537109375,
+              "median": 1217.0537109375,
+              "p95": 1217.0537109375,
+              "max": 1217.0537109375
+            },
+            "all": {
+              "mean": 1274.771484375,
+              "median": 1274.771484375,
+              "p95": 1274.771484375,
+              "max": 1274.771484375
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1144.87109375,
+              "median": 1144.87109375,
+              "p95": 1144.87109375,
+              "max": 1144.87109375
+            },
+            "all": {
+              "mean": 1195.0625,
+              "median": 1195.0625,
+              "p95": 1195.0625,
+              "max": 1195.0625
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 18,
+              "all": 18
+            },
+            "pss": {
+              "shell": 18,
+              "all": 18
+            },
+            "uss": {
+              "shell": 18,
+              "all": 18
+            },
+            "swap_pss": {
+              "shell": 18,
+              "all": 18
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 32.279296875,
+            "anonymous": 1043.6484375,
+            "multimedia": 10.55078125,
+            "shared_buffers": 54.69921875,
+            "fonts": 1.017578125,
+            "qt_qml": 39.23046875,
+            "mesa_llvm": 35.5234375
+          },
+          "sample_count": 18,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        },
+        "video_suspended": {
+          "duration_s": 4.983673920000001,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.19956318588111222,
+              "median": 0.0,
+              "p95": 3.59213734586002,
+              "max": 3.59213734586002
+            },
+            "all": {
+              "mean": 0.19956318588111222,
+              "median": 0.0,
+              "p95": 3.59213734586002,
+              "max": 3.59213734586002
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1296.9574652777778,
+              "median": 1302.2578125,
+              "p95": 1302.2578125,
+              "max": 1302.2578125
+            },
+            "all": {
+              "mean": 1385.6762152777778,
+              "median": 1390.9765625,
+              "p95": 1390.9765625,
+              "max": 1390.9765625
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1213.6205512152778,
+              "median": 1218.9208984375,
+              "p95": 1218.9208984375,
+              "max": 1218.9208984375
+            },
+            "all": {
+              "mean": 1271.3383246527778,
+              "median": 1276.638671875,
+              "p95": 1276.638671875,
+              "max": 1276.638671875
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1141.4379340277778,
+              "median": 1146.73828125,
+              "p95": 1146.73828125,
+              "max": 1146.73828125
+            },
+            "all": {
+              "mean": 1191.6293402777778,
+              "median": 1196.9296875,
+              "p95": 1196.9296875,
+              "max": 1196.9296875
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 18,
+              "all": 18
+            },
+            "pss": {
+              "shell": 18,
+              "all": 18
+            },
+            "uss": {
+              "shell": 18,
+              "all": 18
+            },
+            "swap_pss": {
+              "shell": 18,
+              "all": 18
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 32.279296875,
+            "anonymous": 1033.578125,
+            "multimedia": 10.55078125,
+            "shared_buffers": 54.7109375,
+            "fonts": 1.017578125,
+            "qt_qml": 39.23046875,
+            "mesa_llvm": 35.5234375
+          },
+          "sample_count": 18,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        },
+        "video_resumed": {
+          "duration_s": 4.980084668000018,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 160.90517250919973,
+              "median": 163.06396041205198,
+              "p95": 189.65997297750795,
+              "max": 189.65997297750795
+            },
+            "all": {
+              "mean": 160.90517250919973,
+              "median": 163.06396041205198,
+              "p95": 189.65997297750795,
+              "max": 189.65997297750795
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1285.286376953125,
+              "median": 1285.150390625,
+              "p95": 1285.61328125,
+              "max": 1285.61328125
+            },
+            "all": {
+              "mean": 1374.005126953125,
+              "median": 1373.869140625,
+              "p95": 1374.33203125,
+              "max": 1374.33203125
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1201.949462890625,
+              "median": 1201.8134765625,
+              "p95": 1202.2763671875,
+              "max": 1202.2763671875
+            },
+            "all": {
+              "mean": 1259.667236328125,
+              "median": 1259.53125,
+              "p95": 1259.994140625,
+              "max": 1259.994140625
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1129.766845703125,
+              "median": 1129.630859375,
+              "p95": 1130.09375,
+              "max": 1130.09375
+            },
+            "all": {
+              "mean": 1179.958251953125,
+              "median": 1179.822265625,
+              "p95": 1180.28515625,
+              "max": 1180.28515625
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 16,
+              "all": 16
+            },
+            "pss": {
+              "shell": 16,
+              "all": 16
+            },
+            "uss": {
+              "shell": 16,
+              "all": 16
+            },
+            "swap_pss": {
+              "shell": 16,
+              "all": 16
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 32.279296875,
+            "anonymous": 1028.30078125,
+            "multimedia": 10.55078125,
+            "shared_buffers": 55.31640625,
+            "fonts": 1.017578125,
+            "qt_qml": 39.23046875,
+            "mesa_llvm": 35.5234375
+          },
+          "sample_count": 16,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          },
+          "delivered_video_fps": 24.066072862129598
+        },
+        "static_after_video": {
+          "duration_s": 4.988935647000062,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1280.48046875,
+              "median": 1280.48046875,
+              "p95": 1280.48046875,
+              "max": 1280.48046875
+            },
+            "all": {
+              "mean": 1369.19921875,
+              "median": 1369.19921875,
+              "p95": 1369.19921875,
+              "max": 1369.19921875
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1197.1435546875,
+              "median": 1197.1435546875,
+              "p95": 1197.1435546875,
+              "max": 1197.1435546875
+            },
+            "all": {
+              "mean": 1254.861328125,
+              "median": 1254.861328125,
+              "p95": 1254.861328125,
+              "max": 1254.861328125
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1124.9609375,
+              "median": 1124.9609375,
+              "p95": 1124.9609375,
+              "max": 1124.9609375
+            },
+            "all": {
+              "mean": 1175.15234375,
+              "median": 1175.15234375,
+              "p95": 1175.15234375,
+              "max": 1175.15234375
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 18,
+              "all": 18
+            },
+            "pss": {
+              "shell": 18,
+              "all": 18
+            },
+            "uss": {
+              "shell": 18,
+              "all": 18
+            },
+            "swap_pss": {
+              "shell": 18,
+              "all": 18
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 32.279296875,
+            "anonymous": 1022.7109375,
+            "multimedia": 10.92578125,
+            "shared_buffers": 55.3515625,
+            "fonts": 1.017578125,
+            "qt_qml": 39.23046875,
+            "mesa_llvm": 35.5234375
+          },
+          "sample_count": 18,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        }
+      },
+      "latency": {
+        "cold": {
+          "launcher": {
+            "frame_ms": {
+              "mean": 637,
+              "median": 637,
+              "p95": 637,
+              "max": 637
+            },
+            "synchronous_ms": {
+              "mean": 120,
+              "median": 120,
+              "p95": 120,
+              "max": 120
+            },
+            "samples": [
+              {
+                "frameMs": 637,
+                "synchronousMs": 120,
+                "readyImages": 50
+              }
+            ]
+          },
+          "dashboard": {
+            "frame_ms": {
+              "mean": 635,
+              "median": 635,
+              "p95": 635,
+              "max": 635
+            },
+            "synchronous_ms": {
+              "mean": 35,
+              "median": 35,
+              "p95": 35,
+              "max": 35
+            },
+            "samples": [
+              {
+                "frameMs": 635,
+                "synchronousMs": 35,
+                "readyImages": 2
+              }
+            ]
+          }
+        },
+        "reopen": {
+          "launcher": {
+            "frame_ms": {
+              "mean": 416.8,
+              "median": 387,
+              "p95": 535,
+              "max": 535
+            },
+            "synchronous_ms": {
+              "mean": 32.6,
+              "median": 8,
+              "p95": 136,
+              "max": 136
+            },
+            "samples": [
+              {
+                "frameMs": 535,
+                "synchronousMs": 136,
+                "readyImages": 50
+              },
+              {
+                "frameMs": 387,
+                "synchronousMs": 8,
+                "readyImages": 50
+              },
+              {
+                "frameMs": 362,
+                "synchronousMs": 6,
+                "readyImages": 50
+              },
+              {
+                "frameMs": 419,
+                "synchronousMs": 9,
+                "readyImages": 50
+              },
+              {
+                "frameMs": 381,
+                "synchronousMs": 4,
+                "readyImages": 50
+              }
+            ]
+          },
+          "dashboard": {
+            "frame_ms": {
+              "mean": 450.2,
+              "median": 434,
+              "p95": 532,
+              "max": 532
+            },
+            "synchronous_ms": {
+              "mean": 30.6,
+              "median": 36,
+              "p95": 39,
+              "max": 39
+            },
+            "samples": [
+              {
+                "frameMs": 416,
+                "synchronousMs": 36,
+                "readyImages": 2
+              },
+              {
+                "frameMs": 532,
+                "synchronousMs": 39,
+                "readyImages": 2
+              },
+              {
+                "frameMs": 409,
+                "synchronousMs": 26,
+                "readyImages": 2
+              },
+              {
+                "frameMs": 434,
+                "synchronousMs": 36,
+                "readyImages": 2
+              },
+              {
+                "frameMs": 460,
+                "synchronousMs": 16,
+                "readyImages": 2
+              }
+            ]
+          }
+        }
+      }
+    },
+    "after": {
+      "revision": "301a047724f13518780902b6eeb2aafbfba33c44",
+      "control": false,
+      "versions": {
+        "quickshell": "Quickshell 0.3.2 (revision , distributed by Arch Linux)",
+        "compositor": "niri 26.04 (8ed0da4)",
+        "qt": "6.12.0",
+        "orient": "orient-0.1.0.dev6-55b192008cc8-c8a5bd24dad2"
+      },
+      "harness_sha256": "a3cc8f43213fbd263a23277ced9276810b78cf3a1ad32c7c8f24ae73556261a7",
+      "sampler_sha256": "c57c31e3896f96353fe717c80b9f0cefa9383b27b53d081cb5d27aa5f0719632",
+      "shell_sha256": "7c0ac8862e5ae1282a621fb9e139584a5aaab736d252d19ffbbd6671e27c8250",
+      "allocator_mmap_threshold": "glibc adaptive default",
+      "budget_tier": "software",
+      "parent_renderer": "pixman",
+      "paging_start": {
+        "pswpin": 0,
+        "pswpout": 0
+      },
+      "paging_end": {
+        "pswpin": 0,
+        "pswpout": 0
+      },
+      "scenarios": {
+        "fresh_static": {
+          "duration_s": 5.000185066999961,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 889.1796875,
+              "median": 889.1796875,
+              "p95": 889.1796875,
+              "max": 889.1796875
+            },
+            "all": {
+              "mean": 976.88671875,
+              "median": 976.88671875,
+              "p95": 976.88671875,
+              "max": 976.88671875
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 828.1708984375,
+              "median": 828.1708984375,
+              "p95": 828.1708984375,
+              "max": 828.1708984375
+            },
+            "all": {
+              "mean": 885.4462890625,
+              "median": 885.4462890625,
+              "p95": 885.4462890625,
+              "max": 885.4462890625
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 775.0078125,
+              "median": 775.0078125,
+              "p95": 775.0078125,
+              "max": 775.0078125
+            },
+            "all": {
+              "mean": 824.78515625,
+              "median": 824.78515625,
+              "p95": 824.78515625,
+              "max": 824.78515625
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 19,
+              "all": 19
+            },
+            "pss": {
+              "shell": 19,
+              "all": 19
+            },
+            "uss": {
+              "shell": 19,
+              "all": 19
+            },
+            "swap_pss": {
+              "shell": 19,
+              "all": 19
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 19.33984375,
+            "anonymous": 703.8828125,
+            "shared_buffers": 32.40234375,
+            "fonts": 0.5107421875,
+            "qt_qml": 37.45703125,
+            "mesa_llvm": 34.49609375
+          },
+          "sample_count": 19,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        },
+        "all_panels_closed": {
+          "duration_s": 5.000125491999938,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1212.87109375,
+              "median": 1212.87109375,
+              "p95": 1212.87109375,
+              "max": 1212.87109375
+            },
+            "all": {
+              "mean": 1300.6484375,
+              "median": 1300.6484375,
+              "p95": 1300.6484375,
+              "max": 1300.6484375
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1133.91015625,
+              "median": 1133.91015625,
+              "p95": 1133.91015625,
+              "max": 1133.91015625
+            },
+            "all": {
+              "mean": 1191.1806640625,
+              "median": 1191.1806640625,
+              "p95": 1191.1806640625,
+              "max": 1191.1806640625
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1066.16796875,
+              "median": 1066.16796875,
+              "p95": 1066.16796875,
+              "max": 1066.16796875
+            },
+            "all": {
+              "mean": 1115.94921875,
+              "median": 1115.94921875,
+              "p95": 1115.94921875,
+              "max": 1115.94921875
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 19,
+              "all": 19
+            },
+            "pss": {
+              "shell": 19,
+              "all": 19
+            },
+            "uss": {
+              "shell": 19,
+              "all": 19
+            },
+            "swap_pss": {
+              "shell": 19,
+              "all": 19
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 20.1220703125,
+            "anonymous": 988.1875,
+            "shared_buffers": 50.630859375,
+            "fonts": 1.013671875,
+            "qt_qml": 39.25,
+            "mesa_llvm": 34.62109375
+          },
+          "sample_count": 19,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        },
+        "static_after_latency": {
+          "duration_s": 15.000126611000042,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1203.958912037037,
+              "median": 1202.28125,
+              "p95": 1205.765625,
+              "max": 1205.765625
+            },
+            "all": {
+              "mean": 1291.849537037037,
+              "median": 1290.171875,
+              "p95": 1293.65625,
+              "max": 1293.65625
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1124.5946180555557,
+              "median": 1123.296875,
+              "p95": 1125.9921875,
+              "max": 1125.9921875
+            },
+            "all": {
+              "mean": 1181.9784071180557,
+              "median": 1180.6806640625,
+              "p95": 1183.3759765625,
+              "max": 1183.3759765625
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1056.5675636574074,
+              "median": 1055.27734375,
+              "p95": 1057.95703125,
+              "max": 1057.95703125
+            },
+            "all": {
+              "mean": 1106.4620949074074,
+              "median": 1105.171875,
+              "p95": 1107.8515625,
+              "max": 1107.8515625
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 54,
+              "all": 54
+            },
+            "pss": {
+              "shell": 54,
+              "all": 54
+            },
+            "uss": {
+              "shell": 54,
+              "all": 54
+            },
+            "swap_pss": {
+              "shell": 54,
+              "all": 54
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 20.1220703125,
+            "anonymous": 976.8203125,
+            "shared_buffers": 51.462890625,
+            "fonts": 0.935546875,
+            "qt_qml": 39.25,
+            "mesa_llvm": 34.62109375
+          },
+          "sample_count": 54,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        },
+        "video": {
+          "duration_s": 4.963543278000088,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 160.06242378630122,
+              "median": 158.34176111916264,
+              "p95": 204.29748802287818,
+              "max": 204.29748802287818
+            },
+            "all": {
+              "mean": 160.06242378630122,
+              "median": 158.34176111916264,
+              "p95": 204.29748802287818,
+              "max": 204.29748802287818
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1288.9990234375,
+              "median": 1290.05859375,
+              "p95": 1290.76171875,
+              "max": 1290.76171875
+            },
+            "all": {
+              "mean": 1376.8896484375,
+              "median": 1377.94921875,
+              "p95": 1378.65234375,
+              "max": 1378.65234375
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1204.7861328125,
+              "median": 1205.845703125,
+              "p95": 1206.548828125,
+              "max": 1206.548828125
+            },
+            "all": {
+              "mean": 1262.1552734375,
+              "median": 1263.21484375,
+              "p95": 1263.91796875,
+              "max": 1263.91796875
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1131.8701171875,
+              "median": 1132.9296875,
+              "p95": 1133.6328125,
+              "max": 1133.6328125
+            },
+            "all": {
+              "mean": 1181.7646484375,
+              "median": 1182.82421875,
+              "p95": 1183.52734375,
+              "max": 1183.52734375
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 16,
+              "all": 16
+            },
+            "pss": {
+              "shell": 16,
+              "all": 16
+            },
+            "uss": {
+              "shell": 16,
+              "all": 16
+            },
+            "swap_pss": {
+              "shell": 16,
+              "all": 16
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 32.2998046875,
+            "anonymous": 1025.015625,
+            "shared_buffers": 56.0546875,
+            "multimedia": 10.55078125,
+            "fonts": 0.935546875,
+            "qt_qml": 39.25,
+            "mesa_llvm": 34.62109375
+          },
+          "sample_count": 16,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          },
+          "delivered_video_fps": 23.803987002147146
+        },
+        "video_paused": {
+          "duration_s": 4.9961457510000855,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1282.5703125,
+              "median": 1282.5703125,
+              "p95": 1282.5703125,
+              "max": 1282.5703125
+            },
+            "all": {
+              "mean": 1370.4609375,
+              "median": 1370.4609375,
+              "p95": 1370.4609375,
+              "max": 1370.4609375
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1198.357421875,
+              "median": 1198.357421875,
+              "p95": 1198.357421875,
+              "max": 1198.357421875
+            },
+            "all": {
+              "mean": 1255.7265625,
+              "median": 1255.7265625,
+              "p95": 1255.7265625,
+              "max": 1255.7265625
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1125.44140625,
+              "median": 1125.44140625,
+              "p95": 1125.44140625,
+              "max": 1125.44140625
+            },
+            "all": {
+              "mean": 1175.3359375,
+              "median": 1175.3359375,
+              "p95": 1175.3359375,
+              "max": 1175.3359375
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 18,
+              "all": 18
+            },
+            "pss": {
+              "shell": 18,
+              "all": 18
+            },
+            "uss": {
+              "shell": 18,
+              "all": 18
+            },
+            "swap_pss": {
+              "shell": 18,
+              "all": 18
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 32.2998046875,
+            "anonymous": 1024.5390625,
+            "shared_buffers": 56.05859375,
+            "multimedia": 10.55078125,
+            "fonts": 0.935546875,
+            "qt_qml": 39.25,
+            "mesa_llvm": 34.62109375
+          },
+          "sample_count": 18,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        },
+        "video_suspended": {
+          "duration_s": 4.997119831999953,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1276.1905381944443,
+              "median": 1278.89453125,
+              "p95": 1278.89453125,
+              "max": 1278.89453125
+            },
+            "all": {
+              "mean": 1364.0811631944443,
+              "median": 1366.78515625,
+              "p95": 1366.78515625,
+              "max": 1366.78515625
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1191.9776475694443,
+              "median": 1194.681640625,
+              "p95": 1194.681640625,
+              "max": 1194.681640625
+            },
+            "all": {
+              "mean": 1249.3467881944443,
+              "median": 1252.05078125,
+              "p95": 1252.05078125,
+              "max": 1252.05078125
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1119.0616319444443,
+              "median": 1121.765625,
+              "p95": 1121.765625,
+              "max": 1121.765625
+            },
+            "all": {
+              "mean": 1168.9561631944443,
+              "median": 1171.66015625,
+              "p95": 1171.66015625,
+              "max": 1171.66015625
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 18,
+              "all": 18
+            },
+            "pss": {
+              "shell": 18,
+              "all": 18
+            },
+            "uss": {
+              "shell": 18,
+              "all": 18
+            },
+            "swap_pss": {
+              "shell": 18,
+              "all": 18
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 32.2998046875,
+            "anonymous": 1015.35546875,
+            "shared_buffers": 56.05859375,
+            "multimedia": 10.55078125,
+            "fonts": 0.935546875,
+            "qt_qml": 39.25,
+            "mesa_llvm": 34.62109375
+          },
+          "sample_count": 18,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        },
+        "video_resumed": {
+          "duration_s": 5.000141306000046,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 162.0861276680501,
+              "median": 160.43257201497826,
+              "p95": 179.93653638355477,
+              "max": 179.93653638355477
+            },
+            "all": {
+              "mean": 162.0861276680501,
+              "median": 160.43257201497826,
+              "p95": 179.93653638355477,
+              "max": 179.93653638355477
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1326.51123046875,
+              "median": 1326.490234375,
+              "p95": 1326.7890625,
+              "max": 1326.7890625
+            },
+            "all": {
+              "mean": 1414.40185546875,
+              "median": 1414.380859375,
+              "p95": 1414.6796875,
+              "max": 1414.6796875
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1242.29833984375,
+              "median": 1242.27734375,
+              "p95": 1242.576171875,
+              "max": 1242.576171875
+            },
+            "all": {
+              "mean": 1299.66748046875,
+              "median": 1299.646484375,
+              "p95": 1299.9453125,
+              "max": 1299.9453125
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1169.38232421875,
+              "median": 1169.361328125,
+              "p95": 1169.66015625,
+              "max": 1169.66015625
+            },
+            "all": {
+              "mean": 1219.27685546875,
+              "median": 1219.255859375,
+              "p95": 1219.5546875,
+              "max": 1219.5546875
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 16,
+              "all": 16
+            },
+            "pss": {
+              "shell": 16,
+              "all": 16
+            },
+            "uss": {
+              "shell": 16,
+              "all": 16
+            },
+            "swap_pss": {
+              "shell": 16,
+              "all": 16
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 32.2998046875,
+            "anonymous": 1069.8203125,
+            "shared_buffers": 55.00390625,
+            "multimedia": 10.55078125,
+            "fonts": 0.935546875,
+            "qt_qml": 39.25,
+            "mesa_llvm": 34.62109375
+          },
+          "sample_count": 16,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          },
+          "delivered_video_fps": 23.937867928632304
+        },
+        "static_after_video": {
+          "duration_s": 4.994942050999953,
+          "interval_s": 0.25,
+          "cpu_percent_one_core": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "rss_mib": {
+            "shell": {
+              "mean": 1310.31640625,
+              "median": 1310.31640625,
+              "p95": 1310.31640625,
+              "max": 1310.31640625
+            },
+            "all": {
+              "mean": 1398.20703125,
+              "median": 1398.20703125,
+              "p95": 1398.20703125,
+              "max": 1398.20703125
+            }
+          },
+          "pss_mib": {
+            "shell": {
+              "mean": 1226.103515625,
+              "median": 1226.103515625,
+              "p95": 1226.103515625,
+              "max": 1226.103515625
+            },
+            "all": {
+              "mean": 1283.47265625,
+              "median": 1283.47265625,
+              "p95": 1283.47265625,
+              "max": 1283.47265625
+            }
+          },
+          "uss_mib": {
+            "shell": {
+              "mean": 1153.1875,
+              "median": 1153.1875,
+              "p95": 1153.1875,
+              "max": 1153.1875
+            },
+            "all": {
+              "mean": 1203.08203125,
+              "median": 1203.08203125,
+              "p95": 1203.08203125,
+              "max": 1203.08203125
+            }
+          },
+          "swap_pss_mib": {
+            "shell": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            },
+            "all": {
+              "mean": 0.0,
+              "median": 0.0,
+              "p95": 0.0,
+              "max": 0.0
+            }
+          },
+          "memory_valid_samples": {
+            "rss": {
+              "shell": 18,
+              "all": 18
+            },
+            "pss": {
+              "shell": 18,
+              "all": 18
+            },
+            "uss": {
+              "shell": 18,
+              "all": 18
+            },
+            "swap_pss": {
+              "shell": 18,
+              "all": 18
+            }
+          },
+          "mapping_pss_mib": {
+            "other_files": 32.2998046875,
+            "anonymous": 1049.50390625,
+            "shared_buffers": 58.46484375,
+            "multimedia": 10.92578125,
+            "fonts": 0.935546875,
+            "qt_qml": 39.25,
+            "mesa_llvm": 34.62109375
+          },
+          "sample_count": 18,
+          "output": {
+            "width": 1920,
+            "height": 1080,
+            "favorites": 12
+          }
+        }
+      },
+      "latency": {
+        "cold": {
+          "launcher": {
+            "frame_ms": {
+              "mean": 517,
+              "median": 517,
+              "p95": 517,
+              "max": 517
+            },
+            "synchronous_ms": {
+              "mean": 115,
+              "median": 115,
+              "p95": 115,
+              "max": 115
+            },
+            "samples": [
+              {
+                "frameMs": 517,
+                "synchronousMs": 115,
+                "readyImages": 50
+              }
+            ]
+          },
+          "dashboard": {
+            "frame_ms": {
+              "mean": 515,
+              "median": 515,
+              "p95": 515,
+              "max": 515
+            },
+            "synchronous_ms": {
+              "mean": 5,
+              "median": 5,
+              "p95": 5,
+              "max": 5
+            },
+            "samples": [
+              {
+                "frameMs": 515,
+                "synchronousMs": 5,
+                "readyImages": 2
+              }
+            ]
+          }
+        },
+        "reopen": {
+          "launcher": {
+            "frame_ms": {
+              "mean": 429,
+              "median": 395,
+              "p95": 552,
+              "max": 552
+            },
+            "synchronous_ms": {
+              "mean": 24.8,
+              "median": 2,
+              "p95": 117,
+              "max": 117
+            },
+            "samples": [
+              {
+                "frameMs": 552,
+                "synchronousMs": 117,
+                "readyImages": 50
+              },
+              {
+                "frameMs": 350,
+                "synchronousMs": 3,
+                "readyImages": 50
+              },
+              {
+                "frameMs": 382,
+                "synchronousMs": 2,
+                "readyImages": 50
+              },
+              {
+                "frameMs": 395,
+                "synchronousMs": 1,
+                "readyImages": 50
+              },
+              {
+                "frameMs": 466,
+                "synchronousMs": 1,
+                "readyImages": 50
+              }
+            ]
+          },
+          "dashboard": {
+            "frame_ms": {
+              "mean": 383.6,
+              "median": 382,
+              "p95": 395,
+              "max": 395
+            },
+            "synchronous_ms": {
+              "mean": 3.4,
+              "median": 3,
+              "p95": 6,
+              "max": 6
+            },
+            "samples": [
+              {
+                "frameMs": 366,
+                "synchronousMs": 5,
+                "readyImages": 2
+              },
+              {
+                "frameMs": 381,
+                "synchronousMs": 1,
+                "readyImages": 2
+              },
+              {
+                "frameMs": 394,
+                "synchronousMs": 3,
+                "readyImages": 2
+              },
+              {
+                "frameMs": 395,
+                "synchronousMs": 6,
+                "readyImages": 2
+              },
+              {
+                "frameMs": 382,
+                "synchronousMs": 2,
+                "readyImages": 2
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "status": "Final portable software comparison; GPU comparisons deferred by owner.",
+  "conclusion": "Dashboard frame latency improved; no overall software memory saving. Native allocator defaults are unchanged. Post-video PSS increased 29 MiB; GPU memory benefit is not verified.",
+  "rejected_allocator_trial": {
+    "version": 1,
+    "date": "2026-10-13",
+    "profile": "Nested Niri, software OpenGL, pixman headless parent, one 1920x1080 output at scale 1; same-source behavioral control; 48 generated apps, 12 favorites, 4K PNG and 1080p 24fps H.264; all 11 panel/tab visits; five reopened actions and 15s idle.",
+    "measurement_boundary": "Qt key-handler receipt to frameSwapped after geometry, animation, data and images settle. Excludes physical keyboard transport, actual shortcut CLI/IPC dispatch and compositor presentation. Probe requests frames every 16ms.",
+    "workflow": "https://github.com/nacre-desktop/nacre/actions/runs/38453798008",
+    "captures": {
+      "before": {
+        "revision": "f29bd4bd96955e0c0c794c4086ce64102e5d291b",
+        "control": true,
+        "versions": {
+          "quickshell": "Quickshell 0.3.2 (revision , distributed by Arch Linux)",
+          "compositor": "niri 26.04 (8ed0da4)",
+          "qt": "6.12.0",
+          "orient": "orient-0.1.0.dev6-55b192008cc8-c8a5bd24dad2"
+        },
+        "harness_sha256": "a3cc8f43213fbd263a23277ced9276810b78cf3a1ad32c7c8f24ae73556261a7",
+        "sampler_sha256": "c57c31e3896f96353fe717c80b9f0cefa9383b27b53d081cb5d27aa5f0719632",
+        "shell_sha256": "320e1229b5ad6048d3deca63f5b788b525e5dab02c874438432a8aaafb0c120f",
+        "allocator_mmap_threshold": "glibc adaptive default",
+        "budget_tier": "software",
+        "parent_renderer": "pixman",
+        "paging_start": {
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "paging_end": {
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "scenarios": {
+          "fresh_static": {
+            "duration_s": 4.976547424999978,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 903.03125,
+                "median": 903.03125,
+                "p95": 903.03125,
+                "max": 903.03125
+              },
+              "all": {
+                "mean": 990.953125,
+                "median": 990.953125,
+                "p95": 990.953125,
+                "max": 990.953125
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 842.7138671875,
+                "median": 842.7138671875,
+                "p95": 842.7138671875,
+                "max": 842.7138671875
+              },
+              "all": {
+                "mean": 900.13671875,
+                "median": 900.13671875,
+                "p95": 900.13671875,
+                "max": 900.13671875
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 790.27734375,
+                "median": 790.27734375,
+                "p95": 790.27734375,
+                "max": 790.27734375
+              },
+              "all": {
+                "mean": 840.17578125,
+                "median": 840.17578125,
+                "p95": 840.17578125,
+                "max": 840.17578125
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 17,
+                "all": 17
+              },
+              "pss": {
+                "shell": 17,
+                "all": 17
+              },
+              "uss": {
+                "shell": 17,
+                "all": 17
+              },
+              "swap_pss": {
+                "shell": 17,
+                "all": 17
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 19.0361328125,
+              "anonymous": 720.86328125,
+              "shared_buffers": 30.40625,
+              "fonts": 0.6181640625,
+              "qt_qml": 36.8359375,
+              "mesa_llvm": 34.87109375
+            },
+            "sample_count": 17,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          },
+          "all_panels_closed": {
+            "duration_s": 5.000085476000038,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1194.578125,
+                "median": 1194.578125,
+                "p95": 1194.578125,
+                "max": 1194.578125
+              },
+              "all": {
+                "mean": 1282.5078125,
+                "median": 1282.5078125,
+                "p95": 1282.5078125,
+                "max": 1282.5078125
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1116.330078125,
+                "median": 1116.330078125,
+                "p95": 1116.330078125,
+                "max": 1116.330078125
+              },
+              "all": {
+                "mean": 1173.7451171875,
+                "median": 1173.7451171875,
+                "p95": 1173.7451171875,
+                "max": 1173.7451171875
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1049.25,
+                "median": 1049.25,
+                "p95": 1049.25,
+                "max": 1049.25
+              },
+              "all": {
+                "mean": 1099.14453125,
+                "median": 1099.14453125,
+                "p95": 1099.14453125,
+                "max": 1099.14453125
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 17,
+                "all": 17
+              },
+              "pss": {
+                "shell": 17,
+                "all": 17
+              },
+              "uss": {
+                "shell": 17,
+                "all": 17
+              },
+              "swap_pss": {
+                "shell": 17,
+                "all": 17
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 19.7177734375,
+              "anonymous": 973.1015625,
+              "shared_buffers": 49.041015625,
+              "fonts": 1.1025390625,
+              "qt_qml": 38.15625,
+              "mesa_llvm": 35.12109375
+            },
+            "sample_count": 17,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          },
+          "static_after_latency": {
+            "duration_s": 15.000089815000024,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1203.3471875,
+                "median": 1202.08984375,
+                "p95": 1204.96875,
+                "max": 1204.96875
+              },
+              "all": {
+                "mean": 1291.39796875,
+                "median": 1290.140625,
+                "p95": 1293.01953125,
+                "max": 1293.01953125
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1124.5125,
+                "median": 1123.6044921875,
+                "p95": 1125.689453125,
+                "max": 1125.689453125
+              },
+              "all": {
+                "mean": 1182.0486328125,
+                "median": 1181.140625,
+                "p95": 1183.2255859375,
+                "max": 1183.2255859375
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1057.12421875,
+                "median": 1056.22265625,
+                "p95": 1058.29296875,
+                "max": 1058.29296875
+              },
+              "all": {
+                "mean": 1107.13984375,
+                "median": 1106.23828125,
+                "p95": 1108.30859375,
+                "max": 1108.30859375
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 50,
+                "all": 50
+              },
+              "pss": {
+                "shell": 50,
+                "all": 50
+              },
+              "uss": {
+                "shell": 50,
+                "all": 50
+              },
+              "swap_pss": {
+                "shell": 50,
+                "all": 50
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 19.7177734375,
+              "anonymous": 977.99609375,
+              "shared_buffers": 51.494140625,
+              "fonts": 1.029296875,
+              "qt_qml": 38.15625,
+              "mesa_llvm": 35.12109375
+            },
+            "sample_count": 50,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          },
+          "video": {
+            "duration_s": 4.935158120999972,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 169.11449375273045,
+                "median": 163.9373725129065,
+                "p95": 243.91671024878772,
+                "max": 243.91671024878772
+              },
+              "all": {
+                "mean": 169.11449375273045,
+                "median": 163.9373725129065,
+                "p95": 243.91671024878772,
+                "max": 243.91671024878772
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1289.1841517857142,
+                "median": 1289.458984375,
+                "p95": 1290.46875,
+                "max": 1290.46875
+              },
+              "all": {
+                "mean": 1377.2349330357142,
+                "median": 1377.509765625,
+                "p95": 1378.51953125,
+                "max": 1378.51953125
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1205.6392299107142,
+                "median": 1205.9140625,
+                "p95": 1206.923828125,
+                "max": 1206.923828125
+              },
+              "all": {
+                "mean": 1263.1597377232142,
+                "median": 1263.4345703125,
+                "p95": 1264.4443359375,
+                "max": 1264.4443359375
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1133.2935267857142,
+                "median": 1133.568359375,
+                "p95": 1134.578125,
+                "max": 1134.578125
+              },
+              "all": {
+                "mean": 1183.3091517857142,
+                "median": 1183.583984375,
+                "p95": 1184.59375,
+                "max": 1184.59375
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 14,
+                "all": 14
+              },
+              "pss": {
+                "shell": 14,
+                "all": 14
+              },
+              "uss": {
+                "shell": 14,
+                "all": 14
+              },
+              "swap_pss": {
+                "shell": 14,
+                "all": 14
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 31.978515625,
+              "anonymous": 1030.89453125,
+              "shared_buffers": 56.14453125,
+              "multimedia": 10.5390625,
+              "fonts": 1.0283203125,
+              "qt_qml": 38.15625,
+              "mesa_llvm": 35.12109375
+            },
+            "sample_count": 14,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            },
+            "delivered_video_fps": 23.899946703998463
+          },
+          "video_paused": {
+            "duration_s": 5.0000929189999965,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1287.96484375,
+                "median": 1287.96484375,
+                "p95": 1287.96484375,
+                "max": 1287.96484375
+              },
+              "all": {
+                "mean": 1376.015625,
+                "median": 1376.015625,
+                "p95": 1376.015625,
+                "max": 1376.015625
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1204.419921875,
+                "median": 1204.419921875,
+                "p95": 1204.419921875,
+                "max": 1204.419921875
+              },
+              "all": {
+                "mean": 1261.9404296875,
+                "median": 1261.9404296875,
+                "p95": 1261.9404296875,
+                "max": 1261.9404296875
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1132.07421875,
+                "median": 1132.07421875,
+                "p95": 1132.07421875,
+                "max": 1132.07421875
+              },
+              "all": {
+                "mean": 1182.08984375,
+                "median": 1182.08984375,
+                "p95": 1182.08984375,
+                "max": 1182.08984375
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 17,
+                "all": 17
+              },
+              "pss": {
+                "shell": 17,
+                "all": 17
+              },
+              "uss": {
+                "shell": 17,
+                "all": 17
+              },
+              "swap_pss": {
+                "shell": 17,
+                "all": 17
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 31.978515625,
+              "anonymous": 1032.50390625,
+              "shared_buffers": 54.98828125,
+              "multimedia": 10.5390625,
+              "fonts": 1.0283203125,
+              "qt_qml": 38.15625,
+              "mesa_llvm": 35.12109375
+            },
+            "sample_count": 17,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          },
+          "video_suspended": {
+            "duration_s": 5.000087350000001,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1288.2198988970588,
+                "median": 1288.70703125,
+                "p95": 1288.70703125,
+                "max": 1288.70703125
+              },
+              "all": {
+                "mean": 1376.2706801470588,
+                "median": 1376.7578125,
+                "p95": 1376.7578125,
+                "max": 1376.7578125
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1204.6749770220588,
+                "median": 1205.162109375,
+                "p95": 1205.162109375,
+                "max": 1205.162109375
+              },
+              "all": {
+                "mean": 1262.1954848345588,
+                "median": 1262.6826171875,
+                "p95": 1262.6826171875,
+                "max": 1262.6826171875
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1132.3292738970588,
+                "median": 1132.81640625,
+                "p95": 1132.81640625,
+                "max": 1132.81640625
+              },
+              "all": {
+                "mean": 1182.3448988970588,
+                "median": 1182.83203125,
+                "p95": 1182.83203125,
+                "max": 1182.83203125
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 17,
+                "all": 17
+              },
+              "pss": {
+                "shell": 17,
+                "all": 17
+              },
+              "uss": {
+                "shell": 17,
+                "all": 17
+              },
+              "swap_pss": {
+                "shell": 17,
+                "all": 17
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 31.978515625,
+              "anonymous": 1032.17578125,
+              "shared_buffers": 55.0234375,
+              "multimedia": 10.5390625,
+              "fonts": 1.0283203125,
+              "qt_qml": 38.15625,
+              "mesa_llvm": 35.12109375
+            },
+            "sample_count": 17,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          },
+          "video_resumed": {
+            "duration_s": 4.964605113999994,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 168.62068615340127,
+                "median": 170.29190721923874,
+                "p95": 203.92899029417265,
+                "max": 203.92899029417265
+              },
+              "all": {
+                "mean": 168.62068615340127,
+                "median": 170.29190721923874,
+                "p95": 203.92899029417265,
+                "max": 203.92899029417265
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1290.385044642857,
+                "median": 1291.283203125,
+                "p95": 1291.66796875,
+                "max": 1291.66796875
+              },
+              "all": {
+                "mean": 1378.435825892857,
+                "median": 1379.333984375,
+                "p95": 1379.71875,
+                "max": 1379.71875
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1206.840122767857,
+                "median": 1207.73828125,
+                "p95": 1208.123046875,
+                "max": 1208.123046875
+              },
+              "all": {
+                "mean": 1264.360630580357,
+                "median": 1265.2587890625,
+                "p95": 1265.6435546875,
+                "max": 1265.6435546875
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1134.494419642857,
+                "median": 1135.392578125,
+                "p95": 1135.77734375,
+                "max": 1135.77734375
+              },
+              "all": {
+                "mean": 1184.510044642857,
+                "median": 1185.408203125,
+                "p95": 1185.79296875,
+                "max": 1185.79296875
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 14,
+                "all": 14
+              },
+              "pss": {
+                "shell": 14,
+                "all": 14
+              },
+              "uss": {
+                "shell": 14,
+                "all": 14
+              },
+              "swap_pss": {
+                "shell": 14,
+                "all": 14
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 31.978515625,
+              "anonymous": 1028.87890625,
+              "shared_buffers": 55.3046875,
+              "multimedia": 10.5390625,
+              "fonts": 1.0283203125,
+              "qt_qml": 38.15625,
+              "mesa_llvm": 35.12109375
+            },
+            "sample_count": 14,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            },
+            "delivered_video_fps": 23.960567525761217
+          },
+          "static_after_video": {
+            "duration_s": 5.000086563000025,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1283.6328125,
+                "median": 1283.6328125,
+                "p95": 1283.6328125,
+                "max": 1283.6328125
+              },
+              "all": {
+                "mean": 1371.68359375,
+                "median": 1371.68359375,
+                "p95": 1371.68359375,
+                "max": 1371.68359375
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1200.087890625,
+                "median": 1200.087890625,
+                "p95": 1200.087890625,
+                "max": 1200.087890625
+              },
+              "all": {
+                "mean": 1257.6083984375,
+                "median": 1257.6083984375,
+                "p95": 1257.6083984375,
+                "max": 1257.6083984375
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1127.7421875,
+                "median": 1127.7421875,
+                "p95": 1127.7421875,
+                "max": 1127.7421875
+              },
+              "all": {
+                "mean": 1177.7578125,
+                "median": 1177.7578125,
+                "p95": 1177.7578125,
+                "max": 1177.7578125
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 17,
+                "all": 17
+              },
+              "pss": {
+                "shell": 17,
+                "all": 17
+              },
+              "uss": {
+                "shell": 17,
+                "all": 17
+              },
+              "swap_pss": {
+                "shell": 17,
+                "all": 17
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 31.978515625,
+              "anonymous": 1027.43359375,
+              "shared_buffers": 55.3515625,
+              "multimedia": 10.9140625,
+              "fonts": 1.0283203125,
+              "qt_qml": 38.15625,
+              "mesa_llvm": 35.12109375
+            },
+            "sample_count": 17,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          }
+        },
+        "latency": {
+          "cold": {
+            "launcher": {
+              "frame_ms": {
+                "mean": 631,
+                "median": 631,
+                "p95": 631,
+                "max": 631
+              },
+              "synchronous_ms": {
+                "mean": 105,
+                "median": 105,
+                "p95": 105,
+                "max": 105
+              },
+              "samples": [
+                {
+                  "frameMs": 631,
+                  "synchronousMs": 105,
+                  "readyImages": 50
+                }
+              ]
+            },
+            "dashboard": {
+              "frame_ms": {
+                "mean": 619,
+                "median": 619,
+                "p95": 619,
+                "max": 619
+              },
+              "synchronous_ms": {
+                "mean": 49,
+                "median": 49,
+                "p95": 49,
+                "max": 49
+              },
+              "samples": [
+                {
+                  "frameMs": 619,
+                  "synchronousMs": 49,
+                  "readyImages": 2
+                }
+              ]
+            }
+          },
+          "reopen": {
+            "launcher": {
+              "frame_ms": {
+                "mean": 424.8,
+                "median": 431,
+                "p95": 494,
+                "max": 494
+              },
+              "synchronous_ms": {
+                "mean": 29.2,
+                "median": 6,
+                "p95": 124,
+                "max": 124
+              },
+              "samples": [
+                {
+                  "frameMs": 494,
+                  "synchronousMs": 124,
+                  "readyImages": 50
+                },
+                {
+                  "frameMs": 431,
+                  "synchronousMs": 5,
+                  "readyImages": 50
+                },
+                {
+                  "frameMs": 348,
+                  "synchronousMs": 9,
+                  "readyImages": 50
+                },
+                {
+                  "frameMs": 432,
+                  "synchronousMs": 6,
+                  "readyImages": 50
+                },
+                {
+                  "frameMs": 419,
+                  "synchronousMs": 2,
+                  "readyImages": 50
+                }
+              ]
+            },
+            "dashboard": {
+              "frame_ms": {
+                "mean": 435,
+                "median": 425,
+                "p95": 468,
+                "max": 468
+              },
+              "synchronous_ms": {
+                "mean": 41.4,
+                "median": 42,
+                "p95": 43,
+                "max": 43
+              },
+              "samples": [
+                {
+                  "frameMs": 468,
+                  "synchronousMs": 43,
+                  "readyImages": 2
+                },
+                {
+                  "frameMs": 418,
+                  "synchronousMs": 40,
+                  "readyImages": 2
+                },
+                {
+                  "frameMs": 424,
+                  "synchronousMs": 42,
+                  "readyImages": 2
+                },
+                {
+                  "frameMs": 425,
+                  "synchronousMs": 39,
+                  "readyImages": 2
+                },
+                {
+                  "frameMs": 440,
+                  "synchronousMs": 43,
+                  "readyImages": 2
+                }
+              ]
+            }
+          }
+        }
+      },
+      "after": {
+        "revision": "f29bd4bd96955e0c0c794c4086ce64102e5d291b",
+        "control": false,
+        "versions": {
+          "quickshell": "Quickshell 0.3.2 (revision , distributed by Arch Linux)",
+          "compositor": "niri 26.04 (8ed0da4)",
+          "qt": "6.12.0",
+          "orient": "orient-0.1.0.dev6-55b192008cc8-c8a5bd24dad2"
+        },
+        "harness_sha256": "a3cc8f43213fbd263a23277ced9276810b78cf3a1ad32c7c8f24ae73556261a7",
+        "sampler_sha256": "c57c31e3896f96353fe717c80b9f0cefa9383b27b53d081cb5d27aa5f0719632",
+        "shell_sha256": "e7fa8eef8b52a033d67b8445ca84fa8b041fb1e3caa2915e1b6c7edbffe1a210",
+        "allocator_mmap_threshold": "131072",
+        "budget_tier": "software",
+        "parent_renderer": "pixman",
+        "paging_start": {
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "paging_end": {
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "scenarios": {
+          "fresh_static": {
+            "duration_s": 4.996806284000002,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 905.265625,
+                "median": 905.265625,
+                "p95": 905.265625,
+                "max": 905.265625
+              },
+              "all": {
+                "mean": 992.62890625,
+                "median": 992.62890625,
+                "p95": 992.62890625,
+                "max": 992.62890625
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 844.060546875,
+                "median": 844.060546875,
+                "p95": 844.060546875,
+                "max": 844.060546875
+              },
+              "all": {
+                "mean": 900.98046875,
+                "median": 900.98046875,
+                "p95": 900.98046875,
+                "max": 900.98046875
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 790.7421875,
+                "median": 790.7421875,
+                "p95": 790.7421875,
+                "max": 790.7421875
+              },
+              "all": {
+                "mean": 840.2890625,
+                "median": 840.2890625,
+                "p95": 840.2890625,
+                "max": 840.2890625
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 17,
+                "all": 17
+              },
+              "pss": {
+                "shell": 17,
+                "all": 17
+              },
+              "uss": {
+                "shell": 17,
+                "all": 17
+              },
+              "swap_pss": {
+                "shell": 17,
+                "all": 17
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 19.396484375,
+              "anonymous": 720.7265625,
+              "shared_buffers": 32.45703125,
+              "fonts": 0.501953125,
+              "qt_qml": 36.9609375,
+              "mesa_llvm": 33.9375
+            },
+            "sample_count": 17,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          },
+          "all_panels_closed": {
+            "duration_s": 5.000100480000015,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1208.84765625,
+                "median": 1208.84765625,
+                "p95": 1208.84765625,
+                "max": 1208.84765625
+              },
+              "all": {
+                "mean": 1296.21484375,
+                "median": 1296.21484375,
+                "p95": 1296.21484375,
+                "max": 1296.21484375
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1129.654296875,
+                "median": 1129.654296875,
+                "p95": 1129.654296875,
+                "max": 1129.654296875
+              },
+              "all": {
+                "mean": 1186.564453125,
+                "median": 1186.564453125,
+                "p95": 1186.564453125,
+                "max": 1186.564453125
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1061.640625,
+                "median": 1061.640625,
+                "p95": 1061.640625,
+                "max": 1061.640625
+              },
+              "all": {
+                "mean": 1111.1875,
+                "median": 1111.1875,
+                "p95": 1111.1875,
+                "max": 1111.1875
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 17,
+                "all": 17
+              },
+              "pss": {
+                "shell": 17,
+                "all": 17
+              },
+              "uss": {
+                "shell": 17,
+                "all": 17
+              },
+              "swap_pss": {
+                "shell": 17,
+                "all": 17
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 20.01953125,
+              "anonymous": 986.1484375,
+              "shared_buffers": 49.884765625,
+              "fonts": 1.04296875,
+              "qt_qml": 38.2890625,
+              "mesa_llvm": 34.18359375
+            },
+            "sample_count": 17,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          },
+          "static_after_latency": {
+            "duration_s": 15.000121283999988,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1213.520546875,
+                "median": 1213.30859375,
+                "p95": 1216.984375,
+                "max": 1216.984375
+              },
+              "all": {
+                "mean": 1301.004921875,
+                "median": 1300.79296875,
+                "p95": 1304.46875,
+                "max": 1304.46875
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1133.94228515625,
+                "median": 1134.09375,
+                "p95": 1136.9794921875,
+                "max": 1136.9794921875
+              },
+              "all": {
+                "mean": 1190.96962890625,
+                "median": 1191.12109375,
+                "p95": 1194.0068359375,
+                "max": 1194.0068359375
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1065.642578125,
+                "median": 1065.80078125,
+                "p95": 1068.671875,
+                "max": 1068.671875
+              },
+              "all": {
+                "mean": 1115.306640625,
+                "median": 1115.46484375,
+                "p95": 1118.3359375,
+                "max": 1118.3359375
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 50,
+                "all": 50
+              },
+              "pss": {
+                "shell": 50,
+                "all": 50
+              },
+              "uss": {
+                "shell": 50,
+                "all": 50
+              },
+              "swap_pss": {
+                "shell": 50,
+                "all": 50
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 20.01953125,
+              "anonymous": 987.58984375,
+              "shared_buffers": 52.958984375,
+              "fonts": 0.9658203125,
+              "qt_qml": 38.2890625,
+              "mesa_llvm": 34.18359375
+            },
+            "sample_count": 50,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          },
+          "video": {
+            "duration_s": 4.890346008000051,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 168.01078088467614,
+                "median": 165.22996271270284,
+                "p95": 222.20743572814578,
+                "max": 222.20743572814578
+              },
+              "all": {
+                "mean": 168.01078088467614,
+                "median": 165.22996271270284,
+                "p95": 222.20743572814578,
+                "max": 222.20743572814578
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1302.345982142857,
+                "median": 1303.859375,
+                "p95": 1304.171875,
+                "max": 1304.171875
+              },
+              "all": {
+                "mean": 1389.830357142857,
+                "median": 1391.34375,
+                "p95": 1391.65625,
+                "max": 1391.65625
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1217.809849330357,
+                "median": 1219.3232421875,
+                "p95": 1219.6357421875,
+                "max": 1219.6357421875
+              },
+              "all": {
+                "mean": 1274.822544642857,
+                "median": 1276.3359375,
+                "p95": 1276.6484375,
+                "max": 1276.6484375
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1144.529575892857,
+                "median": 1146.04296875,
+                "p95": 1146.35546875,
+                "max": 1146.35546875
+              },
+              "all": {
+                "mean": 1194.193638392857,
+                "median": 1195.70703125,
+                "p95": 1196.01953125,
+                "max": 1196.01953125
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 14,
+                "all": 14
+              },
+              "pss": {
+                "shell": 14,
+                "all": 14
+              },
+              "uss": {
+                "shell": 14,
+                "all": 14
+              },
+              "swap_pss": {
+                "shell": 14,
+                "all": 14
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 32.27734375,
+              "anonymous": 1034.578125,
+              "shared_buffers": 60.36328125,
+              "multimedia": 10.54296875,
+              "fonts": 0.9658203125,
+              "qt_qml": 38.2890625,
+              "mesa_llvm": 34.18359375
+            },
+            "sample_count": 14,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            },
+            "delivered_video_fps": 23.950813504201463
+          },
+          "video_paused": {
+            "duration_s": 5.000083380000092,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1295.98046875,
+                "median": 1295.98046875,
+                "p95": 1295.98046875,
+                "max": 1295.98046875
+              },
+              "all": {
+                "mean": 1383.46484375,
+                "median": 1383.46484375,
+                "p95": 1383.46484375,
+                "max": 1383.46484375
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1211.4443359375,
+                "median": 1211.4443359375,
+                "p95": 1211.4443359375,
+                "max": 1211.4443359375
+              },
+              "all": {
+                "mean": 1268.45703125,
+                "median": 1268.45703125,
+                "p95": 1268.45703125,
+                "max": 1268.45703125
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1138.1640625,
+                "median": 1138.1640625,
+                "p95": 1138.1640625,
+                "max": 1138.1640625
+              },
+              "all": {
+                "mean": 1187.828125,
+                "median": 1187.828125,
+                "p95": 1187.828125,
+                "max": 1187.828125
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 17,
+                "all": 17
+              },
+              "pss": {
+                "shell": 17,
+                "all": 17
+              },
+              "uss": {
+                "shell": 17,
+                "all": 17
+              },
+              "swap_pss": {
+                "shell": 17,
+                "all": 17
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 32.27734375,
+              "anonymous": 1034.71484375,
+              "shared_buffers": 60.3671875,
+              "multimedia": 10.54296875,
+              "fonts": 0.9658203125,
+              "qt_qml": 38.2890625,
+              "mesa_llvm": 34.18359375
+            },
+            "sample_count": 17,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          },
+          "video_suspended": {
+            "duration_s": 5.0000838770000655,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1289.8685661764705,
+                "median": 1291.75390625,
+                "p95": 1292.83203125,
+                "max": 1292.83203125
+              },
+              "all": {
+                "mean": 1377.3529411764705,
+                "median": 1379.23828125,
+                "p95": 1380.31640625,
+                "max": 1380.31640625
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1205.3324333639705,
+                "median": 1207.2177734375,
+                "p95": 1208.2958984375,
+                "max": 1208.2958984375
+              },
+              "all": {
+                "mean": 1262.3451286764705,
+                "median": 1264.23046875,
+                "p95": 1265.30859375,
+                "max": 1265.30859375
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1132.0521599264705,
+                "median": 1133.9375,
+                "p95": 1135.015625,
+                "max": 1135.015625
+              },
+              "all": {
+                "mean": 1181.7162224264705,
+                "median": 1183.6015625,
+                "p95": 1184.6796875,
+                "max": 1184.6796875
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 17,
+                "all": 17
+              },
+              "pss": {
+                "shell": 17,
+                "all": 17
+              },
+              "uss": {
+                "shell": 17,
+                "all": 17
+              },
+              "swap_pss": {
+                "shell": 17,
+                "all": 17
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 32.27734375,
+              "anonymous": 1025.6015625,
+              "shared_buffers": 60.3671875,
+              "multimedia": 10.54296875,
+              "fonts": 0.9658203125,
+              "qt_qml": 38.2890625,
+              "mesa_llvm": 34.18359375
+            },
+            "sample_count": 17,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          },
+          "video_resumed": {
+            "duration_s": 5.000087249000103,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 168.48695677031628,
+                "median": 161.8514521439259,
+                "p95": 259.6514594598918,
+                "max": 259.6514594598918
+              },
+              "all": {
+                "mean": 168.48695677031628,
+                "median": 161.8514521439259,
+                "p95": 259.6514594598918,
+                "max": 259.6514594598918
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1332.8178013392858,
+                "median": 1329.37890625,
+                "p95": 1339.9765625,
+                "max": 1339.9765625
+              },
+              "all": {
+                "mean": 1420.3021763392858,
+                "median": 1416.86328125,
+                "p95": 1427.4609375,
+                "max": 1427.4609375
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1248.2816685267858,
+                "median": 1244.8427734375,
+                "p95": 1255.4404296875,
+                "max": 1255.4404296875
+              },
+              "all": {
+                "mean": 1305.2943638392858,
+                "median": 1301.85546875,
+                "p95": 1312.453125,
+                "max": 1312.453125
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1175.0013950892858,
+                "median": 1171.5625,
+                "p95": 1182.16015625,
+                "max": 1182.16015625
+              },
+              "all": {
+                "mean": 1224.6654575892858,
+                "median": 1221.2265625,
+                "p95": 1231.82421875,
+                "max": 1231.82421875
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 14,
+                "all": 14
+              },
+              "pss": {
+                "shell": 14,
+                "all": 14
+              },
+              "uss": {
+                "shell": 14,
+                "all": 14
+              },
+              "swap_pss": {
+                "shell": 14,
+                "all": 14
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 32.27734375,
+              "anonymous": 1072.9921875,
+              "shared_buffers": 57.4375,
+              "multimedia": 10.54296875,
+              "fonts": 0.9658203125,
+              "qt_qml": 38.2890625,
+              "mesa_llvm": 34.18359375
+            },
+            "sample_count": 14,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            },
+            "delivered_video_fps": 23.996551197522663
+          },
+          "static_after_video": {
+            "duration_s": 5.000083846999928,
+            "interval_s": 0.25,
+            "cpu_percent_one_core": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "rss_mib": {
+              "shell": {
+                "mean": 1323.9260110294117,
+                "median": 1323.3515625,
+                "p95": 1325.3046875,
+                "max": 1325.3046875
+              },
+              "all": {
+                "mean": 1411.4103860294117,
+                "median": 1410.8359375,
+                "p95": 1412.7890625,
+                "max": 1412.7890625
+              }
+            },
+            "pss_mib": {
+              "shell": {
+                "mean": 1239.3898782169117,
+                "median": 1238.8154296875,
+                "p95": 1240.7685546875,
+                "max": 1240.7685546875
+              },
+              "all": {
+                "mean": 1296.4025735294117,
+                "median": 1295.828125,
+                "p95": 1297.78125,
+                "max": 1297.78125
+              }
+            },
+            "uss_mib": {
+              "shell": {
+                "mean": 1166.1096047794117,
+                "median": 1165.53515625,
+                "p95": 1167.48828125,
+                "max": 1167.48828125
+              },
+              "all": {
+                "mean": 1215.7736672794117,
+                "median": 1215.19921875,
+                "p95": 1217.15234375,
+                "max": 1217.15234375
+              }
+            },
+            "swap_pss_mib": {
+              "shell": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              },
+              "all": {
+                "mean": 0.0,
+                "median": 0.0,
+                "p95": 0.0,
+                "max": 0.0
+              }
+            },
+            "memory_valid_samples": {
+              "rss": {
+                "shell": 17,
+                "all": 17
+              },
+              "pss": {
+                "shell": 17,
+                "all": 17
+              },
+              "uss": {
+                "shell": 17,
+                "all": 17
+              },
+              "swap_pss": {
+                "shell": 17,
+                "all": 17
+              }
+            },
+            "mapping_pss_mib": {
+              "other_files": 32.27734375,
+              "anonymous": 1066.24609375,
+              "shared_buffers": 57.78515625,
+              "multimedia": 10.91796875,
+              "fonts": 0.9658203125,
+              "qt_qml": 38.2890625,
+              "mesa_llvm": 34.18359375
+            },
+            "sample_count": 17,
+            "output": {
+              "width": 1920,
+              "height": 1080,
+              "favorites": 12
+            }
+          }
+        },
+        "latency": {
+          "cold": {
+            "launcher": {
+              "frame_ms": {
+                "mean": 633,
+                "median": 633,
+                "p95": 633,
+                "max": 633
+              },
+              "synchronous_ms": {
+                "mean": 123,
+                "median": 123,
+                "p95": 123,
+                "max": 123
+              },
+              "samples": [
+                {
+                  "frameMs": 633,
+                  "synchronousMs": 123,
+                  "readyImages": 50
+                }
+              ]
+            },
+            "dashboard": {
+              "frame_ms": {
+                "mean": 554,
+                "median": 554,
+                "p95": 554,
+                "max": 554
+              },
+              "synchronous_ms": {
+                "mean": 5,
+                "median": 5,
+                "p95": 5,
+                "max": 5
+              },
+              "samples": [
+                {
+                  "frameMs": 554,
+                  "synchronousMs": 5,
+                  "readyImages": 2
+                }
+              ]
+            }
+          },
+          "reopen": {
+            "launcher": {
+              "frame_ms": {
+                "mean": 436.6,
+                "median": 402,
+                "p95": 546,
+                "max": 546
+              },
+              "synchronous_ms": {
+                "mean": 26.2,
+                "median": 6,
+                "p95": 114,
+                "max": 114
+              },
+              "samples": [
+                {
+                  "frameMs": 546,
+                  "synchronousMs": 114,
+                  "readyImages": 50
+                },
+                {
+                  "frameMs": 461,
+                  "synchronousMs": 6,
+                  "readyImages": 50
+                },
+                {
+                  "frameMs": 402,
+                  "synchronousMs": 8,
+                  "readyImages": 50
+                },
+                {
+                  "frameMs": 387,
+                  "synchronousMs": 1,
+                  "readyImages": 50
+                },
+                {
+                  "frameMs": 387,
+                  "synchronousMs": 2,
+                  "readyImages": 50
+                }
+              ]
+            },
+            "dashboard": {
+              "frame_ms": {
+                "mean": 384,
+                "median": 386,
+                "p95": 402,
+                "max": 402
+              },
+              "synchronous_ms": {
+                "mean": 3.8,
+                "median": 4,
+                "p95": 6,
+                "max": 6
+              },
+              "samples": [
+                {
+                  "frameMs": 379,
+                  "synchronousMs": 4,
+                  "readyImages": 2
+                },
+                {
+                  "frameMs": 386,
+                  "synchronousMs": 4,
+                  "readyImages": 2
+                },
+                {
+                  "frameMs": 402,
+                  "synchronousMs": 3,
+                  "readyImages": 2
+                },
+                {
+                  "frameMs": 359,
+                  "synchronousMs": 6,
+                  "readyImages": 2
+                },
+                {
+                  "frameMs": 394,
+                  "synchronousMs": 2,
+                  "readyImages": 2
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
