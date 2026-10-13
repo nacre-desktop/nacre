@@ -139,12 +139,20 @@ TestCase {
   MouseArea {anchors.fill:parent;onPressed:mouse=>{test.presses++;mouse.accepted=true};onClicked:test.clicks++}
   NacrePanelDrag {id:sensor;parent:panel.parent;x:0;y:0;width:350;height:250;kind:"ai";host:panel;screen:({name:"test",x:0,y:0})}
  }
- function init(){presses=0;clicks=0;NacrePearls.drag=null;NacrePearls.starts=0;NacrePearls.finishes=0;NacrePearls.dx=0;NacrePearls.cancelOnBegin=false;panel.enabled=true;panel.x=0;lower.enabled=false;DesktopSettings.data={dragPanels:true};}
+ function init(){presses=0;clicks=0;NacrePearls.drag=null;NacrePearls.starts=0;NacrePearls.finishes=0;NacrePearls.dx=0;NacrePearls.cancelOnBegin=false;panel.enabled=true;panel.x=0;lower.enabled=false;sensor.enabled=true;sensor.visible=true;DesktopSettings.data={dragPanels:true};}
  function test_ordinary_click_reaches_controls_under_drag_sensor(){
   mouseClick(sensor,20,20,Qt.LeftButton,Qt.NoModifier);
   compare(presses,1);compare(clicks,1);compare(NacrePearls.starts,0);
   mouseClick(panel,120,120,Qt.LeftButton,Qt.NoModifier);
   compare(presses,2);compare(clicks,2);compare(NacrePearls.starts,0);
+ }
+ function test_disabled_or_hidden_sensor_does_not_reserve_gestures(){
+  sensor.enabled=false;
+  mouseDrag(panel,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);
+  compare(NacrePearls.starts,0);
+  sensor.enabled=true;sensor.visible=false;
+  mouseDrag(panel,20,20,100,0,Qt.LeftButton,Qt.MetaModifier);
+  compare(NacrePearls.starts,0);
  }
  function test_single_motion_and_release_use_full_pointer_delta(){
   for(let i=0;i<3;i++){
