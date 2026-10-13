@@ -174,7 +174,7 @@ class CompositorConfigTests(unittest.TestCase):
                 mutate(contract)
                 config.render(contract)
         with self.assertRaises(ValueError):
-            config.render(config.load(), backend="niri")
+            config.render(config.load(), backend="unknown")
         with self.assertRaises(ValueError):
             config.rule_lua({}, backend="niri")
 
@@ -222,7 +222,9 @@ class CompositorConfigTests(unittest.TestCase):
                 DIRECTORY / "compositor_backends",
                 helpers / "compositor_backends",
             )
-            for path, output in config.render(config.load()).items():
+            generated = config.render(config.load())
+            generated.update(config.render(config.load(), backend="niri"))
+            for path, output in generated.items():
                 target = root / path
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(output)

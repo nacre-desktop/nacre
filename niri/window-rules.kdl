@@ -1,0 +1,83 @@
+// Generated from compositor-contract.json; edit the neutral source.
+// Include before user bindings/rules so user-owned choices take precedence.
+window-rule {
+    match app-id="^([Tt]hunar)$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^(org[.]kde[.]dolphin|[Dd]olphin)$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^org.quickshell$" title="^Nacre lock screen preview$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^org\\.pulseaudio\\.pavucontrol$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^blueman-manager$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^nm-connection-editor$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^hyprland-share-picker$"
+    open-floating true
+}
+
+window-rule {
+    match title="^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^nacre-control$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^org[.]quickshell$" title="^Nacre Settings$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^org[.]quickshell$" title="^Nacre Colors$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^org[.]quickshell$" title="^Nacre Welcome$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$"
+}
+
+window-rule {
+    match app-id="^chrome-127[.]0[.]0[.]1__-Default$"
+}
+
+window-rule {
+    match app-id="^([Oo]bsidian)$"
+}
+
+window-rule {
+    match app-id="^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^org[.]quickshell$" title="^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$"
+    open-floating true
+}
