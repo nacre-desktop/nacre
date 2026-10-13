@@ -50,6 +50,18 @@ TestCase {
         verify(toggle.checked);
         compare(DesktopSettings.writes[0].key, "dnd");
     }
+    function test_state_restores_search_without_overriding_a_new_page() {
+        const first = createTemporaryObject(settings, test);
+        first.query = "network";
+        const state = first.captureState();
+        const second = createTemporaryObject(settings, test);
+        second.restoreState(state);
+        compare(second.query, "network");
+        second.open("sound");
+        second.restoreState(state);
+        compare(second.query, "");
+        compare(second.page, "sound");
+    }
     function test_catalog_plain_labels_external_routes_and_unknown_fallback() {
         const view = createTemporaryObject(settings, test);
         wait(20);

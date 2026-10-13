@@ -193,6 +193,10 @@ import QtTest
 import "fixtures"
 TestCase {id:test;name:"Welcome";width:1200;height:900;visible:true;when:windowShown
  Component{id:studio;NacreSurface{width:1000;height:680;color:NacreTokens.body;NacreWelcomeView{id:main;anchors.fill:parent;objectName:"welcomeView"}}}
+ function test_view_state_keeps_expansion_but_obeys_current_tour_page(){
+  const preview=createTemporaryObject(studio,test);const view=findChild(preview,"welcomeView");view.allShortcuts=true;const state=view.captureState();
+  const other=createTemporaryObject(studio,test);const restored=findChild(other,"welcomeView");restored.restoreState(state);verify(restored.allShortcuts);
+ }
  function test_routes_keyboard_and_responsive_footer(){
   const preview=createTemporaryObject(studio,test);const view=findChild(preview,"welcomeView");wait(200);
   const canvas=findChild(view,"welcomeCanvas"); const footer=findChild(view,"welcomeFooter");

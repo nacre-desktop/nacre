@@ -12,6 +12,7 @@ Item {
     readonly property string requestedPath: NacrePresentation.canonicalPoster(String(source))
     property Image current: first
     property Image previous: null
+    property int releaseDelay: 5000
     property Image standby: null
     property bool transitioning: false
     property string failure: ""
@@ -33,6 +34,7 @@ Item {
             NacrePresentation.activate(requestedPath);
             return;
         }
+        release.stop();
         const slots = [first, second, third];
         const slot = !hasImage ? current : (slots.find(item => item !== current && item !== previous && item.requestPath === requestedPath) || slots.find(item => item !== current && item !== previous));
         if (!slot)
@@ -80,6 +82,8 @@ Item {
             current.opacity = 1;
         previous = null;
         transitioning = false;
+        if (standby)
+            release.restart();
         // Keep the immediately previous image warm for reverse navigation. Other
         // full-size slots are only needed while loading or fading a new request.
         for (const slot of [first, second, third]) {
@@ -124,16 +128,30 @@ Item {
         z: 2
         anchors.fill: parent
         active: NacreWallpapers.displayDynamic && !NacreWallpapers.displayAnimated && !WallpaperPlayback.batteryPaused
-        sourceComponent: NacreDesktopVideo {
-            screenName: root.screenName
-            path: NacreWallpapers.displayPath
-            running: root.motionAllowed
+        source: active ? Qt.resolvedUrl("NacreDesktopVideo.qml") : ""
+        onLoaded: {
+            item.screenName = Qt.binding(() => root.screenName);
+            item.path = Qt.binding(() => NacreWallpapers.displayPath);
+            item.running = Qt.binding(() => root.motionAllowed);
         }
     }
     Timer {
         id: settle
         interval: 230
         onTriggered: root.finish()
+    }
+    Timer {
+        id: release
+        interval: root.releaseDelay
+        onTriggered: if (!root.transitioning) {
+            for (const slot of [first, second, third]) {
+                if (slot !== root.current && slot.requestPath !== root.requestedPath) {
+                    slot.requestPath = "";
+                    slot.source = "";
+                }
+            }
+            root.standby = null;
+        }
     }
     Connections {
         target: NacrePresentation

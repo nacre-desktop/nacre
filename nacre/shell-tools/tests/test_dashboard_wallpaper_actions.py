@@ -46,7 +46,7 @@ class DashboardWallpaperActionsTests(unittest.TestCase):
                 manifest.write(
                     "\nActionButton 1.0 ActionButton.qml\nNacreScrollBar 1.0 NacreScrollBar.qml\n"
                 )
-            for name in ("NacreTodayPage", "NacreDashboardHero"):
+            for name in ("NacreTodayPage", "NacreDashboardHero", "NacreDashboardVideo"):
                 source = (
                     (SHELL / "modules/dashboard" / (name + ".qml"))
                     .read_text()
@@ -148,7 +148,8 @@ TestCase {
   NacreWallpapers.displayDynamic=true;
   NacreWallpapers.displayPath=Qt.resolvedUrl("first.mp4").toString().replace("file://","");
   const view=createTemporaryObject(page,this);
-  const video=findChild(view,"dashboardWallpaperVideo");verify(video);
+  tryVerify(()=>!!findChild(view,"dashboardWallpaperVideo"),1000);
+  const video=findChild(view,"dashboardWallpaperVideo");
   tryCompare(video,"playbackState",MediaPlayer.PlayingState,5000);
   tryVerify(()=>video.position>0,5000);
   NacreWallpapers.displayPath=Qt.resolvedUrl("second.mp4").toString().replace("file://","");

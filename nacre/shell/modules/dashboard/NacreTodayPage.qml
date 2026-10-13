@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import QtMultimedia
 import qs.widgets
 import qs.services
 
@@ -45,24 +44,10 @@ Flickable {
             Loader {
                 anchors.fill: parent
                 active: root.shouldUpdate && NacreWallpapers.displayDynamic && !NacreWallpapers.displayAnimated && NacreTokens.motionEnabled && !WallpaperPlayback.batteryPaused && !WallpaperPlayback.paused && !WallpaperPlayback.sleeping && !WallpaperPlayback.locked
-                sourceComponent: Item {
-                    MediaPlayer {
-                        id: video
-                        objectName: "dashboardWallpaperVideo"
-                        autoPlay: true
-                        onMediaStatusChanged: if (mediaStatus === MediaPlayer.LoadedMedia)
-                            play()
-                        source: "file://" + root.heroVideoPath
-                        loops: MediaPlayer.Infinite
-                        videoOutput: videoSurface
-                    }
-                    VideoOutput {
-                        id: videoSurface
-                        anchors.fill: parent
-                        fillMode: VideoOutput.PreserveAspectCrop
-                    }
-                }
+                source: active ? Qt.resolvedUrl("NacreDashboardVideo.qml") : ""
+                onLoaded: item.path = Qt.binding(() => root.heroVideoPath)
             }
+
             AnimatedImage {
                 anchors.fill: parent
                 source: root.shouldUpdate && NacreWallpapers.displayDynamic && NacreWallpapers.displayAnimated ? "file://" + NacreWallpapers.displayPath : ""

@@ -8,6 +8,17 @@ Item {
     id: root
     focus: true
     readonly property bool narrow: width < 820
+    function captureState() {
+        return {
+            page: NacreWelcomeApp.page,
+            allShortcuts: allShortcuts,
+            scroll: canvas.contentY
+        };
+    }
+    function restoreState(data) {
+        allShortcuts = data.allShortcuts === true;
+        Qt.callLater(() => canvas.contentY = data.page === NacreWelcomeApp.page ? data.scroll || 0 : 0);
+    }
     property bool allShortcuts: false
     property real pageOffset: 0
     property real pageOpacity: 1
