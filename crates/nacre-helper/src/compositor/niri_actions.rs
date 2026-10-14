@@ -575,7 +575,13 @@ impl<T: Transport> Backend<T> {
             {
                 return Err(invalid("Specify a workspace or geometry, not both"));
             }
-            let id = self.window_id(window, timeout)?;
+            // Overview keeps a layout selection but clears application keyboard focus.
+            // Let niri resolve that selection when the caller did not specify a window.
+            let id = if window.is_empty() {
+                Value::Null
+            } else {
+                json!(self.window_id(window, timeout)?)
+            };
             let reference = self.workspace_reference(workspace, timeout)?;
             return self.action("MoveWindowToWorkspace",json!({"window_id":id,"reference":reference,"focus":kwargs.get("follow").is_some_and(truthy)}),timeout);
         }
@@ -777,6 +783,37 @@ mod tests {
             }
             Ok(json!("Handled"))
         }
+    }
+    #[test]
+    fn workspace_move_uses_niri_selection_without_application_focus() -> crate::Result<()> {
+        for (workspace, reference) in [
+            (json!(2), json!({"Id": 202})),
+            (json!({"relative": 1}), json!({"Id": 202})),
+        ] {
+            let mut backend = Backend {
+                transport: Fixture {
+                    snapshot: json!({
+                        "activeWindow": null,
+                        "windows": [],
+                        "focusedMonitor": {"name": "eDP-1"},
+                        "activeWorkspace": {"outputId": "eDP-1", "index": 1},
+                        "workspaces": [{"id": "niri-workspace:202", "outputId": "eDP-1", "index": 2}]
+                    }),
+                    probes: vec![],
+                    requests: vec![],
+                    move_output: false,
+                },
+            };
+            backend.execute("move_window", &[], &json!({"workspace": workspace}))?;
+            assert_eq!(
+                backend.transport.requests[0]["request"],
+                json!({"Action": {
+                    "MoveWindowToWorkspace": {"window_id": null, "reference": reference, "focus": false}
+                }})
+            );
+            assert_eq!(backend.transport.probes.len(), 1);
+        }
+        Ok(())
     }
     #[test]
     fn frozen_current_python_action_results_and_ipc_requests() -> crate::Result<()> {

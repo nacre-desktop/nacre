@@ -59,6 +59,11 @@ The [shortcut tables](usage.md#hyprland-shortcuts) describe generated defaults.
 Hyprland's shortcut list reads session bindings; niri cannot inspect private
 binding overrides.
 
+On Niri, Super+Tab opens Bird’s Eye. Super+Shift+1–9 (0 for workspace 10)
+moves the selected tile to that workspace on the current output, keeping the
+overview open and focus on the source workspace. The keyboard-selected tile
+is used; pointing at a different preview does not change the keyboard selection.
+
 ## Files and XDG paths
 
 At the default locations:
