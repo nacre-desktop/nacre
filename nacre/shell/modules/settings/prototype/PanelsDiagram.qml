@@ -19,14 +19,15 @@ Item {
         border.width: 1
         border.color: Qt.alpha(NacreTokens.outline, .5)
         Row {
-            anchors.centerIn: parent
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: parent.height * .6
             spacing: NacreTokens.space.sm
             Repeater {
                 model: [0, 1, 2]
                 NacreSurface {
                     required property int modelData
                     width: Math.max(24, screen.width * .17)
-                    height: modelData === 1 ? 66 : 44
+                    height: NacreTokens.space.huge
                     radius: NacreTokens.radii.small
                     color: Qt.alpha(NacreTokens.outline, .1)
                 }

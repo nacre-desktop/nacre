@@ -896,11 +896,11 @@ NacreSurface {
                         }
                         GradientStop {
                             position: .5
-                            color: NacreColours.palette.m3secondary
+                            color: NacreTokens.gradientColour(NacreColours.palette.m3primary, NacreColours.palette.m3secondary)
                         }
                         GradientStop {
                             position: 1
-                            color: NacreColours.palette.m3tertiary
+                            color: NacreTokens.gradientColour(NacreColours.palette.m3primary, NacreColours.palette.m3tertiary)
                         }
                     }
                 }

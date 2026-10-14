@@ -40,11 +40,11 @@ Shape {
             }
             GradientStop {
                 position: .38
-                color: NacreTokens.accent
+                color: NacreTokens.gradientColour(NacreTokens.orientHighlight, NacreTokens.accent)
             }
             GradientStop {
                 position: 1
-                color: NacreTokens.orientSecondary
+                color: NacreTokens.gradientColour(NacreTokens.orientHighlight, NacreTokens.orientSecondary)
             }
         }
         PathSvg {

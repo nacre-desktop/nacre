@@ -85,7 +85,11 @@ impl Backend {
     pub fn configuration(&self) -> niri_desktop::Configuration {
         niri_desktop::Configuration::new(
             &self.paths,
-            self.environment.get("NACRE_NIRI_CONFIG").map(Path::new),
+            self.environment
+                .get("NACRE_NIRI_CONFIG")
+                .filter(|value| !value.is_empty())
+                .or_else(|| self.environment.get("NIRI_CONFIG"))
+                .map(Path::new),
             self.environment
                 .get("NACRE_NIRI_DESKTOP_CONFIG")
                 .filter(|value| !value.is_empty())
@@ -234,6 +238,22 @@ impl Backend {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn session_loader_fallback_keeps_explicit_override() {
+        let mut environment =
+            BTreeMap::from([("NIRI_CONFIG".into(), "/session/config.kdl".into())]);
+        let backend = Backend::new(Paths::new("/case/home"), environment.clone());
+        assert_eq!(
+            backend.configuration().loader,
+            Path::new("/session/config.kdl")
+        );
+        environment.insert("NACRE_NIRI_CONFIG".into(), "/explicit/config.kdl".into());
+        let backend = Backend::new(Paths::new("/case/home"), environment);
+        assert_eq!(
+            backend.configuration().loader,
+            Path::new("/explicit/config.kdl")
+        );
+    }
     #[test]
     fn frozen_backend_metadata_and_lazy_construction() -> crate::Result<()> {
         let reference: Value = serde_json::from_str(include_str!(

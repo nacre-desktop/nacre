@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import qs.widgets
 import qs.services
+import "../../launcher/menu-model.js" as Menu
 
 SettingsCard {
     id: root
@@ -11,6 +12,20 @@ SettingsCard {
     required property var store
     signal back
     property string filter: ""
+    property bool customCommand: false
+    readonly property bool defaultApplication: setting.store.id === "apps" && setting.section === "apps.defaults"
+    readonly property var installedApplications: defaultApplication ? NacreApps.all.filter(entry => entry.command?.length) : []
+    readonly property bool navigation: setting.entityType?.startsWith("navigation-") === true
+    readonly property var navigationRows: navigation ? Menu.rail(NacreMenu.rows, setting.entityType === "navigation-order" ? {
+        order: store.value(setting)
+    } : {}) : []
+    function move(index, direction) {
+        if (index < 1 || index + direction < 1 || index + direction >= navigationRows.length)
+            return;
+        const values = navigationRows.map(item => item.id);
+        [values[index], values[index + direction]] = [values[index + direction], values[index]];
+        store.write(setting, values);
+    }
     title: registry.text(setting.labelId)
     description: registry.text(setting.descriptionId)
     ActionButton {
@@ -24,6 +39,23 @@ SettingsCard {
         width: parent.width
         placeholderText: root.registry.text("settings.registry.ui.apps")
         onTextEdited: root.filter = text
+    }
+    NacreSelect {
+        objectName: "defaultApplicationPicker"
+        visible: root.defaultApplication
+        width: Math.min(parent.width, NacreTokens.space.huge * 12)
+        model: root.installedApplications.map(entry => entry.name)
+        currentIndex: root.installedApplications.findIndex(entry => JSON.stringify(NacreApps.commandFor(entry, true)) === JSON.stringify(root.store.value(root.setting)))
+        displayText: currentIndex >= 0 ? currentText : root.registry.text("settings.registry.ui.choose-app")
+        searchable: true
+        enabled: root.store.enabled(root.setting)
+        onActivated: index => root.store.write(root.setting, NacreApps.commandFor(root.installedApplications[index], true))
+    }
+    ActionButton {
+        visible: root.defaultApplication
+        text: root.registry.text("settings.registry.ui.custom-command")
+        compact: true
+        onClicked: root.customCommand = !root.customCommand
     }
     Repeater {
         model: root.setting.entityType === "app" ? NacreApps.all.filter(item => !root.filter || item.name.toLocaleLowerCase().includes(root.filter.toLocaleLowerCase())) : []
@@ -57,7 +89,57 @@ SettingsCard {
         }
     }
     Repeater {
-        model: root.setting.entityType === "app" ? [] : root.store.value(root.setting)
+        model: root.navigation ? root.navigationRows : []
+        delegate: Item {
+            id: category
+            required property var modelData
+            required property int index
+            width: parent.width
+            implicitHeight: NacreTokens.space.huge + NacreTokens.space.lg
+            NacreText {
+                width: parent.width - buttons.width - NacreTokens.space.md
+                anchors.verticalCenter: parent.verticalCenter
+                text: category.modelData.label
+                elide: Text.ElideRight
+            }
+            Row {
+                id: buttons
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: NacreTokens.space.xs
+                ActionButton {
+                    visible: root.setting.entityType === "navigation-order"
+                    icon: "arrow_upward"
+                    text: ""
+                    accessibleLabel: root.registry.text("settings.registry.ui.move-up")
+                    compact: true
+                    enabled: category.index > 1 && root.store.enabled(root.setting)
+                    onClicked: root.move(category.index, -1)
+                }
+                ActionButton {
+                    visible: root.setting.entityType === "navigation-order"
+                    icon: "arrow_downward"
+                    text: ""
+                    accessibleLabel: root.registry.text("settings.registry.ui.move-down")
+                    compact: true
+                    enabled: category.index > 0 && category.index < root.navigationRows.length - 1 && root.store.enabled(root.setting)
+                    onClicked: root.move(category.index, 1)
+                }
+                NacreToggleSwitch {
+                    visible: root.setting.entityType === "navigation-hidden"
+                    enabled: category.modelData.id !== "home" && root.store.enabled(root.setting)
+                    checked: !root.store.value(root.setting).includes(category.modelData.id)
+                    Accessible.name: category.modelData.label
+                    onToggled: {
+                        const values = root.store.value(root.setting);
+                        root.store.write(root.setting, checked ? values.filter(id => id !== category.modelData.id) : [...values, category.modelData.id]);
+                    }
+                }
+            }
+        }
+    }
+    Repeater {
+        model: root.setting.entityType === "app" || root.navigation || root.defaultApplication && !root.customCommand ? [] : root.store.value(root.setting)
         delegate: Row {
             id: argument
             required property string modelData
@@ -87,7 +169,7 @@ SettingsCard {
         }
     }
     ActionButton {
-        visible: root.setting.entityType !== "app"
+        visible: root.setting.entityType !== "app" && !root.navigation && (!root.defaultApplication || root.customCommand)
         text: root.registry.text("settings.registry.ui.add")
         icon: "add"
         compact: true

@@ -36,5 +36,18 @@
   "frameBottomEnabled": true,
   "aiSidebarEnabled": true,
   "dashboardEnabled": true,
-  "lipHoverDelay": 350
+  "lipHoverDelay": 350,
+  "interfaceGradients": true,
+  "keyRepeatDelay": 600,
+  "keyRepeatRate": 25,
+  "mouseSpeed": 0.0,
+  "mouseAcceleration": "adaptive",
+  "mouseLeftHanded": false,
+  "mouseNaturalScroll": false,
+  "touchpadSpeed": 0.0,
+  "touchpadTap": true,
+  "touchpadTypingGuard": true,
+  "monoFont": "",
+  "textSize": 12,
+  "reduceMotion": false
 }

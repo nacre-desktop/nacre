@@ -19,6 +19,7 @@ FocusScope {
     property var pendingAction: null
     property int resultIndex: 0
     property bool overflowOpen: false
+    property var backStack: []
     readonly property var schema: registry.schema
     readonly property var current: schema.pages.find(item => item.id === page)
     readonly property bool narrow: width < NacreTokens.space.huge * 24
@@ -32,10 +33,25 @@ FocusScope {
     function focusSearch() {
         search.forceActiveFocus();
     }
-    function open(link) {
+    function back() {
+        if (!backStack.length)
+            return open(current?.parent || "panels", false);
+        const previous = backStack[backStack.length - 1];
+        backStack = backStack.slice(0, -1);
+        open(previous.route, false);
+        Qt.callLater(() => scroll.contentY = Math.min(previous.position, Math.max(0, scroll.contentHeight - scroll.height)));
+    }
+    function open(link, remember = true) {
         const route = Registry.resolve(schema, link, capabilities, development);
         if (!route)
             return false;
+        if (remember && current && route.page !== page)
+            backStack = [...backStack,
+                {
+                    route: page + (highlight ? "#" + highlight : ""),
+                    position: scroll.contentY
+                }
+            ];
         pendingAction = null;
         entitySetting = null;
         page = route.page;
@@ -272,13 +288,13 @@ FocusScope {
             width: scroll.width
             spacing: NacreTokens.space.xl
             Row {
-                visible: !!root.current?.parent && !root.query
+                visible: (!!root.current?.parent || root.backStack.length > 0) && !root.query
                 spacing: NacreTokens.space.sm
                 ActionButton {
                     text: root.registry.text("settings.registry.ui.back")
                     icon: "arrow_back"
                     compact: true
-                    onClicked: root.open(root.current.parent)
+                    onClicked: root.back()
                 }
                 NacreText {
                     anchors.verticalCenter: parent.verticalCenter
@@ -332,9 +348,9 @@ FocusScope {
                 }
             }
             NacreText {
-                visible: root.feedback.length > 0 || root.store.error.length > 0
+                visible: root.feedback.length > 0 || root.store.issue(root.page).length > 0
                 width: parent.width
-                text: root.store.error || root.feedback
+                text: root.store.issue(root.page) || root.feedback
                 wrapMode: Text.Wrap
                 color: NacreTokens.mutedInk
                 font.pointSize: NacreTokens.textSize.caption

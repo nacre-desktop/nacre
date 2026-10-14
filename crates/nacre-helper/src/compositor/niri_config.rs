@@ -140,31 +140,110 @@ pub fn desktop(preferences: &Value) -> Result<String> {
         lines.push(format!("window-rule {{\n    {}\n}}", rules.join("\n    ")));
     }
     let mut input = Vec::new();
-    if let Some(layout) = preferences.get("keyboardLayouts") {
-        input.push(format!(
-            "keyboard {{\n        xkb {{ layout {}; }}\n    }}",
-            text(layout)?
-        ));
-    }
     if preferences.get("followMouse") == Some(&Value::Bool(true)) {
         input.push("focus-follows-mouse".to_string());
     }
     let enabled = preferences
         .get("touchpadEnabled")
-        .map(|v| {
-            v.as_bool()
+        .map(|value| {
+            value
+                .as_bool()
                 .ok_or_else(|| invalid("Invalid touchpad preference"))
         })
         .transpose()?;
-    if let Some(value) = preferences.get("naturalScroll") {
+    let touchpad_extra = ["touchpadSpeed", "touchpadTap", "touchpadTypingGuard"]
+        .iter()
+        .any(|key| preferences.contains_key(*key));
+    if let Some(value) = preferences.get("naturalScroll").filter(|_| !touchpad_extra) {
         let off = if enabled == Some(false) { "off; " } else { "" };
         input.push(if value == true {
             format!("touchpad {{ {off}natural-scroll; scroll-factor 0.25; }}")
         } else {
             format!("touchpad {{ {off}scroll-factor 0.25; }}")
         });
-    } else if enabled == Some(false) {
+    } else if enabled == Some(false) && !touchpad_extra {
         input.push("touchpad { off; }".into());
+    }
+    let mut keyboard = Vec::new();
+    if let Some(layout) = preferences.get("keyboardLayouts") {
+        keyboard.push(format!("xkb {{ layout {}; }}", text(layout)?));
+    }
+    for (key, field, low, high) in [
+        ("keyRepeatDelay", "repeat-delay", 100.0, 1000.0),
+        ("keyRepeatRate", "repeat-rate", 1.0, 80.0),
+    ] {
+        if let Some(value) = preferences.get(key) {
+            if !(low..=high).contains(&number(value, "Invalid keyboard repeat")?) {
+                return Err(invalid("Invalid keyboard repeat"));
+            }
+            keyboard.push(format!("{field} {}", text(value)?));
+        }
+    }
+    if !keyboard.is_empty() {
+        input.push(format!(
+            "keyboard {{\n        {}\n    }}",
+            keyboard.join("\n        ")
+        ));
+    }
+    for (device, speed, flags) in [
+        (
+            "mouse",
+            "mouseSpeed",
+            vec![
+                ("mouseLeftHanded", "left-handed"),
+                ("mouseNaturalScroll", "natural-scroll"),
+            ],
+        ),
+        (
+            "touchpad",
+            "touchpadSpeed",
+            vec![("touchpadTap", "tap"), ("touchpadTypingGuard", "dwt")],
+        ),
+    ] {
+        let mut fields = Vec::new();
+        if device == "touchpad" {
+            if enabled == Some(false) {
+                fields.push("off".into());
+            }
+            if preferences.get("naturalScroll") == Some(&Value::Bool(true)) {
+                fields.push("natural-scroll".into());
+            }
+            fields.push("scroll-factor 0.25".into());
+        }
+        if let Some(value) = preferences.get(speed) {
+            if !(-1.0..=1.0).contains(&number(value, "Invalid pointer speed")?) {
+                return Err(invalid("Invalid pointer speed"));
+            }
+            fields.push(format!("accel-speed {}", text(value)?));
+        }
+        if device == "mouse" {
+            if let Some(value) = preferences.get("mouseAcceleration") {
+                if value != "flat" && value != "adaptive" {
+                    return Err(invalid("Invalid pointer acceleration"));
+                }
+                fields.push(format!("accel-profile {}", text(value)?));
+            }
+        }
+        let mut specified = preferences.contains_key(speed)
+            || (device == "mouse" && preferences.contains_key("mouseAcceleration"));
+        for (key, field) in flags {
+            if let Some(value) = preferences.get(key) {
+                specified = true;
+                if !value.is_boolean() {
+                    return Err(invalid("Invalid input toggle"));
+                }
+                if value == true {
+                    fields.push(field.to_owned());
+                }
+            }
+        }
+        if specified {
+            input.push(if fields.is_empty() {
+                format!("{device} {{ }}")
+            } else {
+                format!("{device} {{ {}; }}", fields.join("; "))
+            });
+        }
     }
     if !input.is_empty() || preferences.contains_key("followMouse") {
         lines.push(format!("input {{\n    {}\n}}", input.join("\n    ")));
@@ -548,6 +627,37 @@ mod tests {
         }
         assert_eq!(count, 34);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod input_settings_tests {
+    use super::*;
+    use serde_json::json;
+    #[test]
+    fn input_choices_are_optional_and_rendered_once() {
+        let baseline = desktop(&json!({"gapsIn":12,"naturalScroll":true})).unwrap();
+        assert!(!baseline.contains("keyboard"));
+        assert!(!baseline.contains("mouse {"));
+        let text = desktop(&json!({"naturalScroll":true,"keyRepeatDelay":450,"keyRepeatRate":30,"mouseSpeed":0.25,"mouseAcceleration":"flat","mouseLeftHanded":true,"touchpadSpeed":-0.2,"touchpadTap":true,"touchpadTypingGuard":false})).unwrap();
+        assert_eq!(text.matches("touchpad {").count(), 1);
+        assert!(text.contains("repeat-delay 450"));
+        assert!(text.contains("accel-profile \"flat\""));
+        assert!(text.contains("left-handed"));
+        assert!(text.contains("accel-speed -0.2"));
+        assert!(!text.contains("dwt"));
+    }
+    #[test]
+    fn invalid_input_values_never_become_configuration() {
+        for value in [
+            json!({"mouseSpeed":true}),
+            json!({"mouseSpeed":2}),
+            json!({"touchpadTap":1}),
+            json!({"keyRepeatRate":0}),
+            json!({"mouseAcceleration":"shell"}),
+        ] {
+            assert!(desktop(&value).is_err(), "{value}");
+        }
     }
 }
 

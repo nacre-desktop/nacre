@@ -28,6 +28,8 @@ def stage(target, *, icons=False):
     target.mkdir(parents=True, exist_ok=True)
     for relative in [
         "modules/settings",
+        "modules/topbar",
+        "modules/launcher",
         "modules/bar/popouts",
         "modules/dashboard/media",
         "config",
@@ -46,6 +48,10 @@ def stage(target, *, icons=False):
             "NacreIcon",
             "NacreInteraction",
             "NacreTextField",
+            "NacreRangeSlider",
+            "NacreToggleSwitch",
+            "NacreSelect",
+            "NacreFolderEntry",
             "NacreScrollBar",
             "FastScroll",
             "ActionButton",
@@ -144,6 +150,10 @@ def stage(target, *, icons=False):
         "m3onSecondaryContainer": "#e6eeee",
         "m3tertiary": "#cbbaca",
         "m3error": "#ffc4be",
+        "yellow": "#e7c579",
+        "m3success": "#9bd3a1",
+        "m3primaryFixed": "#d3eff6",
+        "m3surfaceContainerHighest": "#3a505b",
         "m3inverseSurface": "#e2ebef",
         "m3inverseOnSurface": "#18232a",
     }
@@ -232,14 +242,14 @@ def stage(target, *, icons=False):
         "NacreControlTools": "property bool busy:false;property var data:({nightLightSupported:true,nightLightEnabled:false,powerProfilesSupported:true,screenshot:true,colorPicker:true})",
         "NacreControlActions": "property bool busy:false;property string message:'';function cancelWifiInline(){} function connectWifiInline(point,password){return false} function request(args){}",
         "NacreNotifs": hardware["NacreNotifs"],
-        "NacreMenu": "property var snapshot:({stayAwake:false,capabilities:{record:true}})",
+        "NacreMenu": "property var snapshot:({stayAwake:false,capabilities:{record:true}});property var rows:[{id:'home',kind:'group',label:'Home'},{id:'apps',kind:'group',label:'Apps'},{id:'actions',kind:'group',label:'Actions'},{id:'style',kind:'group',label:'Style'}]",
         "NacreVpn": "property var connected:[];property var profiles:[];property bool busy:false",
         "NacreAudio": "property bool micAvailable:true;property bool micMuted:false",
         "NacreBrightness": "function getMonitorForScreen(screen){return {available:true}}",
         "NacreKeyboardLight": "property bool available:true",
         "NacreProfile": "property bool ai:true;property bool brain:true;property var data:({workspaceCount:5})",
         "NacreWallpapers": "property string thumbnail: Qt.resolvedUrl('../wallpaper-demo.svg').toString().replace('file://','');property string current: '';property var appearancePreferences:({})",
-        "DesktopExtras": "property var keys:[];function request(kind,data){}",
+        "DesktopExtras": "property var busy:({});property string message:'';property var keys:[{key:'Super+Space',description:'Launcher'},{key:'Super+Ctrl+D',description:'Detach panel'}];function request(kind,data){}",
         "NacreSettingsStorage": "property var documents:("
         + json.dumps(
             {
@@ -251,7 +261,7 @@ def stage(target, *, icons=False):
             }
         )
         + ")",
-        "NacreApps": "property var all:[{id:'demo-browser.desktop',name:'Browser'},{id:'demo-editor.desktop',name:'Editor'}]",
+        "NacreApps": "property var all:[{id:'demo-browser.desktop',name:'Browser',command:['demo-browser']},{id:'demo-editor.desktop',name:'Editor',command:['demo-editor']}];function commandFor(entry,directory){return entry.command || []}function nameForCommand(command){return all.find(entry=>JSON.stringify(entry.command)===JSON.stringify(command))?.name || ''}",
         "NacrePanelState": "function openMode(mode){}",
     }
     for name, body in simple.items():

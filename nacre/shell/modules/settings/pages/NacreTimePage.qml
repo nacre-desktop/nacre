@@ -63,25 +63,28 @@ NacreSettingsPage {
     NacreSettingsSection {
         title: NacreI18n.tr("ui.time-page.title.choose-a-timezone", "Choose a timezone")
         description: NacreI18n.tr("ui.time-page.description.for-example-europe-oslo-or-america-chicago-confirming-k", "For example, Europe/Oslo or America/Chicago. Confirming keeps automatic mode; setting manually turns it off.")
-        NacreTextField {
+        NacreSelect {
             id: zone
             objectName: "timezoneEntry"
-            width: parent.width
-            text: TimezoneSettings.status.timezone || ""
-            placeholderText: NacreI18n.tr("ui.time-page.placeholderText.area-city", "Area/City")
+            property string selectedZone: TimezoneSettings.status.timezone || ""
+            width: Math.min(parent.width, NacreTokens.space.huge * 12)
+            model: TimezoneSettings.zones || [selectedZone]
+            searchable: true
+            currentIndex: model.indexOf(selectedZone)
+            onActivated: index => selectedZone = model[index]
         }
         Flow {
             width: parent.width
             spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.time-page.text.confirm-timezone", "Confirm timezone")
-                enabled: !TimezoneSettings.busy && !!zone.text.trim()
-                onClicked: root.change("confirm", zone.text.trim())
+                enabled: !TimezoneSettings.busy && !!zone.selectedZone
+                onClicked: root.change("confirm", zone.selectedZone)
             }
             ActionButton {
                 text: NacreI18n.tr("ui.time-page.text.set-manually", "Set manually")
-                enabled: !TimezoneSettings.busy && !!zone.text.trim()
-                onClicked: root.change("manual", zone.text.trim())
+                enabled: !TimezoneSettings.busy && !!zone.selectedZone
+                onClicked: root.change("manual", zone.selectedZone)
             }
         }
     }

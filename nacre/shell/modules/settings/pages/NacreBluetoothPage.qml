@@ -1,6 +1,7 @@
 import QtQuick
 import qs.widgets
 import qs.services
+import qs.modules.bar.popouts as Connectivity
 
 NacreSettingsPage {
     id: root
@@ -16,70 +17,10 @@ NacreSettingsPage {
     }
     NacreSettingsSection {
         title: NacreI18n.tr("ui.bluetooth-page.title.bluetooth", "Bluetooth")
-        description: !NacreBluetooth.available ? NacreI18n.tr("ui.bluetooth-page.description.no-bluetooth-adapter", "No Bluetooth adapter") : NacreBluetooth.powered ? NacreI18n.tr("ui.bluetooth-page.description.bluetooth-is-on", "Bluetooth is on") : NacreI18n.tr("ui.bluetooth-page.description.bluetooth-is-off", "Bluetooth is off")
-        Flow {
+        Connectivity.NacreBluetoothPopup {
             width: parent.width
-            spacing: NacreTokens.space.sm
-            ActionButton {
-                text: NacreBluetooth.powered ? NacreI18n.tr("ui.bluetooth-page.text.turn-bluetooth-off", "Turn Bluetooth off") : NacreI18n.tr("ui.bluetooth-page.text.turn-bluetooth-on", "Turn Bluetooth on")
-                enabled: !DeviceActions.busy && NacreBluetooth.available
-                onClicked: root.power()
-            }
-            ActionButton {
-                text: NacreI18n.tr("ui.bluetooth-page.text.pair-a-device", "Pair a device")
-                enabled: NacreBluetooth.available
-                onClicked: DesktopActions.execute("bluetooth")
-            }
+            showHeading: false
+            maximumListHeight: NacreTokens.space.huge * 14
         }
-    }
-    NacreSettingsSection {
-        title: NacreI18n.tr("ui.bluetooth-page.title.devices", "Devices")
-        description: NacreI18n.tr("ui.bluetooth-page.description.pairing-and-discovery-open-in-the-bluetooth-manager", "Pairing and discovery open in the Bluetooth manager.")
-        Repeater {
-            model: NacreBluetooth.devices
-            delegate: Column {
-                required property var modelData
-                width: parent.width
-                spacing: NacreTokens.space.sm
-                NacreText {
-                    width: parent.width
-                    text: parent.modelData.alias || parent.modelData.name || parent.modelData.address
-                    wrapMode: Text.Wrap
-                }
-                NacreText {
-                    width: parent.width
-                    text: parent.modelData.connected ? (parent.modelData.trusted ? NacreI18n.tr("bluetooth.status.connected-trusted", "Connected · Trusted") : NacreI18n.tr("ui.bluetooth-page.text.connected", "Connected")) : parent.modelData.paired ? (parent.modelData.trusted ? NacreI18n.tr("bluetooth.status.paired-trusted", "Paired · Trusted") : NacreI18n.tr("ui.bluetooth-page.text.paired", "Paired")) : parent.modelData.trusted ? NacreI18n.tr("bluetooth.status.not-paired-trusted", "Not paired · Trusted") : NacreI18n.tr("ui.bluetooth-page.text.not-paired", "Not paired")
-                    font.pointSize: NacreTokens.textSize.caption
-                    color: NacreTokens.mutedInk
-                }
-                Flow {
-                    width: parent.width
-                    spacing: NacreTokens.space.sm
-                    ActionButton {
-                        text: parent.parent.modelData.connected ? NacreI18n.tr("ui.bluetooth-page.text.disconnect", "Disconnect") : NacreI18n.tr("ui.bluetooth-page.text.connect", "Connect")
-                        enabled: !DeviceActions.busy && NacreBluetooth.powered
-                        onClicked: root.deviceAction(parent.parent.modelData, parent.parent.modelData.connected ? "disconnect" : "connect")
-                    }
-                    ActionButton {
-                        text: parent.parent.modelData.trusted ? NacreI18n.tr("ui.bluetooth-page.text.remove-trust", "Remove trust") : NacreI18n.tr("ui.bluetooth-page.text.trust", "Trust")
-                        enabled: !DeviceActions.busy && NacreBluetooth.available
-                        onClicked: root.deviceAction(parent.parent.modelData, parent.parent.modelData.trusted ? "untrust" : "trust")
-                    }
-                }
-            }
-        }
-        NacreText {
-            width: parent.width
-            visible: NacreBluetooth.devices.length === 0
-            text: !NacreBluetooth.available ? NacreI18n.tr("ui.bluetooth-page.text.no-bluetooth-adapter", "No Bluetooth adapter") : NacreI18n.tr("ui.bluetooth-page.text.no-devices-saved-open-the-bluetooth-manager-to-pair-one", "No devices saved. Open the Bluetooth manager to pair one.")
-            wrapMode: Text.Wrap
-            color: NacreTokens.mutedInk
-        }
-    }
-    NacreText {
-        width: parent.width
-        text: DeviceActions.message
-        wrapMode: Text.Wrap
-        color: NacreTokens.mutedInk
     }
 }

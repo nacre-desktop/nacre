@@ -45,7 +45,7 @@ ShellRoot {
  property var powerPolicy:NacrePowerPolicy
  IpcHandler {target:"settingsRuntime"
   function write(id:string,value:string):bool {return NacreSettingsProvider.write({id:id},JSON.parse(value))}
-  function state():string {return JSON.stringify({files:NacreSettingsProvider.files,error:NacreSettingsProvider.error})}
+  function state():string {return JSON.stringify({files:NacreSettingsProvider.files,error:NacreSettingsProvider.error,inputBusy:NacreSettingsProvider.inputWorker.running,inputQueue:NacreSettingsProvider.inputQueue.length,desktopBusy:DesktopSettings.busy,desktopQueue:DesktopSettings.queue.length})}
  }
 }
 """)
@@ -112,6 +112,18 @@ layout {gaps 24; background-color "#0c151b";}
 hotkey-overlay {skip-at-startup;}
 window-rule {match title="^Nacre Settings Preview$";open-floating true;}
 """)
+        if production:
+            managed = home / ".config/nacre/niri/desktop.kdl"
+            managed.parent.mkdir(parents=True, exist_ok=True)
+            managed.write_text("")
+            env["NACRE_NIRI_DESKTOP_CONFIG"] = str(managed)
+            env["NACRE_NIRI_TOOLS_SOURCE"] = str(tools)
+            with niri_config.open("a") as stream:
+                stream.write(
+                    'input { keyboard { xkb { layout "no"; }; }; }\ninclude '
+                    + json.dumps(str(managed))
+                    + "\n"
+                )
         env["NIRI_CONFIG"] = str(niri_config)
         bus_config = root / "bus.conf"
         bus_config.write_text(
@@ -279,6 +291,80 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                         lambda: json.loads(saved.read_text()) if saved.exists() else {},
                         lambda value: value.get("lipHoverDelay") == 420,
                     )
+
+                    def runtime_state():
+                        result = subprocess.run(
+                            [
+                                "quickshell",
+                                "ipc",
+                                "-p",
+                                str(config / "shell.qml"),
+                                "call",
+                                "settingsRuntime",
+                                "state",
+                            ],
+                            env=env,
+                            capture_output=True,
+                            text=True,
+                            timeout=5,
+                        )
+                        result.check_returncode()
+                        return json.loads(result.stdout)
+
+                    for identity, value in [
+                        ("keyboard-mouse.keyboard.keyboardLayouts", "us,no"),
+                        ("keyboard-mouse.mouse.mouseSpeed", 0.35),
+                    ]:
+                        result = subprocess.run(
+                            [
+                                "quickshell",
+                                "ipc",
+                                "-p",
+                                str(config / "shell.qml"),
+                                "call",
+                                "settingsRuntime",
+                                "write",
+                                identity,
+                                json.dumps(value),
+                            ],
+                            env=env,
+                            capture_output=True,
+                            text=True,
+                            timeout=5,
+                        )
+                        result.check_returncode()
+                        if "true" not in result.stdout:
+                            raise RuntimeError("Input descriptor refused: " + identity)
+                    wait_for(
+                        runtime_state,
+                        lambda value: (
+                            not value["inputBusy"]
+                            and not value["inputQueue"]
+                            and not value["desktopBusy"]
+                            and not value["desktopQueue"]
+                        ),
+                        timeout=30,
+                    )
+                    settings_input = home / ".config/nacre/software-input.json"
+                    wait_for(
+                        lambda: (
+                            json.loads(settings_input.read_text())
+                            if settings_input.exists()
+                            else {}
+                        ),
+                        lambda value: value.get("keyboardLayouts") == "us,no",
+                    )
+                    wait_for(
+                        lambda: json.loads(saved.read_text()),
+                        lambda value: value.get("mouseSpeed") == 0.35,
+                    )
+                    generated = managed.read_text()
+                    if (
+                        generated.count("input {") != 1
+                        or 'layout "us,no"' not in generated
+                        or "accel-speed 0.35" not in generated
+                    ):
+                        raise RuntimeError("Mixed input/desktop writes lost a setting")
                     ipc("open", "panels#hoverDelay").check_returncode()
                     time.sleep(0.3)
                     (output / "production-smoke.json").write_text(
@@ -286,6 +372,7 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                             {
                                 "routes": checked,
                                 "privateStoreAcknowledged": True,
+                                "mixedInputWritesAcknowledged": True,
                                 "productionProviderAcknowledged": True,
                                 "desktopVersion": json.loads(saved.read_text())[
                                     "version"

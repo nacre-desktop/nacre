@@ -44,7 +44,12 @@ impl Configuration {
             return Err(error("RuntimeError","Managed niri desktop include missing; regenerate the isolated session configuration"));
         }
         let contents = fs::read_to_string(&self.loader).map_err(io_error)?;
-        if !contents.contains("include \"desktop.kdl\"") {
+        let absolute_include = format!(
+            "include {}",
+            serde_json::to_string(&self.desktop.to_string_lossy())
+                .map_err(|value| error("ValueError", value.to_string()))?
+        );
+        if !contents.contains("include \"desktop.kdl\"") && !contents.contains(&absolute_include) {
             return Err(error("RuntimeError","Managed niri desktop include missing; regenerate the isolated session configuration"));
         }
         Ok(())
@@ -227,6 +232,28 @@ mod tests {
                 Ok(json!({"code":0,"stdout":"Handled","stderr":""}))
             }
         }
+    }
+    #[test]
+    fn accepts_only_its_explicit_absolute_desktop_include() -> crate::Result<()> {
+        let root = tempfile::tempdir()?;
+        let loader = root.path().join("session.kdl");
+        let target = root.path().join("desktop.kdl");
+        let config = Configuration {
+            config: root.path().into(),
+            loader: loader.clone(),
+            desktop: target.clone(),
+        };
+        fs::write(
+            &loader,
+            format!(
+                "include {}\n",
+                serde_json::to_string(&target.to_string_lossy())?
+            ),
+        )?;
+        assert!(config.ensure_loader().is_ok());
+        fs::write(&loader, "include \"unrelated.kdl\"\n")?;
+        assert!(config.ensure_loader().is_err());
+        Ok(())
     }
     #[test]
     fn frozen_python_desktop_file_bytes_modes_order_and_rollback() -> crate::Result<()> {

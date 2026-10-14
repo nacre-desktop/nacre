@@ -57,7 +57,12 @@ Singleton {
     function setMode(mode) {
         if (!["light", "dark", "auto"].includes(mode))
             return false;
-        AppLaunch.run(["nacre-shell", "scheme-mode", mode]);
+        NacreWallpapers.preference(mode === "auto" ? {
+            paletteAutoMode: true
+        } : {
+            paletteAutoMode: false,
+            paletteMode: mode
+        });
         return true;
     }
     function alpha(value: color, layer: bool): color {

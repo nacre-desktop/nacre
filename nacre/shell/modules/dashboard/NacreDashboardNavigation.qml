@@ -50,11 +50,11 @@ Flickable {
             }
             GradientStop {
                 position: .45
-                color: NacreTokens.accent
+                color: NacreTokens.gradientColour(NacreTokens.orientHighlight ?? NacreTokens.accent, NacreTokens.accent)
             }
             GradientStop {
                 position: 1
-                color: NacreTokens.accent
+                color: NacreTokens.gradientColour(NacreTokens.orientHighlight ?? NacreTokens.accent, NacreTokens.accent)
             }
         }
         Rectangle {

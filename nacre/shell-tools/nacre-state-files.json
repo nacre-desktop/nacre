@@ -40,7 +40,9 @@
       "shape": "object",
       "version": 2,
       "keepVersion": false,
-      "defaults": {},
+      "defaults": {
+        "interfaceGradients": true
+      },
       "settings": {
         "root": "config",
         "access": "write"
@@ -884,7 +886,39 @@
       "shape": "object",
       "version": 1,
       "keepVersion": false,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "read"
+      }
+    },
+    {
+      "id": "launcher-layout",
+      "paths": [
+        "nacre/launcher-layout.json"
+      ],
+      "owner": "launcher sidebar / Settings",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {
+        "order": [
+          "home",
+          "apps",
+          "actions",
+          "style",
+          "setup",
+          "software",
+          "health",
+          "learn",
+          "power"
+        ],
+        "hidden": []
+      },
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
     }
   ]
 }

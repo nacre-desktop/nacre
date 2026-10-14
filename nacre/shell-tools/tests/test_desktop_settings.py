@@ -27,6 +27,26 @@ def screen(name, w, h, scale=1, transform=0):
 
 
 class DesktopSettingsTests(unittest.TestCase):
+    def test_input_validation_and_unchosen_overrides(self):
+        for key, value in [
+            ("mouseSpeed", True),
+            ("mouseSpeed", 2),
+            ("mouseAcceleration", "other"),
+            ("keyRepeatRate", 0),
+        ]:
+            with self.assertRaises(ValueError):
+                desktop.validate(key, value)
+        self.assertEqual(desktop.validate("mouseSpeed", 0.25), 0.25)
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.object(desktop, "STATE", Path(folder) / "desktop.json"),
+        ):
+            desktop.STATE.write_text(json.dumps({"frameWidth": 8}))
+            data = desktop.load()
+            self.assertEqual(data["frameWidth"], 8)
+            for key in desktop.INPUT_KEYS:
+                self.assertNotIn(key, data)
+
     def test_unsafe_and_out_of_range_preferences_are_rejected(self):
         for key, value in [
             ("gapsOut", 10000),

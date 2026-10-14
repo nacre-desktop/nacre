@@ -22,7 +22,8 @@ Singleton {
     Component.onCompleted: refresh()
     Process {
         id: probe
-        command: ["powerprofilesctl", "get"]
+        // Avoid the CLI env-python shebang selecting the isolated palette venv.
+        command: ["/usr/bin/python3", "/usr/bin/powerprofilesctl", "get"]
         onExited: (code, status) => root.serviceReady = status === 0 && code === 0
     }
     function apply() {

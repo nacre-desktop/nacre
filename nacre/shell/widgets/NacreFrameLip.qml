@@ -134,7 +134,7 @@ Item {
                     }
                     GradientStop {
                         position: 1
-                        color: Qt.tint(NacreTokens.body, Qt.alpha(NacreTokens.orientSecondary, root.accentStrength))
+                        color: NacreTokens.gradientColour(Qt.tint(NacreTokens.body, Qt.alpha(NacreTokens.accent, root.accentStrength)), Qt.tint(NacreTokens.body, Qt.alpha(NacreTokens.orientSecondary, root.accentStrength)))
                     }
                 }
                 PathSvg {

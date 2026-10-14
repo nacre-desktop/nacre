@@ -45,19 +45,19 @@ Item {
                 }
                 GradientStop {
                     position: .2
-                    color: NacreTokens.accent
+                    color: NacreTokens.gradientColour(Qt.alpha(NacreTokens.accent, 0), NacreTokens.accent)
                 }
                 GradientStop {
                     position: .6
-                    color: NacreTokens.orientSecondary
+                    color: NacreTokens.gradientColour(Qt.alpha(NacreTokens.accent, 0), NacreTokens.orientSecondary)
                 }
                 GradientStop {
                     position: .85
-                    color: NacreTokens.orientHighlight
+                    color: NacreTokens.gradientColour(Qt.alpha(NacreTokens.accent, 0), NacreTokens.orientHighlight)
                 }
                 GradientStop {
                     position: 1
-                    color: Qt.alpha(NacreTokens.orientHighlight, 0)
+                    color: NacreTokens.gradientColour(Qt.alpha(NacreTokens.accent, 0), Qt.alpha(NacreTokens.orientHighlight, 0))
                 }
             }
         }

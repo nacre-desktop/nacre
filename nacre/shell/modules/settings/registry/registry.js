@@ -148,7 +148,7 @@ function validValue(setting, value) {
         return false;
     if (type === "enum" && !setting.options.some(option => option.value === value))
         return false;
-    if (type === "array" && ["app", "command", "text-list"].includes(setting.entityType) && (value.length > 512 || value.some(item => typeof item !== "string" || item.length > 4096 || item.includes("\0"))))
+    if (type === "array" && ["app", "command", "text-list", "navigation-order", "navigation-hidden"].includes(setting.entityType) && (value.length > 512 || value.some(item => typeof item !== "string" || item.length > 4096 || item.includes("\0"))))
         return false;
     if (type === "array" && setting.entityType === "command" && (!value.length || !value[0].trim()))
         return false;

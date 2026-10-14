@@ -46,7 +46,7 @@ Item {
                 }
                 GradientStop {
                     position: 1
-                    color: NacreTokens.orientSecondary
+                    color: NacreTokens.gradientColour(NacreTokens.accent, NacreTokens.orientSecondary)
                 }
             }
             PathAngleArc {

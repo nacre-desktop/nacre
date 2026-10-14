@@ -101,7 +101,25 @@ Scope {
     property string ownershipWanted: ""
     property bool refreshing: stateWorker.running
     readonly property var rows: NacreI18n.localize(catalog.rows)
-    readonly property var navigation: Model.rail(rows)
+    property var localLayout: ({})
+    readonly property var layoutPreferences: shared ? shared.layoutPreferences : localLayout
+    readonly property var navigation: Model.rail(rows, layoutPreferences)
+    FileView {
+        path: root.shared ? "" : NacrePaths.config + "/launcher-layout.json"
+        preload: !root.shared
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const value = JSON.parse(text());
+                root.localLayout = value.version > 1 ? ({}) : value;
+            } catch (error) {
+                root.localLayout = ({});
+            }
+        }
+        onLoadFailed: root.localLayout = ({})
+    }
     readonly property var softwareDesktopMetadata: new Map(softwareRows("software.discover").filter(row => row.desktopId).map(row => [row.desktopId, row]))
     readonly property var tuiDesktopMetadata: new Map((library.data.tui?.rows || []).map(entry => ["nacre-tui-" + entry.id, entry]))
     readonly property var apps: NacreApps.list.map(entry => {

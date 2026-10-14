@@ -22,6 +22,7 @@ NacreSettingsPage {
         title: NacreI18n.tr("ui.displays-page.title.displays", "Displays")
         description: NacreCompositor.capabilities?.monitorConfiguration === false ? NacreI18n.tr("ui.compositor.niri-display-limits", "Display transactions are unavailable on this compositor. Configure outputs in its output settings.") : NacreCompositor.capabilities?.monitorMirroring === false ? NacreI18n.tr("ui.compositor.niri-mirroring-limit", "Choose a primary monitor, then extend connected screens. Output mirroring is unavailable on niri.") : NacreI18n.tr("ui.displays-page.description.choose-a-primary-monitor-then-extend-or-mirror-connecte", "Choose a primary monitor, then extend or mirror connected screens.")
         Flow {
+            visible: DesktopSettings.monitors.length > 1
             width: parent.width
             spacing: NacreTokens.space.sm
             Repeater {
@@ -35,6 +36,7 @@ NacreSettingsPage {
             }
         }
         Flow {
+            visible: DesktopSettings.monitors.length > 1
             width: parent.width
             spacing: NacreTokens.space.sm
             ActionButton {
@@ -48,6 +50,7 @@ NacreSettingsPage {
                 onClicked: root.layout("extend-left")
             }
             ActionButton {
+                visible: NacreCompositor.capabilities?.monitorMirroring !== false
                 text: NacreI18n.tr("ui.displays-page.text.mirror", "Mirror")
                 enabled: !root.blocked && NacreCompositor.capabilities?.monitorMirroring !== false && DesktopSettings.monitors.length > 1
                 onClicked: root.layout("mirror")
@@ -66,31 +69,42 @@ NacreSettingsPage {
                 value3: Math.round(modelData.refreshRate || 0)
             })
             description: NacreI18n.tr("ui.displays-page.description.display-changes-revert-after-20-seconds-unless-you-keep", "Display changes revert after 20 seconds unless you keep them.")
-            Flow {
+            Row {
                 width: parent.width
-                spacing: NacreTokens.space.sm
-                Repeater {
-                    model: [1, 1.25, 1.5, 1.75, 2, 2.5, 3]
-                    ActionButton {
-                        required property real modelData
-                        text: NacreI18n.number(Math.round(modelData * 100)) + "%"
-                        selected: monitor.modelData.scale === modelData
-                        enabled: !root.blocked
-                        onClicked: root.edit(monitor.modelData.name, modelData, "")
-                    }
+                spacing: NacreTokens.space.md
+                NacreText {
+                    width: Math.max(0, parent.width - scale.width - parent.spacing)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: NacreI18n.tr("settings.displays.scale", "Scale")
+                }
+                NacreSelect {
+                    id: scale
+                    readonly property var scales: [1, 1.25, 1.5, 1.75, 2, 2.5, 3]
+                    width: Math.min(parent.width / 2, NacreTokens.space.huge * 8)
+                    model: scales.map(value => Math.round(value * 100) + "%")
+                    currentIndex: scales.indexOf(monitor.modelData.scale)
+                    enabled: !root.blocked
+                    onActivated: index => root.edit(monitor.modelData.name, scales[index], "")
                 }
             }
-            Flow {
+            Row {
                 width: parent.width
-                spacing: NacreTokens.space.sm
-                Repeater {
+                spacing: NacreTokens.space.md
+                visible: (monitor.modelData.availableModes || []).length > 0
+                NacreText {
+                    width: Math.max(0, parent.width - mode.width - parent.spacing)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: NacreI18n.tr("settings.displays.mode", "Resolution and refresh rate")
+                    wrapMode: Text.Wrap
+                }
+                NacreSelect {
+                    id: mode
+                    width: Math.min(parent.width / 2, NacreTokens.space.huge * 10)
                     model: monitor.modelData.availableModes || []
-                    ActionButton {
-                        required property string modelData
-                        text: modelData
-                        enabled: !root.blocked
-                        onClicked: root.edit(monitor.modelData.name, monitor.modelData.scale, modelData)
-                    }
+                    searchable: model.length > 8
+                    currentIndex: model.findIndex(value => value.startsWith(monitor.modelData.width + "x" + monitor.modelData.height + "@") && Math.abs(parseFloat(value.split("@")[1]) - monitor.modelData.refreshRate) < .01)
+                    enabled: !root.blocked
+                    onActivated: index => root.edit(monitor.modelData.name, monitor.modelData.scale, model[index])
                 }
             }
         }

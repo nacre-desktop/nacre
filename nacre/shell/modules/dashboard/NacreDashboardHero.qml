@@ -17,6 +17,7 @@ NacreClip {
     }
     Rectangle {
         anchors.top: parent.top
+        visible: NacreTokens.gradientsEnabled
         anchors.left: parent.left
         anchors.right: parent.right
         height: 1

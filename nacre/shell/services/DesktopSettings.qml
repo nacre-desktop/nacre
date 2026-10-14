@@ -18,7 +18,11 @@ Singleton {
     property var monitors: []
     property bool pending: false
     property string message: ""
+    property string error: ""
     property var queue: []
+    property bool externalWriteBlocked: false
+    onExternalWriteBlockedChanged: if (!externalWriteBlocked)
+        next()
     readonly property bool busy: worker.running
     function request(args) {
         const change = {
@@ -49,10 +53,14 @@ Singleton {
         next();
     }
     function next() {
-        if (!worker.running && queue.length) {
+        if (!worker.running && !externalWriteBlocked && queue.length) {
             worker.change = queue[0];
             queue = queue.slice(1);
-            worker.command = ["python3", NacrePaths.tools + "/desktop-settings.py", ...worker.change.arguments];
+            const hostTools = NacrePaths.hostTools || NacrePaths.tools;
+            const environment = hostTools !== NacrePaths.tools ? ["NACRE_NIRI_TOOLS_SOURCE=" + hostTools, "NACRE_HELPER_BINARY=" + hostTools + "/nacre-helper"] : [];
+            if (NacrePaths.niriDesktopConfig)
+                environment.push("NACRE_NIRI_DESKTOP_CONFIG=" + NacrePaths.niriDesktopConfig);
+            worker.command = [...(environment.length ? ["env", ...environment] : []), "python3", NacrePaths.tools + "/desktop-settings.py", ...worker.change.arguments];
             worker.running = true;
         }
     }
@@ -68,9 +76,11 @@ Singleton {
             persistedData = result.data;
             monitors = result.monitors ?? monitors;
             pending = result.pending ?? false;
-            message = result.error ?? result.message ?? "";
+            error = result.error || "";
+            message = error || result.message || "";
         } catch (e) {
-            message = NacreI18n.tr("ui.desktop-settings.message.could-not-read-desktop-settings", "Could not read desktop settings");
+            error = NacreI18n.tr("ui.desktop-settings.message.could-not-read-desktop-settings", "Could not read desktop settings");
+            message = error;
         }
     }
     function finish(code) {
@@ -80,8 +90,10 @@ Singleton {
             delete values[change.key];
             desired = values;
         }
-        if (code !== 0 && !message)
-            message = NacreI18n.tr("ui.desktop-settings.message.could-not-save-desktop-settings", "Could not save desktop settings");
+        if (code !== 0 && !error) {
+            error = NacreI18n.tr("ui.desktop-settings.message.could-not-save-desktop-settings", "Could not save desktop settings");
+            message = error;
+        }
         next();
     }
     function refresh() {

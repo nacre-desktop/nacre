@@ -34,10 +34,26 @@ FloatingWindow {
     }
     SettingsStore {
         id: store
+        function choiceOptions(setting) {
+            return setting.picker === "keyboard" ? [
+                {
+                    value: "",
+                    label: registry.text("settings.registry.ui.default")
+                },
+                {
+                    value: "us",
+                    label: registry.text("settings.preview.keyboard-us")
+                },
+                {
+                    value: "no",
+                    label: registry.text("settings.preview.keyboard-no")
+                }
+            ] : [];
+        }
         development: true
         schema: registry.schema
         capabilities: capabilities.snapshot
-        availableStores: ["desktop", "wallpaper-picker", "scheme", "dashboard", "dashboard-extras", "control-center", "launcher", "launcher-sources", "power", "colors", "cli", "apps", "profile", "launcher-workflows"]
+        availableStores: ["desktop", "wallpaper-picker", "scheme", "dashboard", "dashboard-extras", "control-center", "launcher", "launcher-sources", "launcher-layout", "software-input", "power", "colors", "cli", "apps", "profile", "launcher-workflows"]
         profileValues: ({
                 "panels.lips.detachablePanels": true
             })

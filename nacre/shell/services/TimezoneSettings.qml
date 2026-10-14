@@ -9,6 +9,18 @@ Singleton {
 
     property var status: ({})
     property string message: ""
+    property var zones: ["Etc/UTC"]
+    readonly property Process zoneReader: Process {
+        running: true
+        command: ["timedatectl", "list-timezones"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const values = text.trim().split("\n").filter(v => v && !v.startsWith("."));
+                if (values.length)
+                    root.zones = values;
+            }
+        }
+    }
     readonly property bool busy: action.running
     readonly property string helper: NacrePaths.tools + "/timezone.py"
 

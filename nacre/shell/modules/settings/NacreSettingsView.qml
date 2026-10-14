@@ -15,17 +15,19 @@ SettingsView {
     function captureState() {
         return {
             page: page,
-            query: query
+            query: query,
+            backStack: backStack
         };
     }
     function restoreState(data) {
         if (data.page === page)
             query = data.query || "";
+        backStack = data.backStack || [];
     }
     function focusContent() {
         forceActiveFocus(Qt.OtherFocusReason);
     }
-    Component.onCompleted: open(NacrePanelState.settingsPage || "panels")
+    Component.onCompleted: open(NacrePanelState.settingsPage || "panels", false)
     Connections {
         target: NacrePanelState
         function onSettingsPageChanged() {

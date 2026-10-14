@@ -63,10 +63,10 @@ Item {
         anchors.fill: parent
         radius: width / 2
         antialiasing: true
-        color: NacreColours.palette.m3surfaceContainer
+        color: root.occupied || root.current ? root.numberSurface : NacreColours.palette.m3surfaceContainer
         border.width: root.current ? 1 : root.occupied ? 0 : 1.5
         border.color: root.current ? Qt.alpha(NacreColours.palette.m3onSurface, .5) : Qt.alpha(root.accent, .9)
-        gradient: root.occupied || root.current ? enamel : null
+        gradient: NacreTokens.gradientsEnabled && (root.occupied || root.current) ? enamel : null
         Gradient {
             id: enamel
             GradientStop {
@@ -75,15 +75,15 @@ Item {
             }
             GradientStop {
                 position: .45
-                color: Qt.tint(root.accent, Qt.alpha("#fff9f1", root.current ? .40 : .10))
+                color: NacreTokens.gradientColour(Qt.tint(root.accent, Qt.alpha("#fff9f1", root.current ? .88 : .48)), Qt.tint(root.accent, Qt.alpha("#fff9f1", root.current ? .40 : .10)))
             }
             GradientStop {
                 position: 1
-                color: Qt.tint(root.accent, Qt.alpha(NacreColours.palette.m3secondary, .28))
+                color: NacreTokens.gradientColour(Qt.tint(root.accent, Qt.alpha("#fff9f1", root.current ? .88 : .48)), Qt.tint(root.accent, Qt.alpha(NacreColours.palette.m3secondary, .28)))
             }
         }
         Rectangle {
-            visible: root.current || root.occupied
+            visible: NacreTokens.gradientsEnabled && (root.current || root.occupied)
             x: parent.width * .23
             y: parent.height * .14
             width: parent.width * .44

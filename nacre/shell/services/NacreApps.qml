@@ -16,14 +16,29 @@ Singleton {
     function fuzzyQuery(search) {
         return Search.query(preppedApps, search);
     }
+    function commandFor(entry, directory = false) {
+        const command = [...(entry?.command || [])];
+        if (!command.length || command.some(argument => typeof argument !== "string"))
+            return [];
+        const launch = entry.runInTerminal ? ["kitty", "--", ...command] : command;
+        return directory && entry.workingDirectory ? ["env", "-C", entry.workingDirectory, ...launch] : launch;
+    }
+    function nameForCommand(command) {
+        const encoded = JSON.stringify(command);
+        const exact = all.find(entry => JSON.stringify(commandFor(entry, true)) === encoded);
+        if (exact)
+            return exact.name;
+        const executable = command?.[0] === "nacre-shell" && command?.[1] === "dolphin" ? "dolphin" : command?.[0] || "";
+        return all.find(entry => entry.command?.[0]?.split("/").pop() === executable.split("/").pop())?.name || "";
+    }
     function launch(entry) {
         const current = list.find(item => item === entry || item.id === entry?.id);
         if (!current)
             return false;
-        const command = [...(current.command || [])];
-        if (!command.length || command.some(argument => typeof argument !== "string"))
+        const command = commandFor(current);
+        if (!command.length)
             return false;
-        AppLaunch.run(current.runInTerminal ? ["kitty", "--", ...command] : command, current.workingDirectory || undefined);
+        AppLaunch.run(command, current.workingDirectory || undefined);
         return true;
     }
 }

@@ -33,7 +33,7 @@ class PanelHostInputTests(unittest.TestCase):
             manifest = ["singleton NacreFrame 1.0 NacreFrame.qml"]
             for name, body in {
                 "NacrePearls": "property var drag:null",
-                "NacreTokens": 'property bool motionEnabled:false;property color body:"#123456";property color orientSecondary:"#abcdef";property color accent:"#fedcba"',
+                "NacreTokens": 'property bool gradientsEnabled:true;function gradientColour(base,shaded){return gradientsEnabled?shaded:base}property bool motionEnabled:false;property color body:"#123456";property color orientSecondary:"#abcdef";property color accent:"#fedcba"',
             }.items():
                 (fixtures / (name + ".qml")).write_text(
                     "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"

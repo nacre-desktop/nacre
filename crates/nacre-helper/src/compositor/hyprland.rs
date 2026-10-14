@@ -114,6 +114,14 @@ const OPTIONS: &[(&str, &str)] = &[
     ("gapsOut", "general.gaps_out"),
     ("borderSize", "general.border_size"),
     ("rounding", "decoration.rounding"),
+    ("keyRepeatDelay", "input.repeat_delay"),
+    ("keyRepeatRate", "input.repeat_rate"),
+    ("mouseSpeed", "input.sensitivity"),
+    ("mouseAcceleration", "input.accel_profile"),
+    ("mouseLeftHanded", "input.left_handed"),
+    ("mouseNaturalScroll", "input.natural_scroll"),
+    ("touchpadTap", "input.touchpad.tap-to-click"),
+    ("touchpadTypingGuard", "input.touchpad.disable_while_typing"),
 ];
 pub fn render_options(options: &Value) -> Result<String> {
     let mut fields = Vec::new();

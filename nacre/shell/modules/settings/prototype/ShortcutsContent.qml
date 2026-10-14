@@ -8,6 +8,13 @@ Column {
     required property var registry
     spacing: NacreTokens.space.sm
     Component.onCompleted: DesktopExtras.request("keys", {})
+    NacreText {
+        width: parent.width
+        visible: !DesktopExtras.keys.length
+        text: DesktopExtras.message || root.registry.text("settings.registry.ui.shortcuts-empty")
+        wrapMode: Text.Wrap
+        color: NacreTokens.mutedInk
+    }
     Repeater {
         model: DesktopExtras.keys
         delegate: Row {

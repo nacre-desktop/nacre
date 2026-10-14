@@ -109,6 +109,16 @@ Singleton {
         function close(): void {
             root.close();
         }
+        function diagnostics(): string {
+            // Read-only support/verification facts; never include setting values.
+            return JSON.stringify({
+                capabilities: NacreSettingsCapabilities.snapshot,
+                powerProfilesInstalled: NacrePowerPolicy.installed,
+                powerProfilesReady: NacrePowerPolicy.available,
+                error: root.error || NacreSettingsProvider.error,
+                stores: NacreSettingsProvider.availableStores
+            });
+        }
         function state(): string {
             return JSON.stringify({
                 visible: root.visible,

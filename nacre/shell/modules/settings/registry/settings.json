@@ -479,6 +479,46 @@
       "editorSection": "calendar-focus",
       "dependsOn": "panels/dashboard.panel.enabled",
       "storeId": "dashboard"
+    },
+    {
+      "id": "keyboard-mouse.keyboard",
+      "page": "keyboard-mouse",
+      "labelId": "settings.registry.keyboard-mouse.keyboard.label",
+      "order": 0,
+      "visibleWhen": {
+        "capability": "input.controls"
+      }
+    },
+    {
+      "id": "keyboard-mouse.mouse",
+      "page": "keyboard-mouse",
+      "labelId": "settings.registry.keyboard-mouse.mouse.label",
+      "order": 10,
+      "visibleWhen": {
+        "capability": "input.controls"
+      }
+    },
+    {
+      "id": "keyboard-mouse.touchpad",
+      "page": "keyboard-mouse",
+      "labelId": "settings.registry.keyboard-mouse.touchpad.label",
+      "order": 20,
+      "visibleWhen": {
+        "all": [
+          {
+            "capability": "input.controls"
+          },
+          {
+            "capability": "touchpad"
+          }
+        ]
+      }
+    },
+    {
+      "id": "launcher.sidebar",
+      "page": "launcher",
+      "labelId": "settings.registry.launcher.sidebar.label",
+      "order": 30
     }
   ],
   "settings": [
@@ -583,7 +623,10 @@
       "apply": "instant",
       "synonyms": [],
       "advanced": false,
-      "dependsOn": "panels.lips.detachablePanels"
+      "dependsOn": "panels.lips.detachablePanels",
+      "visibleWhen": {
+        "capability": "panelDragging"
+      }
     },
     {
       "id": "panels.lips.lipSize",
@@ -1604,7 +1647,8 @@
       "default": "~/Pictures/Wallpapers",
       "apply": "instant",
       "synonyms": [],
-      "advanced": false
+      "advanced": false,
+      "picker": "folder"
     },
     {
       "id": "wallpaper.rotation.rotationEnabled",
@@ -1795,7 +1839,8 @@
       "default": "",
       "apply": "instant",
       "synonyms": [],
-      "advanced": false
+      "advanced": false,
+      "picker": "font"
     },
     {
       "id": "appearance.fonts.monoFont",
@@ -1811,12 +1856,11 @@
           "monoFont"
         ]
       },
-      "default": "JetBrains Mono NF",
+      "default": "",
       "apply": "instant",
       "synonyms": [],
       "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.appearance.mono-planned"
+      "picker": "font"
     },
     {
       "id": "appearance.fonts.textSize",
@@ -1841,9 +1885,7 @@
         "max": 18,
         "step": 1
       },
-      "unit": "pt",
-      "backend": "planned",
-      "unavailableId": "settings.registry.appearance.text-planned"
+      "unit": "pt"
     },
     {
       "id": "appearance.frame.frameWidth",
@@ -2026,9 +2068,7 @@
       "default": false,
       "apply": "instant",
       "synonyms": [],
-      "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.appearance.reduce-planned"
+      "advanced": false
     },
     {
       "id": "windows-workspaces.windows.gapsIn",
@@ -2054,10 +2094,10 @@
         "step": 1
       },
       "unit": "px",
-      "enabledWhen": {
+      "unavailableId": "settings.registry.windows.gapsIn.unavailable",
+      "visibleWhen": {
         "capability": "desktop.gapsIn"
-      },
-      "unavailableId": "settings.registry.windows.gapsIn.unavailable"
+      }
     },
     {
       "id": "windows-workspaces.windows.gapsOut",
@@ -2083,10 +2123,10 @@
         "step": 1
       },
       "unit": "px",
-      "enabledWhen": {
+      "unavailableId": "settings.registry.windows.gapsOut.unavailable",
+      "visibleWhen": {
         "capability": "desktop.gapsOut"
-      },
-      "unavailableId": "settings.registry.windows.gapsOut.unavailable"
+      }
     },
     {
       "id": "windows-workspaces.windows.borderSize",
@@ -2112,10 +2152,10 @@
         "step": 1
       },
       "unit": "px",
-      "enabledWhen": {
+      "unavailableId": "settings.registry.windows.borderSize.unavailable",
+      "visibleWhen": {
         "capability": "desktop.borderSize"
-      },
-      "unavailableId": "settings.registry.windows.borderSize.unavailable"
+      }
     },
     {
       "id": "windows-workspaces.windows.rounding",
@@ -2141,10 +2181,10 @@
         "step": 1
       },
       "unit": "px",
-      "enabledWhen": {
+      "unavailableId": "settings.registry.windows.rounding.unavailable",
+      "visibleWhen": {
         "capability": "desktop.rounding"
-      },
-      "unavailableId": "settings.registry.windows.rounding.unavailable"
+      }
     },
     {
       "id": "windows-workspaces.windows.blur",
@@ -2164,10 +2204,10 @@
       "apply": "instant",
       "synonyms": [],
       "advanced": false,
-      "enabledWhen": {
+      "unavailableId": "settings.registry.windows.blur.unavailable",
+      "visibleWhen": {
         "capability": "desktop.blur"
-      },
-      "unavailableId": "settings.registry.windows.blur.unavailable"
+      }
     },
     {
       "id": "windows-workspaces.windows.shadow",
@@ -2187,10 +2227,10 @@
       "apply": "instant",
       "synonyms": [],
       "advanced": false,
-      "enabledWhen": {
+      "unavailableId": "settings.registry.windows.shadow.unavailable",
+      "visibleWhen": {
         "capability": "desktop.shadow"
-      },
-      "unavailableId": "settings.registry.windows.shadow.unavailable"
+      }
     },
     {
       "id": "windows-workspaces.windows.followMouse",
@@ -2210,10 +2250,10 @@
       "apply": "instant",
       "synonyms": [],
       "advanced": false,
-      "enabledWhen": {
+      "unavailableId": "settings.registry.windows.followMouse.unavailable",
+      "visibleWhen": {
         "capability": "desktop.followMouse"
-      },
-      "unavailableId": "settings.registry.windows.followMouse.unavailable"
+      }
     },
     {
       "id": "windows-workspaces.workspaces.workspaceCount",
@@ -2322,11 +2362,11 @@
       "apply": "instant",
       "synonyms": [],
       "advanced": false,
-      "enabledWhen": {
-        "capability": "windowCapture"
-      },
       "unavailableId": "settings.registry.windows.capture-unavailable",
-      "dependsOn": "windows-workspaces.overview.nativeOverview"
+      "dependsOn": "windows-workspaces.overview.nativeOverview",
+      "visibleWhen": {
+        "capability": "windowCapture"
+      }
     },
     {
       "id": "panels/top-bar.panel.workspaceWindowHints",
@@ -2368,9 +2408,44 @@
       "advanced": false
     },
     {
-      "id": "keyboard-mouse.pointer.naturalScroll",
+      "id": "keyboard-mouse.touchpad.touchpadEnabled",
       "page": "keyboard-mouse",
-      "section": "keyboard-mouse.pointer",
+      "section": "keyboard-mouse.touchpad",
+      "key": "touchpadEnabled",
+      "type": "boolean",
+      "default": true,
+      "store": {
+        "id": "software-input",
+        "key": [
+          "touchpadEnabled"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.touchpad.touchpadEnabled.label",
+      "descriptionId": "settings.registry.keyboard-mouse.touchpad.touchpadEnabled.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "touchpad",
+        "trackpad",
+        "enable"
+      ],
+      "visibleWhen": {
+        "all": [
+          {
+            "capability": "input.controls"
+          },
+          {
+            "capability": "touchpad"
+          }
+        ]
+      },
+      "adapter": "touchpad-enabled",
+      "order": -1
+    },
+    {
+      "id": "keyboard-mouse.touchpad.naturalScroll",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.touchpad",
       "key": "naturalScroll",
       "labelId": "settings.registry.keyboard-mouse.pointer.naturalScroll.label",
       "descriptionId": "settings.registry.keyboard-mouse.pointer.naturalScroll.description",
@@ -2385,10 +2460,18 @@
       "apply": "instant",
       "synonyms": [],
       "advanced": false,
-      "enabledWhen": {
-        "capability": "desktop.naturalScroll"
+      "unavailableId": "settings.registry.keyboard.scroll-unavailable",
+      "visibleWhen": {
+        "all": [
+          {
+            "capability": "input.controls"
+          },
+          {
+            "capability": "touchpad"
+          }
+        ]
       },
-      "unavailableId": "settings.registry.keyboard.scroll-unavailable"
+      "dependsOn": "keyboard-mouse.touchpad.touchpadEnabled"
     },
     {
       "id": "lock-login.widgets.lockMedia",
@@ -3348,6 +3431,427 @@
       ],
       "advanced": false,
       "entityType": "command"
+    },
+    {
+      "id": "appearance.frame.interfaceGradients",
+      "page": "appearance",
+      "section": "appearance.frame",
+      "key": "interfaceGradients",
+      "labelId": "settings.registry.appearance.frame.interfaceGradients.label",
+      "descriptionId": "settings.registry.appearance.frame.interfaceGradients.description",
+      "type": "boolean",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "interfaceGradients"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        "gradient",
+        "gradients",
+        "solid",
+        "pearl",
+        "slider"
+      ],
+      "advanced": false
+    },
+    {
+      "id": "keyboard-mouse.keyboard.keyboardLayouts",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.keyboard",
+      "key": "keyboardLayouts",
+      "type": "string",
+      "default": "",
+      "store": {
+        "id": "software-input",
+        "key": [
+          "keyboardLayouts"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.keyboard.keyboardLayout.label",
+      "descriptionId": "settings.registry.keyboard-mouse.keyboard.keyboardLayout.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "keyboard layout",
+        "keyboardlayout"
+      ],
+      "visibleWhen": {
+        "capability": "input.controls"
+      },
+      "picker": "keyboard",
+      "adapter": "keyboard-layout"
+    },
+    {
+      "id": "keyboard-mouse.keyboard.keyRepeatDelay",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.keyboard",
+      "key": "keyRepeatDelay",
+      "type": "integer",
+      "default": 600,
+      "store": {
+        "id": "desktop",
+        "key": [
+          "keyRepeatDelay"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.keyboard.keyRepeatDelay.label",
+      "descriptionId": "settings.registry.keyboard-mouse.keyboard.keyRepeatDelay.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "repeat delay",
+        "keyrepeatdelay"
+      ],
+      "visibleWhen": {
+        "capability": "input.controls"
+      },
+      "range": {
+        "min": 100,
+        "max": 1000,
+        "step": 25
+      },
+      "unit": "ms"
+    },
+    {
+      "id": "keyboard-mouse.keyboard.keyRepeatRate",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.keyboard",
+      "key": "keyRepeatRate",
+      "type": "integer",
+      "default": 25,
+      "store": {
+        "id": "desktop",
+        "key": [
+          "keyRepeatRate"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.keyboard.keyRepeatRate.label",
+      "descriptionId": "settings.registry.keyboard-mouse.keyboard.keyRepeatRate.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "repeat rate",
+        "keyrepeatrate"
+      ],
+      "visibleWhen": {
+        "capability": "input.controls"
+      },
+      "range": {
+        "min": 1,
+        "max": 80,
+        "step": 1
+      },
+      "unit": "/s"
+    },
+    {
+      "id": "keyboard-mouse.mouse.mouseSpeed",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.mouse",
+      "key": "mouseSpeed",
+      "type": "number",
+      "default": 0.0,
+      "store": {
+        "id": "desktop",
+        "key": [
+          "mouseSpeed"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.mouse.mouseSpeed.label",
+      "descriptionId": "settings.registry.keyboard-mouse.mouse.mouseSpeed.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "pointer speed",
+        "mousespeed"
+      ],
+      "visibleWhen": {
+        "capability": "input.controls"
+      },
+      "range": {
+        "min": -1,
+        "max": 1,
+        "step": 0.05
+      }
+    },
+    {
+      "id": "keyboard-mouse.mouse.mouseAcceleration",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.mouse",
+      "key": "mouseAcceleration",
+      "type": "enum",
+      "default": "adaptive",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "mouseAcceleration"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.mouse.mouseAcceleration.label",
+      "descriptionId": "settings.registry.keyboard-mouse.mouse.mouseAcceleration.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "acceleration",
+        "mouseacceleration"
+      ],
+      "visibleWhen": {
+        "capability": "input.controls"
+      },
+      "options": [
+        {
+          "value": "adaptive",
+          "labelId": "settings.registry.input.adaptive"
+        },
+        {
+          "value": "flat",
+          "labelId": "settings.registry.input.flat"
+        }
+      ]
+    },
+    {
+      "id": "keyboard-mouse.mouse.mouseLeftHanded",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.mouse",
+      "key": "mouseLeftHanded",
+      "type": "boolean",
+      "default": false,
+      "store": {
+        "id": "desktop",
+        "key": [
+          "mouseLeftHanded"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.mouse.mouseLeftHanded.label",
+      "descriptionId": "settings.registry.keyboard-mouse.mouse.mouseLeftHanded.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "left-handed buttons",
+        "mouselefthanded"
+      ],
+      "visibleWhen": {
+        "capability": "input.controls"
+      }
+    },
+    {
+      "id": "keyboard-mouse.mouse.mouseNaturalScroll",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.mouse",
+      "key": "mouseNaturalScroll",
+      "type": "boolean",
+      "default": false,
+      "store": {
+        "id": "desktop",
+        "key": [
+          "mouseNaturalScroll"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.mouse.mouseNaturalScroll.label",
+      "descriptionId": "settings.registry.keyboard-mouse.mouse.mouseNaturalScroll.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "natural scrolling",
+        "mousenaturalscroll"
+      ],
+      "visibleWhen": {
+        "capability": "input.controls"
+      }
+    },
+    {
+      "id": "keyboard-mouse.touchpad.touchpadSpeed",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.touchpad",
+      "key": "touchpadSpeed",
+      "type": "number",
+      "default": 0.0,
+      "store": {
+        "id": "desktop",
+        "key": [
+          "touchpadSpeed"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.touchpad.touchpadSpeed.label",
+      "descriptionId": "settings.registry.keyboard-mouse.touchpad.touchpadSpeed.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "touchpad speed",
+        "touchpadspeed"
+      ],
+      "visibleWhen": {
+        "all": [
+          {
+            "capability": "input.touchpadSpeed"
+          },
+          {
+            "capability": "touchpad"
+          }
+        ]
+      },
+      "range": {
+        "min": -1,
+        "max": 1,
+        "step": 0.05
+      },
+      "dependsOn": "keyboard-mouse.touchpad.touchpadEnabled"
+    },
+    {
+      "id": "keyboard-mouse.touchpad.touchpadTap",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.touchpad",
+      "key": "touchpadTap",
+      "type": "boolean",
+      "default": true,
+      "store": {
+        "id": "desktop",
+        "key": [
+          "touchpadTap"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.touchpad.touchpadTap.label",
+      "descriptionId": "settings.registry.keyboard-mouse.touchpad.touchpadTap.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "tap to click",
+        "touchpadtap"
+      ],
+      "visibleWhen": {
+        "all": [
+          {
+            "capability": "input.controls"
+          },
+          {
+            "capability": "touchpad"
+          }
+        ]
+      },
+      "dependsOn": "keyboard-mouse.touchpad.touchpadEnabled"
+    },
+    {
+      "id": "keyboard-mouse.touchpad.touchpadTypingGuard",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.touchpad",
+      "key": "touchpadTypingGuard",
+      "type": "boolean",
+      "default": true,
+      "store": {
+        "id": "desktop",
+        "key": [
+          "touchpadTypingGuard"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.touchpad.touchpadTypingGuard.label",
+      "descriptionId": "settings.registry.keyboard-mouse.touchpad.touchpadTypingGuard.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "typing protection",
+        "touchpadtypingguard"
+      ],
+      "visibleWhen": {
+        "all": [
+          {
+            "capability": "input.controls"
+          },
+          {
+            "capability": "touchpad"
+          }
+        ]
+      },
+      "dependsOn": "keyboard-mouse.touchpad.touchpadEnabled"
+    },
+    {
+      "id": "launcher.sidebar.order",
+      "page": "launcher",
+      "section": "launcher.sidebar",
+      "key": "order",
+      "type": "array",
+      "default": [
+        "home",
+        "apps",
+        "actions",
+        "style",
+        "setup",
+        "software",
+        "health",
+        "learn",
+        "power"
+      ],
+      "store": {
+        "id": "launcher-layout",
+        "key": [
+          "order"
+        ]
+      },
+      "labelId": "settings.registry.launcher.sidebar.order.label",
+      "descriptionId": "settings.registry.launcher.sidebar.order.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "sidebar",
+        "left menu",
+        "reorder",
+        "navigation"
+      ],
+      "entityType": "navigation-order"
+    },
+    {
+      "id": "launcher.sidebar.hidden",
+      "page": "launcher",
+      "section": "launcher.sidebar",
+      "key": "hidden",
+      "type": "array",
+      "default": [],
+      "store": {
+        "id": "launcher-layout",
+        "key": [
+          "hidden"
+        ]
+      },
+      "labelId": "settings.registry.launcher.sidebar.hidden.label",
+      "descriptionId": "settings.registry.launcher.sidebar.hidden.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "sidebar",
+        "left menu",
+        "reorder",
+        "navigation"
+      ],
+      "entityType": "navigation-hidden"
+    },
+    {
+      "id": "keyboard-mouse.mouse.shakeCursor",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.mouse",
+      "key": "shakeCursor",
+      "type": "boolean",
+      "default": false,
+      "store": {
+        "id": "desktop",
+        "key": [
+          "shakeCursor"
+        ]
+      },
+      "labelId": "settings.registry.keyboard-mouse.mouse.shakeCursor.label",
+      "descriptionId": "settings.registry.keyboard-mouse.mouse.shakeCursor.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": [
+        "shake mouse",
+        "find pointer",
+        "cursor enlargement"
+      ],
+      "backend": "planned",
+      "visibleWhen": {
+        "capability": "cursorShake"
+      },
+      "unavailableId": "settings.registry.keyboard-mouse.shake-planned"
     }
   ],
   "actions": [
@@ -3611,6 +4115,15 @@
       "labelId": "settings.registry.dashboard.calendar-focus.label",
       "descriptionId": "settings.registry.dashboard.calendar-focus.description",
       "route": "panels/dashboard/calendar-focus"
+    },
+    {
+      "id": "appearance.fonts.installed",
+      "page": "appearance",
+      "section": "appearance.fonts",
+      "labelId": "settings.registry.appearance.fonts.installed.label",
+      "descriptionId": "settings.registry.appearance.fonts.installed.description",
+      "adapter": "fonts",
+      "order": 30
     }
   ]
 }

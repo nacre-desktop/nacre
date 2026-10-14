@@ -1,4 +1,4 @@
-# Settings migration gallery
+# Settings migration and usability gallery
 
 Native Qt window-surface captures in a private nested Niri session: normal 1100×840 and narrow 620×840. Normal-mode controls only; planned schema reservations are hidden. The fixtures contain synthetic data and a public generated wallpaper illustration, with private session and system buses. No live desktop configurations are used.
 
@@ -167,3 +167,5 @@ The renderer, shared Dashboard/Control center sections and retained device edito
 [narrow-search](narrow-search.png)
 
 [narrow-highlight](narrow-highlight.png)
+
+Updated for the 2026-10-15 usability pass: Orient sliders and switches, searchable selectors, graphical folders and apps, real workspace pearls and status colors, input controls, sidebar layout, and corrected navigation. These captures are verification artifacts; installation does not require screenshot review.

@@ -64,7 +64,10 @@ TestCase {
         compare(AppLaunch.calls.length, 0);
         verify(!colours.setMode("bogus"));
         verify(colours.setMode("light"));
-        compare(AppLaunch.calls[0].command.join("|"), "nacre-shell|scheme-mode|light");
+        compare(NacreWallpapers.changes[0].paletteMode, "light");
+        compare(NacreWallpapers.changes[0].paletteAutoMode, false);
+        verify(colours.setMode("auto"));
+        compare(NacreWallpapers.changes[1].paletteAutoMode, true);
         verify(Qt.colorEqual(colours.on(Qt.rgba(1, 1, 1, 1)), "black"));
     }
 }

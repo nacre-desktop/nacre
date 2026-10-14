@@ -19,6 +19,32 @@ spec.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
+    def test_automatic_wallpaper_default_never_erases_enabled_difference(self):
+        old = {
+            "stdout": {
+                "preferences": {"paletteMode": "dark", "palettePreset": "wallpaper"}
+            },
+            "files": {
+                "home/.config/nacre/wallpaper-picker.json": {
+                    "mode": "0o600",
+                    "text": '{"paletteMode":"dark"}',
+                }
+            },
+        }
+        new = copy.deepcopy(old)
+        new["stdout"]["preferences"]["paletteAutoMode"] = False
+        new["files"]["home/.config/nacre/wallpaper-picker.json"]["text"] = (
+            '{"paletteMode":"dark","paletteAutoMode":false}'
+        )
+        case = {"helper": "wallpaper-media"}
+        self.assertEqual(
+            runner.compatible_files(old, case), runner.compatible_files(new, case)
+        )
+        new["stdout"]["preferences"]["paletteAutoMode"] = True
+        self.assertNotEqual(
+            runner.compatible_files(old, case), runner.compatible_files(new, case)
+        )
+
     def test_hosted_traceback_contracts_keep_every_other_observable_field(self):
         for helper, number in [
             ("dashboard-data", "10"),

@@ -348,6 +348,18 @@ def apply_palette(home, wallpaper=None, live=True):
         return _apply_palette(home, wallpaper, live=live)
 
 
+def publish_compositor_palette(home, colors):
+    """Apply the decorative-gradient preference only to desktop borders."""
+    values = dict(colors)
+    desktop = Path(home) / ".config/nacre/desktop.json"
+    preferences = _state.read_json_file(desktop) if desktop.exists() else {}
+    if preferences.get("interfaceGradients", True) is False:
+        values["secondary"] = values["primary"]
+    text = render_template(home, "compositor-palette", values)
+    atomic_write(compositor.config_path(home, "palette"), text)
+    return text
+
+
 def _publish_presentation(home, state, data, colors, wallpaper, fixed, preset, options):
     selected = (
         str(Path(wallpaper).expanduser().resolve())
@@ -817,8 +829,7 @@ def _apply_palette(home, wallpaper=None, live=True):
         state / "scheme/current.txt",
         "\n".join(k + " " + v for k, v in colors.items()) + "\n",
     )
-    lua = render_template(home, "compositor-palette", colors)
-    atomic_write(compositor.config_path(home, "palette"), lua)
+    lua = publish_compositor_palette(home, colors)
     atomic_write(
         home / ".config/nacre/rofi.rasi",
         render_template(home, "rofi-colors.rasi.in", colors),

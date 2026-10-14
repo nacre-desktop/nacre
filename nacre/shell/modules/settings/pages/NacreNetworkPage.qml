@@ -16,6 +16,7 @@ NacreSettingsPage {
         title: NacreI18n.tr("ui.network-page.title.wi-fi", "Wi-Fi")
         Connectivity.NacreNetworkPopup {
             id: controls
+            showHeading: false
             objectName: "settingsWifiControls"
             width: parent.width
             maximumListHeight: 420

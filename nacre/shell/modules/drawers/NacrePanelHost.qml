@@ -61,11 +61,11 @@ Item {
             }
             GradientStop {
                 position: .5
-                color: Qt.alpha(NacreTokens.orientSecondary, .65)
+                color: NacreTokens.gradientColour(Qt.alpha(NacreTokens.accent, .65), Qt.alpha(NacreTokens.orientSecondary, .65))
             }
             GradientStop {
                 position: 1
-                color: Qt.alpha(NacreTokens.accent, .65)
+                color: NacreTokens.gradientColour(Qt.alpha(NacreTokens.accent, .65), Qt.alpha(NacreTokens.accent, .65))
             }
         }
         NacreSurface {

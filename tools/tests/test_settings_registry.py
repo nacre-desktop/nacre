@@ -153,6 +153,12 @@ const schema = api.merge(manifest.fragments.map(name => JSON.parse(fs.readFileSy
 const english = JSON.parse(fs.readFileSync(process.argv[2]));
 const text = id => english[id] || '';
 const caps = {battery:true,ai:true,brain:true,bluetooth:true,wifi:true,packages:true,bottomPanel:true,batterySaver:true};
+function enableConditions(value) {
+    if (!value || typeof value !== 'object') return;
+    if (value.capability) caps[value.capability] = true;
+    for (const child of Object.values(value)) enableConditions(child);
+}
+for (const setting of schema.settings) enableConditions(setting.visibleWhen);
 for (const setting of schema.settings) {
     assert(api.validValue(setting, setting.default), setting.id);
     for (const fragment of [setting.key, setting.id]) {

@@ -632,3 +632,73 @@ Compatibility comparisons canonicalize the declared desktop-v2 edge names and
 new 350 ms/default dashboard values on both sides. The immutable frozen references
 are unchanged, and independent frame/panel values still fail a mismatched
 comparison. CLI invalid-page usage retains exit status 2.
+
+## Usability follow-up (2026-10-15)
+
+The Settings kit uses the same Orient surfaces and size tokens as the desktop.
+`NacreRangeSlider` supplies a visible track and palette handle; `NacreSelect`
+supplies a bounded, searchable popup with the shared wheel handler. Settings rows
+own a single disabled-opacity layer so widgets do not become almost black through
+stacked dimming. Short fixed choices retain segmented buttons. Fonts come from
+Qt's installed font database, keyboard choices from the installed XKB catalog,
+and time zones from `timedatectl list-timezones`. Default applications use the
+existing installed-application model; custom argv remains an explicit secondary
+editor. Folder entry keeps text input,
+adds a platform folder picker and opens the selected directory in the default
+file manager.
+
+The `desktop.interfaceGradients` preference controls decorative color blends in
+controls, workspace pearls, panel edges and desktop borders. Shared consumers use
+`NacreTokens.gradientsEnabled` and `gradientColour(base, shaded)`. Wallpaper,
+weather and artwork content keep their meaningful shading. Compositor publication
+substitutes the primary color for the secondary border endpoint without changing
+other application palette roles.
+
+Colors' Match wallpaper is `wallpaper-picker.paletteAutoMode`: the helper samples
+a small version of the current poster and chooses light for mean grayscale
+brightness of at least 140/255, otherwise dark. It never inherits the preceding
+mode. Explicit Light/Dark disables automatic mode. The existing Colors UI-choice
+record is retained for compatibility; the provider displays the actual wallpaper
+preference and migrates an old Match wallpaper choice once. Failed publication
+restores the preference and reports the error. The preview shows the real
+workspace-pearl component plus buttons and semantic status colors.
+
+Keyboard layouts and the touchpad master switch reuse the Software owner's
+versioned `software-input` store and atomic publisher. Settings reads that ID and
+writes through `nacre-helper input-preferences`, never through an uncoordinated
+file patch. Layouts are chosen graphically, with at most four XKB identifiers;
+reset removes the override and preserves other input preferences. Optional pointer
+and repeat fields remain in `desktop`; unchosen fields are omitted so an unrelated
+settings save does not install default input overrides. Niri renders all input
+fields in one node. Unsupported compositor settings and hardware-irrelevant
+sections are absent from normal navigation.
+
+`launcher-layout` stores category order and hidden sidebar IDs independently of
+the launcher catalog. Home remains first and visible; hidden categories retain
+searchable entries. The entity editor uses up/down buttons and switches. Back
+navigation records the entry page and scroll position, including cross-page
+Privacy links, and survives the Settings content loader's idle teardown.
+
+Niri settings require a managed desktop include in the **actual session** loader.
+The native backend accepts `NIRI_CONFIG` when no explicit `NACRE_NIRI_CONFIG` was
+provided, including an absolute include of the owned desktop file. The Python
+bridge forwards that loader. Display rollback passes HOME/XDG/session variables
+and a separately verified host-visible tools path to its independent worker;
+this matters when the desktop source is mounted into a session namespace. A
+legacy session can use its own initially empty managed include through
+`NacrePaths.niriDesktopConfig`, preserving existing input/output configuration
+until a setting is explicitly changed. GUI input publications and desktop writes
+are serialized so a batch reset cannot overwrite the other producer’s changes. A
+read-only `settingsApp.diagnostics()` reports capabilities, store IDs and errors,
+without setting values. Power-profile probing explicitly uses system Python so
+the palette venv cannot mask PyGObject. Bluetooth reuses the existing discovery
+and PIN/passkey confirmation component instead of reopening its own page.
+
+Research applied: [Qt control customization](https://doc.qt.io/qt-6/qtquickcontrols-customize.html)
+supports replacing the slider's background and handle; [FolderDialog](https://doc.qt.io/qt-6/qml-qtquick-dialogs-folderdialog.html)
+provides a platform picker. [Niri's input reference](https://github.com/niri-wm/niri/wiki/Configuration:-Input)
+defines pointer speed, acceleration, repeat and touchpad options. The
+[Quickshell power interface](https://quickshell.org/docs/v0.2.1/types/Quickshell.Services.UPower/PowerProfiles/)
+exposes current profiles and hardware performance support. These mechanisms avoid
+unbounded menus, manual identifier entry and controls that advertise an absent
+backend. Cursor shake enlargement remains outside the supported Niri controls.

@@ -108,6 +108,7 @@ def _call(operation, *args, **kwargs):
                 "XDG_CURRENT_DESKTOP",
                 "HYPRLAND_INSTANCE_SIGNATURE",
                 "NIRI_SOCKET",
+                "NIRI_CONFIG",
                 "XDG_RUNTIME_DIR",
                 "WAYLAND_DISPLAY",
                 "NACRE_NIRI_CONFIG",
@@ -209,6 +210,7 @@ def session_context(environment):
             for key in (
                 "XDG_CURRENT_DESKTOP",
                 "NIRI_SOCKET",
+                "NIRI_CONFIG",
                 "HYPRLAND_INSTANCE_SIGNATURE",
             )
             if key in environment

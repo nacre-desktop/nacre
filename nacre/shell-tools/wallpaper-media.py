@@ -17,7 +17,7 @@ import tempfile
 import urllib.parse
 import time
 from pathlib import Path
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageStat
 
 HOME = Path.home()
 try:
@@ -78,6 +78,7 @@ def settings():
             "rotationShuffle": True,
             "palettePreset": "wallpaper",
             "paletteMode": "dark",
+            "paletteAutoMode": False,
             "paletteHarmony": False,
             "palettePersonality": "natural",
         },
@@ -124,6 +125,14 @@ def palette_presets():
     return presets
 
 
+def wallpaper_mode(poster):
+    """Choose from the image, independent of the previously selected UI mode."""
+    with Image.open(poster) as image:
+        image.thumbnail((64, 64))
+        brightness = ImageStat.Stat(image.convert("L")).mean[0]
+    return "light" if brightness >= 140 else "dark"
+
+
 def theme(value):
     if (
         not isinstance(value, dict)
@@ -132,6 +141,7 @@ def theme(value):
         - {
             "palettePreset",
             "paletteMode",
+            "paletteAutoMode",
             "paletteAccent",
             "paletteHarmony",
             "palettePersonality",
@@ -156,6 +166,8 @@ def theme(value):
         )
     previous = settings()
     changes = {key: item for key, item in value.items() if key != "paletteAccent"}
+    if "paletteMode" in value and "paletteAutoMode" not in value:
+        changes["paletteAutoMode"] = False
     if "paletteHarmony" in value:
         changes["palettePersonality"] = (
             "harmony" if value["paletteHarmony"] else "natural"
@@ -175,6 +187,8 @@ def theme(value):
                 "Choose a wallpaper before changing its palette",
             )
         )
+    if changes.get("paletteAutoMode", previous.get("paletteAutoMode", False)):
+        changes["paletteMode"] = wallpaper_mode(poster)
     result = preference(changes)
     try:
         cli = HOME / ".local/share/nacre/shell/bin/nacre_shell"
@@ -186,14 +200,14 @@ def theme(value):
             return result
         if accent is not None:
             args = [str(cli), "scheme", "set", "-n", "dynamic"]
-            if "paletteMode" in value:
-                args += ["-m", value["paletteMode"]]
+            if "paletteMode" in changes:
+                args += ["-m", changes["paletteMode"]]
             args += ["--auto-accent"] if accent == "auto" else ["--accent", accent]
             subprocess.run(args, check=True, capture_output=True, timeout=60)
-        elif "paletteMode" in value:
+        elif "paletteMode" in changes:
             # A mode change generates and publishes once, with the saved harmony.
             subprocess.run(
-                [str(cli), "scheme", "set", "-m", value["paletteMode"]],
+                [str(cli), "scheme", "set", "-m", changes["paletteMode"]],
                 check=True,
                 capture_output=True,
                 timeout=60,
@@ -244,6 +258,7 @@ def preference(value):
         "rotationEnabled",
         "rotationShuffle",
         "paletteHarmony",
+        "paletteAutoMode",
         "paletteBackgroundFromWallpaper",
     )
     if not isinstance(value, dict) or any(
@@ -677,13 +692,28 @@ def warm(include_demo=True):
 
 
 def select(path):
+    previous = settings()
+    try:
+        return _select(path)
+    except Exception:  # noqa: BLE001 — Restore auto mode on any failed scene publication.
+        if previous.get("paletteAutoMode"):
+            preference({"paletteMode": previous["paletteMode"]})
+        raise
+
+
+def _select(path):
     item = describe(path)
+    if settings().get("paletteAutoMode"):
+        preference({"paletteMode": wallpaper_mode(item["poster"])})
     # Prepared colors still pass through the single publisher and its shared lock.
     # Missing/stale/invalid cache or custom CLI hooks use the normal CLI pipeline.
     prepared = False
     scheme = read(HOME / ".local/state/nacre/scheme.json", {})
     marker = palette_marker(
-        item["poster"], scheme.get("flavour", "default"), source=item["path"]
+        item["poster"],
+        scheme.get("flavour", "default"),
+        source=item["path"],
+        mode=settings()["paletteMode"] if settings().get("paletteAutoMode") else None,
     )
     if marker.exists():
         try:
@@ -695,7 +725,13 @@ def select(path):
                 with Image.open(item["preview"]) as image:
                     image.convert("RGB").save(thumbnail, quality=85)
             palette = demo_module("classic-state")
-            prepared = palette.commit_prepared(HOME, item["poster"], data, thumbnail)
+            prepared = palette.commit_prepared(
+                HOME,
+                item["poster"],
+                data,
+                thumbnail,
+                allow_mode_change=settings().get("paletteAutoMode", False),
+            )
         except (OSError, ValueError, KeyError):
             prepared = False
     if not prepared:
@@ -705,7 +741,7 @@ def select(path):
             bridge = Path(__file__).with_name("cli-bridge.sh")
         command = (
             [str(legacy), "wallpaper-image", item["poster"]]
-            if legacy.is_file()
+            if legacy.is_file() and not settings().get("paletteAutoMode")
             else [
                 str(bridge),
                 "wallpaper",
@@ -713,6 +749,8 @@ def select(path):
                 item["poster"],
             ]
         )
+        if settings().get("paletteAutoMode"):
+            command += ["--mode", settings()["paletteMode"]]
         subprocess.run(
             command,
             check=True,

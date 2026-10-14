@@ -56,11 +56,11 @@ Item {
                 }
                 GradientStop {
                     position: .55
-                    color: Qt.alpha(NacreTokens.orientSecondary, .65)
+                    color: NacreTokens.gradientColour(Qt.alpha(NacreTokens.accent, .6), Qt.alpha(NacreTokens.orientSecondary, .65))
                 }
                 GradientStop {
                     position: 1
-                    color: Qt.alpha(NacreTokens.orientHighlight, .55)
+                    color: NacreTokens.gradientColour(Qt.alpha(NacreTokens.accent, .6), Qt.alpha(NacreTokens.orientHighlight, .55))
                 }
             }
             PathSvg {

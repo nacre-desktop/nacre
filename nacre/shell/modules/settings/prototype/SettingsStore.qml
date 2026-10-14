@@ -18,6 +18,12 @@ QtObject {
     signal resetRequested(var settings)
     signal actionRequested(string action)
     signal confirmationRequested(var setting, var value)
+    function issue(page) {
+        return error;
+    }
+    function choiceOptions(setting) {
+        return [];
+    }
     function value(setting) {
         if (Object.prototype.hasOwnProperty.call(profileValues, setting.id))
             return profileValues[setting.id];

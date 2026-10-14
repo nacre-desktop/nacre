@@ -25,6 +25,7 @@ Singleton {
             rotationShuffle: true,
             palettePreset: "wallpaper",
             paletteMode: "dark",
+            paletteAutoMode: false,
             paletteHarmony: false
         })
     property var palettePresets: []

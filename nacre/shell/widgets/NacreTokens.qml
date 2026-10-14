@@ -8,7 +8,7 @@ QtObject {
     id: root
 
     property string textFamily: DesktopSettings.data.interfaceFont || "IBM Plex Sans"
-    property string monoFamily: "JetBrains Mono NF"
+    property string monoFamily: DesktopSettings.data.monoFont || "JetBrains Mono NF"
     readonly property Io.FileView sizeFile: Io.FileView {
         path: Qt.resolvedUrl("size-scale.json")
         blockLoading: true
@@ -16,7 +16,13 @@ QtObject {
     readonly property var sizeScale: JSON.parse(sizeFile.text())
     readonly property var space: sizeScale.spacing
     readonly property var radii: sizeScale.radii
-    readonly property var textSize: sizeScale.text
+    readonly property var textSize: {
+        const offset = (DesktopSettings.data.textSize || sizeScale.text.body) - sizeScale.text.body;
+        const values = {};
+        for (const key of Object.keys(sizeScale.text))
+            values[key] = sizeScale.text[key] + offset;
+        return values;
+    }
     readonly property var iconSize: sizeScale.icons
     property real textPointSize: textSize.body
     // Compatibility alias for modules awaiting redesign.

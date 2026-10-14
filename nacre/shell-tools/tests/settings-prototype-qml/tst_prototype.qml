@@ -25,6 +25,7 @@ TestCase {
         schema: testRegistry.schema
         capabilities: ({
                 battery: true,
+                panelDragging: true,
                 ai: true,
                 brain: true,
                 bluetooth: true
@@ -55,6 +56,13 @@ TestCase {
         }
     }
     function init() {
+        testStore.capabilities = {
+            battery: true,
+            ai: true,
+            brain: true,
+            bluetooth: true,
+            panelDragging: true
+        };
         testStore.files = {
             "desktop": {
                 clickEdgeMenus: false,
@@ -73,6 +81,75 @@ TestCase {
         resets = [];
         closes = 0;
         SettingsPreviewContext.store = testStore;
+    }
+    Component {
+        id: choiceComponent
+        NacreSelect {
+            width: 280
+            x: 30
+            y: 30
+            searchable: true
+            model: Array(60).fill(0).map((_, index) => "Choice " + index)
+            currentIndex: 30
+        }
+    }
+    function test_dropdown_search_selection_and_wheel_speed() {
+        const control = createTemporaryObject(choiceComponent, test);
+        mouseClick(control, control.width / 2, control.height / 2);
+        tryCompare(control.popup, "visible", true);
+        const list = findChild(control.popup.contentItem, "choiceList");
+        list.contentY = 0;
+        mouseWheel(list, list.width / 2, list.height / 2, 0, -120);
+        tryVerify(() => list.contentY > 80);
+        const filter = findChild(control.popup.contentItem, "choiceFilter");
+        filter.text = "Choice 3";
+        filter.forceActiveFocus();
+        keyClick(Qt.Key_Return);
+        compare(control.currentText, "Choice 3");
+        tryCompare(control.popup, "visible", false);
+    }
+    function test_default_application_picker_writes_installed_argv() {
+        testStore.availableStores = [...testStore.availableStores, "apps"];
+        testStore.accept("apps", {
+            browser: ["custom-route"]
+        });
+        const view = createTemporaryObject(viewComponent, test);
+        view.open("apps");
+        wait(30);
+        const button = findChild(view, "control-apps.defaults.browser");
+        verify(button);
+        mouseClick(button, button.width / 2, button.height / 2);
+        tryVerify(() => view.entitySetting?.id === "apps.defaults.browser");
+        const picker = findChild(view, "defaultApplicationPicker");
+        verify(picker);
+        picker.activated(1);
+        compare(writes[writes.length - 1].value.join("|"), "demo-editor");
+    }
+    function test_gradient_palette_preference_and_text_scale() {
+        const old = testStore.files.desktop;
+        testStore.accept("desktop", Object.assign({}, old, {
+            interfaceGradients: false,
+            textSize: 14
+        }));
+        compare(NacreTokens.gradientsEnabled, false);
+        compare(NacreTokens.gradientColour("#123456", "#abcdef"), Qt.color("#123456"));
+        compare(NacreTokens.textSize.body, 14);
+        testStore.accept("desktop", Object.assign({}, old, {
+            interfaceGradients: true
+        }));
+        compare(NacreTokens.gradientColour("#123456", "#abcdef"), Qt.color("#abcdef"));
+        testStore.accept("desktop", old);
+    }
+    function test_back_returns_to_origin_of_privacy_links() {
+        const view = createTemporaryObject(viewComponent, test);
+        view.open("privacy");
+        view.open("panels/dashboard#weatherPhotos");
+        compare(view.page, "panels/dashboard/weather");
+        view.back();
+        compare(view.page, "privacy");
+        view.open("panels/dashboard#lyrics");
+        view.back();
+        compare(view.page, "privacy");
     }
     function test_user_only_switches_segments_and_profile_dependency() {
         const view = createTemporaryObject(viewComponent, test);

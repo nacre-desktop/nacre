@@ -8,6 +8,9 @@ QtObject {
     // filesystem paths, while media/config consumers use the URLs below.
     readonly property string share: Quickshell.env("HOME") + "/.local/share/nacre"
     readonly property string tools: share + "/shell/tools"
+    // Outside-namespace path used only by an independent display revert worker.
+    readonly property string hostTools: Quickshell.env("NACRE_NIRI_TOOLS_SOURCE") || tools
+    readonly property string niriDesktopConfig: Quickshell.env("NACRE_NIRI_DESKTOP_CONFIG") || ""
     readonly property string helperBinary: tools + "/nacre-helper"
     readonly property string shellBin: share + "/shell/bin"
     readonly property string palettePython: share + "/palette-runtime/venv/bin/python"

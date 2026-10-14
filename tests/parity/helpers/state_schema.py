@@ -1,4 +1,4 @@
-"""Declared storage-only differences; frozen payloads and references stay intact.
+"""Declared state/additive preference defaults; frozen references stay intact.
 
 No helper is imported by the parent harness. New storage invariants are tested
 independently against both implementations and the native QML publisher.
@@ -56,12 +56,34 @@ def canonical_desktop(data):
                     snapshot.setdefault(key, value)
     data.setdefault("dashboardEnabled", True)
     data.setdefault("lipHoverDelay", 350)
+    for key, value in {
+        "interfaceGradients": True,
+        "monoFont": "",
+        "textSize": 12,
+        "reduceMotion": False,
+    }.items():
+        data.setdefault(key, value)
+        if isinstance(data.get("normalSnapshot"), dict):
+            data["normalSnapshot"].setdefault(key, value)
     return data
+
+
+def canonical_wallpaper_output(value):
+    """The additive automatic-mode preference defaults to false, on both sides."""
+    if isinstance(value, dict):
+        value = {key: canonical_wallpaper_output(item) for key, item in value.items()}
+        if "paletteMode" in value and "palettePreset" in value:
+            value.setdefault("paletteAutoMode", False)
+    elif isinstance(value, list):
+        value = [canonical_wallpaper_output(item) for item in value]
+    return value
 
 
 def compatible_files(result, case):
     result = copy.deepcopy(result)
     helper = case.get("helper")
+    if helper == "wallpaper-media":
+        result["stdout"] = canonical_wallpaper_output(result.get("stdout"))
     if (
         helper == "desktop-settings"
         and isinstance(result.get("stdout"), dict)
@@ -119,7 +141,11 @@ def compatible_files(result, case):
             ):
                 data.pop("version", None)
             data = canonical_desktop(data)
-        record["text"] = json.dumps(data, ensure_ascii=True)
+        if entry["id"] == "wallpaper-picker" and isinstance(data, dict):
+            data.setdefault("paletteAutoMode", False)
+        record["text"] = json.dumps(
+            data, ensure_ascii=True, sort_keys=entry["id"] == "wallpaper-picker"
+        )
     return result
 
 

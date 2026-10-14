@@ -406,3 +406,17 @@ they do not receive the main shell's live objects. See the
 [extension format](development/software-extensions.md) for examples and supported
 kinds. This format does not embed third-party widgets into the built-in bar or
 dashboard.
+
+Settings provides graphical font and wallpaper-folder choices, searchable time
+zones and keyboard layouts, and pointer/repeat/touchpad controls where supported.
+Wallpaper's **Open folder** uses your default file manager. Appearance →
+**Interface gradients** switches the decorative desktop blends to solid colors.
+Colors → **Match wallpaper** chooses Light or Dark from the current scene.
+Launcher → **Sidebar** controls category order and visibility; hidden sidebar
+categories stay searchable. **Brain** opens the installed knowledge add-on.
+
+Power & battery → **Automatic profiles** enables separate AC and battery choices;
+the current profile is retained while it is off. Bluetooth shares discovery and
+pairing confirmation with the control center. Displays retains Keep/Revert and
+the automatic timeout. Back returns to the page you came from, including Privacy
+links to panel settings. Unsupported compositor options are hidden.

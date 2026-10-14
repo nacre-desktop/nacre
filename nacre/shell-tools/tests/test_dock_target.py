@@ -22,7 +22,7 @@ class DockTargetTests(unittest.TestCase):
                 (SHELL / "widgets/NacreDockTarget.qml").read_text()
             )
             (root / "NacreTokens.qml").write_text(
-                'pragma Singleton\nimport QtQuick\nQtObject {property color accent:"#85b8c9";property color orientSecondary:"#d48dbc";property color orientHighlight:"#e9e5f7"}\n'
+                'pragma Singleton\nimport QtQuick\nQtObject {property bool gradientsEnabled:true;function gradientColour(base,shaded){return gradientsEnabled?shaded:base}property color accent:"#85b8c9";property color orientSecondary:"#d48dbc";property color orientHighlight:"#e9e5f7"}\n'
             )
             (root / "qmldir").write_text("singleton NacreTokens 1.0 NacreTokens.qml\n")
             (root / "tst_target.qml").write_text("""import QtQuick

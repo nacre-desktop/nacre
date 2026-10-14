@@ -87,7 +87,7 @@ Item {
             }
             GradientStop {
                 position: 1
-                color: "transparent"
+                color: NacreTokens.gradientColour(NacreTokens.body, "transparent")
             }
         }
     }

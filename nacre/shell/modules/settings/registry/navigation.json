@@ -44,7 +44,8 @@
       "labelId": "settings.registry.colors.label",
       "descriptionId": "settings.registry.colors.description",
       "order": 1,
-      "prototype": true
+      "prototype": true,
+      "enterAction": "colors-refresh"
     },
     {
       "id": "appearance",
@@ -420,6 +421,7 @@
     "panels/dashboard#calendarFile": "panels/dashboard/calendar-focus#calendarFile",
     "panels/dashboard#panels/dashboard.editor.calendarFile": "panels/dashboard/calendar-focus#calendarFile",
     "panels/dashboard#focusMinutes": "panels/dashboard/calendar-focus#focusMinutes",
-    "panels/dashboard#panels/dashboard.editor.focusMinutes": "panels/dashboard/calendar-focus#focusMinutes"
+    "panels/dashboard#panels/dashboard.editor.focusMinutes": "panels/dashboard/calendar-focus#focusMinutes",
+    "keyboard-mouse#keyboard-mouse.pointer.naturalScroll": "keyboard-mouse#keyboard-mouse.touchpad.naturalScroll"
   }
 }

@@ -27,10 +27,23 @@ PENDING = STATE.with_name(
     else "display-pending.json"
 )
 DEFAULTS = _state.read_json_file(Path(__file__).with_name("desktop-defaults.json"))
+INPUT_KEYS = [
+    "keyRepeatDelay",
+    "keyRepeatRate",
+    "mouseSpeed",
+    "mouseAcceleration",
+    "mouseLeftHanded",
+    "mouseNaturalScroll",
+    "touchpadSpeed",
+    "touchpadTap",
+    "touchpadTypingGuard",
+]
 PRESET_KEYS = [
     key
     for key in DEFAULTS
-    if key != "language" and not key.startswith(("lock", "weather", "interface"))
+    if key not in INPUT_KEYS
+    and key != "language"
+    and not key.startswith(("lock", "weather", "interface"))
 ]
 OPTIONS = set(compositor.desktop_option_keys())
 
@@ -42,6 +55,9 @@ RANGES = {
     "frameWidth": (0, 30),
     "frameRounding": (0, 40),
     "lipHoverDelay": (0, 800),
+    "keyRepeatDelay": (100, 1000),
+    "keyRepeatRate": (1, 80),
+    "textSize": (9, 18),
 }
 
 
@@ -69,7 +85,7 @@ def monitor_state():
 
 
 def initial():
-    data = dict(DEFAULTS)
+    data = {key: value for key, value in DEFAULTS.items() if key not in INPUT_KEYS}
     for key in OPTIONS:
         try:
             data[key] = compositor.get_desktop_option(key, timeout=8)
@@ -85,7 +101,14 @@ def initial():
 
 
 def load():
-    data = {**DEFAULTS, **_state.read_json_file(STATE)} if STATE.exists() else initial()
+    data = (
+        {
+            **{key: value for key, value in DEFAULTS.items() if key not in INPUT_KEYS},
+            **_state.read_json_file(STATE),
+        }
+        if STATE.exists()
+        else initial()
+    )
     data.pop("wallpaperTransition", None)
     if compositor.capabilities.get("perOutputWorkspaces"):
         data["displays"] = data.get("compositorDisplays", {}).get(
@@ -99,7 +122,13 @@ def load():
 def validate(key, value):
     if key not in DEFAULTS:
         raise ValueError("Unknown setting")
-    if key in RANGES:
+    if key in ("mouseSpeed", "touchpadSpeed"):
+        if type(value) not in (int, float) or not -1 <= value <= 1:
+            raise ValueError("Pointer speed must be from -1 to 1")
+    elif key == "mouseAcceleration":
+        if value not in ("adaptive", "flat"):
+            raise ValueError("Choose Adaptive or Flat acceleration")
+    elif key in RANGES:
         low, high = RANGES[key]
         if type(value) is not int or not low <= value <= high:
             raise ValueError(f"{key} must be an integer from {low} to {high}")
@@ -108,7 +137,7 @@ def validate(key, value):
             value == "pseudo" and os.environ.get("NACRE_DEVELOPER_MODE") != "1"
         ):
             raise ValueError("Choose System default or English")
-    elif key in ("weatherLocation", "interfaceFont"):
+    elif key in ("weatherLocation", "interfaceFont", "monoFont"):
         if (
             not isinstance(value, str)
             or len(value) > 80
@@ -263,9 +292,18 @@ def main():
                 value = validate(key, json.loads(raw))
                 data = load()
                 data[key] = value
-                if key in OPTIONS:
+                if key in OPTIONS or key in INPUT_KEYS:
                     compositor.set_desktop_options({key: value}, timeout=8)
                 persist(data)
+                if key == "interfaceGradients":
+                    scheme = HOME / ".local/state/nacre/scheme.json"
+                    if scheme.exists():
+                        colors = palette.validated_colors(_state.read_json_file(scheme))
+                        text = palette.publish_compositor_palette(HOME, colors)
+                        if compositor.backend_name == "hyprland":
+                            compositor.apply_config(text, timeout=8)
+                        else:
+                            compositor.reload()
                 if key.startswith("lock"):
                     spec = spec_from_file_location(
                         "lockconfig", Path(__file__).with_name("lock-config.py")
@@ -407,6 +445,13 @@ def main():
                     for name in (
                         "NACRE_COMPOSITOR",
                         "NIRI_SOCKET",
+                        "NIRI_CONFIG",
+                        "HOME",
+                        "XDG_CONFIG_HOME",
+                        "XDG_STATE_HOME",
+                        "XDG_CACHE_HOME",
+                        "XDG_DATA_HOME",
+                        "NACRE_HELPER_BINARY",
                         "NACRE_NIRI_CONFIG",
                         "NACRE_NIRI_DESKTOP_CONFIG",
                     ):

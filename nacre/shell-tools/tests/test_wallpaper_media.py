@@ -31,6 +31,46 @@ class WallpaperMediaTests(unittest.TestCase):
         isolated.start()
         self.addCleanup(isolated.stop)
 
+    def test_match_wallpaper_does_not_inherit_previous_mode(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            poster = home / "wall.png"
+            prefs = home / "wallpaper-picker.json"
+            state = home / "state"
+            state.mkdir()
+            (state / "last.txt").write_text(str(poster))
+            with (
+                patch.object(media, "HOME", home),
+                patch.object(media, "PREFS", prefs),
+                patch.object(media, "STATE", state),
+                patch.object(media, "prepared_theme", return_value=False),
+                patch.object(media.subprocess, "run") as run,
+            ):
+                for previous, color, expected in [
+                    ("light", "#101820", "dark"),
+                    ("dark", "#eeeeee", "light"),
+                ]:
+                    Image.new("RGB", (64, 64), color).save(poster)
+                    media.preference({"paletteMode": previous})
+                    result = media.theme({"paletteAutoMode": True})
+                    self.assertEqual(result["paletteMode"], expected)
+                    self.assertTrue(result["paletteAutoMode"])
+                    self.assertIn(expected, run.call_args.args[0])
+
+    def test_automatic_mode_follows_a_new_scene_even_with_legacy_wrapper(self):
+        poster = media.HOME / "bright.png"
+        Image.new("RGB", (64, 64), "white").save(poster)
+        legacy = media.HOME / ".local/bin/nacre-shell"
+        legacy.parent.mkdir(parents=True)
+        legacy.write_text("legacy wrapper")
+        media.preference({"paletteAutoMode": True, "paletteMode": "dark"})
+        with patch.object(media.subprocess, "run") as run:
+            media.select(str(poster))
+        command = run.call_args.args[0]
+        self.assertNotEqual(command[0], str(legacy))
+        self.assertEqual(command[command.index("--mode") + 1], "light")
+        self.assertEqual(media.settings()["paletteMode"], "light")
+
     def test_decoder_safety_failure_does_not_break_the_wallpaper_library(self):
         media.LIBRARY.mkdir(parents=True)
         bad = media.LIBRARY / "bad.png"

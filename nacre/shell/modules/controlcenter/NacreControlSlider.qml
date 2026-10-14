@@ -33,7 +33,7 @@ Slider {
                 }
                 GradientStop {
                     position: 1
-                    color: NacreColours.palette.m3secondary
+                    color: NacreTokens.gradientColour(NacreTokens.accent, NacreColours.palette.m3secondary)
                 }
             }
             opacity: root.enabled ? 1 : .35

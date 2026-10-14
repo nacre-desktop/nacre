@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
 import qs.widgets
+import qs.services
 import "../registry/registry.js" as Registry
 
 NacreSurface {
@@ -68,38 +69,22 @@ NacreSurface {
         id: editor
         x: parent.width - width - NacreTokens.space.sm
         y: root.stacked ? labels.y + labels.height + NacreTokens.space.sm : Math.max(NacreTokens.space.md, (labels.height - height) / 2 + labels.y)
-        width: root.setting.type === "boolean" ? NacreTokens.space.xl * 3 : Math.min(root.stacked ? parent.width - NacreTokens.space.md * 2 : NacreTokens.space.huge * 8 + NacreTokens.space.sm * 2, parent.width - NacreTokens.space.md * 2)
+        width: root.setting.type === "enum" && root.setting.options.length > 4 ? Math.min(parent.width - NacreTokens.space.md * 2, Math.max(NacreTokens.space.huge * 5, Math.min(NacreTokens.space.huge * 8, Math.max(...root.setting.options.map(option => segmentMetrics.advanceWidth(root.registry.text(option.labelId)) * 1.2)) + NacreTokens.space.huge + NacreTokens.space.md * 2))) : root.setting.type === "boolean" ? NacreTokens.space.xl * 3 : Math.min(root.stacked ? parent.width - NacreTokens.space.md * 2 : NacreTokens.space.huge * 8 + NacreTokens.space.sm * 2, parent.width - NacreTokens.space.md * 2)
         enabled: root.editable
         opacity: enabled ? 1 : .45
-        sourceComponent: root.setting.type === "boolean" ? toggle : root.setting.type === "enum" ? (root.setting.options.length <= 4 ? segments : select) : ["integer", "number"].includes(root.setting.type) ? range : root.setting.type === "array" ? list : entry
+        sourceComponent: root.setting.type === "boolean" ? toggle : root.setting.type === "enum" ? (root.setting.options.length <= 4 ? segments : select) : ["integer", "number"].includes(root.setting.type) ? range : root.setting.type === "array" ? list : root.setting.picker === "folder" ? folder : root.setting.picker === "font" ? fontPicker : root.setting.picker === "keyboard" ? choices : entry
     }
     Component {
         id: toggle
-        Switch {
+        NacreToggleSwitch {
+            dimWhenDisabled: false
             objectName: "control-" + root.setting.id
             checked: root.currentValue === true
             Accessible.name: root.registry.text(root.setting.labelId)
             onToggled: root.store.write(root.setting, checked)
-            indicator: NacreSurface {
-                implicitWidth: NacreTokens.space.xxl + NacreTokens.space.xl + NacreTokens.space.xs
-                implicitHeight: NacreTokens.space.xl + NacreTokens.space.sm
-                x: parent.leftPadding
-                y: (parent.height - height) / 2
-                radius: NacreTokens.radii.full
-                color: root.currentValue === true ? NacreTokens.accent : NacreTokens.body
-                border.width: 1
-                border.color: editor.item?.visualFocus ? NacreTokens.accent : NacreTokens.outline
-                NacreSurface {
-                    x: root.currentValue === true ? parent.width - width - NacreTokens.space.xs : NacreTokens.space.xs
-                    y: NacreTokens.space.xs
-                    width: NacreTokens.radii.large
-                    height: NacreTokens.radii.large
-                    radius: NacreTokens.radii.full
-                    color: root.currentValue === true ? NacreTokens.focusInk(NacreTokens.accent) : NacreTokens.mutedInk
-                }
-            }
         }
     }
+
     FontMetrics {
         id: segmentMetrics
         font.family: NacreTokens.textFamily
@@ -132,50 +117,29 @@ NacreSurface {
     }
     Component {
         id: select
-        ComboBox {
+        NacreSelect {
+            dimWhenDisabled: false
             objectName: "control-" + root.setting.id
             model: root.setting.options.map(option => root.registry.text(option.labelId))
             currentIndex: root.setting.options.findIndex(option => option.value === root.currentValue)
-            font.family: NacreTokens.textFamily
-            font.pointSize: NacreTokens.textSize.body
             Accessible.name: root.registry.text(root.setting.labelId)
+            searchable: model.length > 12
             onActivated: index => root.store.write(root.setting, root.setting.options[index].value)
-            palette.window: NacreTokens.body
-            palette.base: NacreTokens.raised
-            palette.text: NacreTokens.ink
-            palette.button: NacreTokens.raised
-            palette.buttonText: NacreTokens.ink
-            palette.highlight: NacreTokens.accent
-            palette.highlightedText: NacreTokens.focusInk(NacreTokens.accent)
-            background: NacreSurface {
-                radius: NacreTokens.radii.small
-                color: NacreTokens.body
-                border.width: 1
-                border.color: editor.item?.visualFocus ? NacreTokens.accent : NacreTokens.outline
-            }
-            contentItem: NacreText {
-                text: root.registry.text(root.setting.options[parent.currentIndex]?.labelId)
-                leftPadding: NacreTokens.space.md
-                rightPadding: NacreTokens.space.huge
-                verticalAlignment: Text.AlignVCenter
-                elide: Text.ElideRight
-            }
-            indicator: NacreIcon {
-                x: parent.width - width - NacreTokens.space.sm
-                anchors.verticalCenter: parent.verticalCenter
-                text: "expand_more"
-            }
         }
     }
+
     Component {
         id: range
         Column {
             spacing: NacreTokens.space.xs
             NacreText {
-                text: root.currentValue + " " + (root.setting.unit || "")
+                width: parent.width
+                horizontalAlignment: Text.AlignRight
+                text: (root.setting.type === "number" ? Number(root.currentValue).toFixed(2) : root.currentValue) + " " + (root.setting.unit || "")
                 font.pointSize: NacreTokens.textSize.caption
             }
-            Slider {
+            NacreRangeSlider {
+                dimWhenDisabled: false
                 objectName: "control-" + root.setting.id
                 width: parent.width
                 from: root.setting.range.min
@@ -183,15 +147,60 @@ NacreSurface {
                 stepSize: root.setting.range.step
                 snapMode: Slider.SnapAlways
                 value: root.currentValue
-                Accessible.name: root.registry.text(root.setting.labelId)
-                onMoved: root.store.write(root.setting, value)
-                palette.window: NacreTokens.body
-                palette.base: NacreTokens.raised
-                palette.text: NacreTokens.ink
-                palette.button: NacreTokens.raised
-                palette.buttonText: NacreTokens.ink
-                palette.highlight: NacreTokens.accent
-                palette.highlightedText: NacreTokens.focusInk(NacreTokens.accent)
+                label: root.registry.text(root.setting.labelId)
+                onMoved: root.store.write(root.setting, root.setting.type === "integer" ? Math.round(value) : Number(value.toFixed(6)))
+            }
+        }
+    }
+    Component {
+        id: folder
+        NacreFolderEntry {
+            objectName: "control-" + root.setting.id
+            value: String(root.currentValue)
+            label: root.registry.text(root.setting.labelId)
+            onSelected: path => root.store.write(root.setting, path)
+        }
+    }
+    Component {
+        id: fontPicker
+        NacreSelect {
+            dimWhenDisabled: false
+            objectName: "control-" + root.setting.id
+            model: [root.registry.text("settings.registry.ui.default"), ...Qt.fontFamilies().filter(family => !/(symbols|icons|emoji|dingbat|awesome)/i.test(family)).sort()]
+            currentIndex: root.currentValue ? model.indexOf(root.currentValue) : 0
+            searchable: true
+            displayText: root.currentValue || root.registry.text("settings.registry.ui.default")
+            fontChoices: true
+            Accessible.name: root.registry.text(root.setting.labelId)
+            onActivated: index => root.store.write(root.setting, index === 0 ? "" : model[index])
+        }
+    }
+    Component {
+        id: choices
+        NacreSelect {
+            dimWhenDisabled: false
+            readonly property var options: root.store.choiceOptions(root.setting)
+            readonly property var selected: String(root.currentValue).split(",")
+            model: options.map(option => option.label)
+            checkedIndices: selected.map(value => options.findIndex(option => option.value === value))
+            currentIndex: checkedIndices[0] ?? -1
+            displayText: selected.map(value => options.find(option => option.value === value)?.label || value).join(", ")
+            multiple: true
+            maximumChecked: 4
+            alwaysAvailableIndices: [0]
+            searchable: true
+            Accessible.name: root.registry.text(root.setting.labelId)
+            onOptionToggled: index => {
+                const value = options[index].value;
+                if (!value) {
+                    root.store.write(root.setting, "");
+                    return;
+                }
+                const values = selected.filter(item => !!item);
+                if (values.includes(value))
+                    root.store.write(root.setting, values.filter(item => item !== value).join(","));
+                else if (values.length < 4)
+                    root.store.write(root.setting, [...values, value].join(","));
             }
         }
     }
@@ -208,8 +217,9 @@ NacreSurface {
     Component {
         id: list
         ActionButton {
+            opacity: 1
             objectName: "control-" + root.setting.id
-            text: root.registry.text("settings.registry.ui.items", {
+            text: root.setting.store.id === "apps" && root.setting.section === "apps.defaults" ? (typeof NacreApps.nameForCommand === "function" && NacreApps.nameForCommand(root.currentValue) || root.registry.text(root.currentValue.length ? "settings.registry.ui.custom-command" : "settings.registry.ui.choose-app")) : root.registry.text("settings.registry.ui.items", {
                 count: (root.currentValue || []).length
             })
             icon: "chevron_right"

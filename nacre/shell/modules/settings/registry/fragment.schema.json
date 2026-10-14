@@ -90,7 +90,8 @@
           },
           "enterAction": {
             "enum": [
-              "power-refresh"
+              "power-refresh",
+              "colors-refresh"
             ]
           }
         },
@@ -337,11 +338,20 @@
           },
           "adapter": {
             "enum": [
-              "color-mode"
+              "color-mode",
+              "keyboard-layout",
+              "touchpad-enabled"
             ]
           },
           "entityType": {
             "type": "string"
+          },
+          "picker": {
+            "enum": [
+              "folder",
+              "font",
+              "keyboard"
+            ]
           }
         },
         "additionalProperties": false

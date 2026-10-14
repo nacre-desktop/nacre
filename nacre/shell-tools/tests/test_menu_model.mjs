@@ -71,3 +71,11 @@ assert.equal(sourceSettings.decode(JSON.stringify({version:1,files:false,brain:f
 for (const text of ['broken',JSON.stringify({version:2,files:false}),JSON.stringify({version:1,files:'false'}),JSON.stringify({version:1,webEngine:'unknown'})]) assert.equal(sourceSettings.decode(text).files,true);
 assert.equal(sourceSettings.webUrl('google','space & value'),'https://www.google.com/search?q=space%20%26%20value');
 assert.equal(sourceSettings.webUrl('brave','space'),'https://search.brave.com/search?q=space');
+
+const orderedRail = context.rail(menu.rows, {order:['power','style','apps'],hidden:['software','home']});
+assert.equal(orderedRail[0].id,'home');
+assert.equal(orderedRail[1].id,'power');
+assert.equal(orderedRail[2].id,'style');
+assert(!orderedRail.some(row=>row.id==='software'));
+assert(menu.rows.some(row=>row.id==='software')); // Hiding the rail preserves search/catalog ownership.
+assert.equal(context.rail(menu.rows,{order:'invalid',hidden:null}).length,9);

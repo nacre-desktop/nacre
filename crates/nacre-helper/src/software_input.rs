@@ -56,6 +56,10 @@ pub fn set_touchpad(paths: &Paths, enabled: bool, devices: Vec<String>) -> Resul
         json!({"touchpadEnabled":enabled,"touchpadDevices":devices}),
     )
 }
+pub fn reset_layouts(paths: &Paths) -> Result<Value> {
+    apply(paths, json!({"keyboardLayouts":null}))
+}
+
 pub fn set_layouts(paths: &Paths, layouts: &str) -> Result<Value> {
     if layouts.len() > 160
         || layouts.split(',').any(|s| {
@@ -89,10 +93,14 @@ fn apply(paths: &Paths, patch: Value) -> Result<Value> {
         None
     };
     let mut input = preferences(&paths.config)?;
-    input
-        .as_object_mut()
-        .ok_or("Invalid input preferences")?
-        .extend(patch.as_object().unwrap().clone());
+    let map = input.as_object_mut().ok_or("Invalid input preferences")?;
+    for (key, value) in patch.as_object().unwrap() {
+        if value.is_null() {
+            map.remove(key);
+        } else {
+            map.insert(key.clone(), value.clone());
+        }
+    }
     state::write(&path, &input)?;
     let published = fs::read(&path)?;
     let mut generated = None;

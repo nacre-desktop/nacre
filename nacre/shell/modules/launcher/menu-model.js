@@ -140,11 +140,14 @@ function checkTree(rows) {
         }
     }
 }
-function rail(rows) {
-    return rows.filter(row => !parentOf(row.id) && row.kind === "group").map((row, index) => ({
+function rail(rows, preferences = {}) {
+    const configured = Array.isArray(preferences.order) ? preferences.order.filter(id => typeof id === "string") : [];
+    const order = [...new Set(["home", ...configured, ...railOrder])];
+    const hidden = new Set(Array.isArray(preferences.hidden) ? preferences.hidden.filter(id => id !== "home") : []);
+    return rows.filter(row => !parentOf(row.id) && row.kind === "group" && !hidden.has(row.id)).map((row, index) => ({
                 row: row,
                 index: index,
-                order: railOrder.indexOf(row.id)
+                order: order.indexOf(row.id)
             })).sort((a, b) => (a.order < 0 ? 99 : a.order) - (b.order < 0 ? 99 : b.order) || a.index - b.index).map(item => item.row);
 }
 function resolve(value, rows) {

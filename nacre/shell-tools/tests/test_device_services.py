@@ -81,6 +81,14 @@ class DeviceServiceTests(unittest.TestCase):
             (fixtures / "qmldir").write_text(
                 "singleton NacreWelcomeApp 1.0 NacreWelcomeApp.qml\nsingleton NacrePresentation 1.0 NacrePresentation.qml\nsingleton NacrePaths 1.0 NacrePaths.qml\nsingleton Environment 1.0 Environment.qml\nsingleton NacreBrightness 1.0 NacreBrightness.qml\nsingleton NacreCompositor 1.0 NacreCompositor.qml\nsingleton Hyprland 1.0 Hyprland.qml\nsingleton DesktopEntries 1.0 DesktopEntries.qml\nsingleton LauncherPreferences 1.0 LauncherPreferences.qml\nsingleton AppLaunch 1.0 AppLaunch.qml\nsingleton DesktopSettings 1.0 DesktopSettings.qml\nsingleton NacreNotifications 1.0 NacreNotifications.qml\nsingleton NacrePanelState 1.0 NacrePanelState.qml\nsingleton Mpris 1.0 Mpris.qml\nsingleton Pipewire 1.0 Pipewire.qml\nsingleton Bluetooth 1.0 Bluetooth.qml\nPwObjectTracker 1.0 PwObjectTracker.qml\nProcess 1.0 Process.qml\nStdioCollector 1.0 StdioCollector.qml\nSplitParser 1.0 SplitParser.qml\nNacreHelperTask 1.0 NacreHelperTask.qml\n"
             )
+            if name == "NacreColours":
+                (fixtures / "NacreWallpapers.qml").write_text(
+                    "pragma Singleton\nimport QtQuick\nQtObject {property var changes:[];function preference(value){changes=[...changes,value]}}"
+                )
+                with (fixtures / "qmldir").open("a") as manifest:
+                    manifest.write(
+                        "singleton NacreWallpapers 1.0 NacreWallpapers.qml\n"
+                    )
             if name in ("DeviceActions", "NacreControlActions"):
                 with (fixtures / "qmldir").open("a") as manifest:
                     manifest.write(

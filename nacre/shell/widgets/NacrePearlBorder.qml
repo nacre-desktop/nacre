@@ -29,7 +29,7 @@ Shape {
             }
             GradientStop {
                 position: 1
-                color: root.blend(NacreTokens.orientSecondary)
+                color: NacreTokens.gradientColour(root.blend(NacreTokens.accent), root.blend(NacreTokens.orientSecondary))
             }
         }
         PathSvg {

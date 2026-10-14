@@ -368,7 +368,7 @@ TestCase {
             )
             (target / "NacreTokens.qml").write_text("""pragma Singleton
 import QtQuick
-QtObject {property bool motionEnabled:true;property color accent:"#85b8c9";property color orientSecondary:"#d48dbc";property color orientHighlight:"#e9e5f7"}
+QtObject {property bool gradientsEnabled:true;function gradientColour(base,shaded){return gradientsEnabled?shaded:base}property bool motionEnabled:true;property color accent:"#85b8c9";property color orientSecondary:"#d48dbc";property color orientHighlight:"#e9e5f7"}
 """)
             (target / "qmldir").write_text(
                 "singleton NacreTokens 1.0 NacreTokens.qml\n"
@@ -669,7 +669,7 @@ TestCase {
             )
             (target / "NacreTokens.qml").write_text("""pragma Singleton
 import QtQuick
-QtObject {property bool motionEnabled:false;property color outline:"#777777";property color accent:"#2080e0";property color orientSecondary:"#e060a0"}
+QtObject {property bool gradientsEnabled:true;function gradientColour(base,shaded){return gradientsEnabled?shaded:base}property bool motionEnabled:false;property color outline:"#777777";property color accent:"#2080e0";property color orientSecondary:"#e060a0"}
 """)
             (target / "qmldir").write_text(
                 "singleton NacreTokens 1.0 NacreTokens.qml\n"

@@ -51,7 +51,7 @@ Item {
 """)
             for path in (ROOT.parent / "shell/modules/settings/pages").glob("*.qml"):
                 stage_qml(path, target / path.name)
-            for name in ("NacreNetworkPopup", "NacreQuickList"):
+            for name in ("NacreNetworkPopup", "NacreBluetoothPopup", "NacreQuickList"):
                 stage_qml(
                     ROOT.parent / "shell/modules/bar/popouts" / (name + ".qml"),
                     target / (name + ".qml"),
@@ -152,6 +152,16 @@ Item {
             with (target / "fixtures/qmldir").open("a") as manifest:
                 manifest.write(
                     "\nsingleton DesktopSettings 1.0 DesktopSettings.qml\nsingleton Maintenance 1.0 Maintenance.qml\n"
+                )
+            for name in ("NacreSelect", "NacreToggleSwitch", "NacreRangeSlider"):
+                stage_qml(
+                    ROOT.parent / "shell/widgets" / (name + ".qml"),
+                    target / "fixtures" / (name + ".qml"),
+                )
+            for name in ("NacreBluetoothPairing", "NacreControlSwitch"):
+                stage_qml(
+                    ROOT.parent / "shell/modules/controlcenter" / (name + ".qml"),
+                    target / "fixtures" / (name + ".qml"),
                 )
             install_foundation_interaction(
                 target / "fixtures", ROOT.parent / "shell/widgets"

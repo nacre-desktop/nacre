@@ -43,7 +43,7 @@ Item {
             }
             GradientStop {
                 position: 1
-                color: Qt.alpha(NacreTokens.orientSecondary, .02 + .10 * root.amount)
+                color: NacreTokens.gradientColour(Qt.alpha(root.ink, .03 + .09 * root.amount), Qt.alpha(NacreTokens.orientSecondary, .02 + .10 * root.amount))
             }
         }
         border.width: root.outline ? 1 : 0
@@ -64,7 +64,7 @@ Item {
             }
             GradientStop {
                 position: 1
-                color: NacreTokens.orientSecondary
+                color: NacreTokens.gradientColour(root.ink, NacreTokens.orientSecondary)
             }
         }
     }

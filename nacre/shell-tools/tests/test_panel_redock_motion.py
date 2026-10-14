@@ -24,7 +24,7 @@ class RedockMotionTests(unittest.TestCase):
                 dirs_exist_ok=True,
             )
             fixtures = {
-                "NacreTokens": 'property bool motionEnabled:true;property color body:"#101419";property color ink:"white";property color mutedInk:"gray";property color accent:"cyan";property color outline:"gray";property color raised:"#20242a"',
+                "NacreTokens": 'property bool gradientsEnabled:true;function gradientColour(base,shaded){return gradientsEnabled?shaded:base}property bool motionEnabled:true;property color body:"#101419";property color ink:"white";property color mutedInk:"gray";property color accent:"cyan";property color outline:"gray";property color raised:"#20242a"',
                 "NacrePanelState": "property bool hidden:false",
                 "NacreDashboardState": 'property var tabs:["today","weather","media","system","focus"]',
                 "NacreAiViews": 'property var edge:QtObject{property bool busy:false;property string defaultProvider:"codex";function start(){}};property var recent:[];function select(value){}function load(key){}',
