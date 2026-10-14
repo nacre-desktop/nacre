@@ -718,5 +718,714 @@
         "rss_samples": 1
       }
     }
+  },
+  "desktop_pc_quiet_attempt_2026_10_14": {
+    "condition": "desktop-PC quiet attempt; full gate incomplete",
+    "baseline": "cebc24ce8532af146753c856d7d35babe7d4f38c",
+    "native": "a36bbe8216ed11d8ac6d9aece1504274e5ab2333",
+    "machine": {
+      "cpu": "AMD Ryzen 5 7600 6-Core Processor",
+      "ram_kib": 15204764,
+      "kernel": "Linux 7.2.9-2-cachyos",
+      "governors": [
+        "powersave"
+      ],
+      "versions": {
+        "quickshell": "Quickshell 0.3.2 (revision , distributed by Arch Linux)",
+        "niri": "niri 26.04 (8ed0da4)",
+        "Hyprland": "Hyprland 0.56.2 built from branch v0.56.2 at commit efb50993780079460b0cbed1363e2166a2de1d9f clean ([gha] Nix: update inputs).\nDate: Wed Aug 5 14:13:21 2026\nTag: v0.56.2, commits: 7661\n\nLibraries:\nHyprgraphics: built against 0.5.1, system has 0.5.1\nHyprutils: built against 0.14.2, system has 0.14.2\nHyprcursor: built against 0.1.13, system has 0.1.13\nHyprlang: built against 0.6.8, system has 0.6.8\nAquamarine: built against 0.15.1, system has 0.15.1\n\nVersion ABI string: efb50993780079460b0cbed1363e2166a2de1d9f_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6\nno flags were set",
+        "labwc": "labwc 0.20.2 (+xwayland +nls +rsvg +libsfdo) wlroots-0.20.2"
+      }
+    },
+    "gate_passed": false,
+    "reason": "No complete A/B/A/B sequence with unchanged host swap counters. B1 +126 swap-in pages; warmed A3 +33; measured descendants SwapPss0, no swap-out. Discarded full-shell results.",
+    "microbenchmarks": {
+      "A1": {
+        "fresh": {
+          "transport": "fresh Python",
+          "runtime": "Python",
+          "helper_launches": 404,
+          "python_processes": 404,
+          "launch_scope": "direct helper starts only; descendant/session launches require the actions capture",
+          "startup_ms": null,
+          "service_memory": null,
+          "measurement_condition": "unspecified; verify a quiet window before timing claims",
+          "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+          "cpu_resolution_ms": 0.001,
+          "results": {
+            "menu-backend": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 3865.303,
+                "system": 788.7579999999999,
+                "total_per_request": 46.540609999999994
+              },
+              "response": {
+                "ok": false,
+                "error": "Try a conversion such as 10 km to miles"
+              },
+              "first_ms": 62.00205200002529,
+              "warm_ms": {
+                "mean": 46.93941594021453,
+                "median": 45.86086949711898,
+                "p95": 54.480304002936464,
+                "max": 55.09390299994266
+              }
+            },
+            "dashboard-data": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 2517.8160000000003,
+                "system": 553.0680000000001,
+                "total_per_request": 30.708840000000006
+              },
+              "response": {
+                "preferences": {
+                  "tabs": [
+                    "today",
+                    "weather",
+                    "media",
+                    "system",
+                    "focus"
+                  ],
+                  "homeZone": "",
+                  "homeCity": "",
+                  "calendarFile": "",
+                  "lyrics": true,
+                  "albumPalette": true,
+                  "focusMinutes": 25
+                },
+                "focus": {},
+                "home": {},
+                "calendar": {
+                  "events": [],
+                  "error": "",
+                  "configured": false
+                },
+                "brain": {}
+              },
+              "first_ms": 35.330355996848084,
+              "warm_ms": {
+                "mean": 31.01808421946771,
+                "median": 30.90781200080528,
+                "p95": 32.051565998699516,
+                "max": 32.58060599910095
+              }
+            },
+            "launcher-preferences": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 2269.1330000000003,
+                "system": 436.71400000000006,
+                "total_per_request": 27.058470000000003
+              },
+              "response": {
+                "favorites": [],
+                "hidden": [],
+                "recent": [],
+                "usage": {}
+              },
+              "first_ms": 26.617146999342367,
+              "warm_ms": {
+                "mean": 27.322374270079308,
+                "median": 27.39185649625142,
+                "p95": 28.36594700056594,
+                "max": 28.82628700172063
+              }
+            },
+            "notification-history": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 1125.620999999999,
+                "system": 268.32299999999987,
+                "total_per_request": 13.939439999999989
+              },
+              "response": [],
+              "first_ms": 14.111348005826585,
+              "warm_ms": {
+                "mean": 14.11867523987894,
+                "median": 13.974558001791593,
+                "p95": 14.885698001307901,
+                "max": 15.682678000302985
+              }
+            }
+          }
+        },
+        "service": {
+          "transport": "service",
+          "runtime": "Python",
+          "helper_launches": 1,
+          "python_processes": 1,
+          "launch_scope": "direct helper starts only; descendant/session launches require the actions capture",
+          "startup_ms": 27.041467001254205,
+          "service_memory": {
+            "rss_mib": 28.40625,
+            "pss_mib": 17.0361328125,
+            "uss_mib": 16.24609375,
+            "swap_pss_mib": 0.0
+          },
+          "measurement_condition": "unspecified; verify a quiet window before timing claims",
+          "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+          "cpu_resolution_ms": 10.0,
+          "results": {
+            "menu-backend": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 0.0,
+                "system": 0.0,
+                "total_per_request": 0.0
+              },
+              "response": {
+                "ok": false,
+                "error": "Try a conversion such as 10 km to miles"
+              },
+              "first_ms": 21.624457003781572,
+              "warm_ms": {
+                "mean": 0.04581278997648042,
+                "median": 0.03635000393842347,
+                "p95": 0.09960999886970967,
+                "max": 0.2706500017666258
+              }
+            },
+            "dashboard-data": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 0.0,
+                "system": 0.0,
+                "total_per_request": 0.0
+              },
+              "response": {
+                "preferences": {
+                  "tabs": [
+                    "today",
+                    "weather",
+                    "media",
+                    "system",
+                    "focus"
+                  ],
+                  "homeZone": "",
+                  "homeCity": "",
+                  "calendarFile": "",
+                  "lyrics": true,
+                  "albumPalette": true,
+                  "focusMinutes": 25
+                },
+                "focus": {},
+                "home": {},
+                "calendar": {
+                  "events": [],
+                  "error": "",
+                  "configured": false
+                },
+                "brain": {}
+              },
+              "first_ms": 3.66183999722125,
+              "warm_ms": {
+                "mean": 0.08319249005580787,
+                "median": 0.07334049951168709,
+                "p95": 0.15657999756513163,
+                "max": 0.2203699987148866
+              }
+            },
+            "launcher-preferences": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 10.000000000000002,
+                "system": 0.0,
+                "total_per_request": 0.10000000000000002
+              },
+              "response": {
+                "favorites": [],
+                "hidden": [],
+                "recent": [],
+                "usage": {}
+              },
+              "first_ms": 1.1803699962911196,
+              "warm_ms": {
+                "mean": 0.04191619031189475,
+                "median": 0.036860001273453236,
+                "p95": 0.057550001656636596,
+                "max": 0.10671999916667119
+              }
+            },
+            "notification-history": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 0.0,
+                "system": 0.0,
+                "total_per_request": 0.0
+              },
+              "response": [],
+              "first_ms": 0.9789199975784868,
+              "warm_ms": {
+                "mean": 0.022645900317002088,
+                "median": 0.021790001483168453,
+                "p95": 0.023979999241419137,
+                "max": 0.0400300050387159
+              }
+            }
+          }
+        },
+        "owner": {
+          "boundary": "production QML request(read) to focus snapshot publication; no rendered window",
+          "clock": "QML Date.now, wall-clock milliseconds, 1 ms resolution",
+          "requests": 100,
+          "ms": {
+            "mean": 0.19,
+            "median": 0.0,
+            "p95": 1,
+            "max": 1
+          },
+          "runs_ms": [
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0
+          ]
+        }
+      },
+      "B1": {
+        "fresh": {
+          "transport": "fresh Rust",
+          "runtime": "Rust",
+          "helper_launches": 404,
+          "python_processes": 0,
+          "launch_scope": "direct helper starts only; descendant/session launches require the actions capture",
+          "startup_ms": null,
+          "service_memory": null,
+          "measurement_condition": "unspecified; verify a quiet window before timing claims",
+          "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+          "cpu_resolution_ms": 0.001,
+          "results": {
+            "menu-backend": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 109.6,
+                "system": 122.447,
+                "total_per_request": 2.32047
+              },
+              "response": {
+                "ok": false,
+                "error": "Try a conversion such as 10 km to miles"
+              },
+              "first_ms": 3.1146090041147545,
+              "warm_ms": {
+                "mean": 2.464156460191589,
+                "median": 2.4431745005131233,
+                "p95": 2.6714590057963505,
+                "max": 2.7617599989753217
+              }
+            },
+            "dashboard-data": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 410.951,
+                "system": 171.905,
+                "total_per_request": 5.8285599999999995
+              },
+              "response": {
+                "preferences": {
+                  "tabs": [
+                    "today",
+                    "weather",
+                    "media",
+                    "system",
+                    "focus"
+                  ],
+                  "homeZone": "",
+                  "homeCity": "",
+                  "calendarFile": "",
+                  "lyrics": true,
+                  "albumPalette": true,
+                  "focusMinutes": 25
+                },
+                "focus": {},
+                "home": {},
+                "calendar": {
+                  "events": [],
+                  "error": "",
+                  "configured": false
+                },
+                "brain": {}
+              },
+              "first_ms": 5.945339995378163,
+              "warm_ms": {
+                "mean": 6.002377699987846,
+                "median": 5.9757689996331464,
+                "p95": 6.337648999760859,
+                "max": 6.44770899816649
+              }
+            },
+            "launcher-preferences": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 48.18,
+                "system": 90.009,
+                "total_per_request": 1.3818899999999998
+              },
+              "response": {
+                "favorites": [],
+                "hidden": [],
+                "recent": [],
+                "usage": {}
+              },
+              "first_ms": 1.7423799945390783,
+              "warm_ms": {
+                "mean": 1.4930992503650486,
+                "median": 1.4782194957660977,
+                "p95": 1.7016089987009764,
+                "max": 1.8443900044076145
+              }
+            },
+            "notification-history": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 33.93099999999993,
+                "system": 86.51899999999996,
+                "total_per_request": 1.2044999999999988
+              },
+              "response": [],
+              "first_ms": 1.3261400017654523,
+              "warm_ms": {
+                "mean": 1.3166974702471634,
+                "median": 1.2918355023430195,
+                "p95": 1.5852190044824965,
+                "max": 1.6501799982506782
+              }
+            }
+          }
+        },
+        "service": {
+          "transport": "service",
+          "runtime": "Rust",
+          "helper_launches": 1,
+          "python_processes": 0,
+          "launch_scope": "direct helper starts only; descendant/session launches require the actions capture",
+          "startup_ms": 1.4092210039962083,
+          "service_memory": {
+            "rss_mib": 12.80078125,
+            "pss_mib": 10.4091796875,
+            "uss_mib": 10.359375,
+            "swap_pss_mib": 0.0
+          },
+          "measurement_condition": "unspecified; verify a quiet window before timing claims",
+          "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+          "cpu_resolution_ms": 10.0,
+          "results": {
+            "menu-backend": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 0.0,
+                "system": 0.0,
+                "total_per_request": 0.0
+              },
+              "response": {
+                "ok": false,
+                "error": "Try a conversion such as 10 km to miles"
+              },
+              "first_ms": 1.3834690034855157,
+              "warm_ms": {
+                "mean": 0.05937019937846344,
+                "median": 0.056525001127738506,
+                "p95": 0.06205999670783058,
+                "max": 0.20225999469403177
+              }
+            },
+            "dashboard-data": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 10.0,
+                "system": 0.0,
+                "total_per_request": 0.1
+              },
+              "response": {
+                "preferences": {
+                  "tabs": [
+                    "today",
+                    "weather",
+                    "media",
+                    "system",
+                    "focus"
+                  ],
+                  "homeZone": "",
+                  "homeCity": "",
+                  "calendarFile": "",
+                  "lyrics": true,
+                  "albumPalette": true,
+                  "focusMinutes": 25
+                },
+                "focus": {},
+                "home": {},
+                "calendar": {
+                  "events": [],
+                  "error": "",
+                  "configured": false
+                },
+                "brain": {}
+              },
+              "first_ms": 4.225999000482261,
+              "warm_ms": {
+                "mean": 0.041538499790476635,
+                "median": 0.03944000127376057,
+                "p95": 0.04862999776378274,
+                "max": 0.1037499969243072
+              }
+            },
+            "launcher-preferences": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 0.0,
+                "system": 0.0,
+                "total_per_request": 0.0
+              },
+              "response": {
+                "favorites": [],
+                "hidden": [],
+                "recent": [],
+                "usage": {}
+              },
+              "first_ms": 0.13921000208938494,
+              "warm_ms": {
+                "mean": 0.023980290425242856,
+                "median": 0.023275002604350448,
+                "p95": 0.03256999480072409,
+                "max": 0.04792000254383311
+              }
+            },
+            "notification-history": {
+              "requests": 100,
+              "cpu_ms": {
+                "user": 0.0,
+                "system": 0.0,
+                "total_per_request": 0.0
+              },
+              "response": [],
+              "first_ms": 0.06055999983800575,
+              "warm_ms": {
+                "mean": 0.020633599342545494,
+                "median": 0.019429997337283567,
+                "p95": 0.02203999611083418,
+                "max": 0.08805999823380262
+              }
+            }
+          }
+        },
+        "owner": {
+          "boundary": "production QML request(read) to focus snapshot publication; no rendered window",
+          "clock": "QML Date.now, wall-clock milliseconds, 1 ms resolution",
+          "requests": 100,
+          "ms": {
+            "mean": 0.14,
+            "median": 0.0,
+            "p95": 1,
+            "max": 1
+          },
+          "runs_ms": [
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "limitations": [
+      "One accepted helper pair only, not repeated A/B/A/B.",
+      "Whole-shell revisions include intervening UI changes; no Rust-only attribution.",
+      "Python PATH logger excludes absolute interpreter paths; no idle launch conclusion.",
+      "Governor and swap settings were not changed."
+    ]
   }
 }

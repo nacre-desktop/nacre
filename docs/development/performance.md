@@ -1046,3 +1046,34 @@ original fixture read-only. A real nested Niri preview answered IPC, quit cleanl
 and removed its private runtime. Its system bus is explicitly private because
 native hardware helpers no longer pass through the blocked CLI wrappers.
 Whole-shell/idle comparisons remain pending the owner's quiet window.
+
+### Desktop-PC quiet-window attempt (2026-10-14)
+
+The desktop PC used a Ryzen 5 7600 (12 threads), 14.5 GiB RAM, CachyOS
+Linux 7.2.9-2-cachyos and the unchanged powersave governor. Quickshell 0.3.2,
+Niri 26.04 and Hyprland 0.56.2 were installed. The capture used a private
+headless labwc session, HOME/XDG and D-Bus; neither live desktop was changed.
+All release builds completed before measurements. These are desktop-PC numbers.
+
+One helper pair passed unchanged host swap counters; both service SwapPss values
+were zero. It is useful isolated evidence, but is not the required repeated gate.
+
+| Fresh helper median (ms) | Python baseline | Rust native |
+| --- | ---: | ---: |
+| Menu conversion validation | 45.861 | 2.443 |
+| Dashboard read | 30.908 | 5.976 |
+| Launcher preferences load | 27.392 | 1.478 |
+| Notification history load | 13.975 | 1.292 |
+| Service RSS after workload (MiB) | 28.41 | 12.80 |
+| Service PSS after workload (MiB) | 17.04 | 10.41 |
+
+The full A/B/A/B gate did not complete: the native full capture paged in 126
+host pages; after warming, the baseline paged in 33. Every measured descendant
+remained at SwapPss zero and no swap-out occurred, but the owner requires zero
+host swap activity, so both captures are discarded. No paired shell action,
+RSS/PSS, idle CPU or Python-launch improvement is claimed. PATH launch logging
+also excludes absolute interpreter paths. Whole-shell revisions include
+intervening UI changes, which further limits attribution. Baseline `cebc24ce`
+and native `a36bbe82` and helper raw results are recorded in
+[rust-migration-results.json](rust-migration-results.json). Wave 3 remains gated
+on a new valid quiet comparison; no governor, swap or live-session change was made.
