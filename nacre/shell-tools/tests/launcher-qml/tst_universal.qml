@@ -29,6 +29,15 @@ TestCase {
             "reminders": [],
             "webapps": []
         };
+        NacreMenu.localSourceOptions = {
+            version: 1,
+            brain: true,
+            files: true,
+            calculator: true,
+            actions: true,
+            ai: true,
+            webEngine: "duckduckgo"
+        };
         NacreMenu.message = "";
         NacreMenu.library.data = {
             extensions: [],
@@ -418,6 +427,65 @@ TestCase {
         value.cancelForm();
     }
 
+    function test_owner_source_switches_and_web_engine_are_live_reader_values() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        value.menu.localSourceOptions = {
+            version: 1,
+            brain: false,
+            files: false,
+            calculator: false,
+            actions: false,
+            ai: false,
+            webEngine: "brave"
+        };
+        value.menu.fileQuery = "report";
+        value.menu.fileRows = [
+            {
+                id: "doc",
+                name: "Report.md",
+                path: "/fixture/report.md"
+            }
+        ];
+        value.menu.brainQuery = "report";
+        value.menu.notes = [
+            {
+                path: "report.md",
+                title: "Report note",
+                preview: "Report"
+            }
+        ];
+        field.text = "report";
+        verify(!value.entries.some(row => row.file || row.note));
+        value.menu.prepare("home", "report");
+        compare(value.menu.fileWanted, "");
+        compare(value.menu.brainWanted, "");
+        field.text = "= 7+5";
+        verify(!value.calculation);
+        verify(value.entries[0].disabled);
+        field.text = "> screenshot";
+        verify(value.entries[0].disabled);
+        field.text = "? hello";
+        verify(value.entries[0].disabled);
+        AppLaunch.commands = [];
+        value.menu.execute({
+            operation: "search-web",
+            value: "literal space & query"
+        });
+        verify(AppLaunch.commands[0][2].startsWith("https://search.brave.com/search?q="));
+        verify(AppLaunch.commands[0][2].endsWith("literal%20space%20%26%20query"));
+        value.menu.localSourceOptions = {
+            version: 1,
+            brain: true,
+            files: true,
+            calculator: true,
+            actions: true,
+            ai: true,
+            webEngine: "duckduckgo"
+        };
+        field.text = "= 7+5";
+        verify(value.calculation);
+        compare(value.entries[0].value, "12");
+    }
     function test_filter_applies_before_global_result_limit() {
         const value = view(), field = findChild(value, "launcherSearch");
         NacreCompositor.windows = Array.from({

@@ -102,3 +102,10 @@ Additional roots must be existing absolute directories; filesystem root is not
 a search folder. Previews read at most a small text excerpt or a bounded image,
 and resolve symbolic links before checking folder ownership. Saved items can be
 removed through their item actions without editing the JSON file.
+
+The versioned `launcher-sources.json` store controls Brain, Files, Calculator,
+Actions and AI search sources. All default to enabled. The launcher watches the
+file for changes; these owner switches are separate from whether a tool or device
+is available. Invalid or newer stores are left untouched and use safe defaults.
+`webEngine` selects `duckduckgo` (default), `google` or `brave` for the generic web
+search result. Saved named web searches keep their explicit URLs.

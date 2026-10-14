@@ -1527,6 +1527,8 @@
   "launcher.provider.workspace": "Window workspace description; workspace is dynamic.",
   "launcher.search-panel.placeholderText.search-apps-or-actions": "nacre/shell/modules/launcher/NacreSearchPanel.qml: placeholderText",
   "launcher.search-panel.text.no-matches": "nacre/shell/modules/launcher/NacreSearchPanel.qml: text",
+  "launcher.sources.disabled": "Owner-disabled launcher source; distinct from missing software or hardware.",
+  "launcher.sources.disabled-description": "How to re-enable an owner-disabled launcher prefix.",
   "launcher.updates.available": "Available package updates count; English wording stays unchanged.",
   "launcher.validation.ambiguous-menu-alias": "Launcher catalog validation error, presented in the launcher.",
   "launcher.validation.an-action-needs-a-supported-operation": "Launcher catalog validation error, presented in the launcher.",

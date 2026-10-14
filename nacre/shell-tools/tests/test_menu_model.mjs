@@ -63,3 +63,11 @@ assert.equal(context.ranked(desktopApps,'disc')[1].id,'io.missioncenter.MissionC
 const copiedText={id:"copied-disc",kind:"action",name:"disc",clipboard:true};
 const appDiscord={id:"discord",kind:"app",name:"Discord"};
 assert.equal(context.ranked([copiedText,appDiscord],"disc",{"nacre-menu:copied-disc":{count:1e9,last:Date.now()/1000}},["nacre-menu:copied-disc"])[0].id,"discord");
+
+const sourceSettings=vm.createContext({});
+vm.runInContext(fs.readFileSync(new URL('../../shell/modules/launcher/launcher-sources.js',import.meta.url),'utf8').replace('.pragma library',''),sourceSettings);
+assert.equal(sourceSettings.decode('').webEngine,'duckduckgo');
+assert.equal(sourceSettings.decode(JSON.stringify({version:1,files:false,brain:false,webEngine:'brave'})).files,false);
+for (const text of ['broken',JSON.stringify({version:2,files:false}),JSON.stringify({version:1,files:'false'}),JSON.stringify({version:1,webEngine:'unknown'})]) assert.equal(sourceSettings.decode(text).files,true);
+assert.equal(sourceSettings.webUrl('google','space & value'),'https://www.google.com/search?q=space%20%26%20value');
+assert.equal(sourceSettings.webUrl('brave','space'),'https://search.brave.com/search?q=space');

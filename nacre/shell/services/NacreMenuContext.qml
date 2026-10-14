@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
 import "../modules/launcher/menu-model.js" as Model
+import "../modules/launcher/launcher-sources.js" as Sources
 import "../modules/launcher/app-browser.js" as Legacy
 
 Scope {
@@ -26,6 +27,41 @@ Scope {
             if (success && (operation.startsWith("theme-") || operation === "extension-theme"))
                 NacreWallpapers.refresh();
         }
+    }
+    property var localSourceOptions: Sources.defaults()
+    readonly property var sourceOptions: shared ? shared.sourceOptions : localSourceOptions
+    onSourceOptionsChanged: {
+        if (!sourceOptions.files) {
+            fileWanted = "";
+            fileDelay.stop();
+            fileWorker.running = false;
+            fileRows = [];
+            fileQuery = "";
+        }
+        if (!sourceOptions.brain) {
+            brainWanted = "";
+            brainDelay.stop();
+            brainWorker.running = false;
+            notes = [];
+            brainQuery = "";
+        }
+        if (!sourceOptions.calculator) {
+            conversionWanted = "";
+            conversionDelay.stop();
+            conversionWorker.running = false;
+            conversion = ({
+                    ok: false
+                });
+        }
+    }
+    FileView {
+        path: root.shared ? "" : NacrePaths.config + "/launcher-sources.json"
+        preload: !root.shared
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: root.localSourceOptions = Sources.decode(text())
+        onLoadFailed: root.localSourceOptions = Sources.defaults()
     }
     property var localEmojiCatalog: []
     readonly property var emojiCatalog: shared ? shared.emojiCatalog : localEmojiCatalog
@@ -135,15 +171,15 @@ Scope {
         const scope = Model.scope(query);
         previews.searchEmoji(scope.kind === "all" ? scope.text : "");
         const universal = scope.kind === "all" && scope.text.length >= 2;
-        if (scope.kind === "files" || universal) {
+        if (sourceOptions.files && (scope.kind === "files" || universal)) {
             fileWanted = scope.text;
             fileDelay.restart();
         }
-        if (scope.kind === "calculator" && /\b(to|in)\b/.test(scope.text)) {
+        if (sourceOptions.calculator && scope.kind === "calculator" && /\b(to|in)\b/.test(scope.text)) {
             conversionWanted = scope.text;
             conversionDelay.restart();
         }
-        if (scope.kind === "brain" || universal) {
+        if (sourceOptions.brain && (scope.kind === "brain" || universal)) {
             brainWanted = scope.text;
             brainDelay.restart();
         }
@@ -836,7 +872,7 @@ Scope {
         return result;
     }
     function globalRows(query) {
-        return apps.concat(allStatic(), provider("actions.windows"), provider("actions.clipboard"), fileResults(query), brainRows(query), workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), captureRows());
+        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), captureRows());
     }
     function itemActions(entry) {
         if (!entry)
@@ -967,6 +1003,10 @@ Scope {
     }
     function content(route, query, filter = "all", softwareCategory = "all") {
         const scope = Model.scope(query);
+        if (["brain", "files", "calculator", "actions", "ai"].includes(scope.kind) && sourceOptions[scope.kind] === false)
+            return [valueRow("setup", "source-disabled", NacreI18n.tr("launcher.sources.disabled", "This search source is turned off in Settings"), "info", "sources", "settings", NacreI18n.tr("launcher.sources.disabled-description", "Enable it in Settings to use this prefix"), {
+                    disabled: true
+                })];
         if (scope.kind === "files")
             return fileResults(scope.text);
         if (scope.kind === "calculator")
@@ -1031,7 +1071,7 @@ Scope {
                     value: "? ",
                     icon: "chat"
                 }
-            ];
+            ].filter(row => sourceOptions[row.id.replace("scope-", "")] !== false);
         if (scope.kind === "actions")
             return ranked(allStatic().filter(row => row.kind !== "group"), scope.text);
         if (scope.text) {
@@ -1094,7 +1134,7 @@ Scope {
             return true;
         }
         if (row.operation === "search-web") {
-            AppLaunch.run(["nacre-app", "browser", "https://www.google.com/search?q=" + encodeURIComponent(row.value)]);
+            AppLaunch.run(["nacre-app", "browser", Sources.webUrl(sourceOptions.webEngine, row.value)]);
             return true;
         }
         record(row);
@@ -1209,6 +1249,8 @@ Scope {
             return true;
         }
         if (["install-package", "remove-package"].includes(operation)) {
+            if (!snapshot.capabilities.packages)
+                return false;
             terminal(operation === "install-package" ? "install" : "remove", value, (operation === "install-package" ? "Install " : "Remove ") + row.name);
             return true;
         }

@@ -34,7 +34,7 @@ NacreSurface {
     property var activePrompt: null
     readonly property string query: search?.text || ""
     readonly property var scope: Menu.scope(query)
-    readonly property bool calculation: scope.kind === "calculator"
+    readonly property bool calculation: scope.kind === "calculator" && root.menu.sourceOptions.calculator
     property bool calculatorAnswerReady: false
     readonly property var calculationResult: {
         if (!calculation)
@@ -1545,7 +1545,7 @@ NacreSurface {
         spacing: 6
         visible: search.visible && !root.picker && !root.query && root.width >= 940
         Repeater {
-            model: ["> Actions", "= Calculate", "# Brain", ": Files", "? AI"]
+            model: [["actions", "> Actions"], ["calculator", "= Calculate"], ["brain", "# Brain"], ["files", ": Files"], ["ai", "? AI"]].filter(row => root.menu.sourceOptions[row[0]]).map(row => row[1])
             delegate: NacreSurface {
                 required property string modelData
                 width: hint.implicitWidth + 14

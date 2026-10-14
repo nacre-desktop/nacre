@@ -32,7 +32,7 @@ def stage(target):
         stage_qml(
             SHELL / "modules/launcher" / (name + ".qml"), target / (name + ".qml")
         )
-    for name in ("menu-model.js", "app-browser.js", "calculator.js"):
+    for name in ("menu-model.js", "app-browser.js", "calculator.js", "launcher-sources.js"):
         shutil.copy2(SHELL / "modules/launcher" / name, target / name)
     stage_qml(SHELL / "services/NacreMenu.qml", fixtures / "NacreMenu.qml")
     stage_qml(
@@ -56,7 +56,7 @@ def stage(target):
     menu_data = json.dumps(json.dumps(catalog))
     emoji_data = json.dumps((TOOLS / "emoji-catalog.json").read_text())
     (fixtures / "FileView.qml").write_text(
-        'import QtQuick\nQtObject {property string path: "";property bool preload:false;property bool printErrors:false;property bool watchChanges:false;signal loaded();signal fileChanged();function reload(){loaded()}function text(){return path.includes("/shell/tools/launcher-menu.json") ? '
+        'import QtQuick\nQtObject {property string path: "";property bool preload:false;property bool printErrors:false;property bool watchChanges:false;signal loaded();signal loadFailed();signal fileChanged();function reload(){loaded()}function text(){return path.includes("/shell/tools/launcher-menu.json") ? '
         + menu_data
         + ' : path.endsWith("/emoji-catalog.json") ? '
         + emoji_data

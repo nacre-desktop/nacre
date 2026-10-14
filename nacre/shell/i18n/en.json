@@ -1539,6 +1539,8 @@
   "launcher.provider.workspace": "Workspace {workspace}",
   "launcher.search-panel.placeholderText.search-apps-or-actions": "Search apps or > actions",
   "launcher.search-panel.text.no-matches": "No matches",
+  "launcher.sources.disabled": "This search source is turned off in Settings",
+  "launcher.sources.disabled-description": "Enable it in Settings to use this prefix",
   "launcher.updates.available": {
     "one": "{count} available",
     "other": "{count} available"
