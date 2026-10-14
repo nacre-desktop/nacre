@@ -123,6 +123,11 @@ if backend in {"niri", "both"}:
     )
     assert Path("/usr/share/wayland-sessions/nacre-niri.desktop").is_file()
     assert (home / ".config/systemd/user/nacre-niri.target").is_file()
+    appearance = (home / ".config/nacre/niri/desktop.kdl").read_text()
+    assert "focus-ring { width 1; }" in appearance
+    assert "border { width 1; }" in appearance
+    assert "geometry-corner-radius 10" in appearance
+    assert "active-gradient" in (home / ".config/nacre/niri/palette.kdl").read_text()
     startup = home / ".config/systemd/user/nacre-niri-startup.service"
     assert startup.is_file()
     assert (

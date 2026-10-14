@@ -102,25 +102,27 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
     )
     includes += ["keyboard.kdl", "profile.kdl"]
     desktop_path = home / config / "desktop.kdl"
-    if desktop_path.is_file():
+    if desktop_path.is_file() and desktop_path.read_text().strip():
         desktop = desktop_path.read_text()
     else:
+        # The preview installer emitted an empty file on a fresh account. Seed
+        # real Nacre geometry there too; never import another host's monitors.
+        values = json.loads(
+            (root / "nacre/shell-tools/desktop-defaults.json").read_text()
+        )
         preferences = home / ".config/nacre/desktop.json"
-        desktop = ""
+        backend = module(
+            root / "nacre/shell-tools/nacre_native_compositor.py",
+            "package_niri_preferences",
+        )
         if preferences.is_file():
-            backend = module(
-                root / "nacre/shell-tools/nacre_native_compositor.py",
-                "package_niri_preferences",
-            )
-            values = json.loads(preferences.read_text())
-            desktop = backend.render_for_backend(
-                "niri", "render_desktop_options", values
-            )
-            monitors = values.get("compositorDisplays", {}).get("niri")
-            if monitors is not None:
-                desktop += backend.render_for_backend(
-                    "niri", "render_monitors", monitors
-                )
+            values.update(json.loads(preferences.read_text()))
+        desktop = "prefer-no-csd\n" + backend.render_for_backend(
+            "niri", "render_desktop_options", values
+        )
+        monitors = values.get("compositorDisplays", {}).get("niri")
+        if monitors is not None:
+            desktop += backend.render_for_backend("niri", "render_monitors", monitors)
     add(config / "desktop.kdl", desktop)
     includes.append("desktop.kdl")
     # Orient owns later palette updates. Seed this only if the user has none yet.

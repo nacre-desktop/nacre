@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import hashlib
 import contextlib
 import io
 import os
@@ -401,6 +402,11 @@ class PackageSetupTests(unittest.TestCase):
             json.dumps({"revision": "fixture", "compositors": ["hyprland", "niri"]})
         )
         shutil.copy2(TOOLS / "package_niri.py", root / "tools/package_niri.py")
+        for name in ("desktop-defaults.json", "nacre_native_compositor.py"):
+            shutil.copy2(
+                TOOLS.parent / "nacre/shell-tools" / name,
+                root / "nacre/shell-tools" / name,
+            )
         compiler = load(
             TOOLS.parent / "nacre/shell-tools/nacre_native_config.py",
             "test_setup_native",
@@ -474,6 +480,14 @@ class PackageSetupTests(unittest.TestCase):
                 )
                 self.assertIn('include "desktop.kdl"', config.read_text())
                 self.assertIn('include "palette.kdl"', config.read_text())
+                appearance = (config.parent / "desktop.kdl").read_text()
+                self.assertIn("focus-ring { width 1; }", appearance)
+                self.assertIn("border { width 1; }", appearance)
+                self.assertIn("geometry-corner-radius 10", appearance)
+                self.assertIn("prefer-no-csd", appearance)
+                self.assertIn(
+                    "active-gradient", (config.parent / "palette.kdl").read_text()
+                )
                 self.assertIn(
                     'spawn-at-startup "systemctl" "--user" "start" "nacre-niri-startup.service"',
                     config.read_text(),
@@ -554,6 +568,43 @@ class PackageSetupTests(unittest.TestCase):
                 # Preparing only one later must retain the other session's files.
                 releases.deploy_package(root, profile, {"layout": "us"}, "niri")
                 self.assertTrue((home / ".config/hypr/conf/autostart.lua").is_file())
+
+    def test_niri_empty_preview_appearance_upgrades_and_keeps_saved_choices(self):
+        for saved in (None, {"borderSize": 2, "rounding": 7, "shadow": False}):
+            with self.subTest(saved=saved), tempfile.TemporaryDirectory() as folder:
+                root, home, profile = self.niri_fixture(folder)
+                relative = ".config/nacre/niri/desktop.kdl"
+                desktop = home / relative
+                desktop.parent.mkdir(parents=True)
+                desktop.write_text("")
+                known = home / ".local/state/nacre/configuration.json"
+                known.parent.mkdir(parents=True)
+                known.write_text(
+                    json.dumps({relative: hashlib.sha256(b"").hexdigest()})
+                )
+                preferences = home / ".config/nacre/desktop.json"
+                if saved is not None:
+                    preferences.write_text(json.dumps(saved))
+                with (
+                    patch.object(releases, "HOME", home),
+                    patch.object(releases, "STATE", home / "releases"),
+                ):
+                    record = releases.deploy_package(
+                        root, profile, {"layout": "no"}, "niri"
+                    )
+                    width, rounding = (1, 10) if saved is None else (2, 7)
+                    self.assertIn(
+                        f"focus-ring {{ width {width}; }}", desktop.read_text()
+                    )
+                    self.assertIn(
+                        f"geometry-corner-radius {rounding}", desktop.read_text()
+                    )
+                    chosen = desktop.read_bytes()
+                    preferences.write_text('{"borderSize": 4, "rounding": 3}')
+                    releases.deploy_package(root, profile, {"layout": "no"}, "niri")
+                    self.assertEqual(desktop.read_bytes(), chosen)
+                    releases.restore(Path(record["release"]), record)
+                    self.assertEqual(desktop.read_text(), "")
 
     def test_selected_session_dependencies_do_not_force_other_compositors(self):
         with tempfile.TemporaryDirectory() as folder:

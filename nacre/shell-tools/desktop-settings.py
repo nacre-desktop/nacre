@@ -25,42 +25,7 @@ PENDING = STATE.with_name(
     if compositor.backend_name == "niri"
     else "display-pending.json"
 )
-DEFAULTS = dict(
-    animations=True,
-    blur=True,
-    shadow=True,
-    followMouse=True,
-    naturalScroll=True,
-    gapsIn=6,
-    gapsOut=12,
-    borderSize=1,
-    rounding=10,
-    frameWidth=10,
-    frameRounding=25,
-    frameSheen=True,
-    workspaceWindowHints=True,
-    detachablePanels=True,
-    dragPanels=True,
-    topEdge=True,
-    clickEdgeMenus=False,
-    leftEdge=True,
-    rightEdge=True,
-    bottomEdge=True,
-    leftDrawer=True,
-    livePreviews=True,
-    nativePalette=True,
-    nativeOverview=True,
-    nativeClipboard=True,
-    dnd=False,
-    lockMedia=True,
-    lockWeather=True,
-    lockNotifications=True,
-    lockNotificationContents=False,
-    weatherLocation="",
-    weatherFahrenheit=False,
-    interfaceFont="",
-    language="system",
-)
+DEFAULTS = json.loads(Path(__file__).with_name("desktop-defaults.json").read_text())
 PRESET_KEYS = [
     key
     for key in DEFAULTS
