@@ -147,3 +147,9 @@ Compositor-compat retains five original runtime parity cases, 27 frozen dispatch
 cases and eight original wrapper assertions. Existing script names keep working;
 the wrapper invokes the native helper and does not start Python. Managed upgrade
 pruning backs up the removed Python file; edited private files retain drift protection.
+
+Launcher emoji queries use the standalone `launcher-workflows emoji QUERY` mode.
+It searches the shipped Unicode/CLDR catalog and returns at most 100 entries.
+Each launcher owns a debounced worker and rejects replies for an older query;
+ordinary app results remain available while the lookup runs. Unchanged workflow
+status replies do not publish another model update.

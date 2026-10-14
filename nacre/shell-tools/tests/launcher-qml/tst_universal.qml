@@ -30,6 +30,10 @@ TestCase {
             "webapps": []
         };
         NacreMenu.message = "";
+        const emojiWorker = findChild(NacreMenu.previews, "launcherEmojiSearch");
+        if (emojiWorker)
+            emojiWorker.running = false;
+        NacreMenu.previews.searchEmoji("");
         NacreMenu.workflows.data = {
             entries: [],
             projects: [],
@@ -230,6 +234,16 @@ TestCase {
     }
     function test_full_emoji_catalog_and_stop_are_available_during_other_work() {
         tryVerify(() => NacreMenu.emojiCatalog.length === 3944);
+        const penguin = NacreMenu.emojiCatalog.find(row => row.value === "🐧");
+        NacreMenu.prepare("home", "penguin");
+        const search = findChild(NacreMenu.previews, "launcherEmojiSearch");
+        verify(search !== null);
+        tryVerify(() => search.running && search.query === "penguin");
+        search.stdout.text = JSON.stringify({
+            entries: [penguin]
+        });
+        search.stdout.streamFinished();
+        search.finish();
         const emoji = NacreMenu.provider("actions.emoji", "penguin").find(row => row.name === "penguin");
         verify(emoji !== undefined);
         compare(emoji.emoji, "🐧");
@@ -240,6 +254,72 @@ TestCase {
         worker.running = false;
         findChild(NacreMenu.workflows, "launcherRecordingStop").running = false;
     }
+    function test_unchanged_workflow_status_does_not_rebuild_search_models() {
+        const worker = findChild(NacreMenu.workflows, "launcherWorkflowLoad");
+        verify(worker !== null);
+        let changes = 0;
+        const changed = () => changes++;
+        NacreMenu.workflows.dataChanged.connect(changed);
+        try {
+            worker.stdout.text = JSON.stringify(NacreMenu.workflows.data);
+            worker.stdout.streamFinished();
+            compare(changes, 0);
+            const update = Object.assign({}, NacreMenu.workflows.data, {
+                ready: true
+            });
+            worker.stdout.text = JSON.stringify(update);
+            worker.stdout.streamFinished();
+            compare(changes, 1);
+            worker.stdout.streamFinished();
+            compare(changes, 1);
+        } finally {
+            NacreMenu.workflows.dataChanged.disconnect(changed);
+        }
+    }
+
+    function test_emoji_search_keeps_apps_immediate_and_discards_stale_results() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        const search = findChild(value.menu.previews, "launcherEmojiSearch");
+        search.running = false;
+        field.text = "editor";
+        compare(value.entries[0].name, "Editor");
+        value.menu.prepare(value.route, value.query);
+        tryVerify(() => search.running && search.query === "editor");
+        const pending = value.menu.previews;
+        field.text = "penguin";
+        value.menu.prepare(value.route, value.query);
+        search.stdout.text = JSON.stringify({
+            entries: [
+                {
+                    value: "😀",
+                    name: "wrong old match",
+                    aliases: []
+                }
+            ]
+        });
+        search.stdout.streamFinished();
+        compare(pending.emojiMatches.length, 0);
+        search.finish();
+        tryVerify(() => search.running && search.query === "penguin");
+        search.stdout.text = JSON.stringify({
+            entries: [
+                {
+                    value: "🐧",
+                    name: "penguin",
+                    aliases: ["bird"]
+                }
+            ]
+        });
+        search.stdout.streamFinished();
+        search.finish();
+        verify(value.entries.some(row => row.emoji === "🐧"));
+        field.text = "";
+        value.menu.prepare(value.route, value.query);
+        compare(pending.emojiWanted, "");
+        search.stdout.streamFinished();
+        compare(pending.emojiMatches.length, 0);
+    }
+
     function test_toggle_keeps_english_geometry_and_expands_wrapped_translations() {
         const previousLanguage = NacreI18n.language;
         try {

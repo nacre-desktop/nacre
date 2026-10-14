@@ -196,9 +196,12 @@ function distance(a, b, limit) {
     }, (_, i) => i);
     for (let i = 1; i <= a.length; i++) {
         const next = [i];
-        for (let j = 1; j <= b.length; j++)
+        let minimum = i;
+        for (let j = 1; j <= b.length; j++) {
             next[j] = Math.min(next[j - 1] + 1, prior[j] + 1, prior[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-        if (Math.min(...next) > limit)
+            minimum = Math.min(minimum, next[j]);
+        }
+        if (minimum > limit)
             return limit + 1;
         prior = next;
     }

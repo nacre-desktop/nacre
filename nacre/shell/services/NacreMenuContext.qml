@@ -111,6 +111,7 @@ Scope {
         if (route.startsWith("health"))
             Maintenance.refresh();
         const scope = Model.scope(query);
+        previews.searchEmoji(scope.kind === "all" ? scope.text : "");
         const universal = scope.kind === "all" && scope.text.length >= 2;
         if (scope.kind === "files" || universal) {
             fileWanted = scope.text;
@@ -305,7 +306,7 @@ Scope {
                 }));
         if (node.provider === "emoji") {
             if (query)
-                return emojiRows;
+                return previews.emojiQuery === query ? previews.emojiMatches.map(emojiRow) : [];
             const recent = LauncherPreferences.recent || [];
             return emojiRows.slice().sort((a, b) => {
                 const favorite = Number(LauncherPreferences.favorites.includes(Model.stable(b))) - Number(LauncherPreferences.favorites.includes(Model.stable(a)));
@@ -345,14 +346,15 @@ Scope {
                 })) : [];
         return [];
     }
-    readonly property var emojiRows: shared ? shared.emojiRows : (emojiCatalog.length ? emojiCatalog : NacreI18n.localize(emojiData)).map(entry => {
+    function emojiRow(entry) {
         const row = valueRow("actions.emoji", Qt.md5(entry.value), entry.name, "copy", entry.value, "mood", entry.category || NacreI18n.tr("launcher.provider.copy-this-emoji", "Copy this emoji"), {
             emoji: entry.value,
             aliases: [entry.value, ...(entry.aliases || [])]
         });
         row.searchIndex = Model.searchIndex(row);
         return row;
-    })
+    }
+    readonly property var emojiRows: shared ? shared.emojiRows : (emojiCatalog.length ? emojiCatalog : NacreI18n.localize(emojiData)).map(emojiRow)
     readonly property var emojiData: [
         {
             value: "😀",
@@ -557,7 +559,9 @@ Scope {
     ]
     function favorites() {
         const needed = rows.filter(row => row.provider && LauncherPreferences.favorites.some(id => id.startsWith("nacre-menu:" + row.id + ".")));
-        const candidates = allStatic().concat(workflowRows(), ...needed.map(row => provider(row.id)));
+        let candidates = allStatic().concat(workflowRows());
+        for (const row of needed)
+            candidates = candidates.concat(provider(row.id));
         return Model.alphabetical(LauncherPreferences.favorites.map(id => Model.favorite(id, apps, candidates, legacy)).filter(Boolean));
     }
     function recent() {

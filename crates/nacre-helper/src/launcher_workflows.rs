@@ -33,6 +33,69 @@ fn read(path: &Path, fallback: Value) -> Result<Value> {
 fn defaults() -> Value {
     json!({"version":1,"entries":[],"roots":[]})
 }
+fn normalized_search(value: &str) -> String {
+    value
+        .to_lowercase()
+        .replace(['-', '_', ':'], " ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+fn emoji_search(query: &str) -> Result<Value> {
+    if query.chars().count() > 160 || query.contains('\0') {
+        return Err("Emoji search is too long".into());
+    }
+    let term = normalized_search(query);
+    let words: Vec<_> = term.split_whitespace().collect();
+    let catalog: Value = serde_json::from_str(include_str!(
+        "../../../nacre/shell-tools/emoji-catalog.json"
+    ))?;
+    let mut matches = Vec::new();
+    for (index, entry) in catalog["entries"].as_array().unwrap().iter().enumerate() {
+        let name = normalized_search(entry["name"].as_str().unwrap_or(""));
+        let mut aliases: Vec<_> = entry["aliases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(Value::as_str)
+            .map(normalized_search)
+            .collect();
+        aliases.push(entry["value"].as_str().unwrap_or("").to_owned());
+        let haystack = format!(
+            "{name} {} actions emoji {}",
+            normalized_search(entry["category"].as_str().unwrap_or("")),
+            aliases.join(" ")
+        );
+        let initials: String = name
+            .split(|c: char| !c.is_ascii_alphanumeric())
+            .filter_map(|word| word.chars().next())
+            .collect();
+        // CLDR supplies synonyms and keywords. Keep this full-catalog lookup
+        // literal and bounded; edit-distance matching remains for app names.
+        let score = if term.is_empty() {
+            1
+        } else if name == term {
+            120
+        } else if name.starts_with(&term) {
+            100
+        } else if aliases.contains(&term) {
+            89
+        } else if words.iter().all(|word| name.contains(word)) {
+            85
+        } else if term.len() >= 2 && initials.starts_with(&term) {
+            80
+        } else if words.iter().all(|word| haystack.contains(word)) {
+            55
+        } else {
+            continue;
+        };
+        matches.push((score, index, entry));
+    }
+    matches.sort_by_key(|(score, index, _)| (std::cmp::Reverse(*score), *index));
+    Ok(
+        json!({"entries":matches.into_iter().take(100).map(|(_, _, entry)|entry).collect::<Vec<_>>()}),
+    )
+}
 fn configuration(paths: &Paths) -> Result<Value> {
     let value = read(&paths.config.join("launcher-workflows.json"), defaults())?;
     if value["version"] != 1 || !value["entries"].is_array() || !value["roots"].is_array() {
@@ -852,6 +915,7 @@ pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Value> {
         [a, _] if a == "record-stop" => record_stop(&paths),
         [a, _] if a == "qr" => Ok(json!({"message":crate::menu_actions::read_qr_sensitive()?})),
         [a] if a == "load" => load(&paths),
+        [a, v] if a == "emoji" => emoji_search(v),
         [a, v] if a == "preview" => preview(&paths, v),
         [a, v] if a == "save" => save(&paths, v, &input.ok_or("Missing form input")?),
         [a, v] if a == "remove" => remove(&paths, v),
@@ -885,6 +949,28 @@ pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn emoji_search_uses_unicode_keywords_and_bounds_results() -> Result<()> {
+        let happy = emoji_search("happy")?;
+        assert!(happy["entries"].as_array().unwrap().len() > 1);
+        assert_eq!(happy["entries"][0]["value"], "😀");
+        assert_eq!(emoji_search("UK")?["entries"][0]["value"], "🇬🇧");
+        assert_eq!(emoji_search("🦄")?["entries"][0]["name"], "unicorn");
+        assert!(
+            emoji_search("emoji happy")?["entries"]
+                .as_array()
+                .unwrap()
+                .len()
+                > 1
+        );
+        assert_eq!(
+            emoji_search("face")?["entries"].as_array().unwrap().len(),
+            100
+        );
+        assert!(emoji_search(&"x".repeat(161)).is_err());
+        assert!(emoji_search("\0").is_err());
+        Ok(())
+    }
     #[test]
     fn saved_argv_is_literal_and_invalid_forms_do_not_replace_configuration() -> Result<()> {
         let dir = tempfile::tempdir()?;

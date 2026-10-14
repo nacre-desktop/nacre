@@ -56,6 +56,7 @@ Scope {
     }
     Process {
         id: loader
+        objectName: "launcherWorkflowLoad"
         command: [root.helper, "launcher-workflows", "load"]
         stdout: StdioCollector {
             onStreamFinished: {
@@ -63,7 +64,7 @@ Scope {
                     const value = JSON.parse(text);
                     if (value.error)
                         root.message = value.error;
-                    else
+                    else if (JSON.stringify(root.data) !== JSON.stringify(value))
                         root.data = value;
                 } catch (error) {
                     root.message = NacreI18n.tr("launcher.workflows.read-error", "Could not read launcher workflows");
