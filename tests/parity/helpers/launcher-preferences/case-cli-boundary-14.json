@@ -1,0 +1,9 @@
+{
+  "helper": "launcher-preferences",
+  "args": [
+    "--",
+    "load"
+  ],
+  "compare_stderr": true,
+  "reference_source_sha256": "b5848daa56e12c49d582d2b54a42201ee666b37dd97056726d68ffb8126da0f2"
+}

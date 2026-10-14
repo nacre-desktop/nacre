@@ -27,7 +27,7 @@ Singleton {
     function next() {
         if (!worker.running && pending.length) {
             worker.change = pending.shift();
-            worker.command = ["python3", NacrePaths.tools + "/launcher-preferences.py", worker.change.action];
+            worker.command = [NacrePaths.helperBinary, "launcher-preferences", worker.change.action];
             worker.running = true;
         }
     }
@@ -65,7 +65,7 @@ Singleton {
         id: reader
 
         running: true
-        command: ["python3", NacrePaths.tools + "/launcher-preferences.py", "load"]
+        command: [NacrePaths.helperBinary, "launcher-preferences", "load"]
         onExited: {
             root.ready = true;
             watcher.reload();

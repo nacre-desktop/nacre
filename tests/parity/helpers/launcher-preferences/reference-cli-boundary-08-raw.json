@@ -1,0 +1,38 @@
+{
+  "stdout": {
+    "favorites": [],
+    "hidden": [],
+    "recent": [
+      "fixture.desktop"
+    ],
+    "usage": {
+      "fixture.desktop": {
+        "count": 1,
+        "last": 1791951812.655379
+      }
+    }
+  },
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/launcher.json": {
+      "mode": "0o600",
+      "text": "{\"favorites\": [], \"hidden\": [], \"recent\": [\"fixture.desktop\"], \"usage\": {\"fixture.desktop\": {\"count\": 1, \"last\": 1791951812.655379}}}"
+    },
+    "home/.config/nacre/launcher.lock": {
+      "mode": "0o600",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": ""
+}

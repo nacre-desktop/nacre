@@ -1,0 +1,9 @@
+{
+  "stdout": "usage: launcher-preferences.py [-h] {load,favorite,hide,record}\n\npositional arguments:\n  {load,favorite,hide,record}\n\noptions:\n  -h, --help            show this help message and exit\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": ""
+}

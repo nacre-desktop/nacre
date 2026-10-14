@@ -1,0 +1,9 @@
+{
+  "stdout": null,
+  "exit": 2,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": "usage: launcher-preferences.py [-h] {load,favorite,hide,record}\nlauncher-preferences.py: error: unrecognized arguments: extra\n"
+}
