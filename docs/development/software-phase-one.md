@@ -72,3 +72,16 @@ foreign data is preserved. Generated launchers have a unique ownership marker.
 Removal deletes only the selected registered launcher and leaves the terminal,
 command program and application data installed. Commands use literal argv,
 including arguments containing shell metacharacters; no shell is implied.
+
+## Curated fonts
+
+Style → Interface font includes JetBrains Mono, Fira Code, Cascadia Code,
+Iosevka, Victor Mono and Meslo, plus packaged Nerd variants. Repository labels
+and capability checks distinguish official packages from AUR. Missing fonts
+open a confirmed, visible package-manager action. Installed families select
+through the existing `desktop.interfaceFont` Settings descriptor and provider;
+no competing font preference is introduced. Installed families keep their prior
+stable IDs. Package names and Fontconfig family aliases are separate, and
+ordinary search also finds the font offers. This selection changes the shell's
+interface family; the planned terminal/monospace publisher is not implemented
+by this item.

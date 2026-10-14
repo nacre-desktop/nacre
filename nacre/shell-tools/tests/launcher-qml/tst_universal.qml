@@ -427,6 +427,34 @@ TestCase {
         value.cancelForm();
     }
 
+    function test_curated_fonts_install_or_select_discovered_family_without_duplicates() {
+        const value = view();
+        value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
+            fonts: ["JetBrains Mono", "FiraCode Nerd Font", "Other Font"],
+            capabilities: {
+                packages: true,
+                aur: false
+            }
+        });
+        value.navigate("style.fonts");
+        const jetbrains = value.entries.find(row => row.name === "JetBrains Mono");
+        compare(jetbrains.operation, "font");
+        compare(jetbrains.value, "JetBrains Mono");
+        compare(value.entries.filter(row => row.value === "JetBrains Mono").length, 1);
+        const fira = value.entries.find(row => row.name === "Fira Code Nerd");
+        compare(fira.value, "FiraCode Nerd Font");
+        const missing = value.entries.find(row => row.name === "Cascadia Code");
+        compare(missing.operation, "install-package");
+        verify(!!missing.confirm);
+        const aur = value.entries.find(row => row.name === "Victor Mono");
+        verify(aur.disabled);
+        value.menu.execute(jetbrains);
+        compare(DesktopSettings.data.interfaceFont, "JetBrains Mono");
+        value.navigate("software.development");
+        findChild(value, "launcherSearch").text = "meslo";
+        verify(value.entries.some(row => row.name === "Meslo Nerd"));
+    }
+
     function test_tui_creation_literal_arguments_search_and_removal() {
         const value = view();
         value.menu.library.data = Object.assign({}, value.menu.library.data, {

@@ -100,6 +100,7 @@ function merge(baseText, userText) {
             return {
                 rows: visibleRows(candidate),
                 software: base.software || [],
+                fonts: base.fonts || [],
                 error: ""
             };
         } catch (failure) {
@@ -112,6 +113,7 @@ function merge(baseText, userText) {
     return {
         rows: visibleRows(rows),
         software: base.software || [],
+        fonts: base.fonts || [],
         error: error
     };
 }

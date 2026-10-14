@@ -3227,5 +3227,8 @@
   "software.tui.kitty": "Kitty",
   "software.tui.foot": "Foot",
   "software.tui.alacritty": "Alacritty",
-  "software.tui.wezterm": "WezTerm"
+  "software.tui.wezterm": "WezTerm",
+  "software.fonts.choose": "Preview and select this interface font",
+  "software.fonts.install": "Install this font package in a visible terminal",
+  "software.fonts.confirm": "Open the package manager to install {font}? Administrator permission may be required."
 }

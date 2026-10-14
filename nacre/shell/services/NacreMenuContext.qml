@@ -348,15 +348,7 @@ Scope {
                     status: entry.accent === NacreWallpapers.selectedAccent ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : ""
                 }));
         if (node.provider === "fonts")
-            return [valueRow(route, "default", NacreI18n.tr("launcher.provider.nacre-default", "Nacre default"), "font", "", "text_fields", NacreI18n.tr("ui.menu-context.description.ibm-plex-sans", "{font}", {
-                    font: "IBM Plex Sans"
-                }), {
-                    checked: !DesktopSettings.data.interfaceFont
-                }), ...(snapshot.fonts || []).map(name => valueRow(route, Qt.md5(name), name, "font", name, "text_fields", NacreI18n.tr("launcher.provider.preview-this-interface-font", "Preview this interface font"), {
-                        previewFont: name,
-                        disabled: name.length > 80,
-                        checked: DesktopSettings.data.interfaceFont === name
-                    }))];
+            return fontRows();
         if (node.provider === "windows")
             return windowSearchRecords.map(client => valueRow(route, String(client.windowId), NacreI18n.windowCaption(client.title || client.wmClass, client.wmClass), "focus", client.windowId, "window", NacreI18n.tr("launcher.provider.workspace", "Workspace {workspace}", {
                     workspace: client.workspaceName
@@ -933,6 +925,41 @@ Scope {
             }
         }
         return result;
+    }
+    function fontRows() {
+        const curated = catalog.fonts || [];
+        const rows = [valueRow("style.fonts", "default", NacreI18n.tr("launcher.provider.nacre-default", "Nacre default"), "font", "", "text_fields", NacreI18n.tr("ui.menu-context.description.ibm-plex-sans", "{font}", {
+                font: "IBM Plex Sans"
+            }), {
+                checked: !DesktopSettings.data.interfaceFont
+            })];
+        const used = new Set();
+        for (const item of curated) {
+            const family = (snapshot.fonts || []).find(name => item.families.some(alias => Model.normalized(alias) === Model.normalized(name)));
+            if (family)
+                used.add(family);
+            const aur = item.repository === "AUR" && !snapshot.capabilities.aur;
+            const disabled = family ? false : !snapshot.capabilities.packages || aur;
+            rows.push(valueRow("style.fonts", Qt.md5(family || item.package), item.name, family ? "font" : "install-package", family || item.package, "text_fields", family ? NacreI18n.tr("software.fonts.choose", "Preview and select this interface font") : NacreI18n.tr("software.fonts.install", "Install this font package in a visible terminal"), {
+                previewFont: family || "",
+                checked: !!family && DesktopSettings.data.interfaceFont === family,
+                aliases: [item.package, ...item.families, "font typeface nerd"],
+                disabled: disabled,
+                status: family ? NacreI18n.tr("ui.menu-context.status.installed", "Installed") : item.repository,
+                reason: aur ? NacreI18n.tr("launcher.install-offer.aur", "Requires paru or yay for AUR installation") : disabled ? NacreI18n.tr("launcher.disabled.requires-an-arch-compatible-package-manager", "Requires an Arch-compatible package manager") : "",
+                confirm: family ? "" : NacreI18n.tr("software.fonts.confirm", "Open the package manager to install {font}? Administrator permission may be required.", {
+                    font: item.name
+                })
+            }));
+        }
+        for (const family of snapshot.fonts || [])
+            if (!used.has(family))
+                rows.push(valueRow("style.fonts", Qt.md5(family), family, "font", family, "text_fields", NacreI18n.tr("launcher.provider.preview-this-interface-font", "Preview this interface font"), {
+                    previewFont: family,
+                    disabled: family.length > 80,
+                    checked: DesktopSettings.data.interfaceFont === family
+                }));
+        return rows;
     }
     function tuiRows() {
         if (library.data.tui?.error)

@@ -3281,5 +3281,8 @@
   "software.tui.kitty": "Terminal app form or status",
   "software.tui.foot": "Terminal app form or status",
   "software.tui.alacritty": "Terminal app form or status",
-  "software.tui.wezterm": "Terminal app form or status"
+  "software.tui.wezterm": "Terminal app form or status",
+  "software.fonts.choose": "Curated font selection or installation",
+  "software.fonts.install": "Curated font selection or installation",
+  "software.fonts.confirm": "Curated font selection or installation"
 }

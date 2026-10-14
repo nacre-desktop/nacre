@@ -2733,5 +2733,112 @@
       "labelId": "launcher.catalog.chatgpt.label",
       "descriptionId": "launcher.catalog.chatgpt.description"
     }
+  ],
+  "fonts": [
+    {
+      "name": "JetBrains Mono",
+      "package": "ttf-jetbrains-mono",
+      "repository": "extra",
+      "families": [
+        "JetBrains Mono"
+      ]
+    },
+    {
+      "name": "JetBrains Mono Nerd",
+      "package": "ttf-jetbrains-mono-nerd",
+      "repository": "extra",
+      "families": [
+        "JetBrainsMono Nerd Font",
+        "JetBrainsMono NF"
+      ]
+    },
+    {
+      "name": "Fira Code",
+      "package": "ttf-fira-code",
+      "repository": "extra",
+      "families": [
+        "Fira Code"
+      ]
+    },
+    {
+      "name": "Fira Code Nerd",
+      "package": "ttf-firacode-nerd",
+      "repository": "extra",
+      "families": [
+        "FiraCode Nerd Font",
+        "FiraCode NF"
+      ]
+    },
+    {
+      "name": "Cascadia Code",
+      "package": "ttf-cascadia-code",
+      "repository": "extra",
+      "families": [
+        "Cascadia Code"
+      ]
+    },
+    {
+      "name": "Cascadia Code Nerd",
+      "package": "ttf-cascadia-code-nerd",
+      "repository": "extra",
+      "families": [
+        "CaskaydiaCove Nerd Font",
+        "CaskaydiaCove NF"
+      ]
+    },
+    {
+      "name": "Iosevka",
+      "package": "ttf-iosevka",
+      "repository": "AUR",
+      "families": [
+        "Iosevka"
+      ]
+    },
+    {
+      "name": "Iosevka Nerd",
+      "package": "ttf-iosevka-nerd",
+      "repository": "extra",
+      "families": [
+        "Iosevka Nerd Font",
+        "Iosevka NF"
+      ]
+    },
+    {
+      "name": "Victor Mono",
+      "package": "ttf-victor-mono",
+      "repository": "AUR",
+      "families": [
+        "Victor Mono"
+      ]
+    },
+    {
+      "name": "Victor Mono Nerd",
+      "package": "ttf-victor-mono-nerd",
+      "repository": "extra",
+      "families": [
+        "VictorMono Nerd Font",
+        "VictorMono NF"
+      ]
+    },
+    {
+      "name": "Meslo",
+      "package": "ttf-meslo",
+      "repository": "AUR",
+      "families": [
+        "Meslo LG S",
+        "Meslo LG M",
+        "Meslo LG L"
+      ]
+    },
+    {
+      "name": "Meslo Nerd",
+      "package": "ttf-meslo-nerd",
+      "repository": "extra",
+      "families": [
+        "MesloLGS Nerd Font",
+        "MesloLGM Nerd Font",
+        "MesloLGL Nerd Font"
+      ]
+    }
   ]
 }
