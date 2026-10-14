@@ -1,18 +1,13 @@
 """Only real managed sessions count; observations never claim operator unlock."""
 
 import hashlib
-import importlib.util
 import json
 from pathlib import Path
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location(
-    "niri_acceptance_monitor", ROOT / "uwsm/tools/niri-acceptance-monitor.py"
-)
-monitor = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(monitor)
+import native_niri_acceptance_monitor as monitor
 
 
 def sample(compositor, shell=False, idle=False, socket=False):

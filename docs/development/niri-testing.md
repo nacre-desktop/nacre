@@ -123,7 +123,7 @@ TTY/SDDM switching and phase 2 are therefore deferred; the prepared niri alias
 currently opens plain niri, not the new Nacre backend. The task remains incomplete
 until the real cycle and phase-2 checklist pass.
 
-A bounded private recorder is provided in `uwsm/tools/niri-acceptance-monitor.py`.
+A bounded private recorder is provided by `nacre-helper niri-acceptance-monitor`.
 It observes actual UWSM compositor units and activation booleans, rejecting a nested
 socket as evidence of a real niri login. It runs as the normal user in a temporary
 system service, outside the graphical lifecycle. It does not change linger, claim
@@ -138,7 +138,7 @@ sudo systemd-run --unit=nacre-niri-acceptance-monitor --collect \
   --property=RuntimeMaxSec=7200 \
   --setenv=XDG_RUNTIME_DIR="/run/user/$(id -u)" \
   --setenv=DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus" \
-  /usr/bin/python3 "$HOME/.local/share/nacre/niri-on-pc/niri-acceptance-monitor.py" \
+  "$HOME/.local/share/nacre/shell/tools/nacre-helper" niri-acceptance-monitor \
   --seconds 7200
 ```
 

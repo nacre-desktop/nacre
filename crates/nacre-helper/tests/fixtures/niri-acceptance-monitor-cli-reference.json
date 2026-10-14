@@ -1,0 +1,55 @@
+{
+  "cases": [
+    {
+      "args": [
+        "--help"
+      ],
+      "stdout": "usage: niri-acceptance-monitor.py [-h] [--seconds SECONDS]\n\nPrivate, bounded observation of a real Hyprland \u2192 niri \u2192 Hyprland cycle.\n\noptions:\n  -h, --help         show this help message and exit\n  --seconds SECONDS\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--seconds",
+        "9"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-acceptance-monitor.py [-h] [--seconds SECONDS]\nniri-acceptance-monitor.py: error: Observation duration must be between 10 and 7200 seconds\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--seconds",
+        "7201"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-acceptance-monitor.py [-h] [--seconds SECONDS]\nniri-acceptance-monitor.py: error: Observation duration must be between 10 and 7200 seconds\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--seconds",
+        "bad"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-acceptance-monitor.py [-h] [--seconds SECONDS]\nniri-acceptance-monitor.py: error: argument --seconds: invalid int value: 'bad'\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--seconds"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-acceptance-monitor.py [-h] [--seconds SECONDS]\nniri-acceptance-monitor.py: error: argument --seconds: expected one argument\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "unknown"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-acceptance-monitor.py [-h] [--seconds SECONDS]\nniri-acceptance-monitor.py: error: unrecognized arguments: unknown\n",
+      "exit": 2
+    }
+  ]
+}

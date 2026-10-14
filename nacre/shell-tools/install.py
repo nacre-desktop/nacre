@@ -140,9 +140,10 @@ def retire_native_helpers(directory):
     ):
         (directory / (retired + ".py")).unlink(missing_ok=True)
     # The retired prepared-session controller is code, never user state.
-    (directory.parent.parent / "niri-on-pc/niri-session-runtime.py").unlink(
-        missing_ok=True
-    )
+    for name in ("niri-session-runtime", "niri-acceptance-monitor"):
+        (directory.parent.parent / "niri-on-pc" / (name + ".py")).unlink(
+            missing_ok=True
+        )
 
 
 def deploy(code_only=False):

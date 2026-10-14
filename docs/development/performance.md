@@ -1011,3 +1011,19 @@ The runtime replaces itself when launching the compositor or watcher, so it has
 no separate resident helper. No fresh peak RSS, whole-shell action timing,
 aggregate RSS/PSS, idle CPU or launches-per-minute improvement is claimed.
 The quiet-window A/B/A/B gate remains required before Wave 3 lands.
+
+### Wave 2 acceptance recorder (busy machine)
+
+Child CPU accounting measured 100 fresh identical `--help` requests. A separate
+single RSS sample came from each observer after its first record write, waiting
+for an absent private bus with external tools removed from PATH. Both samples
+followed exec and exclude child processes; they are helper measurements only.
+
+| Helper measurement; busy machine | Python reference | Rust release |
+| --- | ---: | ---: |
+| User + system CPU per fresh parser request (ms) | 121.754 | 2.262 |
+| Direct Python starts in 100 fresh requests | 100 | 0 |
+| Observer RSS while waiting for absent bus (MiB; one sample) | 20.77 | 10.34 |
+
+Managed-session latency, whole-shell RSS/PSS, idle CPU and launches per minute
+remain unmeasured. The earlier quiet-window gate remains mandatory.

@@ -666,5 +666,31 @@
         "helper_rss_mib": null
       }
     }
+  },
+  "wave2_acceptance_busy_machine": {
+    "measurement_condition": "busy machine",
+    "method": "benchmark-helpers.py RUSAGE_CHILDREN delta;100 fresh identical --help calls; private HOME/absent buses; observer RSS from smaps_rollup after first record write (after exec), single snapshot; excludes child processes",
+    "scope": "argument parsing and observer memory while waiting for an absent bus; no managed-session latency/whole-shell memory/idleCPU evidence",
+    "quiet_window_pending": true,
+    "results": {
+      "python": {
+        "calls": 100,
+        "cpu_ms_per_call": 121.75414,
+        "user_ms_per_call": 103.89055,
+        "sys_ms_per_call": 17.863590000000002,
+        "python3_starts_in_fresh_requests": 100,
+        "observer_rss_mib": 20.7734375,
+        "observer_rss_samples": 1
+      },
+      "rust": {
+        "calls": 100,
+        "cpu_ms_per_call": 2.2616199999999997,
+        "user_ms_per_call": 0.5368700000000004,
+        "sys_ms_per_call": 1.7247499999999993,
+        "python3_starts_in_fresh_requests": 0,
+        "observer_rss_mib": 10.3359375,
+        "observer_rss_samples": 1
+      }
+    }
   }
 }

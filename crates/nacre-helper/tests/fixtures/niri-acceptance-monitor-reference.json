@@ -1,0 +1,2051 @@
+{
+  "source_sha256": "3cb484564805015acba2722cc9547848b5cb01d91902dac5c4f806b5c5d25211",
+  "cases": [
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "none",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "none",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "niri",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "none",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland:NIRI",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "none",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "none",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "none",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "niri",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "none",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland:NIRI",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "none",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "hyprland",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "hyprland",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "niri",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "hyprland",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland:NIRI",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "hyprland",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "hyprland",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "hyprland",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "niri",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "hyprland",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland:NIRI",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "hyprland",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": false,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "niri",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "niri",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "niri",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "niri",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland:NIRI",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "niri",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "niri",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "niri",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "niri",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "niri",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "inactive",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland:NIRI",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "niri",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": false,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "ambiguous",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "ambiguous",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "niri",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "ambiguous",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland:NIRI",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "ambiguous",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": false,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "ambiguous",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "ambiguous",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": false,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "niri",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "ambiguous",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": false
+      }
+    },
+    {
+      "operation": "snapshot",
+      "units": [
+        {
+          "Id": "wayland-wm@hyprland.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "10"
+        },
+        {
+          "Id": "wayland-wm@niri.desktop.service",
+          "ActiveState": "active",
+          "MainPID": "11"
+        },
+        {
+          "Id": "nacre-shell.service",
+          "ActiveState": "inactive",
+          "MainPID": "12"
+        },
+        {
+          "Id": "nacre-session-watch.service",
+          "ActiveState": "inactive",
+          "MainPID": "13"
+        },
+        {
+          "Id": "hypridle.service",
+          "ActiveState": "inactive",
+          "MainPID": "14"
+        }
+      ],
+      "environment": {
+        "XDG_CURRENT_DESKTOP": "Hyprland:NIRI",
+        "WAYLAND_DISPLAY": "private-display",
+        "NIRI_SOCKET": "private-socket",
+        "PRIVATE_SECRET": "never serialize"
+      },
+      "observed": {
+        "compositor": "ambiguous",
+        "units": {
+          "wayland-wm@hyprland.desktop.service": true,
+          "wayland-wm@niri.desktop.service": true,
+          "nacre-shell.service": false,
+          "nacre-session-watch.service": false,
+          "hypridle.service": false
+        },
+        "niriSocketPresent": true,
+        "waylandDisplayPresent": true,
+        "desktopIsNiri": true,
+        "desktopIsHyprland": true
+      }
+    },
+    {
+      "operation": "cycle",
+      "samples": [
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": false,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        },
+        {
+          "compositor": "niri",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": false,
+            "wayland-wm@niri.desktop.service": true,
+            "nacre-shell.service": false,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": true,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": true,
+          "desktopIsHyprland": false
+        },
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": true,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        },
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": false,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        }
+      ],
+      "observed": [
+        {
+          "niriSessionObserved": false,
+          "plainNiriIsolated": false,
+          "returnedHyprland": false
+        },
+        {
+          "niriSessionObserved": true,
+          "plainNiriIsolated": true,
+          "returnedHyprland": false
+        },
+        {
+          "niriSessionObserved": true,
+          "plainNiriIsolated": true,
+          "returnedHyprland": false
+        },
+        {
+          "niriSessionObserved": true,
+          "plainNiriIsolated": true,
+          "returnedHyprland": true
+        }
+      ]
+    },
+    {
+      "operation": "cycle",
+      "samples": [
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": false,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        },
+        {
+          "compositor": "niri",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": false,
+            "wayland-wm@niri.desktop.service": true,
+            "nacre-shell.service": false,
+            "nacre-session-watch.service": false,
+            "hypridle.service": true
+          },
+          "niriSocketPresent": true,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": true,
+          "desktopIsHyprland": false
+        },
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": true,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        },
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": false,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        }
+      ],
+      "observed": [
+        {
+          "niriSessionObserved": false,
+          "plainNiriIsolated": false,
+          "returnedHyprland": false
+        },
+        {
+          "niriSessionObserved": true,
+          "plainNiriIsolated": false,
+          "returnedHyprland": false
+        },
+        {
+          "niriSessionObserved": true,
+          "plainNiriIsolated": false,
+          "returnedHyprland": false
+        },
+        {
+          "niriSessionObserved": true,
+          "plainNiriIsolated": false,
+          "returnedHyprland": true
+        }
+      ]
+    },
+    {
+      "operation": "protected_files_match",
+      "variant": "valid",
+      "manifest": "{\"protected\": \"25718360e05d3c2d0963d1381e9dd4dae5fca789244ee4b9f861adcc0cc96218\"}",
+      "observed": true
+    },
+    {
+      "operation": "protected_files_match",
+      "variant": "changed",
+      "manifest": "{\"protected\": \"25718360e05d3c2d0963d1381e9dd4dae5fca789244ee4b9f861adcc0cc96218\"}",
+      "observed": false
+    },
+    {
+      "operation": "protected_files_match",
+      "variant": "empty",
+      "manifest": "{}",
+      "observed": false
+    },
+    {
+      "operation": "protected_files_match",
+      "variant": "invalid-json",
+      "manifest": "invalid",
+      "observed": false
+    },
+    {
+      "operation": "protected_files_match",
+      "variant": "array",
+      "manifest": "[]",
+      "observed": false
+    },
+    {
+      "operation": "protected_files_match",
+      "variant": "absolute",
+      "manifest": "{\"$HOME/protected\": \"bad\"}",
+      "observed": false
+    },
+    {
+      "operation": "protected_files_match",
+      "variant": "escape",
+      "manifest": "{\"../escape\": \"bad\"}",
+      "observed": false
+    },
+    {
+      "operation": "protected_files_match",
+      "variant": "missing-file",
+      "manifest": "{\"missing\": \"bad\"}",
+      "observed": false
+    },
+    {
+      "operation": "run",
+      "variant": "success",
+      "samples": [
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": false,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        },
+        {
+          "compositor": "niri",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": false,
+            "wayland-wm@niri.desktop.service": true,
+            "nacre-shell.service": false,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": true,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": true,
+          "desktopIsHyprland": false
+        },
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": false,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        }
+      ],
+      "seconds": 10,
+      "checked": "2000-01-02T03:04:05.006000+00:00",
+      "observed": {
+        "files": {
+          "acceptance-events.jsonl": {
+            "text": "{\"compositor\": \"hyprland\", \"units\": {\"wayland-wm@hyprland.desktop.service\": true, \"wayland-wm@niri.desktop.service\": false, \"nacre-shell.service\": true, \"nacre-session-watch.service\": false, \"hypridle.service\": false}, \"niriSocketPresent\": false, \"waylandDisplayPresent\": true, \"desktopIsNiri\": false, \"desktopIsHyprland\": true, \"niriSessionObserved\": false, \"plainNiriIsolated\": false, \"returnedHyprland\": false, \"protectedFilesMatch\": true, \"checked\": \"2000-01-02T03:04:05.006000+00:00\"}\n{\"compositor\": \"niri\", \"units\": {\"wayland-wm@hyprland.desktop.service\": false, \"wayland-wm@niri.desktop.service\": true, \"nacre-shell.service\": false, \"nacre-session-watch.service\": false, \"hypridle.service\": false}, \"niriSocketPresent\": true, \"waylandDisplayPresent\": true, \"desktopIsNiri\": true, \"desktopIsHyprland\": false, \"niriSessionObserved\": true, \"plainNiriIsolated\": true, \"returnedHyprland\": false, \"protectedFilesMatch\": true, \"checked\": \"2000-01-02T03:04:05.006000+00:00\"}\n{\"compositor\": \"hyprland\", \"units\": {\"wayland-wm@hyprland.desktop.service\": true, \"wayland-wm@niri.desktop.service\": false, \"nacre-shell.service\": true, \"nacre-session-watch.service\": false, \"hypridle.service\": false}, \"niriSocketPresent\": false, \"waylandDisplayPresent\": true, \"desktopIsNiri\": false, \"desktopIsHyprland\": true, \"niriSessionObserved\": true, \"plainNiriIsolated\": true, \"returnedHyprland\": true, \"protectedFilesMatch\": true, \"checked\": \"2000-01-02T03:04:05.006000+00:00\"}\n",
+            "mode": 384
+          },
+          "acceptance-observed.json": {
+            "text": "{\n  \"compositor\": \"hyprland\",\n  \"units\": {\n    \"wayland-wm@hyprland.desktop.service\": true,\n    \"wayland-wm@niri.desktop.service\": false,\n    \"nacre-shell.service\": true,\n    \"nacre-session-watch.service\": false,\n    \"hypridle.service\": false\n  },\n  \"niriSocketPresent\": false,\n  \"waylandDisplayPresent\": true,\n  \"desktopIsNiri\": false,\n  \"desktopIsHyprland\": true,\n  \"niriSessionObserved\": true,\n  \"plainNiriIsolated\": true,\n  \"returnedHyprland\": true,\n  \"protectedFilesMatch\": true,\n  \"checked\": \"2000-01-02T03:04:05.006000+00:00\"\n}",
+            "mode": 384
+          }
+        },
+        "stdout": "",
+        "stderr": "",
+        "exit": 0
+      }
+    },
+    {
+      "operation": "run",
+      "variant": "isolation-violation",
+      "samples": [
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": false,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        },
+        {
+          "compositor": "niri",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": false,
+            "wayland-wm@niri.desktop.service": true,
+            "nacre-shell.service": false,
+            "nacre-session-watch.service": false,
+            "hypridle.service": true
+          },
+          "niriSocketPresent": true,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": true,
+          "desktopIsHyprland": false
+        },
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": false,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        }
+      ],
+      "seconds": 10,
+      "checked": "2000-01-02T03:04:05.006000+00:00",
+      "observed": {
+        "files": {
+          "acceptance-events.jsonl": {
+            "text": "{\"compositor\": \"hyprland\", \"units\": {\"wayland-wm@hyprland.desktop.service\": true, \"wayland-wm@niri.desktop.service\": false, \"nacre-shell.service\": true, \"nacre-session-watch.service\": false, \"hypridle.service\": false}, \"niriSocketPresent\": false, \"waylandDisplayPresent\": true, \"desktopIsNiri\": false, \"desktopIsHyprland\": true, \"niriSessionObserved\": false, \"plainNiriIsolated\": false, \"returnedHyprland\": false, \"protectedFilesMatch\": true, \"checked\": \"2000-01-02T03:04:05.006000+00:00\"}\n{\"compositor\": \"niri\", \"units\": {\"wayland-wm@hyprland.desktop.service\": false, \"wayland-wm@niri.desktop.service\": true, \"nacre-shell.service\": false, \"nacre-session-watch.service\": false, \"hypridle.service\": true}, \"niriSocketPresent\": true, \"waylandDisplayPresent\": true, \"desktopIsNiri\": true, \"desktopIsHyprland\": false, \"niriSessionObserved\": true, \"plainNiriIsolated\": false, \"returnedHyprland\": false, \"protectedFilesMatch\": true, \"checked\": \"2000-01-02T03:04:05.006000+00:00\"}\n{\"compositor\": \"hyprland\", \"units\": {\"wayland-wm@hyprland.desktop.service\": true, \"wayland-wm@niri.desktop.service\": false, \"nacre-shell.service\": true, \"nacre-session-watch.service\": false, \"hypridle.service\": false}, \"niriSocketPresent\": false, \"waylandDisplayPresent\": true, \"desktopIsNiri\": false, \"desktopIsHyprland\": true, \"niriSessionObserved\": true, \"plainNiriIsolated\": false, \"returnedHyprland\": true, \"protectedFilesMatch\": true, \"checked\": \"2000-01-02T03:04:05.006000+00:00\"}\n",
+            "mode": 384
+          },
+          "acceptance-observed.json": {
+            "text": "{\n  \"compositor\": \"hyprland\",\n  \"units\": {\n    \"wayland-wm@hyprland.desktop.service\": true,\n    \"wayland-wm@niri.desktop.service\": false,\n    \"nacre-shell.service\": true,\n    \"nacre-session-watch.service\": false,\n    \"hypridle.service\": false\n  },\n  \"niriSocketPresent\": false,\n  \"waylandDisplayPresent\": true,\n  \"desktopIsNiri\": false,\n  \"desktopIsHyprland\": true,\n  \"niriSessionObserved\": true,\n  \"plainNiriIsolated\": false,\n  \"returnedHyprland\": true,\n  \"protectedFilesMatch\": true,\n  \"checked\": \"2000-01-02T03:04:05.006000+00:00\"\n}",
+            "mode": 384
+          }
+        },
+        "stdout": "",
+        "stderr": "",
+        "exit": 1
+      }
+    },
+    {
+      "operation": "run",
+      "variant": "changed-file",
+      "samples": [
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": false,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        },
+        {
+          "compositor": "niri",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": false,
+            "wayland-wm@niri.desktop.service": true,
+            "nacre-shell.service": false,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": true,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": true,
+          "desktopIsHyprland": false
+        },
+        {
+          "compositor": "hyprland",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": true,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": true,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": false,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": true
+        }
+      ],
+      "seconds": 10,
+      "checked": "2000-01-02T03:04:05.006000+00:00",
+      "observed": {
+        "files": {
+          "acceptance-events.jsonl": {
+            "text": "{\"compositor\": \"hyprland\", \"units\": {\"wayland-wm@hyprland.desktop.service\": true, \"wayland-wm@niri.desktop.service\": false, \"nacre-shell.service\": true, \"nacre-session-watch.service\": false, \"hypridle.service\": false}, \"niriSocketPresent\": false, \"waylandDisplayPresent\": true, \"desktopIsNiri\": false, \"desktopIsHyprland\": true, \"niriSessionObserved\": false, \"plainNiriIsolated\": false, \"returnedHyprland\": false, \"protectedFilesMatch\": false, \"checked\": \"2000-01-02T03:04:05.006000+00:00\"}\n{\"compositor\": \"niri\", \"units\": {\"wayland-wm@hyprland.desktop.service\": false, \"wayland-wm@niri.desktop.service\": true, \"nacre-shell.service\": false, \"nacre-session-watch.service\": false, \"hypridle.service\": false}, \"niriSocketPresent\": true, \"waylandDisplayPresent\": true, \"desktopIsNiri\": true, \"desktopIsHyprland\": false, \"niriSessionObserved\": true, \"plainNiriIsolated\": true, \"returnedHyprland\": false, \"protectedFilesMatch\": false, \"checked\": \"2000-01-02T03:04:05.006000+00:00\"}\n{\"compositor\": \"hyprland\", \"units\": {\"wayland-wm@hyprland.desktop.service\": true, \"wayland-wm@niri.desktop.service\": false, \"nacre-shell.service\": true, \"nacre-session-watch.service\": false, \"hypridle.service\": false}, \"niriSocketPresent\": false, \"waylandDisplayPresent\": true, \"desktopIsNiri\": false, \"desktopIsHyprland\": true, \"niriSessionObserved\": true, \"plainNiriIsolated\": true, \"returnedHyprland\": true, \"protectedFilesMatch\": false, \"checked\": \"2000-01-02T03:04:05.006000+00:00\"}\n",
+            "mode": 384
+          },
+          "acceptance-observed.json": {
+            "text": "{\n  \"compositor\": \"hyprland\",\n  \"units\": {\n    \"wayland-wm@hyprland.desktop.service\": true,\n    \"wayland-wm@niri.desktop.service\": false,\n    \"nacre-shell.service\": true,\n    \"nacre-session-watch.service\": false,\n    \"hypridle.service\": false\n  },\n  \"niriSocketPresent\": false,\n  \"waylandDisplayPresent\": true,\n  \"desktopIsNiri\": false,\n  \"desktopIsHyprland\": true,\n  \"niriSessionObserved\": true,\n  \"plainNiriIsolated\": true,\n  \"returnedHyprland\": true,\n  \"protectedFilesMatch\": false,\n  \"checked\": \"2000-01-02T03:04:05.006000+00:00\"\n}",
+            "mode": 384
+          }
+        },
+        "stdout": "",
+        "stderr": "",
+        "exit": 1
+      }
+    },
+    {
+      "operation": "run",
+      "variant": "timeout",
+      "samples": [
+        {
+          "compositor": "none",
+          "units": {
+            "wayland-wm@hyprland.desktop.service": false,
+            "wayland-wm@niri.desktop.service": false,
+            "nacre-shell.service": false,
+            "nacre-session-watch.service": false,
+            "hypridle.service": false
+          },
+          "niriSocketPresent": false,
+          "waylandDisplayPresent": true,
+          "desktopIsNiri": false,
+          "desktopIsHyprland": false
+        }
+      ],
+      "seconds": 10,
+      "checked": "2000-01-02T03:04:05.006000+00:00",
+      "observed": {
+        "files": {
+          "acceptance-events.jsonl": {
+            "text": "{\"compositor\": \"none\", \"units\": {\"wayland-wm@hyprland.desktop.service\": false, \"wayland-wm@niri.desktop.service\": false, \"nacre-shell.service\": false, \"nacre-session-watch.service\": false, \"hypridle.service\": false}, \"niriSocketPresent\": false, \"waylandDisplayPresent\": true, \"desktopIsNiri\": false, \"desktopIsHyprland\": false, \"niriSessionObserved\": false, \"plainNiriIsolated\": false, \"returnedHyprland\": false, \"protectedFilesMatch\": true, \"checked\": \"2000-01-02T03:04:05.006000+00:00\"}\n",
+            "mode": 384
+          },
+          "acceptance-observed.json": {
+            "text": "{\n  \"compositor\": \"none\",\n  \"units\": {\n    \"wayland-wm@hyprland.desktop.service\": false,\n    \"wayland-wm@niri.desktop.service\": false,\n    \"nacre-shell.service\": false,\n    \"nacre-session-watch.service\": false,\n    \"hypridle.service\": false\n  },\n  \"niriSocketPresent\": false,\n  \"waylandDisplayPresent\": true,\n  \"desktopIsNiri\": false,\n  \"desktopIsHyprland\": false,\n  \"niriSessionObserved\": false,\n  \"plainNiriIsolated\": false,\n  \"returnedHyprland\": false,\n  \"protectedFilesMatch\": true,\n  \"checked\": \"2000-01-02T03:04:05.006000+00:00\"\n}",
+            "mode": 384
+          }
+        },
+        "stdout": "",
+        "stderr": "",
+        "exit": 2
+      }
+    }
+  ]
+}
