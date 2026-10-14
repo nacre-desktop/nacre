@@ -242,7 +242,18 @@ pub fn run_health(id: &str) -> Result<i32> {
     let facts = facts();
     let mut plan = health_plan(id, &facts)?;
     if id == "orphans-remove" {
-        let packages = read("pacman", &["-Qdtq"]).unwrap_or_default();
+        let output = process::run(
+            "pacman",
+            &["-Qdtq".to_string()],
+            None,
+            Duration::from_secs(5),
+        )?;
+        let empty =
+            output.status.code() == Some(1) && output.stdout.is_empty() && output.stderr.is_empty();
+        if !output.status.success() && !empty {
+            return Err("Could not inspect orphaned packages; no changes made".into());
+        }
+        let packages = String::from_utf8(output.stdout)?;
         let names = packages
             .lines()
             .filter(|s| !s.is_empty())
@@ -326,6 +337,13 @@ pub fn run_health(id: &str) -> Result<i32> {
         code = command.status()?.code().unwrap_or(1);
         if code != 0 {
             break;
+        }
+    }
+    if code != 0 && id == "touchpad-restart" {
+        for pad in facts["touchpads"].as_array().unwrap() {
+            let quoted = serde_json::to_string(pad.as_str().unwrap())?;
+            let expression = format!("hl.device({{name={quoted},enabled=true}})");
+            let _ = Command::new("hyprctl").args(["eval", &expression]).status();
         }
     }
     println!(
