@@ -676,15 +676,18 @@ Scope {
                 return false;
             const packageId = Model.normalized(row.package.replace(/-(bin|git)$/, ""));
             return !installedApps.some(app => Model.normalized(app.name) === Model.normalized(row.name) || Model.normalized(app.id.replace(/\.desktop$/, "").split(".").pop()) === packageId);
-        }).map(row => Object.assign({}, row, {
+        }).map(row => {
+            const aurMissing = row.repository === "AUR" && !snapshot.capabilities.aur;
+            return Object.assign({}, row, {
                 installOffer: true,
                 description: NacreI18n.tr("launcher.install-offer.description", "Install {app} · {purpose}", {
                     app: row.name,
                     purpose: row.description
                 }),
-                disabled: row.disabled || row.repository === "AUR" && !snapshot.capabilities.aur,
-                reason: row.repository === "AUR" && !snapshot.capabilities.aur ? NacreI18n.tr("launcher.install-offer.aur", "Requires paru or yay for AUR installation") : row.reason
-            }));
+                disabled: row.disabled || aurMissing,
+                reason: aurMissing ? NacreI18n.tr("launcher.install-offer.aur", "Requires paru or yay for AUR installation") : row.reason
+            });
+        });
     }
     function globalRows(query) {
         return apps.concat(allStatic(), provider("actions.windows"), provider("actions.clipboard"), fileResults(query), brainRows(query), workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), captureRows());
