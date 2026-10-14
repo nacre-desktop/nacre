@@ -10,25 +10,62 @@ use std::{
 pub fn validate_profile(input: &Value) -> Result<Value> {
     validate_profile_value(input).map_err(|error| {
         let message = error.to_string();
-        let id = match message.as_str() {
-            "Unknown profile fields" => "unknown-profile-fields",
-            "Unsupported profile identity/version" => "unsupported-profile-identity-version",
-            "Workspace count must be 1–10" => "workspace-count-must-be-1-10",
-            "Invalid optional component list" => "invalid-optional-component-list",
-            "Invalid workspace labels/icons" => "invalid-workspace-labels-icons",
-            "Invalid optional app workspace" => "invalid-optional-app-workspace",
-            "Window trash binding preference must be a boolean" => {
-                "invalid-window-trash-preference"
-            }
-            "Invalid assistant permission preference" => "invalid-assistant-permission-preference",
-            "Invalid profile routes/startup list" => "invalid-profile-routes-startup-list",
-            "Invalid profile entry" => "invalid-profile-entry",
-            "Invalid profile entry text" => "invalid-profile-entry-text",
-            "Invalid startup arguments" => "invalid-startup-arguments",
-            "Invalid startup class list" => "invalid-startup-class-list",
+        let translated = match message.as_str() {
+            "Unknown profile fields" => crate::i18n::tr(
+                "helper.profile-policy.unknown-profile-fields",
+                "Unknown profile fields",
+            ),
+            "Unsupported profile identity/version" => crate::i18n::tr(
+                "helper.profile-policy.unsupported-profile-identity-version",
+                "Unsupported profile identity/version",
+            ),
+            "Workspace count must be 1–10" => crate::i18n::tr(
+                "helper.profile-policy.workspace-count-must-be-1-10",
+                "Workspace count must be 1–10",
+            ),
+            "Invalid optional component list" => crate::i18n::tr(
+                "helper.profile-policy.invalid-optional-component-list",
+                "Invalid optional component list",
+            ),
+            "Invalid workspace labels/icons" => crate::i18n::tr(
+                "helper.profile-policy.invalid-workspace-labels-icons",
+                "Invalid workspace labels/icons",
+            ),
+            "Invalid optional app workspace" => crate::i18n::tr(
+                "helper.profile-policy.invalid-optional-app-workspace",
+                "Invalid optional app workspace",
+            ),
+            "Window trash binding preference must be a boolean" => crate::i18n::tr(
+                "helper.profile-policy.invalid-window-trash-preference",
+                "Window trash binding preference must be a boolean",
+            ),
+            "Invalid assistant permission preference" => crate::i18n::tr(
+                "helper.profile-policy.invalid-assistant-permission-preference",
+                "Invalid assistant permission preference",
+            ),
+            "Invalid profile routes/startup list" => crate::i18n::tr(
+                "helper.profile-policy.invalid-profile-routes-startup-list",
+                "Invalid profile routes/startup list",
+            ),
+            "Invalid profile entry" => crate::i18n::tr(
+                "helper.profile-policy.invalid-profile-entry",
+                "Invalid profile entry",
+            ),
+            "Invalid profile entry text" => crate::i18n::tr(
+                "helper.profile-policy.invalid-profile-entry-text",
+                "Invalid profile entry text",
+            ),
+            "Invalid startup arguments" => crate::i18n::tr(
+                "helper.profile-policy.invalid-startup-arguments",
+                "Invalid startup arguments",
+            ),
+            "Invalid startup class list" => crate::i18n::tr(
+                "helper.profile-policy.invalid-startup-class-list",
+                "Invalid startup class list",
+            ),
             _ => return error,
         };
-        crate::i18n::tr(&format!("helper.profile-policy.{id}"), &message).into()
+        translated.into()
     })
 }
 fn validate_profile_value(input: &Value) -> Result<Value> {

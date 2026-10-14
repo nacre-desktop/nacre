@@ -7,7 +7,7 @@ Developer-only Python tools and test harnesses remain permitted.
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
 | 1 Service / frequent helpers | Complete; quiet timings deferred | 13 ports; RSS 26.95 -> 10.21 MiB (busy); Source/install CI green. |
-| 2 Compositor / pearls | Compilers / compositor / pearls public; runtime locally complete, validating | Runtime parser CPU 39.61 -> 0.96 ms (busy); no session timing claim. |
+| 2 Compositor / pearls | Prepared runtime public; acceptance recorder / preview pending | Runtime parser CPU 39.61 -> 0.96 ms (busy); no session timing claim. |
 | 3 Wallpaper / colors | Pending | Direct Orient crates; preserve paired publication. |
 | 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
 | 5 AI | Pending | Claude CLI stream-json; retain existing permissions/history. |
@@ -47,7 +47,7 @@ current frozen cases use defaults and remain unchanged.
 Main CI gate retained; 2753707f fixed isolation without changing goldens/skips.
 Wave 1 source/install CI passed; hardware checks remain manual.
 
-Next: publish validated prepared runtime, check CI, then port acceptance monitor and preview (remaining installed Wave 2 scripts). Integrated owner defaults/pin e86acb13; 181 frozen cases, 149 Rust tests, 842 repo tests, 526 parity and 16 original runtime/package assertions; actual nested hover/QML proof passes. Native staging, locale1 keyboard, strict proof/backups and exec; Python runtime retired with callers. Custom XDG follows QML; keyboard/trust failures surface; native errors replace tracebacks; proof uses direct Wayland and sleep. Brain/supervisor children wait for their waves; shared packaging stays with install task. Gate282d6fc2/CI38583318581 and widths39ffa461/CI38581376661 green.
+Next: check CI after literal translation-ID repair, then finish acceptance recorder D-Bus/watch/file/CLI port (46 Python cases frozen; pure Rust decisions match locally); preview follows. Runtime424fc413 is public: 181 frozen /149 Rust /842 repo /526 parity, original16 assertions and native nested hover/QML proof pass. CI38601096072 fresh-install passed; desktop translation scanner rejected dynamic IDs. Literal existing IDs/fallbacks fix it; 2392 messages pass, generated assets unchanged, no skips. Unit state will use events; Manager.Environment has no change signal, requiring 2s refresh. Custom XDG follows QML; failures surface; native diagnostics replace tracebacks. Brain/supervisor children wait for later waves; shared packaging stays with install task.
 Window-hide cutover: 126 Rust tests, 821 repo plus 3 native checks, 12 frozen cases, 11 original assertions and 3 socket/D-Bus goldens pass. Busy CPU 46.26 -> 2.19 ms, helper RSS 17.33 -> 7.27 MiB; 100 -> 0 Python starts. No state migration; notification failures reach stderr and lock symlinks are refused. CI repair 2c31dbd2 / CI38568187548 fully green; no new skips.
 Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.
 Three compiler sources retired; 84 integrated Rust tests / 770 repo tests / 526 cases pass.
