@@ -47,10 +47,12 @@ jobs:
             printf "\nMAKEFLAGS=-j2\nexport CARGO_BUILD_JOBS=2\n" >> /etc/makepkg.conf
             chown -R builder:builder /work
             # Fail early if this host cannot run the sandbox used by check().
+            mkdir -p /var/tmp/nacre-namespace-probe
             mkarchroot /var/tmp/nacre-namespace-probe/root base-devel bubblewrap
             arch-nspawn /var/tmp/nacre-namespace-probe/root useradd -m -u 1000 probe
             arch-nspawn /var/tmp/nacre-namespace-probe/root runuser -u probe -- \
-              bwrap --unshare-all --ro-bind / / --proc /proc --dev /dev /usr/bin/true
+              bwrap --unshare-user --unshare-pid --unshare-net --unshare-ipc \
+              --uid 1000 --gid 1000 --ro-bind / / --proc /proc --dev /dev /usr/bin/true
             rm -rf --one-file-system /var/tmp/nacre-namespace-probe
             cd /work/orient
             sudo -u builder extra-x86_64-build 2>&1 | tee /work/orient.log
