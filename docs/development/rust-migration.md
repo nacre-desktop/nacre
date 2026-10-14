@@ -74,7 +74,6 @@ replaces nvidia-smi; inventory CLI bridges the existing diagnostic module call.
 d920 fingerprint: native-image compares two declared IDs against lock/pin/build;
 17 controls and all 349 cases pass; frozen outputs/core/colors unchanged.
 No live machine/QML/config changes by this task; no tags or package uploads.
-
 Port security follow-ups: [security review](security-review.md#fix-during-port).
 Keep existing AI access/consent/retention policies; add explicit security cases
 and intended differences when implementing the reviewed port hardening.

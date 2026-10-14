@@ -41,3 +41,7 @@ Menu retirement retains all 14 historical assertions:
 
 Frozen references remain immutable. Developer capture tools refuse missing or
 changed Python reference source; installed files contain only the Rust port.
+
+The compositor helper migration test for negative window coordinates and absent
+windows is retained by the seven frozen window-capture cases in
+`menu_actions::capture_tests::frozen_python_capture_calls_files_and_results`.

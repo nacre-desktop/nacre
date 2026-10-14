@@ -138,26 +138,6 @@ class HelperCompositorMigrationTests(unittest.TestCase):
         configure.assert_called_once_with([connected], timeout=None)
         launch.assert_not_called()
 
-    def test_screen_capture_keeps_window_geometry_and_rejects_absent_window(self):
-        menu = load("menu-backend")
-        with patch.object(menu.compositor, "query", return_value={}) as query:
-            with self.assertRaises(ValueError):
-                menu.capture_window()
-        query.assert_called_once_with("active_window", timeout=5)
-        with (
-            tempfile.TemporaryDirectory() as folder,
-            patch.object(menu, "HOME", Path(folder)),
-            patch.object(
-                menu.compositor,
-                "query",
-                return_value={"at": [-40, 20], "size": [640, 480]},
-            ),
-            patch.object(menu.subprocess, "run") as run,
-            patch.object(menu.Path, "read_bytes", return_value=b"PNG"),
-        ):
-            self.assertEqual(menu.capture_window(), "Window saved and copied")
-        self.assertEqual(run.call_args_list[0].args[0][1:3], ["-g", "-40,20 640x480"])
-
     def test_configuration_diagnostics_keep_the_existing_optional_error_policy(self):
         maintenance = load("maintenance")
         with patch.object(

@@ -192,5 +192,339 @@
       "candidate": 96.2
     },
     "focused_repeat": "unchanged baseline dashboard readiness timeout"
+  },
+  "wave1_busy_machine": {
+    "before-fresh": {
+      "transport": "fresh Python",
+      "runtime": "Python",
+      "helper_launches": 404,
+      "python_processes": 404,
+      "launch_scope": "direct helper starts only; descendant/session launches require the actions capture",
+      "startup_ms": null,
+      "service_memory": null,
+      "measurement_condition": "busy machine",
+      "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+      "cpu_resolution_ms": 0.001,
+      "results": {
+        "menu-backend": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 4627.136,
+            "system": 939.7579999999999,
+            "total_per_request": 55.66893999999999
+          },
+          "response": {
+            "ok": false,
+            "error": "Try a conversion such as 10 km to miles"
+          }
+        },
+        "dashboard-data": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 3197.3450000000003,
+            "system": 652.8340000000001,
+            "total_per_request": 38.50179
+          },
+          "response": {
+            "preferences": {
+              "tabs": [
+                "today",
+                "weather",
+                "media",
+                "system",
+                "focus"
+              ],
+              "homeZone": "",
+              "homeCity": "",
+              "calendarFile": "",
+              "lyrics": true,
+              "albumPalette": true,
+              "focusMinutes": 25
+            },
+            "focus": {},
+            "home": {},
+            "calendar": {
+              "events": [],
+              "error": "",
+              "configured": false
+            },
+            "brain": {}
+          }
+        },
+        "launcher-preferences": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 2968.1569999999997,
+            "system": 586.8009999999999,
+            "total_per_request": 35.54958
+          },
+          "response": {
+            "favorites": [],
+            "hidden": [],
+            "recent": [],
+            "usage": {}
+          }
+        },
+        "notification-history": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 1415.585,
+            "system": 272.5050000000002,
+            "total_per_request": 16.880900000000004
+          },
+          "response": []
+        }
+      }
+    },
+    "after-fresh": {
+      "transport": "fresh Rust",
+      "runtime": "Rust",
+      "helper_launches": 404,
+      "python_processes": 0,
+      "launch_scope": "direct helper starts only; descendant/session launches require the actions capture",
+      "startup_ms": null,
+      "service_memory": null,
+      "measurement_condition": "busy machine",
+      "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+      "cpu_resolution_ms": 0.001,
+      "results": {
+        "menu-backend": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 75.17199999999998,
+            "system": 119.59199999999998,
+            "total_per_request": 1.9476399999999998
+          },
+          "response": {
+            "ok": false,
+            "error": "Try a conversion such as 10 km to miles"
+          }
+        },
+        "dashboard-data": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 29.891000000000002,
+            "system": 85.815,
+            "total_per_request": 1.15706
+          },
+          "response": {
+            "preferences": {
+              "tabs": [
+                "today",
+                "weather",
+                "media",
+                "system",
+                "focus"
+              ],
+              "homeZone": "",
+              "homeCity": "",
+              "calendarFile": "",
+              "lyrics": true,
+              "albumPalette": true,
+              "focusMinutes": 25
+            },
+            "focus": {},
+            "home": {},
+            "calendar": {
+              "events": [],
+              "error": "",
+              "configured": false
+            },
+            "brain": {}
+          }
+        },
+        "launcher-preferences": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 22.719000000000005,
+            "system": 88.153,
+            "total_per_request": 1.1087200000000001
+          },
+          "response": {
+            "favorites": [],
+            "hidden": [],
+            "recent": [],
+            "usage": {}
+          }
+        },
+        "notification-history": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 18.91899999999999,
+            "system": 70.18900000000001,
+            "total_per_request": 0.8910799999999999
+          },
+          "response": []
+        }
+      }
+    },
+    "before-service": {
+      "transport": "service",
+      "runtime": "Python",
+      "helper_launches": 1,
+      "python_processes": 1,
+      "launch_scope": "direct helper starts only; descendant/session launches require the actions capture",
+      "startup_ms": null,
+      "service_memory": {
+        "rss_mib": 26.953125
+      },
+      "measurement_condition": "busy machine",
+      "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+      "cpu_resolution_ms": 10.0,
+      "results": {
+        "menu-backend": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 0.0,
+            "system": 0.0,
+            "total_per_request": 0.0
+          },
+          "response": {
+            "ok": false,
+            "error": "Try a conversion such as 10 km to miles"
+          }
+        },
+        "dashboard-data": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 0.0,
+            "system": 0.0,
+            "total_per_request": 0.0
+          },
+          "response": {
+            "preferences": {
+              "tabs": [
+                "today",
+                "weather",
+                "media",
+                "system",
+                "focus"
+              ],
+              "homeZone": "",
+              "homeCity": "",
+              "calendarFile": "",
+              "lyrics": true,
+              "albumPalette": true,
+              "focusMinutes": 25
+            },
+            "focus": {},
+            "home": {},
+            "calendar": {
+              "events": [],
+              "error": "",
+              "configured": false
+            },
+            "brain": {}
+          }
+        },
+        "launcher-preferences": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 9.999999999999995,
+            "system": 0.0,
+            "total_per_request": 0.09999999999999995
+          },
+          "response": {
+            "favorites": [],
+            "hidden": [],
+            "recent": [],
+            "usage": {}
+          }
+        },
+        "notification-history": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 0.0,
+            "system": 0.0,
+            "total_per_request": 0.0
+          },
+          "response": []
+        }
+      }
+    },
+    "after-service": {
+      "transport": "service",
+      "runtime": "Rust",
+      "helper_launches": 1,
+      "python_processes": 0,
+      "launch_scope": "direct helper starts only; descendant/session launches require the actions capture",
+      "startup_ms": null,
+      "service_memory": {
+        "rss_mib": 10.2109375
+      },
+      "measurement_condition": "busy machine",
+      "cpu_scope": "helper and reaped descendants; user + system, excludes benchmark driver",
+      "cpu_resolution_ms": 10.0,
+      "results": {
+        "menu-backend": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 0.0,
+            "system": 0.0,
+            "total_per_request": 0.0
+          },
+          "response": {
+            "ok": false,
+            "error": "Try a conversion such as 10 km to miles"
+          }
+        },
+        "dashboard-data": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 0.0,
+            "system": 0.0,
+            "total_per_request": 0.0
+          },
+          "response": {
+            "preferences": {
+              "tabs": [
+                "today",
+                "weather",
+                "media",
+                "system",
+                "focus"
+              ],
+              "homeZone": "",
+              "homeCity": "",
+              "calendarFile": "",
+              "lyrics": true,
+              "albumPalette": true,
+              "focusMinutes": 25
+            },
+            "focus": {},
+            "home": {},
+            "calendar": {
+              "events": [],
+              "error": "",
+              "configured": false
+            },
+            "brain": {}
+          }
+        },
+        "launcher-preferences": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 10.0,
+            "system": 0.0,
+            "total_per_request": 0.1
+          },
+          "response": {
+            "favorites": [],
+            "hidden": [],
+            "recent": [],
+            "usage": {}
+          }
+        },
+        "notification-history": {
+          "requests": 100,
+          "cpu_ms": {
+            "user": 0.0,
+            "system": 0.0,
+            "total_per_request": 0.0
+          },
+          "response": []
+        }
+      }
+    }
   }
 }
