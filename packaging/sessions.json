@@ -1,0 +1,18 @@
+{
+  "hyprland": {
+    "label": "Hyprland",
+    "module": "package_hyprland",
+    "package": "nacre-session-hyprland",
+    "dependencies": "session_hyprland",
+    "desktop": "uwsm/sessions/nacre-hyprland.desktop",
+    "experimental": false
+  },
+  "niri": {
+    "label": "Niri",
+    "module": "package_niri",
+    "package": "nacre-session-niri",
+    "dependencies": "session_niri",
+    "desktop": "uwsm/sessions/nacre-niri-package.desktop",
+    "experimental": true
+  }
+}

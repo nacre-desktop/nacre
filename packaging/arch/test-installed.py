@@ -4,13 +4,18 @@ This deliberately refuses existing configuration/account directories. Use a
 VM/disposable runtime root, never a maintainer's account.
 """
 
+import argparse
 import hashlib
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--compositor", choices=("hyprland", "niri", "both"), required=True)
+backend = parser.parse_args().compositor
 home = Path.home()
 assert (
     os.geteuid() != 0
@@ -36,6 +41,23 @@ def digest(path):
 
 assert not (home / ".config/nacre").exists(), "Use a fresh disposable user"
 assert not (home / ".codex").exists(), "Do not use an account with credentials"
+# Root-owned ELF and its compatibility link are inside the package trust boundary.
+binary = Path("/usr/lib/nacre/nacre-helper")
+reference = Path("/usr/share/nacre/nacre/shell-tools/nacre-helper")
+assert reference.is_symlink() and reference.resolve(strict=True) == binary
+assert not binary.is_symlink() and binary.read_bytes()[:4] == b"\x7fELF"
+for target in (binary, reference, *binary.parents, *reference.parents):
+    metadata = target.lstat()
+    assert metadata.st_uid == 0, target
+    if not target.is_symlink():
+        assert metadata.st_mode & 0o022 == 0, target
+assert run("pacman", "-Qoq", str(binary)).stdout.strip() == "nacre"
+assert run("pacman", "-Qoq", "/usr/bin/orient").stdout.strip() == "orient"
+# Simulate a distro-configured plain Niri/Noctalia session, kept byte-for-byte.
+plain = home / ".config/niri/config.kdl"
+plain.parent.mkdir(parents=True)
+plain.write_text("// Existing distribution session fixture\n")
+plain_hash = digest(plain)
 base = (
     "nacre",
     "setup",
@@ -43,7 +65,7 @@ base = (
     "--profile",
     "default",
     "--compositor",
-    "hyprland",
+    "hyprland" if backend == "hyprland" else "niri",
     "--layout",
     "no",
     "--with",
@@ -51,6 +73,8 @@ base = (
     "--with",
     "brain",
 )
+if backend == "both":
+    base += ("--also-compositor", "hyprland")
 run(*base, "--plan")
 assert not (home / ".config/nacre").exists()
 account = home / ".codex/account-fixture"
@@ -71,11 +95,24 @@ for relative in (
     ".local/share/nacre/shell/tools",
     ".local/share/nacre/brain",
     ".local/share/nacre/ai/application",
-    ".config/systemd/user/graphical-session.target.wants/nacre-shell.service",
     ".config/systemd/user/timers.target.wants/nacre-brain-check.timer",
 ):
     path = home / relative
     assert path.is_symlink() and path.exists(), relative
+assert not (
+    home / ".config/systemd/user/graphical-session.target.wants/nacre-shell.service"
+).exists()
+assert digest(plain) == plain_hash
+if backend in {"niri", "both"}:
+    sys.path.insert(0, "/usr/share/nacre/tools")
+    from package_niri import validate
+
+    validate(home / ".config/nacre/niri/config.kdl")
+    assert Path("/usr/share/wayland-sessions/nacre-niri.desktop").is_file()
+    assert (home / ".config/systemd/user/nacre-niri.target").is_file()
+if backend in {"hyprland", "both"}:
+    assert Path("/usr/share/wayland-sessions/nacre-hyprland.desktop").is_file()
+    assert (home / ".config/systemd/user/nacre-hyprland.target").is_file()
 for command in (
     ("nacre-welcome", "--help"),
     ("nacre-ai", "--help"),
@@ -101,7 +138,11 @@ run(*base, "--yes")
 assert digest(keyboard) == keyboard_hash and digest(palette) == palette_hash
 print("Repeated setup preserves keyboard and private palette.")
 # Refuse drift before taking a new release snapshot.
-managed = home / ".config/hypr/conf/keyboard.lua"
+managed = home / (
+    ".config/hypr/conf/keyboard.lua"
+    if backend == "hyprland"
+    else ".config/nacre/niri/config.kdl"
+)
 original = managed.read_bytes()
 managed.write_bytes(original + b"\n-- local fixture edit\n")
 current = (home / ".local/state/nacre/releases/current.json").read_bytes()

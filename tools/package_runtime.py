@@ -22,7 +22,7 @@ def files(root, profile):
     return result
 
 
-def links(root, profile):
+def links(root, profile, compositor="hyprland"):
     values = {
         ".local/share/nacre/shell/source": root / "nacre/shell",
         ".local/share/nacre/shell/tools": root / "nacre/shell-tools",
@@ -31,23 +31,12 @@ def links(root, profile):
         ".local/share/nacre/thunar-style": Path("/usr/lib/nacre/thunar-style"),
         ".config/quickshell/nacre": root / "nacre/shell",
     }
-    for name in (
-        "nacre-shell",
-        "nacre-session-watch",
-        "nacre-power-key",
-        "nacre-niri-widths",
-    ):
-        values[
-            f".config/systemd/user/graphical-session.target.wants/{name}.service"
-        ] = Path(f"../{name}.service")
-    values[".config/systemd/user/graphical-session.target.wants/hypridle.service"] = (
-        Path("/usr/lib/systemd/user/hypridle.service")
-    )
     if "brain" in profile["components"]:
         values[".local/share/nacre/brain"] = root / "brain"
-        values[
-            ".config/systemd/user/graphical-session.target.wants/nacre-brain.service"
-        ] = Path("../nacre-brain.service")
+        for target in ("nacre-niri.target", "nacre-hyprland.target"):
+            values[f".config/systemd/user/{target}.wants/nacre-brain.service"] = Path(
+                "../nacre-brain.service"
+            )
         for name in ("check", "sync"):
             values[
                 f".config/systemd/user/timers.target.wants/nacre-brain-{name}.timer"
@@ -57,16 +46,32 @@ def links(root, profile):
     return {Path(key): value for key, value in values.items()}
 
 
-def plan(home, root, profile):
+def plan(home, root, profile, compositor="hyprland"):
     known_path = home / ".local/state/nacre/package-links.json"
     known = json.loads(known_path.read_text()) if known_path.exists() else {}
-    permitted = {str(path) for path in links(root, {"components": ["ai", "brain"]})}
+    permitted = {
+        str(path)
+        for backend in ("hyprland", "niri")
+        for path in links(root, {"components": ["ai", "brain"]}, backend)
+    }
+    # Migrate only the exact links recorded by the old globally-enabled setup.
+    permitted.update(
+        f".config/systemd/user/graphical-session.target.wants/{name}.service"
+        for name in (
+            "nacre-shell",
+            "nacre-session-watch",
+            "nacre-power-key",
+            "nacre-niri-widths",
+            "hypridle",
+            "nacre-brain",
+        )
+    )
     if not isinstance(known, dict) or any(
         key not in permitted or not isinstance(value, str)
         for key, value in known.items()
     ):
         raise ValueError("Invalid package runtime manifest")
-    desired = links(root, profile)
+    desired = links(root, profile, compositor)
     changed = []
     for relative, target in desired.items():
         path = home / relative
@@ -87,8 +92,8 @@ def plan(home, root, profile):
     return changed
 
 
-def apply(home, root, profile):
-    for relative, target in plan(home, root, profile):
+def apply(home, root, profile, compositor="hyprland"):
+    for relative, target in plan(home, root, profile, compositor):
         path = home / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.unlink(missing_ok=True)
@@ -101,6 +106,8 @@ def apply(home, root, profile):
 
     atomic(
         home / ".local/state/nacre/package-links.json",
-        json.dumps({str(k): str(v) for k, v in links(root, profile).items()}).encode(),
+        json.dumps(
+            {str(k): str(v) for k, v in links(root, profile, compositor).items()}
+        ).encode(),
         0o600,
     )

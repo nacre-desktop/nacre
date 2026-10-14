@@ -42,6 +42,7 @@ jobs:
           cp orient-recipe/packaging/arch/PKGBUILD "$work/orient/"
           cp packaging/arch/PKGBUILD "$work/nacre/"
           cp packaging/arch/niri/PKGBUILD "$work/niri/"
+          cp packaging/arch/test-installed.py "$work/test-installed.py"
           # As in Orient's distribution checks, devtools needs systemd as PID1.
           container=$(docker run --detach --privileged --cgroupns=host --tmpfs /run --tmpfs /tmp \
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v "$work:/work" \
@@ -87,6 +88,26 @@ jobs:
             (( ${#archives[@]} > 0 ))
             sha256sum "${archives[@]}" > /work/package-sha256.txt
           '
+          if [[ "$PACKAGE_COMPONENT" != niri ]]; then
+            # A separate image contains no base-devel, source checkout or build venv.
+            runtime=$(docker run --detach -v "$work:/work:ro" archlinux:base sleep infinity)
+            trap 'docker rm --force "$container" "$runtime"' EXIT
+            docker exec "$runtime" bash -euxo pipefail -c '
+              pacman-key --init
+              pacman-key --populate archlinux
+              pacman -Syu --noconfirm
+              pacman -U --noconfirm /work/orient/orient-[0-9]*.pkg.tar.zst \
+                /work/nacre/nacre-[0-9]*.pkg.tar.zst \
+                /work/nacre/nacre-ai-[0-9]*.pkg.tar.zst \
+                /work/nacre/nacre-brain-[0-9]*.pkg.tar.zst \
+                /work/nacre/nacre-session-{niri,hyprland}-[0-9]*.pkg.tar.zst
+              for backend in niri hyprland both; do
+                account="nacre-package-test-$backend"
+                useradd -m "$account"
+                runuser -u "$account" -- python /work/test-installed.py --compositor "$backend"
+              done
+            ' 2>&1 | tee "$work/installed-runtime.log"
+          fi
       - name: Package archives, recipes and build logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

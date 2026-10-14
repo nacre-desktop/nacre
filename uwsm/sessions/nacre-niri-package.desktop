@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Nacre (niri)
+Comment=Nacre on Niri, managed by UWSM
+Exec=/usr/bin/python3 /usr/share/nacre/tools/package_niri.py session
+TryExec=uwsm
+Type=Application
+DesktopNames=niri

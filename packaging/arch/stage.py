@@ -8,6 +8,14 @@ from pathlib import Path
 
 
 def stage(root, destination, component, build):
+    sessions = json.loads((root / "packaging/sessions.json").read_text())
+    if component not in {
+        "core",
+        "ai",
+        "brain",
+        *("session-" + name for name in sessions),
+    }:
+        raise ValueError("Unknown package component: " + component)
     shared = destination / "usr/share/nacre"
     deploy = shared / "deployment" / component
 
@@ -19,7 +27,7 @@ def stage(root, destination, component, build):
                 target,
                 dirs_exist_ok=True,
                 ignore=shutil.ignore_patterns(
-                    "tests", "__pycache__", "*.pyc", ".qmlls.ini"
+                    "tests", "__pycache__", "*.pyc", ".qmlls.ini", "nacre-helper"
                 ),
             )
         else:
@@ -43,6 +51,7 @@ def stage(root, destination, component, build):
             "tools",
             "profiles",
             "packaging/packages.json",
+            "packaging/sessions.json",
             "VERSION",
             "nacre/shell",
             "nacre/shell-tools",
@@ -53,12 +62,16 @@ def stage(root, destination, component, build):
                 {
                     "version": (root / "VERSION").read_text().strip(),
                     "revision": (build / "revision").read_text().strip(),
-                    "compositors": ["hyprland"],
+                    "compositors": list(
+                        json.loads((root / "packaging/sessions.json").read_text())
+                    ),
                 }
             )
             + "\n"
         )
-        copy(build / "native/nacre-helper", shared / "nacre/shell-tools/nacre-helper")
+        copy(build / "native/nacre-helper", destination / "usr/lib/nacre/nacre-helper")
+        helper_reference = shared / "nacre/shell-tools/nacre-helper"
+        helper_reference.symlink_to("../../../../lib/nacre/nacre-helper")
         for name in (
             "nacre-app",
             "nacre-settings",
@@ -157,6 +170,12 @@ def stage(root, destination, component, build):
             copy(source, destination / "usr/share/fonts/nacre" / source.name)
         for source in (build / "fonts").glob("*.txt"):
             copy(source, destination / "usr/share/licenses/nacre" / source.name)
+    elif component.startswith("session-"):
+        name = component.removeprefix("session-")
+        copy(
+            root / sessions[name]["desktop"],
+            destination / "usr/share/wayland-sessions" / ("nacre-" + name + ".desktop"),
+        )
     elif component == "ai":
         # Brain templates belong to nacre-brain, avoiding split-package conflicts.
         copy(root / "ai", shared / "ai")
@@ -224,7 +243,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("root", type=Path)
     parser.add_argument("destination", type=Path)
-    parser.add_argument("component", choices=("core", "ai", "brain"))
+    parser.add_argument("component")
     parser.add_argument("build", type=Path)
     args = parser.parse_args()
     stage(

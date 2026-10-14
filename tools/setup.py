@@ -61,7 +61,18 @@ def supported_compositors(root):
                 for name in backend.supported_backends()
                 if backend.backend_capabilities(name).get("setup_ready", False)
             ]
-    return [name for name in choices if name in metadata["compositors"]]
+    import package_sessions
+
+    for name in metadata["compositors"]:
+        try:
+            backend = package_sessions.integration(root, name)
+        except (KeyError, RuntimeError):
+            continue
+        if backend is not None and backend.supported(root):
+            choices.append(name)
+    return list(
+        dict.fromkeys(name for name in choices if name in metadata["compositors"])
+    )
 
 
 def ask(label, default):
@@ -102,6 +113,14 @@ def selection(args, root, home, interactive):
             tr("setup.error.empty-layout", "Keyboard layout cannot be empty")
         )
     choices = supported_compositors(root)
+    detected = next(
+        (
+            name
+            for name in os.environ.get("XDG_CURRENT_DESKTOP", "").lower().split(":")
+            if name in choices
+        ),
+        "hyprland",
+    )
     compositor = args.compositor or (
         ask(
             tr(
@@ -109,10 +128,10 @@ def selection(args, root, home, interactive):
                 "Compositor ({choices})",
                 {"choices": ", ".join(choices)},
             ),
-            "hyprland",
+            detected,
         )
         if interactive
-        else "hyprland"
+        else detected
     )
     if compositor not in choices:
         raise ValueError(
@@ -122,6 +141,25 @@ def selection(args, root, home, interactive):
                 {"compositor": compositor},
             )
         )
+    additional = list(getattr(args, "additional_compositors", []))
+    if interactive and len(choices) > 1:
+        value = ask(
+            tr(
+                "setup.prompt.additional-compositors",
+                "Additional compositors (comma separated, or none)",
+            ),
+            ",".join(additional) if additional else "none",
+        )
+        additional = (
+            []
+            if value.lower() == "none"
+            else [name.strip() for name in value.split(",")]
+        )
+    if any(name not in choices for name in additional):
+        raise ValueError("Unknown additional compositor")
+    args.additional_compositors = [
+        name for name in dict.fromkeys(additional) if name != compositor
+    ]
     profiles = policy(root)
     chosen = args.profile
     if chosen is None and interactive:
@@ -174,22 +212,13 @@ def selection(args, root, home, interactive):
     profile["components"] = list(
         dict.fromkeys(["configs", "shell", *profile["components"], *optional])
     )
-    for component in ("ai", "brain"):
-        if (
-            component in profile["components"]
-            and not (root / "deployment" / component).is_dir()
-        ):
-            raise RuntimeError(
-                tr(
-                    "setup.error.install-optional",
-                    "Install {package} before enabling it",
-                    {"package": "nacre-" + component},
-                )
-            )
     return profiles.validate(profile), keyboard, compositor
 
 
-def missing_packages(root, profile):
+def missing_packages(root, profile, compositor="hyprland"):
+    import package_sessions
+    import package_managers
+
     mapping = json.loads((root / "packaging/packages.json").read_text())
     names = mapping[distro(mapping)]
     packages = list(
@@ -205,15 +234,25 @@ def missing_packages(root, profile):
             ]
         )
     )
-    return [
-        p
-        for p in packages
-        if subprocess.run(
-            ["pacman", "-Q", p.split("=")[0]],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        ).returncode
-    ]
+    for component in ("ai", "brain"):
+        if (
+            component in profile["components"]
+            and not (root / "deployment" / component).is_dir()
+        ):
+            packages.append("nacre-" + component)
+    registry = package_sessions.registry(root)
+    for name in package_sessions.backends(compositor):
+        definition = registry[name]
+        if definition.get("package"):
+            packages.append(definition["package"])
+        packages.extend(names.get(definition.get("dependencies"), []))
+        if name == "niri" and not definition.get("dependencies"):
+            import package_niri
+
+            packages.extend(package_niri.DEPENDENCIES)
+    return package_managers.manager(distro(mapping)).missing(
+        list(dict.fromkeys(packages))
+    )
 
 
 def main(argv=None):
@@ -236,6 +275,17 @@ def main(argv=None):
     )
     parser.add_argument("--profile")
     parser.add_argument("--compositor")
+    parser.add_argument(
+        "--also-compositor", dest="additional_compositors", action="append", default=[]
+    )
+    parser.add_argument(
+        "--install-deps",
+        action="store_true",
+        help="install missing packages using the distribution package manager",
+    )
+    parser.add_argument(
+        "--review-selected", action="store_true", help=argparse.SUPPRESS
+    )
     parser.add_argument(
         "--with", dest="optional", action="append", choices=("ai", "brain"), default=[]
     )
@@ -267,7 +317,10 @@ def main(argv=None):
                 {"plan": "--plan", "yes": "--yes"},
             )
         )
-    profile, keyboard, compositor = selection(args, ROOT, Path.home(), interactive)
+    profile, keyboard, compositor = selection(
+        args, ROOT, Path.home(), interactive and not args.review_selected
+    )
+    selected_backends = [compositor, *getattr(args, "additional_compositors", [])]
     with tempfile.TemporaryDirectory(prefix="nacre-setup-") as temporary:
         selected = Path(temporary) / "profile.json"
         selected.write_text(json.dumps(profile))
@@ -276,15 +329,17 @@ def main(argv=None):
         try:
             from releases import package_plan, deploy_package
 
-            plan = package_plan(ROOT, profile)
-            missing = missing_packages(ROOT, profile)
+            missing = missing_packages(ROOT, profile, selected_backends)
+            plan = package_plan(
+                ROOT, profile, selected_backends, keyboard, validate_config=not missing
+            )
             print(
                 tr(
                     "setup.plan.summary",
                     "Nacre setup: profile={profile}; compositor={compositor}; components={components}",
                     {
                         "profile": profile["id"],
-                        "compositor": compositor,
+                        "compositor": ", ".join(selected_backends),
                         "components": ", ".join(profile["components"]),
                     },
                 )
@@ -316,6 +371,29 @@ def main(argv=None):
             if args.plan:
                 return 0
             if missing:
+                if args.install_deps or interactive:
+                    import package_managers
+
+                    mapping = json.loads((ROOT / "packaging/packages.json").read_text())
+                    package_managers.manager(distro(mapping)).install(missing)
+                    # Dependencies may upgrade Nacre itself. Review/apply through
+                    # a fresh interpreter, never a mixture of old/new modules.
+                    command = [
+                        sys.executable,
+                        str(ROOT / "tools/setup.py"),
+                        "--review-selected",
+                        "--profile",
+                        str(selected),
+                        "--compositor",
+                        compositor,
+                    ]
+                    for backend in selected_backends[1:]:
+                        command += ["--also-compositor", backend]
+                    for name, value in keyboard.items():
+                        command += ["--" + name, value]
+                    if args.yes:
+                        command.append("--yes")
+                    return subprocess.call(command)
                 raise RuntimeError(
                     tr(
                         "setup.error.missing-packages",
@@ -337,7 +415,7 @@ def main(argv=None):
                     tr("setup.cancelled", "Setup cancelled; no configuration changed.")
                 )
                 return 0
-            result = deploy_package(ROOT, profile, keyboard, compositor)
+            result = deploy_package(ROOT, profile, keyboard, selected_backends)
             print(
                 tr(
                     "setup.applied",

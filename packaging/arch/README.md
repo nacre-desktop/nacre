@@ -1,12 +1,20 @@
 # Arch packages (not yet published)
 
-One package base builds `nacre` (core), `nacre-ai` and `nacre-brain`. Orient owns
+One package base builds `nacre` (core), `nacre-ai`, `nacre-brain`,
+`nacre-session-niri` and `nacre-session-hyprland`. Orient owns
 its independent `orient` package; do not bundle Orient into Nacre.
 The tested exact engine revision/version is in `dependencies.lock.json`.
-Arch versions use `0.1.0devN`, which sorts below `0.1.0`; Python uses
+Development Arch snapshots use `0.1.0devN.rCOUNT.gREVISION`, with an increasing
+Git commit count so pacman recognizes each tested update. These sort below the
+corresponding stable `0.1.0`; Python uses
 `0.1.0.devN` and Git tags use `v0.1.0-dev.N`.
 
 `packaging/packages.json` is the authoritative distro package-name mapping.
+`packaging/sessions.json` declares compositor adapters, dependency groups and
+login entries; setup and package staging use that same registry. A new backend
+adds its integration module and dependency group here, plus plan/apply/rollback
+and installed-runtime tests. A new OS adds a package-manager adapter without
+putting distro-specific transactions into session integration code.
 `recipe.py` renders a conventional PKGBUILD with explicit dependency arrays;
 edit the mapping, regenerate and review the recipe rather than maintaining
 several lists. Native integrations are compiled by `build.py`, using Arch
@@ -69,9 +77,10 @@ change a seeded palette and confirm it remains unchanged; create a conflicting
 managed edit and confirm setup refuses it. Verify rollback and injected apply
 failure through tests. Check that gcc, npm and Ruff are absent from the runtime
 root. The reproducible all-component smoke test is
-`python /path/to/packaging/arch/test-installed.py`, copied into the runtime root
+`python /path/to/packaging/arch/test-installed.py --compositor niri`, copied into the runtime root
 and run as a fresh `nacre-package-test*` user. It refuses existing Nacre config
-or credential directories. Test the terminal wizard through a real TTY too;
+or credential directories. Repeat with separate users for `hyprland` and `both`;
+the package workflow performs all three in a runtime-only Arch image. Test the terminal wizard through a real TTY too;
 confirm cancellation creates no configuration, then confirm apply. Cold-login graphical validation needs a VM/Wayland session and is a
 separate gate; headless configuration success is not proof of desktop rendering.
 
@@ -96,14 +105,15 @@ fresh-user/desktop checks pass:
    Copy only PKGBUILD and any required recipe support files; this recipe has
    no install hooks or patches. Run `makepkg --printsrcinfo > .SRCINFO` there.
 5. Run `namcap PKGBUILD` and inspect `.SRCINFO`, then commit and push those two
-   files to the AUR. The single package base exposes all three split packages.
+   files to the AUR. The single package base exposes all five split packages.
    Do not push package binaries, caches, private profiles or build artifacts.
 6. For compiler-free end-user installs, separately distribute tested signed
    binaries through an Arch repository or release artifacts. AUR submission
    alone still asks users/AUR helpers to build packages.
 
-Repository hosting/signing and AUR account setup are outside this task; never
-copy another account's authentication to publish.
+AUR registration is currently paused. Binary distribution can proceed independently
+through a signed pacman repository. Never copy another account's authentication
+to publish.
 
 ## Niri companion
 
@@ -136,7 +146,8 @@ features and ordinary strip/debug processing stay enabled.
 The package owns only `/usr/lib/nacre/niri`, `/usr/bin/nacre-niri` and its license/
 patch notices. It depends on distribution Niri for its existing resources and
 session support. No system Niri binary, session entry or per-user configuration
-is overwritten. The prepared Nacre Niri session selects this companion first;
+is overwritten. The source-prepared Nacre Niri session selects this companion first; package setup
+currently uses stock Niri;
 `nacre-niri` also runs it directly for nested testing. Stock Niri remains available.
 Pacman-owned files are validated using their owner, permissions, pinned source,
 protocol and executable version. Private source builds instead require matching

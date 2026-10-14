@@ -2,6 +2,7 @@
 """Versioned desktop releases: snapshot, stage, exercise, promote, or restore."""
 
 import argparse
+from contextlib import contextmanager
 import datetime as dt
 import fcntl
 import hashlib
@@ -12,6 +13,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 HOME = Path.home()
@@ -155,7 +157,8 @@ def capture(repo, revision, extra=(), package=False):
         created=dt.datetime.now(dt.timezone.utc).isoformat(),
         entries=[],
     )
-    for i, path in enumerate(sorted(set(paths(repo)) | set(extra), key=str)):
+    captured = set(extra) if package else set(paths(repo)) | set(extra)
+    for i, path in enumerate(sorted(captured, key=str)):
         entry = dict(
             path=str(path),
             before=fingerprint(path),
@@ -484,35 +487,76 @@ def deploy(repo, components, keyboard, migrate=False):
         raise
 
 
-def package_plan(repo, profile):
+@contextmanager
+def package_configuration(repo, profile, keyboard, compositor, *, validate_config=True):
     import configure
-    import package_runtime
+    import package_sessions
 
-    original = configure.selected_profile
+    original, original_files = configure.selected_profile, configure.files
     configure.selected_profile = lambda root=repo: profile
     try:
+        with tempfile.TemporaryDirectory(prefix="nacre-package-config-") as temporary:
+            scope = ()
+            desired = {}
+            common = original_files(repo)
+            for name in package_sessions.backends(compositor):
+                backend = package_sessions.integration(repo, name)
+                if backend is None:
+                    desired.update(common)
+                else:
+                    desired.update(
+                        backend.files(
+                            repo,
+                            HOME,
+                            profile,
+                            keyboard,
+                            Path(temporary) / name,
+                            common,
+                            validate_config=validate_config,
+                        )
+                    )
+            if any(
+                package_sessions.integration(repo, name) is not None
+                for name in package_sessions.backends(compositor)
+            ):
+                configure.files = lambda root=repo: desired
+                scope = tuple(str(path) for path in desired)
+            yield scope
+    finally:
+        configure.selected_profile, configure.files = original, original_files
+
+
+def package_plan(
+    repo, profile, compositor="hyprland", keyboard=None, *, validate_config=True
+):
+    import configure
+    import package_runtime
+    from keyboard import system_keyboard
+
+    keyboard = system_keyboard() if keyboard is None else keyboard
+    with package_configuration(
+        repo, profile, keyboard, compositor, validate_config=validate_config
+    ) as scope:
         collisions = set(configure.files(repo)) & set(
-            package_runtime.links(repo, profile)
+            package_runtime.links(repo, profile, compositor)
         )
         if collisions:
             raise RuntimeError(
                 "Package declares both file and runtime link: "
                 + str(sorted(collisions)[0])
             )
-        changed, links, _ = configure.plan(HOME, repo)
+        changed, links, _ = configure.plan(HOME, repo, only=scope)
         if links:
             raise RuntimeError(
                 "Source-linked configuration requires explicit source migration first"
             )
-        runtime = package_runtime.plan(HOME, repo, profile)
+        runtime = package_runtime.plan(HOME, repo, profile, compositor)
         result = [HOME / relative for relative, _ in changed + runtime]
         result += [
             HOME / ".config/nacre" / name
             for name in ("profile.json", "profile.lua", "keyboard.lua")
         ]
         return sorted(set(result), key=str)
-    finally:
-        configure.selected_profile = original
 
 
 def deploy_package(repo, profile, keyboard, compositor):
@@ -521,8 +565,10 @@ def deploy_package(repo, profile, keyboard, compositor):
     import package_runtime
     from keyboard import seed
     import setup
+    import package_sessions
 
-    if compositor != "hyprland":
+    selected = package_sessions.backends(compositor)
+    if any(name not in setup.supported_compositors(repo) for name in selected):
         raise RuntimeError(
             "This package does not yet include a complete compositor setup contract"
         )
@@ -531,20 +577,27 @@ def deploy_package(repo, profile, keyboard, compositor):
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     with (STATE / "release.lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        desired = package_plan(repo, profile)
-        extra = desired + [HOME / ".local/state/nacre/package-links.json"]
+        desired = package_plan(repo, profile, compositor, keyboard)
+        extra = desired + [
+            HOME / ".local/state/nacre/package-links.json",
+            HOME / ".local/state/nacre/configuration.json",
+        ]
         revision = package_runtime.metadata(repo)["revision"]
         release, record = capture(repo, revision, extra, package=True)
-        record.update(deployment="package", compositor=compositor, release=str(release))
-        original = configure.selected_profile
-        configure.selected_profile = lambda root=repo: profile
+        record.update(
+            deployment="package",
+            compositor=selected[0],
+            compositors=list(selected),
+            release=str(release),
+        )
         try:
-            seed(HOME, keyboard)
-            configure.apply(HOME, repo)
-            profiles = setup.policy(repo)
-            profiles.selected = lambda: profile
-            profiles.install(HOME)
-            package_runtime.apply(HOME, repo, profile)
+            with package_configuration(repo, profile, keyboard, compositor) as scope:
+                seed(HOME, keyboard)
+                configure.apply(HOME, repo, only=scope)
+                profiles = setup.policy(repo)
+                profiles.selected = lambda: profile
+                profiles.install(HOME)
+                package_runtime.apply(HOME, repo, profile, compositor)
             for entry in record["entries"]:
                 entry["after"] = fingerprint(Path(entry["path"]))
             record["status"] = "prepared"
@@ -564,8 +617,6 @@ def deploy_package(repo, profile, keyboard, compositor):
             atomic(release / "release.json", record)
             restore(release, record, force=True)
             raise
-        finally:
-            configure.selected_profile = original
 
 
 def main():

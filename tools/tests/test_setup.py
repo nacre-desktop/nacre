@@ -3,6 +3,7 @@ import json
 import contextlib
 import io
 import os
+import shutil
 import subprocess
 from pathlib import Path
 import sys
@@ -15,6 +16,8 @@ sys.path.insert(0, str(TOOLS))
 import package_runtime
 import releases
 import setup
+import package_niri
+import package_managers
 
 
 def load(path, name):
@@ -345,6 +348,359 @@ class PackageSetupTests(unittest.TestCase):
             root, _, _ = self.fixture(folder)
             self.assertEqual(setup.supported_compositors(root), ["hyprland"])
 
+    def niri_fixture(self, folder):
+        root, home, profile = self.fixture(folder)
+        (root / "package.json.installed").write_text(
+            json.dumps({"revision": "fixture", "compositors": ["hyprland", "niri"]})
+        )
+        shutil.copy2(TOOLS / "package_niri.py", root / "tools/package_niri.py")
+        compiler = load(
+            TOOLS.parent / "nacre/shell-tools/nacre_native_config.py",
+            "test_setup_native",
+        )
+        shutil.copy2(compiler._binary(), root / "nacre/shell-tools/nacre-helper")
+        shutil.copy2(
+            TOOLS.parent / "nacre/shell-tools/compositor-contract.json",
+            root / "nacre/shell-tools/compositor-contract.json",
+        )
+        scheme = root / "deployment/core/.local/state/nacre/scheme.json"
+        scheme.parent.mkdir(parents=True)
+        shutil.copy2(TOOLS.parent / "nacre/shell-tools/reference-style.json", scheme)
+        (root / "seed-paths.json").write_text(
+            json.dumps([".local/state/nacre/scheme.json"])
+        )
+        palette = root / "nacre/shell-tools/compositor_backends/niri/palette.kdl.in"
+        palette.parent.mkdir(parents=True)
+        shutil.copy2(
+            TOOLS.parent / "nacre/shell-tools/compositor_backends/niri/palette.kdl.in",
+            palette,
+        )
+        plain = home / ".config/niri/config.kdl"
+        plain.parent.mkdir(parents=True)
+        plain.write_text("// Existing CachyOS/Noctalia session\n")
+        # Existing source-linked shell preferences must not block a Niri setup.
+        fish = home / ".config/fish"
+        fish_source = home / "private-fish"
+        fish_source.mkdir()
+        fish.symlink_to(fish_source)
+        (fish / "config.fish").write_text("# Private shell\n")
+        return root, home, profile
+
+    def test_niri_package_apply_preserves_plain_session_and_can_rollback(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.niri_fixture(folder)
+            before = {
+                path: path.read_bytes()
+                for path in (
+                    home / ".config/niri/config.kdl",
+                    home / ".config/fish/config.fish",
+                )
+            }
+            with (
+                patch.object(releases, "HOME", home),
+                patch.object(releases, "STATE", home / "releases"),
+                patch.object(releases, "subprocess") as processes,
+            ):
+                self.assertEqual(
+                    setup.supported_compositors(root), ["hyprland", "niri"]
+                )
+                record = releases.deploy_package(
+                    root, profile, {"layout": "no"}, "niri"
+                )
+                processes.run.assert_not_called()
+                self.assertEqual(record["status"], "prepared")
+                config = home / ".config/nacre/niri/config.kdl"
+                subprocess.run(
+                    ["niri", "validate", "-c", str(config)],
+                    check=True,
+                    capture_output=True,
+                )
+                self.assertFalse(
+                    (
+                        home
+                        / ".config/systemd/user/graphical-session.target.wants/nacre-shell.service"
+                    ).exists()
+                )
+                self.assertIn(
+                    "nacre-shell.service",
+                    (home / ".config/systemd/user/nacre-niri.target").read_text(),
+                )
+                self.assertIn('include "desktop.kdl"', config.read_text())
+                self.assertIn('include "palette.kdl"', config.read_text())
+                for path, content in before.items():
+                    self.assertEqual(path.read_bytes(), content)
+                releases.restore(Path(record["release"]), record)
+                self.assertFalse(config.exists())
+                for path, content in before.items():
+                    self.assertEqual(path.read_bytes(), content)
+
+    def test_both_sessions_prepare_and_repeat_without_taking_over_plain_niri(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.niri_fixture(folder)
+            (home / ".config/fish").unlink()
+            (root / "packaging").mkdir()
+            shutil.copy2(
+                TOOLS.parent / "packaging/sessions.json",
+                root / "packaging/sessions.json",
+            )
+            shutil.copy2(
+                TOOLS / "package_hyprland.py", root / "tools/package_hyprland.py"
+            )
+            for name, text in {
+                "hypr/hyprland.lua": "-- fixture\n",
+                "hypr/conf/autostart.lua": "-- existing startup\n",
+                "tools/defaults/hypridle.conf": "general {\n}\n",
+            }.items():
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text)
+            with (
+                patch.object(releases, "HOME", home),
+                patch.object(releases, "STATE", home / "releases"),
+            ):
+                record = releases.deploy_package(
+                    root, profile, {"layout": "no"}, ["niri", "hyprland"]
+                )
+                self.assertEqual(record["compositors"], ["niri", "hyprland"])
+                self.assertIn(
+                    "nacre-hyprland.target",
+                    (home / ".config/hypr/conf/autostart.lua").read_text(),
+                )
+                self.assertTrue(
+                    (home / ".config/systemd/user/nacre-niri.target").is_file()
+                )
+                self.assertTrue(
+                    (home / ".config/systemd/user/nacre-hyprland.target").is_file()
+                )
+                self.assertEqual(
+                    (home / ".config/niri/config.kdl").read_text(),
+                    "// Existing CachyOS/Noctalia session\n",
+                )
+                releases.deploy_package(
+                    root, profile, {"layout": "us"}, ["niri", "hyprland"]
+                )
+                self.assertIn(
+                    '"no"', (home / ".config/nacre/niri/keyboard.kdl").read_text()
+                )
+                # Preparing only one later must retain the other session's files.
+                releases.deploy_package(root, profile, {"layout": "us"}, "niri")
+                self.assertTrue((home / ".config/hypr/conf/autostart.lua").is_file())
+
+    def test_selected_session_dependencies_do_not_force_other_compositors(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, _, profile = self.fixture(folder)
+            (root / "packaging").mkdir()
+            for name in ("packages.json", "sessions.json"):
+                shutil.copy2(
+                    TOOLS.parent / "packaging" / name, root / "packaging" / name
+                )
+            with (
+                patch.object(setup, "distro", return_value="arch"),
+                patch.object(
+                    package_managers.Arch, "missing", return_value=[]
+                ) as query,
+            ):
+                setup.missing_packages(root, profile, "niri")
+                requested = query.call_args.args[0]
+                self.assertIn("nacre-session-niri", requested)
+                self.assertIn("niri>=26.04", requested)
+                self.assertIn("orient", requested)
+                self.assertFalse(any("hyprland" in value for value in requested))
+                setup.missing_packages(root, profile, ["hyprland", "niri"])
+                self.assertIn("nacre-session-hyprland", query.call_args.args[0])
+
+    def test_dependency_transaction_restarts_setup_with_same_choices(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            (root / "packaging").mkdir()
+            (root / "packaging/packages.json").write_text('{"arch":{}}')
+            keyboard = {"layout": "no", "variant": "", "model": "", "options": ""}
+
+            def restart(command):
+                self.assertIn("--review-selected", command)
+                self.assertIn("--yes", command)
+                self.assertEqual(
+                    command[command.index("--also-compositor") + 1], "hyprland"
+                )
+                saved = Path(command[command.index("--profile") + 1])
+                self.assertEqual(json.loads(saved.read_text()), profile)
+                return 0
+
+            with (
+                patch.object(setup, "ROOT", root),
+                patch.object(setup.Path, "home", return_value=home),
+                patch.object(setup.os, "geteuid", return_value=1000),
+                patch.object(
+                    setup, "selection", return_value=(profile, keyboard, "niri")
+                ),
+                patch.object(setup, "distro", return_value="arch"),
+                patch.object(
+                    setup, "missing_packages", return_value=["nacre-session-niri"]
+                ),
+                patch.object(releases, "package_plan", return_value=[]),
+                patch.object(releases, "deploy_package") as deploy,
+                patch.object(package_managers.Arch, "install") as install,
+                patch.object(setup.subprocess, "call", side_effect=restart),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(
+                    setup.main(
+                        ["--yes", "--install-deps", "--also-compositor", "hyprland"]
+                    ),
+                    0,
+                )
+                install.assert_called_once_with(["nacre-session-niri"])
+                deploy.assert_not_called()
+                install.reset_mock()
+                self.assertEqual(setup.main(["--plan", "--install-deps"]), 0)
+                install.assert_not_called()
+
+    def test_niri_configuration_symlink_is_preserved(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.niri_fixture(folder)
+            other = home / "other-settings"
+            other.mkdir()
+            target = home / ".config/nacre/niri"
+            target.parent.mkdir(parents=True)
+            target.symlink_to(other)
+            with patch.object(releases, "HOME", home):
+                with self.assertRaisesRegex(RuntimeError, "symlink preserved"):
+                    releases.package_plan(root, profile, "niri", {"layout": "no"})
+            self.assertTrue(target.is_symlink())
+            self.assertEqual(list(other.iterdir()), [])
+
+    def test_setup_detects_current_niri_when_packaged_backend_is_ready(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, _ = self.niri_fixture(folder)
+            args = setup.argparse.Namespace(
+                layout=None,
+                variant=None,
+                model=None,
+                options=None,
+                compositor=None,
+                profile=None,
+                optional=[],
+            )
+            with patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": "niri"}):
+                self.assertEqual(setup.selection(args, root, home, False)[2], "niri")
+
+    def test_dependencies_check_providers_and_selected_niri_requirements(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, _, profile = self.fixture(folder)
+            mapping = root / "packaging/packages.json"
+            mapping.parent.mkdir()
+            mapping.write_text(
+                json.dumps(
+                    {"arch": {"core": ["hyprland", "uwsm"], "ai": [], "brain": []}}
+                )
+            )
+            with (
+                patch.object(setup, "distro", return_value="arch"),
+                patch.object(
+                    setup.subprocess,
+                    "run",
+                    return_value=subprocess.CompletedProcess(
+                        [], 127, "xdg-desktop-portal-gnome\n", ""
+                    ),
+                ) as query,
+            ):
+                self.assertEqual(
+                    setup.missing_packages(root, profile, "niri"),
+                    ["xdg-desktop-portal-gnome"],
+                )
+            self.assertEqual(query.call_args.args[0][:2], ["pacman", "-T"])
+            self.assertIn("niri", query.call_args.args[0])
+            self.assertIn("xwayland-satellite", query.call_args.args[0])
+
+    def test_niri_repeated_setup_preserves_custom_config_and_rejects_managed_drift(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.niri_fixture(folder)
+            with (
+                patch.object(releases, "HOME", home),
+                patch.object(releases, "STATE", home / "releases"),
+            ):
+                releases.deploy_package(root, profile, {"layout": "no"}, "niri")
+                custom = home / ".config/nacre/niri/custom.kdl"
+                custom.write_text("// My preferences\nlayout { gaps 12; }\n")
+                releases.deploy_package(root, profile, {"layout": "us"}, "niri")
+                self.assertIn("gaps 12", custom.read_text())
+                self.assertIn(
+                    'layout "no"',
+                    (home / ".config/nacre/niri/keyboard.kdl").read_text(),
+                )
+                managed = home / ".config/nacre/niri/config.kdl"
+                managed.write_text(managed.read_text() + "// Local change\n")
+                count = len(list((home / "releases").glob("*/release.json")))
+                with self.assertRaisesRegex(RuntimeError, "Local edit preserved"):
+                    releases.deploy_package(root, profile, {"layout": "no"}, "niri")
+                self.assertEqual(
+                    count, len(list((home / "releases").glob("*/release.json")))
+                )
+                self.assertTrue(managed.read_text().endswith("// Local change\n"))
+
+    def test_invalid_niri_custom_config_is_rejected_before_deployment(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.niri_fixture(folder)
+            custom = home / ".config/nacre/niri/custom.kdl"
+            custom.parent.mkdir(parents=True)
+            custom.write_text("this-is-not-a-niri-setting\n")
+            with patch.object(releases, "HOME", home):
+                with self.assertRaisesRegex(
+                    RuntimeError, "Niri configuration validation failed"
+                ):
+                    releases.package_plan(root, profile, "niri", {"layout": "no"})
+            self.assertFalse((home / ".config/nacre/niri/config.kdl").exists())
+            self.assertFalse((home / ".local/state/nacre/package-links.json").exists())
+
+    def test_niri_session_uses_uwsm_with_explicit_config_and_clears_hyprland(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            config_path = home / ".config/nacre/niri/config.kdl"
+            config_path.parent.mkdir(parents=True)
+            config_path.write_text("// fixture\n")
+            with (
+                patch.dict(
+                    os.environ,
+                    {"HYPRLAND_INSTANCE_SIGNATURE": "foreign", "GDK_BACKEND": "x11"},
+                ),
+                patch.object(package_niri.subprocess, "run") as commands,
+                patch.object(package_niri.os, "execvpe") as execute,
+            ):
+                package_niri.session(home)
+            config = str(home / ".config/nacre/niri/config.kdl")
+            self.assertEqual(
+                commands.call_args_list[0].args[0], ["niri", "validate", "-c", config]
+            )
+            self.assertEqual(
+                commands.call_args_list[1].args[0],
+                ["systemctl", "--user", "daemon-reload"],
+            )
+            command, arguments, environment = execute.call_args.args
+            self.assertEqual(command, "uwsm")
+            self.assertEqual(arguments[-3:], ["--session", "--config", config])
+            self.assertEqual(environment["NACRE_COMPOSITOR"], "niri")
+            self.assertNotIn("HYPRLAND_INSTANCE_SIGNATURE", environment)
+            self.assertNotIn("GDK_BACKEND", environment)
+
+    def test_niri_services_start_only_after_environment_is_published(self):
+        with patch.object(package_niri.subprocess, "run") as commands:
+            package_niri.finalize()
+        self.assertEqual(commands.call_args_list[0].args[0][:2], ["uwsm", "finalize"])
+        self.assertEqual(
+            commands.call_args_list[1].args[0],
+            ["systemctl", "--user", "start", "nacre-niri.target"],
+        )
+        with patch.object(
+            package_niri.subprocess,
+            "run",
+            side_effect=subprocess.CalledProcessError(1, "uwsm"),
+        ) as commands:
+            with self.assertRaises(subprocess.CalledProcessError):
+                package_niri.finalize()
+        self.assertEqual(commands.call_count, 1)
+
     def test_distro_alias_mapping_and_unsupported_os(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "os-release"
@@ -390,7 +746,7 @@ class PackageSetupTests(unittest.TestCase):
             selected, _, _ = setup.selection(args, root, home, False)
             self.assertTrue(selected["aiFullAccess"])
 
-    def test_optional_component_requires_installed_package(self):
+    def test_optional_component_can_be_selected_before_dependency_install(self):
         with tempfile.TemporaryDirectory() as folder:
             root, home, _ = self.fixture(folder)
             args = setup.argparse.Namespace(
@@ -402,11 +758,19 @@ class PackageSetupTests(unittest.TestCase):
                 profile=None,
                 optional=["brain"],
             )
-            with self.assertRaisesRegex(RuntimeError, "Install nacre-brain"):
-                setup.selection(args, root, home, False)
+            profile, _, _ = setup.selection(args, root, home, False)
+            self.assertIn("brain", profile["components"])
 
 
 class ArchPackageLayoutTests(unittest.TestCase):
+    def test_development_archives_have_monotonic_snapshot_versions(self):
+        recipe = load(TOOLS.parent / "packaging/arch/recipe.py", "setup_arch_recipe")
+        older = recipe.render(TOOLS.parent, "a" * 40, 11)
+        newer = recipe.render(TOOLS.parent, "b" * 40, 12)
+        self.assertIn(".r11.gaaaaaaaaaaaa", older)
+        self.assertIn(".r12.gbbbbbbbbbbbb", newer)
+        self.assertIn("orient=0.1.0dev6", newer)
+
     def test_split_packages_have_no_file_collisions_and_ship_native_artifacts(self):
         stage = load(TOOLS.parent / "packaging/arch/stage.py", "test_arch_stage")
         with tempfile.TemporaryDirectory() as folder:
@@ -431,7 +795,13 @@ class ArchPackageLayoutTests(unittest.TestCase):
                     path.chmod(0o755)
             owned = set()
             deployment_owned = set()
-            for component in ("core", "ai", "brain"):
+            for component in (
+                "core",
+                "ai",
+                "brain",
+                "session-niri",
+                "session-hyprland",
+            ):
                 destination = base / component
                 stage.stage(TOOLS.parent, destination, component, build)
                 files = {
@@ -467,6 +837,19 @@ class ArchPackageLayoutTests(unittest.TestCase):
             )
             self.assertNotIn(Path("usr/bin/orient"), owned)
             self.assertIn(Path("usr/share/nacre/nacre/shell-tools/nacre-helper"), owned)
+            self.assertIn(Path("usr/lib/nacre/nacre-helper"), owned)
+            reference = base / "core/usr/share/nacre/nacre/shell-tools/nacre-helper"
+            self.assertTrue(reference.is_symlink())
+            self.assertEqual(
+                reference.resolve(), base / "core/usr/lib/nacre/nacre-helper"
+            )
+            self.assertIn(Path("usr/share/wayland-sessions/nacre-niri.desktop"), owned)
+            self.assertIn(
+                "package_niri.py session",
+                (
+                    base / "session-niri/usr/share/wayland-sessions/nacre-niri.desktop"
+                ).read_text(),
+            )
             self.assertEqual(
                 (base / "core/usr/share/nacre/nacre/shell-tools/nacre-helper")
                 .stat()

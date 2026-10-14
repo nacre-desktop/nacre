@@ -19,6 +19,8 @@ BACKEND_FILES = {
     "tools/performance-session.py",
     # Session lifecycle owns starting/validating the native compositor, not IPC.
     "uwsm/tools/niri-session-runtime.py",
+    # Packaged session lifecycle validates/starts Niri; it performs no native IPC.
+    "tools/package_niri.py",
 }
 EXCLUDED = {
     ".git",
