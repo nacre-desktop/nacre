@@ -1,0 +1,105 @@
+name: Publish tested Arch repository
+on:
+  workflow_run:
+    workflows: [Pinned Arch packages]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Pinned Arch packages run to promote
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nacre-arch-publication
+  cancel-in-progress: false
+jobs:
+  repository:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    container: archlinux:base
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      eligible: ${{ steps.candidate.outputs.eligible }}
+    steps:
+      - name: Repository tools
+        run: pacman -Syu --noconfirm --needed git github-cli python gnupg libarchive
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+      - name: Admit only successful main builds with passing source CI
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CANDIDATE_RUN: ${{ inputs.run_id || github.event.workflow_run.id }}
+        run: python packaging/arch/admit.py
+      - name: Verify the released Orient dependency and build a signed repository
+        if: steps.candidate.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCH_REPO_SIGNING_KEY: ${{ secrets.ARCH_REPO_SIGNING_KEY }}
+          TESTED_REVISION: ${{ steps.candidate.outputs.revision }}
+          PACKAGE_RUN_ID: ${{ steps.candidate.outputs.run_id }}
+        run: |
+          set -eu
+          python packaging/arch/fetch-orient.py verified-orient
+          for archive in verified-orient/*.pkg.tar.zst; do
+            cmp "$archive" "candidate/orient/$(basename "$archive")"
+          done
+          export GNUPGHOME
+          GNUPGHOME=$(mktemp -d)
+          chmod 700 "$GNUPGHOME"
+          trap 'gpgconf --kill gpg-agent; rm -rf "$GNUPGHOME"' EXIT
+          test -n "$ARCH_REPO_SIGNING_KEY"
+          printf '%s' "$ARCH_REPO_SIGNING_KEY" | gpg --batch --import
+          python packaging/arch/repository.py previous --fetch-previous
+          if test -f previous/release.json; then
+            python packaging/arch/repository.py candidate --output site --revision "$TESTED_REVISION" --run-id "$PACKAGE_RUN_ID" --previous previous
+          else
+            python packaging/arch/repository.py candidate --output site --revision "$TESTED_REVISION" --run-id "$PACKAGE_RUN_ID"
+          fi
+      - name: Preserve an immutable downloadable package cut
+        if: steps.candidate.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json, pathlib, subprocess, tempfile
+          folder = pathlib.Path('site/arch/dev/x86_64')
+          receipt = json.loads((folder/'release.json').read_text())
+          tag = 'arch-dev-' + receipt['packages']['nacre']['version']
+          if subprocess.run(['gh','release','view',tag], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+              with tempfile.TemporaryDirectory() as temporary:
+                  subprocess.run(['gh','release','download',tag,'--pattern','release.json','--dir',temporary], check=True)
+                  existing = json.loads((pathlib.Path(temporary)/'release.json').read_text())
+                  assert existing['packages'] == receipt['packages'], 'Refusing to replace a different immutable package cut'
+          else:
+              files = [folder/record['filename'] for record in receipt['packages'].values()]
+              files += [pathlib.Path(str(path)+'.sig') for path in files]
+              files += [folder/'release.json',folder/'release.json.sig',folder/'SHA256SUMS',folder/'SHA256SUMS.sig',pathlib.Path('site/nacre-repo.asc'),pathlib.Path('site/install-arch.sh')]
+              subprocess.run(['gh','release','create',tag,'--target',receipt['sourceRevision'],'--prerelease','--latest=false','--title','Nacre Arch development '+receipt['packages']['nacre']['version'],'--notes','Tested Arch/CachyOS preview. Install through the signed pacman repository for dependency resolution and updates. Source and installed-runtime proof are linked in release.json.',*[str(path) for path in files]], check=True)
+          PY
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        if: steps.candidate.outputs.eligible == 'true'
+        with:
+          path: site
+  deploy:
+    needs: repository
+    if: needs.repository.outputs.eligible == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        id: deployment

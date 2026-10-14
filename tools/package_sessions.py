@@ -37,3 +37,16 @@ def integration(root, name):
     value = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(value)
     return value
+
+
+def start(root, name):
+    if name not in registry(root):
+        raise ValueError("Unknown packaged compositor: " + name)
+    backend = integration(root, name)
+    if (
+        backend is None
+        or not backend.supported(root)
+        or not hasattr(backend, "session")
+    ):
+        raise RuntimeError("Packaged session launcher unavailable: " + name)
+    backend.session()

@@ -4,7 +4,7 @@
     "module": "package_hyprland",
     "package": "nacre-session-hyprland",
     "dependencies": "session_hyprland",
-    "desktop": "uwsm/sessions/nacre-hyprland.desktop",
+    "desktop": "uwsm/sessions/nacre-hyprland-package.desktop",
     "experimental": false
   },
   "niri": {

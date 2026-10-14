@@ -103,13 +103,9 @@ check() {{
   npm ci --ignore-scripts --no-audit --no-fund
   python -m venv --system-site-packages "$srcdir/check-env"
   "$srcdir/check-env/bin/python" -m installer nacre/shell-cli/dist/*.whl
-  local check_runtime
-  check_runtime=$(mktemp -d)
-  chmod 700 "$check_runtime"
   export NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper"
   export NACRE_ORIENT_BINARY=/usr/bin/orient
-  XDG_RUNTIME_DIR="$check_runtime" CI=1 dbus-run-session -- xvfb-run -a "$srcdir/check-env/bin/python" tools/check.py </dev/null
-  rm -rf "$check_runtime"
+  python packaging/arch/check.py "$srcdir/check-env/bin/python"
 }}
 
 package_nacre() {{

@@ -113,13 +113,15 @@ def selection(args, root, home, interactive):
             tr("setup.error.empty-layout", "Keyboard layout cannot be empty")
         )
     choices = supported_compositors(root)
+    if not choices:
+        raise RuntimeError("No supported compositor integration is installed")
     detected = next(
         (
             name
             for name in os.environ.get("XDG_CURRENT_DESKTOP", "").lower().split(":")
             if name in choices
         ),
-        "hyprland",
+        choices[0],
     )
     compositor = args.compositor or (
         ask(

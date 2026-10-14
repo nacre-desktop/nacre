@@ -1,29 +1,43 @@
 name: Pinned Arch packages
 on:
+  workflow_run:
+    workflows: [Source checks]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       component:
-        description: Package family (core builds Orient first)
+        description: Package family (core uses the separately released Orient dependency)
         required: true
-        default: all
+        default: core
         type: choice
         options: [all, core, niri]
       orient_recipe_revision:
         description: Exact Orient commit containing the package recipe to verify
         required: true
+        default: 81cdf445454647ef41a65c67a7ea90c193c2b1e5
         type: string
+      use_released_orient:
+        description: Consume the signed independent Orient release (required for publication)
+        type: boolean
+        default: true
 permissions:
   contents: read
 jobs:
   packages:
-    name: Arch packages (${{ inputs.component }})
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_sha == github.sha)
+    name: Arch packages (${{ inputs.component || 'core' }})
     # Match source CI: Ubuntu24.04 denies nested Bubblewrap network setup.
     # Keep the parity sandbox intact rather than relaxing host protections.
     runs-on: ubuntu-22.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: github.event_name == 'workflow_dispatch' && !inputs.use_released_orient
         with:
           repository: nacre-desktop/orient
           ref: ${{ inputs.orient_recipe_revision }}
@@ -31,16 +45,26 @@ jobs:
       - name: Build the committed VCS recipes in clean Arch chroots
         shell: bash
         env:
-          PACKAGE_COMPONENT: ${{ inputs.component }}
-          ORIENT_RECIPE_REVISION: ${{ inputs.orient_recipe_revision }}
+          PACKAGE_COMPONENT: ${{ inputs.component || 'core' }}
+          USE_RELEASED_ORIENT: ${{ github.event_name == 'workflow_run' || inputs.use_released_orient }}
+          ORIENT_RECIPE_REVISION: ${{ inputs.orient_recipe_revision || '81cdf445454647ef41a65c67a7ea90c193c2b1e5' }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           [[ "$ORIENT_RECIPE_REVISION" =~ ^[0-9a-f]{40}$ ]]
           [[ "$PACKAGE_COMPONENT" == all || "$PACKAGE_COMPONENT" == core || "$PACKAGE_COMPONENT" == niri ]]
           work="$RUNNER_TEMP/pinned-arch"
           mkdir -p "$work"/{orient,nacre,niri}
-          cp orient-recipe/packaging/arch/PKGBUILD "$work/orient/"
-          cp packaging/arch/PKGBUILD "$work/nacre/"
+          cp packaging/keys/nacre-repo.asc "$work/"
+          cp packaging/keys/nacre-repo.fingerprint "$work/"
+          if [[ "$PACKAGE_COMPONENT" != niri ]]; then
+            if [[ "$USE_RELEASED_ORIENT" == true ]]; then
+              python3 packaging/arch/fetch-orient.py "$work/orient"
+            else
+              cp orient-recipe/packaging/arch/PKGBUILD "$work/orient/"
+            fi
+          fi
+          python3 packaging/arch/recipe.py --revision HEAD --output "$work/nacre/PKGBUILD"
           cp packaging/arch/niri/PKGBUILD "$work/niri/"
           cp packaging/arch/test-installed.py "$work/test-installed.py"
           # As in Orient's distribution checks, devtools needs systemd as PID1.
@@ -48,11 +72,11 @@ jobs:
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v "$work:/work" \
             archlinux:base-devel /usr/lib/systemd/systemd)
           trap 'docker rm --force "$container"' EXIT
-          docker exec --env PACKAGE_COMPONENT "$container" bash -euxo pipefail -c '
+          docker exec --env PACKAGE_COMPONENT --env USE_RELEASED_ORIENT "$container" bash -euxo pipefail -c '
             export USER=root
             pacman-key --init
             pacman-key --populate archlinux
-            pacman -Syu --noconfirm devtools sudo
+            pacman -Syu --noconfirm devtools sudo namcap
             useradd -m builder
             printf "builder ALL=(ALL) NOPASSWD: ALL\n" > /etc/sudoers.d/builder
             printf "\nMAKEFLAGS=-j2\nexport CARGO_BUILD_JOBS=2\n" >> /etc/makepkg.conf
@@ -72,12 +96,20 @@ jobs:
               --ro-bind /fixture-proc /proc --dev /dev /usr/bin/true
             rm -rf --one-file-system /var/tmp/nacre-namespace-probe
             if [[ "$PACKAGE_COMPONENT" != niri ]]; then
-              cd /work/orient
-              sudo -u builder extra-x86_64-build 2>&1 | tee /work/orient.log
-              # Each invocation cleans its root; inject only the tested engine.
+              if [[ "$USE_RELEASED_ORIENT" != true ]]; then
+                cd /work/orient
+                sudo -u builder extra-x86_64-build 2>&1 | tee /work/orient.log
+              fi
+              # Trust the public package key only inside this disposable chroot.
+              mkarchroot -C /usr/share/devtools/pacman.conf.d/extra.conf \
+                /var/tmp/nacre-package-build/root base-devel
+              cp /work/nacre-repo.asc /var/tmp/nacre-package-build/root/tmp/nacre-repo.asc
+              arch-nspawn /var/tmp/nacre-package-build/root pacman-key --add /tmp/nacre-repo.asc
+              arch-nspawn /var/tmp/nacre-package-build/root pacman-key --lsign-key "$(cat /work/nacre-repo.fingerprint)"
               cd /work/nacre
-              sudo -u builder extra-x86_64-build -- -I /work/orient/orient-[0-9]*.pkg.tar.zst \
-                2>&1 | tee /work/nacre.log
+              sudo -u builder makechrootpkg -c -r /var/tmp/nacre-package-build \
+                -I /work/orient/orient-[0-9]*.pkg.tar.zst 2>&1 | tee /work/nacre.log
+              namcap /work/nacre/*.pkg.tar.zst > /work/namcap.log 2>&1
             fi
             if [[ "$PACKAGE_COMPONENT" != core ]]; then
               cd /work/niri
@@ -88,6 +120,9 @@ jobs:
             (( ${#archives[@]} > 0 ))
             sha256sum "${archives[@]}" > /work/package-sha256.txt
           '
+          # The builder UID differs from the GitHub runner UID. Return only the
+          # artifact directory itself so the host can write proof logs/receipts.
+          docker exec "$container" chown "$(id -u):$(id -g)" /work
           if [[ "$PACKAGE_COMPONENT" != niri ]]; then
             # A separate image contains no base-devel, source checkout or build venv.
             runtime=$(docker run --detach -v "$work:/work:ro" archlinux:base sleep infinity)
@@ -96,6 +131,8 @@ jobs:
               pacman-key --init
               pacman-key --populate archlinux
               pacman -Syu --noconfirm
+              pacman-key --add /work/nacre-repo.asc
+              pacman-key --lsign-key "$(cat /work/nacre-repo.fingerprint)"
               pacman -U --noconfirm /work/orient/orient-[0-9]*.pkg.tar.zst \
                 /work/nacre/nacre-[0-9]*.pkg.tar.zst \
                 /work/nacre/nacre-ai-[0-9]*.pkg.tar.zst \
@@ -108,6 +145,12 @@ jobs:
               done
             ' 2>&1 | tee "$work/installed-runtime.log"
           fi
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess
+          work = pathlib.Path(os.environ['RUNNER_TEMP']) / 'pinned-arch'
+          revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          (work / 'build-receipt.json').write_text(json.dumps(dict(schema=1, sourceRevision=revision, workflowRevision=os.environ['GITHUB_SHA'], runId=os.environ['GITHUB_RUN_ID'], releasedOrient=os.environ['USE_RELEASED_ORIENT'] == 'true'), indent=2)+'\n')
+          PY
       - name: Package archives, recipes and build logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -118,5 +161,8 @@ jobs:
             ${{ runner.temp }}/pinned-arch/**/PKGBUILD
             ${{ runner.temp }}/pinned-arch/*.log
             ${{ runner.temp }}/pinned-arch/package-sha256.txt
+            ${{ runner.temp }}/pinned-arch/build-receipt.json
+            ${{ runner.temp }}/pinned-arch/**/*.sig
+            ${{ runner.temp }}/pinned-arch/**/release.json
           if-no-files-found: error
           retention-days: 7

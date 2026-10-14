@@ -620,6 +620,16 @@ def deploy_package(repo, profile, keyboard, compositor):
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "session":
+        import package_sessions
+
+        installed = Path("/usr/share/nacre")
+        if len(sys.argv) != 3 or not (installed / "package.json.installed").is_file():
+            raise SystemExit(
+                "Usage after installing packages: nacre session COMPOSITOR"
+            )
+        package_sessions.start(installed, sys.argv[2])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "setup":
         installed = Path("/usr/share/nacre/tools/setup.py")
         candidate = (
@@ -628,7 +638,9 @@ def main():
         raise SystemExit(
             subprocess.call([sys.executable, str(candidate), *sys.argv[2:]])
         )
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(
+        epilog="Package users: nacre setup [OPTIONS] prepares a login; nacre session COMPOSITOR starts it from a TTY after logout."
+    )
     p.add_argument(
         "action",
         choices=[

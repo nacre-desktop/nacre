@@ -18,6 +18,7 @@ import releases
 import setup
 import package_niri
 import package_managers
+import package_hyprland
 
 
 def load(path, name):
@@ -701,6 +702,29 @@ class PackageSetupTests(unittest.TestCase):
                 package_niri.finalize()
         self.assertEqual(commands.call_count, 1)
 
+    def test_hyprland_login_uses_uwsm_and_does_not_inherit_niri_environment(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            with self.assertRaisesRegex(RuntimeError, "Run nacre setup"):
+                package_hyprland.session(home)
+            config = home / ".config/hypr/hyprland.lua"
+            config.parent.mkdir(parents=True)
+            config.write_text("-- prepared fixture\n")
+            with (
+                patch.dict(
+                    os.environ, {"NIRI_CONFIG": "foreign", "NIRI_SOCKET": "foreign"}
+                ),
+                patch.object(package_hyprland.subprocess, "run"),
+                patch.object(package_hyprland.os, "execvpe") as execute,
+            ):
+                package_hyprland.session(home)
+            command, arguments, environment = execute.call_args.args
+            self.assertEqual(command, "uwsm")
+            self.assertEqual(arguments[-1], "hyprland.desktop")
+            self.assertEqual(environment["NACRE_COMPOSITOR"], "hyprland")
+            self.assertNotIn("NIRI_CONFIG", environment)
+            self.assertNotIn("NIRI_SOCKET", environment)
+
     def test_distro_alias_mapping_and_unsupported_os(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "os-release"
@@ -845,7 +869,7 @@ class ArchPackageLayoutTests(unittest.TestCase):
             )
             self.assertIn(Path("usr/share/wayland-sessions/nacre-niri.desktop"), owned)
             self.assertIn(
-                "package_niri.py session",
+                "nacre session niri",
                 (
                     base / "session-niri/usr/share/wayland-sessions/nacre-niri.desktop"
                 ).read_text(),

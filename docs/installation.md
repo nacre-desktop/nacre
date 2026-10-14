@@ -7,6 +7,38 @@ Obtain matching, tested binary archives from the maintainer. The tested Hyprland
 stack uses Hyprland 0.56.2 (Lua configuration), Quickshell 0.3.2, Qt 6.12 and UWSM.
 Upgrade the desktop and Qt together; avoid partial system upgrades.
 
+## Development repository
+
+The first signed repository cut is being validated. Check the
+[package index](https://nacre-desktop.github.io/nacre/) for an available build;
+this is a development preview, with Niri still experimental.
+
+The installer configures a separate, signed pacman repository and installs core
+Nacre, including its independently released Orient dependency. Save and review
+it first:
+
+```sh
+sudo pacman -Syu --needed curl gnupg
+curl --fail --location https://nacre-desktop.github.io/nacre/install-arch.sh -o /tmp/nacre-install-arch.sh
+less /tmp/nacre-install-arch.sh
+bash /tmp/nacre-install-arch.sh --plan
+bash /tmp/nacre-install-arch.sh
+```
+
+Run as your ordinary desktop user. The script requests sudo for the public key,
+repository configuration and pacman transaction, then starts `nacre setup` as
+that user. It verifies signing fingerprint
+`886CBE272BA30B44DBB55F66714CFAAC876C349E`; package **and database** signatures
+are required. It backs up pacman.conf before adding its dedicated include. It
+does not replace Arch/CachyOS repositories or their package signatures.
+
+The wizard offers Niri, Hyprland or both, keyboard/profile choices and optional
+AI/Brain apps. It installs missing dependencies through pacman. You need a
+working network and a normal local user login. If there is no display manager,
+log out of any existing graphical session and start the prepared login from a
+TTY with `nacre session niri` or `nacre session hyprland`. An existing login
+manager can use the packaged Nacre session entries.
+
 ## Arch packages and setup
 
 Install the separate Orient engine and Nacre core archives from the same tested
@@ -115,11 +147,34 @@ login, unlock, idle or screen-sharing test. Package details are in the
 
 ## Updates
 
-Upgrade matching packages, then run `nacre setup` to review per-user changes.
-`nacre status` shows the current setup; `nacre rollback` restores the previous
-private-file snapshot and refuses to overwrite later edits. It cannot undo a
-pacman upgrade: retain previous archives if a matching package downgrade is
-needed. See [recovery and troubleshooting](recovery.md).
+With the development repository configured, normal system updates include Nacre
+and its dependencies:
+
+```sh
+sudo pacman -Syu
+nacre setup --plan
+nacre setup
+```
+
+The update pipeline promotes source only after Source CI, clean stock-Arch
+builds and all three installed-runtime setup checks pass. Development archives
+have increasing snapshot versions. A failed commit leaves the last passing cut
+available; older package files are retained across repository refreshes. Orient
+is fetched from its independent signed release and checked against Nacre's
+engine lock, rather than rebuilt under the same package version.
+
+Program files belong to pacman; private settings belong to the user. Setup
+reviews per-user changes, preserves seeded preferences and refuses conflicting
+local edits. `nacre status` shows the current setup; `nacre rollback` restores the
+previous private-file snapshot and refuses to overwrite later edits. It cannot
+undo a pacman upgrade: retain matching prior archives for a package downgrade.
+See [recovery and troubleshooting](recovery.md).
+
+AUR publication is optional and currently blocked by account registration being
+paused. The binary repository needs no AUR helper, source compiler or npm on the
+user's machine. Stable release promotion remains separate from this experimental
+development channel; a passing headless build does not certify hardware login,
+locking or screen sharing.
 
 ## Source installation
 

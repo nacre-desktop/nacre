@@ -1,6 +1,8 @@
 """Prepare the packaged Hyprland session without deploying Niri experiment files."""
 
 from pathlib import Path
+import os
+import subprocess
 
 
 def supported(root):
@@ -49,3 +51,20 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
             (root / "tools/defaults/hypridle.conf").read_text(),
         )
     return result
+
+
+def session(home=None):
+    home = Path.home() if home is None else home
+    if not (home / ".config/hypr/hyprland.lua").is_file():
+        raise RuntimeError(
+            "Run nacre setup --compositor hyprland before starting its session"
+        )
+    subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
+    environment = dict(os.environ, NACRE_COMPOSITOR="hyprland")
+    for name in ("NIRI_SOCKET", "NIRI_CONFIG"):
+        environment.pop(name, None)
+    os.execvpe(
+        "uwsm",
+        ["uwsm", "start", "-e", "-D", "Hyprland", "hyprland.desktop"],
+        environment,
+    )

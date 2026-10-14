@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Nacre (Hyprland)
+Comment=Nacre with its prepared UWSM-managed Hyprland session
+Exec=nacre session hyprland
+TryExec=nacre
+Type=Application
+DesktopNames=Hyprland
