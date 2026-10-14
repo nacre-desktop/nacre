@@ -239,6 +239,19 @@ Scope {
             disabled: false
         }, extra);
     }
+    // Compositor snapshots can change geometry/focus without changing searchable
+    // text. Compare the small search projection before rebuilding result rows.
+    readonly property string windowSearchData: JSON.stringify((NacreCompositor.windows || []).map(client => ({
+                windowId: client.windowId,
+                title: client.title,
+                wmClass: client.wmClass,
+                workspaceName: client.workspace?.name
+            })))
+    readonly property var windowSearchRecords: JSON.parse(windowSearchData)
+    // Other DesktopExtras replies also carry clipboard state. Equal content
+    // should keep its rows stable instead of invalidating the global ranking.
+    readonly property string clipboardSearchData: JSON.stringify(DesktopExtras.clips || [])
+    readonly property var clipboardSearchRecords: JSON.parse(clipboardSearchData)
     function provider(route, query = "") {
         if (root.node(route)?.provider === "audio")
             return (NacreAudio.outputs || []).map(item => valueRow(route, "output-" + item.id, item.description || item.nickname || item.name, "audio-output", String(item.id), "speaker", NacreI18n.tr("launcher.provider.audio-output", "Audio output"), {
@@ -275,8 +288,8 @@ Scope {
                         checked: DesktopSettings.data.interfaceFont === name
                     }))];
         if (node.provider === "windows")
-            return (NacreCompositor.windows || []).map(client => valueRow(route, String(client.windowId), NacreI18n.windowCaption(client.title || client.wmClass, client.wmClass), "focus", client.windowId, "window", NacreI18n.tr("launcher.provider.workspace", "Workspace {workspace}", {
-                    workspace: client.workspace?.name
+            return windowSearchRecords.map(client => valueRow(route, String(client.windowId), NacreI18n.windowCaption(client.title || client.wmClass, client.wmClass), "focus", client.windowId, "window", NacreI18n.tr("launcher.provider.workspace", "Workspace {workspace}", {
+                    workspace: client.workspaceName
                 })));
         if (node.provider === "wifi")
             return NacreNetwork.visibleNetworks.map(point => valueRow(route, point.bssid.replace(/:/g, ""), point.ssid || NacreI18n.tr("launcher.provider.hidden-network", "Hidden network"), "settings", "network", "wifi", NacreI18n.tr("launcher.provider.signal", "{strength}% signal", {
@@ -291,7 +304,7 @@ Scope {
                     status: device.connected ? NacreI18n.tr("ui.menu-context.status.connected", "Connected") : ""
                 }));
         if (node.provider === "clipboard")
-            return DesktopExtras.clips.map(entry => valueRow(route, String(entry.id), entry.title || NacreI18n.tr("launcher.provider.clipboard-item", "Clipboard item"), "copy-clip", entry.id, "content_paste", NacreI18n.tr("launcher.provider.copied-item", "Copied item"), {
+            return clipboardSearchRecords.map(entry => valueRow(route, String(entry.id), entry.title || NacreI18n.tr("launcher.provider.clipboard-item", "Clipboard item"), "copy-clip", entry.id, "content_paste", NacreI18n.tr("launcher.provider.copied-item", "Copied item"), {
                     preview: entry.image ? entry.thumbnail || "" : "",
                     previewText: entry.image ? "" : entry.title || "",
                     clipboard: true,

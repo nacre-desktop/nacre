@@ -197,6 +197,78 @@ TestCase {
         value.run(NacreMenu.node("actions.saved.add-snippet"));
         verify(value.form.fields.some(row => row.multiline));
     }
+    Component {
+        id: compositorWindow
+        QtObject {
+            property var record: ({
+                    windowId: "qa-window",
+                    title: "Discord documentation",
+                    wmClass: "browser",
+                    workspace: {
+                        name: "1"
+                    },
+                    geometry: {
+                        x: 0
+                    }
+                })
+            readonly property string windowId: record.windowId
+            readonly property string title: record.title
+            readonly property string wmClass: record.wmClass
+            readonly property var workspace: record.workspace
+        }
+    }
+    function test_unchanged_window_and_clipboard_snapshots_do_not_rebuild_search() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        const window = createTemporaryObject(compositorWindow, test);
+        NacreCompositor.windows = [window];
+        DesktopExtras.clips = [
+            {
+                id: "qa-clip",
+                title: "Discord clipboard",
+                image: false
+            }
+        ];
+        field.text = "disc";
+        const focus = value.entries.findIndex(row => row.operation === "focus");
+        verify(focus >= 0);
+        verify(value.entries.some(row => row.operation === "copy-clip"));
+        value.keyboardSelection = true;
+        value.selection = focus;
+        const original = value.entries;
+        for (let index = 0; index < 25; index++) {
+            window.record = Object.assign({}, window.record, {
+                workspace: {
+                    name: "1"
+                },
+                geometry: {
+                    x: index
+                }
+            });
+            NacreCompositor.windows = [window];
+            DesktopExtras.clips = [
+                {
+                    id: "qa-clip",
+                    title: "Discord clipboard",
+                    image: false
+                }
+            ];
+            verify(value.entries === original, "Unchanged search text must preserve its result model");
+            compare(value.selectedEntry.value, "qa-window");
+        }
+        window.record = Object.assign({}, window.record, {
+            title: "Discord revised documentation"
+        });
+        compare(value.selectedEntry.name, "Discord revised documentation");
+        DesktopExtras.clips = [
+            {
+                id: "qa-clip",
+                title: "Updated Discord clipboard",
+                image: false
+            }
+        ];
+        compare(value.entries.find(row => row.operation === "copy-clip").name, "Updated Discord clipboard");
+    }
+
     function test_filter_applies_before_global_result_limit() {
         const value = view(), field = findChild(value, "launcherSearch");
         NacreCompositor.windows = Array.from({
