@@ -97,13 +97,16 @@ Edit lists detected microphone and keyboard sliders first; adding one places it
 beside its related output or display slider. Layouts are saved separately from
 the main desktop settings and keep their order across sessions; existing optional
 tile preferences migrate automatically. The same controls work in a detached pearl.
-Hover a bar status icon for a read-only dropdown after 400 ms. A palette-colored
+Hover a bar status icon or the clock for a dropdown after 400 ms. Status
+summaries are read-only; the calendar keeps its month controls. Clicking the
+clock pins its calendar for keyboard use until Escape or dismissal. Status hover
+highlights fill their segment of the shared pill, following its rounded ends.
+A palette-colored
 highlight and filling underline show the wait. The middle title and top lip wait
 500 ms before opening the dashboard; leaving cancels it, while a click opens
 immediately. Reduced motion keeps the delay with a static highlight. Dropdowns
 unfold from the bar using the same frame and motion as other Nacre popups. Clicking
-a status icon opens its
-control-center detail page; the bell opens notification history inside the same
+a status icon opens its control-center detail page; the bell opens notification history inside the same
 panel. Notification history can also be added as a tile in Edit, or opened by
 right-clicking Do Not Disturb. Pointer-opened controls
 close after leaving the panel; keyboard-opened controls keep their focus. Wi-Fi

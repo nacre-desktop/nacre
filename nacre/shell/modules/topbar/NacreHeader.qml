@@ -14,16 +14,18 @@ Item {
     readonly property bool clickMenus: DesktopSettings.data.clickEdgeMenus === true
     property string hoverHint: ""
     property real hoverHintCenter: 0
+    property string statusHoveredName: ""
     property real peekProgress: 0
     readonly property real dashboardProgress: panel?.input?.lips?.dashboardProgress ?? 0
     property string peekName: ""
     property real peekCenter: 0
     function clearPeek(close = true) {
+        const calendarHover = peekName === "calendar";
         peekDelay.stop();
         peekReveal.stop();
         peekProgress = 0;
         peekName = "";
-        if (close && panel?.popouts.currentName === "peek")
+        if (close && panel && (panel.popouts.currentName === "peek" || calendarHover && panel.popouts.currentName === "calendar" && !panel.popouts.pinned))
             panel.popouts.hasCurrent = false;
     }
     function requestPeek(name, item, hovered) {
@@ -81,7 +83,7 @@ Item {
             if (!popup || !root.peekName || NacrePanelState.hidden)
                 return;
             popup.peekKind = root.peekName;
-            popup.currentName = "peek";
+            popup.currentName = root.peekName === "calendar" ? "calendar" : "peek";
             popup.currentCenter = root.peekCenter;
             popup.pinned = false;
             popup.headerHovered = true;
@@ -362,8 +364,49 @@ Item {
             implicitHeight: 34
             radius: 17
             color: NacreColours.palette.m3surfaceContainer
+            readonly property var cueTarget: ({
+                    audio: status.audioItem,
+                    network: status.network,
+                    bluetooth: status.bluetoothItem,
+                    battery: status.battery,
+                    notifications: status.notificationsItem,
+                    recording: status.recordingItem
+                })[root.statusHoveredName] || null
+            readonly property bool cueFirst: cueTarget === (status.recordingItem?.visible ? status.recordingItem : status.audioItem)
+            readonly property bool cueLast: cueTarget === status.notificationsItem
+            readonly property rect cueBounds: {
+                const item = cueTarget;
+                if (!item)
+                    return Qt.rect(0, 0, 0, 0);
+                // The column is rotated in the header; map both corners to the pill.
+                const extent = status.implicitHeight, itemX = item.x, itemY = item.y;
+                const a = item.mapToItem(statusHolder, 0, 0), b = item.mapToItem(statusHolder, item.width, item.height);
+                const left = cueFirst ? 0 : Math.max(0, Math.min(a.x, b.x) - 1.5);
+                const right = cueLast ? width : Math.min(width, Math.max(a.x, b.x) + 1.5);
+                return Qt.rect(left, 0, Math.max(0, right - left), height);
+            }
+            NacreHoverCue {
+                objectName: "nacreHeaderStatusCue"
+                x: statusHolder.cueBounds.x
+                y: 0
+                width: statusHolder.cueBounds.width
+                height: statusHolder.height
+                ink: statusHolder.cueTarget?.ink ?? NacreTokens.orientSecondary
+                radius: 0
+                topLeftRadius: statusHolder.cueFirst ? statusHolder.radius : 0
+                bottomLeftRadius: topLeftRadius
+                topRightRadius: statusHolder.cueLast ? statusHolder.radius : 0
+                bottomRightRadius: topRightRadius
+                traceLeft: statusHolder.cueFirst ? statusHolder.radius : 5
+                traceRight: statusHolder.cueLast ? statusHolder.radius : 5
+                halo: false
+                outline: false
+                progress: root.statusHoveredName ? root.peekName === root.statusHoveredName ? Math.max(.08, root.peekProgress) : .08 : 0
+            }
             NacreStatusIcons {
                 id: status
+                z: 1
+                grouped: true
                 anchors.centerIn: parent
                 screenName: root.screen.name
                 horizontal: true
@@ -371,7 +414,13 @@ Item {
                 revealProgress: root.peekProgress
                 rotation: -90
                 onActivated: (name, item, pointerOwned) => root.openStatus(name, item, pointerOwned)
-                onPeekRequested: (name, item, hovered) => root.requestPeek(name, item, hovered)
+                onPeekRequested: (name, item, hovered) => {
+                    if (hovered)
+                        root.statusHoveredName = name;
+                    else if (root.statusHoveredName === name)
+                        root.statusHoveredName = "";
+                    root.requestPeek(name, item, hovered);
+                }
                 onInteractionStarted: root.clearPeek()
             }
             Item {
@@ -395,6 +444,12 @@ Item {
             objectName: "nacreHeaderClock"
             implicitWidth: clock.implicitWidth
             implicitHeight: 34
+            NacreHoverCue {
+                objectName: "nacreHeaderCalendarCue"
+                anchors.fill: parent
+                ink: NacreColours.palette.m3tertiary
+                progress: root.peekName === "calendar" ? root.peekProgress : 0
+            }
             Row {
                 id: clock
                 anchors.centerIn: parent
@@ -415,15 +470,29 @@ Item {
                 cursorShape: Qt.PointingHandCursor
                 onEntered: {
                     NacreHoverIntent.popupHovered[root.screen.name] = true;
-                    root.showPopup("calendar", this, false);
+                    root.requestPeek("calendar", clockHolder, true);
                 }
-                onExited: root.leavePopup()
-                onClicked: {
+                onExited: root.requestPeek("calendar", clockHolder, false)
+                activeFocusOnTab: visible && enabled
+                Accessible.role: Accessible.Button
+                Accessible.name: NacreI18n.tr("ui.header.hoverHint.calendar", "Calendar")
+                Accessible.onPressAction: openCalendar()
+                function openCalendar() {
+                    root.clearPeek();
                     root.hoverHint = "";
-                    root.showPopup("calendar", this, true);
-                    if (root.panel && root.clickMenus)
+                    root.showPopup("calendar", clockHolder, true);
+                    if (root.panel)
                         root.panel.popouts.pinned = true;
                 }
+                Keys.onReturnPressed: event => {
+                    openCalendar();
+                    event.accepted = true;
+                }
+                Keys.onSpacePressed: event => {
+                    openCalendar();
+                    event.accepted = true;
+                }
+                onClicked: openCalendar()
             }
         }
         NacrePowerButton {}

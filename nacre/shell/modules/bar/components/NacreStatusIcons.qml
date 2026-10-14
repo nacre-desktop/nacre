@@ -8,6 +8,7 @@ import qs.utils
 
 Item {
     id: root
+    property bool grouped: false
     property string revealName: ""
     property real revealProgress: 0
     property string screenName: "unknown"
@@ -183,6 +184,7 @@ Item {
             }
         }
         NacreHoverCue {
+            visible: !root.grouped
             objectName: cell.objectName + "Reveal"
             anchors.centerIn: parent
             width: root.horizontal ? parent.height : parent.width
@@ -192,6 +194,7 @@ Item {
             progress: root.revealName === cell.key ? root.revealProgress : 0
         }
         NacreInteraction {
+            color: root.grouped ? "transparent" : NacreTokens.ink
             objectName: cell.objectName + "Activation"
             accessibleName: cell.label
             function onClicked() {

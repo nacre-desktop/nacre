@@ -405,6 +405,59 @@ TestCase {
         keyClick(Qt.Key_Return);
         compare(NacrePanelState.calls[NacrePanelState.calls.length - 1], "dashboard");
     }
+    function test_status_highlight_uses_the_shared_pill_end_corners() {
+        const view = createTemporaryObject(header, test), holder = findChild(view, "nacreHeaderStatus"), cue = findChild(view, "nacreHeaderStatusCue");
+        view.statusHoveredName = "audio";
+        wait(30);
+        compare(cue.x, 0);
+        compare(cue.height, holder.height);
+        compare(cue.topLeftRadius, holder.radius);
+        compare(cue.topRightRadius, 0);
+        verify(!cue.halo && !cue.outline);
+        view.statusHoveredName = "notifications";
+        wait(30);
+        fuzzyCompare(cue.x + cue.width, holder.width, .01);
+        compare(cue.topLeftRadius, 0);
+        compare(cue.topRightRadius, holder.radius);
+        view.statusHoveredName = "bluetooth";
+        wait(30);
+        compare(cue.topLeftRadius, 0);
+        compare(cue.topRightRadius, 0);
+    }
+    function test_calendar_hover_delays_without_focus_and_click_cancels_wait() {
+        const popup = {
+            hasCurrent: false,
+            currentName: "",
+            peekKind: "",
+            currentCenter: 0,
+            pinned: false,
+            headerHovered: false
+        };
+        NacrePanelState.panels = {
+            test: {
+                popouts: popup,
+                popoutHovered: false
+            }
+        };
+        const view = createTemporaryObject(header, test), clock = findChild(view, "nacreHeaderClock");
+        mouseMove(test, 900, 300);
+        mouseMove(clock, clock.width / 2, clock.height / 2);
+        wait(250);
+        verify(!popup.hasCurrent);
+        compare(view.peekName, "calendar");
+        mouseMove(test, 900, 300);
+        wait(300);
+        verify(!popup.hasCurrent);
+        mouseMove(clock, clock.width / 2, clock.height / 2);
+        wait(450);
+        verify(popup.hasCurrent);
+        compare(popup.currentName, "calendar");
+        verify(!popup.pinned);
+        mouseClick(clock, clock.width / 2, clock.height / 2);
+        verify(popup.pinned);
+        compare(view.peekName, "");
+        compare(NacrePanelState.calls[NacrePanelState.calls.length - 1], "calendar");
+    }
     function test_status_container_does_not_cover_icon_hover() {
         const view = createTemporaryObject(header, test);
         const network = findChild(view, "fixtureHeaderNetwork");

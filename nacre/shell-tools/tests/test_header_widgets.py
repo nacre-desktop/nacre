@@ -49,6 +49,7 @@ class HeaderWidgetTests(unittest.TestCase):
 Item {
  id:root
  property bool horizontal:false
+ property bool grouped:false
  property string revealName:""
  property real revealProgress:0
  property string screenName:""
