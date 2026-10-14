@@ -39,6 +39,7 @@ pub mod pearl_window;
 pub mod process;
 pub mod resource_state;
 pub mod service;
+pub mod software_ai;
 pub mod software_environments;
 pub mod software_library;
 pub mod state;

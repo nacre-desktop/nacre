@@ -283,6 +283,8 @@ NacreSurface {
     function primaryAction(entry) {
         if (!entry)
             return "";
+        if (entry.operation === "webapp-offer")
+            return NacreI18n.tr("software.ai.web-offer", "Create web app");
         if (entry.theme)
             return NacreI18n.tr("software.preview.apply", "Apply theme");
         if (entry.operation === "software-extension-install")

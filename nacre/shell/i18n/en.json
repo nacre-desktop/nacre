@@ -3192,5 +3192,19 @@
   "settings.registry.ai.default-assistant.label": "Default assistant",
   "settings.registry.ai.default-assistant.description": "New chats use this assistant; existing chats keep theirs.",
   "settings.registry.apps.defaults.emoji.label": "Emoji picker",
-  "settings.registry.apps.defaults.emoji.description": "Application opened by emoji actions."
+  "settings.registry.apps.defaults.emoji.description": "Application opened by emoji actions.",
+  "launcher.catalog.chatgpt.description": "ChatGPT desktop and web assistant",
+  "launcher.catalog.chatgpt.label": "ChatGPT",
+  "launcher.catalog.claude-desktop.description": "Claude desktop and web assistant",
+  "launcher.catalog.claude-desktop.label": "Claude",
+  "launcher.catalog.lmstudio-bin.description": "Explore local language models",
+  "launcher.catalog.lmstudio-bin.label": "LM Studio",
+  "launcher.catalog.ollama.description": "Run local AI models",
+  "launcher.catalog.ollama.label": "Ollama",
+  "launcher.catalog.software.discover.ai.description": "Local models and assistants",
+  "launcher.catalog.software.discover.ai.label": "AI",
+  "software.ai.web-installed": "Web app installed",
+  "software.ai.web-offer": "Create web app",
+  "software.ai.web-requires-browser": "Requires a Chromium-based browser for the web app",
+  "software.category.ai": "AI"
 }

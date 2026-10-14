@@ -3204,5 +3204,61 @@
   "settings.registry.ai.default-assistant.label": "Search metadata for the existing assistant owner.",
   "settings.registry.ai.default-assistant.description": "Search metadata for the existing assistant owner.",
   "settings.registry.apps.defaults.emoji.label": "Default application command for emoji, from the native menu action defaults.",
-  "settings.registry.apps.defaults.emoji.description": "Default application command for emoji, from the native menu action defaults."
+  "settings.registry.apps.defaults.emoji.description": "Default application command for emoji, from the native menu action defaults.",
+  "launcher.catalog.chatgpt.description": {
+    "description": "AI software catalog description",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.chatgpt.label": {
+    "description": "AI software catalog label",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.claude-desktop.description": {
+    "description": "AI software catalog description",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.claude-desktop.label": {
+    "description": "AI software catalog label",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.lmstudio-bin.description": {
+    "description": "AI software catalog description",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.lmstudio-bin.label": {
+    "description": "AI software catalog label",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.ollama.description": {
+    "description": "AI software catalog description",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.ollama.label": {
+    "description": "AI software catalog label",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.software.discover.ai.description": {
+    "description": "AI software catalog description",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.software.discover.ai.label": {
+    "description": "AI software catalog label",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "software.ai.web-installed": {
+    "description": "AI category action or status",
+    "source": "nacre/shell/services/NacreMenuContext.qml"
+  },
+  "software.ai.web-offer": {
+    "description": "AI category action or status",
+    "source": "nacre/shell/modules/launcher/NacreAppBrowser.qml"
+  },
+  "software.ai.web-requires-browser": {
+    "description": "AI category action or status",
+    "source": "nacre/shell/services/NacreMenuContext.qml"
+  },
+  "software.category.ai": {
+    "description": "AI category action or status",
+    "source": "nacre/shell/services/NacreMenuContext.qml"
+  }
 }

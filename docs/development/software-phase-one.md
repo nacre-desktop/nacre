@@ -33,3 +33,20 @@ Validation uses private homes and mock external commands. A real PTY verifies
 the visible command review, cancellation and confirmation boundaries. No real
 language installation, database creation or privileged action is needed for
 these checks.
+
+## AI apps
+
+Apps has an AI category and a searchable AI subpage. Ollama uses Arch's package,
+including detection of installed CUDA/ROCm/Vulkan variants; installed Ollama opens
+its local model listing in a visible terminal. LM Studio uses `lmstudio-bin` and
+Claude uses `claude-desktop` from AUR, with clear repository labels.
+
+ChatGPT uses the vendor desktop package when it is present in the configured
+package database with an OpenAI/ChatGPT project URL. The similarly named
+`chatgpt-bin` community CLI is not used as a desktop app. Nacre does not silently
+add repositories or run a vendor installer it cannot inspect. The project link
+opens the [official Linux installation guide](https://learn.chatgpt.com/docs/linux/linux-app).
+When an applicable package/manager is unavailable, ChatGPT and Claude offer a
+managed Chromium web app. Existing managed web apps remain searchable and
+removable through their existing registry. This does not provide the vendor's
+native desktop integrations.

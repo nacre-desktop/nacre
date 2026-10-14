@@ -427,6 +427,63 @@ TestCase {
         value.cancelForm();
     }
 
+    function test_ai_category_packages_and_web_apps_keep_global_search() {
+        const value = view();
+        value.menu.library.data = Object.assign({}, value.menu.library.data, {
+            ai: {
+                chatgptPackage: false,
+                webApps: true,
+                terminal: true
+            }
+        });
+        value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
+            capabilities: {
+                packages: true,
+                aur: true
+            },
+            packages: [],
+            webapps: []
+        });
+        value.navigate("software.discover");
+        value.softwareCategory = "ai";
+        compare(value.entries.length, 4);
+        verify(value.entries.every(row => row.category === "ai"));
+        const chatgpt = value.entries.find(row => row.name === "ChatGPT");
+        compare(chatgpt.operation, "webapp-offer");
+        verify(!chatgpt.disabled);
+        const lm = value.entries.find(row => row.name === "LM Studio");
+        compare(lm.value, "lmstudio-bin");
+        value.menu.library.data = Object.assign({}, value.menu.library.data, {
+            ai: {
+                chatgptPackage: true,
+                webApps: true,
+                terminal: true
+            }
+        });
+        compare(value.entries.find(row => row.name === "ChatGPT").operation, "install-package");
+        value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
+            packages: [
+                {
+                    name: "ollama-cuda"
+                }
+            ],
+            webapps: [
+                {
+                    id: "sample",
+                    label: "ChatGPT",
+                    url: "https://chatgpt.com/"
+                }
+            ]
+        });
+        const ollama = value.entries.find(row => row.name === "Ollama");
+        compare(ollama.operation, "ai-terminal");
+        compare(ollama.package, "ollama-cuda");
+        compare(value.entries.find(row => row.name === "ChatGPT").operation, "webapp");
+        value.navigate("software.development");
+        findChild(value, "launcherSearch").text = "chatgpt";
+        verify(value.entries.some(row => row.name === "ChatGPT"));
+    }
+
     function test_development_actions_are_searchable_gated_and_terminal_visible() {
         const value = view();
         value.menu.library.data = Object.assign({}, value.menu.library.data, {

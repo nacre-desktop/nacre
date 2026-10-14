@@ -400,6 +400,8 @@ Scope {
                     package: entry.name,
                     status: NacreI18n.tr("ui.menu-context.status.installed", "Installed")
                 }));
+        if (node.provider === "software-ai")
+            return softwareRows(route).filter(row => row.category === "ai");
         if (node.provider === "software")
             return softwareRows(route);
         if (node.provider === "environments")
@@ -744,6 +746,10 @@ Scope {
             label: NacreI18n.tr("software.category.all", "All apps")
         },
         {
+            value: "ai",
+            label: NacreI18n.tr("software.category.ai", "AI")
+        },
+        {
             value: "browsers",
             label: NacreI18n.tr("software.category.browsers", "Browsers")
         },
@@ -800,11 +806,31 @@ Scope {
             const packageId = Model.normalized(entry.package.replace(/-(bin|git)$/, ""));
             const appId = Model.normalized(entry.appId || "");
             const name = Model.normalized(entry.label);
-            const installed = packageNames.has(entry.package) || index.names.has(name) || index.ids.has(packageId) || !!appId && index.ids.has(appId);
+            const installedPackage = [entry.package, ...(entry.packageAlternatives || [])].find(name => packageNames.has(name));
+            const installed = !!installedPackage || index.names.has(name) || index.ids.has(packageId) || !!appId && index.ids.has(appId);
             const desktopId = index.visible.get(name) || index.visible.get(appId) || index.visible.get(packageId) || "";
             const aurMissing = entry.repository === "AUR" && !snapshot.capabilities.aur;
-            return valueRow(route, Qt.md5(entry.package), entry.label, installed ? desktopId ? "software-open" : "info" : "install-package", entry.package, "download", entry.description, {
-                package: entry.package,
+            const savedWeb = (snapshot.webapps || []).find(item => item.url.replace(/\/$/, "") === entry.webUrl?.replace(/\/$/, ""));
+            const packageAvailable = entry.repository !== "OpenAI" || library.data.ai?.chatgptPackage === true;
+            if (entry.webUrl && !installedPackage && (savedWeb || !installed && (aurMissing || !snapshot.capabilities.packages || !packageAvailable)))
+                return valueRow(route, Qt.md5(entry.package), entry.label, savedWeb ? "webapp" : "webapp-offer", savedWeb?.id || entry.webUrl, "public", entry.description, {
+                    software: true,
+                    category: "ai",
+                    categoryLabel: NacreI18n.tr("software.category.ai", "AI"),
+                    webUrl: entry.webUrl,
+                    webapp: !!savedWeb,
+                    desktopId: index.visible.get(Model.normalized(entry.label)) || "",
+                    checked: !!savedWeb,
+                    website: entry.website,
+                    aliases: [entry.package, ...(entry.aliases || [])],
+                    status: savedWeb ? NacreI18n.tr("software.ai.web-installed", "Web app installed") : NacreI18n.tr("software.ai.web-offer", "Create web app"),
+                    disabled: !savedWeb && library.data.ai?.webApps !== true,
+                    reason: NacreI18n.tr("software.ai.web-requires-browser", "Requires a Chromium-based browser for the web app")
+                });
+
+            return valueRow(route, Qt.md5(entry.package), entry.label, installed && entry.terminalCommand ? "ai-terminal" : installed ? desktopId ? "software-open" : "info" : "install-package", installedPackage || entry.package, "download", entry.description, {
+                package: installedPackage || entry.package,
+                terminalCommand: entry.terminalCommand || [],
                 software: true,
                 category: entry.category || "utilities",
                 categoryLabel: softwareCategories.find(row => row.value === entry.category)?.label || "",
@@ -817,7 +843,7 @@ Scope {
                 aliases: [entry.package, ...(entry.aliases || [])],
                 checked: installed,
                 status: installed ? NacreI18n.tr("ui.menu-context.status.installed", "Installed") : NacreI18n.tr("ui.menu-context.status.install", "Install"),
-                disabled: !installed && (!snapshot.capabilities.packages || aurMissing),
+                disabled: installed && entry.terminalCommand ? library.data.ai?.terminal !== true : !installed && (!snapshot.capabilities.packages || aurMissing),
                 reason: installed && !desktopId ? NacreI18n.tr("launcher.disabled.installed-use-item-actions-to-remove-it", "Installed; use item actions to remove it") : !installed && aurMissing ? NacreI18n.tr("launcher.install-offer.aur", "Requires paru or yay for AUR installation") : !installed && !snapshot.capabilities.packages ? NacreI18n.tr("launcher.disabled.requires-an-arch-compatible-package-manager", "Requires an Arch-compatible package manager") : ""
             });
         });
@@ -894,8 +920,11 @@ Scope {
         }
         return result;
     }
+    function installedAiRows() {
+        return softwareRows("software.discover.ai").filter(row => row.category === "ai" && row.checked && !row.desktopId);
+    }
     function globalRows(query) {
-        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), captureRows());
+        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), installedAiRows(), captureRows());
     }
     function itemActions(entry) {
         if (!entry)
@@ -1208,6 +1237,21 @@ Scope {
         }
         if (operation === "power-profile" && profileValue(value) !== undefined) {
             PowerProfiles.profile = profileValue(value);
+            return true;
+        }
+        if (operation === "webapp-offer") {
+            if (!library.data.ai?.webApps)
+                return false;
+            work("webapp-create", "", {
+                label: row.name,
+                url: row.webUrl
+            });
+            return true;
+        }
+        if (operation === "ai-terminal") {
+            if (!library.data.ai?.terminal || !Array.isArray(row.terminalCommand))
+                return false;
+            AppLaunch.run(["kitty", "--hold", "--", ...row.terminalCommand]);
             return true;
         }
         if (operation === "environment") {

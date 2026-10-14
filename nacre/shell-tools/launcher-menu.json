@@ -1563,6 +1563,16 @@
       "value": "software-extension-import",
       "labelId": "software.catalog.extensions.import.label",
       "descriptionId": "software.catalog.extensions.import.description"
+    },
+    {
+      "id": "software.discover.ai",
+      "kind": "group",
+      "label": "AI",
+      "icon": "smart_toy",
+      "description": "Local models and assistants",
+      "provider": "software-ai",
+      "labelId": "launcher.catalog.software.discover.ai.label",
+      "descriptionId": "launcher.catalog.software.discover.ai.description"
     }
   ],
   "software": [
@@ -2643,6 +2653,64 @@
       "descriptionId": "launcher.catalog.mission-center.description",
       "category": "utilities",
       "website": "https://missioncenter.io"
+    },
+    {
+      "package": "ollama",
+      "label": "Ollama",
+      "description": "Run local AI models",
+      "category": "ai",
+      "repository": "extra",
+      "website": "https://ollama.com/",
+      "appId": "ollama",
+      "terminalCommand": [
+        "ollama",
+        "list"
+      ],
+      "packageAlternatives": [
+        "ollama-cuda",
+        "ollama-rocm",
+        "ollama-vulkan"
+      ],
+      "labelId": "launcher.catalog.ollama.label",
+      "descriptionId": "launcher.catalog.ollama.description"
+    },
+    {
+      "package": "lmstudio-bin",
+      "label": "LM Studio",
+      "description": "Explore local language models",
+      "category": "ai",
+      "repository": "AUR",
+      "website": "https://lmstudio.ai/",
+      "appId": "lmstudio",
+      "aliases": [
+        "LMStudio"
+      ],
+      "labelId": "launcher.catalog.lmstudio-bin.label",
+      "descriptionId": "launcher.catalog.lmstudio-bin.description"
+    },
+    {
+      "package": "claude-desktop",
+      "label": "Claude",
+      "description": "Claude desktop and web assistant",
+      "category": "ai",
+      "repository": "AUR",
+      "website": "https://claude.com/download",
+      "appId": "claude-desktop",
+      "webUrl": "https://claude.ai/",
+      "labelId": "launcher.catalog.claude-desktop.label",
+      "descriptionId": "launcher.catalog.claude-desktop.description"
+    },
+    {
+      "package": "chatgpt",
+      "label": "ChatGPT",
+      "description": "ChatGPT desktop and web assistant",
+      "category": "ai",
+      "repository": "OpenAI",
+      "website": "https://learn.chatgpt.com/docs/linux/linux-app",
+      "appId": "chatgpt",
+      "webUrl": "https://chatgpt.com/",
+      "labelId": "launcher.catalog.chatgpt.label",
+      "descriptionId": "launcher.catalog.chatgpt.description"
     }
   ]
 }
