@@ -47,8 +47,8 @@ current frozen cases use defaults and remain unchanged.
 Main CI gate retained; 2753707f fixed isolation without changing goldens/skips.
 Wave 1 source/install CI passed; hardware checks remain manual.
 
-Next: publish CI fixture repair; finish window-hide parity/cutover, then widths/session runtimes.
-Wave 1 main 3e155f5c CI 38528354524: source + fresh Niri install green; no skips.
+Next: watch window-hide publication CI; port widths observer, then coordinate session runtime/gates.
+Window-hide cutover: 126 Rust tests, 821 repo plus 3 native checks, 12 frozen cases, 11 original assertions and 3 socket/D-Bus goldens pass. Busy CPU 46.26 -> 2.19 ms, helper RSS 17.33 -> 7.27 MiB; 100 -> 0 Python starts. No state migration; notification failures reach stderr and lock symlinks are refused. CI repair 2c31dbd2 / CI38568187548 fully green; no new skips.
 Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.
 Three compiler sources retired; 84 integrated Rust tests / 770 repo tests / 526 cases pass.
 Native-only Python clients remain until their later-wave callers are ported; no backend implementation remains.

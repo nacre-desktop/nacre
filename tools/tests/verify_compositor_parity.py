@@ -505,8 +505,8 @@ def probe(repo, backend, output):
                     facade("action", "focus_window", "--window", identifier)
                     run(
                         [
-                            "python3",
-                            str(repo / "hypr/scripts/window-hide.py"),
+                            str(repo / "target/release/nacre-helper"),
+                            "window-hide",
                             "hide",
                             "--window",
                             identifier,
@@ -519,8 +519,8 @@ def probe(repo, backend, output):
                     assert hidden["workspace"]["name"] == "special:hidden"
                     run(
                         [
-                            "python3",
-                            str(repo / "hypr/scripts/window-hide.py"),
+                            str(repo / "target/release/nacre-helper"),
+                            "window-hide",
                             "restore-last",
                             "--quiet",
                         ]

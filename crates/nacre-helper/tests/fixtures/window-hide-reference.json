@@ -1,0 +1,451 @@
+{
+  "source_sha256": "a5e7e8d5afb9a5e5b476dbbde7066c799659ad2adcb026f8999a60cd192b48b3",
+  "cases": [
+    {
+      "request": {
+        "name": "hide",
+        "action": "hide",
+        "clients": [
+          {
+            "address": "0xabc",
+            "workspace": {
+              "id": 2,
+              "name": "2"
+            }
+          }
+        ],
+        "records": {}
+      },
+      "observed": {
+        "error": null,
+        "calls": [
+          {
+            "method": "window.move",
+            "window": "0xabc",
+            "values": {
+              "workspace": "special:hidden",
+              "follow": false
+            }
+          }
+        ],
+        "queries": [
+          "active_window"
+        ],
+        "notifications": [
+          "Window hidden"
+        ],
+        "files": {
+          ".cache/hypr-minimize/.lock": {
+            "hex": "",
+            "mode": "0o600"
+          },
+          ".cache/hypr-minimize/0xabc": {
+            "hex": "320a",
+            "mode": "0o600"
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "explicit-hide",
+        "action": "hide",
+        "clients": [
+          {
+            "address": "0xabc",
+            "workspace": {
+              "id": 2,
+              "name": "2"
+            }
+          }
+        ],
+        "records": {},
+        "window": "0xabc"
+      },
+      "observed": {
+        "error": null,
+        "calls": [
+          {
+            "method": "window.move",
+            "window": "0xabc",
+            "values": {
+              "workspace": "special:hidden",
+              "follow": false
+            }
+          }
+        ],
+        "queries": [
+          "windows"
+        ],
+        "notifications": [
+          "Window hidden"
+        ],
+        "files": {
+          ".cache/hypr-minimize/.lock": {
+            "hex": "",
+            "mode": "0o600"
+          },
+          ".cache/hypr-minimize/0xabc": {
+            "hex": "320a",
+            "mode": "0o600"
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "no-active",
+        "action": "hide",
+        "clients": [],
+        "records": {}
+      },
+      "observed": {
+        "error": null,
+        "calls": [],
+        "queries": [
+          "active_window"
+        ],
+        "notifications": [
+          "No active window to hide"
+        ],
+        "files": {
+          ".cache/hypr-minimize/.lock": {
+            "hex": "",
+            "mode": "0o600"
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "already-hidden",
+        "action": "hide",
+        "clients": [
+          {
+            "address": "0xabc",
+            "workspace": {
+              "id": -99,
+              "name": "special:hidden"
+            }
+          }
+        ],
+        "records": {}
+      },
+      "observed": {
+        "error": null,
+        "calls": [],
+        "queries": [
+          "active_window"
+        ],
+        "notifications": [],
+        "files": {
+          ".cache/hypr-minimize/.lock": {
+            "hex": "",
+            "mode": "0o600"
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "dispatch-failure",
+        "action": "hide",
+        "clients": [
+          {
+            "address": "0xabc",
+            "workspace": {
+              "id": 2,
+              "name": "2"
+            }
+          }
+        ],
+        "records": {},
+        "failure": true
+      },
+      "observed": {
+        "error": {
+          "error": "fixture dispatch failed",
+          "type": "RuntimeError"
+        },
+        "calls": [
+          {
+            "method": "window.move",
+            "window": "0xabc",
+            "values": {
+              "workspace": "special:hidden",
+              "follow": false
+            }
+          }
+        ],
+        "queries": [
+          "active_window"
+        ],
+        "notifications": [],
+        "files": {
+          ".cache/hypr-minimize/.lock": {
+            "hex": "",
+            "mode": "0o600"
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "restore-last",
+        "action": "restore-last",
+        "clients": [
+          {
+            "address": "0xabc",
+            "workspace": {
+              "id": -99,
+              "name": "special:hidden"
+            }
+          }
+        ],
+        "records": {
+          "0xabc": "2\n"
+        }
+      },
+      "observed": {
+        "error": null,
+        "calls": [
+          {
+            "method": "window.move",
+            "window": "0xabc",
+            "values": {
+              "workspace": "2",
+              "follow": false
+            }
+          },
+          {
+            "method": "focus",
+            "window": "0xabc",
+            "values": {}
+          }
+        ],
+        "queries": [
+          "windows"
+        ],
+        "notifications": [
+          "Window restored"
+        ],
+        "files": {
+          ".cache/hypr-minimize/.lock": {
+            "hex": "",
+            "mode": "0o600"
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "restore-current",
+        "action": "restore-current",
+        "clients": [
+          {
+            "address": "0xabc",
+            "workspace": {
+              "id": -99,
+              "name": "special:hidden"
+            }
+          }
+        ],
+        "records": {
+          "0xabc": "2\n"
+        }
+      },
+      "observed": {
+        "error": null,
+        "calls": [
+          {
+            "method": "window.move",
+            "window": "0xabc",
+            "values": {
+              "workspace": "2",
+              "follow": false
+            }
+          }
+        ],
+        "queries": [
+          "windows",
+          "active_workspace"
+        ],
+        "notifications": [
+          "Window restored to current workspace"
+        ],
+        "files": {
+          ".cache/hypr-minimize/.lock": {
+            "hex": "",
+            "mode": "0o600"
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "wrong-current",
+        "action": "restore-current",
+        "clients": [
+          {
+            "address": "0xabc",
+            "workspace": {
+              "id": -99,
+              "name": "special:hidden"
+            }
+          }
+        ],
+        "records": {
+          "0xabc": "3\n"
+        }
+      },
+      "observed": {
+        "error": null,
+        "calls": [],
+        "queries": [
+          "windows",
+          "active_workspace"
+        ],
+        "notifications": [
+          "No hidden windows to restore"
+        ],
+        "files": {
+          ".cache/hypr-minimize/.lock": {
+            "hex": "",
+            "mode": "0o600"
+          },
+          ".cache/hypr-minimize/0xabc": {
+            "hex": "330a",
+            "mode": "0o644"
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "stale",
+        "action": "restore-last",
+        "clients": [],
+        "records": {
+          "0xabc": "2\n"
+        }
+      },
+      "observed": {
+        "error": null,
+        "calls": [],
+        "queries": [
+          "windows"
+        ],
+        "notifications": [
+          "No hidden windows to restore"
+        ],
+        "files": {
+          ".cache/hypr-minimize/.lock": {
+            "hex": "",
+            "mode": "0o600"
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "invalid-record",
+        "action": "restore-last",
+        "clients": [
+          {
+            "address": "0xabc",
+            "workspace": {
+              "id": -99,
+              "name": "special:hidden"
+            }
+          }
+        ],
+        "records": {
+          "0xabc": "invalid\n"
+        }
+      },
+      "observed": {
+        "error": null,
+        "calls": [],
+        "queries": [
+          "windows"
+        ],
+        "notifications": [
+          "No hidden windows to restore"
+        ],
+        "files": {
+          ".cache/hypr-minimize/.lock": {
+            "hex": "",
+            "mode": "0o600"
+          },
+          ".cache/hypr-minimize/0xabc": {
+            "hex": "696e76616c69640a",
+            "mode": "0o644"
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "no-hidden",
+        "action": "restore-last",
+        "clients": [],
+        "records": {}
+      },
+      "observed": {
+        "error": null,
+        "calls": [],
+        "queries": [
+          "windows"
+        ],
+        "notifications": [
+          "No hidden windows to restore"
+        ],
+        "files": {
+          ".cache/hypr-minimize/.lock": {
+            "hex": "",
+            "mode": "0o600"
+          }
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "invalid-window",
+        "action": "hide",
+        "clients": [
+          {
+            "address": "0xabc",
+            "workspace": {
+              "id": 2,
+              "name": "2"
+            }
+          }
+        ],
+        "records": {},
+        "window": "bad"
+      },
+      "observed": {
+        "error": {
+          "error": "Invalid window address",
+          "type": "ValueError"
+        },
+        "calls": [],
+        "queries": [],
+        "notifications": [],
+        "files": {}
+      },
+      "stderr": ""
+    }
+  ]
+}

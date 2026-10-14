@@ -248,6 +248,55 @@ def read_packet(process, timeout=8):
 
 
 def execute(case, command, trace=None):
+    if case["helper"] == "window-hide":
+        # Supply the notification API instead of the retired notify-send tool.
+        # Record its equivalent effect so the immutable reference stays exact.
+        messages = (
+            "Window hidden",
+            "Window restored",
+            "Window restored to current workspace",
+            "No active window to hide",
+            "No hidden windows to restore",
+        )
+        case = dict(case)
+        case["dbus"] = [
+            {
+                "match": {
+                    "destination": "org.freedesktop.Notifications",
+                    "path": "/org/freedesktop/Notifications",
+                    "interface": "org.freedesktop.Notifications",
+                    "member": "Notify",
+                    "signature": "susssasa{sv}i",
+                    "body": [
+                        "Nacre Windows",
+                        0,
+                        "nacre-notifications",
+                        message,
+                        "",
+                        [],
+                        {},
+                        2000,
+                    ],
+                },
+                "reply": {"signature": "u", "body": [1]},
+                "effects": [
+                    {
+                        "command": "notify-send",
+                        "argv": [
+                            "-a",
+                            "Nacre Windows",
+                            "-i",
+                            "nacre-notifications",
+                            "-t",
+                            "2000",
+                            message,
+                        ],
+                        "stdin": "",
+                    }
+                ],
+            }
+            for message in messages
+        ]
     if not shutil.which("bwrap"):
         raise RuntimeError("Bubblewrap is required; refusing a live-host fallback")
     with tempfile.TemporaryDirectory(prefix="nacre-parity-") as directory:

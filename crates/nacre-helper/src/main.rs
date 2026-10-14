@@ -14,6 +14,9 @@ fn run() -> Result<i32> {
     if tool == "compositor-compat" {
         return nacre_helper::compositor_compat::run(&arguments);
     }
+    if tool == "window-hide" {
+        return nacre_helper::window_hide::run(&arguments);
+    }
     if tool == "compositor-render" {
         if arguments.len() != 3 {
             return Err("Expected backend, render operation and JSON values".into());

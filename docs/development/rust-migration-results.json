@@ -557,5 +557,35 @@
     "quiet_window_pending": true,
     "shell_action_timings": null,
     "aggregate_memory": null
+  },
+  "wave2_window_hide_busy_machine": {
+    "measurement_condition": "busy machine",
+    "method": "benchmark-helpers.cpu_times; fresh quiet hide over private Hyprland socket; one warmup then 100 requests; user + sys includes reaped descendants",
+    "quiet_window_pending": true,
+    "results": {
+      "python-reference": {
+        "requests": 100,
+        "cpu_ms": {
+          "user": 3700.382,
+          "system": 925.1700000000001,
+          "total_per_request": 46.25552
+        },
+        "python_processes": 100,
+        "helper_rss_bytes": 18169856,
+        "rss_sample_error": null
+      },
+      "rust-release": {
+        "requests": 100,
+        "cpu_ms": {
+          "user": 67.93800000000027,
+          "system": 150.62600000000003,
+          "total_per_request": 2.185640000000003
+        },
+        "python_processes": 0,
+        "helper_rss_bytes": 7622656,
+        "rss_sample_error": null
+      }
+    },
+    "rss_method": "performance.memory sampled after exec at blocked private query; helper PID only, excludes descendants; one sample per implementation"
   }
 }

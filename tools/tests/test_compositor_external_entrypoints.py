@@ -56,7 +56,6 @@ class ExternalCompositorEntrypointTests(unittest.TestCase):
             "brain/control.py",
             "tools/releases.py",
             "nacre/shell-cli/src/nacre_shell/cli.py",
-            "hypr/scripts/window-hide.py",
         ):
             with self.subTest(filename=filename):
                 source = (ROOT / filename).read_text()

@@ -192,7 +192,7 @@ Singleton {
     }
     function hideWindowCommand(id) {
         const selector = windowSelector(id);
-        return selector ? ["python3", NacrePaths.configRoot.slice(7) + "/hypr/scripts/window-hide.py", "hide", "--window", addressOf(id), "--quiet"] : [];
+        return selector ? [NacrePaths.helperBinary, "window-hide", "hide", "--window", addressOf(id), "--quiet"] : [];
     }
     function closeWindow(id) {
         return windowAction(id, "close", "closewindow");

@@ -944,3 +944,22 @@ per measured action at that resolution, not proof of zero CPU. A preceding
 fresh run recorded 45.265/1.285 ms CPU; loaded-machine variability remains.
 Whole-shell action timings, aggregate RSS/PSS, idle CPU and launches per minute
 remain deferred to the owner's interleaved quiet-window comparison.
+
+### Wave 2 window-hide helper (busy machine)
+
+The current Python helper and Rust release used the same native compositor
+backend and disposable Hyprland socket. Each made 100 quiet hide requests after
+one warm-up. CPU uses `benchmark-helpers.py` child accounting, including reaped
+descendants; RSS uses `performance.py` at the first blocked private query after
+execution, one sample per helper PID, excluding descendants.
+
+| Helper measurement; busy machine | Python reference | Rust release |
+| --- | ---: | ---: |
+| User + system CPU per fresh call (ms) | 46.256 | 2.186 |
+| Direct Python starts in 100 measured calls | 100 | 0 |
+| Helper RSS at private query (MiB) | 17.33 | 7.27 |
+
+These are helper measurements, not shell action latency or aggregate memory.
+Short-lived process peak RSS was discarded because it included memory inherited
+from the benchmark launcher before execution. Quiet-window comparisons remain
+pending; raw accepted values are in `rust-migration-results.json`.

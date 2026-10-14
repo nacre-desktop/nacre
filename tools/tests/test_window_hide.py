@@ -1,6 +1,5 @@
 """Real hide/restore implementation against fake compositor data and old ledgers."""
 
-import importlib.util
 import os
 import subprocess
 from pathlib import Path
@@ -9,11 +8,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).parents[2]
-SPEC = importlib.util.spec_from_file_location(
-    "window_hide", ROOT / "hypr/scripts/window-hide.py"
-)
-hide = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(hide)
+import native_window_hide as hide
 
 
 def client(address, workspace=3, name="3"):

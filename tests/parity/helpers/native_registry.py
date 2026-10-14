@@ -30,6 +30,7 @@ MIGRATED = frozenset(
         "compositor-backends-niri",
         "resource-state",
         "window-chat-title",
+        "window-hide",
         "compositor_config",
         "compositor-backends-hyprland-config",
         "compositor-backends-niri-config",

@@ -68,6 +68,14 @@ the explicit NACRE_PEARL_STATE override keeps precedence.
 Disposable release checks cover absolute XDG state, relative-XDG fallback and
 the explicit state-file override; no existing state file is migrated.
 
+Window-hide preserves the plaintext hide ledger, private modes, newest-record
+restore order, quiet feedback and compositor-owned window IDs. Twelve frozen
+reference cases and all 11 original assertions run against Rust. Notifications
+use D-Bus directly; a private peer records the equivalent historical notify-send
+effect without modifying goldens. Intended differences: notification failures
+reach stderr, lock symlinks are refused, help/error wording is native, and relative
+XDG_CACHE_HOME falls back to HOME (absolute custom roots remain compatible).
+
 ## Launcher workflow additions
 
 `launcher-workflows` is a separate native command for private saved items, file
