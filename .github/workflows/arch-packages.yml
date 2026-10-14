@@ -108,8 +108,8 @@ jobs:
               mkdir -p /var/tmp/nacre-package-build
               mkarchroot -C /usr/share/devtools/pacman.conf.d/extra.conf \
                 /var/tmp/nacre-package-build/root base-devel
-              cp /work/nacre-repo.asc /var/tmp/nacre-package-build/root/tmp/nacre-repo.asc
-              arch-nspawn /var/tmp/nacre-package-build/root pacman-key --add /tmp/nacre-repo.asc
+              cp /work/nacre-repo.asc /var/tmp/nacre-package-build/root/etc/pacman.d/nacre-repo.asc
+              arch-nspawn /var/tmp/nacre-package-build/root pacman-key --add /etc/pacman.d/nacre-repo.asc
               arch-nspawn /var/tmp/nacre-package-build/root pacman-key --lsign-key "$(cat /work/nacre-repo.fingerprint)"
               cd /work/nacre
               sudo -u builder makechrootpkg -c -r /var/tmp/nacre-package-build \
