@@ -1,9 +1,9 @@
 # Install Nacre
 
-Use an updated Arch or CachyOS system. Setup can install the selected Wayland
-compositor if it is missing, or prepare Nacre alongside an existing session. Arch package
-recipes are available, but **Nacre packages are not published to the AUR**.
-Use the signed binary repository below. The tested Hyprland
+Use an updated Arch or CachyOS system and the signed binary repository below.
+Setup can install the selected Wayland compositor if it is missing, or prepare
+Nacre alongside an existing session. **No AUR package or source build is required.**
+The tested Hyprland
 stack uses Hyprland 0.56.2 (Lua configuration), Quickshell 0.3.2, Qt 6.12 and UWSM.
 Upgrade the desktop and Qt together; avoid partial system upgrades.
 
@@ -12,6 +12,11 @@ Upgrade the desktop and Qt together; avoid partial system upgrades.
 The signed repository is available from the
 [package index](https://nacre-desktop.github.io/nacre/);
 this is a development preview, with Niri still experimental.
+
+The installer URL stays the same as updates are released. It installs the latest
+verified snapshot shown in the package index, so there is no version number to
+substitute in the commands. Configure the repository once; existing users can
+go straight to [Updates](#updates).
 
 The installer configures a separate, signed pacman repository and installs core
 Nacre, including its independently released Orient dependency. Save and review
@@ -35,7 +40,9 @@ does not replace Arch/CachyOS repositories or their package signatures.
 The wizard asks only which compositor(s) to use and whether to enable AI tools
 (Nacre AI and Brain). Enter `niri,hyprland` to prepare both, with the first as
 primary. It inherits the system keyboard, keeps an existing profile, and seeds
-a bundled wallpaper and useful launcher favorites. Keyboard and profile
+a bundled wallpaper, useful launcher favorites and a window border width of 3.
+Niri scales that logical width for each display; saved border widths remain
+intact. Keyboard and profile
 overrides remain available through command-line options and Settings.
 
 Missing dependencies are installed through pacman. Routine provider defaults
@@ -61,8 +68,9 @@ nacre setup
 Pacman installs shared code and resolves repository dependencies. Run setup as
 your ordinary user, without sudo. Binary installation needs no compiler, npm or
 Python package downloads. The wizard inherits the keyboard layout, asks for
-compositor(s) and optional AI tools, then asks before applying. `nacre setup --plan` shows the
-complete private file plan. A custom profile is a validated JSON file; see
+compositor(s) and optional AI tools, then asks before applying.
+`nacre setup --plan` shows the complete private file plan. A custom profile is a
+validated JSON file; see
 [configuration](configuration.md).
 
 For an explicit preview or unattended application:
@@ -86,7 +94,7 @@ Optional app installation never signs in, downloads models or creates notes.
 Local edits and foreign runtime links stop deployment before cutover. A failed
 apply restores its snapshot. Package setup prepares the next login; it does not
 restart your running desktop or certify it as tested. Save work, log out and
-select **Nacre (Hyprland)** or the existing UWSM-managed Hyprland session. Open
+select **Nacre (Hyprland)** or **Nacre (niri)** for the prepared compositor. Open
 Welcome with `nacre-welcome`, the launcher with Super+Space and Settings with
 Super+I. Check keyboard, displays, audio, network and lock/unlock.
 
@@ -159,6 +167,13 @@ and its dependencies:
 
 ```sh
 sudo pacman -Syu
+pacman -Q nacre
+```
+
+There is no need to download the installer again. When an update calls for
+refreshing the per-user configuration, review and apply it with:
+
+```sh
 nacre setup --plan
 nacre setup
 ```
@@ -177,8 +192,8 @@ previous private-file snapshot and refuses to overwrite later edits. It cannot
 undo a pacman upgrade: retain matching prior archives for a package downgrade.
 See [recovery and troubleshooting](recovery.md).
 
-AUR publication is optional and currently blocked by account registration being
-paused. The binary repository needs no AUR helper, source compiler or npm on the
+AUR publication is optional and separate. The binary repository needs no AUR
+helper, source compiler or npm on the
 user's machine. Stable release promotion remains separate from this experimental
 development channel; a passing headless build does not certify hardware login,
 locking or screen sharing.

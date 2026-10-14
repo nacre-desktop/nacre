@@ -10,9 +10,13 @@ The separate [Orient](https://github.com/nacre-desktop/orient) Rust engine build
 readable dark and light palettes: keep the image's balance with Natural, bring
 out a small detail with Pop, or choose a softer style.
 
-**Development preview.** Arch package recipes exist, but packages are not yet
-published to the AUR. Start with the [installation guide](docs/installation.md)
-for tested packages, `nacre setup` and the source path.
+**Development preview for Arch and CachyOS.** Install the latest verified build
+from the [signed package repository](https://nacre-desktop.github.io/nacre/)
+using the [installation guide](docs/installation.md). Setup offers Niri,
+Hyprland or both, plus optional AI and Brain tools, and installs missing
+dependencies. Orient is installed as its own package. After the one-time
+repository setup, updates use `sudo pacman -Syu`; no AUR helper or compiler is
+needed.
 
 <p align="center"><img src="assets/screenshots/desktop.png" alt="Nacre desktop with workspace pearls and wallpaper-shaped colors"></p>
 
@@ -32,9 +36,10 @@ assignments. Choose your own defaults through [configuration](docs/configuration
 
 ## Nacre on niri
 
-Niri support is experimental and needs separate preparation. Trash/undo, minimize,
-scratchpad and sticky windows are unavailable because niri lacks matching hidden
-or sticky workspace behavior. Its column layout differs from Hyprland's: pseudo
+Niri support is experimental. Choose it in `nacre setup`, then select
+**Nacre (niri)** at login; your existing plain Niri configuration is preserved.
+Trash/undo, minimize, scratchpad and sticky windows are unavailable because niri
+lacks matching hidden or sticky workspace behavior. Its column layout differs from Hyprland's: pseudo
 tiling, split-direction toggles and resize mode are unsupported. Force close and
 mirroring also lack supported controls. Live thumbnails need unavailable per-window
 capture, and drawer blur needs shaped regions that Nacre cannot yet request.
