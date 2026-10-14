@@ -54,10 +54,10 @@ Singleton {
     property var network: []
     property var previous: null
     property string message: ""
-    readonly property string tool: NacrePaths.dashboardTools + "/dashboard-system.py"
+    readonly property string tool: "dashboard-system"
     function refresh() {
         if (!reader.running) {
-            reader.command = ["python3", tool];
+            reader.command = [NacrePaths.helperBinary, tool];
             reader.running = true;
         }
         routeFile.reload();
@@ -65,7 +65,7 @@ Singleton {
     }
     function end(pid, start) {
         if (!reader.running && shown) {
-            reader.command = ["python3", tool, "end", String(pid), String(start)];
+            reader.command = [NacrePaths.helperBinary, tool, "end", String(pid), String(start)];
             reader.running = true;
         }
     }
