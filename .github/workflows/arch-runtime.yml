@@ -56,9 +56,54 @@ jobs:
               runuser -u "nacre-package-test-$backend" -- python /work/test-installed.py --compositor "$backend"
             done
           ' 2>&1 | tee "$RUNNER_TEMP/runtime.log"
+      - name: Test signed repository delivery with an ephemeral test key
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/archives"
+          cp "$RUNNER_TEMP/runtime.log" "$work/installed-runtime.log"
+          docker run --rm -v "$work:/work" -v "$GITHUB_WORKSPACE:/source:ro" archlinux:base bash -euo pipefail -c '
+            pacman-key --init
+            pacman-key --populate archlinux
+            pacman -Syu --noconfirm --needed python gnupg sudo
+            export GNUPGHOME
+            GNUPGHOME=$(mktemp -d)
+            chmod 700 "$GNUPGHOME"
+            cleanup_key() { gpgconf --kill gpg-agent; rm -rf "$GNUPGHOME"; }
+            trap cleanup_key EXIT
+            gpg --batch --pinentry-mode loopback --passphrase "" --quick-generate-key "Nacre delivery test <fixture@example.invalid>" ed25519 sign 1d
+            gpg --batch --armor --export > /work/test-key.asc
+            python - <<"PY"
+          import importlib.util, pathlib, re, subprocess
+          spec = importlib.util.spec_from_file_location("repo", "/source/packaging/arch/repository.py")
+          repo = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(repo)
+          listing = subprocess.check_output(["gpg","--batch","--with-colons","--list-secret-keys"], text=True)
+          fingerprint = next(line.split(":")[9] for line in listing.splitlines() if line.startswith("fpr:"))
+          recipe = pathlib.Path("/work/nacre/PKGBUILD").read_text()
+          revision = re.search(r"nacre.git#commit=([0-9a-f]{40})", recipe).group(1)
+          repo.build(pathlib.Path("/source"), pathlib.Path("/work"), pathlib.Path("/work/site"), fingerprint, revision, "1")
+          pathlib.Path("/work/test-key.fingerprint").write_text(fingerprint+"\n")
+          PY
+            gpgconf --kill gpg-agent
+            rm -rf "$GNUPGHOME"
+            unset GNUPGHOME
+            trap - EXIT
+            pacman-key --add /work/test-key.asc
+            pacman-key --lsign-key "$(cat /work/test-key.fingerprint)"
+            printf "\n[nacre-dev]\nSigLevel = Required DatabaseRequired TrustedOnly\nServer = file:///work/site/arch/dev/x86_64\n" >> /etc/pacman.conf
+            pacman -Syu --noconfirm --needed nacre
+            ! command -v niri
+            ! command -v hyprland
+            useradd -m nacre-package-test-delivery
+            printf "nacre-package-test-delivery ALL=(ALL) NOPASSWD: /usr/bin/pacman\n" > /etc/sudoers.d/nacre-delivery
+            chmod 440 /etc/sudoers.d/nacre-delivery
+            printf "y\n" | runuser -u nacre-package-test-delivery -- python /source/packaging/arch/test-delivery.py
+          ' 2>&1 | tee "$RUNNER_TEMP/delivery.log"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: diagnostic-runtime-proof
-          path: ${{ runner.temp }}/runtime.log
+          path: |
+            ${{ runner.temp }}/runtime.log
+            ${{ runner.temp }}/delivery.log
           if-no-files-found: warn

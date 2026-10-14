@@ -24,13 +24,18 @@ def render(root, revision, sequence=None):
         f"orient::git+https://github.com/nacre-desktop/orient.git#commit={lock['revision']}",
     ]
     checksums = ["SKIP", "SKIP"]
+    core_licenses = ["GPL-3.0-only"]
     for group in json.loads((root / "nacre/shell-tools/font-assets.json").read_text())[
         "groups"
     ]:
         if group["default"]:
+            if group["license"] not in core_licenses:
+                core_licenses.append(group["license"])
             for row in group["files"]:
                 sources.append(row["name"] + "::" + row["url"])
                 checksums.append(row["sha256"])
+    if (root / "nacre/shell-tools/emoji-LICENSE.txt").is_file():
+        core_licenses.append("Unicode-3.0")
     core = [
         "orient=" + lock["version"].replace("-dev.", "dev") if v == "orient" else v
         for v in mapping["core"]
@@ -109,6 +114,7 @@ check() {{
 }}
 
 package_nacre() {{
+  license={array(core_licenses)}
   depends={array(core)}
   optdepends={array(mapping["core_optional"])}
   cd "$srcdir/nacre"
@@ -139,15 +145,16 @@ package_nacre-brain() {{
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--revision", default="HEAD")
+    parser.add_argument("--source-root", type=Path, default=ROOT)
     parser.add_argument(
         "--output", type=Path, default=Path(__file__).with_name("PKGBUILD")
     )
     args = parser.parse_args()
     revision = subprocess.check_output(
-        ["git", "-C", str(ROOT), "rev-parse", args.revision], text=True
+        ["git", "-C", str(args.source_root), "rev-parse", args.revision], text=True
     ).strip()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     sequence = subprocess.check_output(
-        ["git", "-C", str(ROOT), "rev-list", "--count", revision], text=True
+        ["git", "-C", str(args.source_root), "rev-list", "--count", revision], text=True
     ).strip()
-    args.output.write_text(render(ROOT, revision, sequence))
+    args.output.write_text(render(args.source_root, revision, sequence))

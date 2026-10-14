@@ -170,6 +170,11 @@ def stage(root, destination, component, build):
             copy(source, destination / "usr/share/fonts/nacre" / source.name)
         for source in (build / "fonts").glob("*.txt"):
             copy(source, destination / "usr/share/licenses/nacre" / source.name)
+        if (tools / "emoji-LICENSE.txt").is_file():
+            copy(
+                tools / "emoji-LICENSE.txt",
+                destination / "usr/share/licenses/nacre/emoji-LICENSE.txt",
+            )
     elif component.startswith("session-"):
         name = component.removeprefix("session-")
         copy(

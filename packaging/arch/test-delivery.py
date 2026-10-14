@@ -30,7 +30,7 @@ subprocess.run([*command, "--plan"], check=True)
 assert shutil.which("niri") is None
 assert not (home / ".config/nacre").exists()
 subprocess.run([*command, "--yes", "--install-deps"], check=True)
-assert shutil.which("niri") == "/usr/bin/niri"
+assert Path(shutil.which("niri")).samefile("/usr/bin/niri")
 assert plain.read_bytes() == plain_bytes
 assert (home / ".config/nacre/niri/config.kdl").is_file()
 assert (home / ".config/systemd/user/nacre-niri.target").is_file()

@@ -860,6 +860,8 @@ class ArchPackageLayoutTests(unittest.TestCase):
                 Path("usr/lib/nacre/thunar-style/nacre-thunar-theme.so"), owned
             )
             self.assertNotIn(Path("usr/bin/orient"), owned)
+            if (TOOLS.parent / "nacre/shell-tools/emoji-LICENSE.txt").is_file():
+                self.assertIn(Path("usr/share/licenses/nacre/emoji-LICENSE.txt"), owned)
             self.assertIn(Path("usr/share/nacre/nacre/shell-tools/nacre-helper"), owned)
             self.assertIn(Path("usr/lib/nacre/nacre-helper"), owned)
             reference = base / "core/usr/share/nacre/nacre/shell-tools/nacre-helper"

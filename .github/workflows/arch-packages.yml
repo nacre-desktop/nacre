@@ -6,6 +6,10 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      source_revision:
+        description: Optional exact main ancestor to rebuild with the current verification harness
+        type: string
+        required: false
       component:
         description: Package family (core uses the separately released Orient dependency)
         required: true
@@ -36,6 +40,13 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_revision || github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: package-source
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         if: github.event_name == 'workflow_dispatch' && !inputs.use_released_orient
         with:
@@ -53,9 +64,13 @@ jobs:
           USE_RELEASED_ORIENT: ${{ github.event_name == 'workflow_run' || inputs.use_released_orient }}
           ORIENT_RECIPE_REVISION: ${{ inputs.orient_recipe_revision || '81cdf445454647ef41a65c67a7ea90c193c2b1e5' }}
           GH_TOKEN: ${{ github.token }}
+          PACKAGE_SOURCE: ${{ inputs.source_revision || github.event.workflow_run.head_sha || github.sha }}
         run: |
           set -euo pipefail
           [[ "$ORIENT_RECIPE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PACKAGE_SOURCE" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$PACKAGE_SOURCE" "$GITHUB_SHA"
+          test "$(git -C package-source rev-parse HEAD)" = "$PACKAGE_SOURCE"
           [[ "$PACKAGE_COMPONENT" == all || "$PACKAGE_COMPONENT" == core || "$PACKAGE_COMPONENT" == niri ]]
           work="$RUNNER_TEMP/pinned-arch"
           mkdir -p "$work"/{orient,nacre,niri}
@@ -68,7 +83,7 @@ jobs:
               cp orient-recipe/packaging/arch/PKGBUILD "$work/orient/"
             fi
           fi
-          python3 packaging/arch/recipe.py --revision HEAD --output "$work/nacre/PKGBUILD"
+          python3 packaging/arch/recipe.py --source-root package-source --revision HEAD --output "$work/nacre/PKGBUILD"
           cp packaging/arch/niri/PKGBUILD "$work/niri/"
           cp packaging/arch/test-installed.py "$work/test-installed.py"
           # As in Orient's distribution checks, devtools needs systemd as PID1.
@@ -154,7 +169,7 @@ jobs:
           python3 - <<'PY'
           import json, os, pathlib, subprocess
           work = pathlib.Path(os.environ['RUNNER_TEMP']) / 'pinned-arch'
-          revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          revision = subprocess.check_output(['git', '-C', 'package-source', 'rev-parse', 'HEAD'], text=True).strip()
           (work / 'build-receipt.json').write_text(json.dumps(dict(schema=1, sourceRevision=revision, workflowRevision=os.environ['GITHUB_SHA'], runId=os.environ['GITHUB_RUN_ID'], releasedOrient=os.environ['USE_RELEASED_ORIENT'] == 'true'), indent=2)+'\n')
           PY
       - name: Package archives, recipes and build logs
