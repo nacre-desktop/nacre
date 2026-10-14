@@ -11,6 +11,9 @@ fn run() -> Result<i32> {
     let mut arguments = std::env::args().skip(1);
     let tool = arguments.next().ok_or("Expected a helper command")?;
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "login-appearance" {
+        return nacre_helper::login_appearance::run(&arguments);
+    }
     if tool == "terminal-branding" {
         return nacre_helper::terminal_branding::run(&arguments);
     }

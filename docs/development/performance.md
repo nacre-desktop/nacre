@@ -1114,3 +1114,19 @@ Kitty packet bytes, registration fields/modes, prepared files and cleanup.
 Absolute XDG cache roots are an intended difference. Refresh also uses O_NOCTTY;
 failed registration/pruned-record errors now reach stderr rather than disappearing.
 The internal `--refresh` command replaces the former Python module call.
+
+### Wave 3 login appearance (busy machine)
+
+The frozen 37×23 RGB input measured fresh child user + system CPU, excluding
+the driver. One hundred cache-hit calls measured 50.742→0.955 ms per call; ten
+independent cache misses measured 56.437→1.295 ms. Direct Python starts were
+100→0 and 10→0 respectively. These tiny-image helper figures are not 4K or
+whole-desktop action timings. The existing login-image-v1 cache stamps remain
+readable and reuse existing files without decoding.
+
+Thirteen image vectors match Pillow PNG bytes exactly, including ICC,
+transparency, rotated JPEG and offset transparent GIF. The native publication
+checks retain private/staged-home boundaries and existing file modes. Absolute
+XDG roots and journaled image/publication failures are intended differences.
+The generic Orient image-preview API changes the decoder build fingerprint;
+its core palette output and prior frozen image/artwork outputs stay unchanged.

@@ -659,22 +659,32 @@ def _publish_lock_login(home, state, colors, wallpaper):
         ),
     )
     # Login appearance is public wallpaper/color data; authentication remains SDDM-owned.
-    publisher = Path(__file__).with_name("login-appearance.py")
-    if selected and publisher.exists():
-        try:
-            import importlib.util
+    if selected:
+        from nacre_native_config import _binary
 
-            spec = importlib.util.spec_from_file_location("login_appearance", publisher)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            module.publish(
-                colors,
-                selected,
-                home / ".local/state/nacre/shell/login-preview",
-                home=home,
+        try:
+            result = subprocess.run(
+                [str(_binary()), "login-appearance", "--publish"],
+                input=json.dumps(
+                    {
+                        "home": str(home),
+                        "colors": colors,
+                        "wallpaper": selected,
+                        "preview": str(home / ".local/state/nacre/shell/login-preview"),
+                    }
+                ),
+                text=True,
+                stdout=subprocess.DEVNULL,
+                timeout=60,
+                check=False,
             )
-        except (OSError, ValueError, ImportError):
-            pass  # A login-theme image failure must not interrupt the desktop palette.
+            if result.returncode:
+                print(
+                    "Login appearance publication failed; desktop palette remains active",
+                    file=sys.stderr,
+                )
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+            print(f"Login appearance publication failed: {error}", file=sys.stderr)
 
 
 def _reload_desktop_consumers(data, icon_theme, lua, live):

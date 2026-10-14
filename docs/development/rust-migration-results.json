@@ -1517,5 +1517,35 @@
         "direct_python_launches": 0
       }
     }
+  },
+  "wave3_login_appearance_busy_machine": {
+    "condition": "busy machine",
+    "method": "child user+system CPU; same frozen 37x23 PNG; 100 fresh cache-hit calls and 10 independent cache-miss calls; driver excluded",
+    "results": {
+      "python": {
+        "cache_hit": {
+          "calls": 100,
+          "cpu_ms_per_call": 50.74154000000001,
+          "direct_python_launches": 100
+        },
+        "cache_miss": {
+          "calls": 10,
+          "cpu_ms_per_call": 56.437400000000004,
+          "direct_python_launches": 10
+        }
+      },
+      "rust": {
+        "cache_hit": {
+          "calls": 100,
+          "cpu_ms_per_call": 0.9546300000000008,
+          "direct_python_launches": 0
+        },
+        "cache_miss": {
+          "calls": 10,
+          "cpu_ms_per_call": 1.2954999999999828,
+          "direct_python_launches": 0
+        }
+      }
+    }
   }
 }

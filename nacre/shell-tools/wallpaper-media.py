@@ -550,13 +550,16 @@ def warm(include_demo=True):
         except BlockingIOError:
             return {"busy": True}
         cli = HOME / ".local/share/nacre/palette-runtime/venv/bin/nacre_shell"
-        import importlib.util
+        from nacre_native_config import _binary
 
-        spec = importlib.util.spec_from_file_location(
-            "login", Path(__file__).with_name("login-appearance.py")
-        )
-        login = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(login)
+        def prepare_login(poster):
+            subprocess.run(
+                [str(_binary()), "login-appearance", "--prepare", str(poster)],
+                stdout=subprocess.DEVNULL,
+                check=True,
+                timeout=60,
+            )
+
         brand = demo_module("branding")
         current_media = media_state()
         scenes = [current_media] if current_media.get("poster") else []
@@ -571,7 +574,7 @@ def warm(include_demo=True):
             poster = scene.get("poster")
             if not poster or not cli.exists() or not Path(poster).is_file():
                 continue
-            login.prepare(poster)
+            prepare_login(poster)
             for mode in ("dark", "light"):
                 for personality in (
                     "natural",
@@ -666,7 +669,7 @@ def warm(include_demo=True):
                     )
                     atomic(marker, json.loads(result.stdout))
                     computed += 1
-                login.prepare(item["poster"])
+                prepare_login(item["poster"])
                 prepared += 1
             except (OSError, ValueError, subprocess.SubprocessError):
                 continue

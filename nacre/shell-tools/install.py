@@ -118,6 +118,7 @@ def retire_native_helpers(directory):
     for retired in (
         "kde-palette",
         "terminal-branding",
+        "login-appearance",
         "helper-service",
         "diagnostics",
         "menu-backend",

@@ -45,6 +45,28 @@ impl Request {
 fn call(helper: &str, operation: &str, request: &Request) -> Result<Value> {
     let paths = Paths::environment()?;
     match (helper, operation) {
+        ("login-appearance", "prepare") => {
+            let wallpaper = match request.argument(0, "wallpaper")? {
+                Value::String(path) => PathBuf::from(path),
+                value => PathBuf::from(
+                    value
+                        .get("$path")
+                        .and_then(Value::as_str)
+                        .ok_or("Expected wallpaper path")?,
+                ),
+            };
+            let cache = request
+                .args
+                .get(1)
+                .or_else(|| request.kwargs.get("cache"))
+                .and_then(|v| v.get("$path"))
+                .and_then(Value::as_str)
+                .map(PathBuf::from);
+            let (path, stamp) =
+                nacre_helper::login_appearance::prepare(&paths, &wallpaper, cache.as_deref())?;
+            Ok(value!([path, stamp]))
+        }
+
         ("kde-palette", "read") => {
             nacre_helper::kde_palette::read(&request.path(0, "path", PathBuf::new())?)
         }
@@ -170,7 +192,11 @@ fn main() {
     let (reply, code) = match result {
         Ok(v) => (v, 0),
         Err(error) => {
-            let kind = if error.downcast_ref::<std::io::Error>().is_some() {
+            let kind = if let Some(error) =
+                error.downcast_ref::<nacre_helper::login_appearance::LoginError>()
+            {
+                error.kind
+            } else if error.downcast_ref::<std::io::Error>().is_some() {
                 "OSError"
             } else if error
                 .downcast_ref::<dashboard_data::DashboardTypeError>()

@@ -59,3 +59,5 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub mod kde_palette;
 
 pub mod terminal_branding;
+
+pub mod login_appearance;

@@ -12,6 +12,10 @@ BASE = Path(__file__).resolve().parents[1]
 
 
 def module(name):
+    if name == "login-appearance":
+        import native_login_appearance
+
+        return native_login_appearance
     s = importlib.util.spec_from_file_location(name, BASE / (name + ".py"))
     m = importlib.util.module_from_spec(s)
     s.loader.exec_module(m)
