@@ -627,3 +627,8 @@ installation evidence is recorded with the resulting revision.
 [Final normal and narrow gallery](../../assets/screenshots/settings-final/README.md) records the complete navigation, shared section subpages, search and row highlighting. Profile/source controls are right aligned; unbuilt controls are hidden.
 
 Local integrated validation: 868 repository tests passed (297 tools, 104 AI, 45 Brain, 422 shell); native Rust tests and clippy passed. A private production host verifies 27 routes/aliases and actual store writes. The parity harness and exact CI revision complete the release evidence. Research clones were temporarily moved out of the copied-checkout test path because an upstream DMS symlink is dangling; reference revisions and research content are preserved.
+
+Compatibility comparisons canonicalize the declared desktop-v2 edge names and
+new 350 ms/default dashboard values on both sides. The immutable frozen references
+are unchanged, and independent frame/panel values still fail a mismatched
+comparison. CLI invalid-page usage retains exit status 2.

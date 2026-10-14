@@ -30,9 +30,44 @@ def entry_for(name, helper):
     return None
 
 
+def canonical_desktop(data):
+    """Compare declared v2 names/defaults on both sides; never ignore values."""
+    if not isinstance(data, dict):
+        return data
+    data = copy.deepcopy(data)
+    aliases = {
+        "topEdge": ["frameTopEnabled", "topBarEnabled"],
+        "leftEdge": ["frameLeftEnabled"],
+        "rightEdge": ["frameRightEnabled", "controlCenterEnabled"],
+        "bottomEdge": ["frameBottomEnabled"],
+        "leftDrawer": ["aiSidebarEnabled"],
+    }
+    for old, keys in aliases.items():
+        if old in data:
+            value = data.pop(old)
+            for key in keys:
+                data.setdefault(key, value)
+    if isinstance(data.get("normalSnapshot"), dict):
+        snapshot = data["normalSnapshot"]
+        for old, keys in aliases.items():
+            if old in snapshot:
+                value = snapshot.pop(old)
+                for key in keys:
+                    snapshot.setdefault(key, value)
+    data.setdefault("dashboardEnabled", True)
+    data.setdefault("lipHoverDelay", 350)
+    return data
+
+
 def compatible_files(result, case):
     result = copy.deepcopy(result)
     helper = case.get("helper")
+    if (
+        helper == "desktop-settings"
+        and isinstance(result.get("stdout"), dict)
+        and "data" in result["stdout"]
+    ):
+        result["stdout"]["data"] = canonical_desktop(result["stdout"]["data"])
     for name, record in list(result.get("files", {}).items()):
         base = (
             name.removesuffix(".schema.lock")
@@ -75,6 +110,15 @@ def compatible_files(result, case):
                 del data["version"]
             else:
                 data["version"] = entry["version"]
+        if entry["id"] == "desktop":
+            if (
+                isinstance(data, dict)
+                and isinstance(data.get("version"), int)
+                and not isinstance(data.get("version"), bool)
+                and data["version"] <= entry["version"]
+            ):
+                data.pop("version", None)
+            data = canonical_desktop(data)
         record["text"] = json.dumps(data, ensure_ascii=True)
     return result
 

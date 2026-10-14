@@ -83,7 +83,7 @@ def main():
     args = parser.parse_args()
     try:
         if not valid_route(args.page):
-            raise RuntimeError("Unknown Settings route: " + args.page)
+            parser.error("Unknown Settings route: " + args.page)
         open_settings(args.page)
     except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
         message = str(error)
