@@ -97,6 +97,37 @@ def install_modules(directory):
     imports = root / "imports"
     imports.mkdir(exist_ok=True)
     shutil.copytree(STUBS, imports, dirs_exist_ok=True)
+    # Shared widget assets follow their QML files in isolated fixture trees.
+    for token in root.rglob("NacreTokens.qml"):
+        shutil.copy2(
+            SHELL / "widgets/size-scale.json", token.parent / "size-scale.json"
+        )
+    import json
+
+    scale_text = json.dumps((SHELL / "widgets/size-scale.json").read_text())
+    # File providers are test doubles. Seed just this immutable asset from source.
+    for file_view in [
+        imports / "Quickshell/Io/FileView.qml",
+        *root.rglob("FileView.qml"),
+    ]:
+        source = file_view.read_text()
+        if "property bool blockLoading" not in source:
+            source = source.replace(
+                "QtObject {", "QtObject {\n    property bool blockLoading: false;\n", 1
+            )
+        if "size-scale.json" not in source:
+            source = re.sub(
+                r"(function text\(\)\s*\{)",
+                lambda m: (
+                    m[0]
+                    + "\n        if (String(path).endsWith('/size-scale.json')) return "
+                    + scale_text
+                    + ";"
+                ),
+                source,
+                count=1,
+            )
+        file_view.write_text(source)
     tree = root / "production"
     staged = (
         set((root / "staged.txt").read_text().splitlines())

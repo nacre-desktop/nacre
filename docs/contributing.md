@@ -77,3 +77,22 @@ Versions below 1.0 are development previews. Update `VERSION`, package metadata,
 README and changelog together, pass checks, then create an annotated version tag.
 The manually dispatched release workflow publishes that tag as a GitHub prerelease
 under the automation account. PyPI publication is a separate future step.
+
+## UI size scale
+
+New and redesigned UI uses the shared scale in
+[`size-scale.json`](../nacre/shell/widgets/size-scale.json), exposed by
+`NacreTokens.space`, `radii`, `textSize` and `iconSize`. This is plain versioned
+JSON so Bead's future component kit can consume the same values. Spacing and radii
+use logical pixels; text and icon font sizes use points. `radii.full` creates a
+pill/circle (Qt clamps it to the available geometry). Use the named sizes rather
+than introducing near-duplicate literals. Structural dimensions, hairline borders,
+animation timing and measured geometry are separate concerns.
+
+The scale follows the dashboard/control center's common values: spacing
+2/4/8/10/12/14/18/24/32, corners 8/16/20/full, text 10/12/14/18 and icons
+12/15/18/24/32. This first pass converts shared `widgets/`; existing module
+layouts move to it when redesigned by their owning tasks.
+
+The existing `textPointSize`, `cornerRadius` and `spacing` aliases retain their
+12/12/8 defaults for modules awaiting redesign. New UI uses the named groups.

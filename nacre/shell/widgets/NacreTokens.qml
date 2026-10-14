@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import Quickshell.Io as Io
 import qs.services
 
 QtObject {
@@ -8,9 +9,19 @@ QtObject {
 
     property string textFamily: DesktopSettings.data.interfaceFont || "IBM Plex Sans"
     property string monoFamily: "JetBrains Mono NF"
-    property real textPointSize: 12
-    property real cornerRadius: 12
-    property real spacing: 8
+    readonly property Io.FileView sizeFile: Io.FileView {
+        path: Qt.resolvedUrl("size-scale.json")
+        blockLoading: true
+    }
+    readonly property var sizeScale: JSON.parse(sizeFile.text())
+    readonly property var space: sizeScale.spacing
+    readonly property var radii: sizeScale.radii
+    readonly property var textSize: sizeScale.text
+    readonly property var iconSize: sizeScale.icons
+    property real textPointSize: textSize.body
+    // Compatibility alias for modules awaiting redesign.
+    property real cornerRadius: space.md
+    property real spacing: space.sm
     property int colorDuration: 200
     property int stateDuration: 120
     property int textDuration: 400

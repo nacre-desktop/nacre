@@ -3,7 +3,7 @@ import QtQuick.Controls.Basic
 
 ScrollBar {
     id: root
-    padding: 2
+    padding: NacreTokens.space.hairline
     hoverEnabled: true
     minimumSize: 0.06
     implicitWidth: horizontal ? 40 : 10

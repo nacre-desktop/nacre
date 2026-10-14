@@ -9,21 +9,21 @@ Slider {
         y: root.topPadding + (root.availableHeight - height) / 2
         width: root.availableWidth
         height: 4
-        radius: 2
+        radius: NacreTokens.radii.full
         color: NacreTokens.raised
         Rectangle {
             width: root.visualPosition * parent.width
             height: parent.height
-            radius: 2
+            radius: NacreTokens.radii.full
             color: NacreTokens.accent
         }
     }
     handle: Rectangle {
         x: root.leftPadding + root.visualPosition * (root.availableWidth - width)
         y: root.topPadding + (root.availableHeight - height) / 2
-        width: 16
-        height: 16
-        radius: 8
+        width: NacreTokens.space.lg
+        height: NacreTokens.space.lg
+        radius: NacreTokens.radii.full
         color: NacreTokens.accent
         border.width: root.activeFocus ? 2 : 0
         border.color: NacreTokens.ink

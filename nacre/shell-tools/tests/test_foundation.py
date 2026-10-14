@@ -1,4 +1,4 @@
-from qml_fixtures import install_i18n
+from qml_fixtures import install_i18n, run_qml
 
 """Actual Nacre primitives with native Qt input and text/layout tests."""
 
@@ -48,6 +48,7 @@ class FoundationTests(unittest.TestCase):
                     + ".qml\n"
                 )
             (widgets / "qmldir").write_text(manifest)
+            shutil.copy2(WIDGETS / "size-scale.json", widgets / "size-scale.json")
             palette = {
                 "m3surface": "#202226",
                 "m3surfaceContainer": "#303640",
@@ -87,7 +88,7 @@ class FoundationTests(unittest.TestCase):
                 target / "tst_foundation.qml",
             )
             install_i18n(services)
-            result = subprocess.run(
+            result = run_qml(
                 [
                     str(runner),
                     "-import",
@@ -132,6 +133,7 @@ class FoundationTests(unittest.TestCase):
                 "NacreClip",
             ):
                 shutil.copy2(WIDGETS / (name + ".qml"), widgets / (name + ".qml"))
+            shutil.copy2(WIDGETS / "size-scale.json", widgets / "size-scale.json")
             palette = {
                 "m3surface": "#202226",
                 "m3surfaceContainer": "#303640",

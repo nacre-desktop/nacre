@@ -12,22 +12,22 @@ NacreSurface {
 
     signal clicked
 
-    implicitHeight: Math.max(34, label.implicitHeight + 12)
-    implicitWidth: label.implicitWidth + (compact ? 20 : 28) + (icon ? (compact ? 22 : 25) : 0)
-    radius: 17
+    implicitHeight: Math.max(34, label.implicitHeight + NacreTokens.space.md)
+    implicitWidth: label.implicitWidth + (compact ? NacreTokens.space.xl : NacreTokens.space.huge) + (icon ? (compact ? 22 : 25) : 0)
+    radius: NacreTokens.radii.full
     color: selected ? NacreColours.palette.m3primary : NacreColours.palette.m3surfaceContainerHigh
     opacity: enabled ? 1 : 0.4
 
     Row {
         anchors.centerIn: parent
-        width: root.width < root.implicitWidth ? parent.width - (root.compact ? 20 : 28) : implicitWidth
-        spacing: root.compact ? 5 : 7
+        width: root.width < root.implicitWidth ? parent.width - (root.compact ? NacreTokens.space.xl : NacreTokens.space.huge) : implicitWidth
+        spacing: root.compact ? NacreTokens.space.xs : NacreTokens.space.sm
 
         NacreIcon {
             anchors.verticalCenter: label.lineCount > 1 ? parent.verticalCenter : undefined
             text: root.icon
             visible: root.icon.length > 0
-            font.pointSize: root.compact ? 12 : 14
+            font.pointSize: root.compact ? NacreTokens.iconSize.small : NacreTokens.iconSize.medium
             color: root.selected ? NacreColours.palette.m3onPrimary : NacreColours.palette.m3onSurface
         }
 
@@ -37,7 +37,7 @@ NacreSurface {
             text: root.text
             width: root.width < root.implicitWidth ? parent.width - (root.icon ? (root.compact ? 22 : 25) : 0) : implicitWidth
             wrapMode: Text.Wrap
-            font.pointSize: root.compact ? 10 : 12
+            font.pointSize: root.compact ? NacreTokens.textSize.caption : NacreTokens.textSize.body
             color: root.selected ? NacreColours.palette.m3onPrimary : NacreColours.palette.m3onSurface
         }
     }

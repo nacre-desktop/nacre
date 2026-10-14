@@ -30,6 +30,9 @@ class WallpaperNativeTests(unittest.TestCase):
             target = Path(folder)
             for name in ("widgets", "services", "launcher"):
                 (target / name).mkdir()
+            shutil.copy2(
+                SHELL / "widgets/size-scale.json", target / "widgets/size-scale.json"
+            )
             for name in ("NacreTokens", "NacreClip", "NacreText"):
                 shutil.copy2(
                     SHELL / "widgets" / (name + ".qml"),

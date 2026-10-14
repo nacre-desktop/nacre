@@ -4,8 +4,8 @@ import "../branding/LogoData.js" as LogoData
 
 Item {
     id: root
-    implicitWidth: 30
-    implicitHeight: 30
+    implicitWidth: NacreTokens.iconSize.hero
+    implicitHeight: NacreTokens.iconSize.hero
     readonly property bool ready: image.loadedOnce
     property bool compact: width <= 36
     property bool ai: false

@@ -12,12 +12,12 @@ TextField {
     selectedTextColor: NacreTokens.focusInk(selectionColor)
     selectByMouse: true
     hoverEnabled: true
-    padding: 4
+    padding: NacreTokens.space.xs
     Accessible.name: accessibleName
     background: NacreSurface {
         implicitWidth: 120
-        implicitHeight: 24
-        radius: NacreTokens.cornerRadius
+        implicitHeight: NacreTokens.space.xxl
+        radius: NacreTokens.radii.medium
         color: NacreTokens.raised
         border.width: root.activeFocus ? 1 : 0
         border.color: NacreTokens.outline

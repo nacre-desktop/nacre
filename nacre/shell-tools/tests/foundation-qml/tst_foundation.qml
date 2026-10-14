@@ -323,7 +323,7 @@ TestCase {
         const view = createTemporaryObject(button, test);
         verify(view.implicitWidth > 60);
         compare(view.implicitHeight, 34);
-        compare(view.radius, 17);
+        compare(view.radius, NacreTokens.radii.full);
         const interaction = view.children.find(child => child.activated !== undefined);
         verify(interaction);
         compare(interaction.Accessible.name, "Action");

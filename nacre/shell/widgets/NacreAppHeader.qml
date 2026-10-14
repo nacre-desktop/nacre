@@ -18,9 +18,9 @@ Item {
         onPressed: root.moveRequested()
     }
     BrandLogo {
-        x: 20
-        width: 32
-        height: 32
+        x: NacreTokens.space.xl
+        width: NacreTokens.iconSize.hero
+        height: NacreTokens.iconSize.hero
         anchors.verticalCenter: parent.verticalCenter
         colorsApp: root.app === "colors"
         settings: root.app === "settings"
@@ -29,19 +29,19 @@ Item {
         x: 64
         anchors.verticalCenter: parent.verticalCenter
         text: root.title
-        font.pointSize: 15
+        font.pointSize: NacreTokens.textSize.title
     }
     Row {
         anchors.right: parent.right
-        anchors.rightMargin: 20
+        anchors.rightMargin: NacreTokens.space.xl
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 18
+        spacing: NacreTokens.space.xl
         NacreText {
             visible: !!root.section
             text: root.section
             color: NacreTokens.mutedInk
             anchors.verticalCenter: parent.verticalCenter
-            font.pointSize: 11
+            font.pointSize: NacreTokens.textSize.caption
         }
         NacreTabStrip {
             tabs: root.tabs
@@ -49,7 +49,7 @@ Item {
             onChosen: name => root.navigate(name)
         }
         Row {
-            spacing: 4
+            spacing: NacreTokens.space.xs
             visible: !!root.mode
             Repeater {
                 model: ["dark", "light"]

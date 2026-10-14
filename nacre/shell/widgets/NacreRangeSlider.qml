@@ -9,7 +9,7 @@ Slider {
     to: 1
     stepSize: 0.01
     live: true
-    padding: 10
+    padding: NacreTokens.space.md
     implicitWidth: 280
     implicitHeight: 32
     Accessible.name: label
@@ -18,12 +18,12 @@ Slider {
         y: (root.height - height) / 2
         width: root.availableWidth
         height: 8
-        radius: 4
+        radius: NacreTokens.radii.full
         color: NacreTokens.raised
         Rectangle {
             width: root.visualPosition * parent.width
             height: parent.height
-            radius: 4
+            radius: NacreTokens.radii.full
             gradient: Gradient {
                 orientation: Gradient.Horizontal
                 GradientStop {
@@ -41,9 +41,9 @@ Slider {
     handle: Rectangle {
         x: root.leftPadding + root.visualPosition * (root.availableWidth - width)
         y: (root.height - height) / 2
-        width: 20
-        height: 20
-        radius: 10
+        width: NacreTokens.space.xl
+        height: NacreTokens.space.xl
+        radius: NacreTokens.radii.full
         gradient: Gradient {
             GradientStop {
                 position: 0

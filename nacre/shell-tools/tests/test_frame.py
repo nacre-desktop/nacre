@@ -297,6 +297,9 @@ TestCase {
                 target / "modules/drawers/contour.js",
             )
             shutil.copy2(
+                SHELL / "widgets/size-scale.json", target / "widgets/size-scale.json"
+            )
+            shutil.copy2(
                 SHELL / "widgets/NacreTokens.qml", target / "widgets/NacreTokens.qml"
             )
             shutil.copy2(
