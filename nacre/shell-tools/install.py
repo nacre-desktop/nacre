@@ -113,6 +113,29 @@ def install_native_helper(helper, target):
         temporary.unlink(missing_ok=True)
 
 
+def retire_native_helpers(directory):
+    for retired in (
+        "helper-service",
+        "diagnostics",
+        "menu-backend",
+        "dashboard-data",
+        "dashboard-media",
+        "network-state",
+        "launcher-preferences",
+        "notification-history",
+        "dashboard-system",
+        "resource-state",
+        "window-chat-title",
+        "light-devices",
+        "menu-cli",
+        "pearl-state",
+        "compositor_config",
+        "compositor_backends/hyprland_config",
+        "compositor_backends/niri_config",
+    ):
+        (directory / (retired + ".py")).unlink(missing_ok=True)
+
+
 def deploy(code_only=False):
     # Resolve/build the native candidate before any source/runtime activation.
     helper = ROOT / "nacre-helper"
@@ -185,26 +208,8 @@ def deploy(code_only=False):
     )
     target = DEST / "tools/nacre-helper"
     install_native_helper(helper, target)
-    # The release transaction has already backed up this owned runtime tree.
-    for retired in (
-        "helper-service",
-        "diagnostics",
-        "menu-backend",
-        "dashboard-data",
-        "dashboard-media",
-        "network-state",
-        "launcher-preferences",
-        "notification-history",
-        "dashboard-system",
-        "resource-state",
-        "window-chat-title",
-        "light-devices",
-        "menu-cli",
-        "compositor_config",
-        "compositor_backends/hyprland_config",
-        "compositor_backends/niri_config",
-    ):
-        (DEST / "tools" / (retired + ".py")).unlink(missing_ok=True)
+    # The release transaction already backed up this owned runtime tree.
+    retire_native_helpers(DEST / "tools")
     # Retire the superseded procedural-image dedication from owned helper code.
     # The release transaction snapshots this tree before activation.
     (DEST / "tools/demo-wallpapers.LICENSE").unlink(missing_ok=True)

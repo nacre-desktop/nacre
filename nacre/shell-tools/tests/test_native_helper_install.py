@@ -19,6 +19,22 @@ spec.loader.exec_module(installer)
 
 
 class NativeHelperInstallTests(unittest.TestCase):
+    def test_upgrade_removes_retired_helper_but_preserves_unported_runtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tools = Path(directory)
+            for name in (
+                "pearl-state.py",
+                "pearl-window.py",
+                "nacre-helper",
+                "private.json",
+            ):
+                (tools / name).write_text("existing")
+            installer.retire_native_helpers(tools)
+            self.assertFalse((tools / "pearl-state.py").exists())
+            for name in ("pearl-window.py", "nacre-helper", "private.json"):
+                self.assertEqual((tools / name).read_text(), "existing")
+            installer.retire_native_helpers(tools)
+
     def test_atomic_candidate_keeps_existing_service_alive(self):
         binary = Path(
             os.environ.get("NACRE_HELPER_BINARY") or ROOT / "target/debug/nacre-helper"
