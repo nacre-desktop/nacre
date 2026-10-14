@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "value": "bad option",
+    "calls": []
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,15 @@
+{
+  "helper": "diagnostics",
+  "command": "python3 tests/parity/helpers/diagnostics_reference.py",
+  "args": [
+    "{\"operation\": \"hardware-fixture\", \"monitors\": [{\"name\": \"DP-1\", \"width\": 2560, \"height\": 1440, \"scale\": 1, \"refreshRate\": 144, \"x\": 0, \"y\": 0}, {\"name\": \"HDMI-A-1\", \"width\": 3840, \"height\": 2160, \"scale\": 1.5, \"refreshRate\": 60, \"x\": 2560, \"y\": 0}]}"
+  ],
+  "fixtures": {
+    "sys/class/dmi/id/chassis_type": "3",
+    "sys/class/net/eth0/type": "1"
+  },
+  "reference_source_sha256": {
+    "diagnostics.py": "0176fe8eca21315c075f1aabbe6d3be48dd20fadf594fc8f0c0fa73b08c3a9fd",
+    "maintenance.py": "ef0a0d85ea966a69a3cb5f83c53cbef6e2c89a31c1175c143f2ea53fe77a0ae3"
+  }
+}

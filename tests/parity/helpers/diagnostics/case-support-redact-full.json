@@ -1,0 +1,12 @@
+{
+  "helper": "diagnostics",
+  "command": "python3 tests/parity/helpers/diagnostics_reference.py",
+  "args": [
+    "{\"operation\": \"redact\", \"value\": {\"username\": \"fixture-user\", \"hostname\": \"fixture-host\", \"SSID\": \"Fixture Network\", \"accessToken\": \"fake-access\", \"private_key\": \"fake-key\", \"message\": \"fixture-user@fixture-host /home/fixture-user/file /Users/fixture-other/file 192.0.2.1 2001:db8::42 fe80::2%eth0 AA:BB:CC:DD:EE:FF\\nFixture Network\\nBearer a.short.synthetic\\npassword=two synthetic words\\nhttps://demo:fake@example.invalid/?code=synthetic\\nabcDEF0123456789abcdefghijklmnop\", \"nested\": [{\"/home/fixture-user/key\": \"fixture-host\"}]}, \"identities\": [\"fixture-user\", \"fixture-host\", \"Fixture Network\"]}"
+  ],
+  "fixtures": {},
+  "reference_source_sha256": {
+    "diagnostics.py": "0176fe8eca21315c075f1aabbe6d3be48dd20fadf594fc8f0c0fa73b08c3a9fd",
+    "maintenance.py": "ef0a0d85ea966a69a3cb5f83c53cbef6e2c89a31c1175c143f2ea53fe77a0ae3"
+  }
+}

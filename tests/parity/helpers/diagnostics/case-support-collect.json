@@ -1,0 +1,38 @@
+{
+  "helper": "diagnostics",
+  "command": "python3 tests/parity/helpers/diagnostics_reference.py",
+  "args": [
+    "{\"operation\": \"collect\", \"outputs\": {\"runningVersion\": {\"stdout\": \"Fixture running version\"}, \"installedVersion\": {\"stdout\": \"Fixture installed version\"}, \"quickshell-version\": {\"stdout\": \"Quickshell 0.3.2\"}, \"qt-version\": {\"stdout\": \"6.10.0\"}, \"python-version\": {\"stdout\": \"Python 3.14.7\"}, \"packages\": {\"stdout\": \"python 3.14\\nquickshell 0.3.2\\nbroken row ignored\\n\"}, \"allMonitors\": {\"stdout\": \"[{\\\"name\\\": \\\"DP-1\\\", \\\"width\\\": 3840, \\\"height\\\": 2160, \\\"scale\\\": 2, \\\"refreshRate\\\": 60, \\\"serial\\\": \\\"synthetic serial\\\"}, {\\\"name\\\": \\\"DP-2\\\", \\\"width\\\": 1920, \\\"height\\\": 1080, \\\"scale\\\": 1.25, \\\"refreshRate\\\": 144, \\\"disabled\\\": false}]\"}, \"audio\": {\"stdout\": \"[{\\\"info\\\": {\\\"props\\\": {\\\"media.class\\\": \\\"Audio/Sink\\\", \\\"node.description\\\": \\\"fixture-user Headphones\\\", \\\"device.api\\\": \\\"alsa\\\", \\\"device.serial\\\": \\\"synthetic serial\\\"}, \\\"state\\\": \\\"running\\\"}}]\"}, \"services\": {\"stdout\": \"Id=nacre-shell.service\\nLoadState=loaded\\nActiveState=active\\nResult=success\\nExecMainStatus=0\\n\\nId=xdg-desktop-portal.service\\nActiveState=inactive\\nResult=success\\nExecMainStatus=0\", \"code\": 1, \"stderr\": \"Synthetic private service error\"}, \"maintenance-services\": {\"stdout\": \"Id=nacre-shell.service\\nLoadState=loaded\\nActiveState=active\\nResult=success\\nExecMainStatus=0\\n\\nId=xdg-desktop-portal.service\\nActiveState=inactive\\nResult=success\\nExecMainStatus=0\", \"code\": 1}, \"failed-services\": {\"stdout\": \"fixture.service failed\\n\"}, \"journal\": {\"stdout\": \"fixture-user@fixture-host /case/home/file 192.0.2.1\\nTOKEN=synthetic-short\\n<warning>*literal*\\n\"}, \"shell-log\": {\"stdout\": \"SSID=Fixture Network\\nGPU 0% / 42 C kernel 6.12.4\\n\"}, \"configErrors\": {\"stdout\": \"bad <option> at /case/home/config\"}, \"release-size\": {\"stdout\": \"12345 /case/home/.local/state/nacre/releases\"}, \"ssids\": {\"stdout\": \"Fixture Network\\n\"}, \"connection-names\": {\"stdout\": \"Fixture Connection\\n\"}, \"gpu-model\": {\"stdout\": \"Fixture GPU model\"}, \"gpu-driver-version\": {\"stdout\": \"\"}}, \"config_errors\": \"bad option\", \"gpus\": [{\"id\": \"0000:01:00.0\", \"name\": \"GPU 0\", \"vendor\": \"nvidia\", \"driver\": \"fixture_driver\", \"deviceId\": \"0x1234\"}]}"
+  ],
+  "fixtures": {
+    "etc/os-release": "ID=fixture\nVERSION_ID=\"1\"\nPRETTY_NAME=\"Fixture Linux\"",
+    "etc/hostname": "fixture-host\n",
+    "proc/cpuinfo": "model name : Fixture CPU\n",
+    "sys/class/dmi/id/chassis_type": "9",
+    "sys/class/power_supply/BAT0/type": "Battery",
+    "sys/class/backlight/panel": {
+      "directory": true
+    },
+    "sys/class/bluetooth/hci0": {
+      "directory": true
+    },
+    "sys/class/net/wlan0/wireless": {
+      "directory": true
+    },
+    "sys/class/net/eth0/type": "1",
+    "home/.local/state/nacre/releases/current.json": "{\"revision\": \"fixture-revision\", \"status\": \"ready\", \"checked\": \"fixed release check\", \"label\": \"omit arbitrary profile label\"}",
+    "home/.local/state/nacre/configuration.json": "{\".config/managed.txt\": \"cea23dd4b87e8b00d19fb9ccaaef93e97353c7353e2070f3baf05aeb3995dff4\", \".config/missing.txt\": \"missing\"}",
+    "home/.config/managed.txt": "changed",
+    "home/.cache/nacre/updates.json": {
+      "text": "{}",
+      "mtime": 1790852400.0
+    },
+    "home/.local/state/nacre/brain-sync.json": "{\"privateLabel\":\"not exported\"}",
+    "home/.local/state/nacre/session/latest.json": "{\"privateSession\":\"not exported\"}",
+    "home/.local/state/nacre/performance/latest.json": "{\"privateProfile\":\"not exported\"}"
+  },
+  "reference_source_sha256": {
+    "diagnostics.py": "0176fe8eca21315c075f1aabbe6d3be48dd20fadf594fc8f0c0fa73b08c3a9fd",
+    "maintenance.py": "ef0a0d85ea966a69a3cb5f83c53cbef6e2c89a31c1175c143f2ea53fe77a0ae3"
+  }
+}

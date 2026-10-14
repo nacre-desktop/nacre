@@ -1,0 +1,475 @@
+{
+  "stdout": {
+    "value": {
+      "schemaVersion": 1,
+      "checked": "2026-10-01T12:00:00+00:00",
+      "software": {
+        "distro": {
+          "ID": "fixture",
+          "VERSION_ID": "1",
+          "PRETTY_NAME": "Fixture Linux"
+        },
+        "kernel": "6.12.4-fixture",
+        "architecture": "x86_64",
+        "compositor": "Fixture",
+        "versions": {
+          "compositor": {
+            "status": "ok",
+            "value": "Fixture running version"
+          },
+          "FixtureInstalled": {
+            "status": "ok",
+            "value": "Fixture installed version"
+          },
+          "Quickshell": {
+            "status": "ok",
+            "value": "Quickshell 0.3.2"
+          },
+          "Qt": {
+            "status": "ok",
+            "value": "6.10.0"
+          },
+          "Python": {
+            "status": "ok",
+            "value": "Python 3.14.7"
+          }
+        },
+        "release": {
+          "revision": "fixture-revision",
+          "status": "ready",
+          "checked": "fixed release check"
+        }
+      },
+      "hardware": {
+        "cpu": {
+          "model": "Fixture CPU",
+          "logicalCpus": 8
+        },
+        "gpus": [
+          {
+            "id": "0000:01:00.0",
+            "name": "GPU 0",
+            "vendor": "nvidia",
+            "driver": "fixture_driver",
+            "deviceId": "0x1234",
+            "model": "Fixture GPU model",
+            "driverVersion": "6.12.4-fixture"
+          }
+        ],
+        "formFactor": "laptop",
+        "chassisType": "9",
+        "battery": true,
+        "backlight": true,
+        "bluetooth": true,
+        "wifi": true,
+        "ethernet": true
+      },
+      "monitors": {
+        "status": "ok",
+        "devices": [
+          {
+            "name": "DP-1",
+            "width": 3840,
+            "height": 2160,
+            "scale": 2,
+            "refreshRate": 60,
+            "x": null,
+            "y": null,
+            "transform": null,
+            "disabled": null
+          },
+          {
+            "name": "DP-2",
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.25,
+            "refreshRate": 144,
+            "x": null,
+            "y": null,
+            "transform": null,
+            "disabled": false
+          }
+        ]
+      },
+      "audio": {
+        "status": "ok",
+        "devices": [
+          {
+            "kind": "Audio/Sink",
+            "description": "fixture-[redacted sensitive value]",
+            "api": "alsa",
+            "state": "running"
+          }
+        ]
+      },
+      "dependencies": {
+        "packageManager": "pacman",
+        "missingPackages": [
+          "hyprland",
+          "uwsm",
+          "python-pip",
+          "python-pillow",
+          "pipewire",
+          "wireplumber",
+          "networkmanager",
+          "bluez",
+          "librsvg",
+          "qt6-imageformats",
+          "qt6-multimedia",
+          "qt6-multimedia-ffmpeg",
+          "ddcutil",
+          "cpptrace",
+          "libdwarf",
+          "wtype",
+          "papirus-icon-theme",
+          "kitty",
+          "dolphin",
+          "kio-extras",
+          "qt6ct",
+          "ark",
+          "hypridle",
+          "hyprlock",
+          "grim",
+          "slurp",
+          "wl-clipboard",
+          "libnotify",
+          "brightnessctl",
+          "ffmpeg",
+          "fontconfig"
+        ],
+        "missingCommands": [
+          "Hyprland",
+          "hyprctl",
+          "uwsm",
+          "python3",
+          "quickshell",
+          "systemctl",
+          "wpctl",
+          "nmcli",
+          "bluetoothctl",
+          "kitty",
+          "dolphin",
+          "hypridle",
+          "hyprlock",
+          "grim",
+          "slurp",
+          "wl-copy",
+          "wl-paste",
+          "notify-send",
+          "brightnessctl",
+          "ffmpeg",
+          "fc-list",
+          "ddcutil",
+          "wtype"
+        ]
+      },
+      "services": {
+        "status": "partial",
+        "value": "Id=nacre-shell.service\nLoadState=loaded\nActiveState=active\nResult=success\nExecMainStatus=0\n\nId=xdg-desktop-portal.service\nActiveState=inactive\nResult=success\nExecMainStatus=0"
+      },
+      "maintenance": {
+        "status": "unavailable",
+        "releaseDiskBytes": 12345
+      },
+      "recentErrors": {
+        "journal": {
+          "status": "ok",
+          "value": "[account][redacted sensitive value]\n[redacted sensitive value]\n<warning>*literal*"
+        },
+        "shellLog": {
+          "status": "ok",
+          "value": "[redacted sensitive value]\nGPU 0% / 42 C kernel 6.12.4"
+        },
+        "compositorConfig": {
+          "status": "ok",
+          "value": "bad <option> at /case[home]"
+        }
+      },
+      "privacy": "Redacted locally. No account files, environment dump, Wi-Fi scan, uploads or privileged probes. Review free-form logs before sharing."
+    },
+    "calls": [
+      {
+        "args": [
+          "fixture-compositor",
+          "runningVersion"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "fixture-compositor",
+          "installedVersion"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "quickshell",
+          "--version"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "/usr/lib/qt6/bin/qtpaths",
+          "--qt-version"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "fixture-python",
+          "--version"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "fixture-helper",
+          "resource-state",
+          "inventory",
+          "/case/sys"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": null,
+        "noColor": null
+      },
+      {
+        "args": [
+          "lspci",
+          "-s",
+          "0000:01:00.0"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "modinfo",
+          "-F",
+          "version",
+          "fixture_driver"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "fixture-compositor",
+          "allMonitors"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "pw-dump"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "pacman",
+          "-Q"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "systemctl",
+          "--user",
+          "show",
+          "nacre-shell.service",
+          "nacre-sidebar-ai.service",
+          "nacre-brain.service",
+          "nacre-session-watch.service",
+          "nacre-brain-sync.service",
+          "-p",
+          "Id",
+          "-p",
+          "LoadState",
+          "-p",
+          "ActiveState",
+          "-p",
+          "Result",
+          "-p",
+          "ExecMainStatus"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "journalctl",
+          "--user",
+          "--no-pager",
+          "-o",
+          "cat",
+          "--since",
+          "1 hour ago",
+          "-p",
+          "warning",
+          "-n",
+          "80",
+          "-u",
+          "nacre-shell.service",
+          "-u",
+          "nacre-sidebar-ai.service",
+          "-u",
+          "nacre-brain.service",
+          "-u",
+          "nacre-session-watch.service",
+          "-u",
+          "nacre-brain-sync.service"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "quickshell",
+          "log",
+          "--config",
+          "nacre",
+          "--no-color",
+          "--tail",
+          "60"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "fixture-compositor",
+          "configErrors"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "du",
+          "-s",
+          "-B1",
+          "/case/home/.local/state/nacre/releases"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "nmcli",
+          "--terse",
+          "--escape",
+          "no",
+          "--fields",
+          "SSID",
+          "device",
+          "wifi",
+          "list",
+          "--rescan",
+          "no"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "nmcli",
+          "--terse",
+          "--escape",
+          "no",
+          "--fields",
+          "NAME",
+          "connection",
+          "show"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      }
+    ]
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

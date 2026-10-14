@@ -1,0 +1,18 @@
+{
+  "helper": "diagnostics",
+  "command": "python3 tests/parity/helpers/diagnostics_reference.py",
+  "args": [
+    "{\"operation\": \"hardware-fixture\", \"monitors\": [{\"name\": \"eDP-1\", \"width\": 2880, \"height\": 1800, \"scale\": 2, \"refreshRate\": 90}]}"
+  ],
+  "fixtures": {
+    "sys/class/dmi/id/chassis_type": "10",
+    "sys/class/power_supply/BAT0/type": "Battery",
+    "sys/class/backlight/intel_backlight/brightness": "500",
+    "sys/class/bluetooth/hci0/name": "fixture",
+    "sys/class/net/wlan0/wireless/status": ""
+  },
+  "reference_source_sha256": {
+    "diagnostics.py": "0176fe8eca21315c075f1aabbe6d3be48dd20fadf594fc8f0c0fa73b08c3a9fd",
+    "maintenance.py": "ef0a0d85ea966a69a3cb5f83c53cbef6e2c89a31c1175c143f2ea53fe77a0ae3"
+  }
+}

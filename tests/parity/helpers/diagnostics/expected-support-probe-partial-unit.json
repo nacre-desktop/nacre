@@ -1,0 +1,28 @@
+{
+  "stdout": {
+    "value": {
+      "status": "partial",
+      "value": "Id=nacre-shell.service\nActiveState=active"
+    },
+    "calls": [
+      {
+        "args": [
+          "systemctl",
+          "--user",
+          "show"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      }
+    ]
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

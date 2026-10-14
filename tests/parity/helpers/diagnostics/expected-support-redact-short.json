@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "value": "[redacted sensitive value]\n[redacted sensitive value]\n[redacted sensitive value]\n[redacted URL]",
+    "calls": []
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

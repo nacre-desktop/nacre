@@ -1,0 +1,117 @@
+{
+  "stdout": {
+    "value": {
+      "services": {
+        "nacre-shell.service": "active",
+        "nacre-sidebar-ai.service": "unavailable",
+        "nacre-brain.service": "unavailable",
+        "nacre-session-watch.service": "unavailable",
+        "hypridle.service": "unavailable",
+        "nacre-brain-sync.timer": "unavailable",
+        "xdg-desktop-portal.service": "ready on demand",
+        "xdg-desktop-portal-hyprland.service": "unavailable",
+        "xdg-document-portal.service": "unavailable"
+      },
+      "serviceDetails": {
+        "nacre-shell.service": {
+          "Id": "nacre-shell.service",
+          "LoadState": "loaded",
+          "ActiveState": "active",
+          "Result": "success",
+          "ExecMainStatus": "0"
+        },
+        "xdg-desktop-portal.service": {
+          "Id": "xdg-desktop-portal.service",
+          "ActiveState": "inactive",
+          "Result": "success",
+          "ExecMainStatus": "0"
+        }
+      },
+      "failedServices": [
+        "fixture.service failed"
+      ],
+      "drift": [
+        ".config/managed.txt",
+        ".config/missing.txt"
+      ],
+      "configErrors": "bad option",
+      "updatesAgeSeconds": 3600
+    },
+    "calls": [
+      {
+        "args": [
+          "fixture-compositor",
+          "installedVersion"
+        ],
+        "timeout": 5,
+        "stdin": null,
+        "capture_output": false,
+        "text": true,
+        "locale": null,
+        "noColor": null
+      },
+      {
+        "args": [
+          "fixture-python",
+          "--version"
+        ],
+        "timeout": 5,
+        "stdin": null,
+        "capture_output": false,
+        "text": true,
+        "locale": null,
+        "noColor": null
+      },
+      {
+        "args": [
+          "systemctl",
+          "--user",
+          "show",
+          "nacre-shell.service",
+          "nacre-sidebar-ai.service",
+          "nacre-brain.service",
+          "nacre-session-watch.service",
+          "hypridle.service",
+          "nacre-brain-sync.timer",
+          "xdg-desktop-portal.service",
+          "xdg-desktop-portal-hyprland.service",
+          "xdg-document-portal.service",
+          "-p",
+          "Id",
+          "-p",
+          "ActiveState",
+          "-p",
+          "Result",
+          "-p",
+          "ExecMainStatus"
+        ],
+        "timeout": 5,
+        "stdin": null,
+        "capture_output": true,
+        "text": true,
+        "locale": null,
+        "noColor": null
+      },
+      {
+        "args": [
+          "systemctl",
+          "--user",
+          "--failed",
+          "--no-legend",
+          "--plain"
+        ],
+        "timeout": 5,
+        "stdin": null,
+        "capture_output": false,
+        "text": true,
+        "locale": null,
+        "noColor": null
+      }
+    ]
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "value": "GPU 0% / 42 C kernel 6.12.4",
+    "calls": []
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

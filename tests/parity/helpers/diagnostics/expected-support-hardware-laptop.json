@@ -1,0 +1,34 @@
+{
+  "stdout": {
+    "value": {
+      "hardware": {
+        "formFactor": "laptop",
+        "chassisType": "10",
+        "battery": true,
+        "backlight": true,
+        "bluetooth": true,
+        "wifi": true,
+        "ethernet": false
+      },
+      "monitors": [
+        {
+          "name": "eDP-1",
+          "width": 2880,
+          "height": 1800,
+          "scale": 2,
+          "refreshRate": 90,
+          "x": null,
+          "y": null,
+          "transform": null,
+          "disabled": null
+        }
+      ]
+    },
+    "calls": []
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

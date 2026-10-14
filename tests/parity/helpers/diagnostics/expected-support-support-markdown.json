@@ -1,0 +1,358 @@
+{
+  "stdout": {
+    "value": "# Nacre support report\n\nCollected: 2026-10-01T12:00:00+00:00\n\nRedacted locally. No account files, environment dump, Wi-Fi scan, uploads or privileged probes. Review free-form logs before sharing.\n\n## Software\n\n- **Distro**:\n  - **Id**: fixture\n  - **Version_id**: 1\n  - **Pretty_name**: Fixture Linux\n- **Kernel**: 6.12.4-fixture\n- **Architecture**: x86\\_64\n- **Compositor**: Fixture\n- **Versions**:\n  - **Compositor**:\n    - **Status**: ok\n    - **Value**: Fixture running version\n  - **Fixture installed**:\n    - **Status**: ok\n    - **Value**: Fixture installed version\n  - **Quickshell**:\n    - **Status**: ok\n    - **Value**: Quickshell 0.3.2\n  - **Qt**:\n    - **Status**: ok\n    - **Value**: 6.10.0\n  - **Python**:\n    - **Status**: ok\n    - **Value**: Python 3.14.7\n- **Release**:\n  - **Revision**: fixture-revision\n  - **Status**: ready\n  - **Checked**: fixed release check\n\n## Hardware\n\n- **CPU**:\n  - **Model**: Fixture CPU\n  - **Logical CPUs**: 8\n- **GPUs**:\n  - Device:\n    - **Id**: 0000:01:00.0\n    - **Name**: GPU 0\n    - **Vendor**: nvidia\n    - **Driver**: fixture\\_driver\n    - **Device ID**: 0x1234\n    - **Model**: Fixture GPU model\n    - **Driver version**: 6.12.4-fixture\n- **Form factor**: laptop\n- **Chassis type**: 9\n- **Battery**: Yes\n- **Backlight**: Yes\n- **Bluetooth**: Yes\n- **Wifi**: Yes\n- **Ethernet**: Yes\n\n## Monitors\n\n- **Status**: ok\n- **Devices**:\n  - Device:\n    - **Name**: DP-1\n    - **Width**: 3840\n    - **Height**: 2160\n    - **Scale**: 2\n    - **Refresh rate (Hz)**: 60\n    - **X**: Unavailable\n    - **Y**: Unavailable\n    - **Transform**: Unavailable\n    - **Disabled**: Unavailable\n  - Device:\n    - **Name**: DP-2\n    - **Width**: 1920\n    - **Height**: 1080\n    - **Scale**: 1.25\n    - **Refresh rate (Hz)**: 144\n    - **X**: Unavailable\n    - **Y**: Unavailable\n    - **Transform**: Unavailable\n    - **Disabled**: No\n\n## Audio\n\n- **Status**: ok\n- **Devices**:\n  - Device:\n    - **Kind**: Audio/Sink\n    - **Description**: fixture-\\[redacted sensitive value\\]\n    - **Api**: alsa\n    - **State**: running\n\n## Dependencies\n\n- **Package manager**: pacman\n- **Missing packages**:\n  - hyprland\n  - uwsm\n  - python-pip\n  - python-pillow\n  - pipewire\n  - wireplumber\n  - networkmanager\n  - bluez\n  - librsvg\n  - qt6-imageformats\n  - qt6-multimedia\n  - qt6-multimedia-ffmpeg\n  - ddcutil\n  - cpptrace\n  - libdwarf\n  - wtype\n  - papirus-icon-theme\n  - kitty\n  - dolphin\n  - kio-extras\n  - qt6ct\n  - ark\n  - hypridle\n  - hyprlock\n  - grim\n  - slurp\n  - wl-clipboard\n  - libnotify\n  - brightnessctl\n  - ffmpeg\n  - fontconfig\n- **Missing commands**:\n  - Hyprland\n  - hyprctl\n  - uwsm\n  - python3\n  - quickshell\n  - systemctl\n  - wpctl\n  - nmcli\n  - bluetoothctl\n  - kitty\n  - dolphin\n  - hypridle\n  - hyprlock\n  - grim\n  - slurp\n  - wl-copy\n  - wl-paste\n  - notify-send\n  - brightnessctl\n  - ffmpeg\n  - fc-list\n  - ddcutil\n  - wtype\n\n## Services\n\n- **Status**: partial\n- **Value**: Id=nacre-shell.service\n  LoadState=loaded\n  ActiveState=active\n  Result=success\n  ExecMainStatus=0\n  \n  Id=xdg-desktop-portal.service\n  ActiveState=inactive\n  Result=success\n  ExecMainStatus=0\n\n## Maintenance\n\n- **Services**:\n  - **Nacre-shell.service**: active\n  - **Nacre-sidebar-ai.service**: unavailable\n  - **Nacre-brain.service**: unavailable\n  - **Nacre-session-watch.service**: unavailable\n  - **Hypridle.service**: unavailable\n  - **Nacre-brain-sync.timer**: unavailable\n  - **Xdg-desktop-portal.service**: ready on demand\n  - **[token-like value].service**: unavailable\n  - **Xdg-document-portal.service**: unavailable\n- **Service details**:\n  - **Nacre-shell.service**:\n    - **Id**: nacre-shell.service\n    - **Load state**: loaded\n    - **Active state**: active\n    - **Result**: success\n    - **Exec main status**: 0\n  - **Xdg-desktop-portal.service**:\n    - **Id**: xdg-desktop-portal.service\n    - **Active state**: inactive\n    - **Result**: success\n    - **Exec main status**: 0\n- **Failed services**:\n  - fixture.service failed\n- **Drift**:\n  - .config/managed.txt\n  - .config/missing.txt\n- **Config errors**: bad option\n- **Updates age seconds**: 3600\n- **Release disk usage (bytes)**: 12345\n\n## Recent errors\n\n- **Journal**:\n  - **Status**: ok\n  - **Value**: \\[account\\]\\[redacted sensitive value\\]\n    \\[redacted sensitive value\\]\n    &lt;warning&gt;\\*literal\\*\n- **Shell log**:\n  - **Status**: ok\n  - **Value**: \\[redacted sensitive value\\]\n    GPU 0% / 42 C kernel 6.12.4\n- **Compositor config**:\n  - **Status**: ok\n  - **Value**: bad &lt;option&gt; at /case\\[home\\]\n",
+    "calls": [
+      {
+        "args": [
+          "fixture-compositor",
+          "runningVersion"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "fixture-compositor",
+          "installedVersion"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "quickshell",
+          "--version"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "/usr/lib/qt6/bin/qtpaths",
+          "--qt-version"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "fixture-python",
+          "--version"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "fixture-helper",
+          "resource-state",
+          "inventory",
+          "/case/sys"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": null,
+        "noColor": null
+      },
+      {
+        "args": [
+          "lspci",
+          "-s",
+          "0000:01:00.0"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "modinfo",
+          "-F",
+          "version",
+          "fixture_driver"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "fixture-compositor",
+          "allMonitors"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "pw-dump"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "pacman",
+          "-Q"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "systemctl",
+          "--user",
+          "show",
+          "nacre-shell.service",
+          "nacre-sidebar-ai.service",
+          "nacre-brain.service",
+          "nacre-session-watch.service",
+          "nacre-brain-sync.service",
+          "-p",
+          "Id",
+          "-p",
+          "LoadState",
+          "-p",
+          "ActiveState",
+          "-p",
+          "Result",
+          "-p",
+          "ExecMainStatus"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "journalctl",
+          "--user",
+          "--no-pager",
+          "-o",
+          "cat",
+          "--since",
+          "1 hour ago",
+          "-p",
+          "warning",
+          "-n",
+          "80",
+          "-u",
+          "nacre-shell.service",
+          "-u",
+          "nacre-sidebar-ai.service",
+          "-u",
+          "nacre-brain.service",
+          "-u",
+          "nacre-session-watch.service",
+          "-u",
+          "nacre-brain-sync.service"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "quickshell",
+          "log",
+          "--config",
+          "nacre",
+          "--no-color",
+          "--tail",
+          "60"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "fixture-compositor",
+          "configErrors"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "fixture-compositor",
+          "installedVersion"
+        ],
+        "timeout": 5,
+        "stdin": null,
+        "capture_output": false,
+        "text": true,
+        "locale": null,
+        "noColor": null
+      },
+      {
+        "args": [
+          "fixture-python",
+          "--version"
+        ],
+        "timeout": 5,
+        "stdin": null,
+        "capture_output": false,
+        "text": true,
+        "locale": null,
+        "noColor": null
+      },
+      {
+        "args": [
+          "systemctl",
+          "--user",
+          "show",
+          "nacre-shell.service",
+          "nacre-sidebar-ai.service",
+          "nacre-brain.service",
+          "nacre-session-watch.service",
+          "hypridle.service",
+          "nacre-brain-sync.timer",
+          "xdg-desktop-portal.service",
+          "xdg-desktop-portal-hyprland.service",
+          "xdg-document-portal.service",
+          "-p",
+          "Id",
+          "-p",
+          "ActiveState",
+          "-p",
+          "Result",
+          "-p",
+          "ExecMainStatus"
+        ],
+        "timeout": 5,
+        "stdin": null,
+        "capture_output": true,
+        "text": true,
+        "locale": null,
+        "noColor": null
+      },
+      {
+        "args": [
+          "systemctl",
+          "--user",
+          "--failed",
+          "--no-legend",
+          "--plain"
+        ],
+        "timeout": 5,
+        "stdin": null,
+        "capture_output": false,
+        "text": true,
+        "locale": null,
+        "noColor": null
+      },
+      {
+        "args": [
+          "du",
+          "-s",
+          "-B1",
+          "/case/home/.local/state/nacre/releases"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "nmcli",
+          "--terse",
+          "--escape",
+          "no",
+          "--fields",
+          "SSID",
+          "device",
+          "wifi",
+          "list",
+          "--rescan",
+          "no"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      },
+      {
+        "args": [
+          "nmcli",
+          "--terse",
+          "--escape",
+          "no",
+          "--fields",
+          "NAME",
+          "connection",
+          "show"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      }
+    ]
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

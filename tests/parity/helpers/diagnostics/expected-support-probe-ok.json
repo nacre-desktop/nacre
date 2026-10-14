@@ -1,0 +1,26 @@
+{
+  "stdout": {
+    "value": {
+      "status": "ok",
+      "value": "value"
+    },
+    "calls": [
+      {
+        "args": [
+          "test"
+        ],
+        "timeout": 3,
+        "stdin": -3,
+        "capture_output": true,
+        "text": true,
+        "locale": "C",
+        "noColor": "1"
+      }
+    ]
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

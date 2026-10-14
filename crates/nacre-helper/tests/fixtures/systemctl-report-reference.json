@@ -1,0 +1,788 @@
+{
+  "reference": "Real systemctl against private fake systemd; no owner bus or units",
+  "systemctlVersion": "systemd 262 (262-1-arch)",
+  "cases": [
+    {
+      "name": "single",
+      "units": [
+        "nacre-shell.service"
+      ],
+      "properties": [
+        "Id",
+        "LoadState",
+        "ActiveState",
+        "Result",
+        "ExecMainStatus"
+      ],
+      "replies": [
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "signature": "a{sv}",
+            "body": [
+              {
+                "Id": {
+                  "variant": "s",
+                  "value": "nacre-shell.service"
+                },
+                "LoadState": {
+                  "variant": "s",
+                  "value": "loaded"
+                },
+                "ActiveState": {
+                  "variant": "s",
+                  "value": "active"
+                },
+                "Result": {
+                  "variant": "s",
+                  "value": "success"
+                },
+                "ExecMainStatus": {
+                  "variant": "i",
+                  "value": 0
+                }
+              }
+            ]
+          },
+          "effects": []
+        }
+      ],
+      "stdout": "Id=nacre-shell.service\nLoadState=loaded\nActiveState=active\nResult=success\nExecMainStatus=0\n",
+      "stderr": "/proc/ is not mounted. This is not a supported mode of operation. Please fix\nyour invocation environment to mount /proc/ and /sys/ properly. Proceeding anyway.\nYour mileage may vary.\n",
+      "exit": 0,
+      "wire": [
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unselected-properties",
+      "units": [
+        "nacre-shell.service"
+      ],
+      "properties": [
+        "Id",
+        "LoadState",
+        "ActiveState",
+        "Result",
+        "ExecMainStatus"
+      ],
+      "replies": [
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "signature": "a{sv}",
+            "body": [
+              {
+                "Description": {
+                  "variant": "s",
+                  "value": "Synthetic ignored description"
+                },
+                "Id": {
+                  "variant": "s",
+                  "value": "nacre-shell.service"
+                },
+                "LoadState": {
+                  "variant": "s",
+                  "value": "loaded"
+                },
+                "ActiveState": {
+                  "variant": "s",
+                  "value": "active"
+                },
+                "Result": {
+                  "variant": "s",
+                  "value": "success"
+                },
+                "ExecMainStatus": {
+                  "variant": "i",
+                  "value": 0
+                },
+                "MainPID": {
+                  "variant": "u",
+                  "value": 100
+                }
+              }
+            ]
+          },
+          "effects": []
+        }
+      ],
+      "stdout": "Id=nacre-shell.service\nLoadState=loaded\nActiveState=active\nResult=success\nExecMainStatus=0\n",
+      "stderr": "/proc/ is not mounted. This is not a supported mode of operation. Please fix\nyour invocation environment to mount /proc/ and /sys/ properly. Proceeding anyway.\nYour mileage may vary.\n",
+      "exit": 0,
+      "wire": [
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reversed-reply-order",
+      "units": [
+        "nacre-shell.service"
+      ],
+      "properties": [
+        "Id",
+        "LoadState",
+        "ActiveState",
+        "Result",
+        "ExecMainStatus"
+      ],
+      "replies": [
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "signature": "a{sv}",
+            "body": [
+              {
+                "ExecMainStatus": {
+                  "variant": "i",
+                  "value": 0
+                },
+                "Result": {
+                  "variant": "s",
+                  "value": "success"
+                },
+                "ActiveState": {
+                  "variant": "s",
+                  "value": "active"
+                },
+                "LoadState": {
+                  "variant": "s",
+                  "value": "loaded"
+                },
+                "Id": {
+                  "variant": "s",
+                  "value": "nacre-shell.service"
+                }
+              }
+            ]
+          },
+          "effects": []
+        }
+      ],
+      "stdout": "ExecMainStatus=0\nResult=success\nActiveState=active\nLoadState=loaded\nId=nacre-shell.service\n",
+      "stderr": "/proc/ is not mounted. This is not a supported mode of operation. Please fix\nyour invocation environment to mount /proc/ and /sys/ properly. Proceeding anyway.\nYour mileage may vary.\n",
+      "exit": 0,
+      "wire": [
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reversed-option-order",
+      "units": [
+        "nacre-shell.service"
+      ],
+      "properties": [
+        "ExecMainStatus",
+        "Result",
+        "ActiveState",
+        "LoadState",
+        "Id"
+      ],
+      "replies": [
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "signature": "a{sv}",
+            "body": [
+              {
+                "Id": {
+                  "variant": "s",
+                  "value": "nacre-shell.service"
+                },
+                "LoadState": {
+                  "variant": "s",
+                  "value": "loaded"
+                },
+                "ActiveState": {
+                  "variant": "s",
+                  "value": "active"
+                },
+                "Result": {
+                  "variant": "s",
+                  "value": "success"
+                },
+                "ExecMainStatus": {
+                  "variant": "i",
+                  "value": 0
+                }
+              }
+            ]
+          },
+          "effects": []
+        }
+      ],
+      "stdout": "Id=nacre-shell.service\nLoadState=loaded\nActiveState=active\nResult=success\nExecMainStatus=0\n",
+      "stderr": "/proc/ is not mounted. This is not a supported mode of operation. Please fix\nyour invocation environment to mount /proc/ and /sys/ properly. Proceeding anyway.\nYour mileage may vary.\n",
+      "exit": 0,
+      "wire": [
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "name": "two-units",
+      "units": [
+        "nacre-shell.service",
+        "fixture.service"
+      ],
+      "properties": [
+        "Id",
+        "LoadState",
+        "ActiveState",
+        "Result",
+        "ExecMainStatus"
+      ],
+      "replies": [
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "signature": "a{sv}",
+            "body": [
+              {
+                "Id": {
+                  "variant": "s",
+                  "value": "nacre-shell.service"
+                },
+                "LoadState": {
+                  "variant": "s",
+                  "value": "loaded"
+                },
+                "ActiveState": {
+                  "variant": "s",
+                  "value": "active"
+                },
+                "Result": {
+                  "variant": "s",
+                  "value": "success"
+                },
+                "ExecMainStatus": {
+                  "variant": "i",
+                  "value": 0
+                }
+              }
+            ]
+          },
+          "effects": []
+        },
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/fixture_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "signature": "a{sv}",
+            "body": [
+              {
+                "Id": {
+                  "variant": "s",
+                  "value": "fixture.service"
+                },
+                "LoadState": {
+                  "variant": "s",
+                  "value": "loaded"
+                },
+                "ActiveState": {
+                  "variant": "s",
+                  "value": "failed"
+                },
+                "Result": {
+                  "variant": "s",
+                  "value": "exit-code"
+                },
+                "ExecMainStatus": {
+                  "variant": "i",
+                  "value": 7
+                }
+              }
+            ]
+          },
+          "effects": []
+        }
+      ],
+      "stdout": "Id=nacre-shell.service\nLoadState=loaded\nActiveState=active\nResult=success\nExecMainStatus=0\n\nId=fixture.service\nLoadState=loaded\nActiveState=failed\nResult=exit-code\nExecMainStatus=7\n",
+      "stderr": "/proc/ is not mounted. This is not a supported mode of operation. Please fix\nyour invocation environment to mount /proc/ and /sys/ properly. Proceeding anyway.\nYour mileage may vary.\n",
+      "exit": 0,
+      "wire": [
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        },
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/fixture_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "name": "missing-after-valid",
+      "units": [
+        "nacre-shell.service",
+        "missing.service"
+      ],
+      "properties": [
+        "Id",
+        "LoadState",
+        "ActiveState",
+        "Result",
+        "ExecMainStatus"
+      ],
+      "replies": [
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "signature": "a{sv}",
+            "body": [
+              {
+                "Id": {
+                  "variant": "s",
+                  "value": "nacre-shell.service"
+                },
+                "LoadState": {
+                  "variant": "s",
+                  "value": "loaded"
+                },
+                "ActiveState": {
+                  "variant": "s",
+                  "value": "active"
+                },
+                "Result": {
+                  "variant": "s",
+                  "value": "success"
+                },
+                "ExecMainStatus": {
+                  "variant": "i",
+                  "value": 0
+                }
+              }
+            ]
+          },
+          "effects": []
+        },
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/missing_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "error": "org.freedesktop.systemd1.NoSuchUnit",
+            "text": "Synthetic unit not found"
+          },
+          "effects": []
+        }
+      ],
+      "stdout": "Id=nacre-shell.service\nLoadState=loaded\nActiveState=active\nResult=success\nExecMainStatus=0\n",
+      "stderr": "/proc/ is not mounted. This is not a supported mode of operation. Please fix\nyour invocation environment to mount /proc/ and /sys/ properly. Proceeding anyway.\nYour mileage may vary.\nFailed to get properties: Synthetic unit not found\n",
+      "exit": 1,
+      "wire": [
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        },
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/missing_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "name": "missing-before-valid",
+      "units": [
+        "missing.service",
+        "nacre-shell.service"
+      ],
+      "properties": [
+        "Id",
+        "LoadState",
+        "ActiveState",
+        "Result",
+        "ExecMainStatus"
+      ],
+      "replies": [
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/missing_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "error": "org.freedesktop.systemd1.NoSuchUnit",
+            "text": "Synthetic unit not found"
+          },
+          "effects": []
+        },
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/nacre_2dshell_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "signature": "a{sv}",
+            "body": [
+              {
+                "Id": {
+                  "variant": "s",
+                  "value": "nacre-shell.service"
+                },
+                "LoadState": {
+                  "variant": "s",
+                  "value": "loaded"
+                },
+                "ActiveState": {
+                  "variant": "s",
+                  "value": "active"
+                },
+                "Result": {
+                  "variant": "s",
+                  "value": "success"
+                },
+                "ExecMainStatus": {
+                  "variant": "i",
+                  "value": 0
+                }
+              }
+            ]
+          },
+          "effects": []
+        }
+      ],
+      "stdout": "",
+      "stderr": "/proc/ is not mounted. This is not a supported mode of operation. Please fix\nyour invocation environment to mount /proc/ and /sys/ properly. Proceeding anyway.\nYour mileage may vary.\nFailed to get properties: Synthetic unit not found\n",
+      "exit": 1,
+      "wire": [
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/missing_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "name": "missing-only",
+      "units": [
+        "missing.service"
+      ],
+      "properties": [
+        "Id",
+        "LoadState",
+        "ActiveState",
+        "Result",
+        "ExecMainStatus"
+      ],
+      "replies": [
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/missing_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "error": "org.freedesktop.systemd1.NoSuchUnit",
+            "text": "Synthetic unit not found"
+          },
+          "effects": []
+        }
+      ],
+      "stdout": "",
+      "stderr": "/proc/ is not mounted. This is not a supported mode of operation. Please fix\nyour invocation environment to mount /proc/ and /sys/ properly. Proceeding anyway.\nYour mileage may vary.\nFailed to get properties: Synthetic unit not found\n",
+      "exit": 1,
+      "wire": [
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/missing_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "name": "empty-string-properties",
+      "units": [
+        "fixture.service"
+      ],
+      "properties": [
+        "Id",
+        "LoadState",
+        "ActiveState",
+        "Result",
+        "ExecMainStatus"
+      ],
+      "replies": [
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/fixture_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "signature": "a{sv}",
+            "body": [
+              {
+                "Id": {
+                  "variant": "s",
+                  "value": "fixture.service"
+                },
+                "LoadState": {
+                  "variant": "s",
+                  "value": ""
+                },
+                "ActiveState": {
+                  "variant": "s",
+                  "value": ""
+                },
+                "Result": {
+                  "variant": "s",
+                  "value": ""
+                },
+                "ExecMainStatus": {
+                  "variant": "i",
+                  "value": 0
+                }
+              }
+            ]
+          },
+          "effects": []
+        }
+      ],
+      "stdout": "Id=fixture.service\nLoadState=\nActiveState=\nResult=\nExecMainStatus=0\n",
+      "stderr": "/proc/ is not mounted. This is not a supported mode of operation. Please fix\nyour invocation environment to mount /proc/ and /sys/ properly. Proceeding anyway.\nYour mileage may vary.\n",
+      "exit": 0,
+      "wire": [
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/fixture_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "name": "not-found-properties",
+      "units": [
+        "missing.service"
+      ],
+      "properties": [
+        "Id",
+        "LoadState",
+        "ActiveState",
+        "Result",
+        "ExecMainStatus"
+      ],
+      "replies": [
+        {
+          "match": {
+            "destination": "org.freedesktop.systemd1",
+            "path": "/org/freedesktop/systemd1/unit/missing_2eservice",
+            "interface": "org.freedesktop.DBus.Properties",
+            "member": "GetAll",
+            "signature": "s",
+            "body": [
+              ""
+            ]
+          },
+          "reply": {
+            "signature": "a{sv}",
+            "body": [
+              {
+                "Id": {
+                  "variant": "s",
+                  "value": "missing.service"
+                },
+                "LoadState": {
+                  "variant": "s",
+                  "value": "not-found"
+                },
+                "ActiveState": {
+                  "variant": "s",
+                  "value": "inactive"
+                },
+                "Result": {
+                  "variant": "s",
+                  "value": ""
+                },
+                "ExecMainStatus": {
+                  "variant": "i",
+                  "value": 0
+                }
+              }
+            ]
+          },
+          "effects": []
+        }
+      ],
+      "stdout": "Id=missing.service\nLoadState=not-found\nActiveState=inactive\nResult=\nExecMainStatus=0\n",
+      "stderr": "/proc/ is not mounted. This is not a supported mode of operation. Please fix\nyour invocation environment to mount /proc/ and /sys/ properly. Proceeding anyway.\nYour mileage may vary.\n",
+      "exit": 0,
+      "wire": [
+        {
+          "destination": "org.freedesktop.systemd1",
+          "path": "/org/freedesktop/systemd1/unit/missing_2eservice",
+          "interface": "org.freedesktop.DBus.Properties",
+          "member": "GetAll",
+          "signature": "s",
+          "body": [
+            ""
+          ]
+        }
+      ]
+    }
+  ]
+}
