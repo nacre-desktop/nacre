@@ -176,6 +176,64 @@ TestCase {
         verify(!view.pendingAction);
         compare(testStore.files["launcher.json"].recent.length, 1);
     }
+    SignalSpy {
+        id: confirmationSpy
+        signalName: "confirmationRequested"
+    }
+    SignalSpy {
+        id: writeSpy
+        signalName: "writeRequested"
+    }
+    Component {
+        id: independentStore
+        SettingsStore {}
+    }
+    function test_confirmation_uses_owned_path_and_waits_for_provider_ack() {
+        const source = testRegistry.schema.settings.find(item => item.id === "panels.lips.clickEdgeMenus");
+        const confirmed = Object.assign({}, source, {
+            id: "panels.lips.confirmed",
+            key: "confirmed",
+            type: "boolean",
+            default: false,
+            apply: "confirm",
+            store: {
+                file: "desktop.json",
+                key: ["confirmed"]
+            }
+        });
+        const schema = Object.assign({}, testRegistry.schema, {
+            settings: [...testRegistry.schema.settings, confirmed]
+        });
+        const owner = createTemporaryObject(independentStore, test, {
+            schema: schema,
+            availableStores: ["desktop.json"],
+            capabilities: testStore.capabilities
+        });
+        confirmationSpy.target = owner;
+        writeSpy.target = owner;
+        confirmationSpy.clear();
+        writeSpy.clear();
+        verify(!owner.write(confirmed, true));
+        compare(confirmationSpy.count, 1);
+        compare(writeSpy.count, 0);
+        compare(owner.value(confirmed), false);
+        const forged = Object.assign({}, confirmed, {
+            store: {
+                file: "unowned.json",
+                key: ["bad"]
+            }
+        });
+        verify(owner.write(forged, true, true));
+        compare(writeSpy.count, 1);
+        compare(writeSpy.signalArguments[0][0].store.file, "desktop.json");
+        compare(owner.value(confirmed), false);
+        owner.accept("desktop.json", {
+            confirmed: true
+        });
+        compare(owner.value(confirmed), true);
+        confirmationSpy.target = null;
+        writeSpy.target = null;
+    }
     function test_rail_arrows_and_enter_open_page() {
         const view = createTemporaryObject(viewComponent, test);
         wait(30);
