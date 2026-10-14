@@ -452,12 +452,18 @@ def _publish_application_colors(home, colors, data, live):
                 if not re.search(r"(?m)^gtk-icon-theme-name=", text):
                     text += "\ngtk-icon-theme-name=" + icon_theme + "\n"
             atomic_write(settings, text)
-    kde_spec = importlib.util.spec_from_file_location(
-        "kde_palette", Path(__file__).with_name("kde-palette.py")
+    from nacre_native_config import _binary
+
+    subprocess.run(
+        [str(_binary()), "kde-palette", "--publish"],
+        input=json.dumps(
+            {"home": str(home), "colors": colors, "icon_theme": icon_theme}
+        ),
+        text=True,
+        capture_output=True,
+        check=True,
+        timeout=10,
     )
-    kde_module = importlib.util.module_from_spec(kde_spec)
-    kde_spec.loader.exec_module(kde_module)
-    kde_module.publish(home, colors, icon_theme)
     # Numeric order follows Qt QPalette::ColorRole, including Accent in Qt 6.
     qt_roles = [
         "onSurface",

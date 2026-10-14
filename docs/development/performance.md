@@ -1077,3 +1077,27 @@ intervening UI changes, which further limits attribution. Baseline `cebc24ce`
 and native `a36bbe82` and helper raw results are recorded in
 [rust-migration-results.json](rust-migration-results.json). Wave 3 remains gated
 on a new valid quiet comparison; no governor, swap or live-session change was made.
+
+The owner subsequently revised this gate: accept a capture when measured
+processes have SwapPss zero and host swap-in is under 1 MiB, recording counters
+and page size. The earlier 126-page (504 KiB at 4096 bytes/page) and 33-page
+(132 KiB) captures fit that allowance; their original rejection remains
+historical. They still do not form a complete A/B/A/B sequence. Wave 3 ports may
+proceed; repeat the interleaved comparison at the next announced quiet window
+and include it before Wave 3's final status. Correctness gates remain mandatory.
+
+### Wave 3 KDE file publisher (busy machine)
+
+One hundred fresh publish calls used the frozen Python implementation and the
+Rust release helper with identical palette inputs in disposable homes. Child
+user + system CPU excludes the benchmark driver. CPU per call was 25.387 ms
+for Python and 1.254 ms for Rust; direct Python starts were 100 and zero.
+These are helper numbers. The remaining Python palette owner temporarily calls
+the native publisher as a child; the native palette port will call its Rust
+module directly. No wallpaper/palette action improvement is claimed yet.
+
+Seventeen frozen KDE cases cover files, modes, errors and legacy CLI output;
+the existing read/save corpus remains unchanged. The internal `--publish` JSON
+transport replaces the former Python function call. Custom absolute XDG config
+roots follow the shared Paths rule (intended difference); unexpected file read
+errors are surfaced instead of ConfigParser's silent read failure.

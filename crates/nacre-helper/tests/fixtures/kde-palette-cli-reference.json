@@ -1,0 +1,28 @@
+{
+  "source_sha256": "820e12f97eceaa3932f62b2ae80b5dc295d79301821b37e58485706d7cbb4dfa",
+  "cases": [
+    {
+      "arguments": [],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "arguments": [
+        "--help"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "arguments": [
+        "ignored",
+        "arguments"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ]
+}

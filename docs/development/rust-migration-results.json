@@ -1426,6 +1426,80 @@
       "Whole-shell revisions include intervening UI changes; no Rust-only attribution.",
       "Python PATH logger excludes absolute interpreter paths; no idle launch conclusion.",
       "Governor and swap settings were not changed."
-    ]
+    ],
+    "superseding_owner_rule": {
+      "measured_swap_pss_bytes": 0,
+      "host_swap_in_limit_exclusive_bytes": 1048576,
+      "record_host_swap_counts": true,
+      "repeat_abab_at_next_quiet_window": true,
+      "required_before_wave3_final_status": true,
+      "wave3_ports_authorized": true
+    },
+    "revised_rule_receipts": {
+      "A1": {
+        "host_page_size_bytes": 4096,
+        "host_swap_before": {
+          "pswpin": 5807,
+          "pswpout": 93989
+        },
+        "host_swap_after": {
+          "pswpin": 5807,
+          "pswpout": 93989
+        },
+        "host_swap_in_pages": 0,
+        "host_swap_in_bytes": 0,
+        "measured_max_swap_pss_bytes": 0,
+        "unknown_swap_samples": 0,
+        "eligible_under_revised_rule": true
+      },
+      "B1": {
+        "host_page_size_bytes": 4096,
+        "host_swap_before": {
+          "pswpin": 5867,
+          "pswpout": 93989
+        },
+        "host_swap_after": {
+          "pswpin": 5993,
+          "pswpout": 93989
+        },
+        "host_swap_in_pages": 126,
+        "host_swap_in_bytes": 516096,
+        "measured_max_swap_pss_bytes": 0,
+        "unknown_swap_samples": 0,
+        "eligible_under_revised_rule": true
+      },
+      "A3": {
+        "host_page_size_bytes": 4096,
+        "host_swap_before": {
+          "pswpin": 5993,
+          "pswpout": 93989
+        },
+        "host_swap_after": {
+          "pswpin": 6026,
+          "pswpout": 93989
+        },
+        "host_swap_in_pages": 33,
+        "host_swap_in_bytes": 135168,
+        "measured_max_swap_pss_bytes": 0,
+        "unknown_swap_samples": 0,
+        "eligible_under_revised_rule": true
+      }
+    }
+  },
+  "wave3_kde_busy_machine": {
+    "condition": "busy machine",
+    "method": "100 fresh publish calls; child user+system CPU via getrusage, excludes driver; same files, no shell latency claim",
+    "results": {
+      "python": {
+        "calls": 100,
+        "cpu_ms_per_call": 25.387249999999998,
+        "direct_python_launches": 100
+      },
+      "rust": {
+        "calls": 100,
+        "cpu_ms_per_call": 1.2543399999999993,
+        "direct_python_launches": 0
+      }
+    }
   }
 }

@@ -45,6 +45,17 @@ impl Request {
 fn call(helper: &str, operation: &str, request: &Request) -> Result<Value> {
     let paths = Paths::environment()?;
     match (helper, operation) {
+        ("kde-palette", "read") => {
+            nacre_helper::kde_palette::read(&request.path(0, "path", PathBuf::new())?)
+        }
+        ("kde-palette", "save") => {
+            nacre_helper::kde_palette::save(
+                &request.path(0, "path", PathBuf::new())?,
+                request.text(1, "text")?,
+            )?;
+            Ok(Value::Null)
+        }
+
         ("compositor-backends-niri-widths", "check_session") => Ok(value!(
             nacre_helper::niri_widths::runtime::check_session(&std::env::vars().collect())?
         )),

@@ -68,7 +68,11 @@ class NativeRegistryTests(unittest.TestCase):
                     )
                     self.assertEqual(argv[0], str(binary.resolve()))
                     self.assertEqual(
-                        argv[1], "serve" if helper == "helper-service" else helper
+                        argv[1],
+                        {
+                            "helper-service": "serve",
+                            "compositor-backends-niri-widths": "niri_widths",
+                        }.get(helper, helper),
                     )
 
     def test_missing_or_nonexecutable_native_build_never_falls_back(self):

@@ -8,6 +8,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load(name):
+    if name == "kde-palette":
+        import native_kde_palette
+
+        return native_kde_palette
     spec = importlib.util.spec_from_file_location(name, ROOT / (name + ".py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

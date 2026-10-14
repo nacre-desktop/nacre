@@ -1,6 +1,5 @@
 """Native public-Qt/KDE style regression: atomic palette refresh and app isolation."""
 
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -75,11 +74,8 @@ class DolphinStyleTests(unittest.TestCase):
                 check=True,
                 capture_output=True,
             )
-            spec = importlib.util.spec_from_file_location(
-                "kde_palette", ROOT / "kde-palette.py"
-            )
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            import native_kde_palette as module
+
             colors = json.loads((ROOT / "reference-style.json").read_text())["colours"]
             colors.update(primary="cc5555")
             for args in [[], ["unrelated"]]:

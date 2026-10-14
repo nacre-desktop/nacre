@@ -16,6 +16,7 @@ MIGRATED = frozenset(
         "dashboard-system",
         "diagnostics",
         "helper-service",
+        "kde-palette",
         "launcher-preferences",
         "light-devices",
         "menu-backend",
