@@ -151,7 +151,7 @@ Singleton {
     Process {
         id: slow
         objectName: "resourceReader"
-        command: ["python3", NacrePaths.tools + "/resource-state.py"]
+        command: [NacrePaths.helperBinary, "resource-state"]
         stdout: StdioCollector {
             onStreamFinished: root.slowSample(text)
         }
