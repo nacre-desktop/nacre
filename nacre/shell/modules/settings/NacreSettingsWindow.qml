@@ -11,7 +11,7 @@ FloatingWindow {
     readonly property var view: content.item
     readonly property string searchQuery: view?.query ?? content.savedState?.query ?? ""
     visible: NacreSettingsApp.visible
-    minimumSize: Qt.size(720, 540)
+    minimumSize: Qt.size(NacreTokens.space.huge * 17, NacreTokens.space.huge * 15)
     implicitWidth: Math.min(1100, Math.max(720, (screen?.width || 1920) * .75))
     implicitHeight: Math.min(800, Math.max(540, (screen?.height || 1200) * .8))
     color: "transparent"
@@ -43,13 +43,13 @@ FloatingWindow {
             title: NacreSettingsApp.windowTitle
             app: "settings"
             width: parent.width
-            section: view?.current?.name || view?.current?.title || ""
+            section: view?.current ? view.registry.text(view.current.labelId) : ""
             onMoveRequested: root.contentItem.Window.window.startSystemMove()
         }
         NacreText {
-            x: 20
-            y: header.height + 8
-            width: parent.width - 40
+            x: NacreTokens.space.xl
+            y: header.height + NacreTokens.space.sm
+            width: parent.width - NacreTokens.space.xl * 2
             visible: text.length > 0
             text: NacreSettingsApp.error
             color: NacreColours.palette.m3error
@@ -59,10 +59,10 @@ FloatingWindow {
             id: content
             wanted: NacreSettingsApp.visible
             preserveState: true
-            x: 16
-            y: header.height + (NacreSettingsApp.error ? 48 : 16)
-            width: Math.max(0, parent.width - 32)
-            height: Math.max(0, parent.height - y - 16)
+            x: NacreTokens.space.lg
+            y: header.height + (NacreSettingsApp.error ? NacreTokens.space.huge + NacreTokens.space.lg : NacreTokens.space.lg)
+            width: Math.max(0, parent.width - NacreTokens.space.lg * 2)
+            height: Math.max(0, parent.height - y - NacreTokens.space.lg)
             sourceComponent: NacreSettingsView {
                 active: NacreSettingsApp.active
                 onCloseRequested: NacreSettingsApp.close()

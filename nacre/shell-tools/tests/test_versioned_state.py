@@ -82,7 +82,7 @@ class StateTests(unittest.TestCase):
             path.parent.mkdir()
             original = b'{"custom":"keep"}'
             path.write_bytes(original)
-            backup = path.with_name(path.name + ".pre-v0-to-v1.bak")
+            backup = path.with_name(path.name + ".pre-v0-to-v2.bak")
             outside = Path(folder) / "outside"
             outside.write_text("untouched")
             backup.symlink_to(outside)
@@ -104,9 +104,33 @@ class StateTests(unittest.TestCase):
                     )
                 )
             self.assertEqual(
-                path.with_name(path.name + ".pre-v0-to-v1.bak").read_bytes(), original
+                path.with_name(path.name + ".pre-v0-to-v2.bak").read_bytes(), original
             )
-            self.assertEqual(json.loads(path.read_bytes())["version"], 1)
+            self.assertEqual(json.loads(path.read_bytes())["version"], 2)
+
+    def test_desktop_edges_split_without_losing_profile_snapshot_or_new_keys(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "nacre/desktop.json"
+            path.parent.mkdir()
+            original = b'{"version":1,"rightEdge":false,"frameRightEnabled":true,"topEdge":false,"leftDrawer":false,"unknown":"keep","normalSnapshot":{"rightEdge":false,"topEdge":true}}'
+            path.write_bytes(original)
+            current = state.read(path, {})
+            self.assertTrue(current["frameRightEnabled"])
+            self.assertFalse(current["controlCenterEnabled"])
+            self.assertFalse(current["topBarEnabled"])
+            self.assertFalse(current["frameTopEnabled"])
+            self.assertFalse(current["aiSidebarEnabled"])
+            self.assertTrue(current["dashboardEnabled"])
+            self.assertFalse(current["normalSnapshot"]["controlCenterEnabled"])
+            self.assertTrue(current["normalSnapshot"]["topBarEnabled"])
+            self.assertEqual(current["unknown"], "keep")
+            self.assertNotIn("rightEdge", current)
+            self.assertEqual(path.read_bytes(), original)
+            state.write(path, current)
+            self.assertEqual(
+                path.with_name(path.name + ".pre-v1-to-v2.bak").read_bytes(), original
+            )
+            self.assertEqual(json.loads(path.read_bytes())["version"], 2)
 
     def test_control_center_v1_migration_keeps_optional_order(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -10,7 +10,11 @@
       "shape": "object",
       "version": 1,
       "keepVersion": true,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
     },
     {
       "id": "cli",
@@ -21,7 +25,11 @@
       "shape": "object",
       "version": 1,
       "keepVersion": false,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
     },
     {
       "id": "desktop",
@@ -30,9 +38,13 @@
       ],
       "owner": "desktop-settings",
       "shape": "object",
-      "version": 1,
+      "version": 2,
       "keepVersion": false,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
     },
     {
       "id": "launcher",
@@ -43,7 +55,11 @@
       "shape": "object",
       "version": 1,
       "keepVersion": false,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
     },
     {
       "id": "launcher-menu",
@@ -54,7 +70,11 @@
       "shape": "object",
       "version": 1,
       "keepVersion": true,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
     },
     {
       "id": "launcher-workflows",
@@ -69,6 +89,10 @@
         "version": 1,
         "entries": [],
         "roots": []
+      },
+      "settings": {
+        "root": "config",
+        "access": "write"
       }
     },
     {
@@ -80,7 +104,11 @@
       "shape": "object",
       "version": 1,
       "keepVersion": false,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
     },
     {
       "id": "dashboard-extras",
@@ -91,7 +119,11 @@
       "shape": "object",
       "version": 1,
       "keepVersion": true,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
     },
     {
       "id": "wallpaper-picker",
@@ -102,7 +134,11 @@
       "shape": "object",
       "version": 1,
       "keepVersion": false,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
     },
     {
       "id": "colors",
@@ -113,7 +149,11 @@
       "shape": "object",
       "version": 1,
       "keepVersion": true,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
     },
     {
       "id": "welcome",
@@ -124,7 +164,11 @@
       "shape": "object",
       "version": 1,
       "keepVersion": true,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
     },
     {
       "id": "workflows",
@@ -194,6 +238,10 @@
           "awake",
           "appearance"
         ]
+      },
+      "settings": {
+        "root": "config",
+        "access": "write"
       }
     },
     {
@@ -205,7 +253,11 @@
       "shape": "object",
       "version": 1,
       "keepVersion": false,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "state",
+        "access": "read"
+      }
     },
     {
       "id": "presentation",
@@ -748,7 +800,69 @@
       "shape": "object",
       "version": 1,
       "keepVersion": false,
-      "defaults": {}
+      "defaults": {},
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
+    },
+    {
+      "id": "launcher-sources",
+      "paths": [
+        "nacre/launcher-sources.json"
+      ],
+      "owner": "launcher search / Settings",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {
+        "brain": true,
+        "files": true,
+        "calculator": true,
+        "actions": true,
+        "ai": true,
+        "webEngine": "duckduckgo"
+      },
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
+    },
+    {
+      "id": "power",
+      "paths": [
+        "nacre/power.json"
+      ],
+      "owner": "power policy / Settings",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {
+        "ac": "balanced",
+        "battery": "power-saver",
+        "enabled": false
+      },
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
+    },
+    {
+      "id": "theme-targets",
+      "paths": [
+        "nacre/theme-targets.json"
+      ],
+      "owner": "classic-state publisher",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {
+        "targets": []
+      },
+      "settings": {
+        "root": "state",
+        "access": "read"
+      }
     }
   ]
 }

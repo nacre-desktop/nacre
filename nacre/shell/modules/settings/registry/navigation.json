@@ -35,7 +35,7 @@
       "labelId": "settings.registry.wallpaper.label",
       "descriptionId": "settings.registry.wallpaper.description",
       "order": 0,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "colors",
@@ -53,7 +53,7 @@
       "labelId": "settings.registry.appearance.label",
       "descriptionId": "settings.registry.appearance.description",
       "order": 2,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "panels",
@@ -80,7 +80,7 @@
       "labelId": "settings.registry.windows-workspaces.label",
       "descriptionId": "settings.registry.windows-workspaces.description",
       "order": 5,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "notifications",
@@ -89,7 +89,7 @@
       "labelId": "settings.registry.notifications.label",
       "descriptionId": "settings.registry.notifications.description",
       "order": 6,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "displays",
@@ -98,7 +98,7 @@
       "labelId": "settings.registry.displays.label",
       "descriptionId": "settings.registry.displays.description",
       "order": 7,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "sound",
@@ -107,7 +107,7 @@
       "labelId": "settings.registry.sound.label",
       "descriptionId": "settings.registry.sound.description",
       "order": 8,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "network",
@@ -116,7 +116,7 @@
       "labelId": "settings.registry.network.label",
       "descriptionId": "settings.registry.network.description",
       "order": 9,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "bluetooth",
@@ -125,7 +125,7 @@
       "labelId": "settings.registry.bluetooth.label",
       "descriptionId": "settings.registry.bluetooth.description",
       "order": 10,
-      "prototype": false,
+      "prototype": true,
       "visibleWhen": {
         "capability": "bluetooth"
       }
@@ -140,7 +140,8 @@
       "prototype": true,
       "visibleWhen": {
         "capability": "battery"
-      }
+      },
+      "enterAction": "power-refresh"
     },
     {
       "id": "keyboard-mouse",
@@ -149,7 +150,7 @@
       "labelId": "settings.registry.keyboard-mouse.label",
       "descriptionId": "settings.registry.keyboard-mouse.description",
       "order": 12,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "lock-login",
@@ -158,7 +159,7 @@
       "labelId": "settings.registry.lock-login.label",
       "descriptionId": "settings.registry.lock-login.description",
       "order": 13,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "apps",
@@ -167,7 +168,7 @@
       "labelId": "settings.registry.apps.label",
       "descriptionId": "settings.registry.apps.description",
       "order": 14,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "privacy",
@@ -176,7 +177,7 @@
       "labelId": "settings.registry.privacy.label",
       "descriptionId": "settings.registry.privacy.description",
       "order": 15,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "date-time-language",
@@ -185,7 +186,7 @@
       "labelId": "settings.registry.date-time-language.label",
       "descriptionId": "settings.registry.date-time-language.description",
       "order": 16,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "system",
@@ -194,7 +195,7 @@
       "labelId": "settings.registry.system.label",
       "descriptionId": "settings.registry.system.description",
       "order": 17,
-      "prototype": false
+      "prototype": true
     },
     {
       "id": "addons",
@@ -203,7 +204,7 @@
       "labelId": "settings.registry.addons.label",
       "descriptionId": "settings.registry.addons.description",
       "order": 18,
-      "prototype": false,
+      "prototype": true,
       "visibleWhen": {
         "not": {
           "all": [
@@ -224,7 +225,7 @@
       "labelId": "settings.registry.nacre-ai.label",
       "descriptionId": "settings.registry.nacre-ai.description",
       "order": 19,
-      "prototype": false,
+      "prototype": true,
       "visibleWhen": {
         "capability": "ai"
       }
@@ -236,7 +237,7 @@
       "labelId": "settings.registry.brain.label",
       "descriptionId": "settings.registry.brain.description",
       "order": 20,
-      "prototype": false,
+      "prototype": true,
       "visibleWhen": {
         "capability": "brain"
       }
@@ -292,10 +293,7 @@
       "descriptionId": "settings.registry.panels.bottom.description",
       "order": 34,
       "parent": "panels",
-      "prototype": true,
-      "visibleWhen": {
-        "capability": "bottomPanel"
-      }
+      "prototype": true
     },
     {
       "id": "colors/app-theming",
@@ -335,7 +333,67 @@
       "descriptionId": "settings.registry.windows-workspaces.workflows.description",
       "order": 38,
       "parent": "windows-workspaces",
-      "prototype": false
+      "prototype": true
+    },
+    {
+      "id": "panels/dashboard/pages",
+      "group": "desktop",
+      "icon": "space_dashboard",
+      "labelId": "settings.registry.dashboard.pages.label",
+      "descriptionId": "settings.registry.dashboard.pages.description",
+      "order": 50,
+      "parent": "panels/dashboard",
+      "prototype": true
+    },
+    {
+      "id": "panels/dashboard/extras",
+      "group": "desktop",
+      "icon": "space_dashboard",
+      "labelId": "settings.registry.dashboard.extras.label",
+      "descriptionId": "settings.registry.dashboard.extras.description",
+      "order": 51,
+      "parent": "panels/dashboard",
+      "prototype": true
+    },
+    {
+      "id": "panels/dashboard/weather",
+      "group": "desktop",
+      "icon": "space_dashboard",
+      "labelId": "settings.registry.dashboard.weather.label",
+      "descriptionId": "settings.registry.dashboard.weather.description",
+      "order": 52,
+      "parent": "panels/dashboard",
+      "prototype": true
+    },
+    {
+      "id": "panels/dashboard/media",
+      "group": "desktop",
+      "icon": "space_dashboard",
+      "labelId": "settings.registry.dashboard.media.label",
+      "descriptionId": "settings.registry.dashboard.media.description",
+      "order": 53,
+      "parent": "panels/dashboard",
+      "prototype": true
+    },
+    {
+      "id": "panels/dashboard/home-time",
+      "group": "desktop",
+      "icon": "space_dashboard",
+      "labelId": "settings.registry.dashboard.home-time.label",
+      "descriptionId": "settings.registry.dashboard.home-time.description",
+      "order": 54,
+      "parent": "panels/dashboard",
+      "prototype": true
+    },
+    {
+      "id": "panels/dashboard/calendar-focus",
+      "group": "desktop",
+      "icon": "space_dashboard",
+      "labelId": "settings.registry.dashboard.calendar-focus.label",
+      "descriptionId": "settings.registry.dashboard.calendar-focus.description",
+      "order": 55,
+      "parent": "panels/dashboard",
+      "prototype": true
     }
   ],
   "aliases": {
@@ -346,6 +404,22 @@
     "ai": "nacre-ai",
     "maintenance": "system",
     "orient": "colors",
-    "bead": "panels"
+    "bead": "panels",
+    "panels/dashboard#pages": "panels/dashboard/pages#pages",
+    "panels/dashboard#panels/dashboard.editor.pages": "panels/dashboard/pages#pages",
+    "panels/dashboard#weatherPhotos": "panels/dashboard/weather#weatherPhotos",
+    "panels/dashboard#panels/dashboard.editor.weatherPhotos": "panels/dashboard/weather#weatherPhotos",
+    "panels/dashboard#lyrics": "panels/dashboard/media#lyrics",
+    "panels/dashboard#panels/dashboard.editor.lyrics": "panels/dashboard/media#lyrics",
+    "panels/dashboard#albumPalette": "panels/dashboard/media#albumPalette",
+    "panels/dashboard#panels/dashboard.editor.albumPalette": "panels/dashboard/media#albumPalette",
+    "panels/dashboard#homeZone": "panels/dashboard/home-time#homeZone",
+    "panels/dashboard#panels/dashboard.editor.homeZone": "panels/dashboard/home-time#homeZone",
+    "panels/dashboard#homeCity": "panels/dashboard/home-time#homeCity",
+    "panels/dashboard#panels/dashboard.editor.homeCity": "panels/dashboard/home-time#homeCity",
+    "panels/dashboard#calendarFile": "panels/dashboard/calendar-focus#calendarFile",
+    "panels/dashboard#panels/dashboard.editor.calendarFile": "panels/dashboard/calendar-focus#calendarFile",
+    "panels/dashboard#focusMinutes": "panels/dashboard/calendar-focus#focusMinutes",
+    "panels/dashboard#panels/dashboard.editor.focusMinutes": "panels/dashboard/calendar-focus#focusMinutes"
   }
 }

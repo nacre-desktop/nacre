@@ -22,10 +22,33 @@ class SettingsUITests(unittest.TestCase):
             target = Path(directory)
             shutil.copytree(ROOT / "tests/qml/fixtures", target / "fixtures")
 
-            stage_qml(
-                ROOT.parent / "shell/modules/settings/NacreSettingsView.qml",
-                target / "NacreSettings.qml",
-            )
+            (target / "NacreSettings.qml").write_text("""import QtQuick
+import "fixtures"
+Item {
+ id: root
+ property bool active: true
+ property string page: "appearance"
+ property string query: ""
+ function open(id) {motion.cancel();page=id;scroll.contentY=0;query=""}
+ Flickable {
+  id:scroll;objectName:"settingsScroll";anchors.fill:parent;contentWidth:width;contentHeight:loaded.height;clip:true
+  Loader {id:loaded;objectName:"settingsPage";width:parent.width;active:root.active && !root.query;sourceComponent:({appearance:appearance,desktop:desktop,displays:displays,sound:sound,network:network,bluetooth:bluetooth,notifications:notifications,workflows:workflows,lock:lock,time:time,ai:ai,maintenance:maintenance})[root.page]}
+  FastScroll {id:motion;view:scroll}
+ }
+ Component {id:appearance;NacreAppearancePage {}}
+ Component {id:desktop;NacreDesktopPage {}}
+ Component {id:displays;NacreDisplaysPage {}}
+ Component {id:sound;NacreSoundPage {}}
+ Component {id:network;NacreNetworkPage {}}
+ Component {id:bluetooth;NacreBluetoothPage {}}
+ Component {id:notifications;NacreNotificationPage {}}
+ Component {id:workflows;NacreWorkflowsPage {}}
+ Component {id:lock;NacreLockPage {}}
+ Component {id:time;NacreTimePage {}}
+ Component {id:ai;NacreAiPage {}}
+ Component {id:maintenance;NacreMaintenancePage {}}
+}
+""")
             for path in (ROOT.parent / "shell/modules/settings/pages").glob("*.qml"):
                 stage_qml(path, target / path.name)
             for name in ("NacreNetworkPopup", "NacreQuickList"):

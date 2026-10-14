@@ -46,13 +46,13 @@ Item {
     readonly property bool modal: !hidden && !visibilities.previewOnly && (visibilities.launcher && !dockedHover || visibilities.session || visibilities.dashboard && visibilities.dashboardPinned || panels.popouts.pinned && panels.popouts.hasCurrent || visibilities.edgeMenu === "dashboard" && visibilities.dashboard || visibilities.edgeMenu === "left" && visibilities.left && !visibilities.leftPinned || visibilities.edgeMenu === "osd" && visibilities.osd)
     readonly property bool autoEdges: !hidden && !modal && DesktopSettings.data.clickEdgeMenus !== true && !visibilities.launcher && !visibilities.session && !NacreHoverIntent.fullscreenFor(screen.name)
     readonly property bool lipsAvailable: !hidden && !modal && !visibilities.launcher && !visibilities.session && !visibilities.dashboardPinned && !NacreHoverIntent.fullscreenFor(screen.name)
-    readonly property bool leftEdgeAvailable: lipsAvailable && DesktopSettings.data.leftDrawer !== false && !visibilities.left
-    readonly property bool rightEdgeAvailable: lipsAvailable && DesktopSettings.data.rightEdge !== false && !visibilities.osd
-    readonly property bool topEdgeAvailable: lipsAvailable && !visibilities.dashboard
+    readonly property bool leftEdgeAvailable: lipsAvailable && DesktopSettings.data.aiSidebarEnabled !== false && !visibilities.left
+    readonly property bool rightEdgeAvailable: lipsAvailable && DesktopSettings.data.controlCenterEnabled !== false && !visibilities.osd
+    readonly property bool topEdgeAvailable: lipsAvailable && DesktopSettings.data.dashboardEnabled !== false && !visibilities.dashboard
     readonly property rect leftEdgeRect: lips?.leftRect ?? Qt.rect(0, (height - 144) / 2, NacreFrame.left + 5, 144)
     readonly property rect rightEdgeRect: lips?.rightRect ?? Qt.rect(width - NacreFrame.right - 5, (height - 144) / 2, NacreFrame.right + 5, 144)
     readonly property rect topEdgeRect: lips?.topRect ?? Qt.rect((width - 208) / 2, NacreFrame.headerHeight - 1, 208, 7)
-    readonly property rect headerRect: !hidden && DesktopSettings.data.topEdge !== false ? Qt.rect(0, 0, width, NacreFrame.headerHeight) : Qt.rect(0, 0, 0, 0)
+    readonly property rect headerRect: !hidden && DesktopSettings.data.topBarEnabled !== false ? Qt.rect(0, 0, width, NacreFrame.headerHeight) : Qt.rect(0, 0, 0, 0)
     readonly property rect launcherRect: box(panels.launcher, visibilities.launcher)
     readonly property rect dashboardRect: box(panels.dashboard, visibilities.dashboard)
     readonly property rect leftRect: box(panels.leftDrawer, visibilities.left)

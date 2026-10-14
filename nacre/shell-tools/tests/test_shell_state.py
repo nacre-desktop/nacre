@@ -5,6 +5,7 @@ from qml_fixtures import install_i18n
 """Actual root routing, IPC helpers, compatibility maps and shortcut methods."""
 
 import os
+import json
 from pathlib import Path
 import shutil
 import tempfile
@@ -52,10 +53,32 @@ class ShellStateTests(unittest.TestCase):
                 stage_qml(
                     SHELL / "services" / (name + ".qml"), fixtures / (name + ".qml")
                 )
-            shutil.copy2(
-                SHELL / "modules/settings/settings-catalog.js",
-                fixtures / "settings-catalog.js",
-            )
+            registry = SHELL / "modules/settings/registry"
+            documents = [
+                json.loads((registry / name).read_text())
+                for name in json.loads((registry / "manifest.json").read_text())[
+                    "fragments"
+                ]
+            ]
+            schema = {
+                key: sum((row.get(key, []) for row in documents), [])
+                for key in ["pages", "sections", "settings"]
+            }
+            schema["aliases"] = {
+                key: value
+                for row in documents
+                for key, value in row.get("aliases", {}).items()
+            }
+            shutil.copy2(registry / "registry.js", fixtures / "registry.js")
+            for name, body in {
+                "NacreSettingsRegistry": "property var schema:" + json.dumps(schema),
+                "NacreSettingsCapabilities": "property var snapshot:({ai:true,brain:true,battery:true,bluetooth:true})",
+            }.items():
+                (fixtures / (name + ".qml")).write_text(
+                    "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
+                )
+                with (fixtures / "qmldir").open("a") as manifest:
+                    manifest.write("\nsingleton " + name + " 1.0 " + name + ".qml\n")
             for name in ("NacreShellIpc", "NacreShellShortcuts"):
                 stage_qml(SHELL / "modules" / (name + ".qml"), target / (name + ".qml"))
             stage_qml(

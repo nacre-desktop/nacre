@@ -20,6 +20,24 @@ pub struct Schema {
     pub version: u64,
     pub keep_version: bool,
     pub defaults: Value,
+    pub settings: Option<SettingsAccess>,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct SettingsAccess {
+    pub root: SettingsRoot,
+    pub access: SettingsMode,
+}
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SettingsRoot {
+    Config,
+    State,
+}
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum SettingsMode {
+    Read,
+    Write,
 }
 #[derive(Deserialize)]
 struct Registry {
@@ -138,6 +156,37 @@ fn decode(value: Value, schema: &Schema) -> std::result::Result<(Value, u64), St
     if schema.keep_version && data.is_object() && version < schema.version {
         data["version"] = json!(schema.version);
     }
+    if schema.id == "desktop" && version < 2 {
+        let aliases: [(&str, &[&str]); 5] = [
+            ("topEdge", &["frameTopEnabled", "topBarEnabled"]),
+            ("leftEdge", &["frameLeftEnabled"]),
+            ("rightEdge", &["frameRightEnabled", "controlCenterEnabled"]),
+            ("bottomEdge", &["frameBottomEnabled"]),
+            ("leftDrawer", &["aiSidebarEnabled"]),
+        ];
+        fn migrate(object: &mut serde_json::Map<String, Value>, aliases: &[(&str, &[&str])]) {
+            for (old, keys) in aliases {
+                if let Some(value) = object.remove(*old) {
+                    for key in *keys {
+                        object
+                            .entry((*key).to_owned())
+                            .or_insert_with(|| value.clone());
+                    }
+                }
+            }
+        }
+        let object = data.as_object_mut().unwrap();
+        migrate(object, &aliases);
+        if let Some(snapshot) = object
+            .get_mut("normalSnapshot")
+            .and_then(Value::as_object_mut)
+        {
+            migrate(snapshot, &aliases);
+        }
+        object
+            .entry("dashboardEnabled".to_owned())
+            .or_insert(json!(true));
+    }
     if schema.id == "control-center" && version < 2 {
         if data.get("tiles").is_none() {
             let mut tiles = schema.defaults["tiles"].as_array().unwrap().clone();
@@ -238,10 +287,15 @@ pub fn write_as(path: &Path, schema: Option<&Schema>, value: &Value) -> Result<(
     let Some(schema) = schema else {
         return files::atomic(path, json::encode(value)?.as_bytes());
     };
-    let encoded = encoded(value, schema)?;
-    if encoded.len() as u64 > LIMIT {
-        return Err("State file too large; original preserved".into());
-    }
+    // Reject a caller-supplied future version before creating a lock/backup.
+    encoded(value, schema)?;
+    update_as(path, schema, |_| Ok(value.clone()))
+}
+pub fn update_as(
+    path: &Path,
+    schema: &Schema,
+    change: impl FnOnce(Value) -> Result<Value>,
+) -> Result<()> {
     let parent = path.parent().ok_or("Invalid state path")?;
     fs::create_dir_all(parent)?;
     let lock = path.with_file_name(format!(
@@ -271,17 +325,27 @@ pub fn write_as(path: &Path, schema: Option<&Schema>, value: &Value) -> Result<(
         }
         Err(error) => return Err(error),
     };
-    if let Some(raw) = raw {
-        match serde_json::from_slice(&raw)
+    let (current, old, corrupt) = match raw.as_ref() {
+        Some(raw) => match serde_json::from_slice(raw)
             .map_err(|_| StateError::Corrupt)
             .and_then(|value| decode(value, schema))
         {
-            Ok((_, old)) if old < schema.version => {
-                backup(path, &raw, &format!(".pre-v{old}-to-v{}", schema.version))?
-            }
-            Ok(_) => {}
-            Err(StateError::Corrupt) => backup(path, &raw, ".corrupt")?,
+            Ok((value, version)) => (value, version, false),
+            Err(StateError::Corrupt) => (schema.defaults.clone(), schema.version, true),
             Err(error) => return Err(error.into()),
+        },
+        None => (schema.defaults.clone(), schema.version, false),
+    };
+    let value = change(current)?;
+    let encoded = encoded(&value, schema)?;
+    if encoded.len() as u64 > LIMIT {
+        return Err("State file too large; original preserved".into());
+    }
+    if let Some(raw) = raw.as_ref() {
+        if corrupt {
+            backup(path, raw, ".corrupt")?;
+        } else if old < schema.version {
+            backup(path, raw, &format!(".pre-v{old}-to-v{}", schema.version))?;
         }
     }
     files::atomic(path, &encoded)?;
@@ -290,32 +354,72 @@ pub fn write_as(path: &Path, schema: Option<&Schema>, value: &Value) -> Result<(
     Ok(())
 }
 
+/// The Settings UI addresses owned stores by registry ID, never an arbitrary path.
+pub fn settings_path(id: &str) -> Result<std::path::PathBuf> {
+    let schema = by_id(id)?;
+    let access = schema
+        .settings
+        .as_ref()
+        .ok_or("Store is not owned by Settings")?;
+    let relative = schema
+        .paths
+        .first()
+        .and_then(|path| path.strip_prefix("nacre/"))
+        .ok_or("Invalid Settings store path")?;
+    if relative.contains('*') || relative.contains("..") {
+        return Err("Invalid Settings store path".into());
+    }
+    let paths = crate::paths::Paths::environment()?;
+    Ok(match access.root {
+        SettingsRoot::State => paths.state.join(relative),
+        SettingsRoot::Config => paths.config.join(relative),
+    })
+}
+
 /// Restricted QML publisher: no generic arbitrary-file write surface.
 pub fn run(arguments: &[String]) -> Result<i32> {
-    let result = (|| -> Result<()> {
-        let [action, filename] = arguments else {
-            return Err("Expected state action and path".into());
+    let result = (|| -> Result<Value> {
+        let [action, key] = arguments else {
+            return Err("Expected state action and store ID or path".into());
         };
-        if action != "save" {
+        if action == "load-id" {
+            let schema = by_id(key)?;
+            let path = settings_path(key)?;
+            let data = read(&path, schema.defaults.clone())?;
+            return Ok(json!({"ok":true,"id":key,"data":data,"exists":path.exists()}));
+        }
+        if matches!(action.as_str(), "save-id" | "set-id")
+            && by_id(key)?
+                .settings
+                .as_ref()
+                .is_none_or(|access| access.access != SettingsMode::Write)
+        {
+            return Err("Publisher store is read-only in Settings".into());
+        }
+        let path = if action == "save-id" || action == "set-id" {
+            settings_path(key)?
+        } else if action == "save" {
+            let path = Path::new(key);
+            if path
+                .components()
+                .any(|part| matches!(part, std::path::Component::ParentDir))
+            {
+                return Err("Invalid state path".into());
+            }
+            let paths = crate::paths::Paths::environment()?;
+            if ![
+                paths.config.join("control-center.json"),
+                paths.config.join("dashboard-extras.json"),
+                paths.state.join("battery-alert-state.json"),
+            ]
+            .contains(&path.to_path_buf())
+            {
+                return Err("State path is not a QML-owned store".into());
+            }
+            path.to_path_buf()
+        } else {
             return Err("Unknown state action".into());
-        }
-        let path = Path::new(filename);
-        if path
-            .components()
-            .any(|component| matches!(component, std::path::Component::ParentDir))
-        {
-            return Err("Invalid state path".into());
-        }
-        let paths = crate::paths::Paths::environment()?;
-        if ![
-            paths.config.join("control-center.json"),
-            paths.config.join("dashboard-extras.json"),
-            paths.state.join("battery-alert-state.json"),
-        ]
-        .contains(&path.to_path_buf())
-        {
-            return Err("State path is not a QML-owned store".into());
-        }
+        };
         let mut input = String::new();
         std::io::stdin()
             .lock()
@@ -324,11 +428,50 @@ pub fn run(arguments: &[String]) -> Result<i32> {
         if input.len() as u64 > LIMIT {
             return Err("State request too large".into());
         }
-        write(path, &serde_json::from_str(&input)?)
+        let value: Value = serde_json::from_str(&input)?;
+        if action == "set-id" {
+            let keys = value["key"].as_array().ok_or("Expected key path")?;
+            let keys: Vec<&str> = keys
+                .iter()
+                .map(|key| key.as_str().ok_or("Invalid key path"))
+                .collect::<std::result::Result<_, _>>()?;
+            if keys.is_empty()
+                || keys.iter().any(|key| {
+                    key.is_empty()
+                        || ["__proto__", "constructor", "prototype", "version"].contains(key)
+                })
+            {
+                return Err("Invalid key path".into());
+            }
+            let next = value.get("value").ok_or("Expected setting value")?.clone();
+            update_as(&path, by_id(key)?, |mut data| {
+                let mut target = &mut data;
+                for part in &keys[..keys.len() - 1] {
+                    if target.get(*part).is_none() {
+                        target[*part] = json!({});
+                    }
+                    target = target.get_mut(*part).ok_or("Invalid key path")?;
+                    if !target.is_object() {
+                        return Err("Invalid key path".into());
+                    }
+                }
+                target[keys[keys.len() - 1]] = next;
+                Ok(data)
+            })?;
+        } else {
+            write(&path, &value)?;
+        }
+        if action == "save-id" || action == "set-id" {
+            Ok(
+                json!({"ok":true,"id":key,"data":read(&path,by_id(key)?.defaults.clone())?,"exists":true}),
+            )
+        } else {
+            Ok(json!({"ok":true}))
+        }
     })();
     match result {
-        Ok(()) => {
-            println!("{}", json::encode(&json!({"ok":true}))?);
+        Ok(value) => {
+            println!("{}", json::encode(&value)?);
             Ok(0)
         }
         Err(error) => {
@@ -397,6 +540,62 @@ pub fn legacy_snapshot(mut files: Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn desktop_v2_splits_edges_and_profile_snapshots() -> Result<()> {
+        let folder = tempfile::tempdir()?;
+        let path = folder.path().join("desktop.json");
+        let original = br#"{"version":1,"rightEdge":false,"frameRightEnabled":true,"topEdge":false,"leftDrawer":false,"unknown":"keep","normalSnapshot":{"rightEdge":false,"topEdge":true}}"#;
+        fs::write(&path, original)?;
+        let data = read_as(&path, Some(by_id("desktop")?), json!({}))?;
+        assert_eq!(data["frameRightEnabled"], true);
+        assert_eq!(data["controlCenterEnabled"], false);
+        assert_eq!(data["topBarEnabled"], false);
+        assert_eq!(data["frameTopEnabled"], false);
+        assert_eq!(data["aiSidebarEnabled"], false);
+        assert_eq!(data["dashboardEnabled"], true);
+        assert_eq!(data["unknown"], "keep");
+        assert_eq!(data["normalSnapshot"]["controlCenterEnabled"], false);
+        assert_eq!(data["normalSnapshot"]["topBarEnabled"], true);
+        assert!(data.get("rightEdge").is_none());
+        assert_eq!(fs::read(&path)?, original);
+        write_as(&path, Some(by_id("desktop")?), &data)?;
+        assert_eq!(
+            fs::read(path.with_file_name("desktop.json.pre-v1-to-v2.bak"))?,
+            original
+        );
+        Ok(())
+    }
+    #[test]
+    fn atomic_field_updates_preserve_concurrent_fields_and_future_bytes() -> Result<()> {
+        let folder = tempfile::tempdir()?;
+        let path = folder.path().join("power.json");
+        fs::write(&path, br#"{"version":1,"unknown":"kept"}"#)?;
+        std::thread::scope(|scope| {
+            for index in 0..20 {
+                let path = &path;
+                scope.spawn(move || {
+                    update_as(path, by_id("power").unwrap(), |mut data| {
+                        data[format!("field{index}")] = json!(index);
+                        Ok(data)
+                    })
+                    .unwrap()
+                });
+            }
+        });
+        let saved: Value = serde_json::from_slice(&fs::read(&path)?)?;
+        assert_eq!(saved["unknown"], "kept");
+        for index in 0..20 {
+            assert_eq!(saved[format!("field{index}")], index);
+        }
+        let original = br#"{"version":99,"future":"kept"}"#;
+        fs::write(&path, original)?;
+        assert!(update_as(&path, by_id("power")?, |_| Ok(json!({}))).is_err());
+        assert_eq!(fs::read(&path)?, original);
+        assert!(settings_path("brain-auth").is_err());
+        assert!(settings_path("../desktop").is_err());
+        Ok(())
+    }
 
     #[test]
     fn every_schema_migrates_with_exact_private_one_time_backup() -> Result<()> {
@@ -480,7 +679,7 @@ mod tests {
         let other = folder.path().join("other");
         fs::write(&path, b"{}")?;
         fs::write(&other, b"keep")?;
-        std::os::unix::fs::symlink(&other, path.with_file_name("state.json.pre-v0-to-v1.bak"))?;
+        std::os::unix::fs::symlink(&other, path.with_file_name("state.json.pre-v0-to-v2.bak"))?;
         assert!(write_as(&path, Some(by_id("desktop")?), &json!({})).is_err());
         assert_eq!(fs::read(&path)?, b"{}");
         assert_eq!(fs::read(&other)?, b"keep");

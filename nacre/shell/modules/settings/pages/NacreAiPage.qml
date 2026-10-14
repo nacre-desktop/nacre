@@ -15,7 +15,7 @@ NacreSettingsPage {
         description: NacreI18n.tr("ui.ai-page.description.applies-to-new-chats-existing-conversations-keep-their", "Applies to new chats. Existing conversations keep their assistant and account.")
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.ai-page.text.codex", "Codex")
                 selected: SidebarChat.defaultProvider === "codex"
@@ -30,13 +30,14 @@ NacreSettingsPage {
     }
     NacreSettingsSection {
         title: NacreI18n.tr("ui.ai-page.title.ai-sidebar", "AI sidebar")
-        NacreSettingToggle {
-            label: NacreI18n.tr("ui.ai-page.label.enable-the-ai-sidebar", "Enable the AI sidebar")
-            setting: "leftDrawer"
+        ActionButton {
+            text: NacreI18n.tr("settings.registry.ai.sidebar-options", "Sidebar options")
+            icon: "chevron_right"
+            onClicked: NacrePanelState.openSettings("panels/ai-sidebar")
         }
         ActionButton {
             text: NacreI18n.tr("ui.ai-page.text.open-sidebar", "Open sidebar")
-            enabled: DesktopSettings.data.leftDrawer !== false
+            enabled: DesktopSettings.data.aiSidebarEnabled !== false
             onClicked: AppLaunch.run(["nacre-shell", "left"])
         }
     }
@@ -45,7 +46,7 @@ NacreSettingsPage {
         description: NacreI18n.tr("ui.ai-page.description.manage-assistant-accounts-usage-and-projects-in-the-ai", "Manage assistant accounts, usage and projects in the AI workspace.")
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.ai-page.text.accounts-usage-and-projects", "Accounts, usage and projects")
                 onClicked: AppLaunch.run(["kitty", "--class", "nacre-ai-dashboard", "--title", "Nacre AI settings", "--", "nacre-ai", "settings"])

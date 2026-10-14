@@ -47,7 +47,7 @@ NacreSettingsPage {
         }
     }
     NacreSettingsSection {
-        title: NacreI18n.tr("ui.sound-page.title.advanced-audio", "Advanced audio")
+        title: NacreI18n.tr("ui.sound-page.title.advanced-audio", "Audio routing")
         description: NacreI18n.tr("ui.sound-page.description.change-device-profiles-and-application-routing-in-the-a", "Change device profiles and application routing in the audio manager.")
         ActionButton {
             text: NacreI18n.tr("ui.sound-page.text.open-audio-manager", "Open audio manager")

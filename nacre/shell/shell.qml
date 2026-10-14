@@ -14,6 +14,7 @@ ShellRoot {
     property var helperService: NacreHelpers
     property var controlTools: NacreControlTools
     property var batteryAlerts: NacreBatteryAlerts
+    property var powerPolicy: NacrePowerPolicy
     property var lockWidgets: LockWidgets
     property var displayRecovery: DisplayRecovery
     NacreBackground {}

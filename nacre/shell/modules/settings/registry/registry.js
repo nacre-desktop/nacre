@@ -35,14 +35,18 @@ function visiblePage(schema, page, capabilities) {
         return false;
     return !page.parent || visiblePage(schema, schema.pages.find(item => item.id === page.parent), capabilities);
 }
-function settingsFor(schema, page, capabilities) {
+function settingsFor(schema, page, capabilities, development = false) {
     if (!visiblePage(schema, schema.pages.find(item => item.id === page), capabilities))
         return [];
-    return schema.settings.filter(item => item.page === page && allowed(item.visibleWhen, capabilities) && allowed(schema.sections.find(section => section.id === item.section)?.visibleWhen, capabilities));
+    return schema.settings.filter(item => item.page === page && (development || item.backend !== "planned") && allowed(item.visibleWhen, capabilities) && allowed(schema.sections.find(section => section.id === item.section)?.visibleWhen, capabilities));
 }
-function resolve(schema, link, capabilities) {
+function resolve(schema, link, capabilities, development = false, depth = 0) {
     if (typeof link !== "string" || link.length > 256 || !/^[a-z0-9/-]+(?:#[a-zA-Z0-9._/-]+)?$/.test(link))
         return null;
+    if (depth > 8)
+        return null;
+    if (schema.aliases[link]?.includes("#"))
+        return resolve(schema, schema.aliases[link], capabilities, development, depth + 1);
     const parts = link.split("#");
     let route = schema.aliases[parts[0]] || parts[0];
     let page = schema.pages.find(item => item.id === route);
@@ -54,7 +58,7 @@ function resolve(schema, link, capabilities) {
     }
     if (!visiblePage(schema, page, capabilities))
         return null;
-    const setting = parts[1] ? settingsFor(schema, route, capabilities).find(item => item.key === parts[1] || item.id === parts[1]) : null;
+    const setting = parts[1] ? settingsFor(schema, route, capabilities, development).find(item => item.key === parts[1] || item.id === parts[1]) || schema.actions.find(item => item.page === route && (development || item.backend !== "planned") && item.id === parts[1]) : null;
     if (parts[1] && !setting)
         return null;
     return {
@@ -62,38 +66,91 @@ function resolve(schema, link, capabilities) {
         setting: setting?.id || ""
     };
 }
+function rootPage(schema, page) {
+    let item = schema.pages.find(row => row.id === page);
+    for (let depth = 0; item?.parent && depth < 16; depth++)
+        item = schema.pages.find(row => row.id === item.parent);
+    return item?.id || "";
+}
 function breadcrumb(schema, page, text) {
     const item = schema.pages.find(row => row.id === page);
     if (!item)
         return "";
     const group = schema.groups.find(row => row.id === item.group);
-    const parent = schema.pages.find(row => row.id === item.parent);
-    return [group && text(group.labelId), parent && text(parent.labelId), text(item.labelId)].filter(Boolean).join(" / ");
+    const trail = [text(item.labelId)];
+    let parent = item;
+    for (let depth = 0; parent.parent && depth < 16; depth++) {
+        parent = schema.pages.find(row => row.id === parent.parent);
+        if (!parent)
+            break;
+        trail.unshift(text(parent.labelId));
+    }
+    if (group)
+        trail.unshift(text(group.labelId));
+    return trail.join(" / ");
 }
-function search(schema, query, capabilities, text) {
+function search(schema, query, capabilities, text, development = false) {
     const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
     if (!words.length)
         return [];
-    return schema.settings.filter(setting => {
+    const matches = schema.settings.filter(setting => {
         const page = schema.pages.find(row => row.id === setting.page);
         const section = schema.sections.find(row => row.id === setting.section);
-        if (!visiblePage(schema, page, capabilities) || !allowed(setting.visibleWhen, capabilities) || !allowed(section?.visibleWhen, capabilities))
+        if ((!development && setting.backend === "planned") || !visiblePage(schema, page, capabilities) || !allowed(setting.visibleWhen, capabilities) || !allowed(section?.visibleWhen, capabilities))
             return false;
         const haystack = [text(setting.labelId), text(setting.descriptionId), breadcrumb(schema, setting.page, text), text(section?.labelId), ...(setting.synonyms || []), ...(setting.options || []).map(option => text(option.labelId))].join(" ").toLocaleLowerCase();
         return words.every(word => haystack.includes(word));
     }).map(setting => ({
                 id: setting.id,
+                kind: "setting",
+                route: setting.page + "#" + setting.id,
                 page: setting.page,
                 label: text(setting.labelId),
                 description: text(setting.descriptionId),
                 breadcrumb: breadcrumb(schema, setting.page, text) + " / " + text(schema.sections.find(section => section.id === setting.section)?.labelId)
             }));
+    for (const page of schema.pages) {
+        if (!visiblePage(schema, page, capabilities))
+            continue;
+        const haystack = [text(page.labelId), text(page.descriptionId), breadcrumb(schema, page.id, text), ...(page.synonyms || [])].join(" ").toLocaleLowerCase();
+        if (words.every(word => haystack.includes(word)) && !matches.some(item => item.page === page.id))
+            matches.push({
+                id: page.id,
+                kind: "page",
+                route: page.id,
+                page: page.id,
+                label: text(page.labelId),
+                description: text(page.descriptionId),
+                breadcrumb: breadcrumb(schema, page.id, text)
+            });
+    }
+    for (const action of schema.actions) {
+        const page = schema.pages.find(item => item.id === action.page);
+        if ((!development && action.backend === "planned") || !visiblePage(schema, page, capabilities) || !allowed(action.visibleWhen, capabilities))
+            continue;
+        const haystack = [text(action.labelId), text(action.descriptionId), breadcrumb(schema, page.id, text)].join(" ").toLocaleLowerCase();
+        if (words.every(word => haystack.includes(word)))
+            matches.push({
+                id: action.id,
+                kind: "action",
+                route: action.page + "#" + action.id,
+                page: action.page,
+                label: text(action.labelId),
+                description: text(action.descriptionId),
+                breadcrumb: breadcrumb(schema, page.id, text)
+            });
+    }
+    return matches;
 }
 function validValue(setting, value) {
     const type = setting.type;
     if (type === "boolean" && typeof value !== "boolean" || type === "string" && typeof value !== "string" || type === "array" && !Array.isArray(value) || type === "integer" && !Number.isInteger(value) || type === "number" && (typeof value !== "number" || !Number.isFinite(value)))
         return false;
     if (type === "enum" && !setting.options.some(option => option.value === value))
+        return false;
+    if (type === "array" && ["app", "command", "text-list"].includes(setting.entityType) && (value.length > 512 || value.some(item => typeof item !== "string" || item.length > 4096 || item.includes("\0"))))
+        return false;
+    if (type === "array" && setting.entityType === "command" && (!value.length || !value[0].trim()))
         return false;
     if (setting.range && (value < setting.range.min || value > setting.range.max || Math.abs((value - setting.range.min) / setting.range.step - Math.round((value - setting.range.min) / setting.range.step)) > .00001))
         return false;

@@ -6,16 +6,16 @@ SpinBox {
     id: root
     property string label: ""
     signal adjusted(int number)
-    implicitWidth: 180
-    implicitHeight: 38
+    implicitWidth: NacreTokens.space.huge * 5 + NacreTokens.space.xl
+    implicitHeight: NacreTokens.space.huge + NacreTokens.space.xs
     editable: true
     wheelEnabled: false
-    leftPadding: 38
-    rightPadding: 38
+    leftPadding: NacreTokens.space.huge + NacreTokens.space.xs
+    rightPadding: NacreTokens.space.huge + NacreTokens.space.xs
     Accessible.name: label
     onValueModified: adjusted(value)
     background: NacreSurface {
-        radius: 19
+        radius: NacreTokens.space.xl
         color: NacreTokens.raised
         border.width: root.activeFocus ? 1 : 0
         border.color: NacreTokens.outline
@@ -23,7 +23,7 @@ SpinBox {
     contentItem: TextInput {
         text: root.textFromValue(root.value, root.locale)
         font.family: NacreTokens.textFamily
-        font.pointSize: 11
+        font.pointSize: NacreTokens.textSize.body
         color: NacreTokens.ink
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
@@ -35,9 +35,9 @@ SpinBox {
     }
     up.indicator: NacreSurface {
         x: root.width - width
-        width: 34
+        width: NacreTokens.space.huge + NacreTokens.space.hairline
         height: root.height
-        radius: 17
+        radius: NacreTokens.space.xl
         color: "transparent"
         NacreIcon {
             anchors.centerIn: parent
@@ -46,9 +46,9 @@ SpinBox {
         }
     }
     down.indicator: NacreSurface {
-        width: 34
+        width: NacreTokens.space.huge + NacreTokens.space.hairline
         height: root.height
-        radius: 17
+        radius: NacreTokens.space.xl
         color: "transparent"
         NacreIcon {
             anchors.centerIn: parent

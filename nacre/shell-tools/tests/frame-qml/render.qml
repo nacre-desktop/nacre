@@ -145,13 +145,13 @@ ShellRoot {
                             throw new Error("header missing from shared input region");
                         DesktopSettings.data = {
                             animations: false,
-                            topEdge: false
+                            topBarEnabled: false
                         };
                         if (input.headerRect.width !== 0)
                             throw new Error("disabled header retained input");
                         DesktopSettings.data = {
                             animations: false,
-                            topEdge: true
+                            topBarEnabled: true
                         };
                         dash.width = 200;
                         dash.height = 100;

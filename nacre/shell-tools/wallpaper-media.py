@@ -20,7 +20,20 @@ from pathlib import Path
 from PIL import Image, ImageOps
 
 HOME = Path.home()
-LIBRARY = HOME / "Pictures/Wallpapers"
+try:
+    wallpaper_config = _state.read_json_file(HOME / ".config/nacre/cli.json").get(
+        "wallpaper", {}
+    )
+    library_value = wallpaper_config.get("directory", str(HOME / "Pictures/Wallpapers"))
+    LIBRARY = (
+        Path(library_value).expanduser()
+        if isinstance(library_value, str)
+        and library_value
+        and "\0" not in library_value
+        else HOME / "Pictures/Wallpapers"
+    )
+except (OSError, ValueError, TypeError):
+    LIBRARY = HOME / "Pictures/Wallpapers"
 CACHE = HOME / ".cache/nacre/wallpaper-media"
 STATE = HOME / ".local/state/nacre/wallpaper"
 PREFS = HOME / ".config/nacre/wallpaper-picker.json"

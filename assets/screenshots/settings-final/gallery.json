@@ -1,0 +1,1236 @@
+{
+  "version": 1,
+  "baseRevision": "00700323c87087b394e20c7d5e383740866054fe",
+  "fixture": "Synthetic desktop; AI/Brain/battery/Wi-Fi/Bluetooth available; packages absent; planned backends disabled",
+  "surfaces": [
+    {
+      "file": "normal-wallpaper.png",
+      "state": {
+        "page": "wallpaper",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-colors.png",
+      "state": {
+        "page": "colors",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-colors-lower.png",
+      "state": {
+        "page": "colors",
+        "width": 1100,
+        "height": 840,
+        "scroll": "bottom"
+      }
+    },
+    {
+      "file": "normal-appearance.png",
+      "state": {
+        "page": "appearance",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels.png",
+      "state": {
+        "page": "panels",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-lower.png",
+      "state": {
+        "page": "panels",
+        "width": 1100,
+        "height": 840,
+        "scroll": "bottom"
+      }
+    },
+    {
+      "file": "normal-launcher.png",
+      "state": {
+        "page": "launcher",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-launcher-lower.png",
+      "state": {
+        "page": "launcher",
+        "width": 1100,
+        "height": 840,
+        "scroll": "bottom"
+      }
+    },
+    {
+      "file": "normal-windows-workspaces.png",
+      "state": {
+        "page": "windows-workspaces",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-notifications.png",
+      "state": {
+        "page": "notifications",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-displays.png",
+      "state": {
+        "page": "displays",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-sound.png",
+      "state": {
+        "page": "sound",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-network.png",
+      "state": {
+        "page": "network",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-bluetooth.png",
+      "state": {
+        "page": "bluetooth",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-power.png",
+      "state": {
+        "page": "power",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-power-lower.png",
+      "state": {
+        "page": "power",
+        "width": 1100,
+        "height": 840,
+        "scroll": "bottom"
+      }
+    },
+    {
+      "file": "normal-keyboard-mouse.png",
+      "state": {
+        "page": "keyboard-mouse",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-lock-login.png",
+      "state": {
+        "page": "lock-login",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-apps.png",
+      "state": {
+        "page": "apps",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-privacy.png",
+      "state": {
+        "page": "privacy",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-date-time-language.png",
+      "state": {
+        "page": "date-time-language",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-system.png",
+      "state": {
+        "page": "system",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-nacre-ai.png",
+      "state": {
+        "page": "nacre-ai",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-brain.png",
+      "state": {
+        "page": "brain",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-top-bar.png",
+      "state": {
+        "page": "panels/top-bar",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-dashboard.png",
+      "state": {
+        "page": "panels/dashboard",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-control-center.png",
+      "state": {
+        "page": "panels/control-center",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-ai-sidebar.png",
+      "state": {
+        "page": "panels/ai-sidebar",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-bottom.png",
+      "state": {
+        "page": "panels/bottom",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-colors-app-theming.png",
+      "state": {
+        "page": "colors/app-theming",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-launcher-favorites.png",
+      "state": {
+        "page": "launcher/favorites",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-launcher-entries.png",
+      "state": {
+        "page": "launcher/entries",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-windows-workspaces-workflows.png",
+      "state": {
+        "page": "windows-workspaces/workflows",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-dashboard-pages.png",
+      "state": {
+        "page": "panels/dashboard/pages",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-dashboard-extras.png",
+      "state": {
+        "page": "panels/dashboard/extras",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-dashboard-weather.png",
+      "state": {
+        "page": "panels/dashboard/weather",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-dashboard-media.png",
+      "state": {
+        "page": "panels/dashboard/media",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-dashboard-home-time.png",
+      "state": {
+        "page": "panels/dashboard/home-time",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-panels-dashboard-calendar-focus.png",
+      "state": {
+        "page": "panels/dashboard/calendar-focus",
+        "query": "",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-search.png",
+      "state": {
+        "page": "panels/dashboard/calendar-focus",
+        "query": "palette",
+        "highlight": "",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "normal-highlight.png",
+      "state": {
+        "page": "panels",
+        "query": "",
+        "highlight": "panels.lips.clickEdgeMenus",
+        "width": 1100,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-wallpaper.png",
+      "state": {
+        "page": "wallpaper",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-colors.png",
+      "state": {
+        "page": "colors",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-colors-lower.png",
+      "state": {
+        "page": "colors",
+        "width": 620,
+        "height": 840,
+        "scroll": "bottom"
+      }
+    },
+    {
+      "file": "narrow-appearance.png",
+      "state": {
+        "page": "appearance",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels.png",
+      "state": {
+        "page": "panels",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-lower.png",
+      "state": {
+        "page": "panels",
+        "width": 620,
+        "height": 840,
+        "scroll": "bottom"
+      }
+    },
+    {
+      "file": "narrow-launcher.png",
+      "state": {
+        "page": "launcher",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-launcher-lower.png",
+      "state": {
+        "page": "launcher",
+        "width": 620,
+        "height": 840,
+        "scroll": "bottom"
+      }
+    },
+    {
+      "file": "narrow-windows-workspaces.png",
+      "state": {
+        "page": "windows-workspaces",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-notifications.png",
+      "state": {
+        "page": "notifications",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-displays.png",
+      "state": {
+        "page": "displays",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-sound.png",
+      "state": {
+        "page": "sound",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-network.png",
+      "state": {
+        "page": "network",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-bluetooth.png",
+      "state": {
+        "page": "bluetooth",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-power.png",
+      "state": {
+        "page": "power",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-power-lower.png",
+      "state": {
+        "page": "power",
+        "width": 620,
+        "height": 840,
+        "scroll": "bottom"
+      }
+    },
+    {
+      "file": "narrow-keyboard-mouse.png",
+      "state": {
+        "page": "keyboard-mouse",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-lock-login.png",
+      "state": {
+        "page": "lock-login",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-apps.png",
+      "state": {
+        "page": "apps",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-privacy.png",
+      "state": {
+        "page": "privacy",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-date-time-language.png",
+      "state": {
+        "page": "date-time-language",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-system.png",
+      "state": {
+        "page": "system",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-nacre-ai.png",
+      "state": {
+        "page": "nacre-ai",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-brain.png",
+      "state": {
+        "page": "brain",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-top-bar.png",
+      "state": {
+        "page": "panels/top-bar",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-dashboard.png",
+      "state": {
+        "page": "panels/dashboard",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-control-center.png",
+      "state": {
+        "page": "panels/control-center",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-ai-sidebar.png",
+      "state": {
+        "page": "panels/ai-sidebar",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-bottom.png",
+      "state": {
+        "page": "panels/bottom",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-colors-app-theming.png",
+      "state": {
+        "page": "colors/app-theming",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-launcher-favorites.png",
+      "state": {
+        "page": "launcher/favorites",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-launcher-entries.png",
+      "state": {
+        "page": "launcher/entries",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-windows-workspaces-workflows.png",
+      "state": {
+        "page": "windows-workspaces/workflows",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-dashboard-pages.png",
+      "state": {
+        "page": "panels/dashboard/pages",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-dashboard-extras.png",
+      "state": {
+        "page": "panels/dashboard/extras",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-dashboard-weather.png",
+      "state": {
+        "page": "panels/dashboard/weather",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-dashboard-media.png",
+      "state": {
+        "page": "panels/dashboard/media",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-dashboard-home-time.png",
+      "state": {
+        "page": "panels/dashboard/home-time",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-panels-dashboard-calendar-focus.png",
+      "state": {
+        "page": "panels/dashboard/calendar-focus",
+        "query": "",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-search.png",
+      "state": {
+        "page": "panels/dashboard/calendar-focus",
+        "query": "palette",
+        "highlight": "",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    },
+    {
+      "file": "narrow-highlight.png",
+      "state": {
+        "page": "panels",
+        "query": "",
+        "highlight": "panels.lips.clickEdgeMenus",
+        "width": 620,
+        "height": 840,
+        "error": ""
+      }
+    }
+  ],
+  "sourceHashes": {
+    "nacre/shell/lock-preview.qml": "c6642fb23ad72cf176842cdb95bd712cb2fd858a22147e745f177eb201d42205",
+    "nacre/shell/shell.qml": "aee34df61e63c84a5852bc54f59970b7690bd70da052294922c06f03441f9cf8",
+    "nacre/shell/branding/LogoData.js": "6c645f61f289a028e8ecda86559536b56fd1ece940a37e96fa0cb98a2481d011",
+    "nacre/shell/config/Appearance.qml": "78ab73b3835cce921a60f3b4a683113556a821592b3576d1cb3f619cc9cb6593",
+    "nacre/shell/config/NacreAppearance.qml": "4efb78e8195fbb172006482e3c66ca7c32dc02959f094458967d712ac71c9203",
+    "nacre/shell/config/NacreBar.qml": "b2800fad2f0fb82983cc3cfd4ebedef87d15c5a5ea4f99cfa764fba8868406db",
+    "nacre/shell/config/NacreNotifications.qml": "b9c807a62f98c1647dcf840b9cf67d0d2256dc6356a1a0ee5fa63f5e666403f7",
+    "nacre/shell/config/NacreOsd.qml": "97c95f0256e87bc7db6feaf406a7351daf5f4b070edc4468f6a5ce01e7313cae",
+    "nacre/shell/config/NacreFrame.qml": "2668abcbcc47dcc09e83f15fe0f441bdaa2c2ec65b311032f2ba3c6fe9d63918",
+    "nacre/shell/i18n/options.json": "077ab7c203cb2455a6d918989a89bb50169d53692927889a3db8146e4e444445",
+    "nacre/shell/i18n/translation.js": "d9c43bb838d9c96fc10b26b77b9aa0d6c2c184676d6f1c0259d223a301072906",
+    "nacre/shell/i18n/context.json": "eb930fd339e3cbbe764b5cdaf6ee4519ebdfa64c435801a3b4c97d6a5f70b559",
+    "nacre/shell/i18n/en.json": "b9cc3c386e3ab7fed3989cf6a9ecfe92c65dbc7d5d3bc6fee4db64e569956932",
+    "nacre/shell/modules/NacreShellIpc.qml": "2bf5435fbbd4df281137529b6cba6be48c383056cdd1cf86a97a5d790198f6b2",
+    "nacre/shell/modules/NacreShellShortcuts.qml": "3e7a16fb2d053bb22b80973554897d9393c2dc34d152d71277e7f0f57f3dadc7",
+    "nacre/shell/modules/Shortcuts.qml": "eae64d7c69ab58bb0bbb8a57ece7937bce04fb6d6759162f3e6333b47cfe3d81",
+    "nacre/shell/services/AppLaunch.qml": "afcdc8bd0105c8d1bd8bd7acb0ed913daca121859110b7c3f4ebb3071bdea3db",
+    "nacre/shell/services/Apps.qml": "bbfe4d865135c2619c442caa888c6d6c7a491a9fd07333f29503a1ff54b0a187",
+    "nacre/shell/services/Audio.qml": "9cb13e5021ed7c88b62b33f64a9ebd83eab1d89ea0000af1ed1da4134a278037",
+    "nacre/shell/services/Bluetooth.qml": "a126f2942b1ae45c935559dc6a7f276b9107dbbd0f6e22607e5722f0dbee9e17",
+    "nacre/shell/services/Brightness.qml": "401995475b848a09a0e1696b7432e2f2b1a54fe583e815a7e2bf30cc0b1ff506",
+    "nacre/shell/services/ChatWindowTitle.qml": "e2c1a9a1de41a1392ca977f6fbf08fd2519fadab9ad967e4e4985b43cad70a97",
+    "nacre/shell/services/Colours.qml": "38710e88e124b0fd646694b4398bda3916826d3861c447a0d42101d041a0966e",
+    "nacre/shell/services/DesktopActions.qml": "614b8d27717fd67b1e1ea3de13a9654bfb6b5239af63e613bf4e40f2ab74bf45",
+    "nacre/shell/services/DesktopExtras.qml": "84e0e4e2a76787044daa71ab085b170b614893b955078d8275dac882d164e09e",
+    "nacre/shell/services/DeviceActions.qml": "720448e1777076597b11b7b410b7d2c529f8d9aaf82ce00a1d8bb0f1285a7cce",
+    "nacre/shell/services/DisplayRecovery.qml": "cc5d9bae2875266aa1cc2d1ade0fe0cc30fb0c0d138d24f826611d5f23ea190a",
+    "nacre/shell/services/LauncherPreferences.qml": "d2d5e5665e78d40615912ccd7d31879979809a557fa5c33faddc89fef011ed56",
+    "nacre/shell/services/LockWidgets.qml": "42568be16eb093f0141da8afaaf1b4e34fbd59c340a3f3d912d841949d0c911c",
+    "nacre/shell/services/Maintenance.qml": "002b9081a5b1f3ea5279cef01c0b11747522aa1d722647a80f42d7dbaacb1326",
+    "nacre/shell/services/NacreAiViews.qml": "523c3292dc238e517326b0795ae4e173a952ff4cf58291f6aab0826b68bb813c",
+    "nacre/shell/services/NacreApps.qml": "668eb405d1800d1f484aa3d5e1e9e7e9a45f16b08d2ac91f059b730937df3779",
+    "nacre/shell/services/NacreAudio.qml": "20bf1fa2af1b63d2c7398aea3f685996fbaaec62c6f19eda6a74afdee46d69c0",
+    "nacre/shell/services/NacreBacklight.qml": "3ad1c895e7be0548ab22a69ed662cd2ab555bc44d5c75e95fed51e6cdaf1a1e9",
+    "nacre/shell/services/NacreBatteryAlertPolicy.qml": "b4c769e77cdb193b4cc0da162277755285613bb2c3b485ff07f56b58a9cdb37d",
+    "nacre/shell/services/NacreBluetooth.qml": "c67d5c5447aaa22058ef3e5a86487f45909ae1ed5e0fa0b839839039bc6d2f05",
+    "nacre/shell/services/NacreBrightness.qml": "91e49bd2f1c23b540df625f8466d6b2e8ebe2b01cb14f682480c89c5c58066fb",
+    "nacre/shell/services/NacreChatSession.qml": "4df2537312ee8289bdda63c536eb700fe971695e683f55cd812b4c698d1361bb",
+    "nacre/shell/services/NacreColorsApp.qml": "cb1430fe5746a948cfccd03c23b9076329967b2778f4c2b4e921a3eb88c2f15d",
+    "nacre/shell/services/NacreColours.qml": "19e2147acd7a7f25c85d3c60af62a6ce88dc42f5acc162652411ebf8bd30fda3",
+    "nacre/shell/services/NacreCompositor.qml": "292503e9bea89f4652a8a3ea0cd89375967a68e835c4f9a047535555bf84aba2",
+    "nacre/shell/services/NacreControlActions.qml": "6e2c61f89b231cba828c896823c9f3af0554d840862eff33598683072000e37f",
+    "nacre/shell/services/NacreControlTools.qml": "21224d5d150930967453911bd48ec7a38c074410001f6b3cbb2807057dbcf74a",
+    "nacre/shell/services/NacreDashboardRegistry.qml": "4eb073756f3fc561e6f0ea6282eb7e8ddb291739bad8285cc056b2497d37c025",
+    "nacre/shell/services/NacreDashboardSystem.qml": "8817372f94b130b70d94b90325497df484634beb7f4ebffd741f017b95433c00",
+    "nacre/shell/services/NacreHelperTask.qml": "0223f62da3b935a7f4bd64ebf4123eb625eb3055306221cf123e4bace925f960",
+    "nacre/shell/services/NacreHelpers.qml": "0c436c53a1dd18f7482c31f347a07db57e33146c8e3f715a3fc2ad6026e5d2cc",
+    "nacre/shell/services/NacreHoverIntent.qml": "ba3cc8975bdcaa0ac5c2012a89b7470e0c5862321497ba025f045f7b681c976d",
+    "nacre/shell/services/NacreI18n.qml": "ac4b6e0d16c3680ceb8dc19496b97effeccd798e21023c2049f80f2139bae834",
+    "nacre/shell/services/NacreKeyboardLight.qml": "f33772b548e0fb9fc2b119ea0601af4ecbebe4570003db7ae543db7d456f56f9",
+    "nacre/shell/services/NacreLauncherPreview.qml": "d6de6cd823dccf56466148a9164b37321652c18d2cacb119a6f0ac0cd5a62d25",
+    "nacre/shell/services/NacreLauncherWorkflows.qml": "f3c5429b71c10e1b44a93f2965262a5e68e45e6862a7718093908feb6dbd2ae8",
+    "nacre/shell/services/NacreLightChannel.qml": "9966631114ead871a91195d2e2fac3079a943aa43485d2faa8724741391ea9fd",
+    "nacre/shell/services/NacreMediaDetails.qml": "2f4b1c8f1ba4a43614e8f90606b702b8936f362671b46ab221bb5b7bf97e1d3d",
+    "nacre/shell/services/NacreMenu.qml": "3301c09a4a3248d0b37dc6cf6703c757b3c2abe7b30d516e3e969862fe58cd44",
+    "nacre/shell/services/NacreMenuPrompt.qml": "d143ad9aa9896e8822e68e274407943a4d133db15eb97bf088478f7a1e71f9be",
+    "nacre/shell/services/NacreNetwork.qml": "eb8746437b60966731aa66786337d5dcd571e8de445d6601ea46695659352704",
+    "nacre/shell/services/NacreNotificationEntry.qml": "cfa555593f70ab87978f95ee9f1ebcb643466648258a7a617e06002e8b6221f3",
+    "nacre/shell/services/NacreNotifs.qml": "021f133aa4f6d9736db311132e72daec4e9e9a490e355ebb9f1a96b7c5bd57c3",
+    "nacre/shell/services/NacrePaletteTask.qml": "3497d086f82f90878e171e0cd3dc29debe50d3b1e3820f51e0e5d9a43b750024",
+    "nacre/shell/services/NacrePanelDragRouting.qml": "89baa30bb898c81bf3c2431c540990996da06445509afbcd542b8a6616e4c62e",
+    "nacre/shell/services/NacrePearls.qml": "0e35dcd4696ce49387fe10e3430b7893147350433b03b4829d18fa17da287e3d",
+    "nacre/shell/services/NacrePlayers.qml": "b0b75beba7c5c49e679d969d5cde4cbcc88838757e950c179a4a102c3c4be125",
+    "nacre/shell/services/NacrePresentation.qml": "70fa4f9b59da16102feea973767338c18eb1fc09a1f3744e295ef24169c8ccfa",
+    "nacre/shell/services/NacreProfile.qml": "71aeacc967d80bb96e7665ea755547fcc3ffe630ee20479c20d90604b63423a5",
+    "nacre/shell/services/NacreSystemUsage.qml": "d03074b8aea16f4d2d5d8ac248ec0ddc8db7c9b4204303db6f151deeaee584fb",
+    "nacre/shell/services/NacreTime.qml": "c92f2d7d737e6f0991ff8620e61b6079ed52032f05a543059bc2a61c106f90aa",
+    "nacre/shell/services/NacreVpn.qml": "90d6ab3651d0723820a594021e03d99ca1dfcb8dd8daa11ce3b35a7aa2d91dd1",
+    "nacre/shell/services/NacreWeather.qml": "0f8196c7dcb678e4511f54f54336bc0da552c8c9e40a84f6414c9a712a75d0d4",
+    "nacre/shell/services/NacreWeatherPhoto.qml": "c4e501ba586f5a722748b66ea417db0fba73b12f33695b7d160fe8d225a1b15b",
+    "nacre/shell/services/NacreWelcomeApp.qml": "3b89d7bebf76402f01cc278bc57edf2e562d8fc55a7e353e8769afb618bfb1e1",
+    "nacre/shell/services/Network.qml": "94c33b4c4f349959e77db340074e9e98c3673fcf0a1e7e29ca11bb79484acf3d",
+    "nacre/shell/services/SidebarChat.qml": "8a641a052ffc2b02683128cdca25ed4dc3daefca332da8329678e39c105fabcf",
+    "nacre/shell/services/Time.qml": "45643f589ebc558bf2dd95da809e2ea2bbc6e8a91e3b068c47bfc88d776082c1",
+    "nacre/shell/services/TimezoneSettings.qml": "0f1b82428d47e02ab73712cc542c46783013dc763ef2072377993a6510d1778a",
+    "nacre/shell/services/Updates.qml": "76efcebef74b216300ebd1eec9660ce80f2bd9e7f78722a673ed3e4098260c87",
+    "nacre/shell/services/WallpaperPlayback.qml": "0acd35b72393fee2145527d782216ffb76a4523b4f9f3405828eb0b5ec420445",
+    "nacre/shell/services/Wallpapers.qml": "912ee6f678183c1e3034d231394fcb19c869791604abc1cfe2636bd614ead465",
+    "nacre/shell/services/Weather.qml": "1ec570e00871bf214bf7f3d40b71feaac40e7eb618f8e0031750001f79944775",
+    "nacre/shell/services/app-search.js": "b4434c818401eee55c1d1f11f573d57db937ef75199ca7302287355679933e4e",
+    "nacre/shell/services/colour-data.js": "1fb2f44c5d6870af2b4ae66063dc9b075f11428be36d2e3e53eb37d80f7d72e9",
+    "nacre/shell/services/resource-data.js": "0df7b037323361cd29b72b6ae29d1849aec08ec8db542f947f553abfc68c03d6",
+    "nacre/shell/services/weather-photo.js": "79d54278eee0380b8dd63441b79f4058d74bcae29a400034b883832886cbe8a2",
+    "nacre/shell/services/NacreBatteryAlerts.qml": "ae8166ac387d42c5697652f99ead9457d3499de74e758fbcdd58263c78a90769",
+    "nacre/shell/services/NacreControlPreferences.qml": "b9bb474973c187192129d5427d5dde93fc95b659755ea07b331877bbaa0c50e8",
+    "nacre/shell/services/NacreDashboardState.qml": "4188164a0aa83fd62692ab61296767d1c296cc36775c76473766e830e3480341",
+    "nacre/shell/services/NacreMenuContext.qml": "ca4851589196d85f8f889f7591ca8d39855314bead49ca35a6a6cfc537f7ee49",
+    "nacre/shell/services/NacreSoftwareLibrary.qml": "d367ca5dfd06796365132b19f54601858a12c23a2e79bb4f0bd616dee85ce485",
+    "nacre/shell/services/NacreSettingsApp.qml": "f6bcdc7881c33ede65467f02e5e4ef8be6cd73da8919e4f12183ad68cc316362",
+    "nacre/shell/services/NacreWallpapers.qml": "a3eb795e13fe15369dbe4e9f7e5ae3291f860fd05b9e6519eafcde9a114272b0",
+    "nacre/shell/services/NacreSettingsCapabilities.qml": "564fee6c961b943457bd34130f03e3f980ced297e2ea591957b0509a5b25f996",
+    "nacre/shell/services/NacreSettingsRegistry.qml": "d942bb56c23878ba642dce57dd5e636d4cbf7fcb5c460831bf68da1c254f6707",
+    "nacre/shell/services/NacreSettingsStorage.qml": "f31fe4204a954a10d65443f5f8fe0858b141b846fdd16cc876bf576b653031c2",
+    "nacre/shell/services/NacrePowerPolicy.qml": "6327f6e0e701ea0027935d9c83ec7a086cfc899dc7e1dd4ea76d08fd3234b03d",
+    "nacre/shell/services/DesktopSettings.qml": "f7ea8c4fdc6844f2962480669b236242665496dacc029faa4e56aba29704202d",
+    "nacre/shell/services/NacreSettingsProvider.qml": "9da6ee896582029fd610376c8ed154ceed484141562ac28ab56354a611390115",
+    "nacre/shell/services/NacrePanelState.qml": "ee4021df410ff8f520afc0722d48db449cda239ed5e2ac08bb6765fbefae48ea",
+    "nacre/shell/utils/Icons.qml": "85aedd34f87102def354020a790811519f8a5a70d6f59e242d7279b4887a16a9",
+    "nacre/shell/utils/NacreIcons.qml": "05e60ab81c2fa6c300cf2eec52ff93e8b22ec4b469adb76dedaed303b4daa32e",
+    "nacre/shell/utils/NacrePaths.qml": "3a4e75621369e1f062c27fb4670c75afebed4dbb55de7a65f6bd3de4c911eb8b",
+    "nacre/shell/utils/NacreStateFile.qml": "cd6a6c1b6aa68c0f75d5bcb5c19253c4696b349da77dbda447bc7a64cb77d886",
+    "nacre/shell/widgets/ActionButton.qml": "5060386498a043477b4fe8ba9a2925c8e25366048090a942ba0c60fae0a18abb",
+    "nacre/shell/widgets/BrandLogo.qml": "4d7137d3250e1e28a2f4242f0e6e94ed9df68cbcc7e131d74401e1bca33c5c61",
+    "nacre/shell/widgets/FastScroll.qml": "4c3acf9ad11f2dba8b3f9321e4c59a5c92281ea293f11bd2975d5f4e0207e95f",
+    "nacre/shell/widgets/NacreAdjustSlider.qml": "d27c829555f907c909ef5b4de4bbfe19ac1df4a7b88c69ba12d26188a4d8fe8f",
+    "nacre/shell/widgets/NacreAppHeader.qml": "9765210f29f868e02ddd40d21876375ca1c03b3d0a037b144607592640c47e31",
+    "nacre/shell/widgets/NacreClip.qml": "888291e85776d4e304c69c04a4040e3258a1ace634ae0a58e53674306345a818",
+    "nacre/shell/widgets/NacreDockFilm.qml": "14f74e2029c26ecbf96dbe6f3813cf5a17dd7d4301fc6a5c82830c2f19a548f9",
+    "nacre/shell/widgets/NacreDockTarget.qml": "89347395277315ae07f06aa421a89142aa0a7a8035135bfb807d2ff754269c12",
+    "nacre/shell/widgets/NacreFrameBarrier.qml": "df329db79ad47a5b0379770ef564956dc11fbe2f13e4a1907560ae41c4b2268f",
+    "nacre/shell/widgets/NacreHoverCue.qml": "3a90ab4868314c068985a2720ed3badce7deaca189d703e21c99e91e2fea86d0",
+    "nacre/shell/widgets/NacreIcon.qml": "70de63d9275e397a72ed6d764f011b5db3909f97a62b514bb4363ca7aa06769c",
+    "nacre/shell/widgets/NacreIdleLoader.qml": "d1ebb3c6c02476644207fc6cecc73a32e5d87f95ee2baaaa8851a4e434fc374a",
+    "nacre/shell/widgets/NacreImage.qml": "9d6397784a043251ec189feb95a7726f5e3eef0a452b73b2e4d5e562f590e083",
+    "nacre/shell/widgets/NacreInteraction.qml": "b3db54f1d38ea393576de4960936871d3fc0c79cf62ed5c092b8ae51f2e08c8b",
+    "nacre/shell/widgets/NacrePanelDrag.qml": "719448dfb524fe304ed8aadaba7c54af253a1a1f51935a7f949b5b2254187649",
+    "nacre/shell/widgets/NacrePearlBorder.qml": "bd7daaacb498174129753133d7e6855d0769feb37a367cf4419056a68ec9a9e9",
+    "nacre/shell/widgets/NacreRangeSlider.qml": "a76b85e3fd0ae226ead6b8fcf7d1ab0f473005ba1ed7cb9252f1521806c782d0",
+    "nacre/shell/widgets/NacreScrollBar.qml": "30032faba82f97aa598fa1ab68127c867910552b9f2657de29dbe5e307a4fae2",
+    "nacre/shell/widgets/NacreShortcut.qml": "4429e8d06510377ffed61377d82d2b15d6b7b570ee37fe01869130ace2d6c108",
+    "nacre/shell/widgets/NacreSurface.qml": "fba49ed08619e095e596e4fc45bcea0c5ee7c2818f4f7e7706f898f809cafea9",
+    "nacre/shell/widgets/NacreTabStrip.qml": "0ee5d233fc1efa64dde9779ade6aa2ec93595e5223dd5fd1b6d151599e0c5d15",
+    "nacre/shell/widgets/NacreText.qml": "6da7855d881f877f193d2972808797084dad4d3f39a30cad69bcb8c302446031",
+    "nacre/shell/widgets/NacreTextField.qml": "f5094d7143e5375070d8ffe4970c997d1da683ba0286985caedf485ca1e7f5b1",
+    "nacre/shell/widgets/NacreTokens.qml": "fe2e37013dc027bd5a0a4bc8e3dec4d242e314e493407d33d14c91f8f1c36bbb",
+    "nacre/shell/widgets/NacreWindow.qml": "5ac820cc9a998f3eec78382f8d75b0093a9a9dcd9620346a1d042fcbf9e7c65b",
+    "nacre/shell/widgets/size-scale.json": "24e3c4609c06592f710561b6ad14b9724556c7d127f22094f7a20c0bf2b3b170",
+    "nacre/shell/widgets/NacreFrameLip.qml": "6e40f4b0377aec1ae066b8d477b5b6156489c1366724e98eee73a34accc62575",
+    "nacre/shell/widgets/NacreEdgeTab.qml": "8ac08a4748abffe46c69423d82d2d2853f3fe3bad4fa698277c84a264f058153",
+    "nacre/shell/widgets/NacreHoverDwell.qml": "dcb5ff59fda7aa79e4edfd1720f0949860eec61c60fb9e84e2640ae1e37ab815",
+    "nacre/shell/utils/scripts/notification-images.js": "ca9626e32f62a93deb376256c9319c2bb5e8d6e5174fd385cf2851119f0c2473",
+    "nacre/shell/utils/scripts/view-state.js": "6a7c3bb43af1619bbbe32344f228f32ce3a8de12fd2397dfc5cdb74a96e78053",
+    "nacre/shell/utils/scripts/wallpaper-rotation.js": "354c5acb3d639658d0010f1572341d048be08c8c521c533c54bb97ae30daadbd",
+    "nacre/shell/utils/scripts/wifi-networks.js": "beb843d76a5626bc5ce7c9f504174f8e3c942f99dfa3737c316c63e48a47c31b",
+    "nacre/shell/utils/scripts/window-title.js": "48341fd634d3c51d12e1b992485f0c2f224650b0d5c2d319545c795893584aae",
+    "nacre/shell/services/compositor/HyprlandBackend.qml": "48c9c7914cc6c8e17c14b12e9d6bf00a526d0c23de531c579005f4829de12a1d",
+    "nacre/shell/services/compositor/HyprlandShortcut.qml": "7e0993b176abb60e58bd87e26ae6613c5df4c5acd2c66bc9a68b14255d61c1c3",
+    "nacre/shell/services/compositor/HyprlandWindow.qml": "28181cb9d69307eb6baa910907d8fafe1526e80059f9b50f004f0c21bb276aec",
+    "nacre/shell/services/compositor/NiriBackend.qml": "7c4d352b6bedaa8d56327a20c5b98ff46ca2549328faf34a9d4348cfdcb6422f",
+    "nacre/shell/services/compositor/NiriShortcut.qml": "b02c3ba7aec68b4632ef78c75f84def35a23ed63da223d995b7b8272b9cd656c",
+    "nacre/shell/services/compositor/NiriWindow.qml": "abad6ee776cb7600dbd90c0abd7bc7a1887d3a76caf23620028e1302bf27080f",
+    "nacre/shell/services/compositor/session.js": "d1323b2e63a734a9ac22026c69e4edb82a71033e4dfb4e09dc749947eb07d309",
+    "nacre/shell/modules/background/NacreBackground.qml": "587ddc0ae638757e710cc8f34b43e5b7aa40e0b5dbca478bbde424f784df45f3",
+    "nacre/shell/modules/background/NacreDesktopVideo.qml": "1251e80fd162da3b01c2578c99d3ea6b873f32d6dd06cb66d3692dbda47fabf2",
+    "nacre/shell/modules/background/NacreWallpaperScene.qml": "1d1b0e6d1be30198ae5f0a31e2bede75af769f7dd881a90a6a033947f74c7324",
+    "nacre/shell/modules/colors/NacreAccentTarget.qml": "fb76f5452c49f21ee601cb133ec4c1ad43dad40dc2f62c0ec6cea18fd5e8a268",
+    "nacre/shell/modules/colors/NacreColorSample.qml": "d59b231bed6695f88d10113f715a5aa52ec0ac4bbaaa22873cc6f6b48d4dc0f5",
+    "nacre/shell/modules/colors/NacreColorsHost.qml": "f7e33aee2dbae1f39eb25f28aeb565f2427d825380d83be9505c21726811e291",
+    "nacre/shell/modules/colors/NacreColorsView.qml": "a5ddf227397b8903b06bf6a6d5be3aa90dec6c933471cb2bc8fabfbd71c47eb2",
+    "nacre/shell/modules/colors/NacreColorsWindow.qml": "92371d5cf5957dc3469a55914301309f4681db3c742d24270cb8d50a7bfc3a93",
+    "nacre/shell/modules/colors/NacreThemePreview.qml": "c5c3def523c07ec10f46b8534450b8f10b1dcd4c9e4b3349646f6f17618785a7",
+    "nacre/shell/modules/controlcenter/NacreBluetoothPairing.qml": "6ceef62f914dcbc3859c6f120f5f3e4fcbec6dd2e6509b685929b8433a660416",
+    "nacre/shell/modules/controlcenter/NacreControlAppearance.qml": "1106f5b2617afcb47e961b7459f713a030c7f04c07273033a4d7e1bc3c9eb954",
+    "nacre/shell/modules/controlcenter/NacreControlButton.qml": "45a35e10bf3c6815516c8a052a1136950e0ccc6e98c9496bf9fdc83f5e7727b1",
+    "nacre/shell/modules/controlcenter/NacreControlCatalog.qml": "67d3992dcbc1dae80e5e1fb05c7e6ba0305dec3972403763d0ed2ecdcb947721",
+    "nacre/shell/modules/controlcenter/NacreControlCenter.qml": "1f125c261143b44b3a15e427685096e82e919ebc74382182b3ca5f02f32421fe",
+    "nacre/shell/modules/controlcenter/NacreControlDetail.qml": "eed7c95050fe58bce2a49abcdb1e8362d1b713ad18082e642f71699cb5539085",
+    "nacre/shell/modules/controlcenter/NacreControlDisplays.qml": "08d575ab542e9ee84a196f6d7fc378ea89fff17c1ad0e76ad2bd7c6aeae7997a",
+    "nacre/shell/modules/controlcenter/NacreControlLevels.qml": "60983f9c2d25f1237c4c39543b7b1c5f167f41432a24b7c41f93502cc5e24984",
+    "nacre/shell/modules/controlcenter/NacreControlMedia.qml": "d04df351fe1c23893457ea408f3448b5f448567a22c28e14702eec6d423454b9",
+    "nacre/shell/modules/controlcenter/NacreControlNotices.qml": "0e6d73861ac5a522e7a391a31a979a43557282b0d04fdcee4f9e637f03fe81e0",
+    "nacre/shell/modules/controlcenter/NacreControlOverview.qml": "58e9dbd1d8f3284761390c4a3e9aab1b29333f8d5dee608ab5990df5ee9ba948",
+    "nacre/shell/modules/controlcenter/NacreControlPower.qml": "b8208ac357b9b41566434960c8be5f184f71e3f485462d54810ceb64702d95a4",
+    "nacre/shell/modules/controlcenter/NacreControlSession.qml": "cb15fb67212ae1c7ac5dbb14230e7886b5be863ac5675ff10e29122741680804",
+    "nacre/shell/modules/controlcenter/NacreControlSlider.qml": "c25ff732103cc75ef3a826b42899ab87b3487e87e61a4c5ad67e1d2e88c34eb6",
+    "nacre/shell/modules/controlcenter/NacreControlSurface.qml": "7a19d374ba69b84e9a40a134a293848424646d7e2918e748cb432d5a39a4e1a2",
+    "nacre/shell/modules/controlcenter/NacreControlSwitch.qml": "8dbc3f3e6f2a5c33fbfac00d1d91ca54209da094670549edaab067a7220b5d0d",
+    "nacre/shell/modules/controlcenter/NacreControlTile.qml": "e1173b55d478f3b05f3890fba8c7db680f5fdf38f9f1396428adaa8e97449b58",
+    "nacre/shell/modules/controlcenter/NacreControlUpdates.qml": "2c6ca9b12c9acee9548b99b37f2a2bf21c1aae364a72153494dd3d2e145842f5",
+    "nacre/shell/modules/controlcenter/NacreControlVpn.qml": "42cb339600ca0ee8eb4c1ae7e8ee3fc763fec240e57e5d4a01d22a22402460ac",
+    "nacre/shell/modules/controlcenter/NacreWifiSaved.qml": "e0036ba826bdca722af077d4664cc5816c7915374ac88f4f616417367cef9c72",
+    "nacre/shell/modules/controlcenter/NacreControlAddOption.qml": "4a0239cdc70e822000e344c0e23e72f076c8fedb5ab734cd2c5a7f44c145181b",
+    "nacre/shell/modules/controlcenter/NacreControlEdit.qml": "0174c73e4ed49e8f1b1c0bfc90b2e22ebb1f7886d5fa9ad7e39eb8e2716985d3",
+    "nacre/shell/modules/dashboard/NacreAlbumHalo.qml": "cc82d33e75000a6beb29c64edb78b430a72dd094a722557d6d33e8348547ca5c",
+    "nacre/shell/modules/dashboard/NacreChamberGauge.qml": "c08f6a98fca03b3d72fea2b057a34992ef3f72ee08f2c62f590543f34af6ab30",
+    "nacre/shell/modules/dashboard/NacreCompactMetric.qml": "a7f4c5193e09c1a1f3b77d1a7dc1c355089286f1323097872347f0d72b43003d",
+    "nacre/shell/modules/dashboard/NacreDashboardHero.qml": "a1f6ce5497ea4c894ee7f7ac9c07fc57b0f3c165559782b5c4b1de6a29f12900",
+    "nacre/shell/modules/dashboard/NacreDashboardMetric.qml": "147ba058d62d4cd79fc4f6595aa993c18972b97a4933276b3b24a60cbe72d8e1",
+    "nacre/shell/modules/dashboard/NacreDashboardNavigation.qml": "3f0dcfd46b75c9ea397d6e55a580ea3081e98f2e6e153cf60a910fce3d2badb5",
+    "nacre/shell/modules/dashboard/NacreDashboardNetworkCard.qml": "f60d445da47132e6131456bbfb472871d2c745ece6304cd60f740d86f2ec7053",
+    "nacre/shell/modules/dashboard/NacreDashboardPanel.qml": "62149b31da39fad7841da166174e9719f35b02b8b14a92202e205bc4b7196e15",
+    "nacre/shell/modules/dashboard/NacreDashboardSparkline.qml": "a0d1ab4acbff852372b972d487e06c3d326f1bbeb00aaf2f51c6b5ec531b51fc",
+    "nacre/shell/modules/dashboard/NacreDashboardSummary.qml": "c4298fdd2791cc558989fc1050e354190f66bd8984a1aa63675015ca9782c526",
+    "nacre/shell/modules/dashboard/NacreDashboardVideo.qml": "3c0cd6a5e7155b9b466c7a0b614954fd1767c0570e7e0a31e9cf219780de418d",
+    "nacre/shell/modules/dashboard/NacreFocusPage.qml": "003282c44af50a9a7bc11afb3e43dd1ee4f1ea1df53c5b8355ca86aab97b78f2",
+    "nacre/shell/modules/dashboard/NacreGpuMemory.qml": "8ec268bf0970e49c3145a9eaec641c9bfe3b5c67a9546540145941184b572388",
+    "nacre/shell/modules/dashboard/NacreMediaPage.qml": "eb43f84b588aecb2c625c49baee7f3a66711b9a3938f9d8880adde17f0984b9d",
+    "nacre/shell/modules/dashboard/NacreMiniPlayer.qml": "46ef9943163f5ec50e95744d413fcc847c94920e48309603f2001fe1707d252a",
+    "nacre/shell/modules/dashboard/NacreSystemPage.qml": "ae271432abca2bbc9a2a270b007b49a51ae033a2a52ebcf736bd9af18c69fc2f",
+    "nacre/shell/modules/dashboard/NacreTodayPage.qml": "f0507a34958e481d449b67c7a000572d2ca8a1cd9d314ee08112add075b7afd2",
+    "nacre/shell/modules/dashboard/NacreWeatherPage.qml": "b761fcd5393e390702f7e04b70b5e9680c39b629a2573fad0f0af2ca6d391468",
+    "nacre/shell/modules/dashboard/NacreWeatherSky.qml": "690bcd19224a53d3bde94388f381e5961a86ae5be1f563cc8b4d582fc1c78c82",
+    "nacre/shell/modules/dashboard/NacreDashboardCustomize.qml": "7a2dc3f9c7f1afcc54e0fb0bd815ccce6ae9c48ebba562e28b735ea75796f772",
+    "nacre/shell/modules/dashboard/NacreDashboardCustomizeSection.qml": "886702379fda47413f09a131254da134828d3b3f70d6fb5ecfbfd8d3e70fcc2f",
+    "nacre/shell/modules/dashboard/NacreDashboardExtrasOptions.qml": "c3dd8a5c6c0ed3e782dcc52df506d4b8f7f48af882bbb23c8994dd9c3f6a60f9",
+    "nacre/shell/modules/dashboard/NacreDashboardToggleRow.qml": "c8ff6ddc6b845a41046dfe06e3e531d517fba002ead5c7d0e353a994ae9e5c4a",
+    "nacre/shell/modules/drawers/NacreChrome.qml": "e28353eb9712bd7465d9aa816cbbfbcc81112648d8ca8ec2503e0435e10fd70e",
+    "nacre/shell/modules/drawers/NacreDesktop.qml": "87966f3965dfab310f7caa28e755d54a9ddc40ad80b6b8eb73c44d299d0c2fe7",
+    "nacre/shell/modules/drawers/NacreFrameRim.qml": "f7e8ad9fa199d747fd62dfc7e0d47a72b1ca59895c35640e810f7890af47ad12",
+    "nacre/shell/modules/drawers/NacrePanelHost.qml": "00ce04ac1325aba1e661de602764306bb44cf32ef33769bc54279eabca25ca99",
+    "nacre/shell/modules/drawers/NacrePanelMask.qml": "9b49f61a517943035c613fcca5a1aa0137f16f8341f3a6a71caa301662871a2f",
+    "nacre/shell/modules/drawers/NacreReservedEdges.qml": "9ea72dab7f30666616002e04fc8b7415c0bf6584643bdcb394d8b6bbaddf4258",
+    "nacre/shell/modules/drawers/contour.js": "fe65c86cc2860bb9eed25f46689a5a64fe0d3c17ee6933973747ff41100454b3",
+    "nacre/shell/modules/drawers/layout.js": "13b266b82ee80b3194180e3ea44da072d8f3fd431748180d9fc7aba8f771655f",
+    "nacre/shell/modules/drawers/registry.js": "5fe7026a54c4db6e623f1da07fd01d5468fc0b7a04a814d6d2ed35bb64b34e0e",
+    "nacre/shell/modules/drawers/NacreFrameLips.qml": "8dba10296ba5bbd931e2291dc3507b25723f5392836462ab6fc7cfe6f5e51fa3",
+    "nacre/shell/modules/drawers/NacrePanelInput.qml": "17d3defdd03bc57dae65927fc84bf8dd2cdb8f1dc65143fa27aa5ed5f1c39e8a",
+    "nacre/shell/modules/drawers/NacreScreen.qml": "57a84cb7ff1e5955ed7274b8c2cfa3da19b5e5dca82dd48fcfedf78523297dc0",
+    "nacre/shell/modules/extras/ChatPane.qml": "4aaeea3cb0e3f8fd2d82c92f6f5d0ecf013c8cad407973d97d456072cb45b08b",
+    "nacre/shell/modules/extras/Clipboard.qml": "8a78089fe92b4bf5781d36b83a3effbd3bcb3a606023f5ffea648731a5b7c9cd",
+    "nacre/shell/modules/extras/Keybindings.qml": "3b050bd9172dd0d095ae1dd239a417691d1260a375082529966a2601cb1f92e3",
+    "nacre/shell/modules/extras/LeftDrawer.qml": "dfc4ecff0871f8de9b7bf5c34e434ed589ae995146febe072de1b2a42c59241c",
+    "nacre/shell/modules/extras/Overview.qml": "ef003e9c8ff838568ebec78acec3e1f65fa4bca867a8287e9df28a1e4a0bab89",
+    "nacre/shell/modules/extras/Palette.qml": "fbcbe89a1d1b77cc5140b5c90cdaa92a9ff4067fb09fb94259ba9dd1cf9708ea",
+    "nacre/shell/modules/extras/SearchSurface.qml": "3c133017d52b5fbe23230b26621a2066af9789c4b13378cc1d306a671dc906be",
+    "nacre/shell/modules/launcher/NacreCalculatorPad.qml": "0e50cd7cbeb815c455538c13dd2bc5e84a9f80d515454d0179fc0df7508ded50",
+    "nacre/shell/modules/launcher/NacreLauncherPanel.qml": "6a3d3c3398170cb2e4589e068c4053600fe67705fcf44adab541092357b8f9ed",
+    "nacre/shell/modules/launcher/NacreMenuButton.qml": "cfe0aae767104d09ceedf992d26bbc0a84208374215611a363e61d0290fb45be",
+    "nacre/shell/modules/launcher/NacreMenuForm.qml": "885f582e2328b865ba09827bf1c3f9ca90cc5fdefa4635cf67f09b49bdd35bce",
+    "nacre/shell/modules/launcher/NacreMenuIcon.qml": "0d9d4ca2994b52bf649ce173d01762aca88b858d75a20f52a8981ade0e012c97",
+    "nacre/shell/modules/launcher/NacreSearchPanel.qml": "499bdbdbe92337848cf171635ca86b502691c345dfa360b5209ea8b8455f0738",
+    "nacre/shell/modules/launcher/NacreWallpaperBackdrop.qml": "c4464a8b3cc54c10b1b00885f7c63c79dae0953266f777e644f5fbb4bc278dc2",
+    "nacre/shell/modules/launcher/NacreWallpaperHex.qml": "74ddf62742ee789ed2e7582b0690c9921a32ffa5434e3224be4587f3a08371f6",
+    "nacre/shell/modules/launcher/NacreWallpaperMotion.qml": "42a63b2933d2cc2f37ce2e68888ee4d665a9ace5420f38a350ff4fc288b93d98",
+    "nacre/shell/modules/launcher/NacreWallpaperPicker.qml": "2238d9bc058b08395fc4c64df34c1b84048031bc4ab4105b7636809d98646fa5",
+    "nacre/shell/modules/launcher/NacreWallpaperVideo.qml": "c59ec20b11824083e277f04998a78221c583b6425c1bd2e7a0c9f4e7bd40d1c5",
+    "nacre/shell/modules/launcher/app-browser.js": "fd8d6f391c099417e880beace082bcf8fbfa587a9cdb77c798a4fa7901e6bbaf",
+    "nacre/shell/modules/launcher/calculator.js": "24d0033686c900dc7c12f958d28db8ad5694dee715dbd5b0d541cae0ca78f1c2",
+    "nacre/shell/modules/launcher/NacreAppBrowser.qml": "21a6a3dbbf787f9968f0fc5f3521e7799d2421a8559d1fd35ae3518ecd14c27b",
+    "nacre/shell/modules/launcher/NacreSoftwarePreview.qml": "9e1c1edacbcca34719e3ee03975fe269bad864de76394116bdcfd6675b6af44f",
+    "nacre/shell/modules/launcher/NacreThemePreview.qml": "f1538ca743e44423699496f3f32d079bd2e437a6862f31ea01e657b2ad8d145d",
+    "nacre/shell/modules/launcher/launcher-sources.js": "d9a34bd9649a4eed3a51f920891ea7bbd3597dcbbac4d7a2f237da45788389ae",
+    "nacre/shell/modules/launcher/menu-model.js": "c0ada71caf243630efed0f5a824bc6b40db5f6565cfa4554fdd1f5c089f9c43b",
+    "nacre/shell/modules/notifications/NacreNotice.qml": "21899623fd7d31e9d8c9e6fd18a7ec216f92328f5e1c2309e7b624e787e6df00",
+    "nacre/shell/modules/notifications/NacreNotificationStack.qml": "0ef5dbabdca69b44df0e1faaec36951c1df279c0064b73a17d1f140e4125108b",
+    "nacre/shell/modules/osd/NacreLevelNotice.qml": "f915747e141dfbabd959d27d0d2a6164686c6cbf4285e72378d6e2b7bc8ad620",
+    "nacre/shell/modules/osd/NacreOsdEvents.qml": "cca2bab6ceeb04e8aff6f130ebe3c0b4476c0e51532d12f89648ca6c895dddbe",
+    "nacre/shell/modules/osd/NacreOsdPanel.qml": "65778b264cfe5a2212d450b5cab9164e3d712ba9678620e61bedbfd545592c18",
+    "nacre/shell/modules/pearls/NacreDockGuide.qml": "f2a2fb2dc0460bbd7ce6272738af646d3361fee53a68a4fc4629439b7234fb93",
+    "nacre/shell/modules/pearls/NacrePearlWindow.qml": "b9874ecfe9cd99a2f9bac5e643865f641518029df77089522fb06d82ffc5f8c9",
+    "nacre/shell/modules/pearls/geometry.js": "3b9b68c4d86b289a5e63c5114119b9a097b2e5ca4a9f254fbfe4627028354540",
+    "nacre/shell/modules/session/NacreSessionControls.qml": "a89cf5474352d3d2405b00f4e621f7ac93d003e33a4fb7ec1a24a93ba76d7b87",
+    "nacre/shell/modules/session/NacreSessionPanel.qml": "3042ff147de53dce4269d1a9feff4e9c239339f83bd06a917c0d33fad59c41c8",
+    "nacre/shell/modules/settings/NacreSettingsHost.qml": "10ed1622dbac53ae884adf6fae2dd8eafec836c8167602ace678a2561bef6803",
+    "nacre/shell/modules/settings/NacreSettingsView.qml": "69493a646103947e2bbaf225973d9936c4a51e215b78c2a96a7ac3c2202e9096",
+    "nacre/shell/modules/settings/NacreSettingsWindow.qml": "0de5586d6925556b392a960a54e8aca9098a7f92ffe307ca53d409fff2d8de6a",
+    "nacre/shell/modules/topbar/NacreHeaderForwarder.qml": "0f87ec01befede94635ad0fb93716063b04952a5a8f7f8cab0a21787629d2536",
+    "nacre/shell/modules/topbar/NacreStatusPeek.qml": "115f3831aac232888de72a902d547600fbb0e287871514bf0f4a78510e546a5e",
+    "nacre/shell/modules/topbar/NacreWorkspaceAppIcon.qml": "9c329a21cb4f06fb8da904120d37730caf97cc9aacc27959211d5c1d371ca917",
+    "nacre/shell/modules/topbar/NacreWorkspacePearl.qml": "a4beafee704f11741b90379a1bb8b82544ab89ee5ae4831f39eb4b5de8f1c42b",
+    "nacre/shell/modules/topbar/NacreWorkspaceRow.qml": "05b7c8011b5a1c798104569861ef8c5c08f83549c98dbda8306477fe148e656b",
+    "nacre/shell/modules/topbar/NacreHeader.qml": "d859b42acf8a7e1a69bff4bdbbb2c6d2550a558fc63e3f5a5865d8c778ef8986",
+    "nacre/shell/modules/topbar/NacreStatusHint.qml": "c5f5451bc4e9d20055625355c09f6da9cf9762d993ba69e0a48f3203860291a3",
+    "nacre/shell/modules/welcome/NacreWelcomeDemo.qml": "2ff09f932831509688f55fa1ce417123d54216e38ebcb38aebdd46800abcc61d",
+    "nacre/shell/modules/welcome/NacreWelcomeHost.qml": "699dbf3c8263e6b712d7a96617526cd019c52af460e81f230055bd1259ce085d",
+    "nacre/shell/modules/welcome/NacreWelcomeRow.qml": "c16afe2cdfd242d55506db976f6e820b6171853861e6763ddce715fd0247a845",
+    "nacre/shell/modules/welcome/NacreWelcomeView.qml": "dd93731a1c6a33559e9715ea3a4751050ded240e7cb92ed56d2ad50e03f60871",
+    "nacre/shell/modules/welcome/NacreWelcomeWindow.qml": "527fd941f447a03504a57b29386576204cacd0fa77a0e4a7f17ba67aa8648cbd",
+    "nacre/shell/modules/welcome/welcome-catalog.js": "5b3a437c27c1fe94255b9ecad21871e4c82f01a7495b2962a7e7f8c356c41bb5",
+    "nacre/shell/modules/settings/pages/NacreNetworkPage.qml": "c5578d07b001cde44862d63eb2d2ad9326908fde23d7d671fa34a404b0834ebe",
+    "nacre/shell/modules/settings/pages/NacreSettingsPage.qml": "a9edc6c728e179cbee4feff9c13c49aa501f595c4248763a1fa315818041b86f",
+    "nacre/shell/modules/settings/pages/NacreAiPage.qml": "37de2a3e21423ae22013be4b6cf044239815717f3edaee590ee45765e0618997",
+    "nacre/shell/modules/settings/pages/NacreAppearancePage.qml": "6d2aaea3dd5b42b1bec0e97aaea78355ad40b4aa946dfbf8aa3ecc59c6340475",
+    "nacre/shell/modules/settings/pages/NacreAudioNode.qml": "6b90589be8ab64de77c4ca21de06e77432e9669b3843499de1eee5ed61b81425",
+    "nacre/shell/modules/settings/pages/NacreBluetoothPage.qml": "84c61d35903f10bb8c442da2bd85542f58be7b79cc0a1a0bbe7d31c5f3231018",
+    "nacre/shell/modules/settings/pages/NacreDesktopPage.qml": "9702a39ff93934730c0e8e82e8cfe23705677a2c8aafa8185e26bd4aad09ad66",
+    "nacre/shell/modules/settings/pages/NacreDisplaysPage.qml": "59b3d03c8aa078d320c72e6a0d1f1de29134a826df27d20212f028feac323bed",
+    "nacre/shell/modules/settings/pages/NacreLockPage.qml": "a965a10ff6fd00dcadf7d66296c1f1395e1c2a2494a1c7c5ce02b8310c4d1d34",
+    "nacre/shell/modules/settings/pages/NacreNotificationPage.qml": "36044a54cc4a7d5560e2e06cd89d2f7b57407ca5a6d865f602360a4a175dc8ce",
+    "nacre/shell/modules/settings/pages/NacreNumberField.qml": "8940680a4eb67cded7cd74502c5d166612e5b4fac52fab29f30dff27a829e871",
+    "nacre/shell/modules/settings/pages/NacrePaletteTile.qml": "025eae4b67be5e9d90697d570e76a2787b54e5e030e1eb7a77dda1a01d02f06e",
+    "nacre/shell/modules/settings/pages/NacreSettingToggle.qml": "64fa1f641a8cefba20ce666477b864c8d317bc4118564f740774a23c1f487276",
+    "nacre/shell/modules/settings/pages/NacreSettingsSection.qml": "0ba67dc2b2ae0d1a03994ff3ad0c2bfedce748f2d181196316cf884dd06fe5d7",
+    "nacre/shell/modules/settings/pages/NacreSoundPage.qml": "8102f94a5717dbef1362d24a7a1d8c535badbee3243ed14ced7837f8d568d931",
+    "nacre/shell/modules/settings/pages/NacreTimePage.qml": "d83985cbe87cca606454d97123d9afeeb68ad04f2ae560cfc9192b15973a59a7",
+    "nacre/shell/modules/settings/pages/NacreWorkflowsPage.qml": "fc18159c423e40073b69451dc0b2686b72b0986f44784ab6d333868998609393",
+    "nacre/shell/modules/settings/pages/NacreMaintenancePage.qml": "3449fb78bd08e90f7dc3ea58156f43698569e946c5e723968e98249d4345772b",
+    "nacre/shell/modules/settings/prototype/SettingsCard.qml": "2aac1f5b93784bc4b07aac91ed9671d11d8c29515073de1e76e71fd588f80ed5",
+    "nacre/shell/modules/settings/prototype/SettingsPreviewContext.qml": "f1aac93e907fc7e04c8d4e2fe1a3a1a5fe6fb039a80e00d6257c1d75e236f281",
+    "nacre/shell/modules/settings/prototype/SettingsRegistry.qml": "61f2bc185c83499fd0ac0f32f0faed693ba10b6830ef7a999ab428920b2c8a45",
+    "nacre/shell/modules/settings/prototype/ColorsPreview.qml": "2472f7818f50c9433caa4c22f6d60e1cd5b3047924e39c82d6acb5c3a3f6c128",
+    "nacre/shell/modules/settings/prototype/PanelsDiagram.qml": "438b65ea1df082059ed467310dd606acae51a9fa93e0accdcc1585c86118609d",
+    "nacre/shell/modules/settings/prototype/PreviewBackend.qml": "53eca496e24c5fc177314fb670785bf9fee26eb9ae12ad9d7cfea8edb4c89713",
+    "nacre/shell/modules/settings/prototype/SettingsCapabilities.qml": "afa776566852d101957351ffa73b45ff1b701634b4069d98aedca7ff6502b80e",
+    "nacre/shell/modules/settings/prototype/SettingsPreview.qml": "565e43bad1a12e9f08b094636277a1c79028cc2520f0dee7795dbe52b2f510bd",
+    "nacre/shell/modules/settings/prototype/SettingsRow.qml": "7e93c205e288e0f2e15bcf897508519b6b72317ae2569f3ac048b121bd223772",
+    "nacre/shell/modules/settings/prototype/SharedEditor.qml": "281e13c5e42798f0590faa0a1e37ff609dbdc6682da495479472cc39d2c080f6",
+    "nacre/shell/modules/settings/prototype/AddonContent.qml": "479a49b276bc17c0bab2bfe250f8cb10b974db23898bf198483030e84348e6d6",
+    "nacre/shell/modules/settings/prototype/EntityContent.qml": "36a04a865e7cc9073b570605ce3a4440d331260c7ac519095fa374f7d62b63cc",
+    "nacre/shell/modules/settings/prototype/PublisherTargets.qml": "a0e1c688bbc5a9513ac5e2c45914a7f4b0618c4e79b558446c78dba3ec0aad3b",
+    "nacre/shell/modules/settings/prototype/ShortcutsContent.qml": "b2d7828c1f9f1d969c04c0d636a21cd74fd6654b03aac24982e494446b9fa34b",
+    "nacre/shell/modules/settings/prototype/WallpaperContent.qml": "883f7fc5a13ce00aaf226c3927fa2e1fdc6455d99626cb74ac1bf26f3f8428a9",
+    "nacre/shell/modules/settings/prototype/DeviceContent.qml": "58f0c4a0c6636798b27395a34d07796df4657099f05f3c583c5204fc8cebec85",
+    "nacre/shell/modules/settings/prototype/SettingsStore.qml": "a4ec03be92cfae726926d0e2e2b2273c6fbd9bee0634d8affc9c2e6bca77a055",
+    "nacre/shell/modules/settings/prototype/SettingsView.qml": "ddde890c9d8b920b1ce56a029b6e616334805499f5b577aa034aae3f253016c6",
+    "nacre/shell/modules/settings/registry/fragment.schema.json": "39b3683323038fcf5a62abdf13572b06ebe40556f1aacf4740c95050ad801da6",
+    "nacre/shell/modules/settings/registry/manifest.json": "432cbe76e8c3df85fe224f726b5fd1af578aea3eade4c5c2a7ad1bd45b5b1ab8",
+    "nacre/shell/modules/settings/registry/navigation.json": "da2dbf267d748efa68fd9f91a18dfb3592df05c84beaa5512f0aaeb37b7026fc",
+    "nacre/shell/modules/settings/registry/settings.json": "bb11dc7aaa59c4a68555b5810b753533bb7beb343613da85ef98ab079be26f0f",
+    "nacre/shell/modules/settings/registry/registry.js": "d0d5f68b924c017ef9c70e0e68826c435be90064eadfb2b11dda960e4bcebc4d",
+    "nacre/shell/modules/dashboard/extras/NacreAiUsageExtra.qml": "1b4434d349150005debb84e9c7060e336c1dc96cffc6939fd3fb48660d5fc2a2",
+    "nacre/shell/modules/dashboard/extras/NacreBrainExtra.qml": "83658d5e8a574e1a43a85006d5c50f56a27fdcf85099ee0ef51ba01a6072c209",
+    "nacre/shell/modules/dashboard/extras/NacreClipboardExtra.qml": "1908df63ede9db43d799a1f8fb5e7279a85da846fb4850770687a133433ba449",
+    "nacre/shell/modules/dashboard/extras/NacreDevicesExtra.qml": "2f925a7bab1fc8bbf2c65ca3bd5c212238dc863abe6e89b096f4bf12a21fcf92",
+    "nacre/shell/modules/dashboard/extras/NacreExtraFrame.qml": "81ac77d98d3c3a0b3fe9d1bd79f245d016b7c069184c1dfe397389fd9379f203",
+    "nacre/shell/modules/dashboard/extras/NacreExtraRow.qml": "a691ef7b1ac0d0dd661463d8942aa137c312a2bdcf736d096b4b150acc4f24c4",
+    "nacre/shell/modules/dashboard/extras/NacreFocusExtra.qml": "45d4a2a3814c5609f0bb45a9b7d22ad1c36ddb4abde15df14b76ea016e82fbb7",
+    "nacre/shell/modules/dashboard/extras/NacreNetworkExtra.qml": "1b4a94619c50210242731ba48d5024b4b8554a4d2ee376daea8bd99c4c54446b",
+    "nacre/shell/modules/dashboard/extras/NacreNotificationsExtra.qml": "3ae6ac51ec94e0b18c02b0df2b426af8ae1f8c36ee6c4ce9a92e05188a687f3c",
+    "nacre/shell/modules/dashboard/extras/NacreScreenshotsExtra.qml": "73845f4f53f3b21ab92b3d11829504b8b1cf456293d9d44070e5f672f0022302",
+    "nacre/shell/modules/dashboard/media/NacreAlbum.qml": "07e50aa8b9ac781a659d20b49a07bce878afcc067abc3e89c0fa4b52ebac782a",
+    "nacre/shell/modules/dashboard/media/NacreMediaButton.qml": "2e4eba895e4c890a510de6798986fe985d3cd076442f1af316b2e12addd34eaa",
+    "nacre/shell/modules/dashboard/media/NacreMediaSlider.qml": "d60a7cbc756f37d7d82d5a619382925101cbe80a076c282a2c7545531445263f",
+    "nacre/shell/modules/dashboard/media/NacrePlayerAudioLevel.qml": "1d87f2948351c11559c7249168a696987b8d96c5b5a82843d9576a9405c2548b",
+    "nacre/shell/modules/dashboard/media/media.js": "a7f959d6e3d93ed5d843fc57f29676c523b7de5f1a0abcfb920849a6b0581141",
+    "nacre/shell/modules/dashboard/overview/NacreCalendarCard.qml": "13c4f6b9bf1c2343f96e37075bdef570e3f6d9d9f8d68722f4da7df542466826",
+    "nacre/shell/modules/dashboard/overview/NacreHostCard.qml": "79c82eb8cab7dc6045492bcbb9981b19c256c12186fa2396e9fceee399b49d0c",
+    "nacre/shell/modules/dashboard/overview/NacreMediaCard.qml": "a2b6dec7ffde6805fd4898e91fda5fa5c1ec237f6b53b418914cfdf5f9966b8f",
+    "nacre/shell/modules/dashboard/overview/NacreOverviewCard.qml": "6804370e4676c092957d89db238c76b5201257fdb168a90acff651d243609b93",
+    "nacre/shell/modules/dashboard/overview/overview.js": "d2d1465fad55a852501292db29d7701e2d678c1281888469da3e339c756d4a40",
+    "nacre/shell/modules/bar/components/NacreActiveTitle.qml": "29d4c4cf1d6a0114452ad6d0c153d9d76add1b4a8879b3fdef1fb8e9fa838cc1",
+    "nacre/shell/modules/bar/components/NacrePowerButton.qml": "9d7cec5bb74b6b072c8ba21b23aada7b1b65baa09d4c96f649f805aa5cee7e12",
+    "nacre/shell/modules/bar/components/NacreStatusIcons.qml": "99f407fe58629aa311fb255bace1e099af7ca0f0a776a59a7fdb9f47353c528e",
+    "nacre/shell/modules/bar/popouts/NacreBatteryPopup.qml": "c6f253f29b403efa74ed5fc629eba333470fb6a7a378d3439474d39a40fe5043",
+    "nacre/shell/modules/bar/popouts/NacreBluetoothPopup.qml": "d5a3090f204793e778ef8afd6ecbd6443f0cfd284d0ee2ea452d09d19bcb7b60",
+    "nacre/shell/modules/bar/popouts/NacreCalendarPopup.qml": "e0eb53ab481d30de75bbb8b366c4e1059cea43b62e187a3ad51fd1653551b7d1",
+    "nacre/shell/modules/bar/popouts/NacreHistoryPopup.qml": "40032b69e96cc08c15f9c74985176f7aa6e816434558fd26b0105c30543f51a6",
+    "nacre/shell/modules/bar/popouts/NacreNetworkPopup.qml": "014565e55ca9f708d67142f0445f425fe4d8ef2b8d27a11011d14dd00f46517d",
+    "nacre/shell/modules/bar/popouts/NacrePopupContent.qml": "50248f2df15e5d1dc4bc52028e4b32820b979f966dbf8ba6b5c7041517792af6",
+    "nacre/shell/modules/bar/popouts/NacrePopupPanel.qml": "3dcbc79d8aebf6028ca4acdd334b18342b0dba03f63c39f1e158c6762e02b6b1",
+    "nacre/shell/modules/bar/popouts/NacreQuickList.qml": "574cf5a26ad2bd301b64651e79292239943cd00fc26d509aa91ea62441eb7189",
+    "nacre/shell/modules/bar/popouts/NacreQuickSlider.qml": "28b6dc554a7be501f9be5586631680797a2445288e122e934d48e0da4368677e",
+    "nacre/shell/modules/bar/popouts/NacreSoundPopup.qml": "56ba1c422d9a4e94e3172215d12bc0b863aa05346e2968c512f3200bd8464b42",
+    "nacre/shell/modules/bar/popouts/network-groups.js": "d39100bf91ba4c0816a2c91f1a02f9619b329f6ebf88c2e7e55f4676059b8c4d",
+    "nacre/shell-tools/theme-targets.json": "744f98c10e07fe12f2b09ab3464dbbe89ca39ba03e85351e6a3026b0f4cc81fa",
+    "nacre/shell-tools/nacre-state-files.json": "f110d3eb8b89255bbf772b927f10fa5af6d0525e6ea5f071afcb5c1ab4c3fbf1",
+    "tools/settings-preview.py": "ea8ff3d25d913a618602cf9707e4c3a61091c3f8bb3bfdb1a33f2a2d4c07fda2",
+    "tools/settings_preview_fixtures.py": "3bb791fa588495b7bcbcbdae7bfbf034151b0e62a6cdae91f8422c911604772a"
+  },
+  "capture": "Native Qt grabToImage on the rendered window surface inside nested Niri",
+  "persistence": "Native click/hover and light/dark writes acknowledged and stored; choices restored; invalid type rejected",
+  "capabilityGates": "battery/AI routes rejected; legacy AI routes to Add-ons"
+}

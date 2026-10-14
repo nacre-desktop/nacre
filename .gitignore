@@ -58,3 +58,7 @@ node_modules/
 # Reviewed Settings prototype evidence; synthetic data only.
 !/assets/screenshots/settings-review/
 !/assets/screenshots/settings-review/*.png
+
+# Public synthetic evidence for the Settings migration.
+!/assets/screenshots/settings-final/
+!/assets/screenshots/settings-final/*.png

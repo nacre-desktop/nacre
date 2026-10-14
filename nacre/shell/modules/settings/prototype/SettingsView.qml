@@ -8,6 +8,8 @@ FocusScope {
     id: root
     required property var registry
     required property var store
+    property bool development: false
+    property var entitySetting: null
     property var capabilities: ({})
     property var screen
     property string page: "panels"
@@ -19,26 +21,33 @@ FocusScope {
     property bool overflowOpen: false
     readonly property var schema: registry.schema
     readonly property var current: schema.pages.find(item => item.id === page)
-    readonly property bool narrow: width < 760
-    readonly property var navigation: schema.pages.filter(item => !item.parent && Registry.visiblePage(schema, item, capabilities)).sort((a, b) => a.order - b.order)
+    readonly property bool narrow: width < NacreTokens.space.huge * 24
+    readonly property var navigation: schema.pages.filter(item => !item.parent && Registry.visiblePage(schema, item, capabilities)).sort((a, b) => schema.groups.find(group => group.id === a.group).order - schema.groups.find(group => group.id === b.group).order || a.order - b.order)
     readonly property var sections: schema.sections.filter(item => item.page === page && Registry.allowed(item.visibleWhen, capabilities)).sort((a, b) => a.order - b.order)
-    readonly property var results: Registry.search(schema, query, capabilities, registry.text)
+    readonly property var results: Registry.search(schema, query, capabilities, registry.text, development)
     signal closeRequested
+    signal routeOpened(string route)
     objectName: "settingsPrototype"
     focus: true
     function focusSearch() {
         search.forceActiveFocus();
     }
     function open(link) {
-        const route = Registry.resolve(schema, link, capabilities);
+        const route = Registry.resolve(schema, link, capabilities, development);
         if (!route)
             return false;
+        pendingAction = null;
+        entitySetting = null;
         page = route.page;
+        if (current?.enterAction)
+            store.actionRequested(current.enterAction);
         highlight = route.setting;
         query = "";
         feedback = "";
         overflowOpen = false;
+        pageMotion.cancel();
         scroll.contentY = 0;
+        routeOpened(page + (highlight ? "#" + highlight : ""));
         Qt.callLater(() => {
             if (highlight) {
                 const row = findRow(body, highlight);
@@ -64,7 +73,7 @@ FocusScope {
     function activateResult() {
         const result = results[Math.max(0, Math.min(results.length - 1, resultIndex))];
         if (result)
-            open(result.page + "#" + result.id);
+            open(result.route);
     }
     function action(item) {
         if (item.route)
@@ -88,6 +97,8 @@ FocusScope {
                 pendingAction = null;
             else if (overflowOpen)
                 overflowOpen = false;
+            else if (entitySetting)
+                entitySetting = null;
             else if (query)
                 query = "";
             else
@@ -102,8 +113,8 @@ FocusScope {
     }
     NacreSurface {
         id: rail
-        width: root.narrow ? root.width : 244
-        height: root.narrow ? 110 : root.height
+        width: root.narrow ? root.width : NacreTokens.space.huge * 7 + NacreTokens.space.xl
+        height: root.narrow ? NacreTokens.space.huge * 3 + NacreTokens.space.md : root.height
         radius: NacreTokens.radii.medium
         color: NacreTokens.raised
         NacreTextField {
@@ -112,7 +123,7 @@ FocusScope {
             x: NacreTokens.space.md
             y: NacreTokens.space.md
             width: parent.width - 2 * x
-            height: 44
+            height: NacreTokens.space.huge + NacreTokens.space.md
             padding: NacreTokens.space.md
             text: root.query
             placeholderText: root.registry.text("settings.registry.ui.search")
@@ -140,9 +151,9 @@ FocusScope {
         ComboBox {
             visible: root.narrow
             x: NacreTokens.space.md
-            y: 64
+            y: NacreTokens.space.huge * 2
             width: parent.width - 2 * x
-            height: 36
+            height: NacreTokens.space.huge + NacreTokens.space.xs
             model: root.navigation.map(item => root.registry.text(item.labelId))
             background: NacreSurface {
                 radius: NacreTokens.radii.small
@@ -164,7 +175,7 @@ FocusScope {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "expand_more"
             }
-            currentIndex: root.navigation.findIndex(item => item.id === (root.current?.parent || root.page))
+            currentIndex: root.navigation.findIndex(item => item.id === Registry.rootPage(root.schema, root.page))
             font.family: NacreTokens.textFamily
             Accessible.name: root.registry.text("settings.registry.ui.navigation")
             onActivated: index => root.open(root.navigation[index].id)
@@ -174,19 +185,19 @@ FocusScope {
             objectName: "registryNavigation"
             visible: !root.narrow
             x: NacreTokens.space.sm
-            y: 72
+            y: NacreTokens.space.huge * 2 + NacreTokens.space.sm
             width: parent.width - 2 * x
             height: parent.height - y - NacreTokens.space.sm
             clip: true
             model: root.navigation
-            currentIndex: root.navigation.findIndex(item => item.id === (root.current?.parent || root.page))
+            currentIndex: root.navigation.findIndex(item => item.id === Registry.rootPage(root.schema, root.page))
             boundsBehavior: Flickable.StopAtBounds
             spacing: NacreTokens.space.xs
             section.property: "group"
             section.delegate: NacreText {
                 required property string section
                 width: nav.width
-                height: 34
+                height: NacreTokens.space.huge + NacreTokens.space.hairline
                 leftPadding: NacreTokens.space.md
                 topPadding: NacreTokens.space.md
                 text: root.registry.text(root.schema.groups.find(item => item.id === section).labelId)
@@ -198,7 +209,7 @@ FocusScope {
                 required property var modelData
                 required property int index
                 width: nav.width
-                height: Math.max(42, label.implicitHeight + NacreTokens.space.md)
+                height: Math.max(NacreTokens.space.huge + NacreTokens.space.compact, label.implicitHeight + NacreTokens.space.md)
                 radius: NacreTokens.radii.small
                 color: nav.currentIndex === index ? Qt.alpha(NacreTokens.accent, .18) : "transparent"
                 NacreIcon {
@@ -208,7 +219,7 @@ FocusScope {
                 }
                 NacreText {
                     id: label
-                    x: 42
+                    x: NacreTokens.space.huge + NacreTokens.space.compact
                     width: parent.width - x - NacreTokens.space.sm
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.registry.text(navItem.modelData.labelId)
@@ -253,6 +264,7 @@ FocusScope {
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: NacreScrollBar {}
         FastScroll {
+            id: pageMotion
             view: scroll
         }
         Column {
@@ -280,7 +292,7 @@ FocusScope {
                 spacing: NacreTokens.space.sm
                 NacreText {
                     width: parent.width - overflow.width - parent.spacing
-                    text: root.registry.text(root.query ? "settings.registry.ui.results" : root.current?.labelId)
+                    text: root.registry.text(root.query ? "settings.registry.ui.results" : root.entitySetting?.labelId || root.current?.labelId)
                     font.pointSize: NacreTokens.textSize.headline
                     font.weight: Font.Medium
                     wrapMode: Text.Wrap
@@ -311,7 +323,11 @@ FocusScope {
                 text: root.registry.text("settings.registry.ui.reset")
                 icon: "restart_alt"
                 onClicked: {
-                    root.store.reset(root.page);
+                    root.pendingAction = {
+                        adapter: "reset-page",
+                        page: root.page,
+                        confirmationId: "settings.registry.ui.reset-confirmation"
+                    };
                     root.overflowOpen = false;
                 }
             }
@@ -326,14 +342,17 @@ FocusScope {
             SettingsCard {
                 visible: !!root.pendingAction
                 width: parent.width
-                title: root.registry.text("settings.registry.ui.history-confirm")
+                title: root.registry.text(root.pendingAction?.confirmationId || "settings.registry.ui.confirm-destructive")
                 Row {
                     spacing: NacreTokens.space.sm
                     ActionButton {
                         objectName: "registryConfirmAction"
                         text: root.registry.text("settings.registry.ui.confirm")
                         onClicked: {
-                            root.store.actionRequested(root.pendingAction.adapter);
+                            if (root.pendingAction.adapter === "reset-page")
+                                root.store.reset(root.pendingAction.page);
+                            else
+                                root.store.actionRequested(root.pendingAction.adapter);
                             root.pendingAction = null;
                         }
                     }
@@ -377,7 +396,9 @@ FocusScope {
                             x: resultLabel.x
                             y: resultLabel.y + resultLabel.height + NacreTokens.space.xs
                             width: resultLabel.width
-                            text: result.modelData.breadcrumb
+                            text: result.modelData.breadcrumb + (result.modelData.kind === "setting" ? "\n" + root.registry.text("settings.registry.ui.current-value", {
+                                    value: root.store.displayValue(root.schema.settings.find(item => item.id === result.modelData.id), root.registry.text)
+                                }) : "")
                             color: NacreTokens.mutedInk
                             font.pointSize: NacreTokens.textSize.caption
                             wrapMode: Text.Wrap
@@ -385,7 +406,7 @@ FocusScope {
                         NacreInteraction {
                             accessibleName: resultLabel.text + " " + trail.text
                             function onClicked() {
-                                root.open(result.modelData.page + "#" + result.modelData.id);
+                                root.open(result.modelData.route);
                             }
                         }
                     }
@@ -398,13 +419,24 @@ FocusScope {
                 wrapMode: Text.Wrap
                 color: NacreTokens.mutedInk
             }
+            Loader {
+                width: parent.width
+                active: !!root.entitySetting && !root.query
+                sourceComponent: EntityContent {
+                    setting: root.entitySetting
+                    registry: root.registry
+                    store: root.store
+                    onBack: root.entitySetting = null
+                }
+            }
             Repeater {
-                model: !root.query && root.current?.prototype ? root.sections : []
+                model: !root.query && !root.entitySetting && root.current?.prototype ? root.sections.filter(section => section.customType || root.schema.settings.some(item => item.section === section.id && Registry.settingsFor(root.schema, root.page, root.capabilities, root.development).some(row => row.id === item.id)) || root.schema.actions.some(item => item.section === section.id && (root.development || item.backend !== "planned"))) : []
                 delegate: SettingsCard {
                     id: card
                     required property var modelData
                     width: body.width
                     title: root.registry.text(modelData.labelId)
+                    visible: modelData.customType !== "shared-editor" || !editorLoader.item || editorLoader.item.hasContent
                     border.width: root.schema.settings.some(item => item.section === modelData.id && item.editorOwned && item.id === root.highlight) ? 1 : 0
                     border.color: NacreTokens.accent
                     description: root.registry.text(modelData.descriptionId)
@@ -426,17 +458,57 @@ FocusScope {
                         }
                     }
                     Loader {
+                        id: editorLoader
                         objectName: root.schema.settings.find(item => item.section === card.modelData.id && item.editorOwned)?.id || "sharedEditor-" + card.modelData.id
                         width: parent.width
                         active: card.modelData.customType === "shared-editor"
-                        enabled: !card.modelData.dependsOn || root.store.value(root.schema.settings.find(item => item.id === card.modelData.dependsOn)) === true
+                        enabled: (!card.modelData.storeId || root.store.availableStores.includes(card.modelData.storeId)) && (!card.modelData.dependsOn || root.store.value(root.schema.settings.find(item => item.id === card.modelData.dependsOn)) === true)
+                        opacity: enabled ? 1 : .45
                         sourceComponent: SharedEditor {
                             editor: card.modelData.editor
+                            section: card.modelData.editorSection || "all"
                             screen: root.screen
                         }
                     }
+                    Loader {
+                        width: parent.width
+                        active: card.modelData.customType === "device-content"
+                        sourceComponent: DeviceContent {
+                            target: card.modelData.target
+                        }
+                    }
+                    Loader {
+                        width: parent.width
+                        active: card.modelData.customType === "wallpaper-picker"
+                        sourceComponent: WallpaperContent {
+                            registry: root.registry
+                        }
+                    }
+                    Loader {
+                        width: parent.width
+                        active: card.modelData.customType === "publisher-targets"
+                        sourceComponent: PublisherTargets {
+                            registry: root.registry
+                        }
+                    }
+                    Loader {
+                        width: parent.width
+                        active: card.modelData.customType === "shortcuts"
+                        sourceComponent: ShortcutsContent {
+                            registry: root.registry
+                        }
+                    }
+                    Loader {
+                        width: parent.width
+                        active: card.modelData.customType === "addon-cards"
+                        sourceComponent: AddonContent {
+                            registry: root.registry
+                            capabilities: root.capabilities
+                            onAction: action => root.store.actionRequested(action)
+                        }
+                    }
                     Repeater {
-                        model: Registry.settingsFor(root.schema, root.page, root.capabilities).filter(item => item.section === card.modelData.id && !item.editorOwned)
+                        model: Registry.settingsFor(root.schema, root.page, root.capabilities, root.development).filter(item => item.section === card.modelData.id && !item.editorOwned)
                         delegate: SettingsRow {
                             required property var modelData
                             width: card.width - 2 * NacreTokens.space.md
@@ -444,13 +516,17 @@ FocusScope {
                             registry: root.registry
                             store: root.store
                             highlighted: root.highlight === modelData.id
+                            onEntitiesRequested: root.entitySetting = modelData
                         }
                     }
                     Repeater {
-                        model: root.schema.actions.filter(item => item.section === card.modelData.id)
+                        model: root.schema.actions.filter(item => item.section === card.modelData.id && Registry.allowed(item.visibleWhen, root.capabilities) && (root.development || item.backend !== "planned"))
                         delegate: NacreSurface {
                             id: actionRow
                             required property var modelData
+                            objectName: modelData.id
+                            border.width: root.highlight === modelData.id ? 1 : 0
+                            border.color: NacreTokens.accent
                             width: card.width - 2 * NacreTokens.space.md
                             implicitHeight: actionCopy.implicitHeight + 2 * NacreTokens.space.md
                             radius: NacreTokens.radii.small
@@ -459,7 +535,7 @@ FocusScope {
                                 id: actionCopy
                                 x: NacreTokens.space.sm
                                 y: NacreTokens.space.md
-                                width: parent.width - NacreTokens.space.huge
+                                width: Math.max(0, parent.width - (actionRow.modelData.destructive ? destructiveButton.width + NacreTokens.space.xxl : NacreTokens.space.huge))
                                 spacing: NacreTokens.space.xs
                                 NacreText {
                                     width: parent.width
@@ -478,9 +554,20 @@ FocusScope {
                                 anchors.right: parent.right
                                 anchors.rightMargin: NacreTokens.space.sm
                                 anchors.verticalCenter: parent.verticalCenter
+                                visible: !actionRow.modelData.destructive
                                 text: actionRow.modelData.route ? "chevron_right" : "open_in_new"
                             }
+                            ActionButton {
+                                id: destructiveButton
+                                visible: actionRow.modelData.destructive === true
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.registry.text(actionRow.modelData.labelId)
+                                compact: true
+                                onClicked: root.action(actionRow.modelData)
+                            }
                             NacreInteraction {
+                                visible: !actionRow.modelData.destructive
                                 objectName: "action-" + actionRow.modelData.id
                                 accessibleName: actionCopy.children[0].text
                                 function onClicked() {
@@ -493,7 +580,7 @@ FocusScope {
             }
             NacreText {
                 width: parent.width
-                visible: root.page === "colors" && !root.query
+                visible: root.page.split("/")[0] === "colors" && !root.query
                 text: root.registry.text("settings.registry.ui.credit")
                 color: NacreTokens.mutedInk
                 font.pointSize: NacreTokens.textSize.caption

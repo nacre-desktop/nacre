@@ -12,7 +12,7 @@ Column {
     readonly property bool ready: present && node.ready && !!node.audio
     readonly property string caption: node ? (node.description || node.nickname || node.name || NacreI18n.tr("ui.audio-node.caption.audio-device", "Audio device")) : NacreI18n.tr("ui.audio-node.caption.disconnected", "Disconnected")
     width: parent.width
-    spacing: 8
+    spacing: NacreTokens.space.sm
     function setVolume(target, fraction) {
         if (target && target === node && Pipewire.nodes.values.includes(target) && target.ready && target.audio && Number.isFinite(fraction))
             target.audio.volume = Math.max(0, Math.min(1, fraction));
@@ -31,12 +31,12 @@ Column {
     }
     Row {
         width: parent.width
-        spacing: 12
+        spacing: NacreTokens.space.md
         NacreText {
             width: Math.max(0, parent.width - 112)
             text: root.caption
             wrapMode: Text.Wrap
-            font.pointSize: 11
+            font.pointSize: NacreTokens.textSize.body
             anchors.verticalCenter: parent.verticalCenter
         }
         ActionButton {
@@ -49,7 +49,7 @@ Column {
     }
     Row {
         width: parent.width
-        spacing: 12
+        spacing: NacreTokens.space.md
         NacreMediaButton {
             icon: root.ready && root.node.audio.muted ? "volume_off" : "volume_up"
             label: NacreI18n.tr("ui.audio-node.label.mute-value0", "Mute {value0}", {
@@ -76,10 +76,10 @@ Column {
             onKeyboardRequested: fraction => root.setVolume(root.node, fraction)
         }
         NacreText {
-            width: 52
+            width: NacreTokens.space.huge + NacreTokens.space.xl
             anchors.verticalCenter: parent.verticalCenter
             text: root.ready ? NacreI18n.number(Math.round(root.node.audio.volume * 100)) + "%" : "—"
-            font.pointSize: 10
+            font.pointSize: NacreTokens.textSize.caption
             horizontalAlignment: Text.AlignRight
         }
     }

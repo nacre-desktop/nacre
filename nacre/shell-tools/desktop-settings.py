@@ -41,6 +41,7 @@ RANGES = {
     "rounding": (0, 40),
     "frameWidth": (0, 30),
     "frameRounding": (0, 40),
+    "lipHoverDelay": (0, 800),
 }
 
 
@@ -299,22 +300,26 @@ def main():
                         blur=False, shadow=False, animations=False, dnd=True
                     ),
                     "presentation": dict(
-                        leftDrawer=False,
-                        topEdge=False,
-                        leftEdge=False,
-                        rightEdge=False,
-                        bottomEdge=False,
+                        aiSidebarEnabled=False,
+                        topBarEnabled=False,
+                        frameTopEnabled=False,
+                        frameLeftEnabled=False,
+                        frameRightEnabled=False,
+                        controlCenterEnabled=False,
+                        frameBottomEnabled=False,
                         dnd=True,
                     ),
                     "meeting": dict(dnd=True, blur=False),
                     "music": dict(dnd=True),
                     "docked": dict(dnd=False),
                     "minimal": dict(
-                        topEdge=True,
+                        topBarEnabled=True,
+                        frameTopEnabled=True,
                         clickEdgeMenus=False,
-                        leftEdge=False,
-                        rightEdge=False,
-                        bottomEdge=False,
+                        frameLeftEnabled=False,
+                        frameRightEnabled=False,
+                        controlCenterEnabled=False,
+                        frameBottomEnabled=False,
                         frameWidth=0,
                         gapsIn=3,
                         gapsOut=6,

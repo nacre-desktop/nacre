@@ -19,7 +19,7 @@ NacreWindow {
     implicitHeight: 32
     margins.top: NacreFrame.headerHeight + 8
     margins.left: Math.max(8, Math.min((output?.width ?? 800) - implicitWidth - 8, center - implicitWidth / 2))
-    visible: ready && text !== "" && !NacrePanelState.hidden && DesktopSettings.data.topEdge !== false
+    visible: ready && text !== "" && !NacrePanelState.hidden && DesktopSettings.data.topBarEnabled !== false
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None

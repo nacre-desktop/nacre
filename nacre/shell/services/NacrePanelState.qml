@@ -39,7 +39,35 @@ Singleton {
         view.osd = false;
         view.edgeMenu = "";
     }
+    Connections {
+        target: DesktopSettings
+        function onDataChanged() {
+            for (const view of root.providerViews) {
+                if (!root.panelEnabled("dashboard")) {
+                    view.dashboard = false;
+                    view.dashboardPinned = false;
+                }
+                if (!root.panelEnabled("left")) {
+                    view.left = false;
+                    view.leftPinned = false;
+                }
+                if (!root.panelEnabled("osd"))
+                    view.osd = false;
+                if (view.edgeMenu && !root.panelEnabled(view.edgeMenu))
+                    view.edgeMenu = "";
+            }
+        }
+    }
+    function panelEnabled(name) {
+        return ({
+                dashboard: DesktopSettings.data.dashboardEnabled,
+                left: DesktopSettings.data.aiSidebarEnabled,
+                osd: DesktopSettings.data.controlCenterEnabled
+            })[name] !== false;
+    }
     function openEdge(name, screenName) {
+        if (!panelEnabled(name))
+            return false;
         const view = screenName ? screens[screenName] : getForActive();
         if (!view || !["dashboard", "left", "osd"].includes(name))
             return false;
@@ -108,7 +136,7 @@ Singleton {
     }
     function hoverEdge(name, screenName) {
         const view = screens[screenName];
-        if (!view || !["dashboard", "left", "osd"].includes(name) || view.session || view.launcher || view.dashboardPinned)
+        if (!view || !panelEnabled(name) || !["dashboard", "left", "osd"].includes(name) || view.session || view.launcher || view.dashboardPinned)
             return false;
         view.hoverDocked = false;
         clearPopouts();
@@ -127,7 +155,7 @@ Singleton {
     }
     function openControls(section = "home", screenName = "", forceOpen = false, pointerOwned = false) {
         const view = screenName ? screens[screenName] : getForActive();
-        if (!view || !["home", "audio", "network", "bluetooth", "battery", "session", "updates", "notifications"].includes(section))
+        if (!view || !panelEnabled("osd") || !["home", "audio", "network", "bluetooth", "battery", "session", "updates", "notifications"].includes(section))
             return false;
         const wasOpen = view.osd && view.controlSection === section && view.edgeMenu === "osd";
         clearPopouts();
@@ -162,6 +190,8 @@ Singleton {
         return true;
     }
     function toggleLeft() {
+        if (!panelEnabled("left"))
+            return false;
         const view = getForActive();
         if (!view)
             return false;

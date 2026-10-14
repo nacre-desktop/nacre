@@ -12,7 +12,7 @@ NacreSettingsPage {
         title: NacreI18n.tr("ui.lock-page.title.lock-screen", "Lock screen")
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.lock-page.text.preview-layout", "Preview layout")
                 onClicked: AppLaunch.run(["nacre-shell", "lock-preview"])
@@ -55,7 +55,7 @@ NacreSettingsPage {
         }
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.lock-page.text.save-city", "Save city")
                 onClicked: root.saveWeather(city.text)

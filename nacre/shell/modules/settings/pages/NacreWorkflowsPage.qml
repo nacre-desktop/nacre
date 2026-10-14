@@ -17,7 +17,7 @@ NacreSettingsPage {
         title: NacreI18n.tr("ui.workflows-page.title.desktop-presets", "Desktop presets")
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             Repeater {
                 model: ["normal", "focused", "presentation", "minimal", "meeting", "music", "docked"]
                 ActionButton {
@@ -39,7 +39,7 @@ NacreSettingsPage {
         }
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             Repeater {
                 model: ["Browser", "Nacre AI", "Discord", "Spotify", "Mail", "Brain"]
                 ActionButton {
@@ -51,32 +51,10 @@ NacreSettingsPage {
             }
         }
     }
-    NacreSettingsSection {
-        objectName: "dashboardSettingsSection"
-        title: NacreI18n.tr("dashboard.settings.pages", "Dashboard pages")
-        description: NacreI18n.tr("dashboard.settings.extras-detail", "Enable the optional pages you use and arrange their order. These choices also appear in the dashboard customizer.")
-        Dashboard.NacreDashboardExtrasOptions {
-            width: parent.width
-            includeCore: true
-        }
-    }
-    NacreSettingsSection {
-        title: NacreI18n.tr("dashboard.customize.city-photos", "City photos in Weather")
-        description: NacreI18n.tr("dashboard.customize.city-photos-detail", "Optional Wikipedia/Wikimedia photos, with credit. Uses the city name; cached locally.")
-        ActionButton {
-            text: NacreI18n.tr("dashboard.customize.city-photos", "City photos in Weather")
-            icon: "photo"
-            selected: NacreDashboardState.weatherPhotos === true
-            onClicked: {
-                NacreDashboardState.weatherPhotos = !NacreDashboardState.weatherPhotos;
-                NacreDashboardState.saveExtras();
-            }
-        }
-    }
     NacreText {
         width: parent.width
         text: DesktopSettings.message || ""
-        font.pointSize: 10
+        font.pointSize: NacreTokens.textSize.caption
         color: NacreTokens.mutedInk
         wrapMode: Text.Wrap
     }

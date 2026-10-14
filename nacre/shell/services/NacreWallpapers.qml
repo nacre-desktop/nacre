@@ -76,7 +76,7 @@ Singleton {
     readonly property var rotationPool: Rotation.pool(list, preferences.rotationKind || "all")
     readonly property string rotationKey: (preferences.rotationKind || "all") + ":" + (preferences.rotationShuffle ?? true) + ":" + rotationPool.join("|")
     readonly property bool pickerOpen: NacrePanelState.providerViews.some(view => view.launcher && view.launcherMode === "wallpaper")
-    readonly property bool appearanceOpen: NacrePanelState.settingsVisible && NacrePanelState.settingsPage === "appearance"
+    readonly property bool appearanceOpen: NacrePanelState.settingsVisible && ["wallpaper", "colors", "appearance"].includes(NacrePanelState.settingsPage.split("#")[0].split("/")[0])
     readonly property bool rotationReady: rotationPool.length > 1 && !WallpaperPlayback.sleeping && !WallpaperPlayback.locked && !commit.running && !themeBusy && !catalog.running && !selectedPath && !queuedPath
     readonly property bool welcomeDemoOpen: NacreWelcomeApp.active
     readonly property bool canRotate: rotationReady && !pickerOpen && !appearanceOpen && !welcomeDemoOpen

@@ -26,6 +26,7 @@ class SettingsPrototypeTests(unittest.TestCase):
             demo = stage(target / "demo")
             fixtures = target / "fixtures"
             shutil.copytree(demo / "services", fixtures)
+            shutil.copy2(demo / "wallpaper-demo.svg", target / "wallpaper-demo.svg")
             shutil.rmtree(demo)
             for path in (SHELL / "modules/settings/prototype").glob("*.qml"):
                 stage_qml(path, target / (path.stem + ".qml"))
@@ -41,11 +42,14 @@ class SettingsPrototypeTests(unittest.TestCase):
                 ],
                 "modules/dashboard": [
                     "NacreDashboardCustomize",
+                    "NacreDashboardCustomizeSection",
+                    "NacreDashboardToggleRow",
                     "NacreDashboardExtrasOptions",
                     "NacreDashboardNavigation",
                 ],
                 "modules/controlcenter": [
                     "NacreControlEdit",
+                    "NacreControlAddOption",
                     "NacreControlCatalog",
                     "NacreControlTile",
                     "NacreControlButton",

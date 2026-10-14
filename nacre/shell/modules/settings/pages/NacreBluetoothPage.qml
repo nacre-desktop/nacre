@@ -19,7 +19,7 @@ NacreSettingsPage {
         description: !NacreBluetooth.available ? NacreI18n.tr("ui.bluetooth-page.description.no-bluetooth-adapter", "No Bluetooth adapter") : NacreBluetooth.powered ? NacreI18n.tr("ui.bluetooth-page.description.bluetooth-is-on", "Bluetooth is on") : NacreI18n.tr("ui.bluetooth-page.description.bluetooth-is-off", "Bluetooth is off")
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreBluetooth.powered ? NacreI18n.tr("ui.bluetooth-page.text.turn-bluetooth-off", "Turn Bluetooth off") : NacreI18n.tr("ui.bluetooth-page.text.turn-bluetooth-on", "Turn Bluetooth on")
                 enabled: !DeviceActions.busy && NacreBluetooth.available
@@ -40,7 +40,7 @@ NacreSettingsPage {
             delegate: Column {
                 required property var modelData
                 width: parent.width
-                spacing: 8
+                spacing: NacreTokens.space.sm
                 NacreText {
                     width: parent.width
                     text: parent.modelData.alias || parent.modelData.name || parent.modelData.address
@@ -49,12 +49,12 @@ NacreSettingsPage {
                 NacreText {
                     width: parent.width
                     text: parent.modelData.connected ? (parent.modelData.trusted ? NacreI18n.tr("bluetooth.status.connected-trusted", "Connected · Trusted") : NacreI18n.tr("ui.bluetooth-page.text.connected", "Connected")) : parent.modelData.paired ? (parent.modelData.trusted ? NacreI18n.tr("bluetooth.status.paired-trusted", "Paired · Trusted") : NacreI18n.tr("ui.bluetooth-page.text.paired", "Paired")) : parent.modelData.trusted ? NacreI18n.tr("bluetooth.status.not-paired-trusted", "Not paired · Trusted") : NacreI18n.tr("ui.bluetooth-page.text.not-paired", "Not paired")
-                    font.pointSize: 10
+                    font.pointSize: NacreTokens.textSize.caption
                     color: NacreTokens.mutedInk
                 }
                 Flow {
                     width: parent.width
-                    spacing: 8
+                    spacing: NacreTokens.space.sm
                     ActionButton {
                         text: parent.parent.modelData.connected ? NacreI18n.tr("ui.bluetooth-page.text.disconnect", "Disconnect") : NacreI18n.tr("ui.bluetooth-page.text.connect", "Connect")
                         enabled: !DeviceActions.busy && NacreBluetooth.powered

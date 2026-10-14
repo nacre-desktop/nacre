@@ -5,7 +5,6 @@ import importlib.util
 from pathlib import Path
 import subprocess
 import unittest
-import re
 from unittest.mock import Mock
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -49,8 +48,11 @@ class SettingsLauncherTests(unittest.TestCase):
         entry = (ROOT / "nacre/desktop/nacre-settings.desktop").read_text()
         self.assertIn("Exec=nacre-settings\n", entry)
         self.assertIn("Terminal=false", entry)
-        catalog = (
-            ROOT / "nacre/shell/modules/settings/settings-catalog.js"
-        ).read_text()
-        for page in settings.PAGES:
-            self.assertRegex(catalog, r'\bid:\s*"' + re.escape(page) + r'"')
+        registry = settings.navigation()
+        for page in [row["id"] for row in registry["pages"]] + list(
+            registry["aliases"]
+        ):
+            self.assertTrue(settings.valid_route(page))
+        self.assertTrue(settings.valid_route("panels/dashboard#pages"))
+        for route in ["../desktop", "missing", "colors;bad", "panels#x$(id)"]:
+            self.assertFalse(settings.valid_route(route))

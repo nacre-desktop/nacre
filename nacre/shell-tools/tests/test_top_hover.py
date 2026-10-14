@@ -130,7 +130,7 @@ TestCase {
   verify(top.visible);verify(left.visible);verify(right.visible);
   view.flags.session=false;view.flags.launcher=true;
   mouseClick(view,990,350);verify(view.flags.osd);verify(!view.flags.launcher);
-  DesktopSettings.data={animations:false,leftDrawer:false,rightEdge:false};
+  DesktopSettings.data={animations:false,aiSidebarEnabled:false,controlCenterEnabled:false};
   verify(top.visible);verify(!left.visible);verify(!right.visible);
   NacrePanelState.hidden=true;
   verify(!top.visible);verify(!left.visible);verify(!right.visible);

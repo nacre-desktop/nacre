@@ -1,5 +1,37 @@
 # Using Nacre
 
+Settings groups pages under **Look & feel**, **Desktop**, **Devices**, **System**
+and **Add-ons**. Wallpaper, Colors and Appearance have separate pages. Panels
+shows every edge; its Dashboard and Control center pages use the same editors
+as Customize and Edit inside those panels. The window shares the rounded tile
+shape, and resizing it narrows navigation to a page selector.
+
+Type to search individual preferences, their synonyms and page breadcrumbs.
+Results show the current value; Enter opens and highlights the matching row.
+Escape clears search, then closes Settings. Arrow keys navigate the sidebar.
+Changes apply immediately; display changes still require confirmation or revert.
+The overflow menu contains Reset to defaults. A small “Set by profile” badge
+identifies values held by the selected desktop preset.
+
+`nacre-settings panels/dashboard#pages` opens a specific preference. IPC callers
+use `settingsApp.open("panels/dashboard#pages")`; the old desktop, workflows,
+lock, time, ai and maintenance page IDs continue to resolve. AI assistant and
+Notes appear when their add-ons are installed; otherwise Add-ons offers the
+existing setup entry point. Hardware pages and controls follow detected support.
+
+Launcher source switches control `#` notes, `:` files, `=` calculations, `>`
+actions and `?` AI. Web search offers DuckDuckGo, Google and Brave. Automatic
+power profiles is opt-in: its AC and battery rows apply on source changes while
+it is enabled. Turning it off keeps the active profile. Lip hover delay defaults
+to 350 ms and accepts 0–800 ms. Colors retains Light / Dark / Match wallpaper, and
+its small desktop preview uses the live palette and current wallpaper thumbnail.
+Colors studio remains the full editor; App theming lists the publisher’s actual
+target manifest and last publication status.
+
+Planned controls are hidden during normal use. The separate developer preview
+can reveal schema reservations; the battery-saver bundle stays hidden.
+
+
 Open the launcher with Super+Space and type what you want. Normal search includes
 apps, desktop actions, open windows, clipboard history, emoji, saved launcher
 items, files and optional Brain notes. Files and notes start searching after two
@@ -130,7 +162,7 @@ Read [Nacre on niri](../README.md#nacre-on-niri) for limits.
 New Nacre sessions use a window border width of 3. On Niri this is measured in
 logical pixels: each display's scale determines its physical thickness, so scale
 1 draws 3 pixels and scale 2 draws 6. Niri handles fractional scales and moving
-windows between displays. Adjust **Settings → Desktop → Window border width**
+windows between displays. Adjust **Settings → Windows & workspaces → Window border width**
 to suit your preference; saved widths remain intact when you update Nacre.
 See [Niri's border configuration](https://niri-wm.github.io/niri/Configuration%3A-Layout.html#width).
 
@@ -310,7 +342,7 @@ deadline, a window that resists closing can be forcibly terminated; save work fi
 ### Optional dashboard pages
 
 The default dashboard tabs are Dashboard, Media, Weather and System. Press
-**Ctrl+,** in the dashboard or open Settings → Workflows → Dashboard pages to enable
+**Ctrl+,** in the dashboard or open Settings → Panels → Dashboard → Pages to enable
 Focus, Notifications, Clipboard, Devices, Network, AI usage, Screenshots or Brain.
 Extras start off and load only while selected. Settings shows a live preview of
 the tab strip: add a page, remove one, or move enabled pages with the up/down
@@ -343,7 +375,7 @@ playback—the cover stays still and grows, and the audio bars are hidden. Reduc
 motion disables the pulse. Volume and connections remain in the right-side
 controls. Optional pages stay off by default; Focus can be enabled without adding the other extras to the top strip.
 
-**City photos in Weather**, in Customize or Settings → Workflows, is enabled
+**City photos in Weather**, in Customize or Settings → Panels → Dashboard, is enabled
 by default for new settings; an existing off preference is preserved.
 It sends the city name to Wikipedia/Wikimedia, checks the place against the
 existing weather coordinates locally, and caches one bounded raster photo for

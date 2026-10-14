@@ -29,7 +29,7 @@ TestCase {
                 brain: true,
                 bluetooth: true
             })
-        availableStores: ["desktop.json", "wallpaper-picker.json", "state:scheme.json", "dashboard.json", "control-center.json", "launcher.json"]
+        availableStores: ["desktop", "wallpaper-picker", "scheme", "dashboard", "dashboard-extras", "control-center", "launcher"]
         files: ({})
         onWriteRequested: (setting, value) => {
             test.writes = [...test.writes,
@@ -39,7 +39,7 @@ TestCase {
                 }
             ];
 
-            testStore.accept(setting.store.file, Engine.writePath(testStore.files[setting.store.file], setting.store.key, value));
+            testStore.accept(setting.store.id, Engine.writePath(testStore.files[setting.store.id], setting.store.key, value));
         }
         onResetRequested: settings => test.resets = settings.map(item => item.id)
     }
@@ -56,12 +56,12 @@ TestCase {
     }
     function init() {
         testStore.files = {
-            "desktop.json": {
+            "desktop": {
                 clickEdgeMenus: false,
                 detachablePanels: true,
                 dragPanels: true
             },
-            "launcher.json": {
+            "launcher": {
                 recent: ["demo"],
                 usage: {
                     demo: 2
@@ -82,10 +82,12 @@ TestCase {
         wait(30);
         const click = findChild(view, "option-panels.lips.clickEdgeMenus-true");
         verify(click);
+        const hover = findChild(view, "option-panels.lips.clickEdgeMenus-false");
+        verify(click.y === hover.y, "group=" + click.parent.width + " hover=" + hover.width + " click=" + click.width);
         mouseClick(click, click.width / 2, click.height / 2);
         compare(writes.length, 1);
         compare(writes[0].value, true);
-        testStore.accept("desktop.json", {
+        testStore.accept("desktop", {
             clickEdgeMenus: false,
             detachablePanels: true,
             dragPanels: false
@@ -106,6 +108,38 @@ TestCase {
         verify(!toggle.enabled);
         verify(findChild(view, "panels.lips.detachablePanels").profile);
         compare(writes.length, 2);
+    }
+    function test_disabled_controls_and_right_alignment_at_both_widths() {
+        testStore.profileValues = {
+            "panels.lips.detachablePanels": true,
+            "panels.lips.hoverDelay": 350,
+            "colors.palette.mode": "dark",
+            "colors.palette.style": "natural"
+        };
+        for (const width of [1064, 620]) {
+            const view = createTemporaryObject(viewComponent, test, {
+                width: width
+            });
+            for (const route of ["panels", "colors"]) {
+                verify(view.open(route));
+                wait(30);
+                const ids = route === "panels" ? ["panels.lips.detachablePanels", "panels.lips.hoverDelay"] : ["colors.palette.mode", "colors.palette.style"];
+                for (const id of ids) {
+                    const row = findChild(view, id);
+                    const control = findChild(view, (id === "colors.palette.mode" ? "option-" + id + "-light" : "control-" + id));
+                    verify(control);
+                    verify(!control.enabled, id);
+                    const editor = row.children.find(child => child.toString().startsWith("QQuickLoader"));
+                    verify(editor);
+                    compare(editor.opacity, .45);
+                    fuzzyCompare(editor.x + editor.width, row.width - 8, .01);
+                    const before = writes.length;
+                    mouseClick(control, control.width / 2, control.height / 2);
+                    compare(writes.length, before, id);
+                }
+            }
+            view.destroy();
+        }
     }
     function test_search_keyboard_highlight_escape_and_narrow() {
         const view = createTemporaryObject(viewComponent, test, {
@@ -146,8 +180,8 @@ TestCase {
         testStore.reset("panels");
         verify(resets.includes("panels.lips.clickEdgeMenus"));
         verify(!resets.includes("panels.lips.detachablePanels"));
-        verify(!resets.includes("panels.lips.hoverDelay"));
-        const planned = testRegistry.schema.settings.find(item => item.id === "power.saver.enabled");
+        verify(resets.includes("panels.lips.hoverDelay"));
+        const planned = testRegistry.schema.settings.find(item => item.id === "power.saver.batterySaver");
         verify(!testStore.write(planned, true));
         const click = testRegistry.schema.settings.find(item => item.id === "panels.lips.clickEdgeMenus");
         verify(!testStore.write(click, "true"));
@@ -170,11 +204,11 @@ TestCase {
         const action = testRegistry.schema.actions.find(item => item.id === "launcher.history");
         view.action(action);
         verify(!!view.pendingAction);
-        compare(testStore.files["launcher.json"].recent.length, 1);
+        compare(testStore.files["launcher"].recent.length, 1);
         view.forceActiveFocus();
         keyClick(Qt.Key_Escape);
         verify(!view.pendingAction);
-        compare(testStore.files["launcher.json"].recent.length, 1);
+        compare(testStore.files["launcher"].recent.length, 1);
     }
     SignalSpy {
         id: confirmationSpy
@@ -197,7 +231,7 @@ TestCase {
             default: false,
             apply: "confirm",
             store: {
-                file: "desktop.json",
+                id: "desktop",
                 key: ["confirmed"]
             }
         });
@@ -206,7 +240,7 @@ TestCase {
         });
         const owner = createTemporaryObject(independentStore, test, {
             schema: schema,
-            availableStores: ["desktop.json"],
+            availableStores: ["desktop"],
             capabilities: testStore.capabilities
         });
         confirmationSpy.target = owner;
@@ -219,15 +253,15 @@ TestCase {
         compare(owner.value(confirmed), false);
         const forged = Object.assign({}, confirmed, {
             store: {
-                file: "unowned.json",
+                id: "unowned",
                 key: ["bad"]
             }
         });
         verify(owner.write(forged, true, true));
         compare(writeSpy.count, 1);
-        compare(writeSpy.signalArguments[0][0].store.file, "desktop.json");
+        compare(writeSpy.signalArguments[0][0].store.id, "desktop");
         compare(owner.value(confirmed), false);
-        owner.accept("desktop.json", {
+        owner.accept("desktop", {
             confirmed: true
         });
         compare(owner.value(confirmed), true);
@@ -254,7 +288,7 @@ TestCase {
         file.textValue = JSON.stringify({
             version: 1,
             files: {
-                "desktop.json": {
+                "desktop": {
                     clickEdgeMenus: false,
                     unknown: "kept"
                 }
@@ -262,9 +296,9 @@ TestCase {
         });
         file.loaded();
         verify(backend.ready && backend.writable);
-        verify(backend.change("desktop.json", ["clickEdgeMenus"], true));
-        compare(testStore.files["desktop.json"].clickEdgeMenus, true);
-        compare(JSON.parse(file.textValue).files["desktop.json"].unknown, "kept");
+        verify(backend.change("desktop", ["clickEdgeMenus"], true));
+        compare(testStore.files["desktop"].clickEdgeMenus, true);
+        compare(JSON.parse(file.textValue).files["desktop"].unknown, "kept");
         const before = file.writes;
         file.textValue = JSON.stringify({
             version: 2,
@@ -272,7 +306,7 @@ TestCase {
         });
         file.loaded();
         verify(!backend.writable);
-        verify(!backend.change("desktop.json", ["clickEdgeMenus"], false));
+        verify(!backend.change("desktop", ["clickEdgeMenus"], false));
         compare(file.writes, before);
         compare(JSON.parse(file.textValue).version, 2);
         verify(testStore.error.length > 0);
@@ -290,8 +324,8 @@ TestCase {
         verify(!view.sections.some(item => item.id === "launcher.packages"));
         view.open("panels/dashboard#pages");
         wait(50);
-        compare(view.highlight, "panels/dashboard.editor.pages");
-        verify(findChild(view, "panels/dashboard.editor.pages").item);
+        compare(view.highlight, "panels/dashboard/pages.editor.pages");
+        verify(findChild(view, "panels/dashboard/pages.editor.pages").item);
         view.open("panels/control-center#tiles");
         wait(50);
         verify(findChild(view, "panels/control-center.editor.tiles").item);

@@ -10,8 +10,8 @@ FloatingWindow {
     objectName: "roundedSettingsPreview"
     color: "transparent"
     minimumSize: Qt.size(480, 540)
-    implicitWidth: 1100
-    implicitHeight: 840
+    implicitWidth: NacreTokens.space.huge * 34 + NacreTokens.space.md
+    implicitHeight: NacreTokens.space.huge * 26 + NacreTokens.space.sm
     visible: true
     FontLoader {
         source: Quickshell.env("NACRE_SETTINGS_PREVIEW_ICON_FONT")
@@ -34,9 +34,10 @@ FloatingWindow {
     }
     SettingsStore {
         id: store
+        development: true
         schema: registry.schema
         capabilities: capabilities.snapshot
-        availableStores: ["desktop.json", "wallpaper-picker.json", "state:scheme.json", "dashboard.json", "control-center.json", "launcher.json"]
+        availableStores: ["desktop", "wallpaper-picker", "scheme", "dashboard", "dashboard-extras", "control-center", "launcher", "launcher-sources", "power", "colors", "cli", "apps", "profile", "launcher-workflows"]
         profileValues: ({
                 "panels.lips.detachablePanels": true
             })
@@ -62,7 +63,7 @@ FloatingWindow {
         Item {
             id: titlebar
             width: parent.width
-            height: 56
+            height: NacreTokens.space.huge + NacreTokens.space.xxl
             MouseArea {
                 anchors.fill: parent
                 onPressed: root.contentItem.Window.window.startSystemMove()
@@ -73,7 +74,7 @@ FloatingWindow {
                 text: "settings"
             }
             NacreText {
-                x: 52
+                x: NacreTokens.space.huge + NacreTokens.space.xl
                 anchors.verticalCenter: parent.verticalCenter
                 text: registry.text("settings.registry.ui.preview")
                 width: parent.width - x - 110
@@ -97,6 +98,7 @@ FloatingWindow {
             y: titlebar.height
             width: parent.width - 2 * x
             height: parent.height - y - NacreTokens.space.xl
+            development: true
             registry: registry
             store: store
             screen: Quickshell.screens[0]
@@ -106,6 +108,10 @@ FloatingWindow {
     }
     IpcHandler {
         target: "settingsPreview"
+        function development(enabled: bool): void {
+            store.development = enabled;
+            view.development = enabled;
+        }
         function open(route: string): bool {
             return view.open(route);
         }

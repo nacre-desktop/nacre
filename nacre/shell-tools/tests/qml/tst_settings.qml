@@ -128,63 +128,6 @@ TestCase {
         verify(toggle.checked);
         compare(DesktopSettings.writes[0].key, "dnd");
     }
-    function test_state_restores_search_without_overriding_a_new_page() {
-        const first = createTemporaryObject(settings, test);
-        first.query = "network";
-        const state = first.captureState();
-        const second = createTemporaryObject(settings, test);
-        second.restoreState(state);
-        compare(second.query, "network");
-        second.open("sound");
-        second.restoreState(state);
-        compare(second.query, "");
-        compare(second.page, "sound");
-    }
-    function test_catalog_plain_labels_external_routes_and_unknown_fallback() {
-        const view = createTemporaryObject(settings, test);
-        wait(20);
-        compare(view.pages.length, 12);
-        compare(view.pages[0].label, "Appearance");
-        NacrePanelState.settingsPage = "bluetooth";
-        wait(20);
-        compare(view.page, "bluetooth");
-        view.open("unknown");
-        compare(view.page, "appearance");
-        view.query = "microphone volume";
-        compare(view.matches.length, 1);
-        compare(view.matches[0].id, "sound");
-        view.width = 600;
-        wait(30);
-        verify(view.narrow);
-        const scroll = findChild(view, "settingsScroll");
-        verify(scroll.x + scroll.width <= view.width);
-        view.query = "no matching setting xyz";
-        compare(view.matches.length, 0);
-    }
-
-    function test_pages_search_and_visible_only_loading() {
-        const view = createTemporaryObject(settings, test);
-        verify(view);
-        wait(30);
-        const loader = findChild(view, "settingsPage");
-        verify(loader.item);
-        compare(loader.item.page, "desktop");
-        view.query = "microphone";
-        wait(20);
-        verify(!loader.active);
-        compare(view.matches.length, 1);
-        compare(view.matches[0].id, "sound");
-        view.open("sound");
-        wait(30);
-        verify(loader.item);
-        compare(view.page, "sound");
-        compare(view.query, "");
-        view.active = false;
-        wait(20);
-        verify(!loader.active);
-        verify(!loader.item);
-    }
-
     function test_appearance_interval_writes_only_on_user_input() {
         const prior = NacreWallpapers.preferences;
         NacreWallpapers.preferences = Object.assign({}, prior, {

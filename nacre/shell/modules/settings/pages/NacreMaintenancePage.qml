@@ -5,6 +5,7 @@ import qs.services
 NacreSettingsPage {
     id: root
     property string page: "maintenance"
+    property string pendingRecovery: ""
     readonly property var state: Maintenance.data
     readonly property var serviceNames: ({
             "nacre-shell.service": "Desktop",
@@ -28,24 +29,42 @@ NacreSettingsPage {
             Maintenance.recover(action);
     }
     NacreSettingsSection {
+        visible: !!root.pendingRecovery
+        title: root.pendingRecovery === "restart" ? NacreI18n.tr("settings.registry.ui.confirm-restart", "Restart the desktop?") : NacreI18n.tr("settings.registry.ui.confirm-rollback", "Restore the previous desktop release?")
+        Row {
+            spacing: NacreTokens.space.sm
+            ActionButton {
+                text: NacreI18n.tr("settings.registry.ui.confirm", "Confirm")
+                onClicked: {
+                    root.recovery(root.pendingRecovery);
+                    root.pendingRecovery = "";
+                }
+            }
+            ActionButton {
+                text: NacreI18n.tr("settings.registry.ui.cancel", "Cancel")
+                onClicked: root.pendingRecovery = ""
+            }
+        }
+    }
+    NacreSettingsSection {
         title: NacreI18n.tr("ui.maintenance-page.title.desktop-health", "Desktop health")
         NacreText {
             width: parent.width
             text: NacreI18n.tr("ui.maintenance-page.text.installed-release-value0", "Installed release: {value0}", {
                 value0: (root.state.release?.revision?.slice(0, 12) || NacreI18n.tr("ui.maintenance-page.text.unknown", "Unknown"))
             })
-            font.pointSize: 11
+            font.pointSize: NacreTokens.textSize.body
             wrapMode: Text.Wrap
         }
         Flow {
             width: parent.width
-            spacing: 16
+            spacing: NacreTokens.space.lg
             Repeater {
                 model: Object.entries(root.state.services || {})
                 NacreText {
                     required property var modelData
                     text: (root.serviceNames[modelData[0]] || modelData[0]) + ": " + modelData[1]
-                    font.pointSize: 10
+                    font.pointSize: NacreTokens.textSize.caption
                     color: NacreTokens.mutedInk
                 }
             }
@@ -55,7 +74,7 @@ NacreSettingsPage {
             text: root.state.configErrors ? NacreI18n.tr("ui.maintenance-page.text.compositor-errors-value0", "Compositor errors: {value0}", {
                 value0: root.state.configErrors
             }) : NacreI18n.tr("ui.maintenance-page.text.compositor-configuration-is-valid", "Compositor configuration is valid")
-            font.pointSize: 11
+            font.pointSize: NacreTokens.textSize.body
             wrapMode: Text.Wrap
         }
         NacreText {
@@ -63,7 +82,7 @@ NacreSettingsPage {
             text: NacreI18n.tr("ui.maintenance-page.text.value0-locally-changed-managed-files", "{value0} locally changed managed files", {
                 value0: (root.state.drift || []).length
             })
-            font.pointSize: 10
+            font.pointSize: NacreTokens.textSize.caption
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap
         }
@@ -72,7 +91,7 @@ NacreSettingsPage {
             text: NacreI18n.tr("ui.maintenance-page.text.knowledge-sync-value0", "Knowledge sync: {value0}", {
                 value0: (root.state.brainSync?.message || root.state.brainSync?.state || NacreI18n.tr("ui.maintenance-page.text.not-recorded", "Not recorded"))
             })
-            font.pointSize: 10
+            font.pointSize: NacreTokens.textSize.caption
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap
         }
@@ -83,7 +102,7 @@ NacreSettingsPage {
                 value1: root.state.performance.memoryMiB,
                 value2: (root.state.performance.label || "manual")
             }) : NacreI18n.tr("ui.maintenance-page.text.no-resource-sample-recorded", "No resource sample recorded")
-            font.pointSize: 10
+            font.pointSize: NacreTokens.textSize.caption
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap
         }
@@ -98,13 +117,13 @@ NacreSettingsPage {
                         count: Math.floor(root.state.updatesAgeSeconds / 60)
                     }))
             })
-            font.pointSize: 10
+            font.pointSize: NacreTokens.textSize.caption
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap
         }
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.maintenance-page.text.refresh-status", "Refresh status")
                 enabled: !Maintenance.busy
@@ -133,18 +152,18 @@ NacreSettingsPage {
             ActionButton {
                 text: NacreI18n.tr("ui.maintenance-page.text.restart-desktop", "Restart desktop")
                 enabled: !Maintenance.busy
-                onClicked: root.recovery("restart")
+                onClicked: root.pendingRecovery = "restart"
             }
             ActionButton {
                 text: NacreI18n.tr("ui.maintenance-page.text.restore-previous-release", "Restore previous release")
                 enabled: !Maintenance.busy
-                onClicked: root.recovery("rollback")
+                onClicked: root.pendingRecovery = "rollback"
             }
         }
         NacreText {
             width: parent.width
             text: Maintenance.message || ""
-            font.pointSize: 10
+            font.pointSize: NacreTokens.textSize.caption
             color: NacreTokens.accent
             wrapMode: Text.Wrap
         }
@@ -153,7 +172,7 @@ NacreSettingsPage {
             text: root.state.checked ? NacreI18n.tr("ui.maintenance-page.text.checked-value0", "Checked {value0}", {
                 value0: new Date(root.state.checked).toLocaleString()
             }) : ""
-            font.pointSize: 9
+            font.pointSize: NacreTokens.textSize.body
             color: NacreTokens.mutedInk
             wrapMode: Text.Wrap
         }

@@ -25,7 +25,7 @@ def wait_for(read, accept=bool, timeout=15):
     raise RuntimeError("Preview timed out: " + str(last))
 
 
-def run(output, gallery, keep):
+def run(output, gallery, keep, production=False):
     for program in ["niri", "quickshell", "grim"]:
         if not shutil.which(program):
             raise RuntimeError("Preview requires " + program)
@@ -33,6 +33,22 @@ def run(output, gallery, keep):
     with tempfile.TemporaryDirectory(prefix="nacre-settings-preview-") as directory:
         root = Path(directory)
         config = stage(root / "shell", icons=True)
+        if production:
+            shutil.rmtree(config)
+            shutil.copytree(Path(__file__).resolve().parents[1] / "nacre/shell", config)
+            (config / "shell.qml").write_text("""import Quickshell
+import Quickshell.Io
+import qs.modules.settings
+import qs.services
+ShellRoot {
+ NacreSettingsHost {}
+ property var powerPolicy:NacrePowerPolicy
+ IpcHandler {target:"settingsRuntime"
+  function write(id:string,value:string):bool {return NacreSettingsProvider.write({id:id},JSON.parse(value))}
+  function state():string {return JSON.stringify({files:NacreSettingsProvider.files,error:NacreSettingsProvider.error})}
+ }
+}
+""")
         runtime = root / "runtime"
         runtime.mkdir(mode=0o700)
         home = root / "home"
@@ -51,15 +67,18 @@ def run(output, gallery, keep):
             "NOTIFY_SOCKET",
             "NACRE_QS_CONFIG",
             "DISPLAY",
+            "NIRI_CONFIG",
+            "QT_LOGGING_RULES",
+            *[key for key in env if key.startswith("NACRE_")],
         ]:
             env.pop(key, None)
         env.update(
             HOME=str(home),
             XDG_RUNTIME_DIR=str(runtime),
-            XDG_CONFIG_HOME=str(home / "config"),
-            XDG_CACHE_HOME=str(home / "cache"),
-            XDG_STATE_HOME=str(home / "state"),
-            XDG_DATA_HOME=str(home / "data"),
+            XDG_CONFIG_HOME=str(home / ".config"),
+            XDG_CACHE_HOME=str(home / ".cache"),
+            XDG_STATE_HOME=str(home / ".local/state"),
+            XDG_DATA_HOME=str(home / ".local/share"),
             WAYLAND_DISPLAY=str(parent),
             NACRE_SETTINGS_PREVIEW_STATE=str(seed),
             NACRE_SETTINGS_PREVIEW_ICON_FONT=str(config / "MaterialSymbolsRounded.ttf"),
@@ -68,6 +87,24 @@ def run(output, gallery, keep):
             DBUS_SESSION_BUS_ADDRESS="unix:path=" + str(runtime / "bus"),
             DBUS_SYSTEM_BUS_ADDRESS="unix:path=" + str(runtime / "bus"),
         )
+        if production:
+            source_root = Path(__file__).resolve().parents[1]
+            tools = home / ".local/share/nacre/shell/tools"
+            shutil.copytree(source_root / "nacre/shell-tools", tools)
+            helper = Path(
+                os.environ.get(
+                    "NACRE_HELPER_BINARY", source_root / "target/release/nacre-helper"
+                )
+            )
+            if not helper.is_file():
+                raise RuntimeError("Production smoke needs the task native helper")
+            shutil.copy2(helper, tools / "nacre-helper")
+            config_dir = home / ".config/nacre"
+            config_dir.mkdir(parents=True)
+            shutil.copy2(
+                source_root / "profiles/default.json", config_dir / "profile.json"
+            )
+            env.update(NACRE_COMPOSITOR="niri")
         niri_config = root / "config.kdl"
         niri_config.write_text("""
 output "winit" {mode "1440x1000";}
@@ -75,6 +112,7 @@ layout {gaps 24; background-color "#0c151b";}
 hotkey-overlay {skip-at-startup;}
 window-rule {match title="^Nacre Settings Preview$";open-floating true;}
 """)
+        env["NIRI_CONFIG"] = str(niri_config)
         bus_config = root / "bus.conf"
         bus_config.write_text(
             "<busconfig><type>session</type><listen>unix:path="
@@ -130,20 +168,138 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                             "-p",
                             str(config / "shell.qml"),
                             "call",
-                            "settingsPreview",
+                            "settingsApp" if production else "settingsPreview",
                             method,
                             *map(str, args),
                         ],
                         env=env,
                         capture_output=True,
                         text=True,
-                        timeout=4,
+                        timeout=10 if production else 4,
                     )
 
                 def snapshot():
-                    result = ipc("state")
+                    try:
+                        result = ipc("state")
+                    except subprocess.TimeoutExpired:
+                        return {}
                     return json.loads(result.stdout) if result.returncode == 0 else {}
 
+                if production:
+                    wait_for(snapshot, lambda value: "created" in value, timeout=30)
+                    ipc("open", "panels").check_returncode()
+                    wait_for(
+                        snapshot,
+                        lambda value: (
+                            value.get("visible") and value.get("width", 0) > 0
+                        ),
+                    )
+                    checked = []
+                    for route in [
+                        "wallpaper",
+                        "colors",
+                        "appearance",
+                        "panels",
+                        "launcher",
+                        "windows-workspaces",
+                        "notifications",
+                        "displays",
+                        "sound",
+                        "network",
+                        "keyboard-mouse",
+                        "lock-login",
+                        "apps",
+                        "privacy",
+                        "date-time-language",
+                        "system",
+                        "addons",
+                        "panels/dashboard#pages",
+                        "panels/control-center#tiles",
+                        "colors/app-theming",
+                        "launcher/favorites",
+                        "launcher/entries",
+                        "workflows",
+                        "time",
+                        "lock",
+                        "maintenance",
+                        "ai",
+                    ]:
+                        ipc("open", route).check_returncode()
+                        time.sleep(0.15)
+                        checked.append({"route": route, "state": snapshot()})
+                    native_write = subprocess.run(
+                        [
+                            "quickshell",
+                            "ipc",
+                            "-p",
+                            str(config / "shell.qml"),
+                            "call",
+                            "settingsRuntime",
+                            "write",
+                            "launcher.sources.files",
+                            "false",
+                        ],
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                        timeout=4,
+                    )
+                    native_write.check_returncode()
+                    if "true" not in native_write.stdout:
+                        raise RuntimeError("Production store rejected launcher source")
+                    sources = home / ".config/nacre/launcher-sources.json"
+                    wait_for(
+                        lambda: (
+                            json.loads(sources.read_text()) if sources.exists() else {}
+                        ),
+                        lambda value: value.get("files") is False,
+                    )
+                    # Exercise the production descriptor/store/provider path in
+                    # this compositor's isolated preferences and configuration.
+                    result = subprocess.run(
+                        [
+                            "quickshell",
+                            "ipc",
+                            "-p",
+                            str(config / "shell.qml"),
+                            "call",
+                            "desktopSettings",
+                            "set",
+                            "lipHoverDelay",
+                            "420",
+                        ],
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                        timeout=4,
+                    )
+                    result.check_returncode()
+                    saved = home / ".config/nacre/desktop.json"
+                    wait_for(
+                        lambda: json.loads(saved.read_text()) if saved.exists() else {},
+                        lambda value: value.get("lipHoverDelay") == 420,
+                    )
+                    ipc("open", "panels#hoverDelay").check_returncode()
+                    time.sleep(0.3)
+                    (output / "production-smoke.json").write_text(
+                        json.dumps(
+                            {
+                                "routes": checked,
+                                "privateStoreAcknowledged": True,
+                                "productionProviderAcknowledged": True,
+                                "desktopVersion": json.loads(saved.read_text())[
+                                    "version"
+                                ],
+                            },
+                            indent=2,
+                        )
+                        + "\n"
+                    )
+                    if "WARN scene" in (output / "nested.log").read_text():
+                        raise RuntimeError(
+                            "Production Settings emitted scene warnings; inspect nested.log"
+                        )
+                    return
                 initial = wait_for(snapshot, lambda value: value.get("writable"))
                 if initial.get("systemBus") != env["DBUS_SYSTEM_BUS_ADDRESS"]:
                     raise RuntimeError(
@@ -159,26 +315,14 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                     "surfaces": [],
                 }
                 source_root = Path(__file__).resolve().parents[1]
-                originals = (
-                    list(
-                        (source_root / "nacre/shell/modules/settings/prototype").glob(
-                            "*.qml"
-                        )
-                    )
-                    + list(
-                        (source_root / "nacre/shell/modules/settings/registry").glob(
-                            "*.json"
-                        )
-                    )
-                    + list(
-                        (source_root / "nacre/shell/modules/settings/registry").glob(
-                            "*.js"
-                        )
-                    )
-                )
+                originals = [
+                    path
+                    for path in (source_root / "nacre/shell").rglob("*")
+                    if path.is_file() and path.suffix in [".qml", ".js", ".json"]
+                ]
                 originals += [
-                    source_root / "nacre/shell/i18n/en.json",
-                    source_root / "nacre/shell/widgets/size-scale.json",
+                    source_root / "nacre/shell-tools/theme-targets.json",
+                    source_root / "nacre/shell-tools/nacre-state-files.json",
                     Path(__file__),
                     Path(__file__).with_name("settings_preview_fixtures.py"),
                 ]
@@ -208,13 +352,13 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                         snapshot,
                         lambda value: (
                             value.get("files", {})
-                            .get("desktop.json", {})
+                            .get("desktop", {})
                             .get("clickEdgeMenus")
                             is True
                         ),
                     )
                     assert (
-                        json.loads(seed.read_text())["files"]["desktop.json"][
+                        json.loads(seed.read_text())["files"]["desktop"][
                             "clickEdgeMenus"
                         ]
                         is True
@@ -227,7 +371,7 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                         snapshot,
                         lambda value: (
                             value.get("files", {})
-                            .get("desktop.json", {})
+                            .get("desktop", {})
                             .get("clickEdgeMenus")
                             is False
                         ),
@@ -239,8 +383,9 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                         snapshot,
                         lambda value: (
                             value.get("files", {})
-                            .get("wallpaper-picker.json", {})
-                            .get("paletteMode")
+                            .get("colors", {})
+                            .get("ui", {})
+                            .get("modeChoice")
                             == "light"
                         ),
                     )
@@ -251,14 +396,16 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                         snapshot,
                         lambda value: (
                             value.get("files", {})
-                            .get("wallpaper-picker.json", {})
-                            .get("paletteMode")
+                            .get("colors", {})
+                            .get("ui", {})
+                            .get("modeChoice")
                             == "dark"
                         ),
                     )
                     report["persistence"] = (
                         "Native click/hover and light/dark writes acknowledged and stored; choices restored; invalid type rejected"
                     )
+                    ipc("development", "false").check_returncode()
                     for width, height, label in [
                         (1100, 840, "normal"),
                         (620, 840, "narrow"),
@@ -298,17 +445,21 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                                 and value.get("height") == height
                             ),
                         )
-                        for route in [
-                            "panels",
-                            "colors",
-                            "launcher",
-                            "power",
-                            "panels/dashboard",
-                            "panels/control-center",
-                            "colors/app-theming",
-                            "search",
-                            "highlight",
-                        ]:
+                        routes = [
+                            page["id"]
+                            for fragment in json.loads(
+                                (
+                                    config / "modules/settings/registry/manifest.json"
+                                ).read_text()
+                            )["fragments"]
+                            for page in json.loads(
+                                (
+                                    config / "modules/settings/registry" / fragment
+                                ).read_text()
+                            ).get("pages", [])
+                            if page["id"] != "addons"
+                        ] + ["search", "highlight"]
+                        for route in routes:
                             if route == "search":
                                 ipc("search", "palette").check_returncode()
                             else:
@@ -410,8 +561,13 @@ def main():
     )
     parser.add_argument("--gallery", action="store_true")
     parser.add_argument("--keep", action="store_true")
+    parser.add_argument(
+        "--production",
+        action="store_true",
+        help="Smoke the complete production shell and providers in private nested state",
+    )
     args = parser.parse_args()
-    run(args.output.resolve(), args.gallery, args.keep)
+    run(args.output.resolve(), args.gallery, args.keep, args.production)
 
 
 if __name__ == "__main__":

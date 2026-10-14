@@ -7,21 +7,37 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+import re
 
-PAGES = (
-    "appearance",
-    "desktop",
-    "displays",
-    "sound",
-    "network",
-    "bluetooth",
-    "notifications",
-    "workflows",
-    "lock",
-    "time",
-    "ai",
-    "maintenance",
-)
+
+# The portable navigation registry is the route authority in source and installs.
+def navigation():
+    candidates = [
+        Path(__file__).resolve().parents[1]
+        / "nacre/shell/modules/settings/registry/navigation.json",
+        Path.home()
+        / ".local/share/nacre/shell/source/modules/settings/registry/navigation.json",
+    ]
+    for path in candidates:
+        if path.is_file():
+            import json
+
+            return json.loads(path.read_text())
+    raise RuntimeError("The Settings registry is not installed")
+
+
+def valid_route(route):
+    if not route:
+        return True
+    if len(route) > 256 or not re.fullmatch(
+        r"[a-z0-9/-]+(?:#[a-zA-Z0-9._/-]+)?", route
+    ):
+        return False
+    registry = navigation()
+    page = route.split("#", 1)[0]
+    return page in registry.get("aliases", {}) or any(
+        row["id"] == page for row in registry["pages"]
+    )
 
 
 def compositor():
@@ -61,9 +77,13 @@ def open_settings(page="", runner=subprocess.run, sleep=time.sleep):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("page", nargs="?", default="", choices=("", *PAGES))
+    parser.add_argument(
+        "page", nargs="?", default="", metavar="page[/subpage][#setting]"
+    )
     args = parser.parse_args()
     try:
+        if not valid_route(args.page):
+            raise RuntimeError("Unknown Settings route: " + args.page)
         open_settings(args.page)
     except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
         message = str(error)

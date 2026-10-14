@@ -10,35 +10,35 @@ NacreSurface {
     function choose() {
         chosen();
     }
-    implicitHeight: 110
-    radius: 14
+    implicitHeight: NacreTokens.space.huge * 3 + NacreTokens.space.lg
+    radius: NacreTokens.space.lg
     color: entry.surface ? "#" + entry.surface : NacreTokens.raised
     border.width: selected ? 2 : 1
     border.color: selected ? NacreTokens.focusInk(color) : Qt.alpha(NacreTokens.outline, .45)
     Row {
-        x: 10
-        y: 10
+        x: NacreTokens.space.compact
+        y: NacreTokens.space.compact
         width: parent.width - 20
-        spacing: 4
+        spacing: NacreTokens.space.xs
         Repeater {
             model: root.entry.swatches || []
             Rectangle {
                 required property var modelData
                 width: (parent.width - 8) / 3
-                height: 24
-                radius: 7
+                height: NacreTokens.space.xxl
+                radius: NacreTokens.space.sm
                 color: "#" + modelData
             }
         }
     }
     NacreText {
-        x: 10
+        x: NacreTokens.space.compact
         objectName: "paletteName"
-        y: 44
+        y: NacreTokens.space.huge + NacreTokens.space.md
         width: parent.width - 20
-        height: 36
+        height: NacreTokens.space.huge + NacreTokens.space.xs
         text: NacreI18n.option("palette-name", root.entry.name) || NacreI18n.tr("ui.palette-tile.text.color", "Color")
-        font.pointSize: 10
+        font.pointSize: NacreTokens.textSize.caption
         wrapMode: Text.Wrap
         maximumLineCount: 2
         elide: Text.ElideRight
@@ -46,18 +46,18 @@ NacreSurface {
     }
     Row {
         objectName: "paletteInUse"
-        x: 10
-        y: 82
-        spacing: 5
+        x: NacreTokens.space.compact
+        y: NacreTokens.space.huge * 2 + NacreTokens.space.xl
+        spacing: NacreTokens.space.xs
         visible: root.selected
         NacreIcon {
             text: "check"
-            font.pointSize: 10
+            font.pointSize: NacreTokens.textSize.caption
             color: NacreTokens.focusInk(root.color)
         }
         NacreText {
             text: NacreI18n.tr("ui.palette-tile.text.in-use", "In use")
-            font.pointSize: 9
+            font.pointSize: NacreTokens.textSize.body
             color: NacreTokens.focusInk(root.color)
         }
     }

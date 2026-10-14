@@ -81,7 +81,7 @@ class DesktopSettingsTests(unittest.TestCase):
                     ):
                         desktop.main()
                     if name == "presentation":
-                        self.assertFalse(desktop.load()["topEdge"])
+                        self.assertFalse(desktop.load()["topBarEnabled"])
                         self.assertTrue(desktop.load()["dnd"])
                 for key in desktop.DEFAULTS:
                     self.assertEqual(desktop.load()[key], normal[key], key)

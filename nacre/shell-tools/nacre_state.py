@@ -126,6 +126,24 @@ def _decode(value, entry):
         and version < entry["version"]
     ):
         data["version"] = entry["version"]
+    if entry["id"] == "desktop" and version < 2:
+        aliases = {
+            "topEdge": ["frameTopEnabled", "topBarEnabled"],
+            "leftEdge": ["frameLeftEnabled"],
+            "rightEdge": ["frameRightEnabled", "controlCenterEnabled"],
+            "bottomEdge": ["frameBottomEnabled"],
+            "leftDrawer": ["aiSidebarEnabled"],
+        }
+        for document in [data, data.get("normalSnapshot", {})]:
+            if not isinstance(document, dict):
+                continue
+            for old, keys in aliases.items():
+                if old in document:
+                    for key in keys:
+                        document.setdefault(key, document[old])
+                    document.pop(old)
+        # Dashboard had no independent off switch; preserve that behavior.
+        data.setdefault("dashboardEnabled", True)
     if entry["id"] == "control-center" and version < 2:
         data = dict(
             data,

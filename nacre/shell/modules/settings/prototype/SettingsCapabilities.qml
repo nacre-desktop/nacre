@@ -15,10 +15,14 @@ QtObject {
     property bool yay: false
     property bool flatpak: false
     readonly property var snapshot: Object.assign({}, compositor, {
+        controlDetected: true,
+        controlAvailable: true,
         battery: battery,
         wifi: wifi,
         bluetooth: bluetooth,
         nightLight: nightLight,
+        powerProfiles: true,
+        performanceProfile: true,
         ai: ai,
         brain: brain,
         packages: packages,

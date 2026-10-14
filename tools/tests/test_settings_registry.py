@@ -59,7 +59,15 @@ class SettingsRegistryTests(unittest.TestCase):
             self.assertEqual(setting["id"], setting["section"] + "." + setting["key"])
             self.assertIn(setting["page"], pages)
             self.assertEqual(sections[setting["section"]]["page"], setting["page"])
-            self.assertRegex(setting["store"]["file"], r"^(?:state:)?[a-z-]+\.json$")
+            self.assertIn(
+                setting["store"]["id"],
+                {
+                    row["id"]
+                    for row in json.loads(
+                        (ROOT / "nacre/shell-tools/nacre-state-files.json").read_text()
+                    )["files"]
+                },
+            )
             self.assertTrue(setting["store"]["key"])
             value, kind = setting["default"], setting["type"]
             types = {
@@ -103,7 +111,7 @@ class SettingsRegistryTests(unittest.TestCase):
         def visit(value):
             if isinstance(value, dict):
                 for key, item in value.items():
-                    if key.endswith("Id"):
+                    if key.endswith("Id") and key != "storeId":
                         self.assertIn(item, english)
                     else:
                         visit(item)
@@ -118,7 +126,7 @@ class SettingsRegistryTests(unittest.TestCase):
         )
         for setting in merged["settings"]:
             if (
-                setting["store"]["file"] == "desktop.json"
+                setting["store"]["id"] == "desktop"
                 and setting.get("backend") != "planned"
             ):
                 self.assertEqual(
@@ -144,18 +152,18 @@ const manifest = JSON.parse(fs.readFileSync(base + '/manifest.json'));
 const schema = api.merge(manifest.fragments.map(name => JSON.parse(fs.readFileSync(base + '/' + name))));
 const english = JSON.parse(fs.readFileSync(process.argv[2]));
 const text = id => english[id] || '';
-const caps = {battery:true,ai:true,brain:true,bluetooth:true,wifi:true,packages:true,bottomPanel:true};
+const caps = {battery:true,ai:true,brain:true,bluetooth:true,wifi:true,packages:true,bottomPanel:true,batterySaver:true};
 for (const setting of schema.settings) {
     assert(api.validValue(setting, setting.default), setting.id);
     for (const fragment of [setting.key, setting.id]) {
-        const resolved = api.resolve(schema, setting.page + '#' + fragment, caps);
+        const resolved = api.resolve(schema, setting.page + '#' + fragment, caps, true);
         assert(resolved && resolved.setting === setting.id, setting.id);
     }
-    assert(api.search(schema, text(setting.labelId), caps, text).some(row => row.id === setting.id), setting.id);
+    assert(api.search(schema, text(setting.labelId), caps, text, true).some(row => row.id === setting.id), setting.id);
     assert(!api.resolve(schema, 'colors#' + setting.id, caps) || setting.page === 'colors');
 }
 for (const [alias, target] of Object.entries(schema.aliases)) {
-    assert(api.resolve(schema, alias, caps)?.page === target, alias);
+    assert(api.resolve(schema, alias, caps)?.page === target.split("#")[0], alias);
 }
 for (const link of ['', 'missing', '../desktop', 'colors#absent', 'colors?command=bad', 'panels/dashboard#clickEdgeMenus']) assert(api.resolve(schema, link, caps) === null, link);
 assert(api.resolve(schema, 'power', {}) === null);

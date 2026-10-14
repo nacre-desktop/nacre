@@ -14,7 +14,7 @@ NacreSettingsPage {
         description: TimezoneSettings.status.timezone || NacreI18n.tr("ui.time-page.description.reading-timezone", "Reading timezone…")
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.time-page.text.refresh", "Refresh")
                 enabled: !TimezoneSettings.busy
@@ -32,7 +32,7 @@ NacreSettingsPage {
         description: NacreI18n.tr("ui.time-page.description.uses-device-location-when-available-with-your-confirmed", "Uses device location when available, with your confirmed timezone as a fallback. Network location alone never changes the clock.")
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.time-page.text.on", "On")
                 selected: TimezoneSettings.status.automatic === true
@@ -72,7 +72,7 @@ NacreSettingsPage {
         }
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.time-page.text.confirm-timezone", "Confirm timezone")
                 enabled: !TimezoneSettings.busy && !!zone.text.trim()

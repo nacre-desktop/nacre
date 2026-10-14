@@ -114,7 +114,7 @@ NacreWindow {
             anchors.left: parent.left
             anchors.right: parent.right
             height: NacreFrame.headerHeight
-            visible: DesktopSettings.data.topEdge !== false && !NacrePanelState.hidden
+            visible: DesktopSettings.data.topBarEnabled !== false && !NacrePanelState.hidden
             screen: root.screen
             z: 4
         }

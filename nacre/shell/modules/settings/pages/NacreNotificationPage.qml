@@ -8,28 +8,13 @@ NacreSettingsPage {
     property string page: "notifications"
     property bool confirmClear: false
     NacreSettingsSection {
-        title: NacreI18n.tr("ui.notification-page.title.notification-preferences", "Notification preferences")
-        NacreSettingToggle {
-            label: NacreI18n.tr("ui.notification-page.label.do-not-disturb", "Do not disturb")
-            setting: "dnd"
-        }
-        NacreSettingToggle {
-            label: NacreI18n.tr("ui.notification-page.label.show-notifications-on-the-lock-screen", "Show notifications on the lock screen")
-            setting: "lockNotifications"
-        }
-        NacreSettingToggle {
-            label: NacreI18n.tr("ui.notification-page.label.show-message-contents-on-the-lock-screen", "Show message contents on the lock screen")
-            setting: "lockNotificationContents"
-        }
-    }
-    NacreSettingsSection {
         title: NacreI18n.tr("ui.notification-page.title.notification-history", "Notification history")
         description: NacreI18n.tr("ui.notification-page.description.value0-saved-notifications", "{value0} saved notifications", {
             value0: NacreNotifs.retained.length
         })
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 objectName: "requestClearHistory"
                 text: root.confirmClear ? NacreI18n.tr("ui.notification-page.text.clear-saved-notifications", "Clear saved notifications") : NacreI18n.tr("ui.notification-page.text.clear-history", "Clear history")

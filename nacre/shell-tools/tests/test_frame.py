@@ -112,7 +112,7 @@ QtObject {
                 "NacreHoverIntent": "function fullscreenFor(name){return false}",
                 "NacreDashboardState": "property real progress:0",
                 "NacreTokens": "property bool motionEnabled:false",
-                "DesktopSettings": "property var data:({topEdge:true})",
+                "DesktopSettings": "property var data:({topBarEnabled:true,frameTopEnabled:true})",
                 "NacreFrame": "property int headerHeight:50",
             }
             children = {
@@ -326,7 +326,7 @@ TestCase {
                         "m3outline": "#888888",
                     }
                 ),
-                "services/DesktopSettings": "property var data:({animations:false,leftDrawer:true,rightEdge:true})",
+                "services/DesktopSettings": "property var data:({animations:false,aiSidebarEnabled:true,controlCenterEnabled:true})",
                 "services/NacrePearls": "property var drag:null",
                 "services/NacrePanelState": "property bool hidden:false",
                 "services/NacreCompositor": "property var focusedMonitor:({name:'test'});property var activeWindow:null",

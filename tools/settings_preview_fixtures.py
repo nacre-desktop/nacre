@@ -1,6 +1,7 @@
 """Stage unchanged Settings/panel UI with synthetic, isolated service adapters."""
 
 import json
+import ast
 from pathlib import Path
 import shutil
 import subprocess
@@ -25,7 +26,16 @@ def singleton(folder, name, body, imports=""):
 def stage(target, *, icons=False):
     target = Path(target)
     target.mkdir(parents=True, exist_ok=True)
-    for relative in ["modules/settings", "i18n"]:
+    for relative in [
+        "modules/settings",
+        "modules/bar/popouts",
+        "modules/dashboard/media",
+        "config",
+        "modules/controlcenter",
+        "modules/notifications",
+        "branding",
+        "i18n",
+    ]:
         shutil.copytree(SHELL / relative, target / relative, dirs_exist_ok=True)
     for relative, names in {
         "widgets": [
@@ -58,6 +68,7 @@ def stage(target, *, icons=False):
         folder.mkdir(parents=True, exist_ok=True)
         for name in names:
             shutil.copy2(SHELL / relative / (name + ".qml"), folder)
+    shutil.copytree(SHELL / "widgets", target / "widgets", dirs_exist_ok=True)
     shutil.copy2(SHELL / "widgets/size-scale.json", target / "widgets/size-scale.json")
     # Rendering uses a gallery-only copy of the pinned icon font. Qt tests do
     # not need the font and must work in CI before the font gallery step.
@@ -90,7 +101,7 @@ def stage(target, *, icons=False):
                 )
             (target / row["name"]).write_bytes(raw)
     (target / "utils").mkdir()
-    shutil.copy2(SHELL / "utils/NacrePaths.qml", target / "utils/NacrePaths.qml")
+    shutil.copytree(SHELL / "utils", target / "utils", dirs_exist_ok=True)
     services = target / "services"
     services.mkdir()
     shutil.copy2(SHELL / "services/NacreDashboardRegistry.qml", services)
@@ -105,6 +116,7 @@ def stage(target, *, icons=False):
         for (const key of Object.keys(args || {})) value = value.replace("{" + key + "}", args[key]);
         return value;
     }
+    function number(value) {return String(value)}
     function option(domain, value) {
         const row = options[domain]?.[value];
         return row ? tr(row.id, row.text || value) : value;
@@ -146,29 +158,30 @@ def stage(target, *, icons=False):
         services,
         "DesktopSettings",
         """
-    readonly property var data: Object.assign({interfaceFont:"DejaVu Sans"}, SettingsPreviewContext.store?.files["desktop.json"] || {})
-    function set(key,value){SettingsPreviewContext.backend?.change("desktop.json",[key],value)}
+    property var monitors:[{name:"Demo display",width:1920,height:1080,scale:1,refreshRate:60,availableModes:["1920x1080@60.00Hz"]}];property bool busy:false;property bool pending:false;property string message:"";function request(args){}
+    readonly property var data: Object.assign({interfaceFont:"DejaVu Sans"}, SettingsPreviewContext.store?.files["desktop"] || {})
+    function set(key,value){SettingsPreviewContext.backend?.change("desktop",[key],value)}
     """,
     )
     singleton(
         services,
         "NacreDashboardState",
         """
-    readonly property var preferences: Object.assign({tabs:["today","media","weather","system"],lyrics:true,homeZone:"",homeCity:"",calendarFile:"",focusMinutes:25},SettingsPreviewContext.store?.files["dashboard.json"] || {})
+    readonly property var preferences: Object.assign({tabs:["today","media","weather","system"],lyrics:true,homeZone:"",homeCity:"",calendarFile:"",focusMinutes:25},SettingsPreviewContext.store?.files["dashboard"] || {})
     readonly property var coreTabs: preferences.tabs
-    readonly property var extraOrder: SettingsPreviewContext.store?.files["dashboard-extras.json"]?.order || ["focus","notifications","clipboard","devices","network","ai-usage","screenshots","brain"]
-    readonly property var enabledExtras: SettingsPreviewContext.store?.files["dashboard-extras.json"]?.enabled || []
+    readonly property var extraOrder: SettingsPreviewContext.store?.files["dashboard-extras"]?.order || ["focus","notifications","clipboard","devices","network","ai-usage","screenshots","brain"]
+    readonly property var enabledExtras: SettingsPreviewContext.store?.files["dashboard-extras"]?.enabled || []
     readonly property var tabs: [...coreTabs,...extraOrder.filter(id=>enabledExtras.includes(id))]
     property bool extrasReady:true
     property bool weatherPhotos:true
     property string message:""
-    function save(key,value){SettingsPreviewContext.backend?.change("dashboard.json",[key],value)}
+    function save(key,value){SettingsPreviewContext.backend?.change("dashboard",[key],value)}
     function saveMany(values){for(const key of Object.keys(values)) save(key,values[key])}
     function toggleTab(id){const next=coreTabs.includes(id)?coreTabs.filter(x=>x!==id):[...coreTabs,id];if(next.length)save("tabs",next)}
     function reorder(id,delta){const next=[...coreTabs],index=next.indexOf(id),after=Math.max(0,Math.min(next.length-1,index+delta));if(index>=0){next.splice(index,1);next.splice(after,0,id);save("tabs",next)}}
-    function toggleExtra(id){SettingsPreviewContext.backend?.change("dashboard-extras.json",["enabled"],enabledExtras.includes(id)?enabledExtras.filter(x=>x!==id):[...enabledExtras,id])}
-    function reorderExtra(id,delta){const next=[...extraOrder],index=next.indexOf(id),after=Math.max(0,Math.min(next.length-1,index+delta));next.splice(index,1);next.splice(after,0,id);SettingsPreviewContext.backend?.change("dashboard-extras.json",["order"],next)}
-    function saveExtras(){SettingsPreviewContext.backend?.change("dashboard-extras.json",["weatherPhotos"],weatherPhotos)}
+    function toggleExtra(id){SettingsPreviewContext.backend?.change("dashboard-extras",["enabled"],enabledExtras.includes(id)?enabledExtras.filter(x=>x!==id):[...enabledExtras,id])}
+    function reorderExtra(id,delta){const next=[...extraOrder],index=next.indexOf(id),after=Math.max(0,Math.min(next.length-1,index+delta));next.splice(index,1);next.splice(after,0,id);SettingsPreviewContext.backend?.change("dashboard-extras",["order"],next)}
+    function saveExtras(){SettingsPreviewContext.backend?.change("dashboard-extras",["weatherPhotos"],weatherPhotos)}
     """,
     )
     singleton(
@@ -176,30 +189,76 @@ def stage(target, *, icons=False):
         "NacreControlPreferences",
         """
     readonly property var defaults:["volume","brightness","network","bluetooth","battery","night","dnd","awake","appearance"]
-    readonly property var tiles:SettingsPreviewContext.store?.files["control-center.json"]?.tiles || defaults
+    readonly property var tiles:SettingsPreviewContext.store?.files["control-center"]?.tiles || defaults
     readonly property var optionalTiles:tiles.filter(id=>!defaults.includes(id))
     property string error:""
-    function save(values){SettingsPreviewContext.backend?.change("control-center.json",["tiles"],values)}
+    function save(values){SettingsPreviewContext.backend?.change("control-center",["tiles"],values)}
     function toggle(id){save(tiles.includes(id)?tiles.filter(x=>x!==id):[...tiles,id])}
     function move(id,delta,visibleIds){const next=[...tiles],visible=visibleIds || tiles,index=visible.indexOf(id),other=visible[index+delta];if(other){const first=next.indexOf(id),second=next.indexOf(other);[next[first],next[second]]=[next[second],next[first]];save(next)}}
     function reset(){save(defaults)}
     """,
     )
+    # Hardware/status adapters from the retained native editor regression kit.
+    test_tree = ast.parse(
+        (ROOT / "nacre/shell-tools/tests/test_settings_ui.py").read_text()
+    )
+    hardware = next(
+        ast.literal_eval(node.value)
+        for node in ast.walk(test_tree)
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "services"
+            for target in node.targets
+        )
+    )
+    for name in [
+        "TimezoneSettings",
+        "NacreTime",
+        "AppLaunch",
+        "DesktopActions",
+        "NacreWeather",
+        "DeviceActions",
+        "NacreCompositor",
+    ]:
+        singleton(services, name, hardware[name])
+    for name in ["SidebarChat"]:
+        shutil.copy2(
+            ROOT / "nacre/shell-tools/tests/qml/fixtures" / (name + ".qml"), services
+        )
     simple = {
-        "NacreNetwork": 'property bool wiredConnected:false;property bool wifiEnabled:true;property bool wifiAvailable:true;property var active:({ssid:"Demo network"})',
-        "NacreBluetooth": "property bool powered:true;property bool available:true;property var devices:[]",
+        "Maintenance": "property var data:({});property bool busy:false;property string message:'';function refresh(){} function request(kind){} function recover(kind){}",
+        "NacreNetwork": hardware["NacreNetwork"],
+        "NacreBluetooth": hardware["NacreBluetooth"],
         "NacreControlTools": "property bool busy:false;property var data:({nightLightSupported:true,nightLightEnabled:false,powerProfilesSupported:true,screenshot:true,colorPicker:true})",
-        "NacreControlActions": "property bool busy:false",
-        "NacreNotifs": "property bool dnd:false;property var retained:[]",
+        "NacreControlActions": "property bool busy:false;property string message:'';function cancelWifiInline(){} function connectWifiInline(point,password){return false} function request(args){}",
+        "NacreNotifs": hardware["NacreNotifs"],
         "NacreMenu": "property var snapshot:({stayAwake:false,capabilities:{record:true}})",
         "NacreVpn": "property var connected:[];property var profiles:[];property bool busy:false",
         "NacreAudio": "property bool micAvailable:true;property bool micMuted:false",
         "NacreBrightness": "function getMonitorForScreen(screen){return {available:true}}",
         "NacreKeyboardLight": "property bool available:true",
-        "NacreProfile": "property bool ai:true;property bool brain:true",
+        "NacreProfile": "property bool ai:true;property bool brain:true;property var data:({workspaceCount:5})",
+        "NacreWallpapers": "property string thumbnail: Qt.resolvedUrl('../wallpaper-demo.svg').toString().replace('file://','');property string current: '';property var appearancePreferences:({})",
+        "DesktopExtras": "property var keys:[];function request(kind,data){}",
+        "NacreSettingsStorage": "property var documents:("
+        + json.dumps(
+            {
+                "theme-targets": {
+                    "targets": json.loads(
+                        (ROOT / "nacre/shell-tools/theme-targets.json").read_text()
+                    )["targets"]
+                }
+            }
+        )
+        + ")",
+        "NacreApps": "property var all:[{id:'demo-browser.desktop',name:'Browser'},{id:'demo-editor.desktop',name:'Editor'}]",
+        "NacrePanelState": "function openMode(mode){}",
     }
     for name, body in simple.items():
         singleton(services, name, body)
+    (target / "wallpaper-demo.svg").write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#304c61"/><circle cx="450" cy="100" r="45" fill="#b3cdd7"/><path d="M0 230L150 100L300 260L460 160L640 270V360H0Z" fill="#607d88"/><path d="M0 320L210 190L420 330L570 210L640 280V360H0Z" fill="#213d4d"/></svg>'
+    )
     (target / "shell.qml").write_text(
         "import Quickshell\nimport qs.modules.settings.prototype\nShellRoot {SettingsPreview {}}\n"
     )
@@ -225,31 +284,37 @@ def state():
     return {
         "version": 1,
         "files": {
-            "desktop.json": {
+            "desktop": {
                 "clickEdgeMenus": False,
                 "detachablePanels": True,
                 "dragPanels": True,
-                "topEdge": True,
-                "rightEdge": True,
-                "leftDrawer": True,
+                "topBarEnabled": True,
+                "dashboardEnabled": True,
+                "frameTopEnabled": True,
+                "frameLeftEnabled": True,
+                "frameRightEnabled": True,
+                "frameBottomEnabled": True,
+                "lipHoverDelay": 350,
+                "controlCenterEnabled": True,
+                "aiSidebarEnabled": True,
             },
-            "wallpaper-picker.json": {
+            "wallpaper-picker": {
                 "palettePreset": "wallpaper",
                 "paletteMode": "dark",
                 "palettePersonality": "natural",
             },
-            "state:scheme.json": {"flavour": "default"},
-            "launcher.json": {
+            "scheme": {"flavour": "default"},
+            "launcher": {
                 "favorites": ["demo-browser.desktop"],
                 "hidden": [],
                 "recent": ["demo-editor.desktop"],
                 "usage": {"demo-editor.desktop": {"count": 2}},
             },
-            "dashboard.json": {
+            "dashboard": {
                 "tabs": ["today", "media", "weather", "system"],
                 "lyrics": True,
             },
-            "dashboard-extras.json": {
+            "dashboard-extras": {
                 "version": 1,
                 "enabled": [],
                 "order": [
@@ -264,7 +329,7 @@ def state():
                 ],
                 "weatherPhotos": True,
             },
-            "control-center.json": {
+            "control-center": {
                 "version": 2,
                 "tiles": [
                     "volume",

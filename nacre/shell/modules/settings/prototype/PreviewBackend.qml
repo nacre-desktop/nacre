@@ -61,18 +61,18 @@ Item {
     Connections {
         target: root.store
         function onWriteRequested(setting, value) {
-            root.change(setting.store.file, setting.store.key, value);
+            root.change(setting.store.id, setting.store.key, value);
         }
         function onResetRequested(settings) {
             const files = Object.assign({}, root.store.files);
             for (const setting of settings)
-                files[setting.store.file] = Registry.writePath(files[setting.store.file], setting.store.key, setting.default);
+                files[setting.store.id] = Registry.writePath(files[setting.store.id], setting.store.key, setting.default);
             root.save(files);
         }
         function onActionRequested(action) {
             if (action === "launcher-history") {
                 const files = Object.assign({}, root.store.files);
-                files["launcher.json"] = Object.assign({}, files["launcher.json"], {
+                files["launcher"] = Object.assign({}, files["launcher"], {
                     recent: [],
                     usage: {}
                 });

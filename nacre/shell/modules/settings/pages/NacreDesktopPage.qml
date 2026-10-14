@@ -39,12 +39,12 @@ NacreSettingsPage {
             Row {
                 required property var modelData
                 width: parent.width
-                spacing: 12
+                spacing: NacreTokens.space.md
                 NacreText {
                     width: Math.max(0, parent.width - 192)
                     text: parent.modelData.label
                     wrapMode: Text.Wrap
-                    font.pointSize: 11
+                    font.pointSize: NacreTokens.textSize.body
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 NacreNumberField {
@@ -97,7 +97,7 @@ NacreSettingsPage {
         description: NacreI18n.tr("ui.desktop-page.description.three-visible-frame-lips-mark-the-menus-without-moving", "Three visible frame lips mark the menus without moving windows. Hover opens only those targets; status icons use clicks.")
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.desktop-page.text.click-only", "Click only")
                 selected: DesktopSettings.data.clickEdgeMenus === true
@@ -125,7 +125,7 @@ NacreSettingsPage {
     NacreText {
         width: parent.width
         text: DesktopSettings.message || ""
-        font.pointSize: 10
+        font.pointSize: NacreTokens.textSize.caption
         color: NacreTokens.mutedInk
         wrapMode: Text.Wrap
     }

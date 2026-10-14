@@ -114,7 +114,11 @@ def references(root):
         def identifiers(value):
             if isinstance(value, dict):
                 for key, item in value.items():
-                    if key.endswith("Id") and isinstance(item, str):
+                    if (
+                        key.endswith("Id")
+                        and key != "storeId"
+                        and isinstance(item, str)
+                    ):
                         result.add(item)
                     else:
                         identifiers(item)
@@ -122,6 +126,9 @@ def references(root):
                 for item in value:
                     identifiers(item)
 
+        publisher = root / "nacre/shell-tools/theme-targets.json"
+        if publisher.exists():
+            identifiers(json.loads(publisher.read_text()))
         for fragment in json.loads((registry / "manifest.json").read_text())[
             "fragments"
         ]:
@@ -246,10 +253,7 @@ def check(root=ROOT):
         for row in domain.values():
             if row["id"] not in english:
                 errors.append("Missing option message ID: " + row["id"])
-    for relative in (
-        "modules/settings/settings-catalog.js",
-        "modules/welcome/welcome-catalog.js",
-    ):
+    for relative in ("modules/welcome/welcome-catalog.js",):
         path = root / "nacre/shell" / relative
         stream = tokens(path.read_text())
         for index, token in enumerate(stream[:-2]):

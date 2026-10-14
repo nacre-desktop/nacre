@@ -9,23 +9,23 @@ NacreSurface {
     property bool collapsible: false
     property bool expanded: true
     default property alias contents: body.data
-    implicitHeight: 32 + header.implicitHeight + (body.visible ? 14 + body.implicitHeight : 0)
-    implicitWidth: 880
+    implicitHeight: body.visible ? body.y + body.implicitHeight + NacreTokens.space.xl : header.y + header.implicitHeight + NacreTokens.space.xl
+    implicitWidth: NacreTokens.space.huge * 27 + NacreTokens.space.lg
     width: parent?.width ?? implicitWidth
-    radius: 18
+    radius: NacreTokens.radii.medium
     color: NacreColours.palette.m3surfaceContainer
     Column {
         id: header
-        x: 16
-        y: 16
-        width: parent.width - 32 - (root.collapsible ? 36 : 0)
-        spacing: 8
+        x: NacreTokens.space.xl
+        y: NacreTokens.space.xl
+        width: parent.width - NacreTokens.space.xl * 2 - (root.collapsible ? NacreTokens.space.huge + NacreTokens.space.xs : 0)
+        spacing: NacreTokens.space.sm
         NacreText {
             width: parent.width
             text: root.title
             visible: text.length > 0
-            color: NacreTokens.accent
-            font.pointSize: 13
+            color: NacreTokens.ink
+            font.pointSize: NacreTokens.textSize.title
             wrapMode: Text.Wrap
         }
         NacreText {
@@ -33,18 +33,18 @@ NacreSurface {
             text: root.description
             visible: text.length > 0
             color: NacreTokens.mutedInk
-            font.pointSize: 10
+            font.pointSize: NacreTokens.textSize.caption
             wrapMode: Text.Wrap
         }
     }
     NacreSurface {
         objectName: "settingsSectionToggle"
         visible: root.collapsible
-        x: parent.width - 46
-        y: 14
-        width: 30
-        height: 30
-        radius: 15
+        x: parent.width - NacreTokens.space.huge - NacreTokens.space.lg
+        y: NacreTokens.space.lg
+        width: NacreTokens.space.huge
+        height: NacreTokens.space.huge
+        radius: NacreTokens.space.lg
         color: "transparent"
         NacreIcon {
             anchors.centerIn: parent
@@ -63,10 +63,10 @@ NacreSurface {
     }
     Column {
         id: body
-        x: 16
-        y: header.y + header.height + 14
-        width: parent.width - 32
-        spacing: 14
+        x: NacreTokens.space.xl
+        y: header.y + header.height + NacreTokens.space.lg
+        width: parent.width - NacreTokens.space.xl * 2
+        spacing: NacreTokens.space.lg
         visible: !root.collapsible || root.expanded
     }
 }

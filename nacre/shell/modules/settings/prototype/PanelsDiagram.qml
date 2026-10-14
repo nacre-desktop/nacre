@@ -7,13 +7,13 @@ Item {
     required property var registry
     required property var capabilities
     signal navigate(string route)
-    implicitHeight: 300
+    implicitHeight: NacreTokens.space.huge * 7
     NacreSurface {
         id: screen
-        x: Math.max(48, parent.width * .13)
-        y: 50
+        x: Math.max(NacreTokens.space.xxl * 2, parent.width * .13)
+        y: NacreTokens.space.huge + NacreTokens.space.xl
         width: parent.width - 2 * x
-        height: 190
+        height: NacreTokens.space.huge * 4
         radius: NacreTokens.radii.medium
         color: NacreTokens.body
         border.width: 1
@@ -36,7 +36,7 @@ Item {
             x: NacreTokens.space.md
             y: NacreTokens.space.sm
             width: parent.width - 2 * x
-            height: 10
+            height: NacreTokens.space.compact
             radius: NacreTokens.radii.full
             color: Qt.alpha(NacreTokens.accent, .35)
         }
@@ -44,10 +44,15 @@ Item {
     ActionButton {
         objectName: "edge-top-bar"
         anchors.horizontalCenter: screen.horizontalCenter
-        y: 2
+        y: NacreTokens.space.hairline
         text: root.registry.text("settings.registry.panels.top-bar.label")
         icon: "toolbar"
         compact: true
+        border.width: hover0.hovered ? 1 : 0
+        border.color: NacreTokens.accent
+        HoverHandler {
+            id: hover0
+        }
         onClicked: root.navigate("panels/top-bar")
     }
     ActionButton {
@@ -57,37 +62,57 @@ Item {
         text: root.registry.text("settings.registry.panels.dashboard.label")
         icon: "space_dashboard"
         compact: true
+        border.width: hover1.hovered ? 1 : 0
+        border.color: NacreTokens.accent
+        HoverHandler {
+            id: hover1
+        }
         onClicked: root.navigate("panels/dashboard")
     }
     ActionButton {
         objectName: "edge-ai"
-        visible: root.capabilities.ai === true
+        visible: true
         x: 0
         y: screen.y + (screen.height - height) / 2
-        width: Math.min(120, implicitWidth)
-        text: root.registry.text("settings.registry.panels.ai-sidebar.label")
+        width: Math.min(NacreTokens.space.huge * 4, implicitWidth)
+        text: root.registry.text(root.capabilities.ai === true ? "settings.registry.panels.ai-sidebar.label" : "settings.registry.ui.empty-left-edge")
         icon: "neurology"
         compact: true
-        onClicked: root.navigate("panels/ai-sidebar")
+        border.width: hover2.hovered ? 1 : 0
+        border.color: NacreTokens.accent
+        HoverHandler {
+            id: hover2
+        }
+        onClicked: root.navigate(root.capabilities.ai === true ? "panels/ai-sidebar" : "addons")
     }
     ActionButton {
         objectName: "edge-control-center"
         x: root.width - width
         y: screen.y + (screen.height - height) / 2
-        width: Math.min(138, implicitWidth)
+        width: Math.min(NacreTokens.space.huge * 4 + NacreTokens.space.md, implicitWidth)
         text: root.registry.text("settings.registry.panels.control-center.label")
         icon: "tune"
         compact: true
+        border.width: hover3.hovered ? 1 : 0
+        border.color: NacreTokens.accent
+        HoverHandler {
+            id: hover3
+        }
         onClicked: root.navigate("panels/control-center")
     }
     ActionButton {
         objectName: "edge-bottom"
-        visible: root.capabilities.bottomPanel === true
+        visible: true
         anchors.horizontalCenter: screen.horizontalCenter
         y: screen.y + screen.height + NacreTokens.space.md
-        text: root.registry.text("settings.registry.panels.bottom.label")
+        text: root.registry.text(root.capabilities.bottomPanel === true ? "settings.registry.panels.bottom.label" : "settings.registry.ui.empty-edge")
         icon: "dock_to_bottom"
         compact: true
+        border.width: hover4.hovered ? 1 : 0
+        border.color: NacreTokens.accent
+        HoverHandler {
+            id: hover4
+        }
         onClicked: root.navigate("panels/bottom")
     }
 }

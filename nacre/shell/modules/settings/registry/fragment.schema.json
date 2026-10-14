@@ -87,6 +87,11 @@
           },
           "prototype": {
             "type": "boolean"
+          },
+          "enterAction": {
+            "enum": [
+              "power-refresh"
+            ]
           }
         },
         "additionalProperties": false
@@ -132,7 +137,11 @@
               "wallpaper-picker",
               "display-arrangement",
               "wifi-list",
-              "shared-editor"
+              "shared-editor",
+              "device-content",
+              "shortcuts",
+              "publisher-targets",
+              "addon-cards"
             ]
           },
           "editor": {
@@ -147,6 +156,15 @@
           "dependsOn": {
             "type": "string",
             "minLength": 1
+          },
+          "target": {
+            "type": "string"
+          },
+          "editorSection": {
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -214,11 +232,11 @@
           "store": {
             "type": "object",
             "required": [
-              "file",
+              "id",
               "key"
             ],
             "properties": {
-              "file": {
+              "id": {
                 "type": "string",
                 "minLength": 1
               },
@@ -265,6 +283,9 @@
                 "labelId": {
                   "type": "string",
                   "minLength": 1
+                },
+                "enabledWhen": {
+                  "$ref": "#/$defs/condition"
                 }
               },
               "additionalProperties": false
@@ -313,6 +334,14 @@
           },
           "editorOwned": {
             "type": "boolean"
+          },
+          "adapter": {
+            "enum": [
+              "color-mode"
+            ]
+          },
+          "entityType": {
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -361,13 +390,19 @@
             "minLength": 1
           },
           "adapter": {
-            "enum": [
-              "colors-studio",
-              "launcher-history"
-            ]
+            "type": "string",
+            "minLength": 1
           },
           "confirm": {
             "type": "boolean"
+          },
+          "destructive": {
+            "type": "boolean"
+          },
+          "backend": {
+            "enum": [
+              "planned"
+            ]
           }
         },
         "additionalProperties": false

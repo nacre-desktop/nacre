@@ -85,7 +85,7 @@ Singleton {
         next();
     }
     function refresh() {
-        if (!busy && queue.length === 0)
+        if (!queue.some(item => item.arguments[0] === "state"))
             request(["state"]);
     }
     Component.onCompleted: request(["state"])
@@ -100,7 +100,21 @@ Singleton {
         onFileChanged: reload()
         onLoaded: {
             try {
-                root.persistedData = JSON.parse(text());
+                const data = JSON.parse(text());
+                if ((data.version || 0) < 2) {
+                    const aliases = {
+                        topEdge: ["frameTopEnabled", "topBarEnabled"],
+                        leftEdge: ["frameLeftEnabled"],
+                        rightEdge: ["frameRightEnabled", "controlCenterEnabled"],
+                        bottomEdge: ["frameBottomEnabled"],
+                        leftDrawer: ["aiSidebarEnabled"]
+                    };
+                    for (const key of Object.keys(aliases))
+                        for (const next of aliases[key])
+                            if (data[next] === undefined && data[key] !== undefined)
+                                data[next] = data[key];
+                }
+                root.persistedData = data;
             } catch (e) {
                 console.warn("DesktopSettings: Cannot decode persisted desktop settings:", e);
             }
@@ -109,12 +123,27 @@ Singleton {
     readonly property bool visibleSettings: NacrePanelState.settingsVisible
     onVisibleSettingsChanged: if (visibleSettings)
         refresh()
-    Timer {
-        objectName: "settingsRefreshTimer"
-        interval: 3000
-        repeat: true
-        running: root.visibleSettings
-        onTriggered: root.refresh()
+    // Preference writes already arrive through the file watcher. Hardware and
+    // display-transaction refreshes are event-driven, not a periodic subprocess.
+    // Niri publishes a fresh monitor array with other snapshots too. Compare
+    // only physical output properties to avoid spawning a query on focus events.
+    readonly property string monitorSignature: JSON.stringify((NacreCompositor.monitors?.values || []).map(monitor => ({
+                name: monitor.name,
+                width: monitor.width,
+                height: monitor.height,
+                scale: monitor.scale,
+                refreshRate: monitor.refreshRate,
+                x: monitor.x,
+                y: monitor.y,
+                transform: monitor.transform
+            })).sort((a, b) => String(a.name).localeCompare(String(b.name))))
+    onMonitorSignatureChanged: refresh()
+    FileView {
+        preload: true
+        path: NacrePaths.config + "/display-pending" + (NacreCompositor.backendName === "niri" ? "-niri" : "") + ".json"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: root.refresh()
     }
     Process {
         id: worker

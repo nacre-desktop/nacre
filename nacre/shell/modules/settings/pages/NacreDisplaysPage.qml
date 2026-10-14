@@ -23,7 +23,7 @@ NacreSettingsPage {
         description: NacreCompositor.capabilities?.monitorConfiguration === false ? NacreI18n.tr("ui.compositor.niri-display-limits", "Display transactions are unavailable on this compositor. Configure outputs in its output settings.") : NacreCompositor.capabilities?.monitorMirroring === false ? NacreI18n.tr("ui.compositor.niri-mirroring-limit", "Choose a primary monitor, then extend connected screens. Output mirroring is unavailable on niri.") : NacreI18n.tr("ui.displays-page.description.choose-a-primary-monitor-then-extend-or-mirror-connecte", "Choose a primary monitor, then extend or mirror connected screens.")
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             Repeater {
                 model: DesktopSettings.monitors
                 ActionButton {
@@ -36,7 +36,7 @@ NacreSettingsPage {
         }
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.displays-page.text.extend-right", "Extend right")
                 enabled: !root.blocked && DesktopSettings.monitors.length > 1
@@ -68,7 +68,7 @@ NacreSettingsPage {
             description: NacreI18n.tr("ui.displays-page.description.display-changes-revert-after-20-seconds-unless-you-keep", "Display changes revert after 20 seconds unless you keep them.")
             Flow {
                 width: parent.width
-                spacing: 8
+                spacing: NacreTokens.space.sm
                 Repeater {
                     model: [1, 1.25, 1.5, 1.75, 2, 2.5, 3]
                     ActionButton {
@@ -82,7 +82,7 @@ NacreSettingsPage {
             }
             Flow {
                 width: parent.width
-                spacing: 8
+                spacing: NacreTokens.space.sm
                 Repeater {
                     model: monitor.modelData.availableModes || []
                     ActionButton {
@@ -100,7 +100,7 @@ NacreSettingsPage {
         visible: DesktopSettings.pending
         Flow {
             width: parent.width
-            spacing: 8
+            spacing: NacreTokens.space.sm
             ActionButton {
                 text: NacreI18n.tr("ui.displays-page.text.keep", "Keep")
                 onClicked: DesktopSettings.request(["confirm"])
@@ -114,7 +114,7 @@ NacreSettingsPage {
     NacreText {
         width: parent.width
         text: DesktopSettings.message || ""
-        font.pointSize: 10
+        font.pointSize: NacreTokens.textSize.caption
         color: NacreTokens.mutedInk
         wrapMode: Text.Wrap
     }

@@ -2,6 +2,6 @@
   "version": 1,
   "fragments": [
     "navigation.json",
-    "prototype.json"
+    "settings.json"
   ]
 }

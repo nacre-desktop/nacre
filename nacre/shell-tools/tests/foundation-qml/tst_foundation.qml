@@ -127,8 +127,9 @@ TestCase {
         compare(NacreFrame.colour, NacreTokens.body);
         compare(NacreFrame.headerHeight, 50);
         DesktopSettings.data = {
-            topEdge: false,
-            leftEdge: false,
+            topBarEnabled: false,
+            frameTopEnabled: false,
+            frameLeftEnabled: false,
             frameWidth: 14,
             frameRounding: 19,
             reduceMotion: true

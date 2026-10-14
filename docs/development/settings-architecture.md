@@ -543,7 +543,7 @@ for an unchanged Rust/UI-only task; existing native dependencies were used only
 for the targeted translation tests. Phase 1 Source CI passed desktop and fresh
 install. Phase 2's exact CI result is recorded in the owner handoff.
 
-**Awaiting owner review. No phase 3 migration has begun.**
+**Phase 2 approved with changes; phase 3 implementation follows below.**
 
 
 Integration follow-up: the compositor-boundary checker now declares exactly
@@ -552,3 +552,78 @@ harnesses. A regression still rejects sibling files and production callers;
 the production boundary is not disabled. Both D-Bus addresses point to the
 private daemon, so native read-only PowerProfiles cannot consult the host.
 Gallery evidence was refreshed after rebasing onto concurrent main changes.
+
+## Phase 3: production integration
+
+The approved structure is now the production navigation registry. Its add-on
+labels are task based: AI assistant and Notes; their descriptions explain Nacre
+AI and Brain. IDs remain stable. Existing hardware and system editors remain
+owned components inside registered custom sections. Planned settings are schema
+reservations, excluded from normal rows, search and deep links; developer mode
+reveals them. The battery-saver capability is deliberately never supplied.
+
+Stores reference IDs in `nacre-state-files.json`, not filenames.
+`NacreSettingsStorage` watches those paths and queues native `state-file load-id`
+and `set-id` calls. A field update reads, migrates and patches under the schema
+lock, preserving unrelated fields and exact original migration backups.
+Publisher-owned scheme and target status are read-only. Desktop settings still
+use the existing Python provider; this does not port its compositor behavior.
+The three-second subprocess poll is removed. File events, compositor monitor
+events and display transaction files refresh it; Wave 4 owns the remaining
+Python migration and legacy helpers’ non-default XDG-root limitations.
+
+Desktop state version 2 separates `frameTopEnabled`, `frameLeftEnabled`,
+`frameRightEnabled`, `frameBottomEnabled` from `topBarEnabled`,
+`controlCenterEnabled`, `aiSidebarEnabled` and `dashboardEnabled`. Legacy edge
+choices migrate to both old meanings, without overwriting already explicit new
+keys. The normal profile snapshot migrates too. The existing 350 ms dwell is the
+default `lipHoverDelay`; only the three panel dwell timers consume it.
+
+`launcher-sources` owns five strict source booleans and the web engine. The
+launcher owner’s shared reader watches it, cancels disabled asynchronous sources
+and escapes search-engine query URLs. `power` owns an opt-in `enabled` flag and
+AC/battery preferences. The policy uses Quickshell’s power-profiles-daemon
+interface and UPower source events; missing service or unsupported performance
+profiles cannot apply. Installing the code does not activate a power policy.
+
+Settings access is explicit pure data on each state record:
+`settings: {root: "config" | "state", access: "read" | "write"}`. The native
+helper refuses IDs without this metadata and publisher writes; new owned stores
+can register without another hardcoded allowlist.
+
+The registry kit applies uniform disabled behavior and right alignment to
+switches, sliders, segments and dropdowns at both widths. Profile provenance is
+a small badge. Search includes every registered preference, page and action;
+preferences carry current values and breadcrumbs. Owner-backed custom editor
+metadata highlights its enclosing section. Entity preferences open a list or
+command editor; saved launcher recipes link to the existing validated editor.
+The real hardware editors retain their confirm/stale-device safeguards.
+
+Colors previews current tokens and the wallpaper thumbnail in a miniature
+desktop. Match wallpaper preserves the existing automatic-accent operation;
+this is not an unimplemented scheduled theme mode. Fixed palette options are
+from the real palette family manifest. `theme-targets.json` belongs to the
+actual palette publisher and exports target/status records to a versioned state
+file. Settings reads that manifest, with per-target opt-out controls reserved
+and hidden until their backend exists. The Orient credit is footer-only.
+
+Control center exposes section, heading/hint/reset visibility and standard-row
+presentation through its owner’s API. Settings embeds layout, detected and
+available sections with one heading and hides empty machine-specific groups.
+Dashboard uses the equivalent owner section API. Their in-panel entry points
+keep their existing complete editor views. Reset dispatches canonical owned
+defaults, including shared-editor preferences, while retaining active profile
+values. History, restart and rollback actions require confirmation.
+
+Validation includes schema/store IDs/typed defaults/i18n/unique IDs/control
+budgets, real JS routes/aliases/search/capability gates, native Qt disabled and
+right-alignment checks, retained device-editor tests, AC/battery policy tests,
+atomic concurrent store updates and a real Quickshell watcher acknowledgement.
+A private nested production Settings host exercises routes, aliases and actual
+provider writes; both D-Bus buses, HOME, XDG roots and compositor socket are
+isolated. Gallery fixtures use public synthetic data. Final validation and
+installation evidence is recorded with the resulting revision.
+
+[Final normal and narrow gallery](../../assets/screenshots/settings-final/README.md) records the complete navigation, shared section subpages, search and row highlighting. Profile/source controls are right aligned; unbuilt controls are hidden.
+
+Local integrated validation: 868 repository tests passed (297 tools, 104 AI, 45 Brain, 422 shell); native Rust tests and clippy passed. A private production host verifies 27 routes/aliases and actual store writes. The parity harness and exact CI revision complete the release evidence. Research clones were temporarily moved out of the copied-checkout test path because an upstream DMS symlink is dangling; reference revisions and research content are preserved.

@@ -2,7 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import "../modules/settings/settings-catalog.js" as Catalog
+import "../modules/settings/registry/registry.js" as Registry
 
 Singleton {
     id: root
@@ -23,8 +23,14 @@ Singleton {
     function open(section = "") {
         error = "";
         activation++;
-        if (section)
-            NacrePanelState.settingsPage = Catalog.find(section).id;
+        if (section) {
+            const route = Registry.resolve(NacreSettingsRegistry.schema, section, NacreSettingsCapabilities.snapshot);
+            if (!route) {
+                error = NacreI18n.tr("settings.registry.ui.invalid-route", "This Settings page is unavailable.");
+                return;
+            }
+            NacrePanelState.settingsPage = route.page + (route.setting ? "#" + route.setting : "");
+        }
         NacrePanelState.clearPopouts();
         const view = NacrePanelState.getForActive();
         if (view)

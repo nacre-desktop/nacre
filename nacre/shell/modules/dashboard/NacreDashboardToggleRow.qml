@@ -9,7 +9,7 @@ Item {
     property bool checked: false
     signal toggled(bool value)
     implicitHeight: Math.max(labels.implicitHeight, control.implicitHeight)
-    implicitWidth: 300
+    implicitWidth: NacreTokens.space.huge * 9 + NacreTokens.space.md
     opacity: enabled ? 1 : .5
     Column {
         id: labels
@@ -39,8 +39,8 @@ Item {
         Accessible.name: toggleRow.label
         onToggled: toggleRow.toggled(checked)
         indicator: NacreSurface {
-            implicitWidth: 46
-            implicitHeight: 26
+            implicitWidth: NacreTokens.space.xxl + NacreTokens.space.xl + NacreTokens.space.xs
+            implicitHeight: NacreTokens.space.xl + NacreTokens.space.sm
             x: parent.leftPadding
             y: (parent.height - height) / 2
             radius: NacreTokens.radii.full
@@ -48,10 +48,10 @@ Item {
             border.width: 1
             border.color: NacreTokens.outline
             NacreSurface {
-                x: toggleRow.checked ? parent.width - width - 3 : 3
-                y: 3
-                width: 20
-                height: 20
+                x: toggleRow.checked ? parent.width - width - NacreTokens.space.xs : NacreTokens.space.xs
+                y: NacreTokens.space.xs
+                width: NacreTokens.radii.large
+                height: NacreTokens.radii.large
                 radius: NacreTokens.radii.full
                 color: toggleRow.checked ? NacreTokens.focusInk(NacreTokens.accent) : NacreTokens.mutedInk
             }

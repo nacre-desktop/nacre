@@ -10,6 +10,7 @@ import nacre_state as _state
 import os
 import re
 import signal
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -415,6 +416,26 @@ def _publish_presentation(home, state, data, colors, wallpaper, fixed, preset, o
         )
 
 
+def _publish_target_manifest(home, state):
+    manifest = json.loads(Path(__file__).with_name("theme-targets.json").read_text())
+    targets = []
+    for target in manifest["targets"]:
+        available = not target.get("tool") or shutil.which(target["tool"]) is not None
+        published = any((home / output).is_file() for output in target["outputs"])
+        targets.append(
+            dict(
+                target,
+                status="tool-missing"
+                if not available
+                else "current"
+                if published
+                else "not-published",
+                available=available,
+            )
+        )
+    _state.write(state / "theme-targets.json", dict(version=1, targets=targets))
+
+
 def _publish_application_colors(home, colors, data, live):
     # GTK and qtct use the same committed palette, rather than the old blue files.
     import importlib.util
@@ -795,6 +816,7 @@ def _apply_palette(home, wallpaper=None, live=True):
     icon_theme = _publish_application_colors(home, colors, data, live)
     _publish_terminal_colors(home, colors, data)
     _publish_lock_login(home, state, colors, wallpaper)
+    _publish_target_manifest(home, state)
     if wallpaper is not None:
         atomic_write(
             state / "wallpaper/last.txt", str(Path(wallpaper).expanduser().resolve())

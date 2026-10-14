@@ -65,8 +65,8 @@ TestCase {
  }
  function test_rapid_toggle_latest_value_and_rollback(){
   const model=DesktopSettings;
-  compare(findChild(model,"settingsRefreshTimer").running,false);
-  NacrePanelState.settingsVisible=true;compare(findChild(model,"settingsRefreshTimer").running,true);NacrePanelState.settingsVisible=false;
+  verify(findChild(model,"settingsRefreshTimer")===null);
+  NacrePanelState.settingsVisible=true;verify(findChild(model,"settingsRefreshTimer")===null);NacrePanelState.settingsVisible=false;
   Fakes.withProperty(model,"change").running=false;model.queue=[];model.persistedData={blur:false,gapsOut:8};
   model.set("blur",true);compare(model.data.blur,true);
   model.set("blur",false);compare(model.data.blur,false);
