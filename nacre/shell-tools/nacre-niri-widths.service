@@ -4,8 +4,8 @@ PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
-ExecCondition=/usr/bin/python3 %h/.local/share/nacre/shell/tools/compositor_backends/niri_widths.py --check-session
-ExecStart=/usr/bin/python3 %h/.local/share/nacre/shell/tools/compositor_backends/niri_widths.py
+ExecCondition=%h/.local/share/nacre/shell/tools/nacre-helper niri_widths --check-session
+ExecStart=%h/.local/share/nacre/shell/tools/nacre-helper niri_widths
 Restart=on-failure
 RestartSec=3
 

@@ -213,11 +213,8 @@ def command(action, environment=None, home=None):
         args += original
     elif action in ("widths", "widths-check"):
         args += [
-            "/usr/bin/python3",
-            str(
-                home
-                / ".local/share/nacre/shell/tools/compositor_backends/niri_widths.py"
-            ),
+            str(home / ".local/share/nacre/shell/tools/nacre-helper"),
+            "niri_widths",
         ]
         if action == "widths-check":
             args += ["--check-session"]

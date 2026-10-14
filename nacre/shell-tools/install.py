@@ -133,6 +133,7 @@ def retire_native_helpers(directory):
         "compositor",
         "compositor_backends/hyprland",
         "compositor_backends/niri",
+        "compositor_backends/niri_widths",
         "compositor_config",
         "compositor_backends/hyprland_config",
         "compositor_backends/niri_config",

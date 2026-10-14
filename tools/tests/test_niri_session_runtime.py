@@ -51,11 +51,8 @@ class NiriRuntimeTests(unittest.TestCase):
             self.assertEqual(
                 args[-2:],
                 [
-                    "/usr/bin/python3",
-                    str(
-                        home
-                        / ".local/share/nacre/shell/tools/compositor_backends/niri_widths.py"
-                    ),
+                    str(home / ".local/share/nacre/shell/tools/nacre-helper"),
+                    "niri_widths",
                 ],
             )
             self.assertEqual(env["NIRI_SOCKET"], "/test/niri.sock")

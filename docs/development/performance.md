@@ -963,3 +963,21 @@ These are helper measurements, not shell action latency or aggregate memory.
 Short-lived process peak RSS was discarded because it included memory inherited
 from the benchmark launcher before execution. Quiet-window comparisons remain
 pending; raw accepted values are in `rust-migration-results.json`.
+
+### Wave 2 Niri width observer (busy machine)
+
+The existing child CPU accounting measured 100 fresh `--check-session` calls in
+the same unsupported disposable session after one warm-up. The running observer
+RSS sampler used authenticated private Xvfb and a private Niri socket, after its
+first constraint reconciliation; one helper PID sample each, excluding children.
+
+| Helper measurement; busy machine | Python reference | Rust release |
+| --- | ---: | ---: |
+| User + system CPU per fresh check (ms) | 41.357 | 1.075 |
+| Direct Python starts in 100 measured checks | 100 | 0 |
+| Running observer helper RSS (MiB) | 19.27 | 8.23 |
+
+The native observer blocks on X11/Niri/shutdown events and retains the existing
+one-shot 150 ms opening correction. Two new windows used one persistent action
+connection in the private runtime check. These results do not measure shell
+latency, aggregate memory or idle CPU; the quiet-window comparison remains pending.

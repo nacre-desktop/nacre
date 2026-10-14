@@ -587,5 +587,35 @@
       }
     },
     "rss_method": "performance.memory sampled after exec at blocked private query; helper PID only, excludes descendants; one sample per implementation"
+  },
+  "wave2_widths_busy_machine": {
+    "measurement_condition": "busy machine",
+    "method": "benchmark-helpers.cpu_times; unsupported check-session; one warmup then 100 fresh calls; includes reaped descendants",
+    "quiet_window_pending": true,
+    "results": {
+      "python-reference": {
+        "requests": 100,
+        "cpu_ms": {
+          "user": 3413.417,
+          "system": 722.2729999999999,
+          "total_per_request": 41.356899999999996
+        },
+        "python_processes": 100,
+        "helper_rss_bytes": 20201472,
+        "rss_sample_error": null
+      },
+      "rust-release": {
+        "requests": 100,
+        "cpu_ms": {
+          "user": 27.09500000000009,
+          "system": 80.35800000000005,
+          "total_per_request": 1.0745300000000015
+        },
+        "python_processes": 0,
+        "helper_rss_bytes": 8634368,
+        "rss_sample_error": null
+      }
+    },
+    "rss_method": "performance.memory after first constraint reconciliation on authenticated private Xvfb/private Niri; one helper PID sample each; excludes descendants"
   }
 }

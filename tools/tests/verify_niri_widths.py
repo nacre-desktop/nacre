@@ -3,7 +3,6 @@
 
 import argparse
 import ctypes as c
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -13,10 +12,8 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
-HELPER = ROOT / "nacre/shell-tools/compositor_backends/niri_widths.py"
-spec = importlib.util.spec_from_file_location("widths", HELPER)
-widths = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(widths)
+HELPER = ROOT / "target/release/nacre-helper"
+import widths_x11_fixture as widths
 
 
 def await_value(read, accept, timeout=5):
@@ -169,7 +166,7 @@ def verify(output):
                 report["stockMinimumWidth"] = initial["layout"]["window_size"][0]
                 assert report["stockMinimumWidth"] == 1200
                 helper = subprocess.Popen(
-                    ["python3", str(HELPER)], env=env, stdout=log, stderr=log
+                    [str(HELPER), "niri_widths"], env=env, stdout=log, stderr=log
                 )
                 await_value(
                     lambda: x11.hints(baseline).min_width, lambda value: value == 1

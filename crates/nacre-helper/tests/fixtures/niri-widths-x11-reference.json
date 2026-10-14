@@ -1,0 +1,1475 @@
+{
+  "source_sha256": "ae83f0561b32dd7b28f7266e2dbd7578354d82d78174be85a747fb0c62bb9c37",
+  "cases": [
+    {
+      "request": {
+        "name": "length-0",
+        "values": [],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": null
+      }
+    },
+    {
+      "request": {
+        "name": "length-4",
+        "values": [
+          48,
+          5,
+          7,
+          800
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": null
+      }
+    },
+    {
+      "request": {
+        "name": "length-14",
+        "values": [
+          48,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": null
+      }
+    },
+    {
+      "request": {
+        "name": "length-15",
+        "values": [
+          48,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 48,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        },
+        "written_property": [
+          48,
+          0,
+          0,
+          0,
+          0,
+          1,
+          600,
+          4000,
+          2000,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 48,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "min_width": 1,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "length-16",
+        "values": [
+          48,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 48,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        },
+        "written_property": [
+          48,
+          0,
+          0,
+          0,
+          0,
+          1,
+          600,
+          4000,
+          2000,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 48,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "min_width": 1,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "length-17",
+        "values": [
+          48,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 48,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        },
+        "written_property": [
+          48,
+          0,
+          0,
+          0,
+          0,
+          1,
+          600,
+          4000,
+          2000,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 48,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "min_width": 1,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "length-18",
+        "values": [
+          48,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 48,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        },
+        "written_property": [
+          48,
+          0,
+          0,
+          0,
+          0,
+          1,
+          600,
+          4000,
+          2000,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 48,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "min_width": 1,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "extra-fields",
+        "values": [
+          48,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1,
+          99,
+          100
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 48,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        },
+        "written_property": [
+          48,
+          0,
+          0,
+          0,
+          0,
+          1,
+          600,
+          4000,
+          2000,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 48,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "min_width": 1,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "wrong-type",
+        "values": [
+          48,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 32,
+        "type": "STRING"
+      },
+      "observed": {
+        "hints": null
+      }
+    },
+    {
+      "request": {
+        "name": "wrong-format",
+        "values": [
+          48,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 8,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": null
+      }
+    },
+    {
+      "request": {
+        "name": "flags-0",
+        "values": [
+          0,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 0,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        },
+        "written_property": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 0,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "min_width": 0,
+          "min_height": 0,
+          "max_width": 0,
+          "max_height": 0,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "flags-1",
+        "values": [
+          1,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 1,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        },
+        "written_property": [
+          1,
+          5,
+          7,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 1,
+          "x": 5,
+          "y": 7,
+          "width": 0,
+          "height": 0,
+          "min_width": 0,
+          "min_height": 0,
+          "max_width": 0,
+          "max_height": 0,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "flags-2",
+        "values": [
+          2,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 2,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        },
+        "written_property": [
+          2,
+          0,
+          0,
+          800,
+          600,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 2,
+          "x": 0,
+          "y": 0,
+          "width": 800,
+          "height": 600,
+          "min_width": 0,
+          "min_height": 0,
+          "max_width": 0,
+          "max_height": 0,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "flags-16",
+        "values": [
+          16,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 16,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        },
+        "written_property": [
+          16,
+          0,
+          0,
+          0,
+          0,
+          1,
+          600,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 16,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "min_width": 1,
+          "min_height": 600,
+          "max_width": 0,
+          "max_height": 0,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "flags-32",
+        "values": [
+          32,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 32,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        },
+        "written_property": [
+          32,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          4000,
+          2000,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 32,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "min_width": 0,
+          "min_height": 0,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "flags-48",
+        "values": [
+          48,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 48,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        },
+        "written_property": [
+          48,
+          0,
+          0,
+          0,
+          0,
+          1,
+          600,
+          4000,
+          2000,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 48,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "min_width": 1,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "flags-255",
+        "values": [
+          255,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 255,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        },
+        "written_property": [
+          255,
+          5,
+          7,
+          800,
+          600,
+          1,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 255,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "flags-1023",
+        "values": [
+          1023,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 1023,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        },
+        "written_property": [
+          1023,
+          5,
+          7,
+          800,
+          600,
+          1,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "after": {
+          "flags": 1023,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        }
+      }
+    },
+    {
+      "request": {
+        "name": "flags-33554432",
+        "values": [
+          33554432,
+          5,
+          7,
+          800,
+          600,
+          1600,
+          600,
+          4000,
+          2000,
+          10,
+          20,
+          4,
+          3,
+          16,
+          9,
+          30,
+          40,
+          1
+        ],
+        "format": 32,
+        "type": "WM_SIZE_HINTS"
+      },
+      "observed": {
+        "hints": {
+          "flags": 0,
+          "x": 5,
+          "y": 7,
+          "width": 800,
+          "height": 600,
+          "min_width": 1600,
+          "min_height": 600,
+          "max_width": 4000,
+          "max_height": 2000,
+          "width_inc": 10,
+          "height_inc": 20,
+          "min_aspect": {
+            "x": 4,
+            "y": 3
+          },
+          "max_aspect": {
+            "x": 16,
+            "y": 9
+          },
+          "base_width": 30,
+          "base_height": 40,
+          "win_gravity": 1
+        },
+        "written_property": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": {
+          "flags": 0,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "min_width": 0,
+          "min_height": 0,
+          "max_width": 0,
+          "max_height": 0,
+          "width_inc": 0,
+          "height_inc": 0,
+          "min_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "max_aspect": {
+            "x": 0,
+            "y": 0
+          },
+          "base_width": 0,
+          "base_height": 0,
+          "win_gravity": 0
+        }
+      }
+    }
+  ],
+  "stdout": "",
+  "exit": 0,
+  "files": {}
+}

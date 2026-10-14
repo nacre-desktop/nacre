@@ -1,15 +1,7 @@
 """Constraint restoration, dialog safety and manual-width ownership."""
 
-import importlib.util
-from pathlib import Path
 import unittest
-
-spec = importlib.util.spec_from_file_location(
-    "niri_widths",
-    Path(__file__).resolve().parents[1] / "compositor_backends/niri_widths.py",
-)
-widths = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(widths)
+import native_niri_widths as widths
 
 
 class X11Fixture:
@@ -40,6 +32,7 @@ class WidthTests(unittest.TestCase):
     def setUp(self):
         self.x11 = X11Fixture()
         self.policy = widths.Policy(self.x11)
+        self.addCleanup(self.policy.stop)
         self.window = {
             "id": 1,
             "app_id": "Fixture",

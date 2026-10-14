@@ -33,6 +33,7 @@ rustix = { version = "1.1", features = ["fs", "param", "process", "event", "syst
 niri-ipc = "26.4.0"
 fancy-regex = "0.16"
 wayland-client = "0.31"
+x11rb = { version = "=0.13.2", default-features = false }
 
 [dev-dependencies]
 flate2 = "1"

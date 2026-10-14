@@ -17,6 +17,9 @@ fn run() -> Result<i32> {
     if tool == "window-hide" {
         return nacre_helper::window_hide::run(&arguments);
     }
+    if tool == "niri_widths" {
+        return nacre_helper::niri_widths::cli::run(&arguments);
+    }
     if tool == "compositor-render" {
         if arguments.len() != 3 {
             return Err("Expected backend, render operation and JSON values".into());

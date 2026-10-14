@@ -34,6 +34,7 @@ MIGRATED = frozenset(
         "compositor_config",
         "compositor-backends-hyprland-config",
         "compositor-backends-niri-config",
+        "compositor-backends-niri-widths",
     }
 )
 
@@ -119,6 +120,20 @@ def command(case, override=None, *, root=ROOT, environ=None):
         if not available:
             raise ValueError("Build the developer pearl-window-reference adapter")
         return shlex.join([str(available[0].resolve())])
+    if helper == "compositor-backends-niri-widths":
+        module_api = len(original) > 1 and original[1] == "tests/parity/helpers/api.py"
+        expected = ["python3"]
+        if module_api:
+            expected.append("tests/parity/helpers/api.py")
+        expected.append("nacre/shell-tools/compositor_backends/niri_widths.py")
+        if original and original != expected:
+            raise ValueError("Unsupported native width observer contract command")
+        return shlex.join(
+            [
+                str(native_binary(root, environ, module_api=module_api)),
+                helper if module_api else "niri_widths",
+            ]
+        )
     compiler_sources = {
         "compositor_config": "compositor_config.py",
         "compositor-backends-hyprland-config": "compositor_backends/hyprland_config.py",

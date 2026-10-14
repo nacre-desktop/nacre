@@ -45,6 +45,9 @@ impl Request {
 fn call(helper: &str, operation: &str, request: &Request) -> Result<Value> {
     let paths = Paths::environment()?;
     match (helper, operation) {
+        ("compositor-backends-niri-widths", "check_session") => Ok(value!(
+            nacre_helper::niri_widths::runtime::check_session(&std::env::vars().collect())?
+        )),
         ("diagnostics", "hardware") => {
             nacre_helper::diagnostics::hardware(&request.path(0, "root", PathBuf::from("/sys"))?)
         }

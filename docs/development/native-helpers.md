@@ -76,6 +76,16 @@ effect without modifying goldens. Intended differences: notification failures
 reach stderr, lock symlinks are refused, help/error wording is native, and relative
 XDG_CACHE_HOME falls back to HOME (absolute custom roots remain compatible).
 
+The Niri width observer retains 25 policy snapshots, 19 original Xlib hint
+contracts, 22 CLI cases and all 10 historical assertion bodies. Direct X11 and
+Niri events drive the observer; the existing 150 ms opening correction remains
+one-shot, and width actions share one IPC connection. Private authenticated Xvfb
+tests verify floating/shutdown restoration and persistent actions. Intended
+differences: invalid CLI arguments use native diagnostics, event disconnection
+is a visible failure after restoring constraints, and unexpected X11 errors
+propagate instead of being silently ignored. The service and prepared-session
+caller use native dispatch; the Python observer is retired without state migration.
+
 ## Launcher workflow additions
 
 `launcher-workflows` is a separate native command for private saved items, file

@@ -1,0 +1,301 @@
+{
+  "source_sha256": "ae83f0561b32dd7b28f7266e2dbd7578354d82d78174be85a747fb0c62bb9c37",
+  "cases": [
+    {
+      "request": {
+        "args": []
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--help"
+        ]
+      },
+      "observed": {
+        "stdout": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\n\nRelax advisory X11 minimum widths only for ordinary Niri tiled windows. New\nconstrained windows receive one proportional opening-width correction. Later\ngeometry, application zoom, maximum sizes and height hints stay intact. The\nobserver starts only from main(), never when imported.\n\noptions:\n  -h, --help            show this help message and exit\n  --check-session\n  --opening-width OPENING_WIDTH\n                        Initial width percentage for newly constrained tiled\n                        X11 windows\n",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--check-session"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 1,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--check-s"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 1,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\nniri_widths.py: error: unrecognized arguments: --\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--unknown"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\nniri_widths.py: error: unrecognized arguments: --unknown\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--check-session=true"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\nniri_widths.py: error: argument --check-session: ignored explicit argument 'true'\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\nniri_widths.py: error: argument --opening-width: expected one argument\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          "50"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          "0"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\nniri_widths.py: error: Opening width must be greater than zero and at most 100 percent\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          "101"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\nniri_widths.py: error: Opening width must be greater than zero and at most 100 percent\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          "-1"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\nniri_widths.py: error: Opening width must be greater than zero and at most 100 percent\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          "nan"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\nniri_widths.py: error: Opening width must be greater than zero and at most 100 percent\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          "inf"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\nniri_widths.py: error: Opening width must be greater than zero and at most 100 percent\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          "bad"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\nniri_widths.py: error: argument --opening-width: invalid float value: 'bad'\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          "5_0"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          "5__0"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri_widths.py [-h] [--check-session] [--opening-width OPENING_WIDTH]\nniri_widths.py: error: argument --opening-width: invalid float value: '5__0'\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          "٥٠"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          ".5"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width",
+          "1e2"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening-width=25"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--opening=25"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    }
+  ]
+}

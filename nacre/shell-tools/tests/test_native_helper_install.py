@@ -28,6 +28,7 @@ class NativeHelperInstallTests(unittest.TestCase):
                 "compositor.py",
                 "compositor_backends/hyprland.py",
                 "compositor_backends/niri.py",
+                "compositor_backends/niri_widths.py",
                 "weather.py",
                 "nacre-helper",
                 "private.json",
@@ -42,6 +43,7 @@ class NativeHelperInstallTests(unittest.TestCase):
                 "compositor.py",
                 "compositor_backends/hyprland.py",
                 "compositor_backends/niri.py",
+                "compositor_backends/niri_widths.py",
             ):
                 self.assertFalse((tools / name).exists())
             for name in ("weather.py", "nacre-helper", "private.json"):
