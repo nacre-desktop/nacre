@@ -1,6 +1,6 @@
 pkgbase = nacre
 	pkgdesc = Desktop shell and guided per-user setup
-	pkgver = 0.1.0dev2.r331.g27b48d2b1a53
+	pkgver = 0.1.0dev2.r338.gf8389d9d1a07
 	pkgrel = 1
 	url = https://github.com/nacre-desktop/nacre
 	arch = x86_64
@@ -86,7 +86,7 @@ pkgbase = nacre
 	depends = xwayland-satellite
 	depends = xdg-desktop-portal-gnome
 	options = !lto
-	source = nacre::git+https://github.com/nacre-desktop/nacre.git#commit=27b48d2b1a537f7f63107bd2a51c4f071ea7d986
+	source = nacre::git+https://github.com/nacre-desktop/nacre.git#commit=f8389d9d1a0760723bd41fe693a28505f30b9ada
 	source = orient::git+https://github.com/nacre-desktop/orient.git#commit=17bf36efc7f6e85c2ded2ce4b7bd4cda4ea659b5
 	source = IBMPlexSans.ttf::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf
 	source = IBMPlexSans-OFL.txt::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/OFL.txt
@@ -161,7 +161,7 @@ pkgname = nacre
 pkgname = nacre-ai
 	pkgdesc = Optional assistant workspace (no bundled providers or accounts)
 	arch = any
-	depends = nacre=0.1.0dev2.r331.g27b48d2b1a53
+	depends = nacre=0.1.0dev2.r338.gf8389d9d1a07
 	depends = python
 	depends = python-gobject
 	depends = python-dbus
@@ -175,7 +175,7 @@ pkgname = nacre-ai
 pkgname = nacre-brain
 	pkgdesc = Optional private Markdown knowledge library
 	arch = any
-	depends = nacre=0.1.0dev2.r331.g27b48d2b1a53
+	depends = nacre=0.1.0dev2.r338.gf8389d9d1a07
 	depends = python
 	depends = python-pillow
 	depends = python-yaml
@@ -189,14 +189,14 @@ pkgname = nacre-brain
 pkgname = nacre-session-hyprland
 	pkgdesc = Nacre session integration for Hyprland
 	arch = any
-	depends = nacre=0.1.0dev2.r331.g27b48d2b1a53
+	depends = nacre=0.1.0dev2.r338.gf8389d9d1a07
 	depends = hyprland>=0.56.2
 	depends = xdg-desktop-portal-hyprland
 
 pkgname = nacre-session-niri
 	pkgdesc = Nacre session integration for Niri
 	arch = any
-	depends = nacre=0.1.0dev2.r331.g27b48d2b1a53
+	depends = nacre=0.1.0dev2.r338.gf8389d9d1a07
 	depends = niri>=26.04
 	depends = xwayland-satellite
 	depends = xdg-desktop-portal-gnome
