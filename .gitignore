@@ -51,3 +51,6 @@ node_modules/
 
 # Private power measurement captures.
 /.power-baseline/
+
+# Upstream reference checkouts (research only).
+/.research/
