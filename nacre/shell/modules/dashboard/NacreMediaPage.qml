@@ -41,8 +41,16 @@ Item {
     readonly property bool canSeek: !!(shouldUpdate && player?.canControl && player?.canSeek && player?.positionSupported && player?.lengthSupported && Number.isFinite(player.length) && player.length > 0)
     readonly property real progress: player?.lengthSupported && player?.length > 0 ? Model.fraction(positionSeconds / player.length) : 0
     readonly property bool audioPlaying: shouldUpdate && visible && player?.isPlaying === true && !WallpaperPlayback.sleeping && !WallpaperPlayback.locked
-    readonly property bool localAudio: audioPlaying && NacreMediaDetails.spectrum.some(value => Number.isFinite(value) && value > .005)
-    readonly property real bassLevel: localAudio && NacreTokens.motionEnabled ? NacreMediaDetails.spectrum.slice(0, 8).reduce((sum, value) => sum + (Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0), 0) / 8 : 0
+    Controls.NacrePlayerAudioLevel {
+        id: playerAudio
+        objectName: "mediaPlayerAudio"
+        player: root.player
+        active: root.audioPlaying && NacreTokens.motionEnabled
+    }
+    readonly property bool localAudio: playerAudio.level > .005
+    readonly property real audioLevel: localAudio ? playerAudio.level : 0
+    // CAVA measures the mixed output; show it only when one local player owns it.
+    readonly property bool unambiguousAudio: localAudio && NacrePlayers.list.filter(actor => actor.isPlaying && NacrePlayers.streamFor(actor)).length === 1
     readonly property bool compact: width < 680
     readonly property real inset: width < 400 ? 14 : 22
     readonly property real secondaryHeight: Math.max(78, Math.min(150, height * .22))
@@ -278,7 +286,7 @@ Item {
                     objectName: "fullAlbum"
                     width: Math.min(parent.height, parent.width * (root.localAudio ? (root.compact ? .32 : .4) : (root.compact ? .4 : .52)))
                     height: width
-                    scale: 1 + root.bassLevel * .04
+                    scale: 1 + root.audioLevel * .04
                     Behavior on scale {
                         enabled: root.localAudio && NacreTokens.motionEnabled
                         NumberAnimation {
@@ -353,7 +361,7 @@ Item {
                     id: spectrum
                     objectName: "mediaSpectrum"
                     width: parent.width
-                    visible: root.localAudio
+                    visible: root.unambiguousAudio
                     height: visible ? (root.compact ? 32 : 76) : 0
                     property var samples: NacreMediaDetails.spectrum
                     property color first: root.pagePrimary

@@ -1,21 +1,61 @@
 pragma Singleton
+import QtQuick
+import QtQml.Models
 import Quickshell
 import qs.widgets
 import Quickshell.Io
+import "../modules/dashboard/media/media.js" as Model
 import Quickshell.Services.Mpris
 
 Singleton {
     id: root
     readonly property var list: [...Mpris.players.values]
     property var manualActive: null
+    property var recentPlaying: null
+    property var knownPlayers: []
+    readonly property var localPlaying: list.filter(player => player.isPlaying && streamFor(player))
+    onLocalPlayingChanged: if (manualActive && !localPlaying.includes(manualActive) && localPlaying.length)
+        manualActive = null
+    function streamFor(player) {
+        return Model.playerStream(player, NacreAudio.playbackStreams);
+    }
+    function playbackChanged(player) {
+        if (player.isPlaying) {
+            recentPlaying = player;
+            if (manualActive !== player)
+                manualActive = null;
+        } else if (manualActive === player && list.some(other => other !== player && other.isPlaying)) {
+            manualActive = null;
+        }
+    }
+    Instantiator {
+        model: root.list
+        delegate: Connections {
+            required property var modelData
+            target: modelData
+            function onIsPlayingChanged() {
+                root.playbackChanged(modelData);
+            }
+        }
+    }
     readonly property var active: {
         if (manualActive && list.includes(manualActive))
             return manualActive;
         const playing = list.filter(player => player.isPlaying);
-        return playing.find(player => player.identity === "Spotify") || playing[0] || list.find(player => player.identity === "Spotify") || list[0] || null;
+        const local = localPlaying;
+        const preferred = local.length ? local : playing;
+        return preferred.includes(recentPlaying) ? recentPlaying : preferred[0] || list[0] || null;
     }
-    onListChanged: if (manualActive && !list.includes(manualActive))
-        manualActive = null
+    onListChanged: {
+        for (const player of list.filter(actor => !knownPlayers.includes(actor)))
+            if (player.isPlaying)
+                playbackChanged(player);
+        knownPlayers = list;
+        if (manualActive && !list.includes(manualActive))
+            manualActive = null;
+        if (recentPlaying && !list.includes(recentPlaying))
+            recentPlaying = null;
+    }
     function control(action) {
         const player = active;
         if (!player || !list.includes(player))

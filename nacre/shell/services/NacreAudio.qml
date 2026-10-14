@@ -7,6 +7,7 @@ Singleton {
     readonly property var sink: Pipewire.defaultAudioSink
     readonly property var outputs: Pipewire.nodes.values.filter(node => node.isSink && !node.isStream && !!node.audio && !/^nacre_record_[0-9a-f]{32}$/.test(node.name || ""))
     readonly property var source: Pipewire.defaultAudioSource
+    readonly property var playbackStreams: Pipewire.nodes.values.filter(node => node.isStream && node.isSink && !!node.audio)
     readonly property bool available: usable(sink)
     readonly property bool micAvailable: usable(source)
     readonly property bool muted: available ? sink.audio.muted : false
@@ -14,7 +15,7 @@ Singleton {
     readonly property bool micMuted: micAvailable ? source.audio.muted : false
     readonly property real micVolume: micAvailable ? source.audio.volume : 0
     PwObjectTracker {
-        objects: [...root.outputs, root.source].filter(node => !!node)
+        objects: [...root.outputs, ...root.playbackStreams, root.source].filter(node => !!node)
     }
     function usable(node) {
         return !!node && Pipewire.nodes.values.includes(node) && node.ready && !!node.audio;

@@ -50,3 +50,18 @@ function lyricsMetadata(title, artist, album, browser) {
         album: original.album
     };
 }
+
+// Match application identity, never track titles, to local playback streams.
+function audioKey(value) {
+    const key = String(value || "").split("/").pop().replace(/\.desktop$/i, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    return ["googlechrome", "googlechromestable", "chrome"].includes(key) ? "chrome" : key;
+}
+function playerStream(player, streams) {
+    if (!player)
+        return null;
+    const keys = [player.desktopEntry, player.identity].map(audioKey).filter(Boolean);
+    return (streams || []).find(node => {
+        const props = node.properties || {};
+        return node.ready && [props["application.id"], props["application.name"], props["application.process.binary"], node.name].map(audioKey).some(key => key && keys.includes(key));
+    }) || null;
+}

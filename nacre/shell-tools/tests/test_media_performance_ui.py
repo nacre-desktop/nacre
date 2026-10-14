@@ -21,7 +21,7 @@ def prepare_pages(target):
     prepare_dashboard(target)
     fixtures = target / "fixtures"
     (fixtures / "NacrePlayers.qml").write_text(
-        "pragma Singleton\nimport QtQuick\nQtObject {property var list:[];property var active:null;property var manualActive:null;onManualActiveChanged:if(manualActive)active=manualActive}"
+        "pragma Singleton\nimport QtQuick\nQtObject {property var list:[];property var active:null;property var manualActive:null;property var streams:[];function streamFor(player){return streams.find(row=>row.player===player)||null}onManualActiveChanged:if(manualActive)active=manualActive}"
     )
     (fixtures / "NacreSystemUsage.qml").write_text(
         'pragma Singleton\nimport QtQuick\nQtObject {property real cpuPerc:.15;property real cpuTemp:23;property real gpuTemp:NaN;property real gpuPerc:0;property bool gpuUsageAvailable:false;property real memPerc:.48;property int memUsed:15309210;property int memTotal:32191283;property real storagePerc:.52;property int storageUsed:190840832;property int storageTotal:367001600;property string loadAverage:".10 .20 .30";property string kernel:"Fixture kernel"}'
@@ -82,6 +82,64 @@ class MediaUITests(unittest.TestCase):
                 capture_output=True,
                 text=True,
                 timeout=30,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("QWARN", result.stdout + result.stderr)
+
+    def test_actual_player_service_follows_playback_and_matches_local_streams(self):
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Qt Quick Test unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder)
+            prepare_pages(target)
+            fixtures = target / "fixtures"
+            stage_qml(
+                SHELL / "services/NacrePlayers.qml", fixtures / "NacrePlayers.qml"
+            )
+            (fixtures / "NacreAudio.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject {property var playbackStreams:[]}"
+            )
+            (fixtures / "NacreShortcut.qml").write_text(
+                "import QtQuick\nQtObject {property string appid;property string name;signal pressed()}"
+            )
+            with (fixtures / "qmldir").open("a") as stream:
+                stream.write("NacreShortcut 1.0 NacreShortcut.qml\n")
+            (target / "tst_players.qml").write_text("""import QtQuick
+import QtTest
+import Quickshell.Services.Mpris
+import "fixtures"
+TestCase {
+ name:"AutomaticMediaPlayers";when:windowShown
+ QtObject {id:spotify;property string identity:"Spotify";property string desktopEntry:"spotify";property bool isPlaying:true;property bool canTogglePlaying:true;property int calls:0;function togglePlaying(){calls++;isPlaying=!isPlaying}}
+ QtObject {id:chrome;property string identity:"Google Chrome";property string desktopEntry:"google-chrome";property bool isPlaying:false;property bool canTogglePlaying:true;property int calls:0;function togglePlaying(){calls++;isPlaying=!isPlaying}}
+ function test_follow_new_playback_keep_manual_choice_and_route_controls(){
+  Mpris.players={values:[spotify,chrome]};NacreAudio.playbackStreams=[{ready:true,name:"Google Chrome",properties:{"application.process.binary":"chrome"}}];
+  compare(NacrePlayers.active,spotify);NacrePlayers.manualActive=spotify;
+  chrome.isPlaying=true;tryCompare(NacrePlayers,"active",chrome);
+  verify(NacrePlayers.streamFor(chrome));compare(NacrePlayers.streamFor(spotify),null);
+  verify(NacrePlayers.control("playPause"));compare(chrome.calls,1);compare(spotify.calls,0);verify(!chrome.isPlaying);
+  NacrePlayers.manualActive=spotify;chrome.isPlaying=true;tryCompare(NacrePlayers,"active",chrome);
+  NacrePlayers.manualActive=spotify;compare(NacrePlayers.active,spotify);
+  chrome.isPlaying=false;chrome.isPlaying=true;tryCompare(NacrePlayers,"active",chrome);
+  // A newly registered already-playing app also releases a stale choice.
+  Mpris.players={values:[spotify]};NacrePlayers.manualActive=spotify;Mpris.players={values:[spotify,chrome]};tryCompare(NacrePlayers,"active",chrome);
+  NacreAudio.playbackStreams=[{ready:false,name:"Chrome",properties:{"application.name":"Google Chrome"}}];compare(NacrePlayers.streamFor(chrome),null);
+  NacreAudio.playbackStreams=[{ready:true,name:"Audio",properties:{"application.id":"spotify"}}];verify(NacrePlayers.streamFor(spotify));compare(NacrePlayers.streamFor(chrome),null);
+  spotify.desktopEntry="com.spotify.Client";
+  NacreAudio.playbackStreams=[{ready:true,name:"Audio",properties:{"application.id":"org.other.Client"}}];compare(NacrePlayers.streamFor(spotify),null);
+  NacreAudio.playbackStreams=[{ready:true,name:"Audio",properties:{"application.id":"com.spotify.Client"}}];verify(NacrePlayers.streamFor(spotify));
+  Mpris.players={values:[spotify]};tryCompare(NacrePlayers,"active",spotify);
+  Mpris.players={values:[]};compare(NacrePlayers.active,null);compare(NacrePlayers.control("playPause"),false);
+ }
+}
+""")
+            result = run_qml(
+                [str(runner), "-input", str(target), "-o", "-,txt"],
+                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+                capture_output=True,
+                text=True,
+                timeout=20,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertNotIn("QWARN", result.stdout + result.stderr)

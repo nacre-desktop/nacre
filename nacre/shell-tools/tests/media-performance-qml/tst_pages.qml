@@ -109,6 +109,7 @@ TestCase {
         NacrePlayers.list = [];
         NacrePlayers.active = null;
         NacrePlayers.manualActive = null;
+        NacrePlayers.streams = [];
         DesktopSettings.data = {
             animations: false
         };
@@ -118,7 +119,13 @@ TestCase {
         NacrePlayers.list = [actor];
         NacrePlayers.active = actor;
         actor.writes = 0;
+        NacrePlayers.streams = [
+            {
+                player: actor
+            }
+        ];
         const view = createTemporaryObject(page, test);
+        findChild(view, "mediaPlayerAudio").meter.peak = 0;
         wait(20);
         return {
             actor,
@@ -127,6 +134,7 @@ TestCase {
     }
     function test_empty_and_formatting_without_writes() {
         const view = createTemporaryObject(page, test);
+        findChild(view, "mediaPlayerAudio").meter.peak = 0;
         wait(20);
         compare(findChild(view, "fullMediaTitle").text, "No media playing");
         compare(view.canSeek, false);
@@ -268,6 +276,7 @@ TestCase {
         } = setup();
         for (const audio of [[], Array(32).fill(.8)]) {
             NacreMediaDetails.spectrum = audio;
+            findChild(view, "mediaPlayerAudio").meter.peak = audio.length ? .8 : 0;
             for (const size of [[940, 562], [516, 472], [300, 400], [1400, 800]]) {
                 view.width = size[0];
                 view.height = size[1];
@@ -311,11 +320,13 @@ TestCase {
         };
         const bar = findChild(view, "mediaSpectrumBar0");
         const spectrum = findChild(view, "mediaSpectrum");
+        findChild(view, "mediaPlayerAudio").meter.peak = .8;
         NacreMediaDetails.spectrum = Array(32).fill(.8);
         verify(bar.height > spectrum.height * .7);
         compare(bar.y + bar.height, spectrum.height);
         compare(bar.gradient.stops[0].color, spectrum.third);
         compare(bar.gradient.stops[2].color, spectrum.first);
+        findChild(view, "mediaPlayerAudio").meter.peak = .2;
         NacreMediaDetails.spectrum = Array(32).fill(.2);
         verify(bar.height < spectrum.height * .3);
         actor.isPlaying = false;
@@ -349,10 +360,12 @@ TestCase {
         wait(1400);
         compare(cover.scale, 1);
         compare(findChild(view, "mediaPlaybackAnimation"), null);
+        findChild(view, "mediaPlayerAudio").meter.peak = .8;
         NacreMediaDetails.spectrum = Array(32).fill(.8);
         verify(cover.width < quietWidth);
         verify(spectrum.visible);
         tryCompare(cover, "scale", 1.032);
+        findChild(view, "mediaPlayerAudio").meter.peak = .2;
         NacreMediaDetails.spectrum = Array(32).fill(.2);
         tryCompare(cover, "scale", 1.008);
         actor.isPlaying = false;
@@ -373,6 +386,44 @@ TestCase {
         view.visible = false;
         tryCompare(cover, "scale", 1);
         compare(NacreMediaDetails.mediaSpectrumUsers, 0);
+    }
+    function test_selected_silent_player_never_uses_another_apps_levels() {
+        const {
+            actor,
+            view
+        } = setup();
+        DesktopSettings.data = {
+            animations: true
+        };
+        const meter = findChild(view, "mediaPlayerAudio"), cover = findChild(view, "fullAlbum"), spectrum = findChild(view, "mediaSpectrum");
+        NacreMediaDetails.spectrum = Array(32).fill(.9);
+        meter.meter.peak = 0;
+        compare(view.localAudio, false);
+        compare(cover.scale, 1);
+        compare(spectrum.visible, false);
+        meter.meter.peak = .6;
+        tryCompare(cover, "scale", 1.024);
+        verify(spectrum.visible);
+        const other = createTemporaryObject(player, test);
+        other.identity = "Chrome";
+        other.isPlaying = true;
+        NacrePlayers.list = [actor, other];
+        NacrePlayers.streams = [
+            {
+                player: actor
+            },
+            {
+                player: other
+            }
+        ];
+        verify(view.localAudio);
+        compare(spectrum.visible, false);
+        NacrePlayers.streams = [];
+        tryCompare(cover, "scale", 1);
+        compare(meter.meter.enabled, false);
+        compare(meter.meter.node, null);
+        view.shouldUpdate = false;
+        compare(meter.meter.enabled, false);
     }
     function test_cached_city_photo_ready_on_creation_and_reopening() {
         NacreDashboardState.weatherPhotos = true;

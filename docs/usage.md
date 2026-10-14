@@ -301,7 +301,10 @@ not its amount. Storage uses compact Main/Boot filesystem choices when needed.
 
 Focus presets select a duration; **Start focus** begins the timer. Media shows
 measured PC audio activity while visible and motion is enabled. The album cover
-pulses gently with the measured bass levels. Without local audio—including phone
+pulses gently with the selected app’s measured audio levels. Starting playback
+in another player automatically follows that player; choosing a player manually
+still works. Mixed-output frequency bars are hidden when multiple known local players
+are playing. The cover always uses its selected app’s audio level. Without local audio—including phone
 playback—the cover stays still and grows, and the audio bars are hidden. Reduced
 motion disables the pulse. Volume and connections remain in the right-side
 controls. Optional pages stay off by default; Focus can be enabled without adding the other extras to the top strip.
