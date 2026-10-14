@@ -28,6 +28,9 @@ NacreSurface {
     readonly property var names: NacreDashboardRegistry.names
     readonly property int currentIndex: names[visibilities.dashboardTab] && NacreDashboardState.tabs.includes(names[visibilities.dashboardTab]) ? visibilities.dashboardTab : Math.max(0, names.indexOf(NacreDashboardState.tabs[0]))
     readonly property bool updating: hostActive && visibilities.dashboard && visible && (detached || NacrePanelState.hidden !== true)
+    // Keep Today's dynamic preview alive while the attached surface is still
+    // visibly closing. The loader releases it when presentedHeight reaches zero.
+    readonly property bool todayUpdating: hostActive && visible && (visibilities.dashboard || !detached && presentedHeight > 0) && (detached || NacrePanelState.hidden !== true)
     readonly property real contentWidth: Math.max(0, Math.min(detached ? viewportWidth : viewportWidth - 48, 984))
     readonly property real contentHeight: Math.max(0, detached ? viewportHeight : Math.min(viewportHeight - 64, 650))
     property bool customizing: false
@@ -151,7 +154,7 @@ NacreSurface {
     Component {
         id: today
         NacreTodayPage {
-            shouldUpdate: root.updating
+            shouldUpdate: root.todayUpdating
             visibilities: root.visibilities
         }
     }

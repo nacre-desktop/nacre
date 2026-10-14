@@ -90,7 +90,7 @@ TestCase {
         wait(90);
         verify(loader.active);
         compare(loader.height, content);
-        compare(loader.item.shouldUpdate, false);
+        compare(loader.item.shouldUpdate, true);
         verify(view.height > 0);
         view.visibilities.dashboard = true;
         wait(300);
@@ -99,6 +99,24 @@ TestCase {
         tryCompare(view, "height", 0, 500);
         compare(loader.active, false);
         compare(loader.item, null);
+    }
+    function test_other_pages_stop_on_close_and_today_stops_when_occluded() {
+        const view = createTemporaryObject(panel, test);
+        wait(400);
+        const loader = findChild(view, "dashboardPage");
+        view.select(2);
+        tryVerify(() => loader.item?.pageName === "NacreMediaPage");
+        view.visibilities.dashboard = false;
+        wait(90);
+        verify(loader.active);
+        compare(loader.item.shouldUpdate, false);
+        view.visibilities.dashboard = true;
+        view.select(0);
+        wait(400);
+        verify(view.todayUpdating);
+        NacrePanelState.hidden = true;
+        compare(view.todayUpdating, false);
+        compare(loader.active, false);
     }
     function test_focus_and_hidden_tabs_are_dashboard_pages() {
         const view = createTemporaryObject(panel, test);
