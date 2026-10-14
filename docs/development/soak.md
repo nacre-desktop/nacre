@@ -128,3 +128,97 @@ pre-hide and activation-timing Nacre candidates passed focus-preservation unit
 checks but did not reduce native warnings (13 control, 15 / 14 candidates), so
 both were withdrawn. No warning suppression or input-method disabling was added.
 The minimal reproducer is retained with private evidence for a Qt-side correction.
+
+## Qt bug report draft (not submitted)
+
+**Title:** Wayland text-input-v3 surface focus warnings during native window
+hide/show and activation transitions.
+
+**Observed environment:** Qt 6.12, Quickshell 0.3.2, nested Niri on Linux/Wayland.
+Quickshell hosts the reproducer; its windows and text fields are ordinary Qt
+`Window`/`TextInput` controls with no Nacre UI. Reproduction in the stock Qt QML
+launcher has not been verified. Record exact toolkit/compositor versions when
+filing; this is a draft for the owner to review, not an upstream diagnosis.
+
+**Steps:** In a disposable nested Wayland test session, save the following as
+`/tmp/qt-focus-repro/shell.qml`:
+
+```qml
+import QtQuick
+import QtQuick.Window
+import Quickshell
+import Quickshell.Io
+
+ShellRoot {
+    Window {
+        id: first
+        title: "Plain Qt focus A"
+        width: 400
+        height: 200
+        visible: false
+        TextInput { id: firstInput; focus: true; text: "Public fixture A" }
+    }
+    Window {
+        id: second
+        title: "Plain Qt focus B"
+        width: 400
+        height: 200
+        visible: false
+        TextInput { id: secondInput; focus: true; text: "Public fixture B" }
+    }
+    IpcHandler {
+        target: "nacre"
+        function state(): string { return '{"ready":true}'; }
+        function launcher(query: string): void {
+            first.visible = true;
+            first.requestActivate();
+            Qt.callLater(() => firstInput.forceActiveFocus());
+        }
+        function close(): void { first.visible = false; }
+    }
+    IpcHandler {
+        target: "settingsApp"
+        function open(page: string): void {
+            second.visible = true;
+            second.requestActivate();
+            Qt.callLater(() => secondInput.forceActiveFocus());
+        }
+        function close(): void { second.visible = false; }
+    }
+}
+
+```
+
+Run the standalone shell and repeatedly activate/hide its two windows. The IPC
+target names are only labels; no Nacre services or configuration are loaded.
+
+```sh
+quickshell -n -p /tmp/qt-focus-repro &
+repro_pid=$!
+for i in $(seq 1 30); do
+    quickshell ipc --pid "$repro_pid" call nacre launcher demo
+    sleep 0.25
+    quickshell ipc --pid "$repro_pid" call settingsApp open general
+    sleep 0.25
+    quickshell ipc --pid "$repro_pid" call nacre close
+    quickshell ipc --pid "$repro_pid" call settingsApp close
+done
+kill "$repro_pid"
+wait "$repro_pid" || true
+```
+
+**Actual:** Repeated warnings from `QWaylandTextInputv3::enableSurface` and
+`disableSurface` report differing enabled/focused surfaces. Bounded call stacks
+include Qt's `_q_updateFocusObject`, `processFocusWindowEvent` and Qt Quick focus
+clearing. The original seeded control recorded 83 warnings in one measured
+minute. Removing both explicit `forceActiveFocus()` calls still recorded 36;
+static `focus: true` and native activation remained. Counts depend on timing and
+are not expected to match the shorter loop above exactly.
+
+**Expected:** Normal native-window activation/visibility changes maintain
+consistent text-input surface state without repeated warnings. A functional
+input-method/composition failure has not been established by these diagnostics.
+No warning suppression or input-method disabling was used.
+
+The owner decides whether to file this report. Further warning-fix experiments
+are out of scope for the soak follow-up.
