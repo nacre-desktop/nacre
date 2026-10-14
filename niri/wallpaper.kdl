@@ -11,11 +11,11 @@ layout {
 
 overview {
     workspace-shadow {
-        // A thin edge reveals empty workspaces without shading their interiors.
+        // Soft depth keeps empty workspaces visible without a bright box outline.
         on
-        softness 0
-        spread 2
-        offset x=0 y=0
-        color "#ffffff40"
+        softness 40
+        spread 10
+        offset x=0 y=8
+        color "#00000070"
     }
 }
