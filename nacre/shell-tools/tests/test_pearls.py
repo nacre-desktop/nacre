@@ -17,6 +17,10 @@ SHELL = TOOLS.parent / "shell"
 
 
 def module(name):
+    if name == "pearl-window":
+        from native_pearl_window import NativeWindow
+
+        return NativeWindow()
     if name == "pearl-state":
         import native_pearl_state
 

@@ -1,0 +1,651 @@
+{
+  "source_sha256": "14119a141133775be482fb5068554a77a580ab03126f4f9edd644b7008491b6f",
+  "cases": [
+    {
+      "request": {
+        "name": "geometry",
+        "argv": [
+          "geometry",
+          "Nacre Pearl Launcher 1",
+          "45",
+          "100",
+          "200",
+          "640",
+          "820"
+        ],
+        "clients": [
+          {
+            "title": "Nacre Pearl Launcher 1",
+            "pid": 45,
+            "address": "0xabc",
+            "windowId": "0xabc",
+            "at": [
+              100,
+              880
+            ],
+            "size": [
+              1360,
+              320
+            ],
+            "monitor": 0,
+            "fullscreen": 0,
+            "floating": true
+          }
+        ],
+        "monitors": [
+          {
+            "id": 0,
+            "x": 0,
+            "y": 0,
+            "width": 2880,
+            "height": 1800,
+            "scale": 1.5,
+            "reserved": [
+              10,
+              50,
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "{\"address\": \"0xabc\", \"x\": 100, \"y\": 880, \"width\": 1360, \"height\": 320}\n",
+        "exit": 0,
+        "calls": [],
+        "reads": [
+          "clients",
+          "clients"
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus",
+        "argv": [
+          "focus",
+          "Nacre Pearl Launcher 1",
+          "45",
+          "100",
+          "200",
+          "640",
+          "820"
+        ],
+        "clients": [
+          {
+            "title": "Nacre Pearl Launcher 1",
+            "pid": 45,
+            "address": "0xabc",
+            "windowId": "0xabc",
+            "at": [
+              100,
+              880
+            ],
+            "size": [
+              1360,
+              320
+            ],
+            "monitor": 0,
+            "fullscreen": 0,
+            "floating": true
+          }
+        ],
+        "monitors": [
+          {
+            "id": 0,
+            "x": 0,
+            "y": 0,
+            "width": 2880,
+            "height": 1800,
+            "scale": 1.5,
+            "reserved": [
+              10,
+              50,
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "{\"address\": \"0xabc\", \"x\": 100, \"y\": 880, \"width\": 1360, \"height\": 320}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "focus",
+            "window": "0xabc",
+            "kwargs": {}
+          }
+        ],
+        "reads": [
+          "clients",
+          "clients"
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "pin",
+        "argv": [
+          "pin",
+          "Nacre Pearl Launcher 1",
+          "45",
+          "100",
+          "200",
+          "640",
+          "820"
+        ],
+        "clients": [
+          {
+            "title": "Nacre Pearl Launcher 1",
+            "pid": 45,
+            "address": "0xabc",
+            "windowId": "0xabc",
+            "at": [
+              100,
+              880
+            ],
+            "size": [
+              1360,
+              320
+            ],
+            "monitor": 0,
+            "fullscreen": 0,
+            "floating": true
+          }
+        ],
+        "monitors": [
+          {
+            "id": 0,
+            "x": 0,
+            "y": 0,
+            "width": 2880,
+            "height": 1800,
+            "scale": 1.5,
+            "reserved": [
+              10,
+              50,
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "{\"address\": \"0xabc\", \"x\": 100, \"y\": 880, \"width\": 1360, \"height\": 320}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "pin",
+            "window": "0xabc",
+            "kwargs": {}
+          }
+        ],
+        "reads": [
+          "clients",
+          "clients"
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "place",
+        "argv": [
+          "place",
+          "Nacre Pearl Launcher 1",
+          "45",
+          "100",
+          "200",
+          "640",
+          "820"
+        ],
+        "clients": [
+          {
+            "title": "Nacre Pearl Launcher 1",
+            "pid": 45,
+            "address": "0xabc",
+            "windowId": "0xabc",
+            "at": [
+              100,
+              880
+            ],
+            "size": [
+              1360,
+              320
+            ],
+            "monitor": 0,
+            "fullscreen": 0,
+            "floating": true
+          }
+        ],
+        "monitors": [
+          {
+            "id": 0,
+            "x": 0,
+            "y": 0,
+            "width": 2880,
+            "height": 1800,
+            "scale": 1.5,
+            "reserved": [
+              10,
+              50,
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "{\"address\": \"0xabc\", \"x\": 100, \"y\": 880, \"width\": 1360, \"height\": 320}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "float",
+            "window": "0xabc",
+            "kwargs": {
+              "action": "enable"
+            }
+          },
+          {
+            "method": "resize",
+            "window": "0xabc",
+            "kwargs": {
+              "x": 640,
+              "y": 820,
+              "relative": false
+            }
+          },
+          {
+            "method": "move",
+            "window": "0xabc",
+            "kwargs": {
+              "x": 100,
+              "y": 200,
+              "relative": false
+            }
+          }
+        ],
+        "reads": [
+          "clients",
+          "clients"
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fit",
+        "argv": [
+          "fit",
+          "Nacre Pearl Launcher 1",
+          "45",
+          "100",
+          "200",
+          "640",
+          "820"
+        ],
+        "clients": [
+          {
+            "title": "Nacre Pearl Launcher 1",
+            "pid": 45,
+            "address": "0xabc",
+            "windowId": "0xabc",
+            "at": [
+              100,
+              880
+            ],
+            "size": [
+              1360,
+              320
+            ],
+            "monitor": 0,
+            "fullscreen": 0,
+            "floating": true
+          }
+        ],
+        "monitors": [
+          {
+            "id": 0,
+            "x": 0,
+            "y": 0,
+            "width": 2880,
+            "height": 1800,
+            "scale": 1.5,
+            "reserved": [
+              10,
+              50,
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "{\"address\": \"0xabc\", \"x\": 100, \"y\": 880, \"width\": 1360, \"height\": 320}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "resize",
+            "window": "0xabc",
+            "kwargs": {
+              "x": 1360,
+              "y": 820,
+              "relative": false
+            }
+          },
+          {
+            "method": "move",
+            "window": "0xabc",
+            "kwargs": {
+              "x": 100,
+              "y": 370,
+              "relative": false
+            }
+          }
+        ],
+        "reads": [
+          "clients",
+          "monitors",
+          "clients"
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "maximized",
+        "argv": [
+          "fit",
+          "Nacre Pearl Launcher 1",
+          "45",
+          "0",
+          "0",
+          "640",
+          "820"
+        ],
+        "clients": [
+          {
+            "title": "Nacre Pearl Launcher 1",
+            "pid": 45,
+            "address": "0xabc",
+            "windowId": "0xabc",
+            "at": [
+              100,
+              880
+            ],
+            "size": [
+              1360,
+              320
+            ],
+            "monitor": 0,
+            "fullscreen": 1,
+            "floating": true
+          }
+        ],
+        "monitors": [
+          {
+            "id": 0,
+            "x": 0,
+            "y": 0,
+            "width": 2880,
+            "height": 1800,
+            "scale": 1.5,
+            "reserved": [
+              10,
+              50,
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "{\"address\": \"0xabc\", \"x\": 100, \"y\": 880, \"width\": 1360, \"height\": 320}\n",
+        "exit": 0,
+        "calls": [],
+        "reads": [
+          "clients",
+          "clients"
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "no-floating",
+        "argv": [
+          "pin",
+          "Nacre Pearl Launcher 1",
+          "45",
+          "0",
+          "0",
+          "640",
+          "820"
+        ],
+        "clients": [
+          {
+            "title": "Nacre Pearl Launcher 1",
+            "pid": 45,
+            "address": "0xabc",
+            "windowId": "0xabc",
+            "at": [
+              100,
+              880
+            ],
+            "size": [
+              1360,
+              320
+            ],
+            "monitor": 0,
+            "fullscreen": 0,
+            "floating": false
+          }
+        ],
+        "monitors": [
+          {
+            "id": 0,
+            "x": 0,
+            "y": 0,
+            "width": 2880,
+            "height": 1800,
+            "scale": 1.5,
+            "reserved": [
+              10,
+              50,
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Float the window before pinning it\"}\n",
+        "exit": 1,
+        "calls": [],
+        "reads": [
+          "clients"
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "wrong-pid",
+        "argv": [
+          "fit",
+          "Nacre Pearl Launcher 1",
+          "45",
+          "0",
+          "0",
+          "640",
+          "820"
+        ],
+        "clients": [
+          {
+            "title": "Nacre Pearl Launcher 1",
+            "pid": 46,
+            "address": "0xabc",
+            "windowId": "0xabc",
+            "at": [
+              100,
+              880
+            ],
+            "size": [
+              1360,
+              320
+            ],
+            "monitor": 0,
+            "fullscreen": 0,
+            "floating": true
+          }
+        ],
+        "monitors": [
+          {
+            "id": 0,
+            "x": 0,
+            "y": 0,
+            "width": 2880,
+            "height": 1800,
+            "scale": 1.5,
+            "reserved": [
+              10,
+              50,
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Pearl window not mapped\"}\n",
+        "exit": 1,
+        "calls": [],
+        "reads": [
+          "clients"
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "wrong-title",
+        "argv": [
+          "geometry",
+          "unowned",
+          "45"
+        ],
+        "clients": [
+          {
+            "title": "Nacre Pearl Launcher 1",
+            "pid": 45,
+            "address": "0xabc",
+            "windowId": "0xabc",
+            "at": [
+              100,
+              880
+            ],
+            "size": [
+              1360,
+              320
+            ],
+            "monitor": 0,
+            "fullscreen": 0,
+            "floating": true
+          }
+        ],
+        "monitors": [
+          {
+            "id": 0,
+            "x": 0,
+            "y": 0,
+            "width": 2880,
+            "height": 1800,
+            "scale": 1.5,
+            "reserved": [
+              10,
+              50,
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid pearl identity\"}\n",
+        "exit": 1,
+        "calls": [],
+        "reads": [
+          "clients"
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "negative-pid",
+        "argv": [
+          "geometry",
+          "Nacre Pearl Launcher 1",
+          "-1"
+        ],
+        "clients": [
+          {
+            "title": "Nacre Pearl Launcher 1",
+            "pid": 45,
+            "address": "0xabc",
+            "windowId": "0xabc",
+            "at": [
+              100,
+              880
+            ],
+            "size": [
+              1360,
+              320
+            ],
+            "monitor": 0,
+            "fullscreen": 0,
+            "floating": true
+          }
+        ],
+        "monitors": [
+          {
+            "id": 0,
+            "x": 0,
+            "y": 0,
+            "width": 2880,
+            "height": 1800,
+            "scale": 1.5,
+            "reserved": [
+              10,
+              50,
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid pearl identity\"}\n",
+        "exit": 1,
+        "calls": [],
+        "reads": [
+          "clients"
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

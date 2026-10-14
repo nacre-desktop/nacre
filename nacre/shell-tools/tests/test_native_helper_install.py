@@ -24,6 +24,7 @@ class NativeHelperInstallTests(unittest.TestCase):
             tools = Path(directory)
             for name in (
                 "pearl-state.py",
+                "pearl-window.py",
                 "compositor.py",
                 "compositor_backends/hyprland.py",
                 "compositor_backends/niri.py",
@@ -37,6 +38,7 @@ class NativeHelperInstallTests(unittest.TestCase):
             installer.retire_native_helpers(tools)
             self.assertFalse((tools / "pearl-state.py").exists())
             for name in (
+                "pearl-window.py",
                 "compositor.py",
                 "compositor_backends/hyprland.py",
                 "compositor_backends/niri.py",

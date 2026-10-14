@@ -129,6 +129,7 @@ def retire_native_helpers(directory):
         "light-devices",
         "menu-cli",
         "pearl-state",
+        "pearl-window",
         "compositor",
         "compositor_backends/hyprland",
         "compositor_backends/niri",

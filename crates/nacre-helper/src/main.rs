@@ -50,7 +50,9 @@ fn run() -> Result<i32> {
     if tool == "pearl-state" {
         return nacre_helper::pearl_state::run(&arguments);
     }
-
+    if tool == "pearl-window" {
+        return nacre_helper::pearl_window::run(&arguments);
+    }
     if tool == "compositor" {
         return nacre_helper::compositor::cli::run(&arguments);
     }

@@ -23,6 +23,7 @@ MIGRATED = frozenset(
         "network-state",
         "notification-history",
         "pearl-state",
+        "pearl-window",
         "compositor",
         "compositor-backends-hyprland",
         "compositor-backends-niri",
@@ -99,6 +100,23 @@ def command(case, override=None, *, root=ROOT, environ=None):
         if helper != "compositor":
             args.extend(["module", helper.removeprefix("compositor-backends-")])
         return shlex.join(args)
+    if helper == "pearl-window" and "commands" in case:
+        environment = os.environ if environ is None else environ
+        override = environment.get("NACRE_PEARL_WINDOW_REFERENCE")
+        candidates = (
+            [Path(override)]
+            if override
+            else [
+                root / "target/debug/examples/pearl-window-reference",
+                root / "target/release/examples/pearl-window-reference",
+            ]
+        )
+        available = [
+            path for path in candidates if path.is_file() and os.access(path, os.X_OK)
+        ]
+        if not available:
+            raise ValueError("Build the developer pearl-window-reference adapter")
+        return shlex.join([str(available[0].resolve())])
     compiler_sources = {
         "compositor_config": "compositor_config.py",
         "compositor-backends-hyprland-config": "compositor_backends/hyprland_config.py",
