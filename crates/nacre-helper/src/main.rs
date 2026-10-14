@@ -11,6 +11,35 @@ fn run() -> Result<i32> {
     let mut arguments = std::env::args().skip(1);
     let tool = arguments.next().ok_or("Expected a helper command")?;
     let mut arguments: Vec<String> = arguments.collect();
+    if let Some(module) = match tool.as_str() {
+        "compositor_config" => Some("neutral"),
+        "hyprland_config" | "compositor-backends-hyprland-config" => Some("hyprland"),
+        "niri_config" | "compositor-backends-niri-config" => Some("niri"),
+        _ => None,
+    } {
+        if arguments.is_empty() {
+            return Ok(0);
+        }
+        if arguments.len() != 2 {
+            return Err("Expected compiler operation and JSON arguments".into());
+        }
+        let request: Value = serde_json::from_str(&arguments[1])?;
+        let result = nacre_helper::compositor_config::execute(
+            module,
+            &arguments[0],
+            &request,
+            &nacre_helper::paths::Paths::environment()?.assets(),
+        );
+        let (value, code) = match result {
+            Ok(value) => (value, 0),
+            Err(error) => (
+                serde_json::json!({"error":error.message,"type":error.kind}),
+                1,
+            ),
+        };
+        println!("{}", json::encode(&value)?);
+        return Ok(code);
+    }
     if tool == "diagnostics" && (arguments == ["report"] || arguments == ["report", "--json"]) {
         print!(
             "{}",

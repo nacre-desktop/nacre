@@ -1,7 +1,6 @@
 """Shared neutral-source lowering, safe fragments and native niri validation."""
 
 import copy
-import importlib.util
 import json
 from pathlib import Path
 import re
@@ -13,13 +12,9 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
-import compositor_config as config
+import nacre_native_config as config
 
-spec = importlib.util.spec_from_file_location(
-    "niri_config_test", ROOT / "nacre/shell-tools/compositor_backends/niri_config.py"
-)
-niri = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(niri)
+niri = config.niri
 
 
 class NiriConfigTests(unittest.TestCase):

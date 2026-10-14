@@ -200,6 +200,9 @@ def deploy(code_only=False):
         "window-chat-title",
         "light-devices",
         "menu-cli",
+        "compositor_config",
+        "compositor_backends/hyprland_config",
+        "compositor_backends/niri_config",
     ):
         (DEST / "tools" / (retired + ".py")).unlink(missing_ok=True)
     # Retire the superseded procedural-image dedication from owned helper code.

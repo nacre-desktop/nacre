@@ -8,7 +8,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 DIRECTORY = ROOT / "nacre/shell-tools"
 sys.path.insert(0, str(DIRECTORY))
-from compositor_config import load, render  # noqa: E402 - source module lives with installed helpers
+from nacre_native_config import load, render  # noqa: E402 - thin native client
 
 
 def main():

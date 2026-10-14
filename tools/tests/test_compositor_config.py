@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 from bindings import capture
 
 spec = importlib.util.spec_from_file_location(
-    "compositor_config", DIRECTORY / "compositor_config.py"
+    "compositor_config", DIRECTORY / "nacre_native_config.py"
 )
 config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(config)
@@ -257,8 +257,9 @@ class CompositorConfigTests(unittest.TestCase):
             )
             helpers = root / "nacre/shell-tools"
             helpers.mkdir(parents=True)
-            for file in ("compositor_config.py", "compositor-contract.json"):
+            for file in ("nacre_native_config.py", "compositor-contract.json"):
                 shutil.copy2(DIRECTORY / file, helpers / file)
+            shutil.copy2(config._binary(), helpers / "nacre-helper")
             shutil.copytree(
                 DIRECTORY / "compositor_backends",
                 helpers / "compositor_backends",

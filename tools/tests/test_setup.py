@@ -32,17 +32,9 @@ class PackageSetupTests(unittest.TestCase):
         (root / "nacre/shell-tools").mkdir(parents=True)
         (root / "tools").mkdir()
         (root / "runtime/palette").mkdir(parents=True)
-        for name in ("profile-policy.py", "compositor_config.py"):
+        for name in ("profile-policy.py", "nacre_native_config.py"):
             (root / "nacre/shell-tools" / name).write_bytes(
                 (TOOLS.parent / "nacre/shell-tools" / name).read_bytes()
-            )
-        backend = root / "nacre/shell-tools/compositor_backends"
-        backend.mkdir()
-        for name in ("hyprland_config.py", "niri_config.py"):
-            (backend / name).write_bytes(
-                (
-                    TOOLS.parent / "nacre/shell-tools/compositor_backends" / name
-                ).read_bytes()
             )
         (root / "tools/configure.py").write_bytes((TOOLS / "configure.py").read_bytes())
         (root / "package.json.installed").write_text(
@@ -233,7 +225,7 @@ class PackageSetupTests(unittest.TestCase):
             with (
                 patch.object(releases, "HOME", home),
                 patch.object(releases, "STATE", home / "releases"),
-                patch.object(releases.subprocess, "run") as run,
+                patch.object(releases, "subprocess") as release_processes,
             ):
                 record = releases.deploy_package(
                     root,
@@ -241,7 +233,7 @@ class PackageSetupTests(unittest.TestCase):
                     {"layout": "no", "variant": "", "model": "", "options": ""},
                     "hyprland",
                 )
-                run.assert_not_called()
+                release_processes.run.assert_not_called()
                 self.assertIn('"no"', (home / ".config/nacre/keyboard.lua").read_text())
                 self.assertIn(
                     str(home), (home / ".config/nacre/shortcuts.lua").read_text()
@@ -252,7 +244,7 @@ class PackageSetupTests(unittest.TestCase):
                     any(".codex" in entry["path"] for entry in record["entries"])
                 )
                 releases.restore(Path(record["release"]), record)
-                run.assert_not_called()
+                release_processes.run.assert_not_called()
                 self.assertFalse((home / ".config/nacre/keyboard.lua").exists())
                 self.assertFalse((home / ".config/quickshell/nacre").is_symlink())
                 self.assertEqual(account.read_text(), "private fixture")

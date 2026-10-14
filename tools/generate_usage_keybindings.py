@@ -8,7 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
-from compositor_config import load, niri, render  # noqa: E402
+from nacre_native_config import load, niri, render  # noqa: E402
 
 START = "<!-- BEGIN GENERATED KEYBINDINGS -->"
 END = "<!-- END GENERATED KEYBINDINGS -->"

@@ -17,7 +17,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
-import compositor_config
+import nacre_native_config as compositor_config
 
 spec = importlib.util.spec_from_file_location(
     "close_prepare", ROOT / "tools/prepare.py"

@@ -178,7 +178,7 @@ def selected():
 
 def lua(profile):
     spec = importlib.util.spec_from_file_location(
-        "nacre_compositor_config", Path(__file__).with_name("compositor_config.py")
+        "nacre_compositor_config", Path(__file__).with_name("nacre_native_config.py")
     )
     renderer = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(renderer)

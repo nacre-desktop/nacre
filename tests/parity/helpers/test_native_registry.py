@@ -21,6 +21,34 @@ API_SPEC.loader.exec_module(api)
 
 
 class NativeRegistryTests(unittest.TestCase):
+    def test_compiler_module_commands_are_exact_and_cannot_fall_back(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binary = self.executable(Path(directory) / "helper")
+            for helper, source in (
+                ("compositor_config", "compositor_config.py"),
+                (
+                    "compositor-backends-hyprland-config",
+                    "compositor_backends/hyprland_config.py",
+                ),
+                (
+                    "compositor-backends-niri-config",
+                    "compositor_backends/niri_config.py",
+                ),
+            ):
+                case = {
+                    "helper": helper,
+                    "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/"
+                    + source,
+                }
+                environment = {"NACRE_HELPER_BINARY": str(binary)}
+                self.assertEqual(
+                    shlex.split(registry.command(case, environ=environment)),
+                    [str(binary), helper],
+                )
+                case["command"] += " unexpected"
+                with self.assertRaisesRegex(ValueError, "Unsupported native compiler"):
+                    registry.command(case, environ=environment)
+
     def executable(self, path):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("#!/bin/sh\nexit 0\n")

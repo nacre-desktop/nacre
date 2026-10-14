@@ -24,6 +24,9 @@ MIGRATED = frozenset(
         "notification-history",
         "resource-state",
         "window-chat-title",
+        "compositor_config",
+        "compositor-backends-hyprland-config",
+        "compositor-backends-niri-config",
     }
 )
 
@@ -68,6 +71,20 @@ def command(case, override=None, *, root=ROOT, environ=None):
     if helper not in MIGRATED:
         return None
     original = shlex.split(case.get("command", ""))
+    compiler_sources = {
+        "compositor_config": "compositor_config.py",
+        "compositor-backends-hyprland-config": "compositor_backends/hyprland_config.py",
+        "compositor-backends-niri-config": "compositor_backends/niri_config.py",
+    }
+    if helper in compiler_sources:
+        expected = [
+            "python3",
+            "tests/parity/helpers/api.py",
+            "nacre/shell-tools/" + compiler_sources[helper],
+        ]
+        if original and original != expected:
+            raise ValueError("Unsupported native compiler contract command")
+        return shlex.join([str(native_binary(root, environ)), helper])
     if helper == "diagnostics" and original == [
         "python3",
         "tests/parity/helpers/diagnostics_reference.py",

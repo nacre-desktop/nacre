@@ -48,7 +48,7 @@ def supported_compositors(root):
     # Only advertise backends whose complete setup contract is installed.
     metadata = json.loads((root / "package.json.installed").read_text())
     choices = ["hyprland"]
-    contract = root / "nacre/shell-tools/compositor_config.py"
+    contract = root / "nacre/shell-tools/nacre_native_config.py"
     if contract.exists():
         spec = importlib.util.spec_from_file_location("setup_compositors", contract)
         backend = importlib.util.module_from_spec(spec)

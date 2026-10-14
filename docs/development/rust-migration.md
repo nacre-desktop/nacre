@@ -7,7 +7,7 @@ Developer-only Python tools and test harnesses remain permitted.
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
 | 1 Service / frequent helpers | Complete; quiet timings deferred | 13 ports; RSS 26.95 -> 10.21 MiB (busy); Source/install CI green. |
-| 2 Compositor / pearls | Reference audit | Persistent native IPC; one neutral compositor contract. |
+| 2 Compositor / pearls | Compiler cutover validation | Persistent native IPC; one neutral compositor contract. |
 | 3 Wallpaper / colors | Pending | Direct Orient crates; preserve paired publication. |
 | 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
 | 5 AI | Pending | Claude CLI stream-json; retain existing permissions/history. |
@@ -36,12 +36,9 @@ Quiet window is not announced: require A/B/A/B, zero vmstat si/so and SwapPss;
 discard paged runs. Stop rule only applies to a quiet-window reproduced regression.
 STOP before wave 3 lands if no announced quiet-window comparison is available.
 
-Wave 1 candidates combine the shared service and six hosted helpers with the
-five frequent helpers. Runtime integration is consolidated; peer audits cover
-historical assertions, cache files, private buses, translations and CLI grammar.
-Caller swaps/Python deletions are published; 23 historical test methods map
-explicitly to Rust. Diagnostics/mixed-dashboard tests pass (17). Native service
-crash/concurrency/framing contracts pass. Per-helper publication completed at 3ca5d316.
+Wave 1 service, six hosted and five frequent helpers plus diagnostics are public.
+Caller swaps, source retirement and historical assertion mappings are retained.
+Per-helper publication completed at 3ca5d316; Source and Niri install CI green.
 Frozen helper corpus: `tests/parity/helpers` (separate parity task; do not regenerate).
 
 Follow-up: Rust Paths accepts absolute config/state/cache XDG roots, otherwise
@@ -56,10 +53,12 @@ Latest main `55c5a03b`: Source 38487998838 desktop and Niri fresh install pass;
 834 source tests, 12 original controls, 349 frozen cases. No new skips.
 Earlier `f3b42304` Source and performance both pass. CI workflow repair is retained; hardware checks are manual, correctness stays automatic.
 
-Next: port the neutral Lua/KDL compilers against 62 newly frozen Python cases.
+Next: validate/publish the three compiler ports; then port compositor state/events.
 526 native cases / 51 controls / 81 Rust tests pass; empty-PATH report passes.
 Wave 1 main 3e155f5c CI 38528354524: source + fresh Niri install green; no skips.
-Wave 2: 62 compiler cases freeze stdout/exit/no writes; source/overwrite guards pass.
+Wave 2: Rust matches 62 compiler cases and 22 existing compiler tests; 82 Rust tests pass.
+Three Python compiler files retired locally; 769 repo tests / 55 controls / 526 cases pass.
+Temporary native-only compiler client is removed as its Python callers are ported.
 Busy fresh CPU: 55.67/38.50/35.55/16.88 -> 1.95/1.16/1.11/0.89 ms; Python 404 -> 0.
 Capture: 11 frozen cases match; 0600/0700 security difference tracked; IPC/events pass.
 CLI: 62 menu + 39 hosted cases pass; seven exact retired-frame differences tracked.

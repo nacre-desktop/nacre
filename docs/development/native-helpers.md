@@ -45,3 +45,16 @@ changed Python reference source; installed files contain only the Rust port.
 The compositor helper migration test for negative window coordinates and absent
 windows is retained by the seven frozen window-capture cases in
 `menu_actions::capture_tests::frozen_python_capture_calls_files_and_results`.
+
+The native neutral configuration compiler retains 62 frozen current-Python cases
+and all 22 existing compiler tests, including Lua registrations and Niri parser
+validation. Generated Lua/KDL bytes remain exact. Python callers in later waves
+use `nacre_native_config.py` only as a temporary native command client; it contains
+no compiler implementation and is removed with those callers. Source generators
+and compiler tests may remain developer-only Python.
+
+Intended difference: compiler calls from remaining Python helpers start the local
+native helper; this disappears when those callers become Rust. The package test
+guards release operations against installation commands while allowing rendering.
+Native compiler I/O and malformed-file errors surface with native diagnostic
+wording; captured declaration-validation errors remain byte-identical.

@@ -242,7 +242,7 @@ def prepare(backend, destination, home, *, stock_niri=False):
         destination / "home-view/.local/share/nacre/shell/bin",
     )
     render = module(
-        backend / "nacre/shell-tools/compositor_config.py", "session_config"
+        backend / "nacre/shell-tools/nacre_native_config.py", "session_config"
     )
     keyboard = module(backend / "tools/keyboard.py", "session_keyboard")
     names = {

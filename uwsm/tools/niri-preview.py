@@ -129,7 +129,7 @@ def prepare(backend, destination, home):
             shutil.copyfile(original, controllers / name)
             (controllers / name).chmod(0o700)
     config = module(
-        backend / "nacre/shell-tools/compositor_config.py", "niri_preview_config"
+        backend / "nacre/shell-tools/nacre_native_config.py", "niri_preview_config"
     )
     policy = module(
         backend / "nacre/shell-tools/profile-policy.py", "niri_preview_policy"
