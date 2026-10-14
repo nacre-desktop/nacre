@@ -56,10 +56,9 @@ Item {
             height: root.compact ? (root.metricsHeight - 12) / 2 : root.metricsHeight
             label: NacreI18n.tr("dashboard.system-page.label.cpu", "CPU")
             icon: "memory"
-            value: Number.isFinite(NacreSystemUsage.cpuPerc) ? NacreI18n.tr("dashboard.system-page.percent", "{value}%", {
-                value: Math.round(NacreSystemUsage.cpuPerc * 100)
-            }) : "—"
-            detail: Number.isFinite(NacreSystemUsage.cpuTemp) ? Model.temperature(NacreSystemUsage.cpuTemp) : ""
+            fraction: NacreSystemUsage.cpuPerc
+            value: Number.isFinite(NacreSystemUsage.cpuTemp) ? Model.temperature(NacreSystemUsage.cpuTemp) : "—"
+            detail: NacreI18n.tr("dashboard.system-page.temperature", "Temperature")
             history: NacreSystemUsage.cpuHistory || []
         }
         NacreDashboardMetric {
@@ -81,12 +80,10 @@ Item {
             height: root.compact ? (root.metricsHeight - 12) / 2 : root.metricsHeight
             label: NacreI18n.tr("dashboard.system-page.label.gpu", "GPU")
             icon: "developer_board"
-            value: NacreSystemUsage.gpuUsageAvailable ? NacreI18n.tr("dashboard.system-page.percent", "{value}%", {
-                value: Math.round(NacreSystemUsage.gpuPerc * 100)
-            }) : NacreI18n.tr("dashboard.system-page.gpu-unavailable", "Unavailable")
-            valueSize: NacreSystemUsage.gpuUsageAvailable ? 0 : root.compact ? 12 : 15
-            detail: (Number.isFinite(NacreSystemUsage.gpuTemp) ? Model.temperature(NacreSystemUsage.gpuTemp) + " · " : "") + gpuMemory.display
-            fraction: NacreSystemUsage.gpuUsageAvailable ? NacreSystemUsage.gpuPerc : 0
+            value: gpuMemory.display
+            valueSize: root.compact ? 11 : 12
+            detail: Number.isFinite(NacreSystemUsage.gpuTemp) ? Model.temperature(NacreSystemUsage.gpuTemp) : NacreI18n.tr("dashboard.system-page.gpu-unavailable", "Unavailable")
+            fraction: NacreSystemUsage.gpuUsageAvailable ? NacreSystemUsage.gpuPerc : NaN
         }
         NacreDashboardMetric {
             id: diskTile

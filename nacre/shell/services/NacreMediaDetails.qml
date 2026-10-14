@@ -10,7 +10,8 @@ Singleton {
     id: root
     readonly property var player: NacrePlayers.active
     readonly property bool shown: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.dashboard && view.dashboardTab === 2))
-    readonly property bool spectrumVisible: NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.mediaMini || view.dashboard && view.dashboardTab === 0))
+    property int mediaSpectrumUsers: 0
+    readonly property bool spectrumVisible: mediaSpectrumUsers > 0 || NacrePanelState.providerViews.some(view => (view.detached || NacrePanelState.hidden !== true) && (view.mediaMini || view.dashboard && view.dashboardTab === 0))
     readonly property var lyricMetadata: Model.lyricsMetadata(player?.trackTitle, player?.trackArtist, player?.trackAlbum, /chrome|chromium|firefox|brave|vivaldi|browser/i.test((player?.desktopEntry || "") + " " + (player?.identity || "")))
     readonly property string trackKey: JSON.stringify({
         title: lyricMetadata.title,

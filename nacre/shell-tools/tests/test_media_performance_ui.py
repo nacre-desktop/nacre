@@ -27,8 +27,8 @@ def prepare_pages(target):
     )
     stage_qml(SHELL / "widgets/ActionButton.qml", fixtures / "ActionButton.qml")
     for name, body in {
-        "NacreMediaDetails": 'property var palette:({});property var lines:[];property var spectrum:[];property string message:"";property string plain:""',
-        "NacreDashboardState": "property var preferences:({albumPalette:true});function save(key,value){preferences=Object.assign({},preferences,{[key]:value})}",
+        "NacreMediaDetails": 'property int mediaSpectrumUsers:0;property var palette:({});property var lines:[];property var spectrum:[];property string message:"";property string plain:""',
+        "NacreDashboardState": 'property bool weatherPhotos:false;property var focusState:({status:"idle"});property bool busy:false;readonly property bool running:focusState.status==="running";property string timerText:"24:12";property real progress:0;property var calls:[];function start(minutes){calls=[...calls,minutes];focusState={status:"running"}}function end(){calls=[...calls,"stop"];focusState={status:"idle"}}function request(action){calls=[...calls,action];focusState={status:action==="focus-pause"?"paused":"running"}}property var preferences:({albumPalette:true,focusMinutes:25});function save(key,value){preferences=Object.assign({},preferences,{[key]:value})}',
         "NacreAudio": "property var outputs:[];property var sink:null;function chooseOutput(id){sink=outputs.find(node=>String(node.id)===id);return !!sink}",
     }.items():
         (fixtures / (name + ".qml")).write_text(
@@ -43,6 +43,10 @@ def prepare_pages(target):
         stage_qml(
             SHELL / "modules/dashboard" / (name + ".qml"), target / (name + ".qml")
         )
+    stage_qml(
+        SHELL / "modules/dashboard/extras/NacreFocusExtra.qml",
+        target / "NacreFocusExtra.qml",
+    )
     (target / "media").mkdir(exist_ok=True)
     for path in (SHELL / "modules/dashboard/media").iterdir():
         if path.suffix == ".js":

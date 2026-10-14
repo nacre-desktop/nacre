@@ -21,6 +21,14 @@ TestCase {
         }
     }
     Component {
+        id: focusPage
+        NacreFocusExtra {
+            width: 940
+            height: 562
+            shouldUpdate: true
+        }
+    }
+    Component {
         id: player
         QtObject {
             property string identity: "Fixture player"
@@ -70,6 +78,10 @@ TestCase {
         }
     }
     function init() {
+        NacreDashboardState.focusState = {
+            status: "idle"
+        };
+        NacreDashboardState.calls = [];
         NacreMediaDetails.lines = [];
         NacreMediaDetails.plain = "";
         NacreDashboardState.preferences = {
@@ -144,14 +156,6 @@ TestCase {
         compare(actor.loopState, 2);
         view.perform("repeat");
         compare(actor.loopState, 0);
-        actor.volumeSupported = false;
-        view.volumeTo(.2, actor);
-        compare(actor.volume, .8);
-        actor.volumeSupported = true;
-        view.volumeTo(2, actor);
-        compare(actor.volume, 1);
-        view.volumeTo(NaN, actor);
-        compare(actor.volume, 1);
         const second = createTemporaryObject(player, test, {
             identity: "Second player"
         });
@@ -260,6 +264,37 @@ TestCase {
             const transport = findChild(view, "mediaTransport");
             verify(title.mapToItem(view, 0, title.height).y <= transport.mapToItem(view, 0, 0).y, "metadata stays above controls");
         }
+    }
+    function test_spectrum_lease_stops_when_hidden() {
+        const {
+            view
+        } = setup();
+        compare(NacreMediaDetails.mediaSpectrumUsers, 1);
+        view.shouldUpdate = false;
+        compare(NacreMediaDetails.mediaSpectrumUsers, 0);
+        view.shouldUpdate = true;
+        compare(NacreMediaDetails.mediaSpectrumUsers, 1);
+        view.visible = false;
+        compare(NacreMediaDetails.mediaSpectrumUsers, 0);
+        view.visible = true;
+        compare(NacreMediaDetails.mediaSpectrumUsers, 1);
+    }
+    function test_focus_presets_select_then_explicit_start_and_pause_stop() {
+        const view = createTemporaryObject(focusPage, test);
+        mouseClick(findChild(view, "focusDuration50"), 20, 15);
+        compare(NacreDashboardState.calls.length, 0);
+        compare(findChild(view, "focusTimer").text, "50:00");
+        mouseClick(findChild(view, "focusStart"), 20, 15);
+        compare(NacreDashboardState.calls[0], 50);
+        wait(20);
+        mouseClick(findChild(view, "focusPause"), 20, 15);
+        compare(NacreDashboardState.calls[1], "focus-pause");
+        wait(20);
+        mouseClick(findChild(view, "focusPause"), 20, 15);
+        compare(NacreDashboardState.calls[2], "focus-resume");
+        wait(20);
+        mouseClick(findChild(view, "focusStop"), 20, 15);
+        compare(NacreDashboardState.calls[3], "stop");
     }
     function test_browser_metadata_and_plain_lyrics() {
         compare(Model.lyricsMetadata("Northbound - Quiet horizon (Official Audio)", "Northbound - Topic", "", true), {

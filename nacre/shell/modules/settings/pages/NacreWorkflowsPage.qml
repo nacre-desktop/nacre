@@ -58,6 +58,19 @@ NacreSettingsPage {
             width: parent.width
         }
     }
+    NacreSettingsSection {
+        title: NacreI18n.tr("dashboard.customize.city-photos", "City photos in Weather")
+        description: NacreI18n.tr("dashboard.customize.city-photos-detail", "Optional Wikipedia/Wikimedia photos, with credit. Uses the city name; cached locally.")
+        ActionButton {
+            text: NacreI18n.tr("dashboard.customize.city-photos", "City photos in Weather")
+            icon: "photo"
+            selected: NacreDashboardState.weatherPhotos === true
+            onClicked: {
+                NacreDashboardState.weatherPhotos = !NacreDashboardState.weatherPhotos;
+                NacreDashboardState.saveExtras();
+            }
+        }
+    }
     NacreText {
         width: parent.width
         text: DesktopSettings.message || ""

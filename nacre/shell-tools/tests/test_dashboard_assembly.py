@@ -59,7 +59,7 @@ class DashboardAssemblyTests(unittest.TestCase):
             with (fixtures / "qmldir").open("a") as manifest:
                 manifest.write("\nsingleton NacrePanelState 1.0 NacrePanelState.qml\n")
             (fixtures / "ActionButton.qml").write_text(
-                "import QtQuick\nRectangle {property string text;property string icon;property bool compact:false;property string accessibleLabel;signal clicked;implicitWidth:34;implicitHeight:34}"
+                "import QtQuick\nRectangle {property string text;property string icon;property bool compact:false;property bool selected:false;property string accessibleLabel;signal clicked;implicitWidth:34;implicitHeight:34}"
             )
             with (fixtures / "qmldir").open("a") as manifest:
                 manifest.write(

@@ -70,6 +70,22 @@ Flickable {
                 onClicked: NacreDashboardState.save("lyrics", !NacreDashboardState.preferences.lyrics)
             }
         }
+        ActionButton {
+            text: NacreI18n.tr("dashboard.customize.city-photos", "City photos in Weather")
+            icon: "photo"
+            selected: NacreDashboardState.weatherPhotos === true
+            onClicked: {
+                NacreDashboardState.weatherPhotos = !NacreDashboardState.weatherPhotos;
+                NacreDashboardState.saveExtras();
+            }
+        }
+        NacreText {
+            width: parent.width
+            text: NacreI18n.tr("dashboard.customize.city-photos-detail", "Optional Wikipedia/Wikimedia photos, with credit. Uses the city name; cached locally.")
+            color: NacreTokens.mutedInk
+            font.pointSize: 9
+            wrapMode: Text.Wrap
+        }
         NacreText {
             text: NacreI18n.tr("dashboard.dashboard-customize.text.home-time-while-traveling", "Home time while traveling")
             font.pointSize: 14

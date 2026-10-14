@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import qs.widgets
 import qs.services
 
@@ -7,130 +8,53 @@ Item {
     property bool active: false
     readonly property bool day: NacreWeather.reading.isDay !== false
     readonly property int code: NacreWeather.reading.wmo ?? 0
-    readonly property int hour: Number((NacreWeather.reading.localTime || "").slice(11, 13))
-    readonly property bool twilight: day && (hour < 8 || hour >= 18)
+    readonly property bool photoEnabled: NacreDashboardState.weatherPhotos === true
+    readonly property bool photoReady: cityPhoto.status === Image.Ready && photoEnabled
     readonly property bool moving: active && NacreTokens.motionEnabled && !WallpaperPlayback.sleeping && !WallpaperPlayback.locked
-    readonly property color light: root.twilight ? NacreColours.palette.m3tertiary : NacreTokens.accent
+    Image {
+        id: localPhoto
+        anchors.fill: parent
+        source: !root.photoReady && NacreWallpapers.poster ? "file://" + NacreWallpapers.poster : ""
+        fillMode: Image.PreserveAspectCrop
+        sourceSize.width: 960
+        sourceSize.height: 600
+        asynchronous: true
+    }
+    Image {
+        id: cityPhoto
+        objectName: "weatherCityPhoto"
+        anchors.fill: parent
+        source: root.photoEnabled ? NacreWeatherPhoto.image : ""
+        fillMode: Image.PreserveAspectCrop
+        sourceSize.width: 960
+        sourceSize.height: 600
+        asynchronous: true
+        cache: false
+        visible: false
+    }
+    MultiEffect {
+        anchors.fill: parent
+        source: cityPhoto
+        visible: root.photoReady
+        blurEnabled: true
+        blurMax: 8
+        blur: .25
+        autoPaddingEnabled: false
+    }
     Rectangle {
         anchors.fill: parent
         gradient: Gradient {
             GradientStop {
                 position: 0
-                color: Qt.tint(NacreTokens.body, Qt.alpha(NacreTokens.orientSecondary, root.day ? .38 : .24))
+                color: Qt.alpha(NacreTokens.body, root.photoReady || localPhoto.status === Image.Ready ? .46 : 1)
             }
             GradientStop {
-                position: .56
-                color: Qt.tint(NacreTokens.body, Qt.alpha(root.light, root.twilight ? .32 : .16))
+                position: .58
+                color: Qt.alpha(NacreTokens.body, root.photoReady || localPhoto.status === Image.Ready ? .55 : 1)
             }
             GradientStop {
                 position: 1
-                color: NacreTokens.raised
-            }
-        }
-    }
-    Canvas {
-        id: landscape
-        anchors.fill: parent
-        property color light: root.light
-        property color ink: NacreTokens.ink
-        property color body: NacreTokens.body
-        property color second: NacreTokens.orientSecondary
-        property int condition: root.code
-        property bool day: root.day
-        onLightChanged: requestPaint()
-        onInkChanged: requestPaint()
-        onBodyChanged: requestPaint()
-        onSecondChanged: requestPaint()
-        onConditionChanged: requestPaint()
-        onDayChanged: requestPaint()
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
-        onPaint: {
-            const ctx = getContext("2d");
-            ctx.reset();
-            const sx = width * .8, sy = height * .22;
-            const light = ctx.createRadialGradient(sx, sy, 0, sx, sy, width * .48);
-            light.addColorStop(0, Qt.alpha(root.light, day ? .32 : .15));
-            light.addColorStop(.25, Qt.alpha(root.light, .12));
-            light.addColorStop(1, Qt.alpha(root.light, 0));
-            ctx.fillStyle = light;
-            ctx.fillRect(0, 0, width, height);
-            if (!day) {
-                for (let i = 0; i < 42; i++) {
-                    ctx.fillStyle = Qt.alpha(ink, i % 4 === 0 ? .28 : .12);
-                    ctx.beginPath();
-                    ctx.arc((i * 137 + 39) % width, (i * 47 + 17) % (height * .58), i % 4 === 0 ? .9 : .5, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-            // A distant shoreline gives depth without placing another icon behind the sun arc.
-            for (let i = 0; i < 3; i++) {
-                const y = height * (.56 + i * .09);
-                ctx.fillStyle = Qt.alpha(body, .14 + i * .12);
-                ctx.beginPath();
-                ctx.moveTo(0, height);
-                ctx.lineTo(0, y + height * .13);
-                ctx.bezierCurveTo(width * .12, y + 24, width * .21, y - 18, width * .36, y + 10);
-                ctx.bezierCurveTo(width * .5, y + 42, width * .56, y - 35, width * .72, y - 12);
-                ctx.bezierCurveTo(width * .86, y - 30, width * .95, y + 14, width, y);
-                ctx.lineTo(width, height);
-                ctx.closePath();
-                ctx.fill();
-            }
-            const mist = ctx.createLinearGradient(0, height * .55, 0, height);
-            mist.addColorStop(0, Qt.alpha(second, 0));
-            mist.addColorStop(.35, Qt.alpha(second, .08));
-            mist.addColorStop(1, Qt.alpha(body, .35));
-            ctx.fillStyle = mist;
-            ctx.fillRect(0, height * .55, width, height * .45);
-        }
-    }
-    Canvas {
-        id: atmosphere
-        width: parent.width + 36
-        height: parent.height
-        property color cloud: NacreTokens.ink
-        property int condition: root.code
-        property bool day: root.day
-        onCloudChanged: requestPaint()
-        onConditionChanged: requestPaint()
-        onDayChanged: requestPaint()
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
-        SequentialAnimation on x {
-            running: root.moving && root.code >= 2
-            loops: Animation.Infinite
-            NumberAnimation {
-                from: -18
-                to: 0
-                duration: 90000
-                easing.type: Easing.InOutSine
-            }
-            NumberAnimation {
-                from: 0
-                to: -18
-                duration: 90000
-                easing.type: Easing.InOutSine
-            }
-        }
-        onPaint: {
-            const ctx = getContext("2d");
-            ctx.reset();
-            if (condition < 2)
-                return;
-            // Soft density fields have no hard oval or cartoon cloud outline.
-            for (let i = 0; i < 9; i++) {
-                const x = width * (.34 + (i % 5) * .16), y = height * (.1 + (i % 3) * .08);
-                ctx.save();
-                ctx.translate(x, y);
-                ctx.scale(1, .45);
-                const r = width * (.12 + (i % 3) * .035), haze = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-                haze.addColorStop(0, Qt.alpha(cloud, day ? .085 : .045));
-                haze.addColorStop(.4, Qt.alpha(cloud, day ? .05 : .025));
-                haze.addColorStop(1, Qt.alpha(cloud, 0));
-                ctx.fillStyle = haze;
-                ctx.fillRect(-r, -r, r * 2, r * 2);
-                ctx.restore();
+                color: Qt.alpha(NacreTokens.raised, .94)
             }
         }
     }
@@ -140,11 +64,65 @@ Item {
             orientation: Gradient.Horizontal
             GradientStop {
                 position: 0
-                color: Qt.alpha(NacreTokens.raised, .25)
+                color: Qt.alpha(NacreTokens.body, .24)
             }
             GradientStop {
-                position: .5
-                color: Qt.alpha(NacreTokens.raised, 0)
+                position: 1
+                color: Qt.alpha(NacreTokens.orientSecondary, .08)
+            }
+        }
+    }
+    Canvas {
+        id: atmosphere
+        width: parent.width + 28
+        height: parent.height
+        property color cloud: NacreTokens.ink
+        property color light: NacreTokens.accent
+        property int condition: root.code
+        property bool day: root.day
+        onCloudChanged: requestPaint()
+        onLightChanged: requestPaint()
+        onConditionChanged: requestPaint()
+        onDayChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        SequentialAnimation on x {
+            running: root.moving && !root.photoReady && root.code >= 2
+            loops: Animation.Infinite
+            NumberAnimation {
+                from: -14
+                to: 0
+                duration: 90000
+                easing.type: Easing.InOutSine
+            }
+            NumberAnimation {
+                from: 0
+                to: -14
+                duration: 90000
+                easing.type: Easing.InOutSine
+            }
+        }
+        onPaint: {
+            const ctx = getContext("2d");
+            ctx.reset();
+            const glow = ctx.createRadialGradient(width * .8, height * .15, 0, width * .8, height * .15, width * .45);
+            glow.addColorStop(0, Qt.alpha(light, day ? .13 : .07));
+            glow.addColorStop(1, Qt.alpha(light, 0));
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, width, height);
+            if (condition < 2)
+                return;
+            for (let i = 0; i < 6; i++) {
+                const r = width * .16, x = width * (.2 + i * .18), y = height * (.1 + (i % 2) * .1);
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.scale(1, .5);
+                const haze = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+                haze.addColorStop(0, Qt.alpha(cloud, .035));
+                haze.addColorStop(1, Qt.alpha(cloud, 0));
+                ctx.fillStyle = haze;
+                ctx.fillRect(-r, -r, r * 2, r * 2);
+                ctx.restore();
             }
         }
     }

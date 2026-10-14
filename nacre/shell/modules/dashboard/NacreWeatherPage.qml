@@ -5,12 +5,31 @@ import qs.services
 Item {
     id: root
     required property bool shouldUpdate
+    property bool photoLease: false
+    function syncPhoto() {
+        const wanted = shouldUpdate && visible && NacreDashboardState.weatherPhotos === true;
+        if (wanted === photoLease)
+            return;
+        NacreWeatherPhoto.consumers += wanted ? 1 : -1;
+        photoLease = wanted;
+    }
+    Component.onCompleted: syncPhoto()
+    Component.onDestruction: if (photoLease)
+        NacreWeatherPhoto.consumers--
+    onShouldUpdateChanged: syncPhoto()
+    onVisibleChanged: syncPhoto()
+    Connections {
+        target: NacreDashboardState
+        function onWeatherPhotosChanged() {
+            root.syncPhoto();
+        }
+    }
     readonly property var weather: NacreWeather.reading
     readonly property var hours: weather.hours || []
     readonly property var days: (weather.days || []).slice(0, compact ? 7 : 10)
     readonly property bool compact: width < 680
     readonly property real leftWidth: compact ? width : width * .6
-    readonly property real heroHeight: compact ? height * .37 : height * .53
+    readonly property real heroHeight: compact ? height * .37 : height * (NacreDashboardState.weatherPhotos === true ? .57 : .53)
     readonly property var temperatures: [].concat(...days.map(day => [day.low, day.high])).filter(Number.isFinite)
     readonly property real low: temperatures.length ? Math.min(...temperatures) : 0
     readonly property real span: temperatures.length ? Math.max(1, Math.max(...temperatures) - low) : 1
@@ -27,6 +46,7 @@ Item {
         width: root.leftWidth
         height: root.heroHeight
         NacreWeatherSky {
+            id: sky
             anchors.fill: parent
             active: root.shouldUpdate
         }
@@ -109,7 +129,7 @@ Item {
         }
         Grid {
             x: 20
-            y: root.compact ? parent.height - (root.width >= 430 ? 45 : 88) : parent.height - 118
+            y: root.compact ? parent.height - (root.width >= 430 ? 45 : 88) - (sky.photoReady ? 15 : 0) : parent.height - 118 - (sky.photoReady ? 14 : 0)
             width: parent.width - 40
             columns: root.compact && root.width >= 430 ? 6 : 3
             rowSpacing: root.compact ? 3 : 12
@@ -154,6 +174,30 @@ Item {
                         font.pointSize: root.compact ? 10 : 13
                         font.weight: Font.DemiBold
                     }
+                }
+            }
+        }
+        NacreText {
+            id: credit
+            objectName: "weatherPhotoCredit"
+            x: 20
+            width: parent.width - 40
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 6
+            visible: sky.photoReady
+            text: sky.photoReady ? NacreI18n.tr("dashboard.weather-photo.credit", "Photo: {author} · {license} · cropped/softened", {
+                author: NacreWeatherPhoto.author,
+                license: NacreWeatherPhoto.license
+            }) : ""
+            textFormat: Text.PlainText
+            font.pointSize: 7
+            color: NacreTokens.mutedInk
+            elide: Text.ElideRight
+            NacreInteraction {
+                accessibleName: credit.text
+                function onClicked() {
+                    if (sky.photoReady)
+                        Qt.openUrlExternally(NacreWeatherPhoto.source);
                 }
             }
         }

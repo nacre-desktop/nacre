@@ -26,7 +26,17 @@ Item {
     property string artwork: ""
     property var seekOwner: null
     property var seekTrack: null
-    property var volumeOwner: null
+    property bool spectrumLease: false
+    function syncSpectrum() {
+        const wanted = root.shouldUpdate && root.visible;
+        if (wanted === spectrumLease)
+            return;
+        NacreMediaDetails.mediaSpectrumUsers += wanted ? 1 : -1;
+        spectrumLease = wanted;
+    }
+    onVisibleChanged: syncSpectrum()
+    Component.onDestruction: if (spectrumLease)
+        NacreMediaDetails.mediaSpectrumUsers--
     readonly property bool sampling: clock.running
     readonly property bool canSeek: !!(shouldUpdate && player?.canControl && player?.canSeek && player?.positionSupported && player?.lengthSupported && Number.isFinite(player.length) && player.length > 0)
     readonly property real progress: player?.lengthSupported && player?.length > 0 ? Model.fraction(positionSeconds / player.length) : 0
@@ -79,10 +89,6 @@ Item {
             actor.loopState = states[(states.indexOf(actor.loopState) + 1) % states.length];
         }
     }
-    function volumeTo(value, actor) {
-        if (shouldUpdate && actor === player && member(actor) && actor.canControl && actor.volumeSupported && Number.isFinite(value))
-            actor.volume = Model.fraction(value);
-    }
     function raisePlayer() {
         const actor = player;
         if (shouldUpdate && member(actor) && actor.canRaise) {
@@ -97,11 +103,15 @@ Item {
         else
             art();
     }
-    onShouldUpdateChanged: if (shouldUpdate) {
-        refresh();
-        art();
+    onShouldUpdateChanged: {
+        syncSpectrum();
+        if (shouldUpdate) {
+            refresh();
+            art();
+        }
     }
     Component.onCompleted: {
+        syncSpectrum();
         refresh();
         art();
     }
@@ -319,6 +329,38 @@ Item {
                 anchors.bottom: parent.bottom
                 width: parent.width
                 spacing: root.compact ? 2 : 8
+                Canvas {
+                    id: spectrum
+                    objectName: "mediaSpectrum"
+                    width: parent.width
+                    height: root.compact ? 24 : 40
+                    property var samples: NacreMediaDetails.spectrum
+                    property color first: root.pagePrimary
+                    property color second: root.pageSecondary
+                    readonly property bool active: root.shouldUpdate && root.player?.isPlaying === true && NacreTokens.motionEnabled
+                    Accessible.role: Accessible.Indicator
+                    Accessible.name: NacreI18n.tr("dashboard.media-page.audio-activity", "Audio activity")
+                    onSamplesChanged: if (active)
+                        requestPaint()
+                    onActiveChanged: requestPaint()
+                    onFirstChanged: requestPaint()
+                    onSecondChanged: requestPaint()
+                    onWidthChanged: requestPaint()
+                    onHeightChanged: requestPaint()
+                    onPaint: {
+                        const ctx = getContext("2d");
+                        ctx.reset();
+                        if (!active || samples.length !== 32)
+                            return;
+                        const slot = width / 32, bar = Math.max(2, slot * .38);
+                        for (let i = 0; i < 32; i++) {
+                            const level = Number.isFinite(samples[i]) ? Math.max(0, Math.min(1, samples[i])) : 0;
+                            const h = 2 + level * (height - 4);
+                            ctx.fillStyle = Qt.tint(first, Qt.alpha(second, i / 31 * .7));
+                            ctx.fillRect(i * slot + (slot - bar) / 2, (height - h) / 2, bar, h);
+                        }
+                    }
+                }
                 Controls.NacreMediaSlider {
                     id: seek
                     height: root.compact ? 24 : 34
@@ -403,39 +445,6 @@ Item {
                         selected: !!root.player?.loopState
                         available: !!(root.shouldUpdate && root.player?.canControl && root.player?.loopSupported)
                         onClicked: root.perform("repeat")
-                    }
-                }
-                Row {
-                    width: parent.width
-                    spacing: 8
-                    visible: root.player?.volumeSupported === true
-                    NacreIcon {
-                        text: "volume_up"
-                        color: root.pageInk
-                        anchors.verticalCenter: parent.verticalCenter
-                        font.pointSize: 13
-                    }
-                    Controls.NacreMediaSlider {
-                        accent: root.pagePrimary
-                        second: root.pageSecondary
-                        track: Qt.alpha(root.pageInk, .14)
-                        objectName: "fullVolume"
-                        height: root.compact ? 24 : 34
-                        width: parent.width - 68
-                        label: NacreI18n.tr("dashboard.media-page.label.player-volume", "Player volume")
-                        progress: Model.fraction(root.player?.volume)
-                        enabled: !!(root.shouldUpdate && root.player?.canControl)
-                        onDragBegan: root.volumeOwner = root.player
-                        onDragEnded: value => root.volumeTo(value, root.volumeOwner)
-                        onKeyboardRequested: value => root.volumeTo(value, root.player)
-                    }
-                    NacreText {
-                        text: NacreI18n.tr("dashboard.media-page.text.volume-percent", "{value}%", {
-                            value: Math.round(Model.fraction(root.player?.volume) * 100)
-                        })
-                        color: Qt.alpha(root.pageInk, .65)
-                        font.pointSize: 9
-                        anchors.verticalCenter: parent.verticalCenter
                     }
                 }
             }

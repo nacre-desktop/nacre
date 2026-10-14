@@ -37,6 +37,7 @@ Singleton {
     property var enabledExtras: []
     property var extraOrder: NacreDashboardRegistry.extras.map(page => page.id)
     property bool extrasReady: false
+    property bool weatherPhotos: false
     readonly property var coreTabs: {
         const saved = preferences.tabs || [];
         const legacy = JSON.stringify(saved) === JSON.stringify(["today", "weather", "media", "system", "focus"]);
@@ -51,6 +52,7 @@ Singleton {
                 throw new Error();
             enabledExtras = [...new Set(state.enabled.filter(id => known.includes(id)))];
             extraOrder = [...new Set([...state.order.filter(id => known.includes(id)), ...known])];
+            weatherPhotos = state.weatherPhotos === true;
             extrasReady = true;
         } catch (error) {
             message = NacreI18n.tr("dashboard.state.extras-read-error", "Optional pages could not be read.");
@@ -61,7 +63,8 @@ Singleton {
             extraFile.setText(JSON.stringify({
                 version: 1,
                 enabled: enabledExtras,
-                order: extraOrder
+                order: extraOrder,
+                weatherPhotos: weatherPhotos
             }));
     }
     function toggleExtra(id) {
@@ -114,7 +117,7 @@ Singleton {
     }
     function refresh() {
         if (!worker.running && !queue.length)
-            request(focusShown || brainShown ? "context" : "read");
+            request(brainShown ? "context" : "read");
     }
     function saveMany(values) {
         preferences = Object.assign({}, preferences, values);

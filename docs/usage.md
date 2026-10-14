@@ -222,3 +222,14 @@ provider-supported reports; Claude's cached limits appear after a response.
 Media keeps playback and lyrics together; audio routing is available in Devices.
 Browser lyric matching depends on the metadata supplied by the website. Tracks
 with plain lyrics show those when timed lyrics are unavailable.
+
+Focus presets select a duration; **Start focus** begins the timer. Media shows
+live audio activity while visible and motion is enabled. Volume and connections
+remain in the right-side controls. Optional pages stay off by default; Focus can
+be enabled without adding the other extras to the top strip.
+
+**City photos in Weather**, in Customize or Settings → Workflows, is opt-in.
+It sends the city name to Wikipedia/Wikimedia, checks the place against the
+existing weather coordinates locally, and caches one bounded raster photo for
+seven days. The photo credit opens its Commons source. Failed lookups use local
+wallpaper imagery; requests stop when Weather is hidden.
