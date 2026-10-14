@@ -1,0 +1,28 @@
+{
+  "stdout": [
+    {
+      "ready": true,
+      "version": 1
+    },
+    {
+      "id": 1,
+      "code": 1,
+      "output": "{\"error\": \"Unsupported helper operation\"}"
+    },
+    {
+      "id": 2,
+      "code": 1,
+      "output": "{\"error\": \"Unsupported helper operation\"}"
+    },
+    {
+      "id": 3,
+      "code": 0,
+      "output": "[]\n"
+    }
+  ],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

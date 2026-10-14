@@ -96,7 +96,7 @@ Singleton {
     Process {
         id: server
         objectName: "helperService"
-        command: [NacrePaths.palettePython, NacrePaths.tools + "/helper-service.py"]
+        command: [NacrePaths.helperBinary, "serve"]
         stdinEnabled: true
         running: true
         stdout: SplitParser {

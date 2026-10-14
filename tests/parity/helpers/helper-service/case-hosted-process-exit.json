@@ -8,5 +8,6 @@
   "env": {
     "NACRE_DASHBOARD_TOOLS": "/case/hosted"
   },
-  "stdin": "{\"id\": 1, \"tool\": \"dashboard-media\", \"arguments\": [\"{}\"], \"input\": null}\n"
+  "stdin": "{\"id\": 1, \"tool\": \"dashboard-media\", \"arguments\": [\"{}\"], \"input\": null}\n",
+  "native_service_fixture": "exit"
 }

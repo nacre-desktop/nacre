@@ -1,0 +1,22 @@
+{
+  "helper": "helper-service",
+  "args": [],
+  "stdout": "jsonl",
+  "dialogue": [
+    {
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 1, \"tool\": \"menu-backend\", \"arguments\": [\"installed\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 2, \"tool\": \"menu-backend\", \"arguments\": [\"webapp-launch\", \"00000000000000000000000000000000\"], \"input\": null}\n",
+      "receive": 1
+    },
+    {
+      "send": "{\"id\": 3, \"tool\": \"notification-history\", \"arguments\": [\"load\"], \"input\": null}\n",
+      "receive": 1
+    }
+  ]
+}

@@ -22,5 +22,6 @@
       },
       "receive": 64
     }
-  ]
+  ],
+  "native_service_fixture": "gate"
 }
