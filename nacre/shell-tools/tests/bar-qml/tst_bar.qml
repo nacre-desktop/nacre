@@ -333,6 +333,30 @@ TestCase {
         NacreTime.date = new Date(2026, 9, 10, 12);
         compare(view.todayKey, "2026-10-10");
     }
+    function test_status_right_click_and_wheel_are_scoped_to_their_devices() {
+        const view = createTemporaryObject(status, test);
+        NacreAudio.volume = .98;
+        verify(view.adjust("audio", 1));
+        compare(NacreAudio.volume, 1);
+        NacreBrightness.monitor.brightness = .02;
+        verify(view.adjust("battery", -1));
+        compare(NacreBrightness.monitor.brightness, 0);
+        NacreBrightness.monitor.available = false;
+        verify(!view.adjust("battery", 1));
+        NacreBrightness.monitor.available = true;
+        const muted = NacreAudio.muted;
+        verify(view.quickToggle("audio"));
+        compare(NacreAudio.muted, !muted);
+        NacreControlActions.calls = [];
+        verify(view.quickToggle("network"));
+        compare(NacreControlActions.calls[0].join("|"), "wifi-radio|off");
+        NacreBluetooth.available = false;
+        verify(!view.quickToggle("bluetooth"));
+        compare(NacreControlActions.calls.length, 1);
+        NacreBluetooth.available = true;
+        verify(!view.adjust("network", 1));
+        verify(!view.quickToggle("notifications"));
+    }
     function test_power_keyboard_only_toggles_menu_not_machine() {
         const view = createTemporaryObject(power, test);
         verify(!NacrePanelState.view.session);

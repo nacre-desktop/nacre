@@ -12,6 +12,7 @@ Column {
         objectName: "controlVolumeRow"
         controlId: "Volume"
         label: NacreI18n.tr("controlcenter.control-levels.label.volume", "Volume")
+        detailsLabel: NacreI18n.tr("controlcenter.levels.sound-details", "Sound and microphone controls")
         subtitle: NacreAudio.sink?.description || NacreI18n.tr("popouts.sound-popup.text.output-unavailable", "Output unavailable")
         icon: NacreAudio.muted ? "volume_off" : NacreAudio.volume < .35 ? "volume_down" : "volume_up"
         iconActionName: NacreAudio.muted ? NacreI18n.tr("controlcenter.levels.unmute", "Unmute output") : NacreI18n.tr("controlcenter.levels.mute", "Mute output")
@@ -25,6 +26,7 @@ Column {
         objectName: "controlBrightnessRow"
         controlId: "Brightness"
         label: NacreI18n.tr("controlcenter.levels.brightness", "Brightness")
+        detailsLabel: NacreI18n.tr("controlcenter.levels.light-details", "Display and keyboard brightness")
         subtitle: root.monitor?.available ? root.monitor?.modelData?.description || root.monitor?.modelData?.name || root.monitor?.name || NacreI18n.tr("controlcenter.levels.this-display", "This display") : NacreI18n.tr("controlcenter.levels.no-brightness", "No brightness control for this display")
         icon: "brightness_6"
         iconActionName: NacreI18n.tr("controlcenter.displays.title", "Display brightness")
@@ -39,6 +41,7 @@ Column {
         required property string controlId
         required property string iconActionName
         required property string label
+        required property string detailsLabel
         required property string subtitle
         required property string icon
         required property real level
@@ -92,9 +95,7 @@ Column {
             anchors.rightMargin: 4
             y: 22
             icon: "chevron_right"
-            label: NacreI18n.tr("controlcenter.tile.details", "Open {name} details", {
-                name: row.label
-            })
+            label: row.detailsLabel
             onClicked: row.details()
         }
     }

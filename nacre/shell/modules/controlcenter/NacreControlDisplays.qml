@@ -51,17 +51,22 @@ Column {
         wrapMode: Text.Wrap
     }
     NacreText {
-        visible: NacreKeyboardLight.available
-        text: NacreI18n.tr("controlcenter.control-levels.label.keyboard", "Keyboard")
+        text: NacreI18n.tr("controlcenter.displays.keyboard", "Keyboard backlight")
         font.pointSize: 12
     }
     NacreControlSlider {
         width: parent.width
-        visible: NacreKeyboardLight.available
         enabled: NacreKeyboardLight.available
         value: NacreKeyboardLight.brightness
         label: NacreI18n.tr("controlcenter.displays.keyboard", "Keyboard backlight")
         onMoved: if (enabled)
             NacreKeyboardLight.setBrightness(value)
+    }
+    NacreText {
+        width: parent.width
+        text: NacreKeyboardLight.error || (NacreKeyboardLight.available ? NacreI18n.number(Math.round(NacreKeyboardLight.brightness * 100)) + "%" : NacreI18n.tr("controlcenter.displays.keyboard-unavailable", "Keyboard backlight is unavailable on this device."))
+        color: NacreTokens.mutedInk
+        font.pointSize: 10
+        wrapMode: Text.Wrap
     }
 }

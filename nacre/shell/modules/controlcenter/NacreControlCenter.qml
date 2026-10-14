@@ -8,11 +8,14 @@ FocusScope {
     id: root
     function prepareLift() {
         revealMotion.complete();
+        heightMotion.complete();
     }
     readonly property bool opening: visibility && revealMotion.running
     property bool restoreImmediately: false
     function restoreAttached() {
         revealMotion.complete();
+        heightMotion.complete();
+        presentedHeight = Qt.binding(() => root.contentHeight);
         syncSize();
     }
     property bool handoffHidden: false
@@ -28,9 +31,10 @@ FocusScope {
     signal sectionRequested(string section)
     property real presentedWidth: visibility ? contentWidth : 0
     readonly property real contentWidth: Math.max(240, Math.min(detached ? 560 : 424, parent?.width ?? 424))
-    readonly property real contentHeight: Math.max(240, Math.min(detached ? 860 : 650, parent?.height ?? 650))
+    readonly property real contentHeight: Math.max(240, Math.min(detached ? 860 : section === "session" ? bodyLoader.item?.preferredHeight || 300 : 650, parent?.height ?? 650))
+    property real presentedHeight: contentHeight
     implicitWidth: Math.min(contentWidth, presentedWidth)
-    implicitHeight: contentHeight
+    implicitHeight: Math.min(presentedHeight, parent?.height ?? presentedHeight)
     visible: width > 0
     enabled: visibility
     clip: true
@@ -59,11 +63,20 @@ FocusScope {
             easing.type: Easing.OutCubic
         }
     }
+    Behavior on presentedHeight {
+        enabled: !root.detached && root.visibility && !root.restoreImmediately && NacreTokens.motionEnabled
+        NumberAnimation {
+            id: heightMotion
+            duration: 180
+            easing.type: Easing.OutCubic
+        }
+    }
     Connections {
         target: NacreTokens
         function onMotionEnabledChanged() {
             if (!NacreTokens.motionEnabled) {
                 revealMotion.stop();
+                heightMotion.complete();
                 root.syncSize();
             }
         }
@@ -75,6 +88,7 @@ FocusScope {
             audio: NacreI18n.tr("popouts.sound-popup.text.sound", "Sound"),
             battery: NacreI18n.tr("controlcenter.details.power-brightness", "Power & brightness"),
             session: NacreI18n.tr("controlcenter.session.title", "Power"),
+            updates: NacreI18n.tr("status.peek.updates", "Updates"),
             night: NacreI18n.tr("controlcenter.control-center.label.night-light", "Night light"),
             dnd: NacreI18n.tr("controlcenter.overview.do-not-disturb", "Do Not Disturb"),
             awake: NacreI18n.tr("controlcenter.overview.stay-awake", "Stay awake"),
@@ -88,6 +102,8 @@ FocusScope {
     function navigate(name) {
         if (!detailNames[name])
             return;
+        if (!detached)
+            NacrePanelState.pinControls(screen?.name || "");
         if (keyboardActive || detached)
             forceActiveFocus(Qt.OtherFocusReason);
         sectionRequested(name);

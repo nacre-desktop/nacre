@@ -78,6 +78,12 @@ application mixer stay inside the panel. Power details include each controllable
 display and keyboard backlight. Edit adds optional tiles; unavailable controls
 explain their limits in their detail page. Tiles are saved separately from the
 main desktop settings. The same controls work in a detached pearl.
+Hover a bar status icon for a read-only peek after 400 ms. Click opens its detail
+page; the bell opens notification history separately. Scroll sound for volume
+or battery for brightness. Right-click sound, Wi-Fi or Bluetooth for a quick
+toggle. Sound details include microphone volume; brightness details include
+keyboard backlight. Power mode opens the three profile choices without changing
+the active profile, and session actions use a compact inline page.
 
 Notifications can be reviewed in history; Do not disturb suppresses popups.
 Night light warms display colors, and Stay awake temporarily inhibits idle

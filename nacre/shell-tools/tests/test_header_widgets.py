@@ -49,6 +49,9 @@ class HeaderWidgetTests(unittest.TestCase):
 Item {
  property bool horizontal:false
  property string screenName:""
+ signal activated(string name,var item)
+ signal peekRequested(string name,var item,bool hovered)
+ signal interactionStarted
  implicitWidth:24;implicitHeight:152
  readonly property Item recordingItem:r
  Item{id:r;visible:false;property string label:"Stop recording 1:23"}
@@ -69,6 +72,7 @@ Item {
                 "NacreBrightness": "function getMonitorForScreen(screen){return null}",
                 "NacreTime": 'function format(value){return "12:34"}',
                 "Updates": 'property int count:3;property string message:""',
+                "NacrePearls": "property var entries:[]",
                 "AppLaunch": "property var calls:[];function run(command){calls=[...calls,command]}",
                 "NacrePanelState": 'property bool hidden:false;property var screens:({test:{session:false,launcher:false,dashboard:false,dashboardPinned:false,edgeMenu:""}});property var panels:({});property var calls:[];function openMode(mode,q,preview){calls=[...calls,mode]}function popout(name,center,screen){calls=[...calls,name]}function openDeviceSettings(name){calls=[...calls,name];return ["audio","network","bluetooth"].includes(name)}function openControls(name,screen){calls=[...calls,name]}function hoverEdge(name,screen){calls=[...calls,name]}function openEdge(name,screen){calls=[...calls,name]}',
             }
@@ -103,6 +107,9 @@ Item {
                 stage_qml(
                     SHELL / "modules/topbar" / (name + ".qml"), target / (name + ".qml")
                 )
+            (target / "PeekFixture.qml").write_text(
+                'import QtQuick\nItem {property var output;property string kind:"";property real center:0}'
+            )
             shutil.copy2(
                 SHELL / "utils/scripts/window-title.js", target / "window-title.js"
             )

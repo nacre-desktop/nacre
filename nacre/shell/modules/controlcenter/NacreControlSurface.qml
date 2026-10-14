@@ -8,6 +8,7 @@ import qs.services
 Item {
     id: content
     readonly property real inset: 18
+    readonly property real preferredHeight: panel.section === "session" ? Math.max(300, page.y + page.contentHeight + 18) : 650
     RowLayout {
         id: status
         x: content.inset
@@ -63,6 +64,7 @@ Item {
         }
         NacreControlButton {
             objectName: "controlPower"
+            selected: panel.section === "session"
             icon: "power_settings_new"
             label: NacreI18n.tr("controlcenter.footer.power", "Power menu")
             onClicked: panel.navigate("session")
@@ -148,7 +150,8 @@ Item {
             bluetooth: "../bar/popouts/NacreBluetoothPopup.qml",
             audio: "../bar/popouts/NacreSoundPopup.qml",
             battery: "NacreControlPower.qml",
-            session: "NacreControlSession.qml"
+            session: "NacreControlSession.qml",
+            updates: "NacreControlUpdates.qml"
         };
         const properties = name === "home" ? {
             screen: panel.screen,
@@ -203,24 +206,5 @@ Item {
         color: NacreTokens.body
         border.width: 0
         z: -2
-    }
-    Rectangle {
-        objectName: "controlHeaderTint"
-        x: content.inset
-        y: 6
-        width: parent.width - content.inset * 2
-        height: Math.min(150, parent.height)
-        radius: 18
-        z: -1
-        gradient: Gradient {
-            GradientStop {
-                position: 0
-                color: Qt.alpha(NacreColours.palette.m3primaryContainer, .18)
-            }
-            GradientStop {
-                position: 1
-                color: "transparent"
-            }
-        }
     }
 }

@@ -24,6 +24,7 @@ TestCase {
     Component {
         id: header
         NacreHeader {
+            peekSource: Qt.resolvedUrl("PeekFixture.qml")
             width: 1920
             height: 50
             screen: ({
@@ -37,6 +38,7 @@ TestCase {
         NacreCompositor.requests = [];
         NacrePanelState.calls = [];
         AppLaunch.calls = [];
+        NacrePearls.entries = [];
         NacreCompositor.activeWsId = 2;
         NacreCompositor.windows = [];
         NacreBar.workspaceIcons = [];
@@ -304,6 +306,56 @@ TestCase {
         view.showPopup("notifications", status, true);
         compare(NacrePanelState.calls.length, calls);
         NacrePanelState.screens.test.session = false;
+        NacrePanelState.panels = ({});
+    }
+    function test_status_peeks_delay_release_and_direct_routes() {
+        const view = createTemporaryObject(header, test);
+        const region = findChild(view, "nacreHeaderStatus");
+        const loader = findChild(view, "nacreStatusPeekLoader");
+        view.requestPeek("audio", region, true);
+        wait(330);
+        compare(loader.item, null);
+        compare(NacrePanelState.calls.length, 0);
+        wait(110);
+        verify(loader.item !== null);
+        compare(loader.item.kind, "audio");
+        verify(!loader.item.activeFocus);
+        view.requestPeek("audio", region, false);
+        compare(loader.item, null);
+        view.openStatus("audio", region);
+        compare(NacrePanelState.calls[0], "audio");
+        NacrePanelState.panels = {
+            test: {
+                popouts: {
+                    pinned: false
+                }
+            }
+        };
+        view.openStatus("notifications", region);
+        compare(NacrePanelState.calls[1], "notifications");
+        verify(NacrePanelState.panels.test.popouts.pinned);
+        let selected = "", activated = 0;
+        NacrePearls.entries = [
+            {
+                kind: "controls",
+                window: {
+                    bodyItem: {
+                        item: {
+                            navigate: function (name) {
+                                selected = name;
+                            }
+                        }
+                    },
+                    activate: function () {
+                        activated++;
+                    }
+                }
+            }
+        ];
+        view.openStatus("bluetooth", region);
+        compare(selected, "bluetooth");
+        compare(activated, 1);
+        compare(NacrePanelState.calls.length, 2);
         NacrePanelState.panels = ({});
     }
     function test_open_dashboard_keeps_its_full_header_width_without_widening_initial_target() {

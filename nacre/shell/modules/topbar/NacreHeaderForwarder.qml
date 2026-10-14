@@ -6,6 +6,7 @@ Item {
     required property var screen
     property Item statusItem: null
     property Item calendarItem: null
+    property Item updatesItem: null
     readonly property var panel: NacrePanelState.panels[screen.name]
     property alias handler: observer
     anchors.fill: parent
@@ -19,6 +20,10 @@ Item {
     }
     function press(event) {
         const position = Qt.point(event.x, event.y);
+        if ((root.inside(root.statusItem, position) || root.inside(root.updatesItem, position)) && root.panel?.osd?.visibility === true) {
+            event.accepted = false;
+            return;
+        }
         if (root.panel?.popouts?.pinned && (root.inside(root.statusItem, position) || root.inside(root.calendarItem, position))) {
             event.accepted = false;
             return;

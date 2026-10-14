@@ -16,7 +16,7 @@ NacreSurface {
     implicitWidth: 32
     implicitHeight: 32
     radius: 16
-    color: selected ? NacreColours.palette.m3primaryContainer : "transparent"
+    color: selected ? NacreColours.palette.m3primaryContainer : input.hovered || input.pressed || input.keyboardFocusVisible ? NacreColours.palette.m3surfaceContainerHighest : "transparent"
     NacreIcon {
         anchors.centerIn: parent
         text: root.icon === "pause" ? "\ue034" : root.icon

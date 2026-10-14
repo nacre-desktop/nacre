@@ -123,7 +123,7 @@ Singleton {
     }
     function openControls(section = "home", screenName = "", forceOpen = false) {
         const view = screenName ? screens[screenName] : getForActive();
-        if (!view || !["home", "audio", "network", "bluetooth", "battery", "session", "notifications"].includes(section))
+        if (!view || !["home", "audio", "network", "bluetooth", "battery", "session", "updates"].includes(section))
             return false;
         const wasOpen = view.osd && view.controlSection === section && view.edgeMenu === "osd";
         clearPopouts();
@@ -133,6 +133,14 @@ Singleton {
         view.osd = forceOpen || !wasOpen;
         view.edgeMenu = view.osd ? "osd" : "";
         hidden = false;
+        return true;
+    }
+    function pinControls(screenName) {
+        const view = screens[screenName] || getForActive();
+        if (!view || !view.osd)
+            return false;
+        view.edgeMenu = "osd";
+        view.previewOnly = false;
         return true;
     }
     function openDeviceSettings(icon) {

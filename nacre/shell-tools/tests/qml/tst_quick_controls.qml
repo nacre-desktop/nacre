@@ -220,8 +220,7 @@ TestCase {
         const background = findChild(panel, "controlDetachedBackground");
         verify(!background.visible);
         compare(background.border.width, 0);
-        const tint = findChild(panel, "controlHeaderTint");
-        verify(tint.x > 0 && tint.x + tint.width < panel.contentWidth);
+        verify(!findChild(panel, "controlHeaderTint"));
         panel.detached = true;
         verify(background.visible);
         findChild(panel, "controlPower").clicked();
@@ -233,6 +232,25 @@ TestCase {
         scene.selectedSection = "home";
         wait(30);
         verify(!findChild(panel, "controlSession-lock"));
+    }
+    function test_profiles_are_navigation_and_power_view_fits_its_actions() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        wait(40);
+        const profile = PowerProfiles.profile;
+        const mode = findChild(panel, "controlPowerMode");
+        verify(mode && !mode.selected);
+        mode.clicked();
+        wait(30);
+        compare(panel.section, "battery");
+        compare(PowerProfiles.profile, profile);
+        scene.selectedSection = "session";
+        wait(230);
+        verify(panel.height <= 320);
+        const page = findChild(panel, "controlPageLoader").item;
+        page.choose("restart");
+        wait(230);
+        verify(panel.height > 320 && panel.height < 480);
+        compare(AppLaunch.calls.length, 0);
     }
     Component {
         id: sessionControls

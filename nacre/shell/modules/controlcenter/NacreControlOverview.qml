@@ -35,9 +35,9 @@ Column {
         {
             id: "battery",
             name: NacreI18n.tr("controlcenter.overview.power-mode", "Power mode"),
-            icon: "eco",
+            icon: PowerProfiles.profile === PowerProfile.PowerSaver ? "eco" : PowerProfiles.profile === PowerProfile.Performance ? "bolt" : "balance",
             status: NacreControlTools.data.powerProfilesSupported ? profile : NacreI18n.tr("popouts.battery-popup.text.power-profiles-unavailable", "Power profiles unavailable"),
-            on: PowerProfiles.profile === PowerProfile.PowerSaver,
+            on: false,
             available: NacreControlTools.data.powerProfilesSupported === true
         },
         {
@@ -118,7 +118,7 @@ Column {
         else if (id === "bluetooth")
             NacreControlActions.request(["bluetooth-power", NacreBluetooth.powered ? "off" : "on"]);
         else if (id === "battery")
-            PowerProfiles.profile = PowerProfiles.profile === PowerProfile.PowerSaver ? PowerProfile.Balanced : PowerProfile.PowerSaver;
+            root.detailsRequested("battery");
         else if (id === "night")
             NacreControlTools.toggleNightLight();
         else if (id === "dnd")
@@ -154,7 +154,7 @@ Column {
                 objectName: "control" + ({
                         network: "Wifi",
                         bluetooth: "Bluetooth",
-                        battery: "Power",
+                        battery: "PowerMode",
                         dnd: "Dnd",
                         night: "NightLight",
                         awake: "Awake",

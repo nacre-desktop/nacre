@@ -14,6 +14,74 @@ Item {
     readonly property bool clickMenus: DesktopSettings.data.clickEdgeMenus === true
     property string hoverHint: ""
     property real hoverHintCenter: 0
+    property string peekName: ""
+    property real peekCenter: 0
+    property url peekSource: Qt.resolvedUrl("NacreStatusPeek.qml")
+    function clearPeek() {
+        peekDelay.stop();
+        peekName = "";
+        peekLoader.source = "";
+    }
+    function requestPeek(name, item, hovered) {
+        if (name === "recording")
+            return;
+        if (!hovered) {
+            if (peekName === name)
+                clearPeek();
+            return;
+        }
+        if (visibility?.launcher || visibility?.session)
+            return;
+        clearPeek();
+        hoverHint = "";
+        peekName = name;
+        peekCenter = item.mapToItem(root, item.width / 2, item.height / 2).x;
+        peekDelay.restart();
+    }
+    function openStatus(name, item) {
+        clearPeek();
+        hoverHint = "";
+        if (name === "recording") {
+            NacreMenu.workflows.work("record-stop");
+            return;
+        }
+        if (name === "notifications") {
+            const p = item.mapToItem(root, item.width / 2, item.height / 2);
+            NacrePanelState.popout("notifications", p.x, screen.name);
+            if (panel)
+                panel.popouts.pinned = true;
+            return;
+        }
+        const pearl = NacrePearls.entries.find(entry => entry.kind === "controls");
+        if (pearl?.window?.bodyItem?.item?.navigate) {
+            pearl.window.bodyItem.item.navigate(name);
+            pearl.window.activate();
+        } else
+            NacrePanelState.openControls(name, screen.name, true);
+    }
+    onVisibleChanged: if (!visible)
+        clearPeek()
+    Timer {
+        id: peekDelay
+        interval: 400
+        onTriggered: if (root.peekName && !NacrePanelState.hidden)
+            peekLoader.setSource(root.peekSource, {
+                output: root.screen,
+                kind: root.peekName,
+                center: root.peekCenter
+            })
+    }
+    Loader {
+        id: peekLoader
+        objectName: "nacreStatusPeekLoader"
+    }
+    Connections {
+        target: NacrePanelState
+        function onHiddenChanged() {
+            if (NacrePanelState.hidden)
+                root.clearPeek();
+        }
+    }
     property string registeredName: ""
     readonly property real dashboardHoverWidth: root.visibility?.dashboard ? Math.min(root.width, Math.max(208, root.panel?.dashboard?.width || 208)) : Math.min(208, root.width)
     readonly property bool openHeaderHovered: !!root.visibility?.dashboard && headerPointer.hovered && Math.abs(headerPointer.point.position.x - width / 2) <= dashboardHoverWidth / 2
@@ -200,9 +268,13 @@ Item {
         anchors.rightMargin: 15
         anchors.verticalCenter: parent.verticalCenter
         spacing: 12
-        Item {
+        NacreSurface {
+            id: updatesHolder
+            objectName: "nacreStatusUpdates"
             implicitWidth: updates.implicitWidth
             implicitHeight: 34
+            radius: 17
+            color: updatesInput.hovered ? NacreColours.palette.m3surfaceContainerHighest : "transparent"
             Row {
                 id: updates
                 anchors.centerIn: parent
@@ -216,10 +288,16 @@ Item {
                     color: NacreColours.palette.m3primary
                 }
             }
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: AppLaunch.run(["nacre-shell", "updates"])
+            NacreInteraction {
+                id: updatesInput
+                accessibleName: NacreI18n.tr("status.peek.updates", "Updates")
+                function onClicked() {
+                    root.openStatus("updates", updatesHolder);
+                }
+            }
+            HoverHandler {
+                blocking: false
+                onHoveredChanged: root.requestPeek("updates", updatesHolder, hovered)
             }
         }
         NacreSurface {
@@ -235,27 +313,23 @@ Item {
                 screenName: root.screen.name
                 horizontal: true
                 rotation: -90
+                onActivated: (name, item) => root.openStatus(name, item)
+                onPeekRequested: (name, item, hovered) => root.requestPeek(name, item, hovered)
+                onInteractionStarted: root.clearPeek()
             }
-            MouseArea {
+            Item {
                 id: statusMouse
                 objectName: "nacreHeaderStatusMouse"
                 anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onEntered: {
-                    NacreHoverIntent.popupHovered[root.screen.name] = true;
-                    root.showPopup(root.statusName(mouseX), this, false);
-                }
-                onPositionChanged: if (containsMouse)
-                    root.showPopup(root.statusName(mouseX), this, false)
-                onExited: root.leavePopup()
-                onClicked: {
-                    const name = root.statusName(mouseX);
-                    root.hoverHint = "";
-                    if (name === "recording")
-                        NacreMenu.workflows.work("record-stop");
-                    else
-                        NacrePanelState.openControls(name, root.screen.name);
+                readonly property bool containsMouse: statusHover.hovered
+                HoverHandler {
+                    id: statusHover
+                    blocking: false
+                    onHoveredChanged: {
+                        NacreHoverIntent.popupHovered[root.screen.name] = hovered;
+                        if (!hovered)
+                            root.leavePopup();
+                    }
                 }
             }
         }
@@ -300,6 +374,7 @@ Item {
     NacreHeaderForwarder {
         screen: root.screen
         statusItem: statusHolder
+        updatesItem: updatesHolder
         calendarItem: clockHolder
     }
     IpcHandler {
