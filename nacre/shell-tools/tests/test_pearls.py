@@ -585,11 +585,20 @@ TestCase {
                     (target / (name + ".qml")).write_text("import QtQuick\n" + body)
                     manifest.write(f"{name} 1.0 {name}.qml\n")
             install_i18n(target)
+            stage_qml(
+                SHELL / "services/compositor/NiriWindow.qml", target / "NiriWindow.qml"
+            )
             (target / "tst_release.qml").write_text("""import QtQuick
 import QtTest
+import Quickshell
 import "."
 TestCase {
  name:"FloatingReleaseFrames";when:windowShown
+ QtObject {id:backendFixture;property var workspaces:({values:[{id:1},{id:2}]})}
+ Component {id:niriFactory;NiriWindow {owner:backendFixture}}
+ Component {id:contentFactory;Item {}}
+ Loader {id:content;sourceComponent:contentFactory;active:false}
+
  Component {id:factory;Destination {entry:({kind:"media",title:"Test pearl",key:"test",origin:"test",initial:{}})}}
  function test_placement_does_not_drop_original_before_paint(){
   const win=factory.createObject(this);NacrePearls.handoffs=0;
@@ -605,6 +614,33 @@ TestCase {
   tryVerify(()=>win.revealed,500);win.frameSwapped();win.frameSwapped();
   verify(win.painted);compare(NacrePearls.handoffs,1);win.destroy();
   NacreCompositor.backendName="hyprland";NacrePearls.drag=null;
+ }
+ function test_moving_workspace_gap_keeps_presented_until_hidden_or_inactive(){
+  const win=factory.createObject(this);win.visible=true;win.ready=true;
+  const client={title:win.title,pid:win.entry.initial.testPid||0,workspace:{id:1},pinned:false,moving:false};
+  client.pid=Quickshell.processId;NacreCompositor.windows=[client];NacreCompositor.monitors={values:[{activeWorkspace:{id:1}}]};
+  verify(win.presented);
+  NacreCompositor.windows=[Object.assign({},client,{workspace:null,moving:true})];
+  verify(win.presented);verify(win.providerView.mediaMini);
+  NacreCompositor.windows=[Object.assign({},client,{workspace:null,lastIpcObject:{moving:true}})];
+  verify(win.presented);
+  win.minimized=true;compare(win.presented,false);win.minimized=false;
+  NacreCompositor.windows=[Object.assign({},client,{workspace:{id:2}})];tryCompare(win,"presented",false);
+  win.visible=false;compare(win.presented,false);
+  NacreCompositor.windows=[];NacreCompositor.monitors={values:[]};win.destroy();
+ }
+ function test_niri_record_binding_order_preserves_loaded_content(){
+  const win=factory.createObject(this);win.visible=true;
+  const original={windowId:"niri-window:12",title:win.title,pid:Quickshell.processId,workspaceId:1,moving:false};
+  const client=niriFactory.createObject(this,{record:original});
+  NacreCompositor.monitors={values:[{activeWorkspace:{id:1}}]};NacreCompositor.windows=[client];
+  content.active=Qt.binding(()=>win.presented);tryVerify(()=>!!content.item);const page=content.item;
+  client.record=Object.assign({},original,{workspaceId:null,moving:true});
+  wait(1);verify(win.presented);compare(content.item,page);
+  client.record=original;wait(1);compare(content.item,page);
+  client.record=Object.assign({},original,{workspaceId:2});tryCompare(win,"presented",false);compare(content.item,null);
+  client.record=original;tryVerify(()=>!!content.item);win.minimized=true;compare(content.item,null);
+  content.active=false;NacreCompositor.windows=[];NacreCompositor.monitors={values:[]};client.destroy();win.destroy();
  }
  function test_missing_frame_returns_to_original(){
   const win=factory.createObject(this);NacrePearls.handoffs=0;NacrePearls.failures=0;

@@ -50,7 +50,21 @@ FloatingWindow {
     property string error: ""
     readonly property var client: NacreCompositor.windows.find(value => value.title === root.title && value.pid === Quickshell.processId)
     readonly property bool focused: !!client && client.windowId === NacreCompositor.activeWindow?.windowId
-    readonly property bool presented: visible && !minimized && (!client || client.pinned || NacreCompositor.monitors.values.some(monitor => monitor.activeWorkspace?.id === client.workspace?.id))
+    // Niri clears the workspace while a floating window is being moved. That
+    // visible move must not revoke provider leases and unload the page.
+    readonly property bool moving: client?.moving === true || client?.lastIpcObject?.moving === true || NacrePearls.niriMove?.entry === entry || NacrePearls.nativeDrag?.entry === entry
+    readonly property bool workspaceVisible: moving || !client || client.pinned || NacreCompositor.monitors.values.some(monitor => monitor.activeWorkspace?.id === client.workspace?.id)
+    property bool workspacePresented: true
+    // Workspace and move bindings settle separately from the same record.
+    // Defer lease loss one event turn so their intermediate state cannot
+    // destroy a visible page. Hidden/minimized windows still release immediately.
+    onWorkspaceVisibleChanged: {
+        if (workspaceVisible)
+            workspacePresented = true;
+        else
+            Qt.callLater(() => workspacePresented = workspaceVisible);
+    }
+    readonly property bool presented: visible && !minimized && workspacePresented
     readonly property alias viewState: viewFlags
     readonly property alias providerView: lease
     readonly property alias bodyItem: body
