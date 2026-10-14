@@ -139,50 +139,57 @@ Item {
         running: !!(root.shouldUpdate && root.visible && root.player?.isPlaying && root.player?.positionSupported && !seek.pressed)
         onTriggered: root.refresh()
     }
-    NacreClip {
+    NacreSurface {
         id: hero
         objectName: "mediaHero"
         anchors.fill: parent
         radius: 20
         color: NacreTokens.raised
-        // The diffuse backdrop needs fewer pixels than the crisp cover.
-        Item {
-            width: hero.width / 2
-            height: hero.height / 2
-            scale: 2
-            transformOrigin: Item.TopLeft
-            Image {
-                id: backdrop
-                anchors.fill: parent
-                source: root.shouldUpdate ? root.artwork : ""
-                sourceSize.width: 320
-                sourceSize.height: 240
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-                visible: false
-            }
-            MultiEffect {
-                anchors.fill: parent
-                source: backdrop
-                blurEnabled: true
-                blurMax: 32
-                blur: .85
-                opacity: .4
-                visible: root.shouldUpdate && backdrop.status === Image.Ready
-            }
-        }
-        Rectangle {
+        // Clip imagery alone: content keeps its own scene-graph nodes when
+        // the card moves or its image/effect texture is recreated.
+        NacreClip {
             anchors.fill: parent
-            color: "transparent"
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop {
-                    position: 0
-                    color: Qt.alpha(hero.color, .7)
+            radius: hero.radius
+            color: hero.color
+            // The diffuse backdrop needs fewer pixels than the crisp cover.
+            Item {
+                width: hero.width / 2
+                height: hero.height / 2
+                scale: 2
+                transformOrigin: Item.TopLeft
+                Image {
+                    id: backdrop
+                    anchors.fill: parent
+                    source: root.shouldUpdate ? root.artwork : ""
+                    sourceSize.width: 320
+                    sourceSize.height: 240
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    visible: false
                 }
-                GradientStop {
-                    position: 1
-                    color: Qt.alpha(hero.color, .8)
+                MultiEffect {
+                    anchors.fill: parent
+                    source: backdrop
+                    blurEnabled: true
+                    blurMax: 32
+                    blur: .85
+                    opacity: .4
+                    visible: root.shouldUpdate && backdrop.status === Image.Ready
+                }
+            }
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop {
+                        position: 0
+                        color: Qt.alpha(hero.color, .7)
+                    }
+                    GradientStop {
+                        position: 1
+                        color: Qt.alpha(hero.color, .8)
+                    }
                 }
             }
         }
@@ -259,8 +266,10 @@ Item {
             height: root.playbackHeight
             Item {
                 id: metadata
+                objectName: "mediaMetadata"
                 width: parent.width
                 height: Math.max(72, Math.min(root.compact ? 144 : 260, parent.height - transport.height - 20))
+                y: Math.max(0, (parent.height - height - transport.height - 16) / 2)
                 NacreClip {
                     id: cover
                     objectName: "fullAlbum"
@@ -326,10 +335,10 @@ Item {
             Column {
                 id: transport
                 objectName: "mediaTransport"
-                anchors.bottom: parent.bottom
+                y: metadata.y + metadata.height + 16
                 width: parent.width
                 spacing: root.compact ? 2 : 8
-                Canvas {
+                Item {
                     id: spectrum
                     objectName: "mediaSpectrum"
                     width: parent.width
@@ -340,24 +349,22 @@ Item {
                     readonly property bool active: root.shouldUpdate && root.player?.isPlaying === true && NacreTokens.motionEnabled
                     Accessible.role: Accessible.Indicator
                     Accessible.name: NacreI18n.tr("dashboard.media-page.audio-activity", "Audio activity")
-                    onSamplesChanged: if (active)
-                        requestPaint()
-                    onActiveChanged: requestPaint()
-                    onFirstChanged: requestPaint()
-                    onSecondChanged: requestPaint()
-                    onWidthChanged: requestPaint()
-                    onHeightChanged: requestPaint()
-                    onPaint: {
-                        const ctx = getContext("2d");
-                        ctx.reset();
-                        if (!active || samples.length !== 32)
-                            return;
-                        const slot = width / 32, bar = Math.max(2, slot * .38);
-                        for (let i = 0; i < 32; i++) {
-                            const level = Number.isFinite(samples[i]) ? Math.max(0, Math.min(1, samples[i])) : 0;
-                            const h = 2 + level * (height - 4);
-                            ctx.fillStyle = Qt.tint(first, Qt.alpha(second, i / 31 * .7));
-                            ctx.fillRect(i * slot + (slot - bar) / 2, (height - h) / 2, bar, h);
+                    // Native items survive surface moves without a Canvas texture
+                    // repaint, and only change when the shared audio data changes.
+                    Repeater {
+                        model: 32
+                        delegate: Rectangle {
+                            required property int index
+                            readonly property real slot: spectrum.width / 32
+                            readonly property real level: spectrum.active && Number.isFinite(spectrum.samples[index]) ? Math.max(0, Math.min(1, spectrum.samples[index])) : 0
+                            objectName: "mediaSpectrumBar" + index
+                            x: index * slot + (slot - width) / 2
+                            y: (spectrum.height - height) / 2
+                            width: Math.max(2, slot * .45)
+                            height: 2 + level * (spectrum.height - 4)
+                            radius: width / 2
+                            color: Qt.tint(spectrum.first, Qt.alpha(spectrum.second, index / 31 * .7))
+                            opacity: spectrum.active ? .9 : .25
                         }
                     }
                 }

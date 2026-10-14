@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import qs.widgets
 import qs.services
 
@@ -18,7 +17,7 @@ Item {
         fillMode: Image.PreserveAspectCrop
         sourceSize.width: 960
         sourceSize.height: 600
-        asynchronous: true
+        asynchronous: false
     }
     Image {
         id: cityPhoto
@@ -28,18 +27,11 @@ Item {
         fillMode: Image.PreserveAspectCrop
         sourceSize.width: 960
         sourceSize.height: 600
-        asynchronous: true
-        cache: false
-        visible: false
-    }
-    MultiEffect {
-        anchors.fill: parent
-        source: cityPhoto
-        visible: root.photoReady
-        blurEnabled: true
-        blurMax: 8
-        blur: .25
-        autoPaddingEnabled: false
+        // A bounded, local thumbnail is decoded before the first painted frame.
+        // Qt's image cache also avoids decoding it again on every tab visit.
+        asynchronous: false
+        cache: true
+        retainWhileLoading: true
     }
     Rectangle {
         anchors.fill: parent
@@ -86,6 +78,8 @@ Item {
         onDayChanged: requestPaint()
         onWidthChanged: requestPaint()
         onHeightChanged: requestPaint()
+        onAvailableChanged: if (available)
+            requestPaint()
         SequentialAnimation on x {
             running: root.moving && !root.photoReady && root.code >= 2
             loops: Animation.Infinite

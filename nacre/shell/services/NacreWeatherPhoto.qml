@@ -41,7 +41,9 @@ Singleton {
         worker.running = true;
     }
     function publish(data) {
-        image = "file://" + photoPath;
+        // The file is replaced on refresh. Version its URL so Qt can cache the
+        // decoded image across visits without retaining an obsolete city photo.
+        image = "file://" + photoPath + "?v=" + data.checked;
         author = data.author;
         license = data.license;
         source = data.source;

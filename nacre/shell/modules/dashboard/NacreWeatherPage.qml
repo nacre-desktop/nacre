@@ -41,14 +41,31 @@ Item {
     function icon(code) {
         return code <= 1 ? "sunny" : code <= 3 ? "cloud" : code >= 71 && code <= 86 ? "weather_snowy" : "rainy";
     }
-    NacreDashboardHero {
+    NacreSurface {
         id: hero
+        objectName: "weatherHero"
+        radius: 20
+        color: NacreTokens.raised
         width: root.leftWidth
         height: root.heroHeight
-        NacreWeatherSky {
-            id: sky
+        // Only the sky needs rounded clipping; keep weather text independent
+        // of the offscreen texture used to render the photo.
+        NacreClip {
             anchors.fill: parent
-            active: root.shouldUpdate
+            radius: hero.radius
+            color: hero.color
+            NacreWeatherSky {
+                id: sky
+                anchors.fill: parent
+                active: root.shouldUpdate
+            }
+        }
+        Rectangle {
+            anchors.fill: parent
+            radius: hero.radius
+            color: "transparent"
+            border.width: 1
+            border.color: Qt.alpha(NacreTokens.accent, .4)
         }
         Column {
             x: 20

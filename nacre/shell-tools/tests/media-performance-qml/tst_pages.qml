@@ -21,6 +21,14 @@ TestCase {
         }
     }
     Component {
+        id: weatherSky
+        NacreWeatherSky {
+            width: 564
+            height: 320
+            active: true
+        }
+    }
+    Component {
         id: focusPage
         NacreFocusExtra {
             width: 940
@@ -84,6 +92,7 @@ TestCase {
         NacreDashboardState.calls = [];
         NacreMediaDetails.lines = [];
         NacreMediaDetails.plain = "";
+        NacreMediaDetails.spectrum = [];
         NacreDashboardState.preferences = {
             albumPalette: true
         };
@@ -262,7 +271,9 @@ TestCase {
             }
             const title = findChild(view, "fullMediaTitle");
             const transport = findChild(view, "mediaTransport");
+            const metadata = findChild(view, "mediaMetadata");
             verify(title.mapToItem(view, 0, title.height).y <= transport.mapToItem(view, 0, 0).y, "metadata stays above controls");
+            compare(transport.y - metadata.y - metadata.height, 16, "artwork and transport stay grouped at every size");
         }
     }
     function test_spectrum_lease_stops_when_hidden() {
@@ -278,6 +289,53 @@ TestCase {
         compare(NacreMediaDetails.mediaSpectrumUsers, 0);
         view.visible = true;
         compare(NacreMediaDetails.mediaSpectrumUsers, 1);
+    }
+    function test_activity_bars_follow_audio_and_stop_for_pause_and_reduced_motion() {
+        const {
+            actor,
+            view
+        } = setup();
+        DesktopSettings.data = {
+            animations: true
+        };
+        const bar = findChild(view, "mediaSpectrumBar0");
+        const spectrum = findChild(view, "mediaSpectrum");
+        NacreMediaDetails.spectrum = Array(32).fill(.8);
+        verify(bar.height > spectrum.height * .7);
+        NacreMediaDetails.spectrum = Array(32).fill(.2);
+        verify(bar.height < spectrum.height * .3);
+        actor.isPlaying = false;
+        compare(bar.height, 2);
+        actor.isPlaying = true;
+        DesktopSettings.data = {
+            reduceMotion: true
+        };
+        compare(spectrum.active, false);
+        compare(bar.height, 2);
+        DesktopSettings.data = {
+            animations: true
+        };
+        verify(spectrum.active);
+        view.shouldUpdate = false;
+        compare(bar.height, 2);
+    }
+    function test_cached_city_photo_ready_on_creation_and_reopening() {
+        NacreDashboardState.weatherPhotos = true;
+        NacreWeatherPhoto.image = Qt.resolvedUrl("city.png").toString() + "?v=123";
+        for (let i = 0; i < 3; i++) {
+            const sky = weatherSky.createObject(test);
+            verify(sky.photoReady, "cached local photo is ready before the first frame");
+            const image = findChild(sky, "weatherCityPhoto");
+            sky.x = i * 50;
+            sky.y = i * 30;
+            compare(image.status, Image.Ready);
+            sky.destroy();
+            wait(1);
+        }
+        NacreDashboardState.weatherPhotos = false;
+        const sky = createTemporaryObject(weatherSky, test);
+        compare(sky.photoReady, false);
+        compare(findChild(sky, "weatherCityPhoto").source.toString(), "");
     }
     function test_focus_presets_select_then_explicit_start_and_pause_stop() {
         const view = createTemporaryObject(focusPage, test);

@@ -6,6 +6,7 @@ from qml_fixtures import install_i18n
 
 import os
 from pathlib import Path
+from PIL import Image
 import shutil
 import tempfile
 import unittest
@@ -30,6 +31,9 @@ def prepare_pages(target):
         "NacreMediaDetails": 'property int mediaSpectrumUsers:0;property var palette:({});property var lines:[];property var spectrum:[];property string message:"";property string plain:""',
         "NacreDashboardState": 'property bool weatherPhotos:false;property var focusState:({status:"idle"});property bool busy:false;readonly property bool running:focusState.status==="running";property string timerText:"24:12";property real progress:0;property var calls:[];function start(minutes){calls=[...calls,minutes];focusState={status:"running"}}function end(){calls=[...calls,"stop"];focusState={status:"idle"}}function request(action){calls=[...calls,action];focusState={status:action==="focus-pause"?"paused":"running"}}property var preferences:({albumPalette:true,focusMinutes:25});function save(key,value){preferences=Object.assign({},preferences,{[key]:value})}',
         "NacreAudio": "property var outputs:[];property var sink:null;function chooseOutput(id){sink=outputs.find(node=>String(node.id)===id);return !!sink}",
+        "NacreWeatherPhoto": 'property string image:""',
+        "NacreWallpapers": 'property string poster:""',
+        "WallpaperPlayback": "property bool sleeping:false;property bool locked:false",
     }.items():
         (fixtures / (name + ".qml")).write_text(
             "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
@@ -39,7 +43,11 @@ def prepare_pages(target):
     stage_qml(SHELL / "widgets/NacreScrollBar.qml", fixtures / "NacreScrollBar.qml")
     with (fixtures / "qmldir").open("a") as manifest:
         manifest.write("\nNacreScrollBar 1.0 NacreScrollBar.qml\n")
-    for name in ("NacreMediaPage",):
+    (fixtures / "NacreWeather.qml").write_text(
+        "pragma Singleton\nimport QtQuick\nQtObject {property var reading:({isDay:true,wmo:0})}"
+    )
+    Image.new("RGB", (32, 32), "gray").save(target / "city.png")
+    for name in ("NacreMediaPage", "NacreWeatherSky"):
         stage_qml(
             SHELL / "modules/dashboard" / (name + ".qml"), target / (name + ".qml")
         )
