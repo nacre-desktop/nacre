@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const context=vm.createContext({});
 vm.runInContext(fs.readFileSync(process.argv[2],'utf8').replace('.pragma library',''),context);
 const source=fs.readFileSync(process.argv[3],'utf8'), menu=context.merge(source,'');
-assert.equal(menu.rows.length,141);
+assert.equal(menu.rows.length,142);
 assert.equal(context.resolve('software.apps',menu.rows),'software.discover');
 assert.equal(menu.rows.find(row=>row.id==='software.themes').provider,'software-themes');
 assert.equal(menu.rows.find(row=>row.id==='software.extensions').provider,'software-extensions');

@@ -1594,6 +1594,16 @@
       "provider": "software-ai",
       "labelId": "launcher.catalog.software.discover.ai.label",
       "descriptionId": "launcher.catalog.software.discover.ai.description"
+    },
+    {
+      "id": "health.fixits",
+      "kind": "group",
+      "label": "Fix a problem",
+      "icon": "build",
+      "description": "Review maintenance and repair actions",
+      "provider": "health-fixits",
+      "labelId": "launcher.catalog.health.fixits.label",
+      "descriptionId": "launcher.catalog.health.fixits.description"
     }
   ],
   "software": [

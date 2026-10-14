@@ -603,7 +603,7 @@ fn list(paths: &Paths) -> Result<Value> {
         }
     }
     Ok(
-        json!({"ready":true,"extensions":entries,"themes":themes,"environments":crate::software_environments::snapshot(paths),"ai":crate::software_ai::snapshot(paths),"tui":crate::software_tui::snapshot(paths)}),
+        json!({"ready":true,"extensions":entries,"themes":themes,"environments":crate::software_environments::snapshot(paths),"ai":crate::software_ai::snapshot(paths),"tui":crate::software_tui::snapshot(paths),"system":crate::software_actions::snapshot()}),
     )
 }
 fn import(paths: &Paths, source: &str, update: Option<&str>) -> Result<Value> {
@@ -935,6 +935,7 @@ pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Value> {
         .open(paths.config.join("software-library.lock"))?;
     let _guard = Flock::lock(file, FlockArg::LockExclusive).map_err(|(_, error)| error)?;
     match action {
+        "system-open" => crate::software_actions::open(&paths, id),
         "tui-create" => crate::software_tui::execute(&paths, "create", id, input),
         "tui-remove" => crate::software_tui::execute(&paths, "remove", id, None),
         "tui-launch" => crate::software_tui::execute(&paths, "launch", id, None),

@@ -85,3 +85,23 @@ stable IDs. Package names and Fontconfig family aliases are separate, and
 ordinary search also finds the font offers. This selection changes the shell's
 interface family; the planned terminal/monospace publisher is not implemented
 by this item.
+
+## Health fix-its
+
+Health → Fix a problem exposes detected service and tool actions: PipeWire /
+WirePlumber restart, NetworkManager / Bluetooth restart, fwupd updates, orphan
+package removal and bounded package-cache cleanup. Every action requires a
+launcher confirmation, then a visible terminal command review and `yes` before
+execution. Administrator operations use pkexec or sudo only after that review.
+Remapped desktop sessions hand privileged work to the normal user-session
+terminal bridge; no namespace or sandbox policy is relaxed.
+
+Orphan removal validates and displays the exact package list. Cache cleanup keeps
+three versions. Firmware operations retain fwupd's device/power/signature and
+confirmation checks. Touchpad restart is offered only for confirmed devices on
+the supported Hyprland device-control path, using its current Lua API; it is not
+advertised as available on Niri. A failed touchpad sequence attempts to re-enable
+its owned targets. Missing hardware, services, tools or an administrator agent
+omit their corresponding fix-it rows. Private test fixtures cover cancellation,
+non-TTY rejection, root command dispatch and capability gates; they never restart
+host services or update firmware.

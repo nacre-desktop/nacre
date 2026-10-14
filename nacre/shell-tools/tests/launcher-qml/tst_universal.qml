@@ -427,6 +427,50 @@ TestCase {
         value.cancelForm();
     }
 
+    function test_health_actions_are_searchable_and_require_confirmation() {
+        const value = view();
+        value.menu.library.data = Object.assign({}, value.menu.library.data, {
+            system: {
+                health: [
+                    {
+                        id: "audio-restart",
+                        name: "Restart audio",
+                        description: "Audio pauses",
+                        section: "health.fixits",
+                        root: false
+                    },
+                    {
+                        id: "cache-clean",
+                        name: "Clean package caches",
+                        description: "Retain three versions",
+                        section: "health.fixits",
+                        root: true
+                    }
+                ]
+            }
+        });
+        value.navigate("health.fixits");
+        compare(value.entries.length, 2);
+        const entry = value.entries.find(row => row.value === "cache-clean");
+        verify(!!entry.confirm);
+        verify(!value.menu.execute(entry));
+        value.menu.execute(entry, true);
+        const worker = findChild(value.menu.library, "softwareLibraryAction");
+        compare(worker.operation, "system-open");
+        compare(worker.value, "cache-clean");
+        worker.running = false;
+        value.navigate("software.development");
+        findChild(value, "launcherSearch").text = "restart audio";
+        verify(value.entries.some(row => row.value === "audio-restart"));
+        value.menu.library.data = Object.assign({}, value.menu.library.data, {
+            system: {
+                health: []
+            }
+        });
+        value.navigate("health.fixits");
+        compare(value.entries.length, 0);
+    }
+
     function test_curated_fonts_install_or_select_discovered_family_without_duplicates() {
         const value = view();
         value.menu.snapshot = Object.assign({}, value.menu.snapshot, {

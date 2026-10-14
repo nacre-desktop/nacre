@@ -140,6 +140,27 @@ fn run() -> Result<i32> {
         println!("{}", json::encode(&value)?);
         return Ok(code);
     }
+    if tool == "software-actions" {
+        let action = arguments.first().map(String::as_str).unwrap_or("load");
+        let id = arguments.get(1).map(String::as_str).unwrap_or("");
+        if action == "run" {
+            return nacre_helper::software_actions::run_health(id);
+        }
+        let result = match action {
+            "load" => Ok(nacre_helper::software_actions::snapshot()),
+            "plan" => nacre_helper::software_actions::health_plan(
+                id,
+                &nacre_helper::software_actions::facts(),
+            ),
+            _ => Err("Unknown system action".into()),
+        };
+        let (value, code) = match result {
+            Ok(value) => (value, 0),
+            Err(error) => (serde_json::json!({"error":error.to_string()}), 1),
+        };
+        println!("{}", json::encode(&value)?);
+        return Ok(code);
+    }
     if tool == "software-tui" {
         use std::io::Read;
         let paths = nacre_helper::paths::Paths::environment()?;

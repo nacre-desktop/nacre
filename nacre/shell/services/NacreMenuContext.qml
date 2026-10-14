@@ -395,6 +395,8 @@ Scope {
                         value0: NacreI18n.time(new Date(entry.due * 1000), "hh:mm")
                     })
                 }));
+        if (node.provider === "health-fixits")
+            return systemRows("health");
         if (node.provider === "tui-apps")
             return tuiRows();
         if (node.provider === "webapps")
@@ -926,6 +928,13 @@ Scope {
         }
         return result;
     }
+    function systemRows(section) {
+        return (library.data.system?.[section] || []).map(entry => valueRow(entry.section, entry.id, entry.name, "system-action", entry.id, "build", entry.description, {
+                confirm: NacreI18n.tr("software.actions.open-confirm", "Open a terminal to review and confirm this action?"),
+                aliases: [entry.id, "repair maintenance fix"],
+                status: entry.root ? NacreI18n.tr("software.actions.admin", "Administrator permission") : ""
+            }));
+    }
     function fontRows() {
         const curated = catalog.fonts || [];
         const rows = [valueRow("style.fonts", "default", NacreI18n.tr("launcher.provider.nacre-default", "Nacre default"), "font", "", "text_fields", NacreI18n.tr("ui.menu-context.description.ibm-plex-sans", "{font}", {
@@ -977,7 +986,7 @@ Scope {
         return softwareRows("software.discover.ai").filter(row => row.category === "ai" && row.checked && !row.desktopId);
     }
     function globalRows(query) {
-        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), installedAiRows(), tuiRows().filter(row => !apps.some(app => app.id.replace(/\.desktop$/, "") === "nacre-tui-" + row.value)), captureRows());
+        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), installedAiRows(), sourceOptions.actions ? systemRows("health") : [], tuiRows().filter(row => !apps.some(app => app.id.replace(/\.desktop$/, "") === "nacre-tui-" + row.value)), captureRows());
     }
     function itemActions(entry) {
         if (!entry)
@@ -1296,6 +1305,8 @@ Scope {
             PowerProfiles.profile = profileValue(value);
             return true;
         }
+        if (operation === "system-action")
+            return library.work("system-open", value);
         if (operation === "tui-launch" || operation === "tui-remove")
             return library.work(operation, value);
         if (operation === "webapp-offer") {
