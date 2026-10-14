@@ -9,25 +9,11 @@ Item {
     required property var visibilities
     required property var controller
     property real focusProgress: 0
-    readonly property var rimHandles: [left.visible ? {
-            x: NacreFrame.left,
-            y: leftRect.y,
-            width: 18,
-            height: leftRect.height,
-            edge: "left",
-            shoulder: 10
-        } : null, right.visible ? {
-            x: rightRect.x,
-            y: rightRect.y,
-            width: 18,
-            height: rightRect.height,
-            edge: "right",
-            shoulder: 10
-        } : null].filter(Boolean)
+    readonly property var rimHandles: []
     readonly property bool available: !NacrePanelState.hidden && !controller.modal && !visibilities.launcher && !visibilities.session && !visibilities.dashboardPinned && !NacreHoverIntent.fullscreenFor(screen.name)
     readonly property rect topRect: NacreFrame.headerHeight > 0 ? Qt.rect((width - 208) / 2, 0, 208, NacreFrame.headerHeight) : Qt.rect(0, 0, 0, 0)
-    readonly property rect leftRect: NacreFrame.left > 0 ? Qt.rect(0, (height - 52) / 2, NacreFrame.left + 18, 52) : Qt.rect(0, 0, 0, 0)
-    readonly property rect rightRect: NacreFrame.right > 0 ? Qt.rect(width - NacreFrame.right - 18, (height - 52) / 2, NacreFrame.right + 18, 52) : Qt.rect(0, 0, 0, 0)
+    readonly property rect leftRect: NacreFrame.left > 0 ? Qt.rect(0, (height - 52) / 2, NacreFrame.left, 52) : Qt.rect(0, 0, 0, 0)
+    readonly property rect rightRect: NacreFrame.right > 0 ? Qt.rect(width - NacreFrame.right, (height - 52) / 2, NacreFrame.right, 52) : Qt.rect(0, 0, 0, 0)
     function publishRegions() {
         if (!screen?.name)
             return;
@@ -36,8 +22,8 @@ Item {
             left: leftRect,
             osd: rightRect,
             resting: {
-                left: Qt.rect(0, (height - 52) / 2, NacreFrame.left + 18, 52),
-                osd: Qt.rect(width - NacreFrame.right - 18, (height - 52) / 2, NacreFrame.right + 18, 52)
+                left: Qt.rect(0, (height - 52) / 2, NacreFrame.left, 52),
+                osd: Qt.rect(width - NacreFrame.right, (height - 52) / 2, NacreFrame.right, 52)
             }
         };
     }

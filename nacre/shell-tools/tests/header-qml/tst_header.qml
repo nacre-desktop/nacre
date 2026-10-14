@@ -435,6 +435,38 @@ TestCase {
         view.clearPeek();
         compare(view.peekProgress, 0);
     }
+    function test_long_frame_does_not_jump_over_remaining_fill() {
+        const popup = {
+            hasCurrent: false,
+            currentName: "",
+            peekKind: "",
+            currentCenter: 0,
+            pinned: false,
+            headerHovered: false
+        };
+        NacrePanelState.panels = {
+            test: {
+                popouts: popup,
+                popoutHovered: false
+            }
+        };
+        const view = createTemporaryObject(header, test), region = findChild(view, "nacreHeaderStatus");
+        view.requestPeek("audio", region, true);
+        const dwell = findChild(view, "nacreStatusDwell"), fill = findChild(dwell, "hoverDwellAnimation");
+        fill.pause();
+        dwell.progress = .6;
+        dwell.advance(.25);
+        fuzzyCompare(dwell.progress, .7, .001);
+        verify(!popup.hasCurrent);
+        for (let n = 0; n < 4 && dwell.progress < 1; n++)
+            dwell.advance(.035);
+        compare(dwell.progress, 1);
+        verify(!popup.hasCurrent);
+        dwell.advance(.016);
+        verify(!popup.hasCurrent);
+        dwell.advance(.016);
+        verify(popup.hasCurrent);
+    }
     function test_status_highlight_uses_the_shared_pill_end_corners() {
         const view = createTemporaryObject(header, test), holder = findChild(view, "nacreHeaderStatus"), cue = findChild(view, "nacreHeaderStatusCue");
         view.statusHoveredName = "audio";

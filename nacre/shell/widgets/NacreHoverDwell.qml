@@ -7,12 +7,14 @@ Item {
     property bool waiting: false
     property bool animatedCycle: false
     property int remaining: duration
+    property int fullFrames: 2
     signal triggered
     function cancel() {
         waiting = false;
         fill.stop();
         delay.stop();
         progress = 0;
+        fullFrames = 2;
     }
     function start() {
         cancel();
@@ -30,19 +32,24 @@ Item {
         if (!waiting)
             return;
         waiting = false;
+        fill.stop();
         triggered();
     }
-    // Opening follows the rendered fill's completion, never a competing timer.
-    NumberAnimation {
+    function advance(seconds) {
+        if (!waiting || !animatedCycle)
+            return;
+        if (progress < 1) {
+            // A stalled frame must not consume the entire remaining visible fill.
+            const step = Math.max(0, Math.min(.035, seconds));
+            progress = Math.min(1, progress + step * 1000 / Math.max(1, duration));
+        } else if (--fullFrames <= 0)
+            finish();
+    }
+    // Keep the completed trace visible before lazy popup creation starts.
+    FrameAnimation {
         id: fill
         objectName: "hoverDwellAnimation"
-        target: root
-        property: "progress"
-        from: 0
-        to: 1
-        duration: root.duration
-        easing.type: Easing.Linear
-        onFinished: root.finish()
+        onTriggered: root.advance(frameTime)
     }
     Timer {
         id: delay

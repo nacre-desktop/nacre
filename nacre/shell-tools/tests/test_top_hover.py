@@ -105,7 +105,7 @@ TestCase {
   view.controller.panels={dashboard:{height:240},leftDrawer:{width:320},osd:{width:424}};
   view.flags.dashboard=true;view.flags.left=true;view.flags.osd=true;
   compare(top.y,topY);compare(left.x,leftX);compare(right.x,rightX);
-  compare(top.height,NacreFrame.headerHeight);compare(left.width,NacreFrame.left+18);compare(left.height,52);
+  compare(top.height,NacreFrame.headerHeight);compare(left.width,NacreFrame.left);compare(left.height,52);
   const column=NacreHoverIntent.lipRegions.test.dashboard;
   compare(column.x,396);compare(column.y,0);compare(column.width,208);compare(column.height,50);
   verify(top.visible);verify(left.visible);verify(right.visible);
@@ -120,7 +120,7 @@ TestCase {
   view.controller.panels={dashboard:{height:0},leftDrawer:{width:0},osd:{width:0},launcher:{fullScreenGallery:true}};
   view.flags.launcher=true;
   verify(top.visible);verify(left.visible);verify(right.visible);
-  compare(view.lips.rimHandles.length,2);
+  compare(view.lips.rimHandles.length,0);
   mouseMove(view,8,350);verify(view.flags.launcher);verify(!view.flags.left);
   mouseMove(view,990,350);verify(view.flags.launcher);verify(!view.flags.osd);
   mouseMove(view,500,25);verify(view.flags.launcher);verify(!view.flags.dashboard);

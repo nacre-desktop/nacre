@@ -376,7 +376,7 @@ TestCase {
 
             closed = pixels("closed")
             self.assertEqual(closed.size, (600, 400))
-            self.assertEqual(closed.getpixel((5, 200)), (25, 26, 32))
+            self.assertEqual(closed.getpixel((5, 150)), (25, 26, 32))
             self.assertEqual(closed.getpixel((300, 20)), (25, 26, 32))
             self.assertEqual(closed.getpixel((300, 200)), (86, 125, 154))
             self.assertEqual(closed.getpixel((10, 50)), (25, 26, 32))
@@ -386,9 +386,9 @@ TestCase {
             self.assertEqual(joined.getpixel((300, 200)), (86, 125, 154))
             recoloured = pixels("recoloured")
             self.assertEqual(recoloured.getpixel((300, 100)), (12, 46, 34))
-            self.assertEqual(recoloured.getpixel((5, 200)), (12, 46, 34))
+            self.assertEqual(recoloured.getpixel((5, 150)), (12, 46, 34))
             removed = pixels("no-edges")
-            self.assertEqual(removed.getpixel((5, 200)), (86, 125, 154))
+            self.assertEqual(removed.getpixel((5, 150)), (86, 125, 154))
             self.assertEqual(removed.getpixel((300, 20)), (86, 125, 154))
 
             notice = pixels("notice-joined")
@@ -401,13 +401,13 @@ TestCase {
 
             quiet, rim = pixels("quiet"), pixels("rim-enabled")
             self.assertNotEqual(quiet.getpixel((100, 50)), rim.getpixel((100, 50)))
-            self.assertEqual(quiet.getpixel((5, 200)), rim.getpixel((5, 200)))
-            self.assertEqual(pixels("light").getpixel((5, 200)), (245, 242, 237))
+            self.assertEqual(quiet.getpixel((5, 150)), rim.getpixel((5, 150)))
+            self.assertEqual(pixels("light").getpixel((5, 150)), (245, 242, 237))
 
-            self.assertNotEqual(closed.getpixel((26, 200)), (86, 125, 154))
-            self.assertNotEqual(closed.getpixel((574, 200)), (86, 125, 154))
+            self.assertEqual(closed.getpixel((26, 200)), (86, 125, 154))
+            self.assertEqual(closed.getpixel((574, 200)), (86, 125, 154))
 
-            # Top targets stay flat; only the two side tabs protrude into the wallpaper.
+            # All edge arrows stay inside the frame; no protrusions cover the desktop.
             for point in (
                 (250, 54),
                 (350, 54),

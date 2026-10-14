@@ -102,11 +102,11 @@ summaries are read-only; the calendar keeps its month controls. Clicking the
 clock pins its calendar for keyboard use until Escape or dismissal. Status hover
 highlights fill their segment of the shared pill, following its rounded ends.
 A palette-colored
-highlight and filling underline show the wait. The left and right frame edges have small arrow tabs with the same delayed
+highlight and filling underline show the wait. The left and right frame edges have small arrows inside the existing border with the same delayed
 fill; clicks open or close their panels immediately. The middle title and top lip wait
 350 ms before opening the dashboard; leaving cancels it, while a click opens
-immediately. Opening follows the completed fill, so the indicator reaches its
-end before the panel unfolds. Reduced motion keeps the delay with a static highlight. Dropdowns
+immediately. The fill follows display frames and stays complete briefly before the panel
+unfolds; delayed frames cannot skip the remaining fill. Reduced motion keeps the delay with a static highlight. Dropdowns
 unfold from the bar using the same frame and motion as other Nacre popups. Clicking
 a status icon opens its control-center detail page; the bell opens notification history inside the same
 panel. Notification history can also be added as a tile in Edit, or opened by
