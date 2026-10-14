@@ -48,7 +48,8 @@ jobs:
             chown -R builder:builder /work
             # Fail early if this host cannot run the sandbox used by check().
             mkdir -p /var/tmp/nacre-namespace-probe
-            mkarchroot /var/tmp/nacre-namespace-probe/root base-devel bubblewrap
+            mkarchroot -C /usr/share/devtools/pacman.conf.d/extra.conf \
+              /var/tmp/nacre-namespace-probe/root base-devel bubblewrap
             arch-nspawn /var/tmp/nacre-namespace-probe/root useradd -m -u 1000 probe
             arch-nspawn /var/tmp/nacre-namespace-probe/root runuser -u probe -- \
               bwrap --unshare-user --unshare-pid --unshare-net --unshare-ipc \
