@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare identical helper requests, fresh Python versus the persistent service."""
+"""Compare identical helper requests in fresh processes and a persistent service."""
 
 import argparse
 import json
@@ -7,11 +7,11 @@ import os
 from pathlib import Path
 import resource
 import subprocess
-import sys
 import tempfile
 import time
 
 from performance import memory, summarize
+from helper_runtime import helper_command
 
 
 def cpu_times(worker=None):
@@ -29,7 +29,7 @@ def cpu_times(worker=None):
     return usage.ru_utime, usage.ru_stime
 
 
-def benchmark(tools, count, service, busy_machine=False):
+def benchmark(tools, count, service, busy_machine=False, helper_binary=None):
     requests = (
         ("menu-backend", ["convert", "invalid"], None),
         ("dashboard-data", ["read"], None),
@@ -45,17 +45,44 @@ def benchmark(tools, count, service, busy_machine=False):
             "XDG_CACHE_HOME": directory + "/.cache",
             "XDG_DATA_HOME": directory + "/.local/share",
             "XDG_DATA_DIRS": "/usr/local/share:/usr/share",
+            "XDG_RUNTIME_DIR": directory + "/runtime",
         }
+        Path(environment["XDG_RUNTIME_DIR"]).mkdir(mode=0o700)
+        for name in (
+            "DISPLAY",
+            "WAYLAND_DISPLAY",
+            "DBUS_SESSION_BUS_ADDRESS",
+            "DBUS_SYSTEM_BUS_ADDRESS",
+            "NIRI_SOCKET",
+            "HYPRLAND_INSTANCE_SIGNATURE",
+            "NACRE_COMPOSITOR",
+            "NACRE_COMPOSITOR_TOOLS",
+            "NACRE_QS_CONFIG",
+            "NACRE_PEARL_TOOLS",
+            "XDG_CURRENT_DESKTOP",
+        ):
+            environment.pop(name, None)
+        environment.update(
+            DBUS_SESSION_BUS_ADDRESS="unix:path="
+            + directory
+            + "/runtime/absent-session-bus",
+            DBUS_SYSTEM_BUS_ADDRESS="unix:path="
+            + directory
+            + "/runtime/absent-system-bus",
+        )
+        launches = []
         worker = None
         if service:
+            command, runtime = helper_command(tools, "helper-service", helper_binary)
             started = time.monotonic()
             worker = subprocess.Popen(
-                [sys.executable, str(tools / "helper-service.py")],
+                command,
                 env=environment,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 text=True,
             )
+            launches.append(runtime)
             if json.loads(worker.stdout.readline()) != {"ready": True, "version": 1}:
                 raise ValueError("Missing service handshake")
             startup = (time.monotonic() - started) * 1000
@@ -89,14 +116,16 @@ def benchmark(tools, count, service, busy_machine=False):
                             raise ValueError("Unexpected helper response")
                         output = json.loads(reply["output"])
                     else:
+                        command, runtime = helper_command(tools, tool, helper_binary)
                         reply = subprocess.run(
-                            [sys.executable, str(tools / (tool + ".py")), *arguments],
+                            [*command, *arguments],
                             env=environment,
                             capture_output=True,
                             text=True,
                             timeout=30,
                             check=True,
                         )
+                        launches.append(runtime)
                         output = json.loads(reply.stdout)
                     elapsed = (time.monotonic() - started) * 1000
                     if sequence:
@@ -142,9 +171,13 @@ def benchmark(tools, count, service, busy_machine=False):
                 worker.stdout.close()
                 if worker.returncode:
                     raise ValueError("Helper service did not exit cleanly")
+        runtime = launches[0] if len(set(launches)) == 1 else "mixed"
         return {
-            "transport": "service" if service else "fresh Python",
-            "python_processes": 1 if service else len(requests) * (count + 1),
+            "transport": "service" if service else "fresh " + runtime,
+            "runtime": runtime,
+            "helper_launches": len(launches),
+            "python_processes": launches.count("Python"),
+            "launch_scope": "direct helper starts only; descendant/session launches require the actions capture",
             "startup_ms": None if busy_machine else startup,
             "service_memory": service_memory,
             "measurement_condition": "busy machine"
@@ -166,6 +199,11 @@ def main():
     parser.add_argument("--count", type=int, default=100)
     parser.add_argument("--service", action="store_true")
     parser.add_argument(
+        "--helper-binary",
+        type=Path,
+        help="Use this native binary for both fresh and service requests",
+    )
+    parser.add_argument(
         "--busy-machine",
         action="store_true",
         help="Report CPU, launches and helper RSS; suppress wall-clock and PSS results",
@@ -176,7 +214,14 @@ def main():
         parser.error("count must be in 1..10000")
     args.output.write_text(
         json.dumps(
-            benchmark(args.tools, args.count, args.service, args.busy_machine), indent=2
+            benchmark(
+                args.tools,
+                args.count,
+                args.service,
+                args.busy_machine,
+                args.helper_binary,
+            ),
+            indent=2,
         )
         + "\n"
     )

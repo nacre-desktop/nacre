@@ -10,6 +10,7 @@ import os
 import shutil
 import signal
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 
@@ -99,7 +100,31 @@ def source_digest(directory):
     return digest.hexdigest()
 
 
+def install_native_helper(helper, target):
+    if helper.resolve() == target.resolve():
+        return
+    fd, name = tempfile.mkstemp(prefix=".nacre-helper.", dir=target.parent)
+    os.close(fd)
+    temporary = Path(name)
+    try:
+        shutil.copy2(helper, temporary)
+        temporary.replace(target)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def deploy(code_only=False):
+    # Resolve/build the native candidate before any source/runtime activation.
+    helper = ROOT / "nacre-helper"
+    if not helper.is_file():
+        repo = ROOT.parent.parent
+        helper = Path(
+            subprocess.check_output(
+                ["bash", str(repo / "tools/build-helper.sh")], text=True
+            ).strip()
+        )
+    if not helper.is_file() or not os.access(helper, os.X_OK):
+        raise RuntimeError("The native nacre-helper candidate is unavailable")
     # Parse every QML file before replacing live source. A failed candidate stays local.
     formatter = (
         "/usr/lib/qt6/bin/qmlformat"
@@ -156,8 +181,27 @@ def deploy(code_only=False):
         ROOT,
         DEST / "tools",
         dirs_exist_ok=True,
-        ignore=shutil.ignore_patterns("__pycache__", "tests"),
+        ignore=shutil.ignore_patterns("__pycache__", "tests", "nacre-helper"),
     )
+    target = DEST / "tools/nacre-helper"
+    install_native_helper(helper, target)
+    # The release transaction has already backed up this owned runtime tree.
+    for retired in (
+        "helper-service",
+        "diagnostics",
+        "menu-backend",
+        "dashboard-data",
+        "dashboard-media",
+        "network-state",
+        "launcher-preferences",
+        "notification-history",
+        "dashboard-system",
+        "resource-state",
+        "window-chat-title",
+        "light-devices",
+        "menu-cli",
+    ):
+        (DEST / "tools" / (retired + ".py")).unlink(missing_ok=True)
     # Retire the superseded procedural-image dedication from owned helper code.
     # The release transaction snapshots this tree before activation.
     (DEST / "tools/demo-wallpapers.LICENSE").unlink(missing_ok=True)

@@ -205,9 +205,18 @@ def main():
     if (a.report or a.json) and a.action != "doctor":
         p.error("--report and --json are only valid for doctor")
     if a.action == "doctor":
-        from diagnostics import support_report
-
-        print(support_report(as_json=not a.report), end="")
+        helper = Path(__file__).with_name("nacre-helper")
+        if not helper.is_file():
+            helper = Path(__file__).resolve().parents[2] / "target/release/nacre-helper"
+        subprocess.run(
+            [
+                str(helper),
+                "diagnostics",
+                "report",
+                *(["--json"] if not a.report else []),
+            ],
+            check=True,
+        )
         return
     if a.action == "repair-portals":
         for unit in (

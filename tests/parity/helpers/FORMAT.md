@@ -68,6 +68,15 @@ Orient `info` reply. Colors, core identity, source/options, files/modes and
 actions stay exact. These frozen outputs cannot be re-recorded; arbitrary
 hash/version fields and cache filenames are never normalized by this rule.
 
+The six injected-provider service cases declare `native_service_fixture`.
+With `--command` and `--service-fixture`, they run the developer-only Rust
+example around the same native `serve` library. Exact provider-source SHA256
+checks limit this to the frozen gate/crash/exit/oversized test behaviors; the
+Python baseline still runs its original fixtures. Replies, ordering, IDs,
+exit codes and all file effects stay exact, with no output normalization.
+The native installed runtime uses compiled providers and never loads Python
+from the legacy developer `NACRE_DASHBOARD_TOOLS` module override.
+
 A `commands` entry maps a name to rules with exact `argv` or an explicit fallback,
 `stdout`/`stdout_base64`, `stderr`, `code`, and optional `writes` (paths can use
 `{arg0}`, `{arg1}`, etc.). Set `read_stdin: true` for piped input; inherited service
@@ -86,6 +95,20 @@ operation, then JSON `args`/`kwargs`. `{"$path":"..."}` means a Path; `construct
 provides class constructor arguments. Paths, sets, ConfigParser and
 CompletedProcess values have explicit JSON encodings in that driver. A replacement
 adapter must expose this same boundary; the runner itself remains black-box.
+An exact one-key `{"$datetime":"ISO 8601 timestamp"}` object supplies a datetime
+for deterministic calendar tests, preserving its supplied timezone.
+
+After the Wave 1 cutover, the default registry runs migrated helpers through
+`nacre-helper` and module cases through the developer `parity-api` example. Build
+the exact revision with `cargo build -p nacre-helper --bins --examples`. Explicit
+`NACRE_HELPER_BINARY`, `NACRE_PARITY_API` and `NACRE_SERVICE_FIXTURE` paths are
+authoritative; otherwise the installed helper or newest local debug/release
+build is selected. Missing native artifacts are errors, with no Python fallback.
+Selection by modification time does not prove source identity: rebuild the exact
+revision before a gate and set all three executable paths explicitly in CI.
+Recording any selection containing migrated helpers is rejected before writing
+references. Untouched helpers keep their existing Python boundary. Native
+default routes use the same narrow Orient transport equivalence described below.
 
 D-Bus cases start a private bus with a strict fixture peer. Each rule matches the
 entire destination/path/interface/member/signature/typed body, supplies a reply,

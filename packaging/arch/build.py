@@ -30,6 +30,13 @@ def build(root, output, sources):
         )
     )
     native = output / "native"
+    native.mkdir(exist_ok=True)
+    helper = Path(
+        subprocess.check_output(
+            ["bash", str(root / "tools/build-helper.sh")], text=True
+        ).strip()
+    )
+    shutil.copy2(helper, native / "nacre-helper")
     for name in ("dolphin-style/styles", "thunar-style"):
         (native / name).mkdir(parents=True, exist_ok=True)
     compiler_flags = shlex.split(os.environ.get("CFLAGS", ""))

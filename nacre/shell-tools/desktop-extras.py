@@ -126,11 +126,20 @@ def resume(key, terminal=False):
     records = json.loads((STATE / "chats.json").read_text())
     item = records[key]
     if not terminal:
-        helper = runpy.run_path(str(Path(__file__).with_name("window-chat-title.py")))
         for client in compositor.query("windows", timeout=12):
             if (
                 client["class"] == "nacre-ai-task"
-                and helper["resolve_info"](client["pid"]).get("threadId") == item["id"]
+                and json.loads(
+                    run(
+                        [
+                            os.environ.get("NACRE_HELPER_BINARY")
+                            or str(Path(__file__).with_name("nacre-helper")),
+                            "window-chat-title",
+                            str(client["pid"]),
+                        ]
+                    ).stdout
+                ).get("threadId")
+                == item["id"]
             ):
                 compositor.focus_window(client["address"], timeout=12)
                 return

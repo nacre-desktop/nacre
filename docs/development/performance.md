@@ -557,6 +557,15 @@ The existing four-request workloads use disposable HOME/XDG state and 100 warm
 requests plus one cold request. QML/helper source is held at `0ecb3bb7`; the
 candidate applies the dev6 C8 pin, holding unrelated cleanup/SDK changes constant.
 `benchmark-helpers.py --busy-machine` suppresses wall-clock and PSS results.
+For the migrated runtime, pass `--helper-binary target/release/nacre-helper`
+to this tool, with or without `--service`. The same four requests and CPU/RSS
+methods are used. Without that override, an existing Python script selects the
+baseline; after deletion, the installed binary or source release build is used.
+Launch counts describe direct helper starts; descendant/session Python launches
+still require the separate idle/actions capture. `benchmark-services.py` accepts
+the same binary override, copies it into its disposable installed tree, and
+requires migrated QML command sources. These transport changes are fixture-smoke
+verified; no new Wave 1 performance comparison is claimed before its full cutover.
 Fresh CPU uses Linux child `getrusage`; service CPU uses `/proc/PID/stat` user,
 system and reaped-child ticks. Both exclude driver CPU and waiting time.
 Service resolution is 10 ms per workload, or 0.1 ms/request for 100 requests;
@@ -855,3 +864,46 @@ with position restoration. They do not establish a smaller startup shell, a
 faster warm launcher, or a broad video-memory saving. The earlier merged panel
 and visible-tour-poster work remains in place; its historical measurements are
 in Phase C. The allocator and hero decode trials are rejected rather than shipped.
+
+### Wave 1 native helpers: busy-machine evidence (2026-10-14)
+
+The same `benchmark-helpers.py` requests used 100 warm requests per helper,
+with one discarded cold request each, in disposable HOME/XDG roots and absent
+private session/system bus endpoints. Baseline uses the pre-cutover Python
+helpers; current uses the release `nacre-helper`. These are busy-machine CPU
+and helper RSS observations, not shell latency or aggregate-memory evidence.
+
+| Helper user + system CPU per fresh call (ms); busy machine | Python before | Rust after |
+| --- | ---: | ---: |
+| menu-backend invalid conversion | 55.669 | 1.948 |
+| dashboard-data read | 38.502 | 1.157 |
+| launcher-preferences load | 35.550 | 1.109 |
+| notification-history load | 16.881 | 0.891 |
+
+| Same 404 requests; busy machine | Before | After |
+| --- | ---: | ---: |
+| Fresh helper starts | 404 | 404 |
+| Fresh Python starts | 404 | 0 |
+| Persistent helper starts | 1 | 1 |
+| Persistent Python starts | 1 | 0 |
+| Settled helper RSS (MiB) | 26.953 | 10.211 |
+
+Persistent-service CPU remained below the 10 ms Linux tick resolution for
+menu, dashboard and notification batches; launcher measured 0.100 ms/request
+in both builds. A reported zero means below measurement resolution. Launch
+counts cover direct helpers only; full-session descendants and idle launches
+remain unmeasured. The native helper RSS observation is 16.742 MiB lower (62%).
+
+Launcher/dashboard/wallpaper/palette wall times, aggregate RSS/PSS, idle CPU,
+and Python launches per minute await the owner's quiet window. No quiet window
+has been announced; require interleaved A/B/A/B with zero vmstat si/so and
+SwapPss before and during each run, discarding any run that pages. This gate
+remains mandatory before Wave 3 lands.
+
+Reproduce the load-resistant measurements with developer-only Python:
+
+```sh
+python tools/benchmark-helpers.py --tools BASELINE/nacre/shell-tools --count 100 --busy-machine --output before-fresh.json
+python tools/benchmark-helpers.py --helper-binary target/release/nacre-helper --count 100 --busy-machine --output after-fresh.json
+# Repeat both commands with --service for the persistent helper.
+```

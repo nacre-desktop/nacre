@@ -8,6 +8,7 @@ runs in the child sandbox; the parent runner never imports production helpers.
 import importlib.util
 import importlib.machinery
 import configparser
+import datetime
 import json
 from pathlib import Path
 import subprocess
@@ -34,6 +35,8 @@ def decode(value):
     if isinstance(value, dict):
         if set(value) == {"$path"}:
             return Path(value["$path"])
+        if set(value) == {"$datetime"}:
+            return datetime.datetime.fromisoformat(value["$datetime"])
         return {key: decode(item) for key, item in value.items()}
     if isinstance(value, list):
         return [decode(item) for item in value]

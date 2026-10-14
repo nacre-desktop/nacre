@@ -3,6 +3,8 @@
 import json
 import importlib.util
 import shutil
+import subprocess
+from pathlib import Path
 
 
 def module(path, name):
@@ -43,8 +45,16 @@ def prepare(repo, destination, profile):
     shutil.copytree(
         repo / "nacre/shell-tools",
         shell / "tools",
-        ignore=shutil.ignore_patterns("tests", "__pycache__"),
+        ignore=shutil.ignore_patterns("tests", "__pycache__", "nacre-helper"),
     )
+    helper = repo / "nacre/shell-tools/nacre-helper"
+    if not helper.is_file():
+        helper = Path(
+            subprocess.check_output(
+                ["bash", str(repo / "tools/build-helper.sh")], text=True
+            ).strip()
+        )
+    shutil.copy2(helper, shell / "tools/nacre-helper")
     units = destination / ".config/systemd/user"
     units.mkdir(parents=True, exist_ok=True)
     shutil.copy2(repo / "nacre/shell-tools/nacre-shell.service", units)

@@ -1,6 +1,31 @@
 //! Native desktop helper boundaries. Orient remains an independent MIT dependency.
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
+pub mod arguments;
+pub mod compositor;
+pub mod dashboard_data;
+pub mod dashboard_media;
+pub mod dashboard_system;
+pub mod diagnostics;
+pub mod diagnostics_native;
+pub mod files;
+pub mod i18n;
+pub mod json;
+pub mod launcher_preferences;
+pub mod light_devices;
+pub mod menu;
+pub mod menu_actions;
+pub mod menu_arguments;
+pub mod menu_cli;
+pub mod menu_registry;
+pub mod network_state;
+pub mod notification_history;
 pub mod orient;
 pub mod paths;
+pub mod process;
+pub mod resource_state;
+pub mod service;
+pub mod systemd;
+pub mod unicode;
+pub mod window_chat_title;
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T> = std::result::Result<T, Error>;

@@ -8,6 +8,7 @@ import re
 import sys
 
 from source import uncovered, tokens, literal
+from rust_source import messages as rust_messages
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -93,6 +94,13 @@ def references(root):
             text,
         ):
             result.add(match[1])
+    for path in sorted((root / "crates/nacre-helper/src").rglob("*.rs")):
+        try:
+            result.update(
+                identifier for identifier, _, _ in rust_messages(path.read_text())
+            )
+        except ValueError as error:
+            raise ValueError(f"{path.relative_to(root)}: {error}") from error
     catalog = json.loads((root / "nacre/shell-tools/launcher-menu.json").read_text())
     for rows in (catalog.get("entries", []), catalog.get("software", [])):
         for row in rows:
@@ -133,13 +141,43 @@ def check(root=ROOT):
     context = json.loads((root / "nacre/shell/i18n/context.json").read_text())
     used = references(root) | dynamic_references(root)
     errors = []
+    # Preserve these exact catalog IDs for old clients after the text transport
+    # disappears. This is a finite compatibility contract, not a prefix waiver.
+    compatibility = set()
+    if (
+        not (root / "nacre/shell-tools/network-state.py").exists()
+        and (root / "crates/nacre-helper/src/network_state.rs").is_file()
+    ):
+        for key, fallback in {
+            "helper.network-state.incomplete-nmcli-escape": "Incomplete nmcli escape",
+            "helper.network-state.unknown-nmcli-escape": "Unknown nmcli escape",
+        }.items():
+            if english.get(key) != fallback:
+                errors.append("Changed compatibility message: " + key)
+            if key in used:
+                errors.append("Compatibility message has a live caller: " + key)
+            compatibility.add(key)
+    rust_fallbacks = {}
+    for path in sorted((root / "crates/nacre-helper/src").rglob("*.rs")):
+        for key, fallback, line in rust_messages(path.read_text()):
+            if key in rust_fallbacks and rust_fallbacks[key] != fallback:
+                errors.append("Conflicting Rust message fallback: " + key)
+            rust_fallbacks[key] = fallback
+            if (
+                key in english
+                and isinstance(english[key], str)
+                and english[key] != fallback
+            ):
+                errors.append(
+                    f"{path.relative_to(root)}:{line}: Rust fallback/ID mismatch: {key}"
+                )
     for key in sorted(used - english.keys()):
         errors.append("Missing English ID: " + key)
-    for key in sorted(english.keys() - used):
+    for key in sorted(english.keys() - used - compatibility):
         errors.append("Unused English ID: " + key)
     for key in sorted(context.keys() - english.keys()):
         errors.append("Unused translator context: " + key)
-    for key in sorted(used - context.keys()):
+    for key in sorted((used | compatibility) - context.keys()):
         errors.append("Missing translator context: " + key)
     for key, value in english.items():
         if not re.fullmatch(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+", key):

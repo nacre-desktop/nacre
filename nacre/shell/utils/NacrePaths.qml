@@ -8,6 +8,7 @@ QtObject {
     // filesystem paths, while media/config consumers use the URLs below.
     readonly property string share: Quickshell.env("HOME") + "/.local/share/nacre"
     readonly property string tools: share + "/shell/tools"
+    readonly property string helperBinary: tools + "/nacre-helper"
     readonly property string shellBin: share + "/shell/bin"
     readonly property string palettePython: share + "/palette-runtime/venv/bin/python"
     readonly property string compositorTools: Quickshell.env("NACRE_COMPOSITOR_TOOLS") || Quickshell.env("NACRE_PEARL_TOOLS") || tools

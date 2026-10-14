@@ -58,6 +58,7 @@ def stage(root, destination, component, build):
             )
             + "\n"
         )
+        copy(build / "native/nacre-helper", shared / "nacre/shell-tools/nacre-helper")
         for name in (
             "nacre-app",
             "nacre-settings",

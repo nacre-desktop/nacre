@@ -49,8 +49,35 @@ impl Paths {
             env::var_os("XDG_CACHE_HOME").as_deref(),
         ))
     }
+    /// Resolve read-only helper assets in a source checkout or installed tree.
+    pub fn assets(&self) -> PathBuf {
+        if let Some(folder) = env::var_os("NACRE_HELPER_TOOLS") {
+            return PathBuf::from(folder);
+        }
+        let installed = self.tools();
+        if installed.join("nacre-helper").is_file() {
+            return installed;
+        }
+        let source = env::current_dir()
+            .unwrap_or_default()
+            .join("nacre/shell-tools");
+        if source.join("notification-policy.json").is_file() {
+            source
+        } else {
+            self.tools()
+        }
+    }
     pub fn tools(&self) -> PathBuf {
         self.share.join("shell/tools")
+    }
+    pub fn applications(&self) -> PathBuf {
+        self.home.join(".local/share/applications")
+    }
+    pub fn recordings(&self) -> PathBuf {
+        self.home.join("Videos/Recordings")
+    }
+    pub fn screenshots(&self) -> PathBuf {
+        self.home.join("Pictures/Screenshots")
     }
 }
 

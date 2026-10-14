@@ -78,7 +78,9 @@
       "python-build",
       "python-installer",
       "python-hatchling",
-      "nodejs"
+      "nodejs",
+      "rust",
+      "cargo"
     ],
     "check": [
       "ruff",

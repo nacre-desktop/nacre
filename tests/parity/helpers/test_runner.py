@@ -19,6 +19,113 @@ spec.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
+    def test_hosted_traceback_contracts_keep_every_other_observable_field(self):
+        for helper, number in [
+            ("dashboard-data", "10"),
+            ("dashboard-media", "00"),
+            ("notification-history", "00"),
+            ("notification-history", "05"),
+            ("notification-history", "06"),
+        ]:
+            path = HERE / helper / f"case-cli-boundary-{number}.json"
+            case = json.loads(path.read_text())
+            expected = json.loads(
+                path.with_name(path.name.replace("case-", "expected-")).read_text()
+            )
+            actual = {**expected, "stderr": case["native_exception"]["terminal_line"]}
+            original = copy.deepcopy(expected)
+            with self.subTest(helper=helper, number=number):
+                self.assertEqual(
+                    runner.native_exception_reference(expected, actual, case), actual
+                )
+                self.assertEqual(expected, original)
+                changed = {**actual, "files": {"unexpected": True}}
+                self.assertNotEqual(
+                    runner.native_exception_reference(expected, changed, case), changed
+                )
+                with self.assertRaisesRegex(ValueError, "exact declared"):
+                    runner.native_exception_reference(
+                        expected, actual, {**case, "args": ["other"]}
+                    )
+
+    def test_native_exception_omits_only_declared_retired_source_frames(self):
+        case = json.loads(
+            (HERE / "menu-backend/case-cli-reminder-default.json").read_text()
+        )
+        expected = json.loads(
+            (HERE / "menu-backend/expected-cli-reminder-default.json").read_text()
+        )
+        actual = {**expected, "stderr": case["native_exception"]["terminal_line"]}
+        original = copy.deepcopy(expected)
+        self.assertEqual(
+            runner.native_exception_reference(expected, actual, case), actual
+        )
+        self.assertEqual(expected, original)
+        for field, value in (
+            ("stdout", {"error": "changed"}),
+            ("exit", 0),
+            ("files", {}),
+        ):
+            changed = {**actual, field: value}
+            self.assertNotEqual(
+                runner.native_exception_reference(expected, changed, case), changed
+            )
+
+    def test_native_exception_refuses_wrong_message_source_action_or_traceback(self):
+        case = json.loads(
+            (HERE / "menu-backend/case-cli-reminder-default.json").read_text()
+        )
+        expected = json.loads(
+            (HERE / "menu-backend/expected-cli-reminder-default.json").read_text()
+        )
+        actual = {**expected, "stderr": case["native_exception"]["terminal_line"]}
+        for field, value in (
+            ("helper", "dashboard-data"),
+            ("args", ["reminder", "other"]),
+            ("stdin", '{"minutes": 1}\n'),
+            ("reference_source_sha256", "wrong"),
+            ("native_exception", {"kind": "anything"}),
+        ):
+            with (
+                self.subTest(field=field),
+                self.assertRaisesRegex(ValueError, "exact declared"),
+            ):
+                runner.native_exception_reference(
+                    expected, actual, {**case, field: value}
+                )
+        for candidate in (
+            {**actual, "stderr": "TypeError: wrong\n"},
+            {**actual, "stderr": ""},
+        ):
+            with self.assertRaisesRegex(ValueError, "exact declared"):
+                runner.native_exception_reference(expected, candidate, case)
+        for frozen in ({**expected, "stderr": "unrelated\n"}, {**expected, "exit": 0}):
+            with self.assertRaisesRegex(ValueError, "exact declared"):
+                runner.native_exception_reference(frozen, actual, case)
+
+    def test_native_service_fixture_retains_the_frozen_provider_and_mode(self):
+        case = json.loads((HERE / "helper-service/case-hosted-crash.json").read_text())
+        with tempfile.TemporaryDirectory(prefix="native provider ") as folder:
+            binary = Path(folder) / "fixture"
+            binary.touch()
+            self.assertEqual(
+                shlex.split(
+                    runner.service_fixture_command(case, "native {name}", binary)
+                ),
+                [str(binary), "crash"],
+            )
+            self.assertIsNone(runner.service_fixture_command(case, None, binary))
+            wrong = json.loads(json.dumps(case))
+            wrong["fixtures"]["hosted/dashboard-media.py"] += "# changed provider\n"
+            with self.assertRaisesRegex(ValueError, "differs"):
+                runner.service_fixture_command(wrong, "native {name}", binary)
+            with self.assertRaisesRegex(ValueError, "Build/select"):
+                runner.service_fixture_command(case, "native {name}", None)
+            wrong = json.loads(json.dumps(case))
+            wrong["native_service_fixture"] = "unregistered"
+            with self.assertRaisesRegex(ValueError, "Unsupported"):
+                runner.service_fixture_command(wrong, "native {name}", binary)
+
     def provenance_fixture(self):
         folder = HERE / "nacre_shell"
         case = json.loads((folder / "case-native-image.json").read_text())

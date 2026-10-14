@@ -24,7 +24,6 @@ def load(name, path):
 niri = load("daily_niri", "compositor_backends/niri.py")
 controls = load("daily_controls", "control-tools.py")
 desktop = load("daily_desktop", "desktop-settings.py")
-menu = load("daily_menu", "menu-backend.py")
 
 
 class NiriDailyDriverTests(unittest.TestCase):

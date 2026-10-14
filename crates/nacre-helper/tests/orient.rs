@@ -41,6 +41,7 @@ fn scrub(value: &mut Value) {
 }
 #[test]
 fn direct_libraries_match_frozen_wallpaper_palettes() {
+    let cache = tempfile::tempdir().unwrap();
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../deps/orient");
     let gallery = root.join("tests/orient-gallery/images");
     let mut bytes = Vec::new();
@@ -71,7 +72,11 @@ fn direct_libraries_match_frozen_wallpaper_palettes() {
         }
         for record in dereference(&case["palettes"], pool).as_array().unwrap() {
             let record = expanded(record, pool);
-            let result = orient::from_image(&path, &record["options"]);
+            let mut options = record["options"].clone();
+            if let Some(options) = options.as_object_mut() {
+                options.insert("cache_dir".into(), json!(cache.path()));
+            }
+            let result = orient::from_image(&path, &options);
             let mut actual = match result {
                 Ok(value) => json!({"value":value}),
                 Err(error) => {

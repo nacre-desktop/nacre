@@ -5,6 +5,8 @@ import argparse
 import base64
 import copy
 import difflib
+import hashlib
+import importlib.util
 from functools import lru_cache
 import json
 import os
@@ -23,6 +25,11 @@ import time
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
+_registry_spec = importlib.util.spec_from_file_location(
+    "native_helper_registry", HERE / "native_registry.py"
+)
+native_registry = importlib.util.module_from_spec(_registry_spec)
+_registry_spec.loader.exec_module(native_registry)
 
 
 def expand(value):
@@ -650,6 +657,64 @@ def engine_provenance_reference(expected, actual, case):
     return result
 
 
+def native_exception_reference(expected, actual, case):
+    """Only enumerated retired tracebacks become exact class/message lines."""
+    rule = case.get("native_exception")
+    if rule is None:
+        return expected
+    reminder = "TypeError: float() argument must be a string or a real number, not 'NoneType'\n"
+    index = "IndexError: list index out of range\n"
+    menu_sha = "d74ca0b2a6d6d41a173b399fa5fbf876472d9ef8b18572d604ea8b20108eb958"
+    history_sha = "a2ebaf16a33ac477cbf5ac58484075406d4d4a9ebb39acaf2ae9eccedbf6fb7a"
+    contracts = {
+        ("menu-backend", ("reminder",), "{}\n"): (menu_sha, reminder),
+        ("menu-backend", ("reminder", "demo"), "{}\n"): (menu_sha, reminder),
+        ("notification-history", (), None): (history_sha, index),
+        ("notification-history", ("unknown",), None): (
+            history_sha,
+            "ValueError: Unknown history action\n",
+        ),
+        ("notification-history", ("--help",), None): (
+            history_sha,
+            "ValueError: Unknown history action\n",
+        ),
+        ("dashboard-media", (), None): (
+            "8fbbe42b736ffeffd5130eac87c9e2b8fa3e313e2b104c0a7885af4714bca77d",
+            index,
+        ),
+        ("dashboard-data", ("preferences", "-2"), None): (
+            "edc64017612a33b07377dc3eea7da533a114c432256f51a72945b9d44181130a",
+            "AttributeError: 'int' object has no attribute 'items'\n",
+        ),
+    }
+    key = (case.get("helper"), tuple(case.get("args", [])), case.get("stdin"))
+    declared = contracts.get(key)
+    reasons = {
+        "Rust retains exception class/message, empty stdout, exit and lock; retired Python source frames are omitted.",
+        "Rust retains exception class/message, stdout, exit and files; retired Python source frames are omitted.",
+    }
+    if (
+        declared is None
+        or set(rule) != {"kind", "terminal_line", "reason"}
+        or rule["kind"] != "retired-python-traceback"
+        or rule["reason"] not in reasons
+        or rule["terminal_line"] != declared[1]
+        or case.get("reference_source_sha256") != declared[0]
+        or not expected.get("stderr", "").startswith(
+            "Traceback (most recent call last):\n"
+        )
+        or not expected["stderr"].endswith(declared[1])
+        or f"/repo/nacre/shell-tools/{case['helper']}.py" not in expected["stderr"]
+        or expected.get("exit") != 1
+        or expected.get("stdout") not in (None, "")
+        or actual.get("stderr") != declared[1]
+    ):
+        raise ValueError(
+            "Native exception differs from the exact declared traceback contract"
+        )
+    return {**expected, "stderr": declared[1]}
+
+
 def orient_direct_equivalence(result, case):
     if not case.get("native_engine"):
         return result
@@ -681,6 +746,51 @@ def orient_direct_equivalence(result, case):
     return result
 
 
+def service_fixture_command(case, command, fixture_binary):
+    mode = case.get("native_service_fixture")
+    if not mode or not command:
+        return command
+    providers = {
+        "gate": (
+            "hosted/dashboard-data.py",
+            "da4885ab56669f9d59d87f05bc59cc04bc131118bcf69fe492614b35209e2976",
+        ),
+        "crash": (
+            "hosted/dashboard-media.py",
+            "79b67df827ee454974c7a62b349d2561eb814c1b95bbb67d215cfa7a46bc51ca",
+        ),
+        "exit": (
+            "hosted/dashboard-media.py",
+            "85d07f9647e4d7291e92f8cc8fbc1f1f48a8e863854ed352586eca51f3a24a0c",
+        ),
+        "oversized": (
+            "hosted/dashboard-data.py",
+            "4fb41fa05f9c4473cb2d7a6fc8b028b852da0c1707b0361788a7c7fb9b215ea1",
+        ),
+    }
+    if (
+        case.get("helper") != "helper-service"
+        or case.get("env", {}).get("NACRE_DASHBOARD_TOOLS") != "/case/hosted"
+        or mode not in providers
+    ):
+        raise ValueError("Unsupported native service provider fixture")
+    path, digest = providers[mode]
+    source = case.get("fixtures", {}).get(path)
+    if (
+        set(case.get("fixtures", {})) != {path}
+        or not isinstance(source, str)
+        or hashlib.sha256(source.encode()).hexdigest() != digest
+    ):
+        raise ValueError(
+            "Injected provider differs from the frozen native test mapping"
+        )
+    if fixture_binary is None:
+        raise ValueError(
+            "Build/select --service-fixture for native service provider cases"
+        )
+    return shlex.join([str(Path(fixture_binary).resolve(strict=True)), mode])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -701,12 +811,19 @@ def main():
         type=Path,
         help="save per-case observations, including raw D-Bus method calls",
     )
+    parser.add_argument(
+        "--service-fixture",
+        type=Path,
+        help="Developer-only native provider adapter for frozen service crash/concurrency cases",
+    )
     args = parser.parse_args()
     os.umask(0o022)
     if args.orient_direct and not args.command:
         parser.error("--orient-direct requires a replacement --command")
     if args.record and args.command:
         parser.error("Record only the Python reference, never a replacement")
+    if args.service_fixture and not args.command:
+        parser.error("--service-fixture requires a replacement --command")
     paths = sorted(HERE.glob("*/case-*.json"))
     import fnmatch
 
@@ -721,6 +838,13 @@ def main():
     ]
     if not selected:
         parser.error("No matching cases")
+    if args.record:
+        try:
+            native_registry.assert_recordable(
+                [json.loads(path.read_text()) for path in selected]
+            )
+        except ValueError as error:
+            parser.error(str(error))
     failures = 0
     for path in selected:
         label = path.parent.name + "/" + path.stem[5:]
@@ -731,9 +855,13 @@ def main():
             case = json.loads(path.read_text())
             if args.record and case.get("engine_provenance"):
                 parser.error("Frozen engine-provenance cases cannot be re-recorded")
+            command = native_registry.command(case, args.command)
+            fixture = args.service_fixture
+            if command and case.get("native_service_fixture") and fixture is None:
+                fixture = native_registry.service_fixture_binary()
             actual = execute(
                 case,
-                args.command,
+                service_fixture_command(case, command, fixture),
                 args.traces / (label + ".json") if args.traces else None,
             )
             reference = path.with_name("expected-" + path.name[5:])
@@ -747,7 +875,10 @@ def main():
             else:
                 expected = json.loads(reference.read_text())
                 expected = engine_provenance_reference(expected, actual, case)
-                if args.orient_direct:
+                expected = native_exception_reference(expected, actual, case)
+                if args.orient_direct or (
+                    args.command is None and case["helper"] in native_registry.MIGRATED
+                ):
                     expected = orient_direct_equivalence(expected, case)
                     actual = orient_direct_equivalence(actual, case)
                 if expected != actual:

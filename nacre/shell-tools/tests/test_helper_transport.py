@@ -6,7 +6,6 @@ import selectors
 import shutil
 import signal
 import subprocess
-import sys
 import tempfile
 import time
 import unittest
@@ -16,6 +15,12 @@ SERVICES = TOOLS.parent / "shell/services"
 
 
 class HelperTransportTests(unittest.TestCase):
+    def test_renderer_worker_uses_central_native_helper(self):
+        source = (SERVICES / "NacreHelpers.qml").read_text()
+        self.assertIn('command: [NacrePaths.helperBinary, "serve"]', source)
+        self.assertNotIn("helper-service.py", source)
+        self.assertNotIn("palettePython", source)
+
     def test_native_failure_fails_both_jobs_and_recovers_without_replay(self):
         for mode in ("kill", "malformed", "timeout"):
             with self.subTest(mode=mode):
@@ -30,9 +35,6 @@ class HelperTransportTests(unittest.TestCase):
             home = root / "home"
             tools = home / ".local/share/nacre/shell/tools"
             tools.mkdir(parents=True)
-            runtime = home / ".local/share/nacre/palette-runtime/venv/bin/python"
-            runtime.parent.mkdir(parents=True)
-            runtime.symlink_to(sys.executable)
             services = root / "services"
             services.mkdir()
             utils = root / "utils"
@@ -42,18 +44,14 @@ class HelperTransportTests(unittest.TestCase):
             )
             for name in ("NacreHelpers", "NacreHelperTask"):
                 shutil.copy2(SERVICES / (name + ".qml"), services)
-            for name in ("helper-service", "launcher-preferences"):
-                shutil.copy2(TOOLS / (name + ".py"), tools)
-            (tools / "dashboard-data.py").write_text("""import os
-from pathlib import Path
-import time
-def execute(action, value=''):
-    if action == 'wait':
-        with Path(os.environ['NACRE_TEST_MARKER']).open('a') as stream:
-            stream.write('started\\n')
-        time.sleep(20)
-    return {'fixture': True}
-""")
+            fixture = Path(
+                os.environ.get("NACRE_SERVICE_FIXTURE")
+                or TOOLS.parents[1] / "target/debug/examples/service-fixture"
+            )
+            self.assertTrue(
+                fixture.is_file(), "Build the developer native service fixture"
+            )
+            shutil.copy2(fixture, tools / "nacre-helper")
             (root / "shell.qml").write_text("""import QtQuick
 import Quickshell
 import qs.services
@@ -65,19 +63,19 @@ ShellRoot {
  function fail(message){console.error("NATIVE_FAIL "+message);Qt.quit();}
  function rejected(code){if(code!==1){fail("pending job succeeded after death");return;}failed++;if(failed===2)recovered.running=true;}
  NacreHelperTask {
-  id:initial;command:["python3",root.tools+"launcher-preferences.py","load"];running:true
+  id:initial;command:[root.tools+"nacre-helper","launcher-preferences","load"];running:true
   onOutput:text=>{const value=JSON.parse(text);if(!Array.isArray(value.favorites))root.fail("initial reply");}
   onExited:code=>{if(code!==0)root.fail("initial failure");else{first.running=true;second.running=true;}}
  }
- NacreHelperTask {id:first;command:["python3",root.tools+"dashboard-data.py","wait"];onExited:code=>root.rejected(code)}
- NacreHelperTask {id:second;command:["python3",root.tools+"dashboard-data.py","wait"];onExited:code=>root.rejected(code)}
+ NacreHelperTask {id:first;command:[root.tools+"nacre-helper","dashboard-data","wait"];onExited:code=>root.rejected(code)}
+ NacreHelperTask {id:second;command:[root.tools+"nacre-helper","dashboard-data","wait"];onExited:code=>root.rejected(code)}
  Timer {interval:150;running:NacreHelpers.count===2&&!root.announced;onTriggered:{root.announced=true;
     const mode=Quickshell.env("NACRE_TEST_FAILURE");
     if(mode==="malformed")NacreHelpers.receive("malformed");
     else if(mode==="timeout")for(const record of Object.values(NacreHelpers.pending))record.deadline=Date.now()-1;
     else console.log("NATIVE_KILL_WORKER");}}
  NacreHelperTask {
-  id:recovered;command:["python3",root.tools+"launcher-preferences.py","favorite"];stdinEnabled:true
+  id:recovered;command:[root.tools+"nacre-helper","launcher-preferences","favorite"];stdinEnabled:true
   onStarted:write(JSON.stringify({id:"fixture.desktop",enabled:true}))
   onOutput:text=>{const value=JSON.parse(text);if(value.favorites?.[0]!=="fixture.desktop")root.fail("recovery reply");}
   onExited:code=>{if(code!==0||root.failed!==2)root.fail("recovery failed");else{console.log("HELPERS_NATIVE_PASS");Qt.quit();}}
@@ -93,9 +91,7 @@ ShellRoot {
                 "XDG_CACHE_HOME": str(home / ".cache"),
                 "XDG_STATE_HOME": str(home / ".local/state"),
                 "QT_QPA_PLATFORM": "offscreen",
-                "PATH": str(Path(sys.executable).parent)
-                + os.pathsep
-                + os.environ["PATH"],
+                "QT_LOGGING_RULES": "qml.debug=true",
                 "NACRE_TEST_MARKER": str(marker),
                 "NACRE_TEST_FAILURE": mode,
             }
@@ -132,7 +128,7 @@ ShellRoot {
                         targets = [
                             int(pid)
                             for pid in children
-                            if b"helper-service.py"
+                            if b"nacre-helper"
                             in Path(f"/proc/{pid}/cmdline").read_bytes()
                         ]
                         self.assertEqual(

@@ -11,9 +11,10 @@ import sys
 import tempfile
 
 from performance import summarize
+from helper_runtime import helper_command
 
 
-def benchmark(services, tools, count):
+def benchmark(services, tools, count, helper_binary=None):
     with tempfile.TemporaryDirectory(prefix="nacre-owner-") as directory:
         root = Path(directory)
         home = root / "home"
@@ -29,10 +30,39 @@ def benchmark(services, tools, count):
         shutil.copytree(
             tools, installed, ignore=shutil.ignore_patterns("tests", "__pycache__")
         )
+        native_qml = (
+            "NacrePaths.helperBinary" in (services / "NacreHelpers.qml").read_text()
+        )
+        if native_qml and helper_binary is None:
+            helper_binary = (
+                os.environ.get("NACRE_HELPER_BINARY") or tools / "nacre-helper"
+            )
+            if not Path(helper_binary).is_file() and tools.parts[-2:] == (
+                "nacre",
+                "shell-tools",
+            ):
+                helper_binary = tools.parents[1] / "target/release/nacre-helper"
+        _, helper_kind = helper_command(tools, "helper-service", helper_binary)
+        if helper_kind == "Rust":
+            for name in ("NacreHelpers", "NacreDashboardState"):
+                if (
+                    "NacrePaths.helperBinary"
+                    not in (services / (name + ".qml")).read_text()
+                ):
+                    raise ValueError(
+                        "Selected QML still uses Python helper commands; select migrated services"
+                    )
+            command, _ = helper_command(tools, "helper-service", helper_binary)
+            shutil.copy2(command[0], installed / "nacre-helper")
         utils = root / "utils"
         utils.mkdir()
         shutil.copy2(services.parent / "utils/NacrePaths.qml", utils / "NacrePaths.qml")
-        for name in ("NacreDashboardState", "NacreHelpers", "NacreHelperTask"):
+        for name in (
+            "NacreDashboardState",
+            "NacreDashboardRegistry",
+            "NacreHelpers",
+            "NacreHelperTask",
+        ):
             source = services / (name + ".qml")
             if source.exists():
                 shutil.copy2(source, target)
@@ -135,6 +165,11 @@ def main():
         default=Path(__file__).resolve().parents[1] / "nacre/shell-tools",
     )
     parser.add_argument("--count", type=int, default=100)
+    parser.add_argument(
+        "--helper-binary",
+        type=Path,
+        help="Copy this native helper into the disposable installed tree",
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if not 1 <= args.count <= 200:
@@ -142,7 +177,11 @@ def main():
     if not shutil.which("quickshell"):
         parser.error("Quickshell is required")
     args.output.write_text(
-        json.dumps(benchmark(args.services, args.tools, args.count), indent=2) + "\n"
+        json.dumps(
+            benchmark(args.services, args.tools, args.count, args.helper_binary),
+            indent=2,
+        )
+        + "\n"
     )
     print(args.output)
 

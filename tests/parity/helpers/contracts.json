@@ -602,7 +602,22 @@
       ],
       "existing_tests": [
         "nacre/shell-tools/tests/test_pearl_dashboard_data.py"
-      ]
+      ],
+      "replacement": {
+        "source": "crates/nacre-helper/src/dashboard_system.rs",
+        "command": [
+          "nacre-helper",
+          "dashboard-system"
+        ],
+        "tests": "cargo test -p nacre-helper dashboard_system::tests",
+        "reference_tests": "Historical Python tests remain the specification at reference_revision; behavior assertions moved to Rust, with frozen CLI outputs unchanged.",
+        "test_mapping": {
+          "test_pid_reuse_and_other_owners_cannot_receive_signals": [
+            "dashboard_system::tests::changed_identity_and_foreign_owner_are_rejected",
+            "dashboard_system::tests::current_helper_cannot_receive_a_termination_signal"
+          ]
+        }
+      }
     },
     {
       "helper": "demo-wallpapers",
@@ -747,7 +762,7 @@
     {
       "helper": "helper-service",
       "source": "nacre/shell-tools/helper-service.py",
-      "cases": 10,
+      "cases": 11,
       "operations": [
         "[]"
       ],
@@ -906,15 +921,48 @@
     {
       "helper": "light-devices",
       "source": "nacre/shell-tools/light-devices.py",
-      "cases": 9,
+      "cases": 18,
       "operations": [
+        "[\"--help\"]",
+        "[\"-h\"]",
         "[\"discover\"]",
         "[\"read-ddc\"]",
-        "[\"set\"]"
+        "[\"set\"]",
+        "[\"unknown\"]",
+        "[]"
       ],
       "existing_tests": [
         "nacre/shell-tools/tests/test_light_devices.py"
-      ]
+      ],
+      "replacement": {
+        "source": "crates/nacre-helper/src/light_devices.rs",
+        "command": [
+          "nacre-helper",
+          "light-devices"
+        ],
+        "tests": "cargo test -p nacre-helper light_devices::tests",
+        "reference_tests": "Historical Python tests remain the specification at reference_revision; behavior assertions moved to Rust, with frozen CLI outputs unchanged.",
+        "test_mapping": {
+          "test_discovery_chooses_only_backlight_and_keyboard_without_writes": [
+            "light_devices::tests::discovery_and_clamping_preserve_guards_and_argument_boundaries"
+          ],
+          "test_panel_minimum_keyboard_off_and_safe_argv": [
+            "light_devices::tests::discovery_and_clamping_preserve_guards_and_argument_boundaries"
+          ],
+          "test_stale_maximum_bad_class_and_paths_cannot_write": [
+            "light_devices::tests::discovery_and_clamping_preserve_guards_and_argument_boundaries"
+          ],
+          "test_ddc_terse_response_and_invalid_output": [
+            "light_devices::tests::terse_ddc_metrics_are_bounded"
+          ],
+          "test_ddc_connector_mapping_and_fingerprint_guard": [
+            "light_devices::tests::monitor_fingerprint_and_ambiguous_connectors_block_writes"
+          ],
+          "test_ambiguous_connector_mapping_stays_unavailable": [
+            "light_devices::tests::monitor_fingerprint_and_ambiguous_connectors_block_writes"
+          ]
+        }
+      }
     },
     {
       "helper": "lock-config",
@@ -1010,8 +1058,9 @@
     {
       "helper": "menu-backend",
       "source": "nacre/shell-tools/menu-backend.py",
-      "cases": 18,
+      "cases": 24,
       "operations": [
+        "[\"config\"]",
         "[\"convert\"]",
         "[\"files\"]",
         "[\"install\"]",
@@ -1031,8 +1080,13 @@
     {
       "helper": "menu-cli",
       "source": "nacre/shell-tools/menu-cli.py",
-      "cases": 7,
+      "cases": 20,
       "operations": [
+        "[\"--help\"]",
+        "[\"--t\"]",
+        "[\"--title\"]",
+        "[\"--unknown\"]",
+        "[\"-h\"]",
         "[\"home\"]",
         "[\"pick\"]",
         "[\"read-request\"]",
@@ -1040,7 +1094,36 @@
       ],
       "existing_tests": [
         "nacre/shell-tools/tests/test_menu_cli.py"
-      ]
+      ],
+      "replacement": {
+        "source": "crates/nacre-helper/src/menu_cli.rs",
+        "command": [
+          "nacre-helper",
+          "menu-cli"
+        ],
+        "tests": "cargo test -p nacre-helper menu_cli::tests",
+        "reference_tests": "Historical Python tests remain the specification at reference_revision; behavior assertions moved to Rust, with frozen CLI outputs unchanged.",
+        "test_mapping": {
+          "test_tabbed_choices_preserve_distinct_values": [
+            "menu_cli::tests::tabbed_choices_and_validation_match_existing_spec"
+          ],
+          "test_choice_validation_rejects_unbounded_and_nonstring_values": [
+            "menu_cli::tests::tabbed_choices_and_validation_match_existing_spec"
+          ],
+          "test_arbitrary_paths_are_never_selector_sessions": [
+            "menu_cli::tests::paths_permissions_symlinks_and_expiry_are_rejected"
+          ],
+          "test_response_can_only_choose_an_enabled_member": [
+            "menu_cli::tests::owned_selector_can_only_choose_enabled_members"
+          ],
+          "test_world_readable_or_symlinked_session_is_rejected": [
+            "menu_cli::tests::paths_permissions_symlinks_and_expiry_are_rejected"
+          ],
+          "test_expired_request_is_rejected": [
+            "menu_cli::tests::paths_permissions_symlinks_and_expiry_are_rejected"
+          ]
+        }
+      }
     },
     {
       "helper": "nacre-ai",
@@ -1436,7 +1519,42 @@
       ],
       "existing_tests": [
         "nacre/shell-tools/tests/test_resource_state.py"
-      ]
+      ],
+      "replacement": {
+        "source": "crates/nacre-helper/src/resource_state.rs",
+        "command": [
+          "nacre-helper",
+          "resource-state"
+        ],
+        "tests": "cargo test -p nacre-helper resource_state::tests",
+        "reference_tests": "Historical Python tests remain the specification at reference_revision; behavior assertions moved to Rust, with frozen CLI outputs unchanged.",
+        "test_mapping": {
+          "test_package_sensor_priority_and_valid_gpu_idle_zero": [
+            "resource_state::tests::cpu_package_priority_and_optional_metrics_are_preserved",
+            "resource_state::tests::empty_unrelated_malformed_and_nouveau_metrics_stay_unknown"
+          ],
+          "test_missing_malformed_and_unrelated_sensors_remain_unknown": [
+            "resource_state::tests::empty_unrelated_malformed_and_nouveau_metrics_stay_unknown"
+          ],
+          "test_large_disk_uses_kib_without_signed_integer_overflow": [
+            "resource_state::tests::storage_totals_use_kib_without_signed_overflow"
+          ],
+          "test_amd_intel_i915_and_xe_keep_identity_and_optional_fields": [
+            "resource_state::tests::vendor_identity_idle_zero_and_frequency_paths_are_preserved"
+          ],
+          "test_nvidia_multiple_devices_unsupported_fields_and_query_deadline": [
+            "resource_state::tests::nvidia_partial_metrics_missing_driver_and_hwmon_deduplication",
+            "resource_state::tests::direct_nvml_abi_partial_metrics_failures_and_deadline"
+          ],
+          "test_nouveau_invalid_metrics_and_unbound_gpu_inventory": [
+            "resource_state::tests::empty_unrelated_malformed_and_nouveau_metrics_stay_unknown",
+            "resource_state::tests::nvidia_partial_metrics_missing_driver_and_hwmon_deduplication"
+          ],
+          "test_hwmon_class_links_do_not_duplicate_gpu_records": [
+            "resource_state::tests::nvidia_partial_metrics_missing_driver_and_hwmon_deduplication"
+          ]
+        }
+      }
     },
     {
       "helper": "screenshot",
@@ -1642,7 +1760,28 @@
       ],
       "existing_tests": [
         "nacre/shell-tools/tests/test_window_chat_title.py"
-      ]
+      ],
+      "replacement": {
+        "source": "crates/nacre-helper/src/window_chat_title.rs",
+        "command": [
+          "nacre-helper",
+          "window-chat-title"
+        ],
+        "tests": "cargo test -p nacre-helper window_chat_title::tests",
+        "reference_tests": "Historical Python tests remain the specification at reference_revision; behavior assertions moved to Rust, with frozen CLI outputs unchanged.",
+        "test_mapping": {
+          "test_new_chat_resolves_from_named_metadata_without_resume_argument": [
+            "window_chat_title::tests::fresh_chat_uses_named_metadata_without_writing"
+          ],
+          "test_shared_project_directory_and_ambiguous_chat_never_guess_identity": [
+            "window_chat_title::tests::resumed_identity_and_ambiguous_directory_match_existing_tests"
+          ],
+          "test_resumed_chat_uses_exact_id_and_strips_terminal_control_sequences": [
+            "window_chat_title::tests::resumed_identity_and_ambiguous_directory_match_existing_tests",
+            "window_chat_title::tests::title_sanitization_preserves_python_categories_and_character_limit"
+          ]
+        }
+      }
     },
     {
       "helper": "window-hide",
@@ -1703,6 +1842,34 @@
       "scope": "configuration, state and cache roots only; HOME-relative installation/share paths stay unchanged",
       "affected_frozen_cases": [],
       "coverage": "Current frozen cases use default XDG roots; no existing reference changed or excluded. Custom-XDG cases must explicitly declare this intended difference and verify the redirected files/output."
+    },
+    "argument_error_wording": {
+      "reason": "Native CLI parsers retain help stdout, accepted arguments, parse-error exit 2 and no side effects; diagnostic stderr wording differs from argparse.",
+      "scope": [
+        "light-devices",
+        "menu-cli"
+      ],
+      "affected_cases": [
+        "light-devices/arg-action",
+        "light-devices/arg-extra",
+        "light-devices/arg-invalid-int",
+        "light-devices/arg-missing",
+        "menu-cli/arg-ambiguous",
+        "menu-cli/arg-extra",
+        "menu-cli/arg-invalid-timeout",
+        "menu-cli/arg-missing-title",
+        "menu-cli/arg-unknown",
+        "light-devices/arg-integer-limit",
+        "menu-cli/arg-integer-limit"
+      ]
+    },
+    "bounded_capture_tools": {
+      "reason": "Native screen-reading grim and clipboard operations have a five-second failure deadline; legacy subprocess calls could wait indefinitely. Successful results/files/argv/clipboard bytes remain exact.",
+      "scope": [
+        "menu-backend/capture-text",
+        "menu-backend/capture-qr"
+      ],
+      "evidence": "menu-screen-reference.json and exact CLI effect traces; temporary basename only uses existing explicit temp-path rules"
     }
   }
 }

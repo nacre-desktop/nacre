@@ -75,6 +75,14 @@ jobs:
           cargo fmt --check
           cargo clippy -j2 --all-targets -- -D warnings
           cargo test -j2 --quiet
+          cargo build -j2 --locked --release -p nacre-helper --bin nacre-helper
+          cargo build -j2 --locked --examples
+      - name: Candidate helper for fresh-install tests
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: smoke-helper
+          path: target/release/nacre-helper
+          retention-days: 3
       - name: Install developer-only helper parity tooling
         run: |
           pacman -S --noconfirm --needed bubblewrap shadow
@@ -161,6 +169,11 @@ jobs:
         with:
           name: smoke-engine
           path: /tmp/smoke-engine
+      - name: Download candidate helper
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: smoke-helper
+          path: nacre/shell-tools
       - name: Install candidate test runtime
         run: |
           python -m venv /tmp/smoke-env
@@ -169,7 +182,7 @@ jobs:
           pins = json.load(open("dependencies.lock.json"))["python"]
           subprocess.run(["/tmp/smoke-env/bin/pip", "install", "./nacre/shell-cli", *[name + "==" + version for name, version in pins.items()]], check=True)
           PY
-          chmod +x /tmp/smoke-engine/orient
+          chmod +x /tmp/smoke-engine/orient nacre/shell-tools/nacre-helper
       - name: Fresh default install in nested niri
         env:
           NACRE_ORIENT_BINARY: /tmp/smoke-engine/orient

@@ -10,6 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/i18n"))
 from source import uncovered
+from rust_source import messages as rust_messages
 
 spec = importlib.util.spec_from_file_location(
     "translation_runtime_tests", ROOT / "tools/i18n/tests.py"
@@ -25,6 +26,147 @@ spec.loader.exec_module(guard)
 
 
 class CoverageTests(unittest.TestCase):
+    def test_retired_nmcli_messages_keep_exact_catalog_values_and_context(self):
+        messages = {
+            "helper.network-state.incomplete-nmcli-escape": "Incomplete nmcli escape",
+            "helper.network-state.unknown-nmcli-escape": "Unknown nmcli escape",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.fixture(root, messages, "Item {}")
+            source = root / "crates/nacre-helper/src/network_state.rs"
+            source.parent.mkdir(parents=True)
+            source.write_text("pub fn snapshot() {}")
+            guard.check(root)
+            english = root / "nacre/shell/i18n/en.json"
+            english.write_text(json.dumps({**messages, "test.unused": "Unused"}))
+            with self.assertRaisesRegex(ValueError, "Unused English ID: test.unused"):
+                guard.check(root)
+            english.write_text(
+                json.dumps(
+                    {**messages, "helper.network-state.unknown-nmcli-escape": "Changed"}
+                )
+            )
+            with self.assertRaisesRegex(ValueError, "Changed compatibility message"):
+                guard.check(root)
+            english.write_text(json.dumps(messages))
+            (root / "nacre/shell/i18n/context.json").write_text("{}")
+            with self.assertRaisesRegex(ValueError, "Missing translator context"):
+                guard.check(root)
+
+    def test_retired_message_policy_refuses_live_callers_and_requires_native_source(
+        self,
+    ):
+        messages = {
+            "helper.network-state.incomplete-nmcli-escape": "Incomplete nmcli escape",
+            "helper.network-state.unknown-nmcli-escape": "Unknown nmcli escape",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.fixture(root, messages, "Item {}")
+            with self.assertRaisesRegex(ValueError, "Unused English ID"):
+                guard.check(root)
+            source = root / "crates/nacre-helper/src/network_state.rs"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                'tr("helper.network-state.unknown-nmcli-escape", "Unknown nmcli escape");'
+            )
+            with self.assertRaisesRegex(
+                ValueError, "Compatibility message has a live caller"
+            ):
+                guard.check(root)
+
+    def rust(self, root, source):
+        path = root / "crates/nacre-helper/src/provider.rs"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(source)
+
+    def test_rust_literals_raw_strings_unicode_and_lifetimes_are_tracked(self):
+        source = r"""fn label<'a>(value: &'a str) {
+            // tr("test.comment", "Comment")
+            /* outer /* tr("test.nested", "Nested") */ comment */
+            let noise = r##"tr("test.noise", "Noise")"##;
+            let bytes = br##"tr("test.bytes", "Bytes")"##;
+            let character = '\'';
+            tr("test.\u{006c}abel", "Open\n\u{00f8}");
+            i18n::tr(r#"test.raw"#, r##"Quoted "label""##);
+        }"""
+        self.assertEqual(
+            rust_messages(source),
+            [("test.label", "Open\nø", 7), ("test.raw", 'Quoted "label"', 8)],
+        )
+
+    def test_rust_finite_wrapper_calls_own_only_their_literal_suffixes(self):
+        source = """fn message(id: &str, fallback: &str) -> String {
+            i18n::tr(&format!("helper.demo.{id}"), fallback)
+        }
+        message("open", "Open");
+        message("close", "Close");"""
+        self.assertEqual(
+            {key for key, _, _ in rust_messages(source)},
+            {"helper.demo.open", "helper.demo.close"},
+        )
+        with self.assertRaisesRegex(ValueError, "Unresolved Rust translation ID"):
+            rust_messages(source + '\nmessage(runtime_id, "Fallback");')
+        with self.assertRaisesRegex(ValueError, "Unresolved Rust translation fallback"):
+            rust_messages(source + '\nmessage("computed", runtime_label);')
+
+    def test_rust_source_keeps_missing_unused_context_and_fallback_checks(self):
+        for english, source, error in [
+            ({}, 'tr("test.missing", "Open");', "Missing English ID"),
+            (
+                {"test.unused": "Unused"},
+                'tr("test.other", "Other");',
+                "Unused English ID",
+            ),
+            (
+                {"test.label": "Open"},
+                'tr("test.label", "Changed");',
+                "Rust fallback/ID mismatch",
+            ),
+            (
+                {"test.label": "Open"},
+                'tr("test.label", "Open");tr("test.label", "Changed");',
+                "Conflicting Rust message fallback",
+            ),
+        ]:
+            with self.subTest(error=error), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                self.fixture(root, english, "Item {}")
+                self.rust(root, source)
+                with self.assertRaisesRegex(ValueError, error):
+                    guard.check(root)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.fixture(root, {"test.label": "Open"}, "Item {}")
+            self.rust(root, 'tr("test.label", "Open");')
+            (root / "nacre/shell/i18n/context.json").write_text("{}")
+            with self.assertRaisesRegex(ValueError, "Missing translator context"):
+                guard.check(root)
+
+    def test_rust_test_only_messages_do_not_hide_unused_runtime_ids(self):
+        source = """#[cfg(test)] mod tests { fn example() { tr("test.unused", "Unused"); } }
+        #[test] fn example() { tr("test.also-unused", "Unused"); }
+        fn real() { tr("test.real", "Real"); }"""
+        self.assertEqual({key for key, _, _ in rust_messages(source)}, {"test.real"})
+
+    def test_deleting_python_keeps_only_ids_owned_by_rust(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.fixture(
+                root, {"test.active": "Open", "test.retired": "Retired"}, "Item {}"
+            )
+            python = root / "nacre/shell-tools/provider.py"
+            python.write_text(
+                'tr("test.active", "Open")\ntr("test.retired", "Retired")'
+            )
+            self.rust(root, 'i18n::tr("test.active", "Open");')
+            guard.check(root)
+            python.unlink()
+            self.assertEqual(guard.references(root), {"test.active"})
+            with self.assertRaisesRegex(ValueError, "Unused English ID: test.retired"):
+                guard.check(root)
+
     def test_visible_literals_are_required_but_icons_and_identity_are_not_messages(
         self,
     ):

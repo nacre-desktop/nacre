@@ -14,6 +14,24 @@ serde_json.workspace = true
 sha2 = "0.10"
 tempfile = "3"
 regex = "1"
+nix = { version = "0.30", features = ["fs", "user", "signal", "feature"] }
+chrono = "0.4"
+chrono-tz = "0.10"
+walkdir = "2"
+wait-timeout = "0.2"
+zbus = { version = "5", features = ["blocking-api"] }
+async-io = "2"
+futures-lite = "2"
+clap = { version = "4", features = ["derive"] }
+unicode-normalization = "=0.1.24"
+unicode-casefold = "0.2"
+unicode-general-category = "=1.1.0"
+ureq = "3"
+uuid = { version = "1", features = ["v4"] }
+nvml-wrapper = "0.13"
+rustix = { version = "1.1", features = ["fs", "param", "process", "event", "system"] }
+niri-ipc = "26.4.0"
+fancy-regex = "0.16"
 
 [dev-dependencies]
 flate2 = "1"

@@ -430,10 +430,13 @@ class ArchPackageLayoutTests(unittest.TestCase):
             for name in (
                 "dolphin-style/styles/libnacre-dolphin.so",
                 "thunar-style/nacre-thunar-theme.so",
+                "nacre-helper",
             ):
                 path = build / "native" / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("fixture compiled bytes")
+                if name == "nacre-helper":
+                    path.chmod(0o755)
             owned = set()
             deployment_owned = set()
             for component in ("core", "ai", "brain"):
@@ -471,5 +474,13 @@ class ArchPackageLayoutTests(unittest.TestCase):
                 Path("usr/lib/nacre/thunar-style/nacre-thunar-theme.so"), owned
             )
             self.assertNotIn(Path("usr/bin/orient"), owned)
+            self.assertIn(Path("usr/share/nacre/nacre/shell-tools/nacre-helper"), owned)
+            self.assertEqual(
+                (base / "core/usr/share/nacre/nacre/shell-tools/nacre-helper")
+                .stat()
+                .st_mode
+                & 0o777,
+                0o755,
+            )
             self.assertIn(Path("usr/bin/nacre"), owned)
             self.assertIn(Path("usr/share/nacre/brain/templates/AGENTS.md"), owned)

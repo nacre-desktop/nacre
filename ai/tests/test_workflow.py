@@ -548,7 +548,7 @@ class WorkflowTests(IsolatedWorkflowTest):
                 capture_output=True,
             )
             moved = home / "moved-checkout"
-            shutil.copytree(ROOT, moved)
+            shutil.copytree(ROOT, moved, ignore=shutil.ignore_patterns("target"))
             subprocess.run(
                 [sys.executable, str(moved / "ai/install.py")],
                 env=env,
