@@ -850,7 +850,7 @@ fn open_extension(paths: &Paths, id: &str, action: Option<&str>) -> Result<Value
         row["unit"] = json!(name);
         write(&store(paths), &value)?;
     }
-    process::spawn_detached("systemd-run", &args)?;
+    process::spawn_detached_quiet("systemd-run", &args)?;
     Ok(json!({"message":tr("helper.software-library.extension-opened", "Extension opened")}))
 }
 fn theme_import(paths: &Paths, input: &str) -> Result<Value> {

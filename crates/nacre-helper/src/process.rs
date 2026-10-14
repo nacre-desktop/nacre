@@ -87,9 +87,29 @@ pub fn checked(
 /// Preserve Python's start_new_session for explicit user-launched desktop apps.
 #[allow(unsafe_code)]
 pub fn spawn_detached(program: &str, arguments: &[String]) -> Result<std::process::Child> {
+    spawn_detached_io(program, arguments, false)
+}
+
+/// A long-lived launch must not inherit a one-shot helper response pipe.
+pub fn spawn_detached_quiet(program: &str, arguments: &[String]) -> Result<std::process::Child> {
+    spawn_detached_io(program, arguments, true)
+}
+
+#[allow(unsafe_code)]
+fn spawn_detached_io(
+    program: &str,
+    arguments: &[String],
+    quiet: bool,
+) -> Result<std::process::Child> {
     use std::os::unix::process::CommandExt;
     let mut command = Command::new(program);
     command.args(arguments);
+    if quiet {
+        command
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+    }
     restore_child_signals(&mut command);
     // SAFETY: after fork the hook calls only the async-signal-safe setsid syscall.
     // It captures nothing and performs no allocation, locking or Rust callbacks.

@@ -10,6 +10,8 @@ import subprocess
 import json
 import os
 import urllib.parse
+import signal
+import time
 from pathlib import Path
 
 binary = Path(
@@ -21,6 +23,72 @@ binary = Path(
 
 
 class SoftwareLibraryIntegrationTests(unittest.TestCase):
+    def test_open_returns_before_long_lived_extension_exits(self):
+        if not binary.is_file():
+            self.skipTest("A compiled candidate helper is required")
+        with tempfile.TemporaryDirectory(prefix="nacre-extension-response-") as name:
+            root = Path(name)
+            commands = root / "bin"
+            commands.mkdir()
+            child_pid = root / "child.pid"
+            launcher = commands / "systemd-run"
+            launcher.write_text(
+                "#!/usr/bin/python3\n"
+                "import os,time\n"
+                f"open({str(child_pid)!r},'w').write(str(os.getpid()))\n"
+                "time.sleep(30)\n"
+            )
+            launcher.chmod(0o755)
+            env = {
+                **os.environ,
+                "HOME": str(root / "home"),
+                "XDG_CONFIG_HOME": str(root / "config"),
+                "XDG_DATA_HOME": str(root / "data"),
+                "XDG_STATE_HOME": str(root / "state"),
+                "XDG_CACHE_HOME": str(root / "cache"),
+                "XDG_RUNTIME_DIR": str(root / "runtime"),
+                "DBUS_SESSION_BUS_ADDRESS": "unix:path=" + str(root / "absent-bus"),
+                "DBUS_SYSTEM_BUS_ADDRESS": "unix:path=" + str(root / "absent-bus"),
+                "PATH": str(commands) + os.pathsep + os.environ.get("PATH", ""),
+            }
+
+            def cli(operation, *args):
+                return json.loads(
+                    subprocess.check_output(
+                        [
+                            str(binary),
+                            "software-library",
+                            operation,
+                            "org.nacre.folders",
+                            *args,
+                        ],
+                        input="{}\n",
+                        env=env,
+                        text=True,
+                        timeout=5,
+                    )
+                )
+
+            try:
+                self.assertNotIn("error", cli("install-builtin"))
+                self.assertNotIn("error", cli("enable"))
+                self.assertNotIn("error", cli("open", "documents"))
+                # The child is still alive after the one-shot JSON response is complete.
+                for _ in range(300):
+                    if child_pid.exists():
+                        break
+                    time.sleep(0.01)
+                self.assertTrue(child_pid.exists())
+                os.kill(int(child_pid.read_text()), 0)
+            finally:
+                if child_pid.exists():
+                    pid = int(child_pid.read_text())
+                    command = Path(f"/proc/{pid}/cmdline")
+                    if command.exists() and str(
+                        launcher
+                    ).encode() in command.read_bytes().split(b"\0"):
+                        os.kill(pid, signal.SIGTERM)
+
     def test_https_lifecycle_preserves_edits_and_rejects_invalid_updates(self):
         if not shutil.which("openssl") or not binary.is_file():
             self.skipTest("OpenSSL and a compiled candidate helper are required")
