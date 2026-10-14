@@ -243,6 +243,10 @@ Media keeps playback and lyrics together; audio routing is available in Devices.
 Browser lyric matching depends on the metadata supplied by the website. Tracks
 with plain lyrics show those when timed lyrics are unavailable.
 
+The hourly weather timeline pairs its temperature curve with condition icons and
+precipitation chances at labelled times. A percentage is the chance of rain/snow,
+not its amount. Storage uses compact Main/Boot filesystem choices when needed.
+
 Focus presets select a duration; **Start focus** begins the timer. Media shows
 live audio activity while visible and motion is enabled. Volume and connections
 remain in the right-side controls. Optional pages stay off by default; Focus can
@@ -252,4 +256,6 @@ be enabled without adding the other extras to the top strip.
 It sends the city name to Wikipedia/Wikimedia, checks the place against the
 existing weather coordinates locally, and caches one bounded raster photo for
 seven days. The photo credit opens its Commons source. Failed lookups use local
-wallpaper imagery; requests stop when Weather is hidden.
+weather illustrations matching the condition and time of day. With city photos
+off, these local illustrations need no image downloads. Requests stop when
+Weather is hidden.

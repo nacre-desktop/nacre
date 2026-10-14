@@ -21,6 +21,14 @@ TestCase {
         }
     }
     Component {
+        id: weatherPage
+        NacreWeatherPage {
+            width: 940
+            height: 562
+            shouldUpdate: true
+        }
+    }
+    Component {
         id: weatherSky
         NacreWeatherSky {
             width: 564
@@ -302,6 +310,9 @@ TestCase {
         const spectrum = findChild(view, "mediaSpectrum");
         NacreMediaDetails.spectrum = Array(32).fill(.8);
         verify(bar.height > spectrum.height * .7);
+        compare(bar.y + bar.height, spectrum.height);
+        compare(bar.gradient.stops[0].color, spectrum.third);
+        compare(bar.gradient.stops[2].color, spectrum.first);
         NacreMediaDetails.spectrum = Array(32).fill(.2);
         verify(bar.height < spectrum.height * .3);
         actor.isPlaying = false;
@@ -336,6 +347,81 @@ TestCase {
         const sky = createTemporaryObject(weatherSky, test);
         compare(sky.photoReady, false);
         compare(findChild(sky, "weatherCityPhoto").source.toString(), "");
+    }
+    function test_hourly_forecast_aligns_conditions_rain_and_full_day() {
+        const hours = Array.from({
+            length: 24
+        }, (_, i) => ({
+                    time: "2026-10-14T" + String(i).padStart(2, "0") + ":00",
+                    temperature: 8 + i % 6,
+                    rain: i === 20 ? null : i * 4,
+                    code: i < 12 ? 0 : 80
+                }));
+        NacreWeather.reading = {
+            isDay: true,
+            wmo: 0,
+            hours: hours,
+            days: [
+                {
+                    date: "2026-10-14",
+                    low: 8,
+                    high: 14,
+                    rain: 30,
+                    code: 80,
+                    sunrise: "2026-10-14T07:00",
+                    sunset: "2026-10-14T19:00"
+                }
+            ]
+        };
+        NacreDashboardState.weatherPhotos = false;
+        const view = createTemporaryObject(weatherPage, test);
+        const hourly = findChild(view, "weatherHourly");
+        compare(hourly.slots.length, 7);
+        compare(hourly.slots[6].index, 23);
+        compare(findChild(view, "weatherHourIcon0").text, "bedtime");
+        compare(findChild(view, "weatherHourIcon8").text, "sunny");
+        compare(findChild(view, "weatherHourIcon16").text, "rainy");
+        compare(findChild(view, "weatherHour20").rain, "—");
+        compare(view.icon(80), "rainy");
+        compare(view.icon(85), "weather_snowy");
+        for (const size of [[940, 562], [516, 472], [356, 312]]) {
+            view.width = size[0];
+            view.height = size[1];
+            wait(20);
+            for (const index of [0, 4, 8, 12, 16, 20, 23]) {
+                const slot = findChild(view, "weatherHour" + index);
+                verify(slot.x >= 0 && slot.x + slot.width <= hourly.width);
+                verify(slot.y + slot.height <= hourly.height);
+            }
+        }
+        NacreWeather.reading = {
+            hours: [],
+            days: []
+        };
+        compare(hourly.slots.length, 0);
+    }
+    function test_photos_off_uses_weather_art_without_loading_wallpaper() {
+        NacreDashboardState.weatherPhotos = false;
+        const sky = createTemporaryObject(weatherSky, test);
+        const art = findChild(sky, "weatherIllustration");
+        for (const [code, scene] of [[0, "clear"], [3, "clouds"], [61, "rain"], [80, "rain"], [75, "snow"], [85, "snow"], [45, "mist"], [95, "storm"]]) {
+            NacreWeather.reading = {
+                isDay: true,
+                wmo: code
+            };
+            compare(art.scene, scene);
+            verify(art.visible);
+            compare(findChild(sky, "weatherCityPhoto").source.toString(), "");
+        }
+        NacreWeather.reading = {
+            isDay: false,
+            wmo: 0
+        };
+        compare(art.daylight, false);
+        DesktopSettings.data = {
+            reduceMotion: true
+        };
+        compare(sky.moving, false);
     }
     function test_focus_dial_and_controls_fit_small_and_large_windows() {
         const view = createTemporaryObject(focusPage, test);

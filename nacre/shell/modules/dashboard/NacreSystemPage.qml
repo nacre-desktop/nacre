@@ -90,50 +90,57 @@ Item {
             color: "transparent"
             width: (parent.width - (parent.columns - 1) * parent.spacing) / parent.columns
             height: root.compact ? (root.metricsHeight - 12) / 2 : root.metricsHeight
-            label: NacreI18n.tr("dashboard.system-page.label.storage", "Storage") + (root.selectedDisk && root.selectedDisk.path !== "/" ? " " + root.selectedDisk.path : "")
+            label: NacreI18n.tr("dashboard.system-page.label.storage", "Storage")
             icon: "hard_drive"
             value: Model.size(root.selectedDisk ? root.selectedDisk.used / 1024 : NacreSystemUsage.storageUsed)
             detail: NacreI18n.tr("dashboard.system-page.total", "{value} total", {
                 value: Model.size(root.selectedDisk ? root.selectedDisk.total / 1024 : NacreSystemUsage.storageTotal)
             })
             fraction: root.selectedDisk ? root.selectedDisk.used / Math.max(1, root.selectedDisk.total) : NacreSystemUsage.storagePerc
-            ActionButton {
-                x: parent.width - 42
-                y: 9
-                width: 28
+            Flickable {
+                objectName: "storageFilesystems"
+                x: Math.max(96, parent.width * .5)
+                y: 8
+                width: Math.max(0, parent.width - x - 10)
                 height: 26
-                compact: true
-                text: ""
-                icon: "expand_more"
-                enabled: (NacreDashboardSystem.filesystems || []).length > 0
-                accessibleLabel: NacreI18n.tr("dashboard.system-page.choose-filesystem", "Choose filesystem")
-                onClicked: disks.open()
-            }
-            Popup {
-                id: disks
-                x: Math.min(0, diskTile.width - width)
-                y: diskTile.height + 6
-                width: Math.min(300, root.width - 44)
-                padding: 8
-                background: NacreSurface {
-                    radius: 14
-                    color: NacreTokens.raised
-                }
-                contentItem: ListView {
-                    implicitHeight: Math.min(contentHeight, Math.max(100, root.height - diskTile.height - 24))
-                    clip: true
-                    model: NacreDashboardSystem.filesystems || []
-                    delegate: ActionButton {
-                        required property var modelData
-                        required property int index
-                        width: parent.width
-                        height: 34
-                        text: modelData.path
-                        selected: index === root.diskIndex
-                        compact: true
-                        onClicked: {
-                            root.diskIndex = index;
-                            disks.close();
+                contentWidth: filesystemChoices.width
+                contentHeight: height
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                flickableDirection: Flickable.HorizontalFlick
+                visible: (NacreDashboardSystem.filesystems || []).length > 1
+                Row {
+                    id: filesystemChoices
+                    spacing: 3
+                    Repeater {
+                        model: NacreDashboardSystem.filesystems || []
+                        NacreSurface {
+                            id: filesystem
+                            required property var modelData
+                            required property int index
+                            objectName: "storageFilesystem" + index
+                            width: Math.min(70, diskLabel.implicitWidth + 12)
+                            height: 24
+                            radius: 12
+                            color: index === root.diskIndex ? Qt.alpha(NacreTokens.accent, .16) : "transparent"
+                            NacreText {
+                                id: diskLabel
+                                anchors.centerIn: parent
+                                width: Math.min(58, implicitWidth)
+                                text: filesystem.modelData.path === "/" ? NacreI18n.tr("dashboard.system-page.main-drive", "Main") : filesystem.modelData.path === "/boot" ? NacreI18n.tr("dashboard.system-page.boot-drive", "Boot") : filesystem.modelData.path
+                                font.pointSize: 7
+                                color: filesystem.index === root.diskIndex ? NacreTokens.ink : NacreTokens.mutedInk
+                                elide: Text.ElideRight
+                            }
+                            NacreInteraction {
+                                enabled: root.shouldUpdate
+                                accessibleName: NacreI18n.tr("dashboard.system-page.show-filesystem", "Show filesystem {path}", {
+                                    path: filesystem.modelData.path
+                                })
+                                function onClicked() {
+                                    root.diskIndex = filesystem.index;
+                                }
+                            }
                         }
                     }
                 }

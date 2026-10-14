@@ -346,6 +346,7 @@ Item {
                     property var samples: NacreMediaDetails.spectrum
                     property color first: root.pagePrimary
                     property color second: root.pageSecondary
+                    property color third: NacreColours.palette.m3tertiary
                     readonly property bool active: root.shouldUpdate && root.player?.isPlaying === true && NacreTokens.motionEnabled
                     Accessible.role: Accessible.Indicator
                     Accessible.name: NacreI18n.tr("dashboard.media-page.audio-activity", "Audio activity")
@@ -359,11 +360,24 @@ Item {
                             readonly property real level: spectrum.active && Number.isFinite(spectrum.samples[index]) ? Math.max(0, Math.min(1, spectrum.samples[index])) : 0
                             objectName: "mediaSpectrumBar" + index
                             x: index * slot + (slot - width) / 2
-                            y: (spectrum.height - height) / 2
+                            y: spectrum.height - height
                             width: Math.max(2, slot * .45)
                             height: 2 + level * (spectrum.height - 4)
                             radius: width / 2
-                            color: Qt.tint(spectrum.first, Qt.alpha(spectrum.second, index / 31 * .7))
+                            gradient: Gradient {
+                                GradientStop {
+                                    position: 0
+                                    color: spectrum.third
+                                }
+                                GradientStop {
+                                    position: .5
+                                    color: spectrum.second
+                                }
+                                GradientStop {
+                                    position: 1
+                                    color: spectrum.first
+                                }
+                            }
                             opacity: spectrum.active ? .9 : .25
                         }
                     }

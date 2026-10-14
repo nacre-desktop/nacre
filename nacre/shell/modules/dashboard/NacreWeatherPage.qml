@@ -1,9 +1,17 @@
 import QtQuick
+import QtQuick.Controls.Basic
 import qs.widgets
 import qs.services
 
-Item {
+Flickable {
     id: root
+    objectName: "weatherContent"
+    contentWidth: width
+    contentHeight: layoutHeight
+    interactive: contentHeight > height
+    clip: true
+    boundsBehavior: Flickable.StopAtBounds
+    ScrollBar.vertical: NacreScrollBar {}
     required property bool shouldUpdate
     property bool photoLease: false
     function syncPhoto() {
@@ -29,7 +37,8 @@ Item {
     readonly property var days: (weather.days || []).slice(0, compact ? 7 : 10)
     readonly property bool compact: width < 680
     readonly property real leftWidth: compact ? width : width * .6
-    readonly property real heroHeight: compact ? height * .37 : height * (NacreDashboardState.weatherPhotos === true ? .57 : .53)
+    readonly property real layoutHeight: compact ? Math.max(height, width < 430 ? 504 : 472) : height
+    readonly property real heroHeight: compact ? layoutHeight * .37 : layoutHeight * (NacreDashboardState.weatherPhotos === true ? .57 : .53)
     readonly property var temperatures: [].concat(...days.map(day => [day.low, day.high])).filter(Number.isFinite)
     readonly property real low: temperatures.length ? Math.min(...temperatures) : 0
     readonly property real span: temperatures.length ? Math.max(1, Math.max(...temperatures) - low) : 1
@@ -39,7 +48,7 @@ Item {
         return Number.isFinite(number) ? Math.round(number) + suffix : "—";
     }
     function icon(code) {
-        return code <= 1 ? "sunny" : code <= 3 ? "cloud" : code >= 71 && code <= 86 ? "weather_snowy" : "rainy";
+        return !Number.isFinite(code) || code < 0 ? "cloud_off" : code <= 1 ? "sunny" : code === 2 ? "partly_cloudy_day" : code === 3 ? "cloud" : code === 45 || code === 48 ? "foggy" : code >= 95 ? "thunderstorm" : (code >= 71 && code <= 77 || code === 85 || code === 86) ? "weather_snowy" : "rainy";
     }
     NacreSurface {
         id: hero
@@ -150,7 +159,7 @@ Item {
         }
         Grid {
             x: 20
-            y: root.compact ? parent.height - (root.width >= 430 ? 45 : 88) - (sky.photoReady ? 15 : 0) : parent.height - 118 - (sky.photoReady ? 14 : 0)
+            y: root.compact ? parent.height - height - 8 - (sky.photoReady ? 14 : 0) : parent.height - 118 - (sky.photoReady ? 14 : 0)
             width: parent.width - 40
             columns: root.compact && root.width >= 430 ? 6 : 3
             rowSpacing: root.compact ? 3 : 12
@@ -225,11 +234,40 @@ Item {
     }
     NacreSurface {
         id: hourly
+        objectName: "weatherHourly"
         y: hero.height + 14
         width: root.leftWidth
-        height: root.compact ? root.height * .26 : root.height - y
+        height: root.compact ? root.layoutHeight * .26 : root.layoutHeight - y
         radius: 16
         color: NacreTokens.raised
+        readonly property var points: root.hours.filter(p => Number.isFinite(p.temperature))
+        readonly property var slots: points.map((hour, index) => ({
+                    hour: hour,
+                    index: index
+                })).filter(p => p.index % 4 === 0 || p.index === points.length - 1)
+        readonly property real minimum: points.length ? Math.min(...points.map(p => p.temperature)) : 0
+        readonly property real span: points.length ? Math.max(1, Math.max(...points.map(p => p.temperature)) - minimum) : 1
+        readonly property real cellWidth: plot.width / Math.max(1, slots.length)
+        function timeX(index) {
+            return cellWidth / 2 + index / Math.max(1, points.length - 1) * (plot.width - cellWidth);
+        }
+        function temperatureY(value) {
+            return 16 + (1 - (value - minimum) / span) * Math.max(4, plot.height - 24);
+        }
+        function condition(code) {
+            if (!Number.isFinite(code) || code < 0)
+                return NacreI18n.tr("dashboard.weather-page.condition-unavailable", "Condition unavailable");
+            const key = code === 0 ? "Clear" : code === 1 ? "Mostly clear" : code === 2 ? "Partly cloudy" : code === 3 ? "Overcast" : code === 45 || code === 48 ? "Fog" : code >= 95 ? "Thunderstorm" : code >= 71 && code <= 77 || code === 85 || code === 86 ? "Snow" : code >= 80 ? "Rain showers" : code >= 61 ? "Rain" : "Drizzle";
+            return NacreI18n.option("weather-description", key);
+        }
+        function hourIcon(hour) {
+            const day = root.days.find(day => day.date === hour.time.slice(0, 10));
+            const clock = hour.time.slice(11, 16), daylight = day ? clock >= day.sunrise.slice(11, 16) && clock < day.sunset.slice(11, 16) : clock >= "06:00" && clock < "20:00";
+            const code = hour.code;
+            if (!Number.isFinite(code) || code < 0)
+                return "cloud_off";
+            return code <= 1 ? daylight ? "sunny" : "bedtime" : code === 2 ? daylight ? "partly_cloudy_day" : "partly_cloudy_night" : code === 45 || code === 48 ? "foggy" : code >= 95 ? "thunderstorm" : root.icon(code);
+        }
         NacreText {
             x: 16
             y: 12
@@ -237,60 +275,136 @@ Item {
             font.pointSize: 12
             font.weight: Font.DemiBold
         }
-        Canvas {
+        NacreText {
+            anchors.right: parent.right
+            anchors.rightMargin: 16
+            y: 16
+            text: root.compact ? NacreI18n.tr("dashboard.weather-page.precipitation-chance", "Precipitation chance") : NacreI18n.tr("dashboard.weather-page.hourly-legend", "Temperature · Precipitation chance")
+            font.pointSize: root.compact ? 7 : 8
+            color: NacreTokens.mutedInk
+            visible: parent.width >= 240
+        }
+        Item {
+            id: plot
+            objectName: "weatherTemperaturePlot"
             x: 16
-            y: 44
+            y: 42
             width: parent.width - 32
-            height: parent.height - 50
-            property var values: root.hours
-            property color first: NacreTokens.accent
-            onValuesChanged: requestPaint()
-            onFirstChanged: requestPaint()
-            onWidthChanged: requestPaint()
-            onHeightChanged: requestPaint()
-            onPaint: {
-                const ctx = getContext("2d");
-                ctx.reset();
-                const points = root.hours.filter(p => Number.isFinite(p.temperature));
-                if (points.length < 2)
-                    return;
-                const low = Math.min(...points.map(p => p.temperature)), span = Math.max(1, Math.max(...points.map(p => p.temperature)) - low);
-                const x = i => 12 + i * (width - 24) / (points.length - 1), y = value => 12 + (1 - (value - low) / span) * height * .38;
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = NacreTokens.accent;
-                ctx.beginPath();
-                points.forEach((p, i) => {
-                    if (i)
-                        ctx.lineTo(x(i), y(p.temperature));
-                    else
-                        ctx.moveTo(x(i), y(p.temperature));
-                });
-                ctx.stroke();
-                ctx.lineTo(x(points.length - 1), height * .58);
-                ctx.lineTo(x(0), height * .58);
-                ctx.closePath();
-                const wash = ctx.createLinearGradient(0, 0, 0, height * .58);
-                wash.addColorStop(0, Qt.alpha(first, .14));
-                wash.addColorStop(1, Qt.alpha(first, 0));
-                ctx.fillStyle = wash;
-                ctx.fill();
-                ctx.font = (root.compact ? "8px " : "10px ") + JSON.stringify(NacreTokens.textFamily);
-                for (let i = 0; i < points.length; i++) {
-                    ctx.fillStyle = Qt.alpha(NacreTokens.orientSecondary, .65);
-                    ctx.fillRect(x(i) - 3, height - 24 - (points[i].rain || 0) / 100 * height * .2, 6, (points[i].rain || 0) / 100 * height * .2);
-                    if (i % 4 === 0) {
-                        ctx.fillStyle = NacreTokens.ink;
-                        ctx.fillText(NacreWeather.degrees(points[i].temperature), x(i) - 10, Math.max(10, y(points[i].temperature) - 8));
-                        ctx.fillStyle = NacreTokens.mutedInk;
-                        ctx.fillText(points[i].time.slice(11, 16), x(i) - 10, root.compact ? height - 2 : height - 7);
-                        ctx.fillText((points[i].rain || 0) + "%", x(i) - 10, root.compact ? height - 15 : height - 31 - (points[i].rain || 0) / 100 * height * .2);
+            height: Math.max(24, parent.height - y - 48)
+            Canvas {
+                anchors.fill: parent
+                property var values: hourly.points
+                property color first: NacreTokens.accent
+                onValuesChanged: requestPaint()
+                onFirstChanged: requestPaint()
+                onWidthChanged: requestPaint()
+                onHeightChanged: requestPaint()
+                onAvailableChanged: if (available)
+                    requestPaint()
+                onPaint: {
+                    const ctx = getContext("2d");
+                    ctx.reset();
+                    if (!values.length)
+                        return;
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = first;
+                    ctx.beginPath();
+                    values.forEach((p, i) => {
+                        if (i)
+                            ctx.lineTo(hourly.timeX(i), hourly.temperatureY(p.temperature));
+                        else
+                            ctx.moveTo(hourly.timeX(i), hourly.temperatureY(p.temperature));
+                    });
+                    ctx.stroke();
+                    ctx.lineTo(hourly.timeX(values.length - 1), height);
+                    ctx.lineTo(hourly.timeX(0), height);
+                    ctx.closePath();
+                    const wash = ctx.createLinearGradient(0, 0, 0, height);
+                    wash.addColorStop(0, Qt.alpha(first, .16));
+                    wash.addColorStop(1, Qt.alpha(first, 0));
+                    ctx.fillStyle = wash;
+                    ctx.fill();
+                }
+            }
+            Repeater {
+                model: hourly.slots
+                NacreText {
+                    required property var modelData
+                    x: hourly.timeX(modelData.index) - width / 2
+                    y: Math.max(0, hourly.temperatureY(modelData.hour.temperature) - height - 3)
+                    text: NacreWeather.degrees(modelData.hour.temperature)
+                    font.pointSize: root.compact ? 8 : 9
+                    color: NacreTokens.ink
+                }
+            }
+        }
+        Repeater {
+            model: hourly.slots
+            Item {
+                id: hourSlot
+                required property var modelData
+                objectName: "weatherHour" + modelData.index
+                readonly property string rain: Number.isFinite(modelData.hour.rain) ? NacreI18n.tr("dashboard.weather-page.hour-rain", "{chance}%", {
+                    chance: Math.round(modelData.hour.rain)
+                }) : "—"
+                readonly property string summary: NacreI18n.tr("dashboard.weather-page.hour-summary", "{time}: {temperature}, {condition}, precipitation chance {chance}", {
+                    time: modelData.hour.time.slice(11, 16),
+                    temperature: NacreWeather.degrees(modelData.hour.temperature),
+                    condition: hourly.condition(modelData.hour.code),
+                    chance: rain
+                })
+                x: plot.x + hourly.timeX(modelData.index) - width / 2
+                y: parent.height - 42
+                width: Math.max(28, hourly.cellWidth * .75)
+                height: 40
+                Accessible.role: Accessible.StaticText
+                Accessible.name: summary
+                NacreIcon {
+                    id: hourSymbol
+                    objectName: "weatherHourIcon" + hourSlot.modelData.index
+                    x: root.compact ? (parent.width - width) / 2 : (parent.width - width - 4 - chanceLabel.width) / 2
+                    text: hourly.hourIcon(hourSlot.modelData.hour)
+                    font.pointSize: root.compact ? 10 : 12
+                    color: NacreTokens.orientSecondary
+                }
+                NacreText {
+                    id: chanceLabel
+                    x: root.compact ? (parent.width - width) / 2 : hourSymbol.x + hourSymbol.width + 4
+                    y: root.compact ? 14 : 0
+                    text: hourSlot.rain
+                    font.pointSize: root.compact ? 7 : 8
+                    color: NacreTokens.ink
+                }
+                NacreText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: root.compact ? 28 : 22
+                    text: hourSlot.modelData.hour.time.slice(11, 16)
+                    font.pointSize: 8
+                    color: NacreTokens.mutedInk
+                }
+                HoverHandler {
+                    id: hover
+                }
+                ToolTip {
+                    id: hourHint
+                    visible: hover.hovered
+                    delay: 250
+                    text: hourSlot.summary
+                    contentItem: NacreText {
+                        text: hourHint.text
+                        font.pointSize: 9
+                        color: NacreTokens.ink
+                    }
+                    background: NacreSurface {
+                        radius: 10
+                        color: NacreTokens.raised
                     }
                 }
             }
         }
         NacreText {
             anchors.centerIn: parent
-            visible: !root.hours.length
+            visible: !hourly.points.length
             text: NacreI18n.tr("dashboard.weather-page.text.forecast-unavailable", "Forecast unavailable")
             font.pointSize: 10
             color: Qt.alpha(NacreTokens.ink, .85)
@@ -301,7 +415,7 @@ Item {
         x: root.compact ? 0 : root.leftWidth + 16
         y: root.compact ? hourly.y + hourly.height + 12 : 0
         width: parent.width - x
-        height: parent.height - y
+        height: root.layoutHeight - y
         radius: 16
         color: NacreTokens.raised
         NacreText {
