@@ -78,3 +78,13 @@ No live machine/config changes; no tags or package uploads.
 Port security follow-ups: [security review](security-review.md#fix-during-port).
 Keep existing AI access/consent/retention policies; add explicit security cases
 and intended differences when implementing the reviewed port hardening.
+
+## Soak lifecycle acceptance
+
+Retain per-PID/start-time resident-plus-swapped memory measurements when porting
+persistent helpers. The completed three-hour Niri/Hyprland default-allocator
+stress captures showed flat long-lived helper memory; they do not demonstrate a
+Python helper leak. Test cancellation, bounded request/model caches, child reaping
+and wallpaper-watch/service restart counts during repeated wallpaper/video,
+palette and pearl operations. Short helper lifetimes and isolated zombie samples
+alone do not prove a leak. See [the measured comparison](soak.md#results-and-fixes).

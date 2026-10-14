@@ -86,6 +86,8 @@ NacreSurface {
     border.width: 0
 
     function focusExplicit() {
+        if (!visible || !enabled || (!detached && !visibilities.launcher))
+            return;
         search.forceActiveFocus();
     }
     function calculatorStart() {
@@ -187,7 +189,7 @@ NacreSurface {
             selection = entries.findIndex(entry => entry.id === resolved);
             keyboardSelection = selection >= 0;
         }
-        search.forceActiveFocus();
+        root.focusExplicit();
     }
     function select(name) {
         navigate(({
@@ -236,7 +238,7 @@ NacreSurface {
                 button: NacreI18n.tr("ui.app-browser.button.continue", "Continue")
             };
         }
-        Qt.callLater(() => search.forceActiveFocus());
+        Qt.callLater(root.focusExplicit);
     }
     function back() {
         if (form) {
@@ -279,12 +281,12 @@ NacreSurface {
         }
         if (entry.operation === "scope") {
             search.text = entry.value;
-            search.forceActiveFocus();
+            root.focusExplicit();
             return;
         }
         if (entry.operation === "calculator") {
             search.text = "= ";
-            search.forceActiveFocus();
+            root.focusExplicit();
             return;
         }
         if (entry.operation === "route") {
@@ -387,7 +389,7 @@ NacreSurface {
         keyboardSelection = false;
         selection = -1;
         detailScroll.contentY = 0;
-        search.forceActiveFocus();
+        root.focusExplicit();
     }
     Timer {
         id: hoverClear
@@ -463,18 +465,18 @@ NacreSurface {
         }
         if (event.text && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
             search.text += event.text;
-            search.forceActiveFocus();
+            root.focusExplicit();
             event.accepted = true;
         } else if (event.key === Qt.Key_Backspace) {
             query ? search.text = search.text.slice(0, -1) : back();
-            search.forceActiveFocus();
+            root.focusExplicit();
             event.accepted = true;
         }
     }
     function dismiss() {
         if (context.opened) {
             context.close();
-            search.forceActiveFocus();
+            root.focusExplicit();
         } else if (confirmation)
             confirmation = null;
         else if (form)
@@ -493,7 +495,7 @@ NacreSurface {
         if (inputPicker)
             NacreMenuPrompt.finish("", true);
         form = null;
-        search.forceActiveFocus();
+        root.focusExplicit();
     }
     function submitForm(values) {
         if (inputPicker)
@@ -501,7 +503,7 @@ NacreSurface {
         else
             root.menu.work(form.kind === "webapp" ? "webapp-create" : "reminder", "", values);
         form = null;
-        search.forceActiveFocus();
+        root.focusExplicit();
     }
     onQueryChanged: {
         calculatorAnswerReady = false;
@@ -525,6 +527,8 @@ NacreSurface {
         function onLauncherChanged() {
             if (root.visibilities.launcher)
                 root.reset();
+            else
+                search.focus = false;
         }
         function onLauncherRequestChanged() {
             if (root.visibilities.launcher)
@@ -1214,7 +1218,7 @@ NacreSurface {
                     text: NacreI18n.tr("launcher.app-browser.text.cancel", "Cancel")
                     onClicked: {
                         root.confirmation = null;
-                        search.forceActiveFocus();
+                        root.focusExplicit();
                     }
                 }
                 NacreMenuButton {

@@ -1,83 +1,89 @@
-# Overnight soak testing
+# Desktop soak testing
 
-`tools/soak.py` runs seeded shell actions in nested Niri, then nested Hyprland,
-one compositor at a time. It uses public generated demo data and a disposable
-HOME, session bus, network and PID namespace. Only the parent Wayland endpoint
-is exposed; live compositor IPC, user services and configurations are hidden.
-The host filesystem is read-only. No installation or desktop restart is needed.
-The session retains the public UWSM Qt theme and disables toolkit window
-decorations, matching Nacre's own window chrome. Private toolkit state stays hidden.
-Use a committed task worktree and leave its code unchanged while both sessions run.
-
-Use the development Python environment described in [contributing](../contributing.md).
-Runtime prerequisites are Bubblewrap, both compositors, Quickshell, D-Bus tools,
-`notify-send` and `wl-copy`. FFmpeg optionally supplies a small synthetic video.
-An existing Wayland session supplies the parent display. Pass the pinned Orient
-binary to exercise palette changes without building another engine:
+`tools/soak.py` exercises Niri and Hyprland sequentially in nested sessions with
+public fixtures and disposable HOME/XDG, D-Bus, network and PID namespaces.
+The host filesystem is read-only; only the parent Wayland endpoint is exposed.
+It does not install anything, restart the live shell or change user settings.
+Use a task worktree, keep its source frozen during both runs, and run in tmux:
 
 ```sh
 nice -n 10 .venv/bin/python tools/soak.py \
-  --hyprland-headless \
+  --hyprland-headless --wayland-debug --seed 20261013 \
   --orient-binary deps/orient/target/release/orient \
   --output /tmp/nacre-soak-before
 ```
 
-Run it in tmux for unattended use. The default is ten minutes of warmup followed
-by three measured hours **per compositor**, with one sample every 60 seconds.
-For confirmation, repeat with `--hours 1` and a new output directory. Short
-preflights can use `--hours 0.025 --warmup 10 --interval 10`.
-The tool also lowers its own scheduling priority. Build prerequisites with `-j2`.
-For a protocol crash, add `--wayland-debug`: only the last 4 MiB of client
-protocol traffic are retained in `wayland-tail.log`; ordinary warnings still
-reach `shell.log`. `--render-loop basic` is an explicitly recorded, test-only
-diagnostic comparison. The default leaves Qt's render-loop selection alone.
-`--hyprland-headless` keeps the nested compositor but uses its own virtual output
-and disables its guest Wayland outputs. This avoids a reproduced presentation
-stall with the nested Wayland-backed Hyprland output. It changes only the test
-session and does not establish physical-output performance or acceptance.
+Use the [development environment](../contributing.md), Bubblewrap, Quickshell,
+both compositors, D-Bus tools, `notify-send` and `wl-copy`. FFmpeg optionally
+creates a synthetic video. Build prerequisites with `-j2`. The driver also lowers
+its own priority. It retains the public Qt toolkit policy. Hyprland uses a guest
+virtual output because its nested Wayland-backed output reproduced a presentation
+stall; this does not establish physical-output performance.
 
-Each compositor writes `samples.csv`, `events.jsonl`, `shell.log`,
-`compositor.log` and `report.json` under its output directory in `/tmp`.
-The report identifies the Git revision, seed, action failures, warnings,
-helper lifetimes and observed exits. Helper-service and wallpaper-watcher
-start/exit probes are added only to staged QML. Shell/compositor exits end that
-run rather than silently restarting it. Other short helper lifetimes are
-observations, not proof of crashes; they can be legitimate jobs. CSV PIDs belong
-to the private namespace. Helper stderr is shared with the shell, so per-helper
-QML warning attribution is unknown rather than duplicated across helper rows.
-A shell IPC outage lasting more than two minutes stops the invalid workload.
-`duration_complete` and `workload_healthy` distinguish full duration from an
-interrupted, crashed or unresponsive run.
+Defaults: ten-minute warmup, three measured hours per compositor, 60-second
+samples and five-second seeded actions. Confirmation adds `--hours 1` and a new
+output directory. Actions include launcher queries, settings/dashboard pages,
+pearl detach/dock, notifications, clipboard, windows/workspaces, wallpaper/video
+and palettes; Niri also changes scale. At most four detached pearls accumulate.
+`--actions settings close --action-interval 0.5` selects a supplemental remapping
+probe; `--notification-images` selects raw D-Bus image payloads and requires
+`dbus-next`. Keep these supplemental probes separate from matched comparisons.
 
-Actions cover launcher queries, dashboard tabs, settings pages, launcher pearl
-detach/dock, wallpapers, palettes, notification bursts, bounded clipboard owners,
-workspace switches and test windows. Niri output scale changes every five minutes.
-At most four intentionally detached pearls accumulate before docking; otherwise
-the workload itself could resemble a component leak.
+Artifacts: `samples.csv`, `events.jsonl`, `report.json`, logs and a bounded 4 MiB
+Wayland trace. Copy captures into ignored `.research/soak/` before reboot; `/tmp`
+is temporary. Reports record the revision and source fingerprint, duration,
+workload health, exits, failed actions/probes and helper lifetimes. No restart
+hides a crash. Two minutes of failed IPC ends an invalid workload. Example:
 
-The analysis excludes warmup and separates PID/start-time lifetimes. It flags
-PSS/USS slopes above 5 MiB/hour or descriptor/thread/child slopes above 0.5/hour
-when the least-squares fit has R² ≥ 0.6 and at least five samples. These are
-investigation thresholds, not memory budgets. Missing memory is unknown, never
-zero. PSS apportions shared resident pages; USS counts private resident pages.
-Neither measures all graphics-device allocations. Host swap counters accompany
-samples because a busy machine can distort resident-memory trends.
+```sh
+.venv/bin/python tools/soak_analyze.py \
+  .research/soak/before/niri .research/soak/before/hyprland
+NACRE_RUN_SOAK_REGRESSIONS=1 .venv/bin/python -m unittest discover \
+  -s tools/tests -p test_soak_settings.py
+```
 
-Startup warnings about unavailable hardware services are expected in this
-sandbox. Repeated warnings still need review. Preserve failed actions, crashes
-and missing coverage in reports; a finished run is not automatically a pass.
-Dashboard redesign defects and Python helper internals are report-only during
-the concurrent redesign and Rust migration.
+Analysis excludes warmup and separates PID/start-time lifetimes. Resident PSS
+apportions shared pages; swapped PSS counts paged-out memory. Use their sum on a
+busy host: falling resident memory alone does not prove release. Missing memory
+coverage remains unknown. The summary prints full/first/final-hour trends and
+mixed-action correlations, never raw captures. Sustained growth is an investigation
+signal, not proof of infinite growth; finite runs cannot prove an eventual limit.
+These counters omit unmapped GPU allocations. Short helper lifetimes and one
+zombie observation do not establish unreaped processes. Dashboard redesign and
+Python helper internals remain report-only; port acceptance is tracked in
+[rust-migration](rust-migration.md#fix-during-port).
 
-## Results
+## Results and fixes
 
-The overnight comparison is in progress; no long-run conclusion is claimed yet.
-An initial harness variant omitted the public Qt toolkit policy. Its Niri
-shell exited with an initial-configuration Wayland protocol error after 98
-measured minutes; Hyprland stopped answering IPC and was interrupted. Those
-captures are preserved for diagnosis and are not complete production baselines.
+Corrected baseline: seed 20261013, revision `b17827f7`, public Qt policy, default
+render loop, guest Hyprland headless output. Both three-hour measurements completed
+with zero shell exits and zero action/probe failures. Long-lived helpers stayed
+flat. Shell growth continued in the final hour; no plateau was observed.
 
-| Run | Niri | Hyprland | Result |
-| --- | --- | --- | --- |
-| Before | Pending: 3 measured hours | Pending: 3 measured hours | Baseline not complete |
-| After | Pending: 1 measured hour | Pending: 1 measured hour | Confirmation not complete |
+| Compositor/run | Measured minutes | Shell PSS + SwapPss slope, MiB/h (R²) | Dismissal keys at end | Result |
+| --- | ---: | ---: | ---: | --- |
+| Niri before | 180 | +119.9 (.816); first hour +163.3 (.576) | 711 | Healthy workload; continuing shell growth |
+| Hyprland before | 180 | +144.7 (.880); first hour +58.3 (.228) | 718 | Healthy workload; continuing shell growth |
+| Niri after | Pending | Pending | Pending | Confirmation required |
+| Hyprland after | Pending | Pending | Pending | Confirmation required |
+
+Fixed: dismissal tombstones now protect only the initial asynchronous load;
+removed entries drop native references, snapshots/images and timers immediately.
+Native expiry no longer depends on popup visibility: long-timeout notifications
+and DND notifications can expire while their text remains in history. Permanent
+zero-timeout notifications remain permanent. Expired history drops live images.
+Regression coverage includes load/reentrant races, repeated clear cycles, image
+release, hidden long-timeout/DND expiry and hidden launcher focus requests.
+An isolated real D-Bus/Quickshell check passed 30 raw-image cycles plus automatic
+hidden/DND expiry; a nested image probe also returned tracked/referenced/image/key
+counts to zero. Baseline notifications had no images, so this does not attribute
+its large memory signal to image retention.
+
+Settings remapping now leaves native rendering enabled and lets Qt suppress
+unexposed frames. Toggling Quickshell's update gate explicitly requests a frame;
+failed traces identified Settings attaching a buffer before its initial configure.
+The native rapid-remap regression and long confirmations must establish the fix's
+practical limits. Earlier protocol failures and an interrupted warmup remain
+preserved failed attempts. Repeated Qt Wayland text-input focus warnings remain
+unresolved; warnings are not suppressed. Wallpaper/video and pearl operations
+have weak mixed-action associations with memory changes, insufficient attribution.

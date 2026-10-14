@@ -32,6 +32,7 @@ EXCLUDED = {
     "build",
     "dist",
     ".venv",
+    ".research",
 }
 NATIVE_PROGRAMS = {"hyprctl", "Hyprland", "hyprshutdown", "niri"}
 TEXT_NATIVE = re.compile(

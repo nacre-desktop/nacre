@@ -13,6 +13,16 @@ spec.loader.exec_module(boundary)
 
 
 class CompositorBoundaryTests(unittest.TestCase):
+    def test_archived_soak_sources_are_not_live_compositor_callers(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            archive = root / ".research/soak/shell"
+            archive.mkdir(parents=True)
+            (archive / "old.qml").write_text("import Quickshell.Hyprland\nItem {}\n")
+            self.assertEqual(boundary.check(root), [])
+            (root / "new.qml").write_text("import Quickshell.Hyprland\nItem {}\n")
+            self.assertEqual(len(boundary.check(root)), 1)
+
     def test_python_qml_shell_and_expressions_cannot_bypass_service(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

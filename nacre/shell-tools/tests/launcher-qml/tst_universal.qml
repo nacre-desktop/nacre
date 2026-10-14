@@ -39,6 +39,23 @@ TestCase {
         return value;
     }
 
+    function test_hidden_or_disabled_launcher_cannot_force_search_focus() {
+        const value = view();
+        const search = findChild(value, "launcherSearch");
+        verify(search);
+        value.visible = false;
+        search.focus = false;
+        value.focusExplicit();
+        compare(search.focus, false);
+        value.visible = true;
+        value.enabled = false;
+        search.focus = false;
+        value.focusExplicit();
+        compare(search.focus, false);
+        value.enabled = true;
+        value.focusExplicit();
+        compare(search.focus, true);
+    }
     function test_toggle_keeps_english_geometry_and_expands_wrapped_translations() {
         const previousLanguage = NacreI18n.language;
         try {

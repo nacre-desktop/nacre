@@ -35,6 +35,24 @@ def series(values, *, phase="measured", pid=10, start=100):
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_source_fingerprint_ignores_captures_and_changes_with_code(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            subprocess.run(["git", "init", "--quiet", folder], check=True)
+            (root / ".gitignore").write_text("/.research/\n")
+            source = root / "candidate.py"
+            source.write_text("value = 1\n")
+            with patch.object(soak, "ROOT", root):
+                before = soak.source_state()
+                archive = root / ".research"
+                archive.mkdir()
+                (archive / "capture.json").write_text('{"sample": 123}\n')
+                self.assertEqual(soak.source_state(), before)
+                source.write_text("value = 2\n")
+                self.assertNotEqual(
+                    soak.source_state()["files_sha256"], before["files_sha256"]
+                )
+
     def test_steady_leak_is_flagged_with_real_units(self):
         result = soak.analyze(series(range(100, 160)))
         flag = next(f for f in result["growth_flags"] if f["metric"] == "pss_mib")
@@ -45,6 +63,21 @@ class AnalysisTests(unittest.TestCase):
         rows = series(range(50, 110), phase="warmup")
         rows += series([110] * 60)
         self.assertEqual(soak.analyze(rows)["growth_flags"], [])
+
+    def test_swapping_cannot_hide_combined_memory_growth(self):
+        rows = series(range(160, 100, -1))
+        for i, row in enumerate(rows):
+            row["swap_pss_mib"] = 2 * i
+        result = soak.analyze(rows)
+        flag = next(
+            f for f in result["growth_flags"] if f["metric"] == "combined_pss_mib"
+        )
+        self.assertAlmostEqual(flag["per_hour"], 60)
+        self.assertFalse(any(f["metric"] == "pss_mib" for f in result["growth_flags"]))
+
+    def test_missing_swap_coverage_does_not_imply_zero(self):
+        result = soak.analyze(series([100] * 60))
+        self.assertIsNone(result["trends"][0]["metrics"]["combined_pss_mib"])
 
     def test_single_step_cache_warmup_is_not_steady_growth(self):
         rows = series([100] * 55 + [200] * 5)

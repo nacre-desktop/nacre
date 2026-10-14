@@ -38,9 +38,15 @@ QtObject {
     }
     readonly property real timeout: notification?.expireTimeout ?? -1
     readonly property Timer deadline: Timer {
-        interval: root.timeout > 0 ? Math.max(1, Math.min(root.timeout, 10000)) : root.owner.defaultTimeout
-        running: root.popup && !!root.notification && !root.hovered && !root.owner.dnd && root.owner.expire
-        onTriggered: root.timeout === 0 || root.timeout > 10000 ? root.owner.hideEntry(root) : root.owner.expireEntry(root)
+        interval: root.timeout > 0 ? Math.max(1, Math.min(root.timeout, 2147483647)) : root.owner.defaultTimeout
+        // History/DND visibility must not keep native notifications tracked.
+        running: !!root.notification && root.timeout !== 0 && !root.hovered && root.owner.expire
+        onTriggered: root.owner.expireEntry(root)
+    }
+    readonly property Timer popupDeadline: Timer {
+        interval: root.timeout > 0 ? 10000 : root.owner.defaultTimeout
+        running: root.popup && !!root.notification && (root.timeout === 0 || root.timeout > 10000) && !root.hovered && !root.owner.dnd && root.owner.expire
+        onTriggered: root.owner.hideEntry(root)
     }
     readonly property Connections changes: Connections {
         target: root.notification
@@ -83,8 +89,20 @@ QtObject {
     }
     function freeze() {
         const saved = record();
+        // Native image-provider URLs belong to the live notification. History
+        // keeps its text, but must not keep an expired image or stale URL alive.
+        saved.image = "";
         notification = null;
         snapshot = saved;
+    }
+    function release() {
+        const live = notification;
+        popup = false;
+        hovered = false;
+        notification = null;
+        snapshot = ({});
+        if (live)
+            live.dismiss();
     }
     function restartPopup() {
         time = new Date();

@@ -128,6 +128,7 @@ def main():
                 "build",
                 "dist",
                 ".venv",
+                ".research",
                 "node_modules",
                 "deps",
                 "target",

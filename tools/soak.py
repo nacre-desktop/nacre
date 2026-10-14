@@ -2,8 +2,10 @@
 """Seeded, isolated overnight shell exercise. Artifacts stay under /tmp."""
 
 import argparse
+import asyncio
 from collections import Counter, defaultdict, deque
 import csv
+import hashlib
 import importlib.util
 import json
 import math
@@ -22,6 +24,21 @@ import time
 import performance
 
 ROOT = Path(__file__).resolve().parents[1]
+ACTIONS = (
+    "launcher",
+    "close",
+    "dashboard",
+    "settings",
+    "detach",
+    "dock",
+    "notifications",
+    "notification_clear",
+    "clipboard",
+    "workspace",
+    "window",
+    "wallpaper",
+    "palette",
+)
 FIELDS = (
     "seconds",
     "phase",
@@ -89,6 +106,79 @@ def load_session():
     return module
 
 
+async def notify_image(index, transient):
+    """Supplemental raw-image lifetime probe; never used by the matched baseline."""
+    from dbus_next import Message, MessageType, Variant
+    from dbus_next.aio import MessageBus
+
+    bus = await MessageBus().connect()
+    try:
+        reply = await asyncio.wait_for(
+            bus.call(
+                Message(
+                    destination="org.freedesktop.Notifications",
+                    path="/org/freedesktop/Notifications",
+                    interface="org.freedesktop.Notifications",
+                    member="Notify",
+                    signature="susssasa{sv}i",
+                    body=[
+                        "Soak Demo",
+                        0,
+                        "",
+                        f"Image demo {index}",
+                        "Public image lifetime probe",
+                        [],
+                        {
+                            "transient": Variant("b", transient),
+                            "image-data": Variant(
+                                "(iiibiiay)",
+                                [
+                                    64,
+                                    64,
+                                    256,
+                                    True,
+                                    8,
+                                    4,
+                                    bytes([80, 120, 180, 255]) * 4096,
+                                ],
+                            ),
+                        },
+                        3000,
+                    ],
+                )
+            ),
+            timeout=15,
+        )
+        if reply.message_type == MessageType.ERROR:
+            raise RuntimeError("image notification rejected: " + str(reply.error_name))
+    finally:
+        bus.disconnect()
+
+
+def source_state():
+    """Identify uncommitted test candidates without including ignored evidence."""
+    paths = (
+        subprocess.check_output(
+            ["git", "ls-files", "-co", "--exclude-standard", "-z"], cwd=ROOT
+        )
+        .decode()
+        .split("\0")
+    )
+    digest = hashlib.sha256()
+    for name in sorted(set(paths) - {""}):
+        path = ROOT / name
+        if not path.is_file():
+            continue
+        digest.update(name.encode() + b"\0")
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return {
+        "dirty": bool(
+            subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT)
+        ),
+        "files_sha256": digest.hexdigest(),
+    }
+
+
 def slope(points):
     """Least squares units/hour and R squared; reject missing coverage."""
     if len(points) < 5:
@@ -114,7 +204,14 @@ def analyze(rows):
     groups = defaultdict(list)
     for row in rows:
         if row["phase"] == "measured":
-            groups[(row["role"], row["pid"], row["start"])].append(row)
+            sample = dict(row)
+            sample["combined_pss_mib"] = (
+                float(row["pss_mib"]) + float(row["swap_pss_mib"])
+                if row.get("pss_mib") not in (None, "")
+                and row.get("swap_pss_mib") not in (None, "")
+                else None
+            )
+            groups[(row["role"], row["pid"], row["start"])].append(sample)
     trends, flags = [], []
     for identity, samples in groups.items():
         entry = {
@@ -123,7 +220,14 @@ def analyze(rows):
             "start": identity[2],
             "metrics": {},
         }
-        for metric in ("pss_mib", "uss_mib", "fds", "threads", "children"):
+        for metric in (
+            "pss_mib",
+            "uss_mib",
+            "combined_pss_mib",
+            "fds",
+            "threads",
+            "children",
+        ):
             points = [
                 (float(row["seconds"]), float(row[metric]))
                 for row in samples
@@ -239,9 +343,15 @@ def prepare(directory):
     watcher.write_text(source)
     notices = shell / "services/NacreNotifs.qml"
     notices.write_text(
-        notices.read_text().replace(
+        notices.read_text()
+        .replace(
+            "    NotificationServer {",
+            "    NotificationServer {\n        id: soakNotificationServer",
+            1,
+        )
+        .replace(
             "                historyReady: root.historyReady,",
-            "                dismissedKeys: Object.keys(root.dismissedKeys).length,\n                historyReady: root.historyReady,",
+            "                tracked: soakNotificationServer.trackedNotifications.values.length,\n                liveReferences: root.list.filter(entry => entry.notification).length,\n                images: root.list.filter(entry => entry.image).length,\n                dismissedKeys: Object.keys(root.dismissedKeys).length,\n                historyReady: root.historyReady,",
             1,
         )
     )
@@ -538,7 +648,7 @@ def worker(args, directory):
             "qml_warnings": warning_count,
             "shell_exits": exits,
         }
-        for metric in ("pss_mib", "uss_mib", "fds", "threads"):
+        for metric in ("pss_mib", "uss_mib", "swap_pss_mib", "fds", "threads"):
             values = [row[metric] for row in sampled]
             aggregate[metric] = (
                 sum(values) if values and all(v is not None for v in values) else None
@@ -618,6 +728,9 @@ def worker(args, directory):
         elif name == "notifications":
             transient = rng.choice((True, False))
             for i in range(rng.randint(2, 6)):
+                if args.notification_images:
+                    asyncio.run(notify_image(i, transient))
+                    continue
                 run(
                     [
                         "notify-send",
@@ -756,21 +869,7 @@ def worker(args, directory):
         started = time.monotonic()
         last_ipc_success = started
         event("ready", shell_pid=pid, compositor_pid=compositor.pid)
-        names = [
-            "launcher",
-            "close",
-            "dashboard",
-            "settings",
-            "detach",
-            "dock",
-            "notifications",
-            "notification_clear",
-            "clipboard",
-            "workspace",
-            "window",
-            "wallpaper",
-            "palette",
-        ]
+        names = args.actions or list(ACTIONS)
         next_action, next_sample, next_scale = started, started, started
         with (directory / "samples.csv").open("w", newline="") as stream:
             writer = csv.DictWriter(stream, fieldnames=FIELDS)
@@ -793,7 +892,11 @@ def worker(args, directory):
                     next_sample += args.interval
                 if now >= next_action:
                     name = rng.choice(names)
-                    if args.backend == "niri" and now >= next_scale:
+                    if (
+                        args.backend == "niri"
+                        and not args.actions
+                        and now >= next_scale
+                    ):
                         name, next_scale = "scale", now + 300
                     actions[name] += 1
                     event("action", action=name)
@@ -847,7 +950,10 @@ def worker(args, directory):
         report = {
             "backend": args.backend,
             "seed": args.seed,
+            "action_selection": args.actions,
+            "notification_images": args.notification_images,
             "source_revision": (directory / "revision").read_text().strip(),
+            "source_state": json.loads((directory / "source-state.json").read_text()),
             "busy_host": True,
             "duration_complete": duration_complete,
             "workload_healthy": workload_healthy,
@@ -893,6 +999,17 @@ def main():
     parser.add_argument("--interval", type=float, default=60)
     parser.add_argument("--action-interval", type=float, default=5)
     parser.add_argument("--seed", type=int, default=20261013)
+    parser.add_argument(
+        "--actions",
+        nargs="+",
+        choices=ACTIONS,
+        help="supplemental isolated-action probe; omit for matched workload",
+    )
+    parser.add_argument(
+        "--notification-images",
+        action="store_true",
+        help="supplemental raw-image notifications (requires dbus-next)",
+    )
     parser.add_argument("--output", type=Path)
     parser.add_argument("--orient-binary", type=Path)
     parser.add_argument(
@@ -944,12 +1061,14 @@ def main():
     revision = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
     ).strip()
+    state = source_state()
     result = 0
     for backend in ("niri", "hyprland") if args.backend == "both" else (args.backend,):
         target = directory / backend
         target.mkdir(mode=0o700)
         prepare(target)
         (target / "revision").write_text(revision + "\n")
+        (target / "source-state.json").write_text(json.dumps(state) + "\n")
         if args.orient_binary:
             shutil.copyfile(args.orient_binary.resolve(strict=True), target / "orient")
             (target / "orient").chmod(0o755)
@@ -975,6 +1094,10 @@ def main():
             words.append("--wayland-debug")
         if args.hyprland_headless:
             words.append("--hyprland-headless")
+        if args.notification_images:
+            words.append("--notification-images")
+        if args.actions:
+            words.extend(["--actions", *args.actions])
         # No inherited accounts, injected Qt paths or session activation variables.
         clean = {
             "PATH": "/usr/bin:/bin",

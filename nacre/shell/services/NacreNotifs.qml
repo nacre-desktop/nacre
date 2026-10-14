@@ -80,6 +80,8 @@ Singleton {
                 }
             list = [...history, ...list];
             historyReady = true;
+            // These tombstones only protect the asynchronous initial load.
+            dismissedKeys = ({});
             error = "";
             if (dirty)
                 saveDelay.restart();
@@ -98,14 +100,12 @@ Singleton {
         if (!list.includes(entry))
             return;
         const wasRetained = entry.retain;
-        dismissedKeys = Object.assign({}, dismissedKeys, {
-            [entry.key]: true
-        });
+        if (!historyReady)
+            dismissedKeys = Object.assign({}, dismissedKeys, {
+                [entry.key]: true
+            });
         list = list.filter(item => item !== entry);
-        entry.popup = false;
-        entry.hovered = false;
-        if (entry.notification)
-            entry.notification.dismiss();
+        entry.release();
         Qt.callLater(() => entry.destroy());
         if (wasRetained)
             persist();
@@ -144,18 +144,17 @@ Singleton {
             clearedBeforeLoad = true;
         const removed = [...retained];
         const removing = new Set(removed);
-        const keys = Object.assign({}, dismissedKeys);
-        for (const entry of removed)
-            keys[entry.key] = true;
-        dismissedKeys = keys;
+        if (!historyReady) {
+            const keys = Object.assign({}, dismissedKeys);
+            for (const entry of removed)
+                keys[entry.key] = true;
+            dismissedKeys = keys;
+        }
         // Publish once: replacing an array model rebuilds every remaining card.
         // Detach before native close callbacks so new arrivals survive the clear.
         list = list.filter(entry => !removing.has(entry));
         for (const entry of removed) {
-            entry.popup = false;
-            entry.hovered = false;
-            if (entry.notification)
-                entry.notification.dismiss();
+            entry.release();
             Qt.callLater(() => entry.destroy());
         }
         persist();
@@ -266,9 +265,10 @@ Singleton {
             if (entry)
                 root.dismiss(entry);
             else {
-                root.dismissedKeys = Object.assign({}, root.dismissedKeys, {
-                    [key]: true
-                });
+                if (!root.historyReady)
+                    root.dismissedKeys = Object.assign({}, root.dismissedKeys, {
+                        [key]: true
+                    });
                 root.persist();
             }
         }

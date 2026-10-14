@@ -15,7 +15,8 @@ FloatingWindow {
     implicitWidth: Math.min(1100, Math.max(720, (screen?.width || 1920) * .75))
     implicitHeight: Math.min(800, Math.max(540, (screen?.height || 1200) * .8))
     color: NacreTokens.body
-    updatesEnabled: NacreSettingsApp.active
+    // Qt already suppresses frames for unexposed windows. Re-enabling the
+    // Quickshell update gate requests a frame while Wayland is still remapping.
     function activate() {
         minimized = false;
         const native = contentItem.Window.window;
