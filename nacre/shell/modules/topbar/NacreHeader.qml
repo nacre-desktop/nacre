@@ -16,23 +16,25 @@ Item {
     property real hoverHintCenter: 0
     property string peekName: ""
     property real peekCenter: 0
-    property url peekSource: Qt.resolvedUrl("NacreStatusPeek.qml")
-    function clearPeek() {
+    function clearPeek(close = true) {
         peekDelay.stop();
         peekName = "";
-        peekLoader.source = "";
+        if (close && panel?.popouts.currentName === "peek")
+            panel.popouts.hasCurrent = false;
     }
     function requestPeek(name, item, hovered) {
         if (name === "recording")
             return;
         if (!hovered) {
             if (peekName === name)
-                clearPeek();
+                clearPeek(false);
+            leavePopup();
             return;
         }
         if (visibility?.launcher || visibility?.session)
             return;
-        clearPeek();
+        clearPeek(false);
+        popupExpiry.stop();
         hoverHint = "";
         peekName = name;
         peekCenter = item.mapToItem(root, item.width / 2, item.height / 2).x;
@@ -43,13 +45,6 @@ Item {
         hoverHint = "";
         if (name === "recording") {
             NacreMenu.workflows.work("record-stop");
-            return;
-        }
-        if (name === "notifications") {
-            const p = item.mapToItem(root, item.width / 2, item.height / 2);
-            NacrePanelState.popout("notifications", p.x, screen.name);
-            if (panel)
-                panel.popouts.pinned = true;
             return;
         }
         const pearl = NacrePearls.entries.find(entry => entry.kind === "controls");
@@ -64,16 +59,17 @@ Item {
     Timer {
         id: peekDelay
         interval: 400
-        onTriggered: if (root.peekName && !NacrePanelState.hidden)
-            peekLoader.setSource(root.peekSource, {
-                output: root.screen,
-                kind: root.peekName,
-                center: root.peekCenter
-            })
-    }
-    Loader {
-        id: peekLoader
-        objectName: "nacreStatusPeekLoader"
+        onTriggered: {
+            const popup = root.panel?.popouts;
+            if (!popup || !root.peekName || NacrePanelState.hidden)
+                return;
+            popup.peekKind = root.peekName;
+            popup.currentName = "peek";
+            popup.currentCenter = root.peekCenter;
+            popup.pinned = false;
+            popup.headerHovered = true;
+            popup.hasCurrent = true;
+        }
     }
     Connections {
         target: NacrePanelState
@@ -205,10 +201,10 @@ Item {
     }
     function leavePopup() {
         hoverHint = "";
-        NacreHoverIntent.popupHovered[screen.name] = statusMouse.containsMouse || clockMouse.containsMouse;
+        NacreHoverIntent.popupHovered[screen.name] = statusMouse.containsMouse || updatesInput.hovered || clockMouse.containsMouse;
         NacreHoverIntent.rearm("popouts", screen);
         if (panel)
-            panel.popouts.headerHovered = statusMouse.containsMouse || clockMouse.containsMouse;
+            panel.popouts.headerHovered = statusMouse.containsMouse || updatesInput.hovered || clockMouse.containsMouse;
         popupExpiry.restart();
     }
     Timer {
@@ -217,7 +213,7 @@ Item {
         onTriggered: {
             if (!root.panel)
                 return;
-            root.panel.popouts.headerHovered = statusMouse.containsMouse || clockMouse.containsMouse;
+            root.panel.popouts.headerHovered = statusMouse.containsMouse || updatesInput.hovered || clockMouse.containsMouse;
             if (!root.panel.popouts.headerHovered && !root.panel.popoutHovered && !root.panel.popouts.pinned)
                 root.panel.popouts.hasCurrent = false;
         }

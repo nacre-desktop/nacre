@@ -151,6 +151,7 @@ Item {
             audio: "../bar/popouts/NacreSoundPopup.qml",
             battery: "NacreControlPower.qml",
             session: "NacreControlSession.qml",
+            notifications: "../bar/popouts/NacreHistoryPopup.qml",
             updates: "NacreControlUpdates.qml"
         };
         const properties = name === "edit" ? {
@@ -160,7 +161,7 @@ Item {
             active: panel.hostActive && panel.visibility
         } : ["audio", "session"].includes(name) ? {
             active: panel.hostActive && panel.visibility
-        } : ["network", "bluetooth"].includes(name) ? {
+        } : ["network", "bluetooth", "notifications"].includes(name) ? {
             showHeading: false,
             maximumListHeight: Math.max(140, page.height - (name === "network" ? 180 : 130))
         } : !paths[name] ? {

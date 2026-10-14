@@ -250,7 +250,7 @@ TestCase {
         tryVerify(() => wifi.border.width === 2);
         const writes = DesktopSettings.writes.length;
         mouseClick(dnd, 20, 20, Qt.RightButton);
-        compare(panel.section, "dnd");
+        compare(panel.section, "notifications");
         compare(DesktopSettings.writes.length, writes);
         scene.selectedSection = "home";
         wait(30);
@@ -812,6 +812,49 @@ TestCase {
         popup.hasCurrent = true;
         verify(!popup.hasCurrent);
         compare(popup.currentItem, null);
+    }
+    function test_bar_dropdown_uses_shared_popup_motion_and_unloads() {
+        const popup = createTemporaryObject(assembly, test);
+        popup.currentName = "peek";
+        for (const kind of ["audio", "network", "bluetooth", "battery", "updates", "notifications"]) {
+            popup.peekKind = kind;
+            popup.hasCurrent = true;
+            tryVerify(() => popup.currentItem !== null, 500);
+            compare(popup.currentItem.kind, kind);
+            verify(popup.currentItem.summary.length > 0);
+            tryVerify(() => popup.height > 0, 300);
+            verify(!popup.pinned);
+            popup.hasCurrent = false;
+            tryCompare(popup, "height", 0, 400);
+            compare(popup.currentItem, null);
+        }
+    }
+    function test_notification_control_page_is_lazy_and_reuses_history() {
+        NacreNotifs.retained = [
+            {
+                expanded: false
+            }
+        ];
+        NacreNotifs.clears = 0;
+        const host = createTemporaryObject(center, test), panel = host.panel;
+        panel.navigate("notifications");
+        wait(40);
+        const page = findChild(panel, "controlPageLoader");
+        verify(page.item !== null);
+        compare(page.item.showHeading, false);
+        compare(NacreNotifs.clears, 0);
+        verify(findChild(page.item, "quickClearHistory").enabled);
+        verify(findChild(page.item, "quickDnd") !== null);
+        panel.navigate("home");
+        wait(40);
+        verify(findChild(page.item, "quickClearHistory") === null);
+        NacreControlPreferences.save(["notifications"]);
+        wait(40);
+        const tile = findChild(panel, "controlAction-notifications");
+        verify(tile && tile.navigation && !tile.hasDetails);
+        mouseClick(tile, 20, 20);
+        compare(panel.section, "notifications");
+        NacreNotifs.retained = [];
     }
     function test_history_user_only_controls_and_pinned_escape() {
         NacreNotifs.retained = [

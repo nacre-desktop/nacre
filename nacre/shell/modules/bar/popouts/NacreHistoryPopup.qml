@@ -5,6 +5,8 @@ import qs.modules.notifications
 
 Item {
     id: root
+    property bool showHeading: true
+    property real maximumListHeight: 440
     readonly property var entries: NacreNotifs.retained
     implicitWidth: 380
     implicitHeight: body.implicitHeight
@@ -22,7 +24,7 @@ Item {
             NacreText {
                 width: Math.max(0, parent.width - dndToggle.width - clearButton.width - parent.spacing * 2)
                 anchors.verticalCenter: parent.verticalCenter
-                text: NacreI18n.tr("popouts.history-popup.text.notifications", "Notifications")
+                text: root.showHeading ? NacreI18n.tr("popouts.history-popup.text.notifications", "Notifications") : ""
                 font.pointSize: 14
             }
             ActionButton {
@@ -53,7 +55,7 @@ Item {
         }
         NacreQuickList {
             width: parent.width
-            maximumHeight: 440
+            maximumHeight: root.maximumListHeight
             Column {
                 width: parent.width
                 spacing: 8

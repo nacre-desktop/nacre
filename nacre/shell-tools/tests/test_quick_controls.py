@@ -87,6 +87,10 @@ class QuickControlsTests(unittest.TestCase):
                     ROOT.parent / "shell/modules/bar/popouts" / (component + ".qml"),
                     target / (component + ".qml"),
                 )
+            stage_qml(
+                ROOT.parent / "shell/modules/topbar/NacreStatusPeek.qml",
+                target / "NacreStatusPeek.qml",
+            )
             shutil.copy2(
                 ROOT.parent / "shell/modules/dashboard/overview/overview.js",
                 target / "overview.js",

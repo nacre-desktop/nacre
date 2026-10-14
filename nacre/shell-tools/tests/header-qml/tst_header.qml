@@ -24,7 +24,6 @@ TestCase {
     Component {
         id: header
         NacreHeader {
-            peekSource: Qt.resolvedUrl("PeekFixture.qml")
             width: 1920
             height: 50
             screen: ({
@@ -311,17 +310,32 @@ TestCase {
     function test_status_peeks_delay_release_and_direct_routes() {
         const view = createTemporaryObject(header, test);
         const region = findChild(view, "nacreHeaderStatus");
-        const loader = findChild(view, "nacreStatusPeekLoader");
+        const popup = {
+            hasCurrent: false,
+            currentName: "",
+            peekKind: "",
+            currentCenter: 0,
+            pinned: false,
+            headerHovered: false
+        };
+        NacrePanelState.panels = {
+            test: {
+                popouts: popup,
+                popoutHovered: false
+            }
+        };
         view.requestPeek("audio", region, true);
         wait(330);
-        compare(loader.item, null);
+        verify(!popup.hasCurrent);
         compare(NacrePanelState.calls.length, 0);
         wait(110);
-        verify(loader.item !== null);
-        compare(loader.item.kind, "audio");
-        verify(!loader.item.activeFocus);
+        verify(popup.hasCurrent);
+        compare(popup.currentName, "peek");
+        compare(popup.peekKind, "audio");
+        verify(!popup.pinned);
         view.requestPeek("audio", region, false);
-        compare(loader.item, null);
+        wait(140);
+        verify(!popup.hasCurrent);
         view.openStatus("audio", region);
         compare(NacrePanelState.calls[0], "audio");
         NacrePanelState.panels = {
@@ -333,7 +347,7 @@ TestCase {
         };
         view.openStatus("notifications", region);
         compare(NacrePanelState.calls[1], "notifications");
-        verify(NacrePanelState.panels.test.popouts.pinned);
+        verify(!NacrePanelState.panels.test.popouts.pinned);
         let selected = "", activated = 0;
         NacrePearls.entries = [
             {
@@ -361,17 +375,31 @@ TestCase {
     function test_status_container_does_not_cover_icon_hover() {
         const view = createTemporaryObject(header, test);
         const network = findChild(view, "fixtureHeaderNetwork");
-        const loader = findChild(view, "nacreStatusPeekLoader");
+        const popup = {
+            hasCurrent: false,
+            currentName: "",
+            peekKind: "",
+            currentCenter: 0,
+            pinned: false,
+            headerHovered: false
+        };
+        NacrePanelState.panels = {
+            test: {
+                popouts: popup,
+                popoutHovered: false
+            }
+        };
         mouseMove(test, 900, 300);
         mouseMove(network, network.width / 2, network.height / 2);
         wait(330);
-        compare(loader.item, null);
+        verify(!popup.hasCurrent);
         wait(110);
-        verify(loader.item !== null);
-        compare(loader.item.kind, "network");
+        verify(popup.hasCurrent);
+        compare(popup.currentName, "peek");
+        compare(popup.peekKind, "network");
         mouseMove(test, 900, 300);
-        wait(20);
-        compare(loader.item, null);
+        wait(150);
+        verify(!popup.hasCurrent);
     }
     function test_open_dashboard_keeps_its_full_header_width_without_widening_initial_target() {
         NacrePanelState.screens = {

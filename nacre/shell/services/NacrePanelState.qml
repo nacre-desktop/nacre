@@ -127,7 +127,7 @@ Singleton {
     }
     function openControls(section = "home", screenName = "", forceOpen = false, pointerOwned = false) {
         const view = screenName ? screens[screenName] : getForActive();
-        if (!view || !["home", "audio", "network", "bluetooth", "battery", "session", "updates"].includes(section))
+        if (!view || !["home", "audio", "network", "bluetooth", "battery", "session", "updates", "notifications"].includes(section))
             return false;
         const wasOpen = view.osd && view.controlSection === section && view.edgeMenu === "osd";
         clearPopouts();

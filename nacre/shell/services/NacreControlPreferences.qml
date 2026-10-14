@@ -10,7 +10,7 @@ Singleton {
     property var tiles: defaults.slice()
     readonly property var optionalTiles: tiles.filter(id => !defaults.includes(id))
     property string error: ""
-    readonly property var allowed: defaults.concat(["airplane", "vpn", "record", "mic", "mic-volume", "keyboard", "screenshot", "picker", "clipboard", "wallpaper", "next-wallpaper", "updates", "displays"])
+    readonly property var allowed: defaults.concat(["airplane", "vpn", "record", "mic", "mic-volume", "keyboard", "screenshot", "picker", "clipboard", "wallpaper", "next-wallpaper", "updates", "notifications", "displays"])
     function normalize(values) {
         return [...new Set(values.filter(value => typeof value === "string" && allowed.includes(value)))];
     }

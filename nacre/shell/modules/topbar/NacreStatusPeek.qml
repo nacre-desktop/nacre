@@ -1,16 +1,14 @@
 import QtQuick
-import Quickshell
-import Quickshell.Wayland
 import Quickshell.Services.UPower
 import qs.widgets
 import qs.config
 import qs.services
 
-NacreWindow {
+Item {
     id: root
-    required property var output
-    required property string kind
-    property real center: 0
+    property string kind: ""
+    implicitWidth: 280
+    implicitHeight: textColumn.implicitHeight
     readonly property var connected: NacreBluetooth.powered ? NacreBluetooth.devices.filter(device => device.connected) : []
     readonly property var battery: UPower.displayDevice
     readonly property bool batteryAvailable: !!battery && battery.ready && battery.isPresent !== false && battery.isLaptopBattery && Number.isFinite(battery.percentage) && battery.percentage >= 0 && battery.percentage <= 1
@@ -61,90 +59,65 @@ NacreWindow {
         }
         return "";
     }
-    name: "status-peek"
-    screen: output
-    anchors.top: true
-    anchors.left: true
-    implicitWidth: 280
-    implicitHeight: textColumn.implicitHeight + 28
-    margins.top: NacreFrame.headerHeight + 8
-    margins.left: Math.max(8, Math.min((output?.width ?? 800) - implicitWidth - 8, center - implicitWidth / 2))
-    visible: !NacrePanelState.hidden && DesktopSettings.data.topEdge !== false
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-    mask: Region {
-        width: 0
-        height: 0
-    }
-    NacreSurface {
-        anchors.fill: parent
-        radius: 18
-        color: NacreTokens.body
-        border.width: 1
-        border.color: Qt.alpha(NacreTokens.outline, .25)
-        Column {
-            id: textColumn
-            x: 14
-            y: 14
-            width: parent.width - 28
-            spacing: 6
-            NacreText {
-                text: root.title
-                font.pointSize: 10
-                font.weight: Font.Medium
-                color: NacreTokens.mutedInk
-            }
-            NacreText {
-                width: parent.width
-                text: root.summary
-                textFormat: Text.PlainText
-                wrapMode: Text.Wrap
-                font.pointSize: 12
-            }
-            NacreText {
-                width: parent.width
-                text: root.detail
-                visible: text !== ""
-                textFormat: Text.PlainText
-                wrapMode: Text.Wrap
-                font.pointSize: 10
-                color: NacreTokens.mutedInk
-            }
-            Repeater {
-                model: root.kind === "bluetooth" ? root.connected.slice(0, 4) : []
-                delegate: Row {
-                    required property var modelData
-                    width: textColumn.width
-                    spacing: 6
-                    NacreText {
-                        width: parent.width - 60
-                        text: modelData.alias || modelData.name
-                        textFormat: Text.PlainText
-                        wrapMode: Text.Wrap
-                        font.pointSize: 10
-                    }
-                    NacreIcon {
-                        text: "battery_full"
-                        font.pointSize: 12
-                        visible: modelData.batteryAvailable === true
-                        color: NacreTokens.accent
-                    }
-                    NacreText {
-                        text: NacreI18n.number(Math.round((modelData.battery || 0) * 100)) + "%"
-                        visible: modelData.batteryAvailable === true
-                        font.pointSize: 9
-                    }
+    Column {
+        id: textColumn
+        width: root.width
+        spacing: 6
+        NacreText {
+            text: root.title
+            font.pointSize: 10
+            font.weight: Font.Medium
+            color: NacreTokens.mutedInk
+        }
+        NacreText {
+            width: parent.width
+            text: root.summary
+            textFormat: Text.PlainText
+            wrapMode: Text.Wrap
+            font.pointSize: 12
+        }
+        NacreText {
+            width: parent.width
+            text: root.detail
+            visible: text !== ""
+            textFormat: Text.PlainText
+            wrapMode: Text.Wrap
+            font.pointSize: 10
+            color: NacreTokens.mutedInk
+        }
+        Repeater {
+            model: root.kind === "bluetooth" ? root.connected.slice(0, 4) : []
+            delegate: Row {
+                required property var modelData
+                width: textColumn.width
+                spacing: 6
+                NacreText {
+                    width: parent.width - 60
+                    text: modelData.alias || modelData.name
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    font.pointSize: 10
+                }
+                NacreIcon {
+                    text: "battery_full"
+                    font.pointSize: 12
+                    visible: modelData.batteryAvailable === true
+                    color: NacreTokens.accent
+                }
+                NacreText {
+                    text: NacreI18n.number(Math.round((modelData.battery || 0) * 100)) + "%"
+                    visible: modelData.batteryAvailable === true
+                    font.pointSize: 9
                 }
             }
-            NacreText {
-                visible: root.kind === "bluetooth" && root.connected.length > 4
-                text: NacreI18n.tr("status.peek.more-devices", "{count} more devices", {
-                    count: Math.max(0, root.connected.length - 4)
-                })
-                font.pointSize: 10
-                color: NacreTokens.mutedInk
-            }
+        }
+        NacreText {
+            visible: root.kind === "bluetooth" && root.connected.length > 4
+            text: NacreI18n.tr("status.peek.more-devices", "{count} more devices", {
+                count: Math.max(0, root.connected.length - 4)
+            })
+            font.pointSize: 10
+            color: NacreTokens.mutedInk
         }
     }
 }

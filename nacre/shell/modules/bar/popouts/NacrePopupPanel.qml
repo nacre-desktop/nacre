@@ -4,6 +4,7 @@ import qs.widgets
 Item {
     id: root
     required property var screen
+    property alias peekKind: content.peekKind
     property alias currentName: content.currentName
     property alias currentCenter: content.currentCenter
     property alias hasCurrent: content.hasCurrent

@@ -87,8 +87,11 @@ Edit lists detected microphone and keyboard sliders first; adding one places it
 beside its related output or display slider. Layouts are saved separately from
 the main desktop settings and keep their order across sessions; existing optional
 tile preferences migrate automatically. The same controls work in a detached pearl.
-Hover a bar status icon for a read-only peek after 400 ms. Click opens its detail
-page; the bell opens notification history separately. Pointer-opened controls
+Hover a bar status icon for a read-only dropdown after 400 ms. It unfolds from
+the bar using the same frame and motion as other Nacre popups. Click opens its
+control-center detail page; the bell opens notification history inside the same
+panel. Notification history can also be added as a tile in Edit, or opened by
+right-clicking Do Not Disturb. Pointer-opened controls
 close after leaving the panel; keyboard-opened controls keep their focus. Wi-Fi
 shows cached networks immediately and refreshes passively; use Scan for a fresh
 scan without waiting for one on every open. Scroll sound for volume

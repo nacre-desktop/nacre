@@ -96,7 +96,7 @@ QtObject {
     function toggle(id) {
         if (!supported(id) || !find(id)?.available)
             return;
-        if (["network", "bluetooth", "battery"].includes(id))
+        if (["network", "bluetooth", "battery", "notifications"].includes(id))
             root.detailsRequested(id);
         else if (id === "night")
             NacreControlTools.toggleNightLight();
@@ -197,6 +197,16 @@ QtObject {
             name: NacreI18n.tr("status.peek.updates", "Updates"),
             icon: "system_update",
             status: NacreI18n.tr("controlcenter.catalog.check-updates", "Check for updates"),
+            on: false,
+            available: true
+        },
+        {
+            id: "notifications",
+            name: NacreI18n.tr("popouts.history-popup.text.notifications", "Notifications"),
+            icon: "notifications",
+            status: NacreI18n.tr("ui.status-icons.label.value0-notifications", "{value0} notifications", {
+                value0: NacreNotifs.retained.length
+            }),
             on: false,
             available: true
         },

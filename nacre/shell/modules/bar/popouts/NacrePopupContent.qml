@@ -5,6 +5,7 @@ import qs.services
 Item {
     id: root
     required property var screen
+    property string peekKind: ""
     property string currentName: ""
     property real currentCenter: 0
     property bool hasCurrent: false
@@ -12,6 +13,7 @@ Item {
     property real lastWidth: 320
     property real lastHeight: 80
     readonly property var routes: ({
+            peek: "../../topbar/NacreStatusPeek.qml",
             audio: "NacreSoundPopup.qml",
             network: "NacreNetworkPopup.qml",
             bluetooth: "NacreBluetoothPopup.qml",
@@ -36,6 +38,8 @@ Item {
         if (Number.isFinite(h) && h > 0)
             lastHeight = Math.max(30, Math.min(640, h));
     }
+    onPeekKindChanged: if (currentName === "peek" && currentItem)
+        currentItem.kind = peekKind
     Loader {
         id: body
         objectName: "nacrePopupLoader"
@@ -43,7 +47,11 @@ Item {
         y: 15
         active: root.validRoute && (root.hasCurrent || root.retaining)
         source: root.validRoute ? Qt.resolvedUrl(root.routes[root.currentName]) : ""
-        onLoaded: root.rememberSize()
+        onLoaded: {
+            if (root.currentName === "peek")
+                item.kind = root.peekKind;
+            root.rememberSize();
+        }
         onStatusChanged: if (status === Loader.Error) {
             root.lastWidth = 280;
             root.lastHeight = 64;
