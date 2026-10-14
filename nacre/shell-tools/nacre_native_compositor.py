@@ -201,6 +201,21 @@ def config_errors(*, timeout=10, default=_missing):
         return default
 
 
+def session_context(environment):
+    return _call(
+        "session_context",
+        {
+            key: environment[key]
+            for key in (
+                "XDG_CURRENT_DESKTOP",
+                "NIRI_SOCKET",
+                "HYPRLAND_INSTANCE_SIGNATURE",
+            )
+            if key in environment
+        },
+    )
+
+
 def render_for_backend(backend, operation, values):
     result = subprocess.run(
         [

@@ -7,6 +7,7 @@ import importlib.util
 import json
 import math
 import os
+import sys
 from pathlib import Path
 import subprocess
 
@@ -158,7 +159,13 @@ def palette_include(home, config):
 def command(action, environment=None, home=None):
     env = dict(os.environ if environment is None else environment)
     home = Path.home() if home is None else Path(home)
-    gate = module(Path(__file__).with_name("niri-session-gate.py"), "runtime_gate")
+    tools = Path(__file__).resolve().parents[2] / "nacre/shell-tools"
+    if not (tools / "nacre_native_compositor.py").is_file():
+        tools = home / ".local/share/nacre/shell/tools"
+    sys.path.insert(0, str(tools))
+    import nacre_native_compositor
+
+    context = nacre_native_compositor.session_context(env)
     original = [str(home / ".local/bin/nacre-shell"), "start"]
     if action == "brain":
         original = [
@@ -166,9 +173,9 @@ def command(action, environment=None, home=None):
             str(home / ".local/share/nacre/brain/control.py"),
             "watch-brain",
         ]
-    if action in ("shell", "brain") and gate.compositor(env) == "hyprland":
+    if action in ("shell", "brain") and context == "hyprland":
         return original, env
-    if gate.compositor(env) != "niri":
+    if context != "niri":
         raise ValueError("Niri runtime requires an explicit niri session")
     root = home / ".local/share/nacre/niri-on-pc/session"
     shell = root / "home-view/.local/share/nacre/shell"

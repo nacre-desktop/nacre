@@ -59,6 +59,14 @@ impl Backend {
                 .cloned()
                 .unwrap_or(Value::Null)
         };
+        if operation == "session_context" {
+            let environment: BTreeMap<String, String> =
+                serde_json::from_value(argument(0, "environment")).map_err(|error| Error {
+                    kind: "ValueError",
+                    message: error.to_string(),
+                })?;
+            return Ok(json!(crate::niri_session_gate::compositor(&environment)));
+        }
         let timeout = Duration::try_from_secs_f64(
             kwargs
                 .get("timeout")

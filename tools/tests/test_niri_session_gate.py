@@ -1,7 +1,6 @@
 """Session aliases and native startup gates preserve the working Hyprland path."""
 
 import configparser
-import importlib.util
 import json
 from pathlib import Path
 import subprocess
@@ -9,11 +8,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location(
-    "niri_session_gate", ROOT / "uwsm/tools/niri-session-gate.py"
-)
-gate = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(gate)
+import native_niri_session_gate as gate
 
 
 class NiriSessionGateTests(unittest.TestCase):

@@ -20,6 +20,9 @@ fn run() -> Result<i32> {
     if tool == "niri_widths" {
         return nacre_helper::niri_widths::cli::run(&arguments);
     }
+    if tool == "niri-session-gate" {
+        return nacre_helper::niri_session_gate::run(&arguments);
+    }
     if tool == "compositor-render" {
         if arguments.len() != 3 {
             return Err("Expected backend, render operation and JSON values".into());

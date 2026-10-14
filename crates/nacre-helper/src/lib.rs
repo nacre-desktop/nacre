@@ -21,6 +21,7 @@ pub mod menu_arguments;
 pub mod menu_cli;
 pub mod menu_registry;
 pub mod network_state;
+pub mod niri_session_gate;
 pub mod niri_widths;
 pub mod notification_history;
 pub mod orient;

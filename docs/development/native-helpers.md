@@ -86,6 +86,14 @@ is a visible failure after restoring constraints, and unexpected X11 errors
 propagate instead of being silently ignored. The service and prepared-session
 caller use native dispatch; the Python observer is retired without state migration.
 
+The prepared-session acceptance gate retains 270 frozen context/readiness
+decisions and the original record bytes. Explicit desktop context outranks stale
+sockets; ambiguous sessions fail closed, and idle still needs manual unlock
+verification separately from backend readiness. The temporary Python runtime
+client delegates classification to Rust until its own port. Intended differences:
+absolute XDG_CONFIG_HOME follows QML, unreadable/malformed records still deny
+activation while reaching stderr, and invalid CLI diagnostics use native wording.
+
 ## Launcher workflow additions
 
 `launcher-workflows` is a separate native command for private saved items, file

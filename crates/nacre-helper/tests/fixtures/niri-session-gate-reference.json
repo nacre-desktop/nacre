@@ -1,0 +1,5735 @@
+{
+  "source_sha256": "85f5079ca1983a3f9b9e4ee5d210b8a5a66fd1b2d1dc1db2b8db43177f4cb582",
+  "cases": [
+    {
+      "request": {
+        "name": "context-0-record-0-shell",
+        "environment": {},
+        "record": null,
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-0-observer",
+        "environment": {},
+        "record": null,
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-0-idle",
+        "environment": {},
+        "record": null,
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-1-shell",
+        "environment": {},
+        "record": "bad",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-1-observer",
+        "environment": {},
+        "record": "bad",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-1-idle",
+        "environment": {},
+        "record": "bad",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-2-shell",
+        "environment": {},
+        "record": "[]",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-2-observer",
+        "environment": {},
+        "record": "[]",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-2-idle",
+        "environment": {},
+        "record": "[]",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-3-shell",
+        "environment": {},
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-3-observer",
+        "environment": {},
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-3-idle",
+        "environment": {},
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-4-shell",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-4-observer",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-4-idle",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-5-shell",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-5-observer",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-5-idle",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-6-shell",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-6-observer",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-6-idle",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-7-shell",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-7-observer",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-7-idle",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-8-shell",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-8-observer",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-8-idle",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-9-shell",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-9-observer",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-0-record-9-idle",
+        "environment": {},
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-0-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": null,
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-0-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": null,
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-0-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": null,
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-1-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "bad",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-1-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "bad",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-1-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "bad",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-2-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "[]",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-2-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "[]",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-2-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "[]",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-3-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-3-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-3-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-4-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-4-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-4-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-5-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-5-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-5-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-6-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-6-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-6-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-7-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-7-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-7-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-8-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-8-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-8-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-9-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-9-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-1-record-9-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-0-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": null,
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-0-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": null,
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-0-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": null,
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-1-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "bad",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-1-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "bad",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-1-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "bad",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-2-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "[]",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-2-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "[]",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-2-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "[]",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-3-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-3-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-3-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-4-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-4-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-4-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-5-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-5-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-5-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-6-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-6-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-6-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-7-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-7-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-7-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-8-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-8-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-8-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-9-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-9-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-2-record-9-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-0-shell",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": null,
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-0-observer",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": null,
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-0-idle",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": null,
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-1-shell",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "bad",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-1-observer",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "bad",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-1-idle",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "bad",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-2-shell",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "[]",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-2-observer",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "[]",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-2-idle",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "[]",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-3-shell",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-3-observer",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-3-idle",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-4-shell",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-4-observer",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-4-idle",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-5-shell",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-5-observer",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-5-idle",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-6-shell",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-6-observer",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-6-idle",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-7-shell",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-7-observer",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-7-idle",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-8-shell",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-8-observer",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-8-idle",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-9-shell",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-9-observer",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-3-record-9-idle",
+        "environment": {
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "hyprland",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-0-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": null,
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-0-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": null,
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-0-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": null,
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-1-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "bad",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-1-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "bad",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-1-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "bad",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-2-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "[]",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-2-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "[]",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-2-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "[]",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-3-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-3-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-3-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-4-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-4-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-4-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-5-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-5-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-5-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-6-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-6-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-6-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-7-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-7-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-7-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-8-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-8-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-8-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-9-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-9-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-4-record-9-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-0-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": null,
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-0-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": null,
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-0-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": null,
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-1-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "bad",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-1-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "bad",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-1-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "bad",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-2-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "[]",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-2-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "[]",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-2-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "[]",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-3-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-3-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-3-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-4-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-4-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-4-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-5-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-5-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-5-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-6-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-6-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-6-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-7-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-7-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-7-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-8-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-8-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-8-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-9-shell",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-9-observer",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-5-record-9-idle",
+        "environment": {
+          "NIRI_SOCKET": "/fixture",
+          "HYPRLAND_INSTANCE_SIGNATURE": "fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-0-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": null,
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-0-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": null,
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-0-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": null,
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-1-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "bad",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-1-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "bad",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-1-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "bad",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-2-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "[]",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-2-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "[]",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-2-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "[]",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-3-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-3-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-3-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-4-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-4-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-4-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-5-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-5-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-5-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-6-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-6-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-6-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-7-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-7-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-7-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-8-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-8-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-8-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-9-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-9-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-6-record-9-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-0-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": null,
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-0-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": null,
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-0-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": null,
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-1-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "bad",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-1-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "bad",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-1-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "bad",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-2-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "[]",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-2-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "[]",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-2-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "[]",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-3-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-3-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-3-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-4-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-4-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-4-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-5-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-5-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-5-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-6-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-6-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-6-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-7-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-7-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-7-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-8-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-8-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-8-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-9-shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": true,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-9-observer",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-7-record-9-idle",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri:Hyprland",
+          "NIRI_SOCKET": "/fixture"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "niri",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-0-shell",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": null,
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-0-observer",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": null,
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-0-idle",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": null,
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": null,
+        "record_after": null
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-1-shell",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "bad",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-1-observer",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "bad",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-1-idle",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "bad",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "626164",
+        "record_after": "626164"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-2-shell",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "[]",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-2-observer",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "[]",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-2-idle",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "[]",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "5b5d",
+        "record_after": "5b5d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-3-shell",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-3-observer",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-3-idle",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"plain\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a22706c61696e222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-4-shell",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-4-observer",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-4-idle",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-5-shell",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-5-observer",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-5-idle",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-6-shell",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-6-observer",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-6-idle",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-7-shell",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-7-observer",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-7-idle",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":false,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a66616c73652c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-8-shell",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-8-observer",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-8-idle",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":1,\"observerReady\":true,\"unlockVerified\":true}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a312c226f627365727665725265616479223a747275652c22756e6c6f636b5665726966696564223a747275657d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-9-shell",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "shell"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-9-observer",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "observer"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "context-8-record-9-idle",
+        "environment": {
+          "NACRE_COMPOSITOR": "niri"
+        },
+        "record": "{\"phase\":\"nacre\",\"backendReady\":true,\"observerReady\":1,\"unlockVerified\":1}",
+        "action": "idle"
+      },
+      "observed": {
+        "backend": "unknown",
+        "allowed": false,
+        "exit": 1,
+        "stdout": "",
+        "stderr": "",
+        "record_before": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d",
+        "record_after": "7b227068617365223a226e61637265222c226261636b656e645265616479223a747275652c226f627365727665725265616479223a312c22756e6c6f636b5665726966696564223a317d"
+      },
+      "exit": 0,
+      "stderr": ""
+    }
+  ]
+}

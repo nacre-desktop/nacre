@@ -47,7 +47,7 @@ current frozen cases use defaults and remain unchanged.
 Main CI gate retained; 2753707f fixed isolation without changing goldens/skips.
 Wave 1 source/install CI passed; hardware checks remain manual.
 
-Next: publish widths, watch CI, then port prepared-session gate/runtime with coordinated receipts. Widths: 130 Rust / 836 repo / 526 parity pass; 25 policy / 19 Xlib / 22 CLI cases exact; CPU 41.36 -> 1.07 ms, RSS 19.27 -> 8.23 MiB (busy). CI38570643930 green; shared packaging remains owned by install task.
+Next: publish prepared-session gate (132 Rust / 839 repo / 526 parity; 270 decisions / 14 CLI / 5 original + 3 native tests pass), then runtime; send receipts before publication. Gate CPU31.18 -> 0.98 ms (busy). Widths39ffa461:130 Rust / 836 repo / 526 parity, CPU41.36 -> 1.07 ms/RSS19.27 -> 8.23 MiB (busy); CI38581376661 running. Shared packaging stays with install task.
 Window-hide cutover: 126 Rust tests, 821 repo plus 3 native checks, 12 frozen cases, 11 original assertions and 3 socket/D-Bus goldens pass. Busy CPU 46.26 -> 2.19 ms, helper RSS 17.33 -> 7.27 MiB; 100 -> 0 Python starts. No state migration; notification failures reach stderr and lock symlinks are refused. CI repair 2c31dbd2 / CI38568187548 fully green; no new skips.
 Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.
 Three compiler sources retired; 84 integrated Rust tests / 770 repo tests / 526 cases pass.

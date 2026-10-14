@@ -103,7 +103,7 @@ current ownership until actual phase-2 tests.
 
 ### Local phase-1 gates
 
-New per-user drop-ins use `uwsm/tools/niri-session-gate.py` as ExecCondition for
+New per-user drop-ins use `nacre-helper niri-session-gate` as ExecCondition for
 `nacre-shell.service`, `nacre-session-watch.service` and `hypridle.service`. An
 explicit Hyprland desktop context passes through even if a stale niri socket is
 present. Plain niri cleanly skips these units. niri's future acceptance record is

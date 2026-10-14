@@ -981,3 +981,17 @@ The native observer blocks on X11/Niri/shutdown events and retains the existing
 one-shot 150 ms opening correction. Two new windows used one persistent action
 connection in the private runtime check. These results do not measure shell
 latency, aggregate memory or idle CPU; the quiet-window comparison remains pending.
+
+### Wave 2 prepared-session gate (busy machine)
+
+The existing child CPU accounting measured 100 fresh `shell` gate checks in an
+unknown disposable session after one warm-up. Both implementations denied the
+check with exit 1 and unchanged files.
+
+| Helper measurement; busy machine | Python reference | Rust release |
+| --- | ---: | ---: |
+| User + system CPU per fresh check (ms) | 31.178 | 0.984 |
+| Direct Python starts in 100 measured checks | 100 | 0 |
+
+No reliable fresh-helper RSS sample was collected for this short-lived command;
+no aggregate memory, shell latency or idle CPU change is claimed.

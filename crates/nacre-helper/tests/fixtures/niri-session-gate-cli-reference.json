@@ -1,0 +1,191 @@
+{
+  "source_sha256": "85f5079ca1983a3f9b9e4ee5d210b8a5a66fd1b2d1dc1db2b8db43177f4cb582",
+  "cases": [
+    {
+      "request": {
+        "args": []
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri-session-gate.py [-h] {shell,observer,idle}\nniri-session-gate.py: error: the following arguments are required: action\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "shell"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 1,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "observer"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 1,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "idle"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 1,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "unknown"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri-session-gate.py [-h] {shell,observer,idle}\nniri-session-gate.py: error: argument action: invalid choice: 'unknown' (choose from 'shell', 'observer', 'idle')\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--help"
+        ]
+      },
+      "observed": {
+        "stdout": "usage: niri-session-gate.py [-h] {shell,observer,idle}\n\nExecCondition for safe, opt-in niri acceptance without changing Hyprland.\n\npositional arguments:\n  {shell,observer,idle}\n\noptions:\n  -h, --help            show this help message and exit\n",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "-h"
+        ]
+      },
+      "observed": {
+        "stdout": "usage: niri-session-gate.py [-h] {shell,observer,idle}\n\nExecCondition for safe, opt-in niri acceptance without changing Hyprland.\n\npositional arguments:\n  {shell,observer,idle}\n\noptions:\n  -h, --help            show this help message and exit\n",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "shell",
+          "--help"
+        ]
+      },
+      "observed": {
+        "stdout": "usage: niri-session-gate.py [-h] {shell,observer,idle}\n\nExecCondition for safe, opt-in niri acceptance without changing Hyprland.\n\npositional arguments:\n  {shell,observer,idle}\n\noptions:\n  -h, --help            show this help message and exit\n",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "unknown",
+          "--help"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri-session-gate.py [-h] {shell,observer,idle}\nniri-session-gate.py: error: argument action: invalid choice: 'unknown' (choose from 'shell', 'observer', 'idle')\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "shell",
+          "idle"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri-session-gate.py [-h] {shell,observer,idle}\nniri-session-gate.py: error: unrecognized arguments: idle\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "shell",
+          "idle",
+          "--help"
+        ]
+      },
+      "observed": {
+        "stdout": "usage: niri-session-gate.py [-h] {shell,observer,idle}\n\nExecCondition for safe, opt-in niri acceptance without changing Hyprland.\n\npositional arguments:\n  {shell,observer,idle}\n\noptions:\n  -h, --help            show this help message and exit\n",
+        "stderr": "",
+        "exit": 0,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri-session-gate.py [-h] {shell,observer,idle}\nniri-session-gate.py: error: the following arguments are required: action\n",
+        "exit": 2,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--",
+          "shell"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 1,
+        "files": {}
+      }
+    },
+    {
+      "request": {
+        "args": [
+          "--bad"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: niri-session-gate.py [-h] {shell,observer,idle}\nniri-session-gate.py: error: the following arguments are required: action\n",
+        "exit": 2,
+        "files": {}
+      }
+    }
+  ]
+}
