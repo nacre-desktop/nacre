@@ -120,9 +120,9 @@ installation bookkeeping are distinguished from user preferences.
 | `desktop.json` / `dragPanels` | Settings / Desktop | Panels / Lips & pearls | `nacre/shell/services/DesktopSettings.qml`, `nacre/shell-tools/desktop-settings.py`, `nacre/shell/services/NacrePanelDragRouting.qml`, `nacre/shell/services/NacrePearls.qml` |
 | `desktop.json` / `topEdge` | Settings / Appearance | Panels / Edge subpages | `nacre/shell/services/DesktopSettings.qml`, `nacre/shell-tools/desktop-settings.py` |
 | `desktop.json` / `clickEdgeMenus` | Settings / Desktop | Panels / Lips & pearls | `nacre/shell/services/DesktopSettings.qml`, `nacre/shell-tools/desktop-settings.py` |
-| `desktop.json` / `leftEdge` | Settings / Appearance | Panels / Edge subpages | `nacre/shell/services/DesktopSettings.qml`, `nacre/shell-tools/desktop-settings.py` |
+| `desktop.json` / `leftEdge` | Settings / Appearance (frame thickness) | Appearance / Frame | `nacre/shell/services/DesktopSettings.qml`, `nacre/shell-tools/desktop-settings.py` |
 | `desktop.json` / `rightEdge` | Settings / Appearance | Panels / Edge subpages | `nacre/shell/services/DesktopSettings.qml`, `nacre/shell-tools/desktop-settings.py` |
-| `desktop.json` / `bottomEdge` | Settings / Appearance | Panels / Edge subpages | `nacre/shell/services/DesktopSettings.qml`, `nacre/shell-tools/desktop-settings.py` |
+| `desktop.json` / `bottomEdge` | Settings / Appearance (frame thickness) | Appearance / Frame | `nacre/shell/services/DesktopSettings.qml`, `nacre/shell-tools/desktop-settings.py` |
 | `desktop.json` / `leftDrawer` | Settings / Appearance and Nacre AI | Panels / Edge subpages | `nacre/shell/services/DesktopSettings.qml`, `nacre/shell-tools/desktop-settings.py`, `nacre/shell/services/NacrePanelDragRouting.qml`, `nacre/shell/services/NacrePearls.qml` |
 | `desktop.json` / `livePreviews` | Settings / Appearance | Windows & workspaces / Overview | `nacre/shell/services/DesktopSettings.qml`, `nacre/shell-tools/desktop-settings.py` |
 | `desktop.json` / `nativePalette` | Settings / Appearance | Launcher / Search sources | `nacre/shell/services/DesktopSettings.qml`, `nacre/shell-tools/desktop-settings.py` |
@@ -326,6 +326,22 @@ The prototype registers the target subpage and demonstrates rows/status with a
 small synthetic target manifest; phase 3 must obtain the complete runtime manifest
 from the owning publisher before enabling these controls.
 
+### CLI paths and fixed shell policy
+
+`cli.json.wallpaper.directory` is the random/collection source and
+`wallpaper.postHook` is an explicit post-selection hook read by
+`shell-cli/src/nacre_shell/cli.py`; place them under Wallpaper / Collections and
+an expert hook subpage respectively. `cli.json.orient.accents.{image}` holds
+per-image accent overrides; Colors / Studio owns them. Existing export/template
+configuration is an expert surface, not an executable-schema facility.
+`config/NacreNotifications.qml` fixes popup expiry at 5000 ms, with expire,
+actionOnClick and gesture thresholds; `config/NacreOsd.qml` fixes hideDelay at
+2000 ms. These are source policy today, not saved user controls. Notification
+popup duration/OSD style need an adapter and typed preference before migration.
+`NacreBar` reads workspace names/count/icons from profile; its geometry and the
+legacy NacreAppearance spacing/type/motion constants are UI implementation
+values, superseded incrementally by the shared scale, not new settings rows.
+
 ## Duplicates, orphans and missing settings
 
 | Finding | Evidence / resolution |
@@ -339,6 +355,7 @@ from the owning publisher before enabling these controls.
 | Profile values not identified in UI | Add provenance badge; never silently hide overridden values |
 | `reduceMotion` read but not in desktop-defaults | NacreTokens reads it, desktop-settings rejects unknown keys; future registered/backend field, no writable pretend toggle |
 | `albumPalette` in dashboard defaults | Reader exists but Customize has no switch; expose under Dashboard / Media in phase 3 |
+| Edge-key semantics | `NacreFrame` reads leftEdge/rightEdge/bottomEdge as frame thickness gates; NacrePanelInput reads leftDrawer for AI and rightEdge for Control center, with a separate top Dashboard lip. topEdge controls the bar/header. rightEdge has dual frame/panel effects. These keys are not orphaned; phase 3 must split or explicitly retain those semantics. |
 | Whole-store keys without Settings entry | launcher custom entries/roots, favorites/hidden/reset, font, default apps/startup, keyboard/layouts, profile workspaces, collections, Brain sync |
 | No top bar preferences owner yet | Modules/order/tray/clock settings need provider/schema from owning panel task; don't invent files |
 | Requested but absent backend | Mono font/text size, lip size/delay, automatic theme schedule, contrast preference, per-app theming switches/status, notification popup/OSD/retention policy/schedule, AC/battery profiles, battery-saver bundle, idle UI/lid/button/battery-alert preferences, VRR GUI, lock wallpaper selection, login follows colors toggle, settings backup/restore GUI |
@@ -464,3 +481,66 @@ store itself is event-driven; there is no periodic preference polling.
 row density, diagram behavior, normal/narrow layout, Colors studio boundary and
 unavailable-feature treatment. Only approval authorizes remaining pages, CLI/IPC
 migration, removing the old catalog and the final docs/usage.md/gallery update.
+
+
+## Phase 2 implementation and review status
+
+The prototype lives in `nacre/shell/modules/settings/prototype`, reads the
+manifest's fragment list, and leaves the legacy page catalog/routes installed.
+Forty setting descriptors, thirty page/subpage descriptors and schema-v1 JSON
+are present. JSON Schema validation uses developer-only jsonschema 4.26.0; source
+CI installs it with test tooling, not desktop runtime packages. The initial
+fragments describe the full navigation but only the four prototype pages and
+their entity/editor subpages have setting rows. Search therefore indexes those
+forty descriptors; phase 3 must add the audited remainder before replacing the
+old catalog. Packages/Software are gated, empty reservations, with no manager.
+
+Run `python3 tools/settings-preview.py --gallery --output /tmp/nacre-settings-gallery`
+to reproduce the review, or omit `--gallery` for interactive review. It launches
+only a private nested Niri, a private D-Bus without service activation, a private
+HOME/XDG state tree and Quickshell with synthetic providers. It reuses unchanged
+widgets and both owning editor components. The font is a bounded, checksum-
+verified preview copy from the existing pinned asset manifest; no font install.
+All subprocesses are nice 10. Native IPC targets only this preview path/socket.
+No live providers, package actions, systemd session imports or production store
+writes are used. Click/hover and Colors choices persist only to the isolated
+preview file; disabled planned fields cannot write. State v2/corruption is
+preserved, and failures are surfaced. Production must delegate versioned writes
+to the foundation owner rather than use this preview-only file writer.
+
+The existing `NacreSettingsWindow.qml` also receives a transparent background and
+shared `NacreClip` with `radii.large`, so the requested rounded box is a source
+fix independent of migrating pages. No live deployment was performed.
+
+[Review gallery](../../assets/screenshots/settings-review/README.md) includes
+normal 1100×840 and narrow 620×840 native Qt item captures from the nested
+session, top/lower content, both shared editors, App theming, search and row
+highlight. Capture checks include actual serialized preview writes, invalid type
+rejection, battery/AI route gating and alias fallback. The metadata records the
+base revision plus source hashes because captures precede their commit.
+
+The design uses existing token roles: body #18232a, raised #223139, ink #e2ebef,
+muted ink #abbec7, accent #99cbd9 and outline #6f8792 in the synthetic fixture.
+DejaVu Sans is the public fixture text family, Material Symbols Rounded the
+pinned icon family. Layout emphasizes the screen diagram; surrounding rows stay
+quiet and left aligned. Native screenshots were visually checked at both widths.
+The Colors thumbnail is a representative synthetic light/dark/source preview,
+not a fresh Orient-generated palette; real publication remains in its owner.
+The shared Dashboard editor retains its own heading/spacing and long content;
+phase 3 should coordinate a section/heading API with its owner to meet the full
+control budget without forking it. Its internal controls are not counted as
+fifteen generic registry rows. App theming demonstrates target/status rows but
+per-target switches and full runtime target discovery are still planned.
+
+Local validation: JSON Schema/default/i18n/ownership/search/route/gating tests;
+eight native QML cases (including real pointer and keyboard input, reset,
+provenance/dependencies and preview version protection); existing Settings
+launcher/UI suites; app-file, shared-foundation and translation tests; Qt format/
+parse for all Settings sources; Ruff; i18n coverage/generated assets; nested
+persistence/gallery. The complete native source/fresh-install pipeline runs in
+CI. This machine has no Cargo toolchain, so no new native build was performed
+for an unchanged Rust/UI-only task; existing native dependencies were used only
+for the targeted translation tests. Phase 1 Source CI passed desktop and fresh
+install. Phase 2's exact CI result is recorded in the owner handoff.
+
+**Awaiting owner review. No phase 3 migration has begun.**

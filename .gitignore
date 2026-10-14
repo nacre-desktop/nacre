@@ -54,3 +54,7 @@ node_modules/
 
 # Upstream reference checkouts (research only).
 /.research/
+
+# Reviewed Settings prototype evidence; synthetic data only.
+!/assets/screenshots/settings-review/
+!/assets/screenshots/settings-review/*.png

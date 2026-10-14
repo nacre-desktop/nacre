@@ -107,6 +107,31 @@ def references(root):
             for field in ("label", "description", "confirm"):
                 if row.get(field + "Id"):
                     result.add(row[field + "Id"])
+    # Portable Settings fragments carry the same i18n identifiers as QML.
+    registry = root / "nacre/shell/modules/settings/registry"
+    if (registry / "manifest.json").exists():
+
+        def identifiers(value):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    if key.endswith("Id") and isinstance(item, str):
+                        result.add(item)
+                    else:
+                        identifiers(item)
+            elif isinstance(value, list):
+                for item in value:
+                    identifiers(item)
+
+        for fragment in json.loads((registry / "manifest.json").read_text())[
+            "fragments"
+        ]:
+            identifiers(json.loads((registry / fragment).read_text()))
+        for path in (root / "nacre/shell/modules/settings/prototype").glob("*.qml"):
+            result.update(
+                re.findall(
+                    r'"(settings\.(?:registry|preview)\.[^"]+)"', path.read_text()
+                )
+            )
     return result
 
 

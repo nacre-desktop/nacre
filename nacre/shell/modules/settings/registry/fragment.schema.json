@@ -1,0 +1,447 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nacre Settings fragment v1",
+  "type": "object",
+  "required": [
+    "version"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "labelId",
+          "order"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "labelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "descriptionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order": {
+            "type": "integer"
+          },
+          "visibleWhen": {
+            "$ref": "#/$defs/condition"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "group",
+          "icon",
+          "labelId",
+          "descriptionId",
+          "order",
+          "prototype"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "labelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "descriptionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order": {
+            "type": "integer"
+          },
+          "visibleWhen": {
+            "$ref": "#/$defs/condition"
+          },
+          "group": {
+            "type": "string",
+            "minLength": 1
+          },
+          "icon": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parent": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prototype": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "page",
+          "labelId",
+          "order"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "labelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "descriptionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order": {
+            "type": "integer"
+          },
+          "visibleWhen": {
+            "$ref": "#/$defs/condition"
+          },
+          "page": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customType": {
+            "enum": [
+              "panels-diagram",
+              "colors-preview",
+              "wallpaper-picker",
+              "display-arrangement",
+              "wifi-list",
+              "shared-editor"
+            ]
+          },
+          "editor": {
+            "enum": [
+              "dashboard",
+              "control-center"
+            ]
+          },
+          "reserved": {
+            "type": "boolean"
+          },
+          "dependsOn": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "settings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "page",
+          "section",
+          "key",
+          "labelId",
+          "descriptionId",
+          "type",
+          "store",
+          "default",
+          "apply",
+          "synonyms",
+          "advanced"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "labelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "descriptionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order": {
+            "type": "integer"
+          },
+          "visibleWhen": {
+            "$ref": "#/$defs/condition"
+          },
+          "page": {
+            "type": "string",
+            "minLength": 1
+          },
+          "section": {
+            "type": "string",
+            "minLength": 1
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "enum": [
+              "boolean",
+              "integer",
+              "number",
+              "string",
+              "enum",
+              "array"
+            ]
+          },
+          "store": {
+            "type": "object",
+            "required": [
+              "file",
+              "key"
+            ],
+            "properties": {
+              "file": {
+                "type": "string",
+                "minLength": 1
+              },
+              "key": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "default": {},
+          "apply": {
+            "enum": [
+              "instant",
+              "confirm",
+              "restart"
+            ]
+          },
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "advanced": {
+            "type": "boolean"
+          },
+          "options": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "required": [
+                "value",
+                "labelId"
+              ],
+              "properties": {
+                "value": {},
+                "labelId": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "range": {
+            "type": "object",
+            "required": [
+              "min",
+              "max",
+              "step"
+            ],
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "step": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "additionalProperties": false
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1
+          },
+          "enabledWhen": {
+            "$ref": "#/$defs/condition"
+          },
+          "dependsOn": {
+            "type": "string",
+            "minLength": 1
+          },
+          "backend": {
+            "enum": [
+              "planned"
+            ]
+          },
+          "unavailableId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "editorOwned": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "page",
+          "section",
+          "labelId",
+          "descriptionId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "labelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "descriptionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order": {
+            "type": "integer"
+          },
+          "visibleWhen": {
+            "$ref": "#/$defs/condition"
+          },
+          "page": {
+            "type": "string",
+            "minLength": 1
+          },
+          "section": {
+            "type": "string",
+            "minLength": 1
+          },
+          "route": {
+            "type": "string",
+            "minLength": 1
+          },
+          "adapter": {
+            "enum": [
+              "colors-studio",
+              "launcher-history"
+            ]
+          },
+          "confirm": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "aliases": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "capability"
+          ],
+          "properties": {
+            "capability": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "all"
+          ],
+          "properties": {
+            "all": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/condition"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "any"
+          ],
+          "properties": {
+            "any": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/condition"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "not"
+          ],
+          "properties": {
+            "not": {
+              "$ref": "#/$defs/condition"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

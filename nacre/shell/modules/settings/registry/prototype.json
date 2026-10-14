@@ -1,0 +1,1285 @@
+{
+  "version": 1,
+  "sections": [
+    {
+      "id": "panels.overview",
+      "page": "panels",
+      "labelId": "settings.registry.panels.overview.label",
+      "order": 0,
+      "customType": "panels-diagram"
+    },
+    {
+      "id": "panels.lips",
+      "page": "panels",
+      "labelId": "settings.registry.panels.lips.label",
+      "order": 1,
+      "descriptionId": "settings.registry.panels.lips.description"
+    },
+    {
+      "id": "panels/top-bar.panel",
+      "page": "panels/top-bar",
+      "labelId": "settings.registry.panels.top-bar.panel.label",
+      "order": 0
+    },
+    {
+      "id": "panels/dashboard.panel",
+      "page": "panels/dashboard",
+      "labelId": "settings.registry.panels.dashboard.panel.label",
+      "order": 0
+    },
+    {
+      "id": "panels/dashboard.editor",
+      "page": "panels/dashboard",
+      "labelId": "settings.registry.panels.dashboard.editor.label",
+      "order": 1,
+      "customType": "shared-editor",
+      "editor": "dashboard",
+      "dependsOn": "panels/dashboard.panel.enabled"
+    },
+    {
+      "id": "panels/control-center.panel",
+      "page": "panels/control-center",
+      "labelId": "settings.registry.panels.control-center.panel.label",
+      "order": 0
+    },
+    {
+      "id": "panels/control-center.editor",
+      "page": "panels/control-center",
+      "labelId": "settings.registry.panels.control-center.editor.label",
+      "order": 1,
+      "customType": "shared-editor",
+      "editor": "control-center",
+      "dependsOn": "panels/control-center.panel.enabled"
+    },
+    {
+      "id": "panels/ai-sidebar.panel",
+      "page": "panels/ai-sidebar",
+      "labelId": "settings.registry.panels.ai-sidebar.panel.label",
+      "order": 0
+    },
+    {
+      "id": "panels/bottom.panel",
+      "page": "panels/bottom",
+      "labelId": "settings.registry.panels.bottom.panel.label",
+      "order": 0
+    },
+    {
+      "id": "colors.preview",
+      "page": "colors",
+      "labelId": "settings.registry.colors.preview.label",
+      "order": 0,
+      "customType": "colors-preview"
+    },
+    {
+      "id": "colors.palette",
+      "page": "colors",
+      "labelId": "settings.registry.colors.palette.label",
+      "order": 1
+    },
+    {
+      "id": "colors.readability",
+      "page": "colors",
+      "labelId": "settings.registry.colors.readability.label",
+      "order": 2
+    },
+    {
+      "id": "colors.applications",
+      "page": "colors",
+      "labelId": "settings.registry.colors.applications.label",
+      "order": 3
+    },
+    {
+      "id": "colors/app-theming.targets",
+      "page": "colors/app-theming",
+      "labelId": "settings.registry.colors.app-theming.targets.label",
+      "order": 0
+    },
+    {
+      "id": "launcher.sources",
+      "page": "launcher",
+      "labelId": "settings.registry.launcher.sources.label",
+      "order": 0
+    },
+    {
+      "id": "launcher.web",
+      "page": "launcher",
+      "labelId": "settings.registry.launcher.web.label",
+      "order": 1
+    },
+    {
+      "id": "launcher.apps",
+      "page": "launcher",
+      "labelId": "settings.registry.launcher.apps.label",
+      "order": 2
+    },
+    {
+      "id": "launcher.packages",
+      "page": "launcher",
+      "labelId": "settings.registry.launcher.packages.label",
+      "order": 3,
+      "visibleWhen": {
+        "capability": "packages"
+      },
+      "reserved": true
+    },
+    {
+      "id": "apps.software",
+      "page": "apps",
+      "labelId": "settings.registry.apps.software.label",
+      "order": 0,
+      "visibleWhen": {
+        "capability": "packages"
+      },
+      "reserved": true
+    },
+    {
+      "id": "launcher/favorites.list",
+      "page": "launcher/favorites",
+      "labelId": "settings.registry.launcher.favorites.list.label",
+      "order": 0
+    },
+    {
+      "id": "launcher/entries.list",
+      "page": "launcher/entries",
+      "labelId": "settings.registry.launcher.entries.list.label",
+      "order": 0
+    },
+    {
+      "id": "power.profiles",
+      "page": "power",
+      "labelId": "settings.registry.power.profiles.label",
+      "order": 0
+    },
+    {
+      "id": "power.saver",
+      "page": "power",
+      "labelId": "settings.registry.power.saver.label",
+      "order": 1
+    },
+    {
+      "id": "power.idle",
+      "page": "power",
+      "labelId": "settings.registry.power.idle.label",
+      "order": 2
+    },
+    {
+      "id": "power.hardware",
+      "page": "power",
+      "labelId": "settings.registry.power.hardware.label",
+      "order": 3
+    }
+  ],
+  "settings": [
+    {
+      "id": "panels.lips.clickEdgeMenus",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "clickEdgeMenus",
+      "labelId": "settings.registry.panels.lips.clickEdgeMenus.label",
+      "descriptionId": "settings.registry.panels.lips.clickEdgeMenus.description",
+      "type": "enum",
+      "store": {
+        "file": "desktop.json",
+        "key": [
+          "clickEdgeMenus"
+        ]
+      },
+      "default": false,
+      "apply": "instant",
+      "synonyms": [
+        "lip",
+        "lips",
+        "hover",
+        "edge menus"
+      ],
+      "advanced": false,
+      "options": [
+        {
+          "value": false,
+          "labelId": "settings.registry.panels.open.option.false"
+        },
+        {
+          "value": true,
+          "labelId": "settings.registry.panels.open.option.true"
+        }
+      ]
+    },
+    {
+      "id": "panels.lips.detachablePanels",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "detachablePanels",
+      "labelId": "settings.registry.panels.lips.detachablePanels.label",
+      "descriptionId": "settings.registry.panels.lips.detachablePanels.description",
+      "type": "boolean",
+      "store": {
+        "file": "desktop.json",
+        "key": [
+          "detachablePanels"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        "pearls",
+        "detach",
+        "bead"
+      ],
+      "advanced": false
+    },
+    {
+      "id": "panels.lips.dragPanels",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "dragPanels",
+      "labelId": "settings.registry.panels.lips.dragPanels.label",
+      "descriptionId": "settings.registry.panels.lips.dragPanels.description",
+      "type": "boolean",
+      "store": {
+        "file": "desktop.json",
+        "key": [
+          "dragPanels"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "dependsOn": "panels.lips.detachablePanels"
+    },
+    {
+      "id": "panels.lips.lipSize",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "lipSize",
+      "labelId": "settings.registry.panels.lips.lipSize.label",
+      "descriptionId": "settings.registry.panels.lips.lipSize.description",
+      "type": "integer",
+      "store": {
+        "file": "panels.json",
+        "key": [
+          "lipSize"
+        ]
+      },
+      "default": 48,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "range": {
+        "min": 24,
+        "max": 96,
+        "step": 4
+      },
+      "unit": "px",
+      "backend": "planned",
+      "unavailableId": "settings.registry.panels.lipSize.unavailable"
+    },
+    {
+      "id": "panels.lips.hoverDelay",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "hoverDelay",
+      "labelId": "settings.registry.panels.lips.hoverDelay.label",
+      "descriptionId": "settings.registry.panels.lips.hoverDelay.description",
+      "type": "integer",
+      "store": {
+        "file": "panels.json",
+        "key": [
+          "hoverDelay"
+        ]
+      },
+      "default": 180,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "range": {
+        "min": 0,
+        "max": 800,
+        "step": 20
+      },
+      "unit": "ms",
+      "backend": "planned",
+      "unavailableId": "settings.registry.panels.hoverDelay.unavailable"
+    },
+    {
+      "id": "panels/top-bar.panel.enabled",
+      "page": "panels/top-bar",
+      "section": "panels/top-bar.panel",
+      "key": "enabled",
+      "labelId": "settings.registry.panels.top-bar.panel.enabled.label",
+      "descriptionId": "settings.registry.panels.top-bar.panel.enabled.description",
+      "type": "boolean",
+      "store": {
+        "file": "desktop.json",
+        "key": [
+          "topEdge"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false
+    },
+    {
+      "id": "panels/dashboard.panel.enabled",
+      "page": "panels/dashboard",
+      "section": "panels/dashboard.panel",
+      "key": "enabled",
+      "labelId": "settings.registry.panels.dashboard.panel.enabled.label",
+      "descriptionId": "settings.registry.panels.dashboard.panel.enabled.description",
+      "type": "boolean",
+      "store": {
+        "file": "panels.json",
+        "key": [
+          "dashboardEnabled"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.panels.dashboard.unavailable"
+    },
+    {
+      "id": "panels/control-center.panel.enabled",
+      "page": "panels/control-center",
+      "section": "panels/control-center.panel",
+      "key": "enabled",
+      "labelId": "settings.registry.panels.control-center.panel.enabled.label",
+      "descriptionId": "settings.registry.panels.control-center.panel.enabled.description",
+      "type": "boolean",
+      "store": {
+        "file": "desktop.json",
+        "key": [
+          "rightEdge"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false
+    },
+    {
+      "id": "panels/ai-sidebar.panel.enabled",
+      "page": "panels/ai-sidebar",
+      "section": "panels/ai-sidebar.panel",
+      "key": "enabled",
+      "labelId": "settings.registry.panels.ai-sidebar.panel.enabled.label",
+      "descriptionId": "settings.registry.panels.ai-sidebar.panel.enabled.description",
+      "type": "boolean",
+      "store": {
+        "file": "desktop.json",
+        "key": [
+          "leftDrawer"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false
+    },
+    {
+      "id": "panels/bottom.panel.enabled",
+      "page": "panels/bottom",
+      "section": "panels/bottom.panel",
+      "key": "enabled",
+      "labelId": "settings.registry.panels.bottom.panel.enabled.label",
+      "descriptionId": "settings.registry.panels.bottom.panel.enabled.description",
+      "type": "boolean",
+      "store": {
+        "file": "desktop.json",
+        "key": [
+          "bottomPanel"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.panels.bottom.unavailable"
+    },
+    {
+      "id": "panels/dashboard.editor.pages",
+      "page": "panels/dashboard",
+      "section": "panels/dashboard.editor",
+      "key": "pages",
+      "labelId": "settings.registry.panels.dashboard.editor.pages.label",
+      "descriptionId": "settings.registry.panels.dashboard.editor.pages.description",
+      "type": "array",
+      "store": {
+        "file": "dashboard.json",
+        "key": [
+          "tabs"
+        ]
+      },
+      "default": [
+        "today",
+        "media",
+        "weather",
+        "system"
+      ],
+      "apply": "instant",
+      "synonyms": [
+        "customize",
+        "tabs",
+        "extras"
+      ],
+      "advanced": false,
+      "editorOwned": true
+    },
+    {
+      "id": "panels/control-center.editor.tiles",
+      "page": "panels/control-center",
+      "section": "panels/control-center.editor",
+      "key": "tiles",
+      "labelId": "settings.registry.panels.control-center.editor.tiles.label",
+      "descriptionId": "settings.registry.panels.control-center.editor.tiles.description",
+      "type": "array",
+      "store": {
+        "file": "control-center.json",
+        "key": [
+          "tiles"
+        ]
+      },
+      "default": [
+        "volume",
+        "brightness",
+        "network",
+        "bluetooth",
+        "battery",
+        "night",
+        "dnd",
+        "awake",
+        "appearance"
+      ],
+      "apply": "instant",
+      "synonyms": [
+        "edit",
+        "quick controls"
+      ],
+      "advanced": false,
+      "editorOwned": true
+    },
+    {
+      "id": "colors.palette.source",
+      "page": "colors",
+      "section": "colors.palette",
+      "key": "source",
+      "labelId": "settings.registry.colors.palette.source.label",
+      "descriptionId": "settings.registry.colors.palette.source.description",
+      "type": "enum",
+      "store": {
+        "file": "wallpaper-picker.json",
+        "key": [
+          "palettePreset"
+        ]
+      },
+      "default": "wallpaper",
+      "apply": "instant",
+      "synonyms": [
+        "orient",
+        "color family",
+        "theme"
+      ],
+      "advanced": false,
+      "options": [
+        {
+          "value": "wallpaper",
+          "labelId": "settings.registry.colors.source.option.wallpaper"
+        },
+        {
+          "value": "ocean",
+          "labelId": "settings.registry.colors.source.option.ocean"
+        }
+      ]
+    },
+    {
+      "id": "colors.palette.mode",
+      "page": "colors",
+      "section": "colors.palette",
+      "key": "mode",
+      "labelId": "settings.registry.colors.palette.mode.label",
+      "descriptionId": "settings.registry.colors.palette.mode.description",
+      "type": "enum",
+      "store": {
+        "file": "wallpaper-picker.json",
+        "key": [
+          "paletteMode"
+        ]
+      },
+      "default": "dark",
+      "apply": "instant",
+      "synonyms": [
+        "light",
+        "dark"
+      ],
+      "advanced": false,
+      "options": [
+        {
+          "value": "light",
+          "labelId": "settings.registry.colors.mode.option.light"
+        },
+        {
+          "value": "dark",
+          "labelId": "settings.registry.colors.mode.option.dark"
+        }
+      ]
+    },
+    {
+      "id": "colors.palette.automatic",
+      "page": "colors",
+      "section": "colors.palette",
+      "key": "automatic",
+      "labelId": "settings.registry.colors.palette.automatic.label",
+      "descriptionId": "settings.registry.colors.palette.automatic.description",
+      "type": "boolean",
+      "store": {
+        "file": "colors.json",
+        "key": [
+          "schedule",
+          "enabled"
+        ]
+      },
+      "default": false,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.colors.schedule.unavailable"
+    },
+    {
+      "id": "colors.palette.style",
+      "page": "colors",
+      "section": "colors.palette",
+      "key": "style",
+      "labelId": "settings.registry.colors.palette.style.label",
+      "descriptionId": "settings.registry.colors.palette.style.description",
+      "type": "enum",
+      "store": {
+        "file": "wallpaper-picker.json",
+        "key": [
+          "palettePersonality"
+        ]
+      },
+      "default": "natural",
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "options": [
+        {
+          "value": "natural",
+          "labelId": "settings.registry.colors.style.option.natural"
+        },
+        {
+          "value": "pigment",
+          "labelId": "settings.registry.colors.style.option.pigment"
+        },
+        {
+          "value": "harmony",
+          "labelId": "settings.registry.colors.style.option.harmony"
+        },
+        {
+          "value": "pop",
+          "labelId": "settings.registry.colors.style.option.pop"
+        },
+        {
+          "value": "mist",
+          "labelId": "settings.registry.colors.style.option.mist"
+        },
+        {
+          "value": "vivid",
+          "labelId": "settings.registry.colors.style.option.vivid"
+        },
+        {
+          "value": "pearl",
+          "labelId": "settings.registry.colors.style.option.pearl"
+        },
+        {
+          "value": "tide",
+          "labelId": "settings.registry.colors.style.option.tide"
+        }
+      ]
+    },
+    {
+      "id": "colors.readability.contrast",
+      "page": "colors",
+      "section": "colors.readability",
+      "key": "contrast",
+      "labelId": "settings.registry.colors.readability.contrast.label",
+      "descriptionId": "settings.registry.colors.readability.contrast.description",
+      "type": "enum",
+      "store": {
+        "file": "state:scheme.json",
+        "key": [
+          "flavour"
+        ]
+      },
+      "default": "default",
+      "apply": "instant",
+      "synonyms": [
+        "readability",
+        "legibility"
+      ],
+      "advanced": false,
+      "options": [
+        {
+          "value": "default",
+          "labelId": "settings.registry.colors.contrast.option.default"
+        },
+        {
+          "value": "hard",
+          "labelId": "settings.registry.colors.contrast.option.hard"
+        }
+      ]
+    },
+    {
+      "id": "colors/app-theming.targets.gtk",
+      "page": "colors/app-theming",
+      "section": "colors/app-theming.targets",
+      "key": "gtk",
+      "labelId": "settings.registry.colors.app-theming.targets.gtk.label",
+      "descriptionId": "settings.registry.colors.app-theming.targets.gtk.description",
+      "type": "boolean",
+      "store": {
+        "file": "app-theming.json",
+        "key": [
+          "gtk"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.colors.target.unavailable"
+    },
+    {
+      "id": "colors/app-theming.targets.qt",
+      "page": "colors/app-theming",
+      "section": "colors/app-theming.targets",
+      "key": "qt",
+      "labelId": "settings.registry.colors.app-theming.targets.qt.label",
+      "descriptionId": "settings.registry.colors.app-theming.targets.qt.description",
+      "type": "boolean",
+      "store": {
+        "file": "app-theming.json",
+        "key": [
+          "qt"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.colors.target.unavailable"
+    },
+    {
+      "id": "colors/app-theming.targets.kitty",
+      "page": "colors/app-theming",
+      "section": "colors/app-theming.targets",
+      "key": "kitty",
+      "labelId": "settings.registry.colors.app-theming.targets.kitty.label",
+      "descriptionId": "settings.registry.colors.app-theming.targets.kitty.description",
+      "type": "boolean",
+      "store": {
+        "file": "app-theming.json",
+        "key": [
+          "kitty"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.colors.target.unavailable"
+    },
+    {
+      "id": "colors/app-theming.targets.rofi",
+      "page": "colors/app-theming",
+      "section": "colors/app-theming.targets",
+      "key": "rofi",
+      "labelId": "settings.registry.colors.app-theming.targets.rofi.label",
+      "descriptionId": "settings.registry.colors.app-theming.targets.rofi.description",
+      "type": "boolean",
+      "store": {
+        "file": "app-theming.json",
+        "key": [
+          "rofi"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.colors.target.unavailable"
+    },
+    {
+      "id": "colors/app-theming.targets.lock",
+      "page": "colors/app-theming",
+      "section": "colors/app-theming.targets",
+      "key": "lock",
+      "labelId": "settings.registry.colors.app-theming.targets.lock.label",
+      "descriptionId": "settings.registry.colors.app-theming.targets.lock.description",
+      "type": "boolean",
+      "store": {
+        "file": "app-theming.json",
+        "key": [
+          "lock"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.colors.target.unavailable"
+    },
+    {
+      "id": "launcher.sources.brain",
+      "page": "launcher",
+      "section": "launcher.sources",
+      "key": "brain",
+      "labelId": "settings.registry.launcher.sources.brain.label",
+      "descriptionId": "settings.registry.launcher.sources.brain.description",
+      "type": "boolean",
+      "store": {
+        "file": "launcher-sources.json",
+        "key": [
+          "brain"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        "#",
+        "prefix",
+        "search"
+      ],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.launcher.sources.unavailable",
+      "visibleWhen": {
+        "capability": "brain"
+      }
+    },
+    {
+      "id": "launcher.sources.files",
+      "page": "launcher",
+      "section": "launcher.sources",
+      "key": "files",
+      "labelId": "settings.registry.launcher.sources.files.label",
+      "descriptionId": "settings.registry.launcher.sources.files.description",
+      "type": "boolean",
+      "store": {
+        "file": "launcher-sources.json",
+        "key": [
+          "files"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        ":",
+        "prefix",
+        "search"
+      ],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.launcher.sources.unavailable"
+    },
+    {
+      "id": "launcher.sources.calculator",
+      "page": "launcher",
+      "section": "launcher.sources",
+      "key": "calculator",
+      "labelId": "settings.registry.launcher.sources.calculator.label",
+      "descriptionId": "settings.registry.launcher.sources.calculator.description",
+      "type": "boolean",
+      "store": {
+        "file": "launcher-sources.json",
+        "key": [
+          "calculator"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        "=",
+        "prefix",
+        "search"
+      ],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.launcher.sources.unavailable"
+    },
+    {
+      "id": "launcher.sources.actions",
+      "page": "launcher",
+      "section": "launcher.sources",
+      "key": "actions",
+      "labelId": "settings.registry.launcher.sources.actions.label",
+      "descriptionId": "settings.registry.launcher.sources.actions.description",
+      "type": "boolean",
+      "store": {
+        "file": "launcher-sources.json",
+        "key": [
+          "actions"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        ">",
+        "prefix",
+        "search"
+      ],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.launcher.sources.unavailable"
+    },
+    {
+      "id": "launcher.sources.ai",
+      "page": "launcher",
+      "section": "launcher.sources",
+      "key": "ai",
+      "labelId": "settings.registry.launcher.sources.ai.label",
+      "descriptionId": "settings.registry.launcher.sources.ai.description",
+      "type": "boolean",
+      "store": {
+        "file": "launcher-sources.json",
+        "key": [
+          "ai"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        "?",
+        "prefix",
+        "search"
+      ],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.launcher.sources.unavailable",
+      "visibleWhen": {
+        "capability": "ai"
+      }
+    },
+    {
+      "id": "launcher.web.engine",
+      "page": "launcher",
+      "section": "launcher.web",
+      "key": "engine",
+      "labelId": "settings.registry.launcher.web.engine.label",
+      "descriptionId": "settings.registry.launcher.web.engine.description",
+      "type": "enum",
+      "store": {
+        "file": "launcher-sources.json",
+        "key": [
+          "webEngine"
+        ]
+      },
+      "default": "duckduckgo",
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "options": [
+        {
+          "value": "duckduckgo",
+          "labelId": "settings.registry.launcher.engine.option.duckduckgo"
+        },
+        {
+          "value": "google",
+          "labelId": "settings.registry.launcher.engine.option.google"
+        },
+        {
+          "value": "brave",
+          "labelId": "settings.registry.launcher.engine.option.brave"
+        }
+      ],
+      "backend": "planned",
+      "unavailableId": "settings.registry.launcher.web.unavailable"
+    },
+    {
+      "id": "launcher/favorites.list.favorites",
+      "page": "launcher/favorites",
+      "section": "launcher/favorites.list",
+      "key": "favorites",
+      "labelId": "settings.registry.launcher.favorites.list.favorites.label",
+      "descriptionId": "settings.registry.launcher.favorites.list.favorites.description",
+      "type": "array",
+      "store": {
+        "file": "launcher.json",
+        "key": [
+          "favorites"
+        ]
+      },
+      "default": [],
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.launcher.entities.unavailable"
+    },
+    {
+      "id": "launcher/favorites.list.hidden",
+      "page": "launcher/favorites",
+      "section": "launcher/favorites.list",
+      "key": "hidden",
+      "labelId": "settings.registry.launcher.favorites.list.hidden.label",
+      "descriptionId": "settings.registry.launcher.favorites.list.hidden.description",
+      "type": "array",
+      "store": {
+        "file": "launcher.json",
+        "key": [
+          "hidden"
+        ]
+      },
+      "default": [],
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.launcher.entities.unavailable"
+    },
+    {
+      "id": "launcher/entries.list.entries",
+      "page": "launcher/entries",
+      "section": "launcher/entries.list",
+      "key": "entries",
+      "labelId": "settings.registry.launcher.entries.list.entries.label",
+      "descriptionId": "settings.registry.launcher.entries.list.entries.description",
+      "type": "array",
+      "store": {
+        "file": "launcher-workflows.json",
+        "key": [
+          "entries"
+        ]
+      },
+      "default": [],
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.launcher.entities.unavailable"
+    },
+    {
+      "id": "launcher/entries.list.roots",
+      "page": "launcher/entries",
+      "section": "launcher/entries.list",
+      "key": "roots",
+      "labelId": "settings.registry.launcher.entries.list.roots.label",
+      "descriptionId": "settings.registry.launcher.entries.list.roots.description",
+      "type": "array",
+      "store": {
+        "file": "launcher-workflows.json",
+        "key": [
+          "roots"
+        ]
+      },
+      "default": [],
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.launcher.entities.unavailable"
+    },
+    {
+      "id": "power.profiles.ac",
+      "page": "power",
+      "section": "power.profiles",
+      "key": "ac",
+      "labelId": "settings.registry.power.profiles.ac.label",
+      "descriptionId": "settings.registry.power.profiles.ac.description",
+      "type": "enum",
+      "store": {
+        "file": "power.json",
+        "key": [
+          "profiles",
+          "ac"
+        ]
+      },
+      "default": "balanced",
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "options": [
+        {
+          "value": "power-saver",
+          "labelId": "settings.registry.power.profile.option.power-saver"
+        },
+        {
+          "value": "balanced",
+          "labelId": "settings.registry.power.profile.option.balanced"
+        },
+        {
+          "value": "performance",
+          "labelId": "settings.registry.power.profile.option.performance"
+        }
+      ],
+      "backend": "planned",
+      "unavailableId": "settings.registry.power.profiles.unavailable"
+    },
+    {
+      "id": "power.profiles.battery",
+      "page": "power",
+      "section": "power.profiles",
+      "key": "battery",
+      "labelId": "settings.registry.power.profiles.battery.label",
+      "descriptionId": "settings.registry.power.profiles.battery.description",
+      "type": "enum",
+      "store": {
+        "file": "power.json",
+        "key": [
+          "profiles",
+          "battery"
+        ]
+      },
+      "default": "power-saver",
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "options": [
+        {
+          "value": "power-saver",
+          "labelId": "settings.registry.power.profile.option.power-saver"
+        },
+        {
+          "value": "balanced",
+          "labelId": "settings.registry.power.profile.option.balanced"
+        },
+        {
+          "value": "performance",
+          "labelId": "settings.registry.power.profile.option.performance"
+        }
+      ],
+      "backend": "planned",
+      "unavailableId": "settings.registry.power.profiles.unavailable"
+    },
+    {
+      "id": "power.saver.enabled",
+      "page": "power",
+      "section": "power.saver",
+      "key": "enabled",
+      "labelId": "settings.registry.power.saver.enabled.label",
+      "descriptionId": "settings.registry.power.saver.enabled.description",
+      "type": "boolean",
+      "store": {
+        "file": "power.json",
+        "key": [
+          "saver",
+          "enabled"
+        ]
+      },
+      "default": false,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.power.saver.unavailable"
+    },
+    {
+      "id": "power.idle.dim",
+      "page": "power",
+      "section": "power.idle",
+      "key": "dim",
+      "labelId": "settings.registry.power.idle.dim.label",
+      "descriptionId": "settings.registry.power.idle.dim.description",
+      "type": "integer",
+      "store": {
+        "file": "power.json",
+        "key": [
+          "idle",
+          "dim"
+        ]
+      },
+      "default": 5,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "range": {
+        "min": 1,
+        "max": 60,
+        "step": 1
+      },
+      "unit": "min",
+      "backend": "planned",
+      "unavailableId": "settings.registry.power.idle.unavailable"
+    },
+    {
+      "id": "power.idle.sleep",
+      "page": "power",
+      "section": "power.idle",
+      "key": "sleep",
+      "labelId": "settings.registry.power.idle.sleep.label",
+      "descriptionId": "settings.registry.power.idle.sleep.description",
+      "type": "integer",
+      "store": {
+        "file": "power.json",
+        "key": [
+          "idle",
+          "sleep"
+        ]
+      },
+      "default": 30,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "range": {
+        "min": 1,
+        "max": 60,
+        "step": 1
+      },
+      "unit": "min",
+      "backend": "planned",
+      "unavailableId": "settings.registry.power.idle.unavailable"
+    },
+    {
+      "id": "power.hardware.lid",
+      "page": "power",
+      "section": "power.hardware",
+      "key": "lid",
+      "labelId": "settings.registry.power.hardware.lid.label",
+      "descriptionId": "settings.registry.power.hardware.lid.description",
+      "type": "enum",
+      "store": {
+        "file": "power.json",
+        "key": [
+          "lid"
+        ]
+      },
+      "default": "suspend",
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "options": [
+        {
+          "value": "suspend",
+          "labelId": "settings.registry.power.lid.option.suspend"
+        },
+        {
+          "value": "lock",
+          "labelId": "settings.registry.power.lid.option.lock"
+        },
+        {
+          "value": "nothing",
+          "labelId": "settings.registry.power.lid.option.nothing"
+        }
+      ],
+      "backend": "planned",
+      "unavailableId": "settings.registry.power.hardware.unavailable"
+    },
+    {
+      "id": "power.hardware.button",
+      "page": "power",
+      "section": "power.hardware",
+      "key": "button",
+      "labelId": "settings.registry.power.hardware.button.label",
+      "descriptionId": "settings.registry.power.hardware.button.description",
+      "type": "enum",
+      "store": {
+        "file": "power.json",
+        "key": [
+          "button"
+        ]
+      },
+      "default": "lock",
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "options": [
+        {
+          "value": "lock",
+          "labelId": "settings.registry.power.button.option.lock"
+        },
+        {
+          "value": "suspend",
+          "labelId": "settings.registry.power.button.option.suspend"
+        },
+        {
+          "value": "menu",
+          "labelId": "settings.registry.power.button.option.menu"
+        }
+      ],
+      "backend": "planned",
+      "unavailableId": "settings.registry.power.hardware.unavailable"
+    },
+    {
+      "id": "power.hardware.alerts",
+      "page": "power",
+      "section": "power.hardware",
+      "key": "alerts",
+      "labelId": "settings.registry.power.hardware.alerts.label",
+      "descriptionId": "settings.registry.power.hardware.alerts.description",
+      "type": "boolean",
+      "store": {
+        "file": "power.json",
+        "key": [
+          "alerts"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "backend": "planned",
+      "unavailableId": "settings.registry.power.alerts.unavailable"
+    }
+  ],
+  "actions": [
+    {
+      "id": "colors.studio",
+      "page": "colors",
+      "section": "colors.applications",
+      "labelId": "settings.registry.colors.studio.label",
+      "descriptionId": "settings.registry.colors.studio.description",
+      "adapter": "colors-studio"
+    },
+    {
+      "id": "colors.app-theming",
+      "page": "colors",
+      "section": "colors.applications",
+      "labelId": "settings.registry.colors.theming.label",
+      "descriptionId": "settings.registry.colors.theming.description",
+      "route": "colors/app-theming"
+    },
+    {
+      "id": "launcher.favorites",
+      "page": "launcher",
+      "section": "launcher.apps",
+      "labelId": "settings.registry.launcher.favorites.label",
+      "descriptionId": "settings.registry.launcher.favorites.description",
+      "route": "launcher/favorites"
+    },
+    {
+      "id": "launcher.entries",
+      "page": "launcher",
+      "section": "launcher.apps",
+      "labelId": "settings.registry.launcher.entries.label",
+      "descriptionId": "settings.registry.launcher.entries.description",
+      "route": "launcher/entries"
+    },
+    {
+      "id": "launcher.history",
+      "page": "launcher",
+      "section": "launcher.apps",
+      "labelId": "settings.registry.launcher.history.label",
+      "descriptionId": "settings.registry.launcher.history.description",
+      "adapter": "launcher-history",
+      "confirm": true
+    },
+    {
+      "id": "power.idle-lock",
+      "page": "power",
+      "section": "power.idle",
+      "labelId": "settings.registry.power.lock.label",
+      "descriptionId": "settings.registry.power.lock.description",
+      "route": "lock-login"
+    }
+  ]
+}

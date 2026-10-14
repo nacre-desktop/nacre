@@ -1,0 +1,351 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "look",
+      "labelId": "settings.registry.group.look",
+      "order": 0
+    },
+    {
+      "id": "desktop",
+      "labelId": "settings.registry.group.desktop",
+      "order": 1
+    },
+    {
+      "id": "devices",
+      "labelId": "settings.registry.group.devices",
+      "order": 2
+    },
+    {
+      "id": "system",
+      "labelId": "settings.registry.group.system",
+      "order": 3
+    },
+    {
+      "id": "addons",
+      "labelId": "settings.registry.group.addons",
+      "order": 4
+    }
+  ],
+  "pages": [
+    {
+      "id": "wallpaper",
+      "group": "look",
+      "icon": "wallpaper",
+      "labelId": "settings.registry.wallpaper.label",
+      "descriptionId": "settings.registry.wallpaper.description",
+      "order": 0,
+      "prototype": false
+    },
+    {
+      "id": "colors",
+      "group": "look",
+      "icon": "palette",
+      "labelId": "settings.registry.colors.label",
+      "descriptionId": "settings.registry.colors.description",
+      "order": 1,
+      "prototype": true
+    },
+    {
+      "id": "appearance",
+      "group": "look",
+      "icon": "format_size",
+      "labelId": "settings.registry.appearance.label",
+      "descriptionId": "settings.registry.appearance.description",
+      "order": 2,
+      "prototype": false
+    },
+    {
+      "id": "panels",
+      "group": "desktop",
+      "icon": "dashboard",
+      "labelId": "settings.registry.panels.label",
+      "descriptionId": "settings.registry.panels.description",
+      "order": 3,
+      "prototype": true
+    },
+    {
+      "id": "launcher",
+      "group": "desktop",
+      "icon": "search",
+      "labelId": "settings.registry.launcher.label",
+      "descriptionId": "settings.registry.launcher.description",
+      "order": 4,
+      "prototype": true
+    },
+    {
+      "id": "windows-workspaces",
+      "group": "desktop",
+      "icon": "view_quilt",
+      "labelId": "settings.registry.windows-workspaces.label",
+      "descriptionId": "settings.registry.windows-workspaces.description",
+      "order": 5,
+      "prototype": false
+    },
+    {
+      "id": "notifications",
+      "group": "desktop",
+      "icon": "notifications",
+      "labelId": "settings.registry.notifications.label",
+      "descriptionId": "settings.registry.notifications.description",
+      "order": 6,
+      "prototype": false
+    },
+    {
+      "id": "displays",
+      "group": "devices",
+      "icon": "monitor",
+      "labelId": "settings.registry.displays.label",
+      "descriptionId": "settings.registry.displays.description",
+      "order": 7,
+      "prototype": false
+    },
+    {
+      "id": "sound",
+      "group": "devices",
+      "icon": "volume_up",
+      "labelId": "settings.registry.sound.label",
+      "descriptionId": "settings.registry.sound.description",
+      "order": 8,
+      "prototype": false
+    },
+    {
+      "id": "network",
+      "group": "devices",
+      "icon": "wifi",
+      "labelId": "settings.registry.network.label",
+      "descriptionId": "settings.registry.network.description",
+      "order": 9,
+      "prototype": false
+    },
+    {
+      "id": "bluetooth",
+      "group": "devices",
+      "icon": "bluetooth",
+      "labelId": "settings.registry.bluetooth.label",
+      "descriptionId": "settings.registry.bluetooth.description",
+      "order": 10,
+      "prototype": false,
+      "visibleWhen": {
+        "capability": "bluetooth"
+      }
+    },
+    {
+      "id": "power",
+      "group": "devices",
+      "icon": "battery_charging_full",
+      "labelId": "settings.registry.power.label",
+      "descriptionId": "settings.registry.power.description",
+      "order": 11,
+      "prototype": true,
+      "visibleWhen": {
+        "capability": "battery"
+      }
+    },
+    {
+      "id": "keyboard-mouse",
+      "group": "devices",
+      "icon": "keyboard",
+      "labelId": "settings.registry.keyboard-mouse.label",
+      "descriptionId": "settings.registry.keyboard-mouse.description",
+      "order": 12,
+      "prototype": false
+    },
+    {
+      "id": "lock-login",
+      "group": "system",
+      "icon": "lock",
+      "labelId": "settings.registry.lock-login.label",
+      "descriptionId": "settings.registry.lock-login.description",
+      "order": 13,
+      "prototype": false
+    },
+    {
+      "id": "apps",
+      "group": "system",
+      "icon": "apps",
+      "labelId": "settings.registry.apps.label",
+      "descriptionId": "settings.registry.apps.description",
+      "order": 14,
+      "prototype": false
+    },
+    {
+      "id": "privacy",
+      "group": "system",
+      "icon": "shield",
+      "labelId": "settings.registry.privacy.label",
+      "descriptionId": "settings.registry.privacy.description",
+      "order": 15,
+      "prototype": false
+    },
+    {
+      "id": "date-time-language",
+      "group": "system",
+      "icon": "language",
+      "labelId": "settings.registry.date-time-language.label",
+      "descriptionId": "settings.registry.date-time-language.description",
+      "order": 16,
+      "prototype": false
+    },
+    {
+      "id": "system",
+      "group": "system",
+      "icon": "info",
+      "labelId": "settings.registry.system.label",
+      "descriptionId": "settings.registry.system.description",
+      "order": 17,
+      "prototype": false
+    },
+    {
+      "id": "addons",
+      "group": "addons",
+      "icon": "extension",
+      "labelId": "settings.registry.addons.label",
+      "descriptionId": "settings.registry.addons.description",
+      "order": 18,
+      "prototype": false,
+      "visibleWhen": {
+        "not": {
+          "all": [
+            {
+              "capability": "ai"
+            },
+            {
+              "capability": "brain"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "nacre-ai",
+      "group": "addons",
+      "icon": "neurology",
+      "labelId": "settings.registry.nacre-ai.label",
+      "descriptionId": "settings.registry.nacre-ai.description",
+      "order": 19,
+      "prototype": false,
+      "visibleWhen": {
+        "capability": "ai"
+      }
+    },
+    {
+      "id": "brain",
+      "group": "addons",
+      "icon": "auto_stories",
+      "labelId": "settings.registry.brain.label",
+      "descriptionId": "settings.registry.brain.description",
+      "order": 20,
+      "prototype": false,
+      "visibleWhen": {
+        "capability": "brain"
+      }
+    },
+    {
+      "id": "panels/top-bar",
+      "group": "desktop",
+      "icon": "toolbar",
+      "labelId": "settings.registry.panels.top-bar.label",
+      "descriptionId": "settings.registry.panels.top-bar.description",
+      "order": 30,
+      "parent": "panels",
+      "prototype": true
+    },
+    {
+      "id": "panels/dashboard",
+      "group": "desktop",
+      "icon": "space_dashboard",
+      "labelId": "settings.registry.panels.dashboard.label",
+      "descriptionId": "settings.registry.panels.dashboard.description",
+      "order": 31,
+      "parent": "panels",
+      "prototype": true
+    },
+    {
+      "id": "panels/control-center",
+      "group": "desktop",
+      "icon": "tune",
+      "labelId": "settings.registry.panels.control-center.label",
+      "descriptionId": "settings.registry.panels.control-center.description",
+      "order": 32,
+      "parent": "panels",
+      "prototype": true
+    },
+    {
+      "id": "panels/ai-sidebar",
+      "group": "desktop",
+      "icon": "neurology",
+      "labelId": "settings.registry.panels.ai-sidebar.label",
+      "descriptionId": "settings.registry.panels.ai-sidebar.description",
+      "order": 33,
+      "parent": "panels",
+      "prototype": true,
+      "visibleWhen": {
+        "capability": "ai"
+      }
+    },
+    {
+      "id": "panels/bottom",
+      "group": "desktop",
+      "icon": "dock_to_bottom",
+      "labelId": "settings.registry.panels.bottom.label",
+      "descriptionId": "settings.registry.panels.bottom.description",
+      "order": 34,
+      "parent": "panels",
+      "prototype": true,
+      "visibleWhen": {
+        "capability": "bottomPanel"
+      }
+    },
+    {
+      "id": "colors/app-theming",
+      "group": "look",
+      "icon": "apps",
+      "labelId": "settings.registry.colors.app-theming.label",
+      "descriptionId": "settings.registry.colors.app-theming.description",
+      "order": 35,
+      "parent": "colors",
+      "prototype": true
+    },
+    {
+      "id": "launcher/favorites",
+      "group": "desktop",
+      "icon": "star",
+      "labelId": "settings.registry.launcher.favorites.label",
+      "descriptionId": "settings.registry.launcher.favorites.description",
+      "order": 36,
+      "parent": "launcher",
+      "prototype": true
+    },
+    {
+      "id": "launcher/entries",
+      "group": "desktop",
+      "icon": "bookmark",
+      "labelId": "settings.registry.launcher.entries.label",
+      "descriptionId": "settings.registry.launcher.entries.description",
+      "order": 37,
+      "parent": "launcher",
+      "prototype": true
+    },
+    {
+      "id": "windows-workspaces/workflows",
+      "group": "desktop",
+      "icon": "workspaces",
+      "labelId": "settings.registry.windows-workspaces.workflows.label",
+      "descriptionId": "settings.registry.windows-workspaces.workflows.description",
+      "order": 38,
+      "parent": "windows-workspaces",
+      "prototype": false
+    }
+  ],
+  "aliases": {
+    "desktop": "windows-workspaces",
+    "workflows": "windows-workspaces/workflows",
+    "lock": "lock-login",
+    "time": "date-time-language",
+    "ai": "nacre-ai",
+    "maintenance": "system",
+    "orient": "colors",
+    "bead": "panels"
+  }
+}

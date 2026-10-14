@@ -87,7 +87,7 @@ jobs:
         run: |
           pacman -S --noconfirm --needed bubblewrap shadow
           getent passwd 1000 >/dev/null || useradd --uid 1000 --user-group --create-home parity-fixture
-          /tmp/check-env/bin/pip install dbus-next==0.2.3
+          /tmp/check-env/bin/pip install dbus-next==0.2.3 jsonschema==4.26.0
       - name: Helper sandbox integrity
         run: /tmp/check-env/bin/python -m unittest discover -s tests/parity/helpers -p test_runner.py
       - name: Install development-only JavaScript formatter
