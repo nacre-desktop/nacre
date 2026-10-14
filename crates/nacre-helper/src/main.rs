@@ -140,12 +140,35 @@ fn run() -> Result<i32> {
         println!("{}", json::encode(&value)?);
         return Ok(code);
     }
+    if tool == "software-tui" {
+        use std::io::Read;
+        let paths = nacre_helper::paths::Paths::environment()?;
+        let action = arguments.first().map(String::as_str).unwrap_or("load");
+        let id = arguments.get(1).map(String::as_str).unwrap_or("");
+        let input = if action == "create" {
+            let mut text = String::new();
+            io::stdin().take(262145).read_to_string(&mut text)?;
+            if text.len() > 262144 {
+                return Err("Terminal app request is too large".into());
+            }
+            Some(serde_json::from_str(&text)?)
+        } else {
+            None
+        };
+        let result = nacre_helper::software_tui::execute(&paths, action, id, input);
+        let (value, code) = match result {
+            Ok(value) => (value, 0),
+            Err(error) => (serde_json::json!({"error":error.to_string()}), 1),
+        };
+        println!("{}", json::encode(&value)?);
+        return Ok(code);
+    }
     if tool == "software-library" {
         use std::io::Read;
         let input = if arguments.first().is_some_and(|a| {
             matches!(
                 a.as_str(),
-                "import" | "clone" | "theme-import" | "theme-export" | "open"
+                "import" | "clone" | "theme-import" | "theme-export" | "open" | "tui-create"
             )
         }) {
             let mut line = String::new();

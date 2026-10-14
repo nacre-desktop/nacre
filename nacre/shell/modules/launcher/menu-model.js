@@ -1,7 +1,7 @@
 .pragma library
 
 const operations = ["tool", "route", "calculator", "legacy", "scope", "toggle", "next-wallpaper", "personality", "background", "palette-mode", "setting-toggle", "settings", "config", "form", "maintenance", "info", "url", "power", "power-profile", "command", "media"];
-const providers = ["apps", "wallpapers", "accents", "fonts", "software", "packages", "installed", "windows", "wifi", "bluetooth", "clipboard", "keys", "emoji", "timers", "webapps", "audio", "software-themes", "software-extensions", "environments", "software-ai"];
+const providers = ["apps", "wallpapers", "accents", "fonts", "software", "packages", "installed", "windows", "wifi", "bluetooth", "clipboard", "keys", "emoji", "timers", "webapps", "audio", "software-themes", "software-extensions", "environments", "software-ai", "tui-apps"];
 const fields = ["labelId", "descriptionId", "confirmId", "id", "kind", "label", "description", "icon", "operation", "value", "provider", "capability", "state", "confirm", "brand", "aliases", "hidden", "arguments"];
 const aliases = {
     favorites: "home",

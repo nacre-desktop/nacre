@@ -103,8 +103,16 @@ Scope {
     readonly property var rows: NacreI18n.localize(catalog.rows)
     readonly property var navigation: Model.rail(rows)
     readonly property var softwareDesktopMetadata: new Map(softwareRows("software.discover").filter(row => row.desktopId).map(row => [row.desktopId, row]))
+    readonly property var tuiDesktopMetadata: new Map((library.data.tui?.rows || []).map(entry => ["nacre-tui-" + entry.id, entry]))
     readonly property var apps: NacreApps.list.map(entry => {
         const row = NacreI18n.applicationRow(Model.application(entry));
+        const terminal = tuiDesktopMetadata.get(entry.id.replace(/\.desktop$/, ""));
+        if (terminal)
+            return Object.assign(row, {
+                tui: true,
+                value: terminal.id,
+                terminal: terminal.terminal
+            });
         const metadata = softwareDesktopMetadata.get(entry.id);
         if (!metadata)
             return row;
@@ -235,6 +243,10 @@ Scope {
             }) : NacreI18n.tr("ui.menu-context.status.up-to-date", "Up to date")) : typeof checked === "boolean" ? (["setting", "dnd", "night-light", "stay-awake", "mute", "mic-mute", "wifi", "bluetooth"].includes(row.state) ? (checked ? NacreI18n.tr("ui.menu-context.status.on", "On") : NacreI18n.tr("ui.menu-context.status.off", "Off")) : checked ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : "") : "";
         result.disabled = !!row.capability && snapshot.capabilities[row.capability] !== true && workflows.data.capabilities?.[row.capability] !== true;
         result.reason = result.disabled ? NacreI18n.tr("launcher.disabled.optional-tool-is-not-installed", "Optional tool is not installed") : "";
+        if (row.id === "software.tui.new" && !(library.data.tui?.terminals || []).length) {
+            result.disabled = true;
+            result.reason = NacreI18n.tr("software.tui.requires-terminal", "Install a supported terminal first");
+        }
         if (row.operation === "media") {
             const player = NacrePlayers.active;
             const capability = {
@@ -391,6 +403,8 @@ Scope {
                         value0: NacreI18n.time(new Date(entry.due * 1000), "hh:mm")
                     })
                 }));
+        if (node.provider === "tui-apps")
+            return tuiRows();
         if (node.provider === "webapps")
             return (snapshot.webapps || []).map(entry => valueRow(route, entry.id, entry.label, "webapp", entry.id, "public", entry.url, {
                     webapp: true
@@ -920,11 +934,23 @@ Scope {
         }
         return result;
     }
+    function tuiRows() {
+        if (library.data.tui?.error)
+            return [valueRow("software.tui", "error", NacreI18n.tr("software.tui.registry-error", "Terminal apps need attention"), "info", "tui", "terminal", library.data.tui.error, {
+                    disabled: true
+                })];
+        return (library.data.tui?.rows || []).map(entry => valueRow("software.tui", entry.id, entry.name, "tui-launch", entry.id, entry.icon, entry.command.join(" · "), {
+                tui: true,
+                terminal: entry.terminal,
+                disabled: !entry.available,
+                reason: entry.available ? "" : NacreI18n.tr("software.tui.requires-command", "Install the selected terminal and command first")
+            }));
+    }
     function installedAiRows() {
         return softwareRows("software.discover.ai").filter(row => row.category === "ai" && row.checked && !row.desktopId);
     }
     function globalRows(query) {
-        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), installedAiRows(), captureRows());
+        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), installedAiRows(), tuiRows().filter(row => !apps.some(app => app.id.replace(/\.desktop$/, "") === "nacre-tui-" + row.value)), captureRows());
     }
     function itemActions(entry) {
         if (!entry)
@@ -966,6 +992,10 @@ Scope {
                     confirm: NacreI18n.tr("software.action.remove-confirm", "Open the package manager to remove this app?")
                 });
         }
+        if (entry.tui)
+            add(NacreI18n.tr("software.tui.remove", "Remove terminal app"), "tui-remove", entry.value, {
+                confirm: NacreI18n.tr("software.tui.remove-confirm", "Remove this launcher entry? The command and its data will be retained.")
+            });
         if (entry.theme || entry.screenshots?.length)
             add(NacreI18n.tr("software.preview.more", "View previews"), "software-preview");
         if (entry.theme) {
@@ -1239,6 +1269,8 @@ Scope {
             PowerProfiles.profile = profileValue(value);
             return true;
         }
+        if (operation === "tui-launch" || operation === "tui-remove")
+            return library.work(operation, value);
         if (operation === "webapp-offer") {
             if (!library.data.ai?.webApps)
                 return false;

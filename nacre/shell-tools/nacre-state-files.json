@@ -480,6 +480,17 @@
       "defaults": []
     },
     {
+      "id": "tui-apps",
+      "paths": [
+        "nacre/menu/tui-apps.json"
+      ],
+      "owner": "software terminal app registry",
+      "shape": "array",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": []
+    },
+    {
       "id": "reminders",
       "paths": [
         "nacre/menu/reminders.json"

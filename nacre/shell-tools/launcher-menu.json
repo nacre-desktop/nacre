@@ -1014,6 +1014,27 @@
       "confirmId": "launcher.catalog.software.development.mise.confirm"
     },
     {
+      "id": "software.tui",
+      "kind": "group",
+      "label": "Terminal apps",
+      "icon": "terminal",
+      "description": "Manage command-line applications",
+      "provider": "tui-apps",
+      "labelId": "launcher.catalog.software.tui.label",
+      "descriptionId": "launcher.catalog.software.tui.description"
+    },
+    {
+      "id": "software.tui.new",
+      "kind": "action",
+      "label": "Create a TUI app",
+      "icon": "add",
+      "operation": "form",
+      "value": "tui",
+      "description": "Name a command and choose its terminal",
+      "labelId": "launcher.catalog.software.tui.new.label",
+      "descriptionId": "launcher.catalog.software.tui.new.description"
+    },
+    {
       "id": "software.webapps",
       "kind": "group",
       "label": "Web apps",

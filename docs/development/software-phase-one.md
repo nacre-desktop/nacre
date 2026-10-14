@@ -57,3 +57,18 @@ Source validation exercises the launcher and native action plans in nested test
 sessions. It does not require installing the catalog's software, restarting host
 services or changing the active desktop. CI-only commits for this follow-up use
 `[no-publish]` to keep automatic Arch package publication outside this phase.
+
+## Terminal apps
+
+Software → Terminal apps offers Create a TUI app next to the web-app section.
+The form saves a name, an icon theme name, one command argument per line and a
+terminal choice (Kitty, Foot, Alacritty or WezTerm). Creation does not execute
+commands. Existing entries are globally searchable and create desktop entries
+for All apps. Missing terminals or command executables disable launch.
+
+The `tui-apps` versioned state schema owns `state/nacre/menu/tui-apps.json`.
+Guarded writes retain future versions and original-byte backups; corrupt or
+foreign data is preserved. Generated launchers have a unique ownership marker.
+Removal deletes only the selected registered launcher and leaves the terminal,
+command program and application data installed. Commands use literal argv,
+including arguments containing shell metacharacters; no shell is implied.

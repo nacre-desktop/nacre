@@ -427,6 +427,47 @@ TestCase {
         value.cancelForm();
     }
 
+    function test_tui_creation_literal_arguments_search_and_removal() {
+        const value = view();
+        value.menu.library.data = Object.assign({}, value.menu.library.data, {
+            tui: {
+                terminals: ["kitty"],
+                rows: [
+                    {
+                        id: "0123456789abcdef0123456789abcdef",
+                        name: "My monitor",
+                        command: ["htop"],
+                        terminal: "kitty",
+                        icon: "utilities-terminal",
+                        available: true
+                    }
+                ]
+            }
+        });
+        value.navigate("software.tui");
+        const entry = value.entries.find(row => row.tui);
+        verify(entry);
+        verify(value.menu.itemActions(entry).some(action => action.operation === "tui-remove" && !!action.confirm));
+        value.run(value.menu.node("software.tui.new"));
+        compare(value.form.kind, "tui");
+        value.submitForm({
+            name: "Literal app",
+            command: "printf\nvalue; $(not executed)",
+            terminal: "kitty",
+            icon: "utilities-terminal"
+        });
+        const worker = findChild(value.menu.library, "softwareLibraryAction");
+        compare(worker.operation, "tui-create");
+        compare(worker.payload.command[0], "printf");
+        compare(worker.payload.command[1], "value; $(not executed)");
+        verify(!AppLaunch.commands.some(command => command[0] === "printf"));
+        worker.running = false;
+        value.menu.library.completed("tui-create", true);
+        value.navigate("software.development");
+        findChild(value, "launcherSearch").text = "my monitor";
+        verify(value.entries.some(row => row.tui));
+    }
+
     function test_ai_category_packages_and_web_apps_keep_global_search() {
         const value = view();
         value.menu.library.data = Object.assign({}, value.menu.library.data, {

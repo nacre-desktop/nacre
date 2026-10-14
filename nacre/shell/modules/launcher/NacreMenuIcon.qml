@@ -13,7 +13,7 @@ Item {
     Image {
         id: image
         anchors.fill: parent
-        source: root.entry.kind === "app" && !root.entry.brand ? Quickshell.iconPath(root.entry.icon || "application-x-executable", true) : ""
+        source: (root.entry.kind === "app" || root.entry.tui === true) && !root.entry.brand ? Quickshell.iconPath(root.entry.icon || "application-x-executable", true) : ""
         sourceSize.width: root.size
         sourceSize.height: root.size
         asynchronous: true
@@ -41,7 +41,7 @@ Item {
         visible: !root.entry.brand && !root.entry.emoji && !image.visible
         textFormat: Text.PlainText
         // Desktop icon names are image identifiers, not symbol-font ligatures.
-        text: root.entry.kind === "app" ? "apps" : root.entry.icon || "chevron_right"
+        text: (root.entry.kind === "app" || root.entry.tui === true) ? "apps" : root.entry.icon || "chevron_right"
         font.pointSize: root.size * .5
         color: NacreColours.palette.m3onSurface
     }

@@ -3260,5 +3260,26 @@
   "software.category.ai": {
     "description": "AI category action or status",
     "source": "nacre/shell/services/NacreMenuContext.qml"
-  }
+  },
+  "launcher.catalog.software.tui.label": "Terminal app launcher catalog label",
+  "launcher.catalog.software.tui.description": "Terminal app launcher catalog description",
+  "launcher.catalog.software.tui.new.label": "Terminal app launcher catalog label",
+  "launcher.catalog.software.tui.new.description": "Terminal app launcher catalog description",
+  "software.tui.created": "Terminal app crates/nacre-helper/src/software_tui.rs",
+  "software.tui.removed": "Terminal app crates/nacre-helper/src/software_tui.rs",
+  "software.tui.opened": "Terminal app crates/nacre-helper/src/software_tui.rs",
+  "software.tui.requires-terminal": "Terminal app nacre/shell/services/NacreMenuContext.qml",
+  "software.tui.registry-error": "Terminal app nacre/shell/services/NacreMenuContext.qml",
+  "software.tui.requires-command": "Terminal app nacre/shell/services/NacreMenuContext.qml",
+  "software.tui.remove": "Terminal app nacre/shell/services/NacreMenuContext.qml",
+  "software.tui.remove-confirm": "Terminal app nacre/shell/services/NacreMenuContext.qml",
+  "software.tui.argv-help": "Terminal app form or status",
+  "software.tui.name": "Terminal app form or status",
+  "software.tui.command": "Terminal app form or status",
+  "software.tui.icon": "Terminal app form or status",
+  "software.tui.terminal": "Terminal app form or status",
+  "software.tui.kitty": "Terminal app form or status",
+  "software.tui.foot": "Terminal app form or status",
+  "software.tui.alacritty": "Terminal app form or status",
+  "software.tui.wezterm": "Terminal app form or status"
 }

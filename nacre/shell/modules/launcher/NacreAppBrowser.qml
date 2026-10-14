@@ -484,6 +484,56 @@ NacreSurface {
             form = softwareForm(entry);
             return;
         }
+        if (entry.operation === "form" && entry.value === "tui") {
+            form = {
+                kind: "tui",
+                software: "tui-create",
+                title: NacreI18n.tr("launcher.catalog.software.tui.new.label", "Create a TUI app"),
+                description: NacreI18n.tr("software.tui.argv-help", "Enter one command argument per line. Creation saves an entry without running it."),
+                fields: [
+                    {
+                        id: "name",
+                        label: NacreI18n.tr("software.tui.name", "App name")
+                    },
+                    {
+                        id: "command",
+                        label: NacreI18n.tr("software.tui.command", "Command arguments"),
+                        multiline: true,
+                        initial: "htop"
+                    },
+                    {
+                        id: "icon",
+                        label: NacreI18n.tr("software.tui.icon", "Icon name"),
+                        initial: "utilities-terminal"
+                    },
+                    {
+                        id: "terminal",
+                        label: NacreI18n.tr("software.tui.terminal", "Terminal"),
+                        initial: "kitty",
+                        choices: [
+                            {
+                                value: "kitty",
+                                label: NacreI18n.tr("software.tui.kitty", "Kitty")
+                            },
+                            {
+                                value: "foot",
+                                label: NacreI18n.tr("software.tui.foot", "Foot")
+                            },
+                            {
+                                value: "alacritty",
+                                label: NacreI18n.tr("software.tui.alacritty", "Alacritty")
+                            },
+                            {
+                                value: "wezterm",
+                                label: NacreI18n.tr("software.tui.wezterm", "WezTerm")
+                            }
+                        ]
+                    }
+                ],
+                button: NacreI18n.tr("ui.app-browser.button.create-app", "Create app")
+            };
+            return;
+        }
         if (entry.operation === "form") {
             if (["action", "snippet", "search", "bookmark", "workspace", "roots"].includes(entry.value)) {
                 form = workflowForm(entry.value);
@@ -701,7 +751,10 @@ NacreSurface {
                 visibilities.launcher = false;
             root.menu.workflows.startRecording(options);
         } else if (form.software) {
-            formPending = root.menu.library.work(form.software, form.value || "", values);
+            const payload = form.kind === "tui" ? Object.assign({}, values, {
+                command: (values.command || "").split("\n").filter(line => line.length > 0)
+            }) : values;
+            formPending = root.menu.library.work(form.software, form.value || "", payload);
             return;
         } else if (form.workflow) {
             formPending = root.menu.workflows.work("save", form.kind, values);

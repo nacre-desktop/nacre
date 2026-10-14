@@ -42,6 +42,7 @@ pub mod service;
 pub mod software_ai;
 pub mod software_environments;
 pub mod software_library;
+pub mod software_tui;
 pub mod state;
 pub mod systemd;
 pub mod unicode;
