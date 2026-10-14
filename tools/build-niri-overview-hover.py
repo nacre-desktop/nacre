@@ -56,7 +56,10 @@ def prepare(source):
     ).strip()
     if untracked:
         raise ValueError("Keep unrelated files outside the experiment source checkout")
-    changes = subprocess.check_output(["git", "diff", "--binary", "HEAD"], cwd=source)
+    # Match the stored patch headers: Git auto-abbreviation grows in full clones.
+    changes = subprocess.check_output(
+        ["git", "diff", "--binary", "--abbrev=7", "HEAD"], cwd=source
+    )
     if not changes:
         subprocess.run(
             ["git", "apply", "--check", str(PATCH.resolve())], cwd=source, check=True

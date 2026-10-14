@@ -39,6 +39,7 @@ jobs:
             archlinux:base-devel /usr/lib/systemd/systemd)
           trap 'docker rm --force "$container"' EXIT
           docker exec "$container" bash -euxo pipefail -c '
+            export USER=root
             pacman-key --init
             pacman-key --populate archlinux
             pacman -Syu --noconfirm devtools sudo
@@ -51,9 +52,14 @@ jobs:
             mkarchroot -C /usr/share/devtools/pacman.conf.d/extra.conf \
               /var/tmp/nacre-namespace-probe/root base-devel bubblewrap
             arch-nspawn /var/tmp/nacre-namespace-probe/root useradd -m -u 1000 probe
+            # The real harness binds synthetic proc data; it never mounts procfs.
+            mkdir /var/tmp/nacre-namespace-probe/root/fixture-proc
             arch-nspawn /var/tmp/nacre-namespace-probe/root runuser -u probe -- \
               bwrap --unshare-user --unshare-pid --unshare-net --unshare-ipc \
-              --uid 1000 --gid 1000 --ro-bind / / --proc /proc --dev /dev /usr/bin/true
+              --uid 1000 --gid 1000 --die-with-parent --new-session \
+              --size 1073741824 --tmpfs / --ro-bind /usr /usr \
+              --symlink usr/bin /bin --symlink usr/lib /lib --symlink usr/lib64 /lib64 \
+              --ro-bind /fixture-proc /proc --dev /dev /usr/bin/true
             rm -rf --one-file-system /var/tmp/nacre-namespace-probe
             cd /work/orient
             sudo -u builder extra-x86_64-build 2>&1 | tee /work/orient.log
