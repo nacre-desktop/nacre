@@ -117,10 +117,25 @@ TestCase {
                 123: "Name saved by the agent"
             });
         compare(view.displayTitle, "⠹ Name saved by the agent");
+        const caption = findChild(view, "nacreActiveTitle");
+        const spinner = findChild(view, "nacreActiveTitleSpinner");
+        compare(caption.text, "Name saved by the agent");
+        const spinnerY = spinner.mapToItem(view, 0, 0).y;
+        const titleX = caption.mapToItem(view, 0, 0).x;
+        for (const frame of "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏") {
+            NacreCompositor.activeWindow = Object.assign({}, NacreCompositor.activeWindow, {
+                title: frame + " Fix the terminal titles | 7ce71273f1db4999bf221..."
+            });
+            compare(spinner.text, frame);
+            compare(spinner.mapToItem(view, 0, 0).y, spinnerY);
+            compare(caption.mapToItem(view, 0, 0).x, titleX);
+        }
         NacreCompositor.activeWindow = Object.assign({}, NacreCompositor.activeWindow, {
             title: "Name saved by the agent | /home/user/project"
         });
         compare(view.displayTitle, "Name saved by the agent");
+        compare(caption.text, "Name saved by the agent");
+        verify(!spinner.parent.visible);
     }
     function test_screenshot_focus_loss_keeps_caption_without_stale_empty_workspace_title() {
         NacreCompositor.backendName = "niri";

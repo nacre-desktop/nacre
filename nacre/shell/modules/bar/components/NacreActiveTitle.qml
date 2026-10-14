@@ -15,6 +15,7 @@ Item {
     property string previousWindowId: ""
     readonly property var client: NacreCompositor.overviewHoverWindow || NacreCompositor.overviewSelectedWindow || WindowTitle.displayWindow(NacreCompositor.activeWindow, NacreCompositor.windows, NacreCompositor.activeWorkspaceId, previousWindowId, NacreCompositor.backendName)
     readonly property string displayTitle: NacreCompositor.backendName === "niri" && NacreCompositor.overviewOpen && !NacreCompositor.overviewHoverSupported ? NacreI18n.tr("ui.compositor.hover-title-unavailable", "Hover titles require the niri overview companion") : client ? NacreI18n.windowCaption(WindowTitle.caption(client.title || client.wmClass, client.wmClass, ChatWindowTitle.titles[client.pid]), client.wmClass) : NacreI18n.tr("desktop.title.empty", "Desktop")
+    readonly property string spinnerPrefix: client?.wmClass === "nacre-ai-task" ? /^[\u2800-\u28ff]\s*/.exec(displayTitle)?.[0] || "" : ""
     function rememberWindow() {
         if (NacreCompositor.activeWindow?.windowId)
             previousWindowId = NacreCompositor.activeWindow.windowId;
@@ -37,15 +38,16 @@ Item {
             root.rememberWindow();
         }
     }
-    implicitWidth: glyph.width + caption.implicitWidth + row.spacing
+    implicitWidth: glyph.width + spinner.width + caption.implicitWidth + row.spacing
     implicitHeight: 30
     Accessible.role: Accessible.StaticText
     Accessible.name: displayTitle
-    Row {
+    Item {
         id: row
         anchors.centerIn: parent
-        spacing: NacreAppearance.spacing.small
+        readonly property real spacing: NacreAppearance.spacing.small
         width: Math.min(root.width, root.implicitWidth)
+        height: Math.max(glyph.height, caption.implicitHeight)
         NacreIcon {
             id: glyph
             width: 24
@@ -57,12 +59,44 @@ Item {
             color: root.colour
             anchors.verticalCenter: parent.verticalCenter
         }
+        Item {
+            id: spinner
+            x: glyph.width + row.spacing
+            width: root.spinnerPrefix ? spinnerAdvance.advanceWidth : 0
+            height: glyph.height
+            anchors.verticalCenter: glyph.verticalCenter
+            visible: root.spinnerPrefix.length > 0 && caption.width > 0
+            NacreText {
+                id: spinnerText
+                objectName: "nacreActiveTitleSpinner"
+                text: root.spinnerPrefix.charAt(0)
+                font: caption.font
+                color: root.colour
+                // Center the complete six-dot animation grid, rather than the
+                // font line box or each frame's changing occupied dots.
+                y: (parent.height - spinnerGrid.tightBoundingRect.height) / 2 - baselineOffset - spinnerGrid.tightBoundingRect.y
+                Accessible.ignored: true
+            }
+            TextMetrics {
+                id: spinnerGrid
+                font: spinnerText.font
+                renderType: spinnerText.renderType
+                text: "⠿"
+            }
+            TextMetrics {
+                id: spinnerAdvance
+                font: spinnerText.font
+                renderType: spinnerText.renderType
+                text: root.spinnerPrefix
+            }
+        }
         NacreText {
             id: caption
             objectName: "nacreActiveTitle"
-            width: Math.max(0, row.width - glyph.width - row.spacing)
+            x: spinner.x + spinner.width
+            width: Math.max(0, row.width - x)
             anchors.verticalCenter: parent.verticalCenter
-            text: root.displayTitle
+            text: root.displayTitle.slice(root.spinnerPrefix.length)
             font.family: NacreAppearance.font.family.mono
             font.pointSize: NacreAppearance.font.size.smaller
             color: root.colour
