@@ -27,6 +27,10 @@ QtObject {
     property int textDuration: 400
     property bool reduceMotion: DesktopSettings.data.reduceMotion === true
     readonly property bool motionEnabled: !reduceMotion && DesktopSettings.data.animations !== false
+    readonly property bool gradientsEnabled: DesktopSettings.data.interfaceGradients !== false
+    function gradientColour(base, shaded): color {
+        return gradientsEnabled ? shaded : base;
+    }
 
     readonly property color body: NacreColours.palette.m3surface
     readonly property color raised: NacreColours.palette.m3surfaceContainer
