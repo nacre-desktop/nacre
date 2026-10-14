@@ -1,0 +1,9 @@
+{
+  "stdout": null,
+  "exit": 2,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": "usage: dashboard-data.py [-h] action [value]\ndashboard-data.py: error: unrecognized arguments: --bad\n"
+}

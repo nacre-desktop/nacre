@@ -1,0 +1,22 @@
+{
+  "stdout": null,
+  "exit": 1,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/dashboard.lock": {
+      "mode": "0o644",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": "Traceback (most recent call last):\n  File \"/repo/nacre/shell-tools/dashboard-data.py\", line 357, in <module>\n    main()\n    ~~~~^^\n  File \"/repo/nacre/shell-tools/dashboard-data.py\", line 343, in main\n    result = execute(args.action, args.value)\n  File \"/repo/nacre/shell-tools/dashboard-data.py\", line 295, in execute\n    write(CONFIG, validate(json.loads(value)))\n                  ~~~~~~~~^^^^^^^^^^^^^^^^^^^\n  File \"/repo/nacre/shell-tools/dashboard-data.py\", line 56, in validate\n    for key, value in data.items():\n                      ^^^^^^^^^^\nAttributeError: 'int' object has no attribute 'items'\n"
+}

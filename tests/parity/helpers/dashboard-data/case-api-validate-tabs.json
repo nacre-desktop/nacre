@@ -1,0 +1,9 @@
+{
+  "helper": "dashboard-data",
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/dashboard-data.py",
+  "args": [
+    "validate",
+    "{\"args\": [{\"tabs\": [\"focus\", \"today\"]}]}"
+  ],
+  "reference_source_sha256": "edc64017612a33b07377dc3eea7da533a114c432256f51a72945b9d44181130a"
+}

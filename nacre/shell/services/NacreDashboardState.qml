@@ -109,7 +109,7 @@ Singleton {
             return;
         const item = queue.shift();
         activeAction = item[0];
-        worker.command = ["python3", NacrePaths.dashboardTools + "/dashboard-data.py", ...item];
+        worker.command = [NacrePaths.helperBinary, "dashboard-data", ...item];
         worker.running = true;
     }
     function refresh() {

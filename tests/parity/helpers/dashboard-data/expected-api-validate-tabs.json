@@ -1,0 +1,19 @@
+{
+  "stdout": {
+    "tabs": [
+      "focus",
+      "today"
+    ],
+    "homeZone": "",
+    "homeCity": "",
+    "calendarFile": "",
+    "lyrics": true,
+    "albumPalette": true,
+    "focusMinutes": 25
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

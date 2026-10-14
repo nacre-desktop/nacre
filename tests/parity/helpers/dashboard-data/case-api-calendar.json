@@ -1,0 +1,12 @@
+{
+  "helper": "dashboard-data",
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/dashboard-data.py",
+  "args": [
+    "calendar",
+    "{\"args\": [\"{home}/events.ics\"], \"kwargs\": {\"now\": {\"$datetime\": \"2099-10-11T00:00:00+00:00\"}}}"
+  ],
+  "reference_source_sha256": "edc64017612a33b07377dc3eea7da533a114c432256f51a72945b9d44181130a",
+  "fixtures": {
+    "home/events.ics": "BEGIN:VCALENDAR\nBEGIN:VEVENT\nDTSTART:20991011T100000Z\nSUMMARY:Project\\,\n review\nEND:VEVENT\nBEGIN:VEVENT\nDTSTART:20991011T120000Z\nSTATUS:CANCELLED\nSUMMARY:Cancelled\nEND:VEVENT\nEND:VCALENDAR"
+  }
+}

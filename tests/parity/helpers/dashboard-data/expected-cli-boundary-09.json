@@ -1,0 +1,22 @@
+{
+  "stdout": "{\"error\": \"Expecting value: line 1 column 1 (char 0)\"}\n",
+  "exit": 1,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/dashboard.lock": {
+      "mode": "0o644",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": ""
+}

@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "cannot use 'dict' as a set element (unhashable type: 'dict')",
+    "type": "TypeError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

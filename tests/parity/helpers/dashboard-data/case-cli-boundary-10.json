@@ -1,0 +1,14 @@
+{
+  "helper": "dashboard-data",
+  "args": [
+    "preferences",
+    "-2"
+  ],
+  "compare_stderr": true,
+  "reference_source_sha256": "edc64017612a33b07377dc3eea7da533a114c432256f51a72945b9d44181130a",
+  "native_exception": {
+    "kind": "retired-python-traceback",
+    "terminal_line": "AttributeError: 'int' object has no attribute 'items'\n",
+    "reason": "Rust retains exception class/message, stdout, exit and files; retired Python source frames are omitted."
+  }
+}

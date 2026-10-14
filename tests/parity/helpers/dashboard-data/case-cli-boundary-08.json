@@ -1,0 +1,9 @@
+{
+  "helper": "dashboard-data",
+  "args": [
+    "preferences",
+    "--bad"
+  ],
+  "compare_stderr": true,
+  "reference_source_sha256": "edc64017612a33b07377dc3eea7da533a114c432256f51a72945b9d44181130a"
+}

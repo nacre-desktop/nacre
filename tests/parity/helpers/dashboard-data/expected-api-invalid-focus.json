@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "Focus duration must be1\u2013180minutes",
+    "type": "ValueError"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,19 @@
+{
+  "stdout": {
+    "events": [
+      {
+        "title": "Project,review",
+        "start": 4095396000.0,
+        "time": "10:00",
+        "date": "Sun 11 Oct"
+      }
+    ],
+    "configured": true,
+    "error": ""
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

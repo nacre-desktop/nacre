@@ -1,0 +1,32 @@
+{
+  "stdout": {
+    "status": "running",
+    "total": 1500,
+    "remaining": 1500,
+    "deadline": 1600.0,
+    "previousDnd": false,
+    "ownsDnd": true
+  },
+  "exit": 0,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/dashboard-focus.json": {
+      "mode": "0o600",
+      "text": "{\"status\": \"running\", \"total\": 1500, \"remaining\": 1500, \"deadline\": 1600.0, \"previousDnd\": false, \"ownsDnd\": true}"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

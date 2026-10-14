@@ -1,0 +1,9 @@
+{
+  "stdout": "usage: dashboard-data.py [-h] action [value]\n\npositional arguments:\n  action\n  value\n\noptions:\n  -h, --help  show this help message and exit\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": ""
+}
