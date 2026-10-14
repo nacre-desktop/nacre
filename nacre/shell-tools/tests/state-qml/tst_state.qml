@@ -214,7 +214,9 @@ TestCase {
         verify(one.left && !one.leftPinned);
         compare(one.edgeMenu, "left");
         NacrePanelState.toggleSession();
-        verify(one.session && !one.dashboard && !one.launcher);
+        verify(!one.session && one.osd && !one.dashboard && !one.launcher);
+        compare(one.controlSection, "session");
+        compare(one.edgeMenu, "osd");
         NacrePanelState.close();
         verify(!one.session && !one.left && !one.leftPinned);
         compare(one.edgeMenu, "");

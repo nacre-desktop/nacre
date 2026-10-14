@@ -13,6 +13,7 @@ Item {
     property bool disabled: false
     property bool focusByPointer: false
     property bool keyboardPressed: false
+    property bool drawFocusOutline: true
     readonly property bool hovered: hover.hovered && visible && enabled && !disabled
     readonly property bool pressed: (pointer.pressed && pointer.containsMouse || keyboardPressed) && visible && enabled && !disabled
     readonly property bool keyboardFocusVisible: activeFocus && !focusByPointer && visible && enabled && !disabled
@@ -109,7 +110,7 @@ Item {
         bottomRightRadius: root.bottomRightRadius
         border.width: 1
         border.color: NacreTokens.focusInk(root.parent?.color)
-        visible: root.keyboardFocusVisible
+        visible: root.drawFocusOutline && root.keyboardFocusVisible
     }
     HoverHandler {
         id: hover

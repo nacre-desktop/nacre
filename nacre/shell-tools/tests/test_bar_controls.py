@@ -45,7 +45,7 @@ class BarControlsTests(unittest.TestCase):
                 "NacreTime": "property date date:new Date(2026,9,9,12,34)",
                 "UPower": "property bool onBattery:true;property var displayDevice:({ready:true,isLaptopBattery:true,percentage:.53,timeToEmpty:5400,timeToFull:1800})",
                 "PowerProfiles": 'property int profile:PowerProfile.Balanced;property bool hasPerformanceProfile:true;property string degradationReason:"";property int writes:0;onProfileChanged:writes++',
-                "NacrePanelState": "property var view:({session:false,launcher:true,dashboard:true,osd:true});property var panels:({test:{popouts:{hasCurrent:true,pinned:true}}});function getForActive(){return view}",
+                "NacrePanelState": 'property var view:({session:false,launcher:true,dashboard:true,osd:true});property var panels:({test:{popouts:{hasCurrent:true,pinned:true}}});function getForActive(){return view}function toggleSession(){const opening=!(view.osd && view.controlSection==="session");view.launcher=false;view.dashboard=false;view.session=false;view.controlSection="session";view.osd=opening;for(const panel of Object.values(panels)){panel.popouts.hasCurrent=false;panel.popouts.pinned=false}}',
             }
             manifest = fixtures / "qmldir"
             with manifest.open("a") as stream:

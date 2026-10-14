@@ -62,14 +62,10 @@ Item {
             onClicked: NacrePanelState.openSettings("")
         }
         NacreControlButton {
-            icon: "lock"
-            label: NacreI18n.tr("controlcenter.footer.lock", "Lock screen")
-            onClicked: DesktopActions.execute("lock")
-        }
-        NacreControlButton {
+            objectName: "controlPower"
             icon: "power_settings_new"
             label: NacreI18n.tr("controlcenter.footer.power", "Power menu")
-            onClicked: DesktopActions.execute("power")
+            onClicked: panel.navigate("session")
         }
     }
     RowLayout {
@@ -149,12 +145,13 @@ Item {
             network: "../bar/popouts/NacreNetworkPopup.qml",
             bluetooth: "../bar/popouts/NacreBluetoothPopup.qml",
             audio: "../bar/popouts/NacreSoundPopup.qml",
-            battery: "NacreControlPower.qml"
+            battery: "NacreControlPower.qml",
+            session: "NacreControlSession.qml"
         };
         const properties = name === "home" ? {
             screen: panel.screen,
             active: panel.hostActive && panel.visibility
-        } : name === "audio" ? {
+        } : ["audio", "session"].includes(name) ? {
             active: panel.hostActive && panel.visibility
         } : ["network", "bluetooth"].includes(name) ? {
             showHeading: false,
@@ -197,24 +194,26 @@ Item {
         when: !!target
     }
     NacreSurface {
+        objectName: "controlDetachedBackground"
         anchors.fill: parent
-        radius: 24
+        visible: panel.detached
+        radius: 18
         color: NacreTokens.body
-        border.width: 1
-        border.color: Qt.alpha(NacreTokens.outline, .14)
+        border.width: 0
         z: -2
     }
     Rectangle {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: Math.min(180, parent.height)
-        radius: 24
+        objectName: "controlHeaderTint"
+        x: content.inset
+        y: 6
+        width: parent.width - content.inset * 2
+        height: Math.min(150, parent.height)
+        radius: 18
         z: -1
         gradient: Gradient {
             GradientStop {
                 position: 0
-                color: Qt.alpha(NacreColours.palette.m3primaryContainer, .38)
+                color: Qt.alpha(NacreColours.palette.m3primaryContainer, .18)
             }
             GradientStop {
                 position: 1

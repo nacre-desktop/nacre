@@ -307,7 +307,7 @@ Singleton {
             return;
         }
         if (action === "power") {
-            v.session = true;
+            NacrePanelState.openControls("session", "", true);
             return;
         }
         const commands = {

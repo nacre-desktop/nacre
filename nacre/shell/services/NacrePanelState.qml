@@ -123,7 +123,7 @@ Singleton {
     }
     function openControls(section = "home", screenName = "", forceOpen = false) {
         const view = screenName ? screens[screenName] : getForActive();
-        if (!view || !["home", "audio", "network", "bluetooth", "battery", "notifications"].includes(section))
+        if (!view || !["home", "audio", "network", "bluetooth", "battery", "session", "notifications"].includes(section))
             return false;
         const wasOpen = view.osd && view.controlSection === section && view.edgeMenu === "osd";
         clearPopouts();
@@ -162,16 +162,7 @@ Singleton {
         return true;
     }
     function toggleSession() {
-        const view = getForActive();
-        if (!view)
-            return false;
-        const opening = !view.session;
-        clearPopouts();
-        closeTransient(view);
-        view.previewOnly = false;
-        view.session = opening;
-        hidden = false;
-        return true;
+        return openControls("session");
     }
     function close() {
         const name = activeName(), view = screens[name];

@@ -32,7 +32,11 @@ The control center groups volume, brightness and everyday toggles on one page.
 Click a tile to toggle it. Wi-Fi, Bluetooth and power have separate detail
 chevrons; right-click or long-press any tile for details (keyboard: Menu or
 Shift+F10). Back or Escape returns to the overview. Light, Dark and Auto share
-one appearance selector. The top battery row includes edit and session actions. Wi-Fi passwords, Bluetooth devices, audio inputs/outputs and the
+one appearance selector. The attached panel shares the right wall's surface.
+The top battery row includes edit, settings and power. Lock, log out, restart
+and power off stay on its Power page; the bar power button and session shortcuts
+open that page too. Log out, restart and power off require inline confirmation.
+Wi-Fi passwords, Bluetooth devices, audio inputs/outputs and the
 application mixer stay inside the panel. Power details include each controllable
 display and keyboard backlight. Edit adds optional tiles; unavailable controls
 explain their limits in their detail page. Tiles are saved separately from the

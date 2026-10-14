@@ -34,6 +34,9 @@ TestCase {
         NacreControlActions.busy = false;
         NacreAudio.writes = 0;
         DesktopSettings.writes = [];
+        AppLaunch.calls = [];
+        DesktopActions.calls = [];
+        NacreCompositor.logoutCount = 0;
     }
 
     Component {
@@ -188,6 +191,16 @@ TestCase {
         verify(dnd && wifi);
         compare(dnd.hasDetails, false);
         compare(wifi.hasDetails, true);
+        const toggle = findChild(wifi, "controlWifiToggle");
+        compare(toggle.radius, wifi.radius);
+        compare(toggle.topRightRadius, 0);
+        compare(toggle.drawFocusOutline, false);
+        verify(!toggle.containsPoint(Qt.point(2, 2)));
+        const request = NacreControlActions.lastRequest.join("|");
+        mouseClick(wifi, 2, 2, Qt.LeftButton);
+        compare(NacreControlActions.lastRequest.join("|"), request);
+        toggle.forceActiveFocus(Qt.TabFocusReason);
+        tryVerify(() => wifi.border.width === 2);
         const writes = DesktopSettings.writes.length;
         mouseClick(dnd, 20, 20, Qt.RightButton);
         compare(panel.section, "dnd");
@@ -200,6 +213,64 @@ TestCase {
         compare(panel.section, "awake");
         mouseRelease(panel, 20, 20, Qt.LeftButton);
         compare(DesktopSettings.writes.length, writes);
+    }
+    function test_attached_surface_uses_shared_frame_and_power_stays_inline() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        wait(40);
+        const background = findChild(panel, "controlDetachedBackground");
+        verify(!background.visible);
+        compare(background.border.width, 0);
+        const tint = findChild(panel, "controlHeaderTint");
+        verify(tint.x > 0 && tint.x + tint.width < panel.contentWidth);
+        panel.detached = true;
+        verify(background.visible);
+        findChild(panel, "controlPower").clicked();
+        wait(30);
+        compare(panel.section, "session");
+        verify(!!findChild(panel, "controlSession-lock"));
+        compare(DesktopActions.calls.length, 0);
+        verify(!NacrePanelState.screens.test.session);
+        scene.selectedSection = "home";
+        wait(30);
+        verify(!findChild(panel, "controlSession-lock"));
+    }
+    Component {
+        id: sessionControls
+        NacreControlSession {
+            width: 388
+        }
+    }
+    function test_session_confirmation_cancel_and_inactive_guards() {
+        const page = createTemporaryObject(sessionControls, test);
+        verify(page.choose("restart"));
+        compare(AppLaunch.calls.length, 0);
+        page.pendingKey = "";
+        verify(!page.confirm());
+        verify(!page.choose("unknown"));
+        verify(page.choose("poweroff"));
+        page.active = false;
+        compare(page.pendingKey, "");
+        verify(!page.confirm());
+        verify(!page.choose("lock"));
+        page.active = true;
+        verify(page.choose("restart"));
+        verify(page.confirm());
+        compare(AppLaunch.calls.length, 1);
+        compare(AppLaunch.calls[0].join("|"), "systemctl|reboot");
+        verify(!page.confirm());
+        verify(page.choose("logout"));
+        verify(page.confirm());
+        compare(NacreCompositor.logoutCount, 1);
+        verify(page.choose("lock"));
+        compare(DesktopActions.calls[0], "lock");
+    }
+    function test_session_shortcut_routes_into_control_center() {
+        verify(NacrePanelState.toggleSession());
+        compare(NacrePanelState.screens.test.controlSection, "session");
+        verify(NacrePanelState.screens.test.osd);
+        verify(!NacrePanelState.screens.test.session);
+        verify(NacrePanelState.toggleSession());
+        verify(!NacrePanelState.screens.test.osd);
     }
     function test_input_peak_monitor_stops_when_sound_page_inactive() {
         const popup = createTemporaryObject(sound, test);

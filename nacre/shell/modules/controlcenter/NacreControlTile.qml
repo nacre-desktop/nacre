@@ -3,7 +3,7 @@ import QtQuick.Controls.Basic
 import qs.widgets
 import qs.services
 
-NacreSurface {
+NacreClip {
     id: root
     property string label: ""
     property string detail: ""
@@ -21,8 +21,8 @@ NacreSurface {
     implicitWidth: 184
     radius: 24
     color: !available ? Qt.alpha(NacreTokens.raised, .4) : selected ? NacreColours.palette.m3primaryContainer : NacreTokens.raised
-    border.width: 1
-    border.color: Qt.alpha(NacreTokens.outline, available ? .12 : .06)
+    border.width: toggleInput.keyboardFocusVisible || detailInput.keyboardFocusVisible ? 2 : 1
+    border.color: toggleInput.keyboardFocusVisible || detailInput.keyboardFocusVisible ? NacreTokens.focusInk(root.color) : Qt.alpha(NacreTokens.outline, available ? .12 : .06)
     Item {
         width: parent.width - (root.hasDetails ? 34 : 0)
         height: parent.height
@@ -51,6 +51,7 @@ NacreSurface {
             NacreText {
                 width: parent.width
                 text: root.detail
+                visible: root.detail !== ""
                 font.pointSize: 9
                 color: root.selected && root.available ? root.tileInk : NacreTokens.mutedInk
                 opacity: root.available ? 1 : .55
@@ -60,6 +61,11 @@ NacreSurface {
         NacreInteraction {
             id: toggleInput
             objectName: root.objectName + "Toggle"
+            radius: root.radius
+            topRightRadius: root.hasDetails ? 0 : radius
+            bottomRightRadius: root.hasDetails ? 0 : radius
+            color: root.tileInk
+            drawFocusOutline: false
             disabled: !root.available
             accessibleName: root.label + ": " + root.detail
             function onClicked() {
@@ -77,10 +83,9 @@ NacreSurface {
     }
     NacreSurface {
         anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
         width: 34
-        height: parent.height - 12
-        radius: 17
+        height: parent.height
+        radius: 0
         color: "transparent"
         visible: root.hasDetails
         NacreIcon {
@@ -90,6 +95,9 @@ NacreSurface {
             color: root.tileInk
         }
         NacreInteraction {
+            id: detailInput
+            color: root.tileInk
+            drawFocusOutline: false
             objectName: root.objectName + "Details"
             accessibleName: NacreI18n.tr("controlcenter.tile.details", "Open {name} details", {
                 name: root.label

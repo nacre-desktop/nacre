@@ -74,6 +74,7 @@ FocusScope {
             bluetooth: NacreI18n.tr("controlcenter.control-center.label.bluetooth", "Bluetooth"),
             audio: NacreI18n.tr("popouts.sound-popup.text.sound", "Sound"),
             battery: NacreI18n.tr("controlcenter.details.power-brightness", "Power & brightness"),
+            session: NacreI18n.tr("controlcenter.session.title", "Power"),
             night: NacreI18n.tr("controlcenter.control-center.label.night-light", "Night light"),
             dnd: NacreI18n.tr("controlcenter.overview.do-not-disturb", "Do Not Disturb"),
             awake: NacreI18n.tr("controlcenter.overview.stay-awake", "Stay awake"),

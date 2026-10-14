@@ -322,14 +322,16 @@ TestCase {
         const action = findChild(view, "nacrePowerActivation");
         action.forceActiveFocus();
         keyClick(Qt.Key_Return);
-        verify(NacrePanelState.view.session);
+        verify(!NacrePanelState.view.session);
+        compare(NacrePanelState.view.controlSection, "session");
         verify(!NacrePanelState.view.launcher);
         verify(!NacrePanelState.view.dashboard);
-        verify(!NacrePanelState.view.osd);
+        verify(NacrePanelState.view.osd);
         verify(!NacrePanelState.panels.test.popouts.hasCurrent);
         verify(!NacrePanelState.panels.test.popouts.pinned);
         keyClick(Qt.Key_Return);
         verify(!NacrePanelState.view.session);
+        verify(!NacrePanelState.view.osd);
         compare(NacreAudio.writes.length, 0);
         compare(PowerProfiles.writes, 0);
     }
