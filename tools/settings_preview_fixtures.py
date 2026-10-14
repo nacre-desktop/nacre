@@ -42,6 +42,8 @@ def stage(target, *, icons=False):
         ],
         "modules/dashboard": [
             "NacreDashboardCustomize",
+            "NacreDashboardCustomizeSection",
+            "NacreDashboardToggleRow",
             "NacreDashboardExtrasOptions",
             "NacreDashboardNavigation",
         ],

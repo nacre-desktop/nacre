@@ -23,7 +23,7 @@
     "optionsDomain": "dashboard-tab",
     "reason": "The dashboard page model supplies tab names at runtime.",
     "reference": "NacreI18n.option(\"dashboard-tab\"",
-    "source": "nacre/shell/modules/dashboard/NacreDashboardCustomize.qml"
+    "source": "nacre/shell/modules/dashboard/NacreDashboardCustomizeSection.qml"
   },
   "mode": {
     "ids": [

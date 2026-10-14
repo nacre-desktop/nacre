@@ -6,12 +6,17 @@ Column {
     id: root
     objectName: "dashboardExtraOptions"
     property bool includeCore: false
+    property bool includeExtras: true
+    property bool showPreview: true
     property string previewChoice: "today"
     readonly property var enabledOrder: NacreDashboardState.extraOrder.filter(id => NacreDashboardState.enabledExtras.includes(id))
-    readonly property var shownOrder: includeCore ? [...NacreDashboardState.coreTabs, ...enabledOrder] : enabledOrder
-    readonly property var available: [...(includeCore ? NacreDashboardRegistry.core.filter(id => !NacreDashboardState.coreTabs.includes(id)) : []), ...NacreDashboardState.extraOrder.filter(id => !NacreDashboardState.enabledExtras.includes(id))]
+    readonly property var shownOrder: [...(includeCore ? NacreDashboardState.coreTabs : []), ...(includeExtras ? enabledOrder : [])]
+    readonly property var available: [...(includeCore ? NacreDashboardRegistry.core.filter(id => !NacreDashboardState.coreTabs.includes(id)) : []), ...(includeExtras ? NacreDashboardState.extraOrder.filter(id => !NacreDashboardState.enabledExtras.includes(id)) : [])]
     readonly property string previewPage: NacreDashboardState.tabs.includes(previewChoice) ? previewChoice : NacreDashboardState.tabs[0] || "today"
     spacing: 10
+    function pageTitle(id) {
+        return id === "today" ? NacreI18n.tr("dashboard.dashboard-customize.text.dashboard", "Dashboard") : NacreDashboardRegistry.title(id);
+    }
     function toggle(id) {
         if (NacreDashboardRegistry.core.includes(id))
             NacreDashboardState.toggleTab(id);
@@ -28,12 +33,14 @@ Column {
             NacreDashboardState.reorderExtra(id, NacreDashboardState.extraOrder.indexOf(next) - NacreDashboardState.extraOrder.indexOf(id));
     }
     NacreText {
+        visible: root.showPreview
         text: NacreI18n.tr("dashboard.extras.preview", "Your dashboard tabs")
         font.pointSize: 11
         color: NacreTokens.mutedInk
     }
     NacreSurface {
         objectName: "dashboardTabPreview"
+        visible: root.showPreview
         width: parent.width
         height: 70
         radius: 18
@@ -80,7 +87,7 @@ Column {
                     x: 34
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - x
-                    text: NacreDashboardRegistry.title(row.modelData)
+                    text: root.pageTitle(row.modelData)
                     font.pointSize: 11
                     elide: Text.ElideRight
                 }
@@ -102,7 +109,7 @@ Column {
                 objectName: "dashboardExtraEarlier-" + row.modelData
                 text: ""
                 icon: "arrow_upward"
-                accessibleLabel: NacreI18n.tr("dashboard.extras.move-earlier", "Move {title} earlier", {
+                accessibleLabel: row.core ? NacreI18n.tr("dashboard.dashboard-customize.text.earlier", "Earlier") + " · " + root.pageTitle(row.modelData) : NacreI18n.tr("dashboard.extras.move-earlier", "Move {title} earlier", {
                     title: NacreDashboardRegistry.title(row.modelData)
                 })
                 width: 32
@@ -115,7 +122,7 @@ Column {
                 objectName: "dashboardExtraLater-" + row.modelData
                 text: ""
                 icon: "arrow_downward"
-                accessibleLabel: NacreI18n.tr("dashboard.extras.move-later", "Move {title} later", {
+                accessibleLabel: row.core ? NacreI18n.tr("dashboard.dashboard-customize.text.later", "Later") + " · " + root.pageTitle(row.modelData) : NacreI18n.tr("dashboard.extras.move-later", "Move {title} later", {
                     title: NacreDashboardRegistry.title(row.modelData)
                 })
                 width: 32
