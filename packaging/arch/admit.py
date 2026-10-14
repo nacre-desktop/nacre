@@ -89,7 +89,15 @@ def main():
         )["workflow_runs"]
         revision = validate_source(run, receipt, checks, repository)
         subprocess.run(
-            ["git", "merge-base", "--is-ancestor", revision, run["head_sha"]],
+            [
+                "git",
+                "-c",
+                "safe.directory=" + str(Path.cwd()),
+                "merge-base",
+                "--is-ancestor",
+                revision,
+                run["head_sha"],
+            ],
             check=True,
         )
     with open(os.environ["GITHUB_OUTPUT"], "a") as stream:
