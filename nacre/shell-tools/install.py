@@ -117,6 +117,7 @@ def install_native_helper(helper, target):
 def retire_native_helpers(directory):
     for retired in (
         "kde-palette",
+        "terminal-branding",
         "helper-service",
         "diagnostics",
         "menu-backend",

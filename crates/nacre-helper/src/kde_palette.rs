@@ -203,13 +203,7 @@ pub fn run(arguments: &[String]) -> Result<i32> {
     }
     let request: Value = serde_json::from_str(&text)?;
     let paths = if let Some(home) = request["home"].as_str() {
-        if std::env::var_os("HOME")
-            .is_some_and(|current| std::path::Path::new(&current) == std::path::Path::new(home))
-        {
-            Paths::environment()?
-        } else {
-            Paths::new(home)
-        }
+        Paths::for_home(Path::new(home))?
     } else {
         Paths::environment()?
     };

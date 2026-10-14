@@ -49,6 +49,14 @@ impl Paths {
             env::var_os("XDG_CACHE_HOME").as_deref(),
         ))
     }
+    /// Explicit fixture homes use defaults; the current home honors absolute XDG roots.
+    pub fn for_home(home: &Path) -> Result<Self> {
+        if env::var_os("HOME").is_some_and(|current| Path::new(&current) == home) {
+            Self::environment()
+        } else {
+            Ok(Self::new(home))
+        }
+    }
     /// Resolve read-only helper assets in a source checkout or installed tree.
     pub fn assets(&self) -> PathBuf {
         if let Some(folder) = env::var_os("NACRE_HELPER_TOOLS") {

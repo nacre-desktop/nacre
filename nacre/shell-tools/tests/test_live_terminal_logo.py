@@ -1,6 +1,5 @@
 """Palette event updates must touch only a registered image in its original PTY."""
 
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -11,11 +10,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location(
-    "terminal_branding", ROOT / "terminal-branding.py"
-)
-live = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(live)
+import native_terminal_branding as live
 
 
 class LiveTerminalTests(unittest.TestCase):

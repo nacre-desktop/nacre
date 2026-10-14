@@ -4,7 +4,6 @@
 import io
 from nacre_i18n import tr
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -360,12 +359,14 @@ def publish(colors, home=None):
     ]:
         atomic(folder / legacy, (folder / current).read_bytes())
     refresh_terminal_menus(home)
-    live = HERE / "terminal-branding.py"
-    if live.is_file():
-        spec = importlib.util.spec_from_file_location("terminal_branding", live)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        module.refresh(home)
+    from nacre_native_config import _binary
+
+    subprocess.run(
+        [str(_binary()), "terminal-branding", "--refresh", str(home)],
+        stdout=subprocess.DEVNULL,
+        check=True,
+        timeout=10,
+    )
 
 
 def build():

@@ -1101,3 +1101,16 @@ the existing read/save corpus remains unchanged. The internal `--publish` JSON
 transport replaces the former Python function call. Custom absolute XDG config
 roots follow the shared Paths rule (intended difference); unexpected file read
 errors are surfaced instead of ConfigParser's silent read failure.
+
+### Wave 3 terminal branding (busy machine)
+
+One hundred fresh plain-text logo calls used identical private HOME/input files
+with Python absent from the native command's PATH. Child user + system CPU
+was 29.016 ms per Python call and 1.071 ms per Rust call; direct Python starts
+were 100 and zero. This measures the logo helper, not desktop action latency.
+
+Forty-two frozen function cases and two real Bash/private-PTY cases preserve
+Kitty packet bytes, registration fields/modes, prepared files and cleanup.
+Absolute XDG cache roots are an intended difference. Refresh also uses O_NOCTTY;
+failed registration/pruned-record errors now reach stderr rather than disappearing.
+The internal `--refresh` command replaces the former Python module call.

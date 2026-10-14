@@ -11,6 +11,7 @@ orient-core = { path = "../../deps/orient/crates/orient-core" }
 orient-decoder = { path = "../../deps/orient/crates/orient-decoder" }
 serde.workspace = true
 serde_json.workspace = true
+base64 = "=0.23.1"
 sha2 = "0.10"
 tempfile = "3"
 regex = "1"
@@ -29,7 +30,7 @@ unicode-general-category = "=1.1.0"
 ureq = "3"
 uuid = { version = "1", features = ["v4"] }
 nvml-wrapper = "0.13"
-rustix = { version = "1.1", features = ["fs", "param", "process", "event", "system"] }
+rustix = { version = "1.1", features = ["fs", "param", "process", "event", "system", "termios", "pty"] }
 niri-ipc = "26.4.0"
 fancy-regex = "0.16"
 wayland-client = "0.31"

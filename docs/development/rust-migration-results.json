@@ -1501,5 +1501,21 @@
         "direct_python_launches": 0
       }
     }
+  },
+  "wave3_terminal_branding_busy_machine": {
+    "condition": "busy machine",
+    "method": "100 fresh plain-text terminal-logo calls; child user+system CPU excludes benchmark driver",
+    "results": {
+      "python": {
+        "calls": 100,
+        "cpu_ms_per_call": 29.0156,
+        "direct_python_launches": 100
+      },
+      "rust": {
+        "calls": 100,
+        "cpu_ms_per_call": 1.0709100000000027,
+        "direct_python_launches": 0
+      }
+    }
   }
 }

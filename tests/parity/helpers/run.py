@@ -34,6 +34,7 @@ from native_compositor_peer import Peer as NativeCompositorPeer
 from state_schema import compatible_files, recovery_reference
 
 NATIVE_CLIENT_CALLERS = {
+    "nacre-terminal-logo",
     "pearl-window",
     "compositor",
     "compositor-backends-hyprland",

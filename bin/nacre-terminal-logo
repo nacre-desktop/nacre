@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 set -euo pipefail
-exec python3 "$HOME/.local/share/nacre/shell/tools/terminal-branding.py" "$@"
+exec "${NACRE_HELPER_BINARY:-$HOME/.local/share/nacre/shell/tools/nacre-helper}" terminal-branding "$@"
