@@ -80,7 +80,8 @@
       "python-hatchling",
       "nodejs",
       "rust",
-      "cargo"
+      "cargo",
+      "cmake"
     ],
     "check": [
       "ruff",
