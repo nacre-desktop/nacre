@@ -11,5 +11,10 @@
       "mtime": 1700000000
     }
   },
-  "native_engine": true
+  "native_engine": true,
+  "engine_provenance": {
+    "frozen_engine": "orient-0.1.0.dev6-55b192008cc8-c8a5bd24dad2",
+    "pointers": ["/stdout/engine", "/stdout/source/engine"],
+    "reason": "Native artwork source changes the decoder fingerprint; unchanged 128px frames and palette values are independently gated."
+  }
 }

@@ -469,6 +469,7 @@ dependencies = [
 name = "orient-decoder"
 version = "0.1.0-dev.6"
 dependencies = [
+ "crc32fast",
  "gif",
  "image",
  "lcms2",
@@ -477,6 +478,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "turbojpeg",
+ "zlib-rs",
 ]
 
 [[package]]

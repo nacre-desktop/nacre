@@ -7,7 +7,7 @@ Developer-only Python tools and test harnesses remain permitted.
 | Wave | Status | Numbers / decisions |
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
-| 1 Service / frequent helpers | In progress; CI-gated | Frozen outputs; local Rust candidates only. |
+| 1 Service / frequent helpers | In progress; CI repaired | Frozen outputs; local Rust candidates only. |
 | 2 Compositor / pearls | Pending | Persistent native IPC; one neutral compositor contract. |
 | 3 Wallpaper / colors | Pending | Direct Orient crates; preserve paired publication. |
 | 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
@@ -41,34 +41,37 @@ Existing tasks coordinate Wave 1: peer owns workspace/paths/service + menu-backe
 dashboard-data/media, network-state, launcher-preferences, notification-history.
 This task owns dashboard-system, resource-state, window-chat-title, light-devices,
 menu-cli; gate deferred with owner conditions. All 27 frozen CLI cases and
-22 focused existing tests pass before porting. Chat-title draft: 3 Rust behavior
-tests, Clippy and all 3 frozen CLI cases pass through a disposable adapter;
-no caller cutover/deletion or public port until main CI is green.
+22 focused existing tests pass before porting. Five local drafts (chat title,
+dashboard system, lights, menu CLI, resources): 27 frozen CLI cases, 22 Rust tests
+and Clippy, including synthetic direct NVML partial/failure/deadline checks,
+pass through a disposable adapter; selector choose/cancel/timeout/signals clean up.
+Own five caller swaps/Python deletions are prepared locally; 23 historical test
+methods map explicitly to Rust. Diagnostics/mixed-dashboard tests pass (17).
+No public port yet; main CI gate is green, shared hosted group remains incomplete.
 Frozen helper corpus: `tests/parity/helpers` (separate parity task; do not regenerate).
-API: execute(&[String], Option<Value>) -> Result<Option<Value>>; custom text as needed.
 
 Follow-up: Rust Paths accepts absolute config/state/cache XDG roots, otherwise
 HOME defaults, matching QML. Custom-XDG behavior is an intended parity difference;
 current frozen cases use defaults and remain unchanged.
 Paths fix is public (`ae6a9f86`); Rust gates and default-XDG parity pass.
-Main CI must be green before further wave 1 ports land. Ubuntu 22.04 runner fix
-`2753707f` retains the Arch container/sandbox/checks; CI sandbox integrity and
-fresh install now pass. Source CI exposed host/container workspace aliasing and
-a timestamp-dependent translation test. Use actual working directory for Git
-Orient; scope Git trust directly to the resolved read-only inventory command
-(workflow-global trust was insufficient). Give the changed test fixture an
-explicit new cache timestamp; all original assertions remain.
-CI now passes 817 unit tests; parity exposed root-owned mock sockets and an
-uncontrolled interpreter version. Fix fixture socket ownership/mode and declare
-the frozen interpreter-version input; golden outputs stay unchanged.
-Local repaired gate: 817 tests, 12 controls and all 349 frozen cases pass.
-No test/reference was skipped or weakened.
-Full Source CI remains pending;
-the separate headless performance workflow passed at `301a0477`.
+Main CI must be green before further wave 1 ports land. Repair complete:
+`2753707f` uses Ubuntu 22.04 with the same Arch container/isolation; workspace
+trust is scoped, test cache timestamps explicit, mock sockets UID1000/0600 and
+reported interpreter version controlled at input. All original goldens remain.
+Latest main `1489849d`: Source 38479479986 desktop and Niri fresh install pass;
+834 source tests, 12 original controls, 349 frozen cases. No new skips.
+Earlier `f3b42304` Source and performance both pass. CI workflow owner now
+handles monitoring; hardware checks are manual, correctness stays automatic.
 
-Next: verify full main CI after the path/test-fixture fixes before port cutovers;
-integrate shared candidate, finish chat-title caller/deletion/test mapping, then
-run full correctness gates before publishing.
+Next: integrate complete shared hosted group (menu actions, media 512px pipeline,
+native API/default parity registry), then full cargo/repo/parity gates and atomic
+cutover. Shared binary installation/dispatcher/property remain peer-owned.
+Media API: 64 frozen artwork cases pass (63 PNG files plus Pillow I;16 error);
+128px frames / 160 palettes unchanged; Orient `40c1a75` public, all 7 CI jobs green.
+Intended differences: unexpected telemetry/cache failures reach stderr; NVML
+replaces nvidia-smi; inventory CLI bridges the existing diagnostic module call.
+d920 fingerprint: native-image compares two declared IDs against lock/pin/build;
+17 controls and all 349 cases pass; frozen outputs/core/colors unchanged.
 No live machine/QML/config changes by this task; no tags or package uploads.
 
 Port security follow-ups: [security review](security-review.md#fix-during-port).

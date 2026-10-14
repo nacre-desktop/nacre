@@ -60,6 +60,14 @@ Changes are observed in HOME, temporary files, sysfs fixtures, runtime files, an
 into exact stderr comparison; otherwise stderr is retained in requested traces.
 Python tracebacks are not part of the replacement stdout/exit contract.
 
+Intended difference: `nacre_shell/native-image` records the decoder-source
+fingerprint change at exactly `/stdout/engine` and `/stdout/source/engine`.
+Its `engine_provenance` rule requires the declared frozen identity and checks
+the candidate against the current dependency lock, adapter pin and compiled
+Orient `info` reply. Colors, core identity, source/options, files/modes and
+actions stay exact. These frozen outputs cannot be re-recorded; arbitrary
+hash/version fields and cache filenames are never normalized by this rule.
+
 A `commands` entry maps a name to rules with exact `argv` or an explicit fallback,
 `stdout`/`stdout_base64`, `stderr`, `code`, and optional `writes` (paths can use
 `{arg0}`, `{arg1}`, etc.). Set `read_stdin: true` for piped input; inherited service

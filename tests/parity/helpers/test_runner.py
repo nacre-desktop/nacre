@@ -1,6 +1,7 @@
 """Harness integrity, negative controls, framing and transport equivalence."""
 
 import importlib.util
+import copy
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,105 @@ spec.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
+    def provenance_fixture(self):
+        folder = HERE / "nacre_shell"
+        case = json.loads((folder / "case-native-image.json").read_text())
+        expected = json.loads((folder / "expected-native-image.json").read_text())
+        current = json.loads((runner.ROOT / "dependencies.lock.json").read_text())[
+            "orient"
+        ]["engine"]
+        actual = copy.deepcopy(expected)
+        actual["stdout"]["engine"] = current
+        actual["stdout"]["source"]["engine"] = current
+        return case, expected, actual, current
+
+    def test_provenance_accepts_only_declared_fields_without_mutating_reference(self):
+        case, expected, actual, current = self.provenance_fixture()
+        original = copy.deepcopy(expected)
+        with patch.object(runner, "pinned_engine_identity", return_value=current):
+            equivalent = runner.engine_provenance_reference(expected, actual, case)
+            self.assertEqual(equivalent, actual)
+            actual["stdout"]["colours"]["primary"] = "010203"
+            self.assertNotEqual(equivalent, actual)
+            actual = copy.deepcopy(equivalent)
+            actual["files"]["unexpected"] = {"mode": "0o600", "text": "changed"}
+            self.assertNotEqual(equivalent, actual)
+        self.assertEqual(expected, original)
+
+    def test_provenance_rejects_recording_without_touching_frozen_outputs(self):
+        reference = HERE / "nacre_shell/expected-native-image.json"
+        before = reference.read_bytes()
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(HERE / "run.py"),
+                "--record",
+                "--case",
+                "nacre_shell/native-image",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("cannot be re-recorded", result.stderr)
+        self.assertEqual(reference.read_bytes(), before)
+
+    def test_provenance_rejects_wrong_observed_frozen_or_field_identity(self):
+        case, expected, actual, current = self.provenance_fixture()
+        with patch.object(runner, "pinned_engine_identity", return_value=current):
+            wrong = copy.deepcopy(actual)
+            wrong["stdout"]["source"]["engine"] = "unverified-engine"
+            with self.assertRaisesRegex(ValueError, "Observed"):
+                runner.engine_provenance_reference(expected, wrong, case)
+            wrong = copy.deepcopy(expected)
+            wrong["stdout"]["engine"] = "unverified-reference"
+            with self.assertRaisesRegex(ValueError, "Frozen"):
+                runner.engine_provenance_reference(wrong, actual, case)
+            wrong = copy.deepcopy(case)
+            wrong["engine_provenance"]["pointers"].append("/stdout/colours/primary")
+            with self.assertRaisesRegex(ValueError, "Unsupported"):
+                runner.engine_provenance_reference(expected, actual, wrong)
+
+    def test_provenance_rejects_a_compiled_decoder_with_a_different_identity(self):
+        runner.pinned_engine_identity.cache_clear()
+        with patch.object(
+            runner.subprocess,
+            "run",
+            return_value=type("Reply", (), {"stdout": '{"result":{}}'})(),
+        ):
+            with self.assertRaisesRegex(ValueError, "Compiled"):
+                runner.pinned_engine_identity()
+        runner.pinned_engine_identity.cache_clear()
+
+    def test_provenance_rejects_core_changes_and_a_lock_adapter_mismatch(self):
+        case, expected, actual, current = self.provenance_fixture()
+        with patch.object(
+            runner,
+            "pinned_engine_identity",
+            return_value=current.replace("55b192008cc8", "differentcore"),
+        ):
+            with self.assertRaisesRegex(ValueError, "Core engine changed"):
+                runner.engine_provenance_reference(expected, actual, case)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            lock = json.loads((runner.ROOT / "dependencies.lock.json").read_text())
+            pin = json.loads(
+                (
+                    runner.ROOT / "nacre/shell-cli/src/nacre_shell/engine-pin.json"
+                ).read_text()
+            )
+            pin["engine"] = "stale-adapter"
+            target = root / "nacre/shell-cli/src/nacre_shell/engine-pin.json"
+            target.parent.mkdir(parents=True)
+            target.write_text(json.dumps(pin))
+            (root / "dependencies.lock.json").write_text(json.dumps(lock))
+            runner.pinned_engine_identity.cache_clear()
+            with patch.object(runner, "ROOT", root):
+                with self.assertRaisesRegex(ValueError, "lock and adapter"):
+                    runner.pinned_engine_identity()
+            runner.pinned_engine_identity.cache_clear()
+
     def test_scripted_interpreter_version_preserves_execution_and_executable(self):
         script = (
             "import json,subprocess,sys; "

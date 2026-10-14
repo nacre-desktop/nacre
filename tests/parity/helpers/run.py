@@ -3,7 +3,9 @@
 
 import argparse
 import base64
+import copy
 import difflib
+from functools import lru_cache
 import json
 import os
 import re
@@ -578,6 +580,76 @@ ORIENT_DIRECT_OPERATIONS = frozenset(
 )
 
 
+@lru_cache(maxsize=1)
+def pinned_engine_identity():
+    lock = json.loads((ROOT / "dependencies.lock.json").read_text())["orient"]
+    pin = json.loads(
+        (ROOT / "nacre/shell-cli/src/nacre_shell/engine-pin.json").read_text()
+    )
+    wanted = {
+        "backend": "rust",
+        "interfaceVersion": lock["interfaceVersion"],
+        "engine": lock["engine"],
+        "coreEngine": lock["engine"].rsplit("-", 1)[0],
+        "decoder": lock["decoder"],
+        "version": lock["version"].replace("-dev.", ".dev"),
+    }
+    if pin["version"] != wanted["version"] or any(
+        pin[key] != lock[key] for key in ("engine", "decoder", "interfaceVersion")
+    ):
+        raise ValueError("Orient lock and adapter identity differ")
+    binary = os.environ.get("NACRE_ORIENT_BINARY", str(ROOT / ".venv/bin/orient"))
+    reply = json.loads(
+        subprocess.run(
+            [binary, "--rpc"],
+            input=json.dumps({"operation": "info", "payload": {}}),
+            text=True,
+            capture_output=True,
+            check=True,
+            timeout=5,
+        ).stdout
+    )
+    if (
+        reply.get("result") != wanted
+        or reply.get("engine") != lock["engine"]
+        or reply.get("interfaceVersion") != lock["interfaceVersion"]
+    ):
+        raise ValueError("Compiled Orient identity differs from the tested pin")
+    return lock["engine"]
+
+
+def engine_provenance_reference(expected, actual, case):
+    rule = case.get("engine_provenance")
+    if not rule:
+        return expected
+    # This is a reviewed identity change at two exact fields, not a generic
+    # hash/version normalizer. Every other byte/field remains comparable.
+    locations = ["/stdout/engine", "/stdout/source/engine"]
+    if (
+        case.get("helper") != "nacre_shell"
+        or (case.get("args") or [None])[0] != "from_image"
+        or not case.get("native_engine")
+        or rule.get("pointers") != locations
+        or not rule.get("reason")
+    ):
+        raise ValueError("Unsupported engine provenance rule")
+    current = pinned_engine_identity()
+    if current.rsplit("-", 1)[0] != rule["frozen_engine"].rsplit("-", 1)[0]:
+        raise ValueError("Core engine changed; decoder provenance rule does not apply")
+    result = copy.deepcopy(expected)
+    for location in locations:
+        frozen, key = pointer(result, location)
+        observed, observed_key = pointer(actual, location)
+        if frozen[key] != rule["frozen_engine"]:
+            raise ValueError(
+                "Frozen engine identity differs from the declared reference"
+            )
+        if observed[observed_key] != current:
+            raise ValueError("Observed engine identity differs from the tested pin")
+        frozen[key] = current
+    return result
+
+
 def orient_direct_equivalence(result, case):
     if not case.get("native_engine"):
         return result
@@ -657,6 +729,8 @@ def main():
             continue
         try:
             case = json.loads(path.read_text())
+            if args.record and case.get("engine_provenance"):
+                parser.error("Frozen engine-provenance cases cannot be re-recorded")
             actual = execute(
                 case,
                 args.command,
@@ -672,6 +746,7 @@ def main():
                 reference.write_text(rendered)
             else:
                 expected = json.loads(reference.read_text())
+                expected = engine_provenance_reference(expected, actual, case)
                 if args.orient_direct:
                     expected = orient_direct_equivalence(expected, case)
                     actual = orient_direct_equivalence(actual, case)
