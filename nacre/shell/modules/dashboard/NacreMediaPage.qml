@@ -337,12 +337,12 @@ Item {
                 objectName: "mediaTransport"
                 y: metadata.y + metadata.height + 16
                 width: parent.width
-                spacing: root.compact ? 2 : 8
+                spacing: root.compact ? 1 : 4
                 Item {
                     id: spectrum
                     objectName: "mediaSpectrum"
                     width: parent.width
-                    height: root.compact ? 24 : 40
+                    height: root.compact ? 32 : 76
                     property var samples: NacreMediaDetails.spectrum
                     property color first: root.pagePrimary
                     property color second: root.pageSecondary
@@ -384,7 +384,7 @@ Item {
                 }
                 Controls.NacreMediaSlider {
                     id: seek
-                    height: root.compact ? 24 : 34
+                    height: root.compact ? 24 : 26
                     accent: root.pagePrimary
                     second: root.pageSecondary
                     track: Qt.alpha(root.pageInk, .14)
@@ -399,7 +399,7 @@ Item {
                 }
                 Item {
                     width: parent.width
-                    height: root.compact ? 14 : 18
+                    height: root.compact ? 14 : 16
                     NacreText {
                         text: root.player?.positionSupported ? Model.duration(root.positionSeconds) : "—"
                         font.pointSize: 9
