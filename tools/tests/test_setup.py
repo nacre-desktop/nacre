@@ -474,6 +474,24 @@ class PackageSetupTests(unittest.TestCase):
                 )
                 self.assertIn('include "desktop.kdl"', config.read_text())
                 self.assertIn('include "palette.kdl"', config.read_text())
+                self.assertIn(
+                    'spawn-at-startup "systemctl" "--user" "start" "nacre-niri-startup.service"',
+                    config.read_text(),
+                )
+                startup = home / ".config/systemd/user/nacre-niri-startup.service"
+                self.assertIn("PartOf=graphical-session.target", startup.read_text())
+                self.assertIn("After=graphical-session.target", startup.read_text())
+                self.assertIn("RemainAfterExit=yes", startup.read_text())
+                if shutil.which("systemd-analyze"):
+                    subprocess.run(
+                        ["systemd-analyze", "--user", "verify", str(startup)],
+                        env={
+                            **os.environ,
+                            "SYSTEMD_UNIT_PATH": str(startup.parent) + ":",
+                        },
+                        check=True,
+                        capture_output=True,
+                    )
                 for path, content in before.items():
                     self.assertEqual(path.read_bytes(), content)
                 releases.restore(Path(record["release"]), record)
@@ -751,25 +769,116 @@ class PackageSetupTests(unittest.TestCase):
                 arguments[5:], ["--", "niri", "--session", "--config", config]
             )
             self.assertEqual(environment["NACRE_COMPOSITOR"], "niri")
+            for name, value in package_niri.TOOLKIT_ENVIRONMENT.items():
+                self.assertEqual(environment[name], value)
             self.assertNotIn("HYPRLAND_INSTANCE_SIGNATURE", environment)
             self.assertNotIn("GDK_BACKEND", environment)
 
     def test_niri_services_start_only_after_environment_is_published(self):
         with patch.object(package_niri.subprocess, "run") as commands:
             package_niri.finalize()
-        self.assertEqual(commands.call_args_list[0].args[0][:2], ["uwsm", "finalize"])
         self.assertEqual(
-            commands.call_args_list[1].args[0],
+            commands.call_args_list[0].args[0][:3],
+            ["systemctl", "--user", "import-environment"],
+        )
+        self.assertEqual(
+            commands.call_args_list[1].args[0][0], "dbus-update-activation-environment"
+        )
+        self.assertEqual(
+            commands.call_args_list[2].args[0],
             ["systemctl", "--user", "start", "nacre-niri.target"],
         )
         with patch.object(
             package_niri.subprocess,
             "run",
-            side_effect=subprocess.CalledProcessError(1, "uwsm"),
+            side_effect=subprocess.CalledProcessError(1, "systemctl"),
         ) as commands:
             with self.assertRaises(subprocess.CalledProcessError):
                 package_niri.finalize()
         self.assertEqual(commands.call_count, 1)
+
+    @unittest.skipUnless(
+        shutil.which("systemd-notify"), "Systemd notification utility unavailable"
+    )
+    def test_real_niri_startup_child_without_notify_socket_starts_services(self):
+        # Niri deliberately removes NOTIFY_SOCKET from startup children. Model
+        # an already-ready compositor, not a mock successful uwsm.finalize call.
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            commands = home / "bin"
+            commands.mkdir()
+            receipt = home / "startup.json"
+            shim = f"""#!{sys.executable}
+import json, os, pathlib, sys
+path=pathlib.Path(os.environ["STARTUP_RECEIPT"])
+events=json.loads(path.read_text()) if path.exists() else []
+assert "NOTIFY_SOCKET" not in os.environ
+command=pathlib.Path(sys.argv[0]).name
+if command == "systemctl" and sys.argv[1:3] == ["--user", "import-environment"]:
+    assert "NIRI_SOCKET" in sys.argv and "WAYLAND_DISPLAY" in sys.argv
+    assert os.environ["NIRI_SOCKET"] == "/fixture/niri.sock"
+    events.append("manager-environment")
+elif command == "dbus-update-activation-environment":
+    if os.environ.get("FAIL_ACTIVATION"): sys.exit(17)
+    assert events == ["manager-environment"]
+    events.append("activation-environment")
+elif command == "systemctl" and sys.argv[1:] == ["--user", "start", "nacre-niri.target"]:
+    assert events == ["manager-environment", "activation-environment"]
+    events.append("services-active")
+else: sys.exit(23)
+path.write_text(json.dumps(events))
+"""
+            for name in ("systemctl", "dbus-update-activation-environment"):
+                path = commands / name
+                path.write_text(shim)
+                path.chmod(0o755)
+            legacy = commands / "uwsm"
+            legacy.write_text(
+                "#!/bin/sh\nexec "
+                + shutil.which("systemd-notify")
+                + " READY=1 NOTIFYACCESS=exec\n"
+            )
+            legacy.chmod(0o755)
+            environment = {
+                **os.environ,
+                "HOME": str(home),
+                "PATH": str(commands) + os.pathsep + os.environ["PATH"],
+                "STARTUP_RECEIPT": str(receipt),
+                "NIRI_SOCKET": "/fixture/niri.sock",
+                "WAYLAND_DISPLAY": "wayland-fixture",
+            }
+            environment.pop("NOTIFY_SOCKET", None)
+            old = subprocess.run(
+                [str(legacy), "finalize"],
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertNotEqual(old.returncode, 0)
+            self.assertIn("NOTIFY_SOCKET", old.stderr)
+            result = subprocess.run(
+                [sys.executable, str(TOOLS / "package_niri.py"), "finalize"],
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads(receipt.read_text()),
+                ["manager-environment", "activation-environment", "services-active"],
+            )
+            receipt.unlink()
+            result = subprocess.run(
+                [sys.executable, str(TOOLS / "package_niri.py"), "finalize"],
+                env={**environment, "FAIL_ACTIVATION": "1"},
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(json.loads(receipt.read_text()), ["manager-environment"])
 
     def test_hyprland_login_uses_uwsm_and_does_not_inherit_niri_environment(self):
         with tempfile.TemporaryDirectory() as folder:

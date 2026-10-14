@@ -9,6 +9,13 @@ import subprocess
 import sys
 
 DEPENDENCIES = ("niri", "xwayland-satellite", "xdg-desktop-portal-gnome")
+TOOLKIT_ENVIRONMENT = {
+    "QT_QPA_PLATFORM": "wayland;xcb",
+    "QT_QPA_PLATFORMTHEME": "qt6ct",
+    "QT_WAYLAND_DISABLE_WINDOWDECORATION": "1",
+    "XCURSOR_THEME": "breeze_cursors",
+    "XCURSOR_SIZE": "24",
+}
 
 
 def module(path, name):
@@ -152,16 +159,15 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
     entry += (
         "environment {\n"
         '    NACRE_COMPOSITOR "niri"\n'
-        "    NIRI_CONFIG " + json.dumps(str(home / config / "config.kdl")) + "\n"
-        '    QT_QPA_PLATFORM "wayland;xcb"\n'
-        '    QT_QPA_PLATFORMTHEME "qt6ct"\n'
-        '    QT_WAYLAND_DISABLE_WINDOWDECORATION "1"\n'
-        '    XCURSOR_THEME "breeze_cursors"\n'
-        '    XCURSOR_SIZE "24"\n'
-        "}\n"
-        'spawn-at-startup "/usr/bin/python3" '
-        + json.dumps(str(root / "tools/package_niri.py"))
-        + ' "finalize"\n'
+        "    NIRI_CONFIG "
+        + json.dumps(str(home / config / "config.kdl"))
+        + "\n"
+        + "".join(
+            "    " + name + " " + json.dumps(value) + "\n"
+            for name, value in TOOLKIT_ENVIRONMENT.items()
+        )
+        + "}\n"
+        'spawn-at-startup "systemctl" "--user" "start" "nacre-niri-startup.service"\n'
         'spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"\n'
     )
     entry += "".join("workspace " + json.dumps(name) + "\n" for name in names.values())
@@ -175,6 +181,17 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         "[Unit]\nDescription=Nacre Niri session services\n"
         "PartOf=graphical-session.target\nAfter=graphical-session.target\n"
         "Wants=nacre-shell.service nacre-niri-widths.service nacre-niri-lock.service\n",
+    )
+    # Niri discards startup children's stdout/stderr. A oneshot records failures
+    # in the journal and waits for the existing graphical-session ordering.
+    add(
+        ".config/systemd/user/nacre-niri-startup.service",
+        "[Unit]\nDescription=Start Nacre services in the Niri session\n"
+        "PartOf=graphical-session.target\nAfter=graphical-session.target\n"
+        "[Service]\nType=oneshot\nRemainAfterExit=yes\n"
+        "ExecStart=/usr/bin/python3 "
+        + str(root / "tools/package_niri.py")
+        + " finalize\n",
     )
     # Handle explicit loginctl lock requests. Idle/suspend policy is not enabled
     # before the owner validates manual password unlock on the real hardware.
@@ -235,7 +252,8 @@ def session(home=None):
         )
     validate(config)
     subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
-    environment = dict(os.environ)
+    # Let UWSM own export and logout cleanup of the static session variables.
+    environment = {**os.environ, **TOOLKIT_ENVIRONMENT}
     environment["NACRE_COMPOSITOR"] = "niri"
     environment["NIRI_CONFIG"] = str(config)
     for name in (
@@ -253,21 +271,24 @@ def session(home=None):
 
 
 def finalize():
-    # Niri starts autostart children independently. Publish its environment to
-    # systemd before starting services that need NIRI_SOCKET and the config path.
+    # Niri already imports its display environment and sends READY=1. Its child
+    # spawner deliberately removes NOTIFY_SOCKET, so repeating `uwsm finalize`
+    # can race autoready's NotifyAccess update and fail before starting services.
+    # Publish the child context explicitly without a second readiness handshake.
+    variables = [
+        "WAYLAND_DISPLAY",
+        "DISPLAY",
+        "NIRI_SOCKET",
+        "NACRE_COMPOSITOR",
+        "NIRI_CONFIG",
+        *TOOLKIT_ENVIRONMENT,
+    ]
     subprocess.run(
-        [
-            "uwsm",
-            "finalize",
-            "NIRI_SOCKET",
-            "NACRE_COMPOSITOR",
-            "NIRI_CONFIG",
-            "QT_QPA_PLATFORM",
-            "QT_QPA_PLATFORMTHEME",
-            "QT_WAYLAND_DISABLE_WINDOWDECORATION",
-            "XCURSOR_THEME",
-            "XCURSOR_SIZE",
-        ],
+        ["systemctl", "--user", "import-environment", *variables],
+        check=True,
+    )
+    subprocess.run(
+        ["dbus-update-activation-environment", *variables],
         check=True,
     )
     subprocess.run(["systemctl", "--user", "start", "nacre-niri.target"], check=True)

@@ -122,6 +122,13 @@ if backend in {"niri", "both"}:
     )
     assert Path("/usr/share/wayland-sessions/nacre-niri.desktop").is_file()
     assert (home / ".config/systemd/user/nacre-niri.target").is_file()
+    startup = home / ".config/systemd/user/nacre-niri-startup.service"
+    assert startup.is_file()
+    assert (
+        '"nacre-niri-startup.service"'
+        in (home / ".config/nacre/niri/config.kdl").read_text()
+    )
+    run("systemd-analyze", "--user", "verify", str(startup))
 if backend in {"hyprland", "both"}:
     assert Path("/usr/share/wayland-sessions/nacre-hyprland.desktop").is_file()
     assert (home / ".config/systemd/user/nacre-hyprland.target").is_file()
