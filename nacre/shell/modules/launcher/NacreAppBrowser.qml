@@ -30,6 +30,7 @@ NacreSurface {
     readonly property string query: search?.text || ""
     readonly property var scope: Menu.scope(query)
     readonly property bool calculation: scope.kind === "calculator"
+    property bool calculatorAnswerReady: false
     readonly property var calculationResult: {
         if (!calculation)
             return {
@@ -46,7 +47,7 @@ NacreSurface {
     readonly property bool picker: !!activePrompt
     readonly property bool inputPicker: picker && root.activePrompt.kind === "input"
     readonly property bool appLayout: !picker && !scope.text && scope.kind === "all" && ["home", "apps", "hidden"].includes(route)
-    readonly property bool showDetails: width >= 940 && !picker
+    readonly property bool showDetails: width >= 940 && !picker && !calculation
     readonly property var entries: {
         if (picker && !inputPicker)
             return Menu.ranked((root.activePrompt.choices || []).map((entry, index) => Object.assign({}, entry, {
@@ -87,10 +88,62 @@ NacreSurface {
     function focusExplicit() {
         search.forceActiveFocus();
     }
+    function calculatorStart() {
+        const prefix = search.text.indexOf("=") + 1;
+        return prefix + search.text.slice(prefix).match(/^\s*/)[0].length;
+    }
+    function calculatorEdit(value) {
+        if (calculatorAnswerReady && /^[0-9.(]/.test(value))
+            search.text = "= ";
+        let start = Math.max(calculatorStart(), search.selectionStart);
+        const end = Math.max(start, search.selectionEnd);
+        if (/^[+\-*/]$/.test(value) && start === end && end === search.text.length && /[\d)]\s*[+\-*/]\s*$/.test(scope.text))
+            start = search.text.search(/[+\-*/]\s*$/);
+        search.remove(start, end);
+        search.insert(start, value);
+        search.cursorPosition = start + value.length;
+        search.forceActiveFocus();
+    }
+    function calculatorAction(action) {
+        if (action === "clear") {
+            search.text = "= ";
+        } else if (action === "backspace") {
+            const prefix = calculatorStart();
+            const start = Math.max(prefix, search.selectionStart);
+            const end = Math.max(start, search.selectionEnd);
+            const removeFrom = start === end ? Math.max(prefix, start - 1) : start;
+            search.remove(removeFrom, end);
+            search.cursorPosition = removeFrom;
+            search.forceActiveFocus();
+            return;
+        } else if (action === "equals") {
+            // Unit conversions can return a labelled value, not an arithmetic operand.
+            if (calculationResult.ok && Calculator.evaluate(calculationResult.value).ok) {
+                search.text = "= " + calculationResult.value;
+                calculatorAnswerReady = true;
+            }
+        } else if (action === "copy") {
+            if (calculationResult.ok)
+                AppLaunch.run(["wl-copy", "--", calculationResult.value]);
+        } else if (action === "sign" && scope.text) {
+            search.text = "= -(" + scope.text + ")";
+        } else if (action === "square" && scope.text) {
+            search.text = "= (" + scope.text + ")^2";
+        } else if (action === "sqrt") {
+            if (scope.text) {
+                const operand = "sqrt(" + scope.text + ")";
+                search.text = "= " + operand;
+            } else
+                calculatorEdit("sqrt(");
+        }
+        search.cursorPosition = search.text.length;
+        search.forceActiveFocus();
+    }
     function captureState() {
         return {
             route: route,
             query: query,
+            calculatorAnswerReady: calculation && calculatorAnswerReady,
             history: history,
             selection: selection,
             keyboardSelection: keyboardSelection,
@@ -105,6 +158,7 @@ NacreSurface {
         route = data.route || "home";
         history = data.history || [];
         search.text = data.query || "";
+        calculatorAnswerReady = data.calculatorAnswerReady === true && calculation;
         selection = data.selection ?? -1;
         keyboardSelection = data.keyboardSelection === true;
         Qt.callLater(() => {
@@ -152,6 +206,7 @@ NacreSurface {
         keyboardSelection = selection >= 0;
     }
     function reset() {
+        calculatorAnswerReady = false;
         activePrompt = NacreMenuPrompt.active && NacreMenuPrompt.ownerView === visibilities ? NacreMenuPrompt.request : null;
         history = [];
         route = visibilities.launcherRoute || "home";
@@ -341,6 +396,10 @@ NacreSurface {
             root.hoveredEntry = null
     }
     function focusResults(delta = 1) {
+        if (calculation) {
+            calculatorPad.item?.focusFirst();
+            return;
+        }
         controlsPinned = false;
         keyboardSelection = true;
         selection = Menu.step(entries, selection, delta);
@@ -359,6 +418,10 @@ NacreSurface {
             return;
         }
         if (event.key === Qt.Key_Tab) {
+            if (calculation) {
+                event.accepted = false;
+                return;
+            }
             if (selectedEntry)
                 actionsFor(selectedEntry);
             else
@@ -441,6 +504,7 @@ NacreSurface {
         search.forceActiveFocus();
     }
     onQueryChanged: {
+        calculatorAnswerReady = false;
         controlsPinned = false;
         keyboardSelection = false;
         hoveredEntry = null;
@@ -754,7 +818,7 @@ NacreSurface {
     ListView {
         id: results
         objectName: "launcherResults"
-        visible: !root.appLayout && !root.form
+        visible: !root.appLayout && !root.form && !root.calculation
         x: root.contentX
         y: root.picker ? 54 : 84
         width: root.contentWidth
@@ -846,12 +910,29 @@ NacreSurface {
         x: root.contentX + 14
         y: root.picker ? 80 : 120
         width: root.contentWidth - 28
-        visible: !root.entries.length && !root.form
+        visible: !root.entries.length && !root.form && !root.calculation
         text: root.calculation ? root.calculationResult.error || NacreI18n.tr("launcher.app-browser.text.type-an-expression-after", "Type an expression after =") : root.scope.kind === "files" ? root.menu.fileMessage || NacreI18n.tr("launcher.app-browser.text.type-and-a-filename-to-search-your-folders", "Type : and a filename to search your folders") : root.scope.kind === "brain" ? (root.scope.text ? NacreI18n.tr("launcher.app-browser.text.looking-in-your-private-notes", "Looking in your private notes…") : NacreI18n.tr("launcher.app-browser.text.type-and-a-few-words-to-search-nacre-brain", "Type # and a few words to search Nacre Brain")) : root.scope.kind === "ai" ? NacreI18n.tr("launcher.app-browser.text.type-and-your-question", "Type ? and your question") : root.route === "home" && !root.query ? NacreI18n.tr("launcher.app-browser.text.add-apps-and-menu-items-to-favorites-with-ctrl-d-or-the", "Add apps and menu items to Favorites with Ctrl+D or their item actions.") : root.route === "software.packages" ? root.menu.packageMessage || NacreI18n.tr("launcher.app-browser.text.type-two-or-more-characters-to-search-packages", "Type two or more characters to search packages") : NacreI18n.tr("launcher.app-browser.text.no-matches-try-a-different-word-for-actions-or-for-sear", "No matches. Try a different word, > for actions, or / for search scopes.")
         wrapMode: Text.Wrap
         textFormat: Text.PlainText
         color: NacreColours.palette.m3onSurfaceVariant
         font.pointSize: 11
+    }
+    Loader {
+        id: calculatorPad
+        objectName: "launcherCalculatorLoader"
+        visible: root.calculation && !root.form && !root.picker
+        active: visible
+        width: Math.min(460, root.contentWidth)
+        height: Math.max(0, root.bodyHeight)
+        x: root.contentX + (root.contentWidth - width) / 2
+        y: 84
+        sourceComponent: NacreCalculatorPad {
+            objectName: "launcherCalculator"
+            expression: root.scope.text
+            result: root.calculationResult
+            onInsertRequested: value => root.calculatorEdit(value)
+            onActionRequested: action => root.calculatorAction(action)
+        }
     }
     NacreSurface {
         id: details
@@ -1024,7 +1105,7 @@ NacreSurface {
         font.pointSize: 9
         color: NacreColours.palette.m3onSurfaceVariant
         elide: Text.ElideRight
-        visible: !root.form && !root.confirmation && (!!root.selectedEntry || root.picker || !!root.menu.catalog.error || !!root.menu.message)
+        visible: !root.form && !root.confirmation && (!!root.selectedEntry || root.calculation || root.picker || !!root.menu.catalog.error || !!root.menu.message)
     }
     NacreTextField {
         id: search
@@ -1037,6 +1118,7 @@ NacreSurface {
         visible: !root.form && !root.confirmation
         placeholderText: root.picker ? NacreI18n.tr("launcher.app-browser.placeholderText.filter-choices", "Filter choices") : root.calculation ? "= (12 + 8) / 5" : NacreI18n.tr("launcher.app-browser.placeholderText.search-everything", "Search everything…")
         rightPadding: prefixHints.visible ? prefixHints.width + 28 : 15
+        persistentSelection: root.calculation
         onAccepted: root.activate(root.selection)
         Keys.onDownPressed: root.focusResults()
         Keys.onEscapePressed: root.dismiss()
@@ -1045,8 +1127,11 @@ NacreSurface {
                 root.favorite(root.selectedEntry);
                 event.accepted = true;
             } else if (event.key === Qt.Key_Tab) {
-                root.selectedEntry ? root.actionsFor(root.selectedEntry) : rail.forceActiveFocus();
-                event.accepted = true;
+                if (!root.calculation) {
+                    root.selectedEntry ? root.actionsFor(root.selectedEntry) : rail.forceActiveFocus();
+                    event.accepted = true;
+                } else
+                    event.accepted = false;
             } else if (event.key === Qt.Key_Backspace && !text) {
                 root.back();
                 event.accepted = true;

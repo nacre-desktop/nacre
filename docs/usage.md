@@ -5,6 +5,12 @@ Enter to open the selected result. `>` scopes actions, `=` opens the calculator,
 `#` searches optional Brain notes and `?` opens optional AI. Manage favorites on
 hover or with Ctrl+D. Super+I opens Settings; Super+K opens the shortcut list.
 
+Type `=` or choose Calculator for a keypad with arithmetic, parentheses, sign
+change, square and square root. Type expressions directly or use the buttons;
+the result updates as you work. The `=` button keeps the answer ready for the
+next operation. Copy saves the result to the clipboard while keeping the
+calculator open; Enter copies it and closes the attached launcher.
+
 Colors previews wallpaper palettes before applying. Natural keeps the image's
 balance; Pop brings out contrasting details. Other styles offer softer or more
 vivid palettes. Dark/light and background tint are separate choices. Applying

@@ -283,6 +283,138 @@ TestCase {
         compare(SidebarChat.commands.length, 0);
     }
 
+    function calculatorClick(value, name) {
+        const button = findChild(value, "calculatorKey_" + name);
+        verify(button !== null, "Missing calculator key " + name);
+        mouseClick(button, button.width / 2, button.height / 2);
+    }
+
+    function test_calculator_keypad_mouse_editing_and_chaining() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        compare(findChild(value, "launcherCalculator"), null);
+        field.text = "= ";
+        tryVerify(() => findChild(value, "calculatorKey_7") !== null);
+        compare(findChild(value, "calculatorResult").text, "0");
+        compare(findChild(value, "calculatorCopy").enabled, false);
+        for (const key of ["left-parenthesis", "1", "2", "add", "8", "right-parenthesis", "divide", "5"])
+            calculatorClick(value, key);
+        compare(value.scope.text, "(12+8)/5");
+        compare(value.calculationResult.value, "4");
+        calculatorClick(value, "equals");
+        compare(value.scope.text, "4");
+        verify(value.visibilities.launcher);
+        calculatorClick(value, "multiply");
+        calculatorClick(value, "3");
+        calculatorClick(value, "equals");
+        compare(value.scope.text, "12");
+        const state = value.captureState();
+        value.navigate("apps");
+        value.restoreState(state);
+        verify(value.calculatorAnswerReady);
+        // A digit after equals starts a fresh calculation.
+        calculatorClick(value, "7");
+        compare(value.scope.text, "7");
+        calculatorClick(value, "add");
+        calculatorClick(value, "multiply");
+        compare(value.scope.text, "7*");
+        calculatorClick(value, "backspace");
+        calculatorClick(value, "decimal");
+        calculatorClick(value, "5");
+        compare(value.calculationResult.value, "7.5");
+        calculatorClick(value, "sign");
+        compare(value.calculationResult.value, "-7.5");
+        calculatorClick(value, "clear");
+        compare(value.scope.kind, "calculator");
+        compare(value.scope.text, "");
+        calculatorClick(value, "1");
+        calculatorClick(value, "2");
+        calculatorClick(value, "backspace");
+        compare(value.scope.text, "1");
+        calculatorClick(value, "backspace");
+        calculatorClick(value, "backspace");
+        compare(value.scope.kind, "calculator");
+        compare(value.scope.text, "");
+        // Button input respects the typed field's cursor and selection.
+        field.text = "= 123";
+        field.select(3, 4);
+        calculatorClick(value, "9");
+        compare(value.scope.text, "193");
+        field.cursorPosition = 3;
+        calculatorClick(value, "decimal");
+        compare(value.scope.text, "1.93");
+        field.cursorPosition = 5;
+        calculatorClick(value, "backspace");
+        compare(value.scope.text, "1.3");
+        compare(field.cursorPosition, 4);
+        field.text = "= 16";
+        calculatorClick(value, "sqrt");
+        compare(value.calculationResult.value, "4");
+        calculatorClick(value, "square");
+        compare(value.calculationResult.value, "16");
+        value.navigate("apps");
+        tryCompare(findChild(value, "launcherCalculatorLoader"), "active", false);
+    }
+
+    function test_calculator_copy_errors_and_keyboard_focus() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        field.text = "= 1/0";
+        tryVerify(() => findChild(value, "calculatorKey_equals") !== null);
+        compare(findChild(value, "calculatorKey_equals").enabled, false);
+        compare(findChild(value, "calculatorCopy").enabled, false);
+        verify(findChild(value, "calculatorError").visible);
+        const pad = findChild(value, "launcherCalculator");
+        const position = findChild(value, "calculatorKey_7").mapToItem(pad, 0, 0).y;
+        field.text = "= 8*3";
+        compare(findChild(value, "calculatorKey_7").mapToItem(pad, 0, 0).y, position);
+        const copy = findChild(value, "calculatorCopy");
+        mouseClick(copy, copy.width / 2, copy.height / 2);
+        compare(AppLaunch.commands[0][0], "wl-copy");
+        compare(AppLaunch.commands[0][2], "24");
+        verify(value.visibilities.launcher);
+        compare(copy.text, "Copied");
+        field.forceActiveFocus();
+        keyClick(Qt.Key_Down);
+        const seven = findChild(value, "calculatorKey_7");
+        verify(seven.children.some(child => child.activeFocus));
+        keyClick(Qt.Key_Space);
+        // Down then Space activates a real, focused keypad button.
+        compare(value.scope.text, "8*37");
+        compare(copy.text, "Copy");
+        field.text = "= 10 km to miles";
+        NacreMenu.conversionQuery = "10 km to miles";
+        NacreMenu.conversion = {
+            ok: true,
+            value: "6.2137 mi"
+        };
+        compare(value.calculationResult.value, "6.2137 mi");
+        calculatorClick(value, "equals");
+        compare(value.scope.text, "10 km to miles");
+    }
+
+    function test_calculator_small_window_scroll_and_pseudo_labels() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        const previousLanguage = NacreI18n.language;
+        try {
+            NacreI18n.language = "pseudo";
+            value.width = 540;
+            value.height = 340;
+            field.text = "= 2+2";
+            tryVerify(() => findChild(value, "launcherCalculator") !== null);
+            const pad = findChild(value, "launcherCalculator");
+            const seven = findChild(value, "calculatorKey_7");
+            tryVerify(() => seven.width >= 42 && seven.height >= 42);
+            verify(pad.contentHeight > pad.height);
+            pad.contentY = pad.contentHeight - pad.height;
+            wait(20);
+            calculatorClick(value, "equals");
+            compare(value.scope.kind, "calculator");
+            compare(value.scope.text, "4");
+            verify(findChild(value, "calculatorCopy").text.startsWith("["));
+        } finally {
+            NacreI18n.language = previousLanguage;
+        }
+    }
+
     function test_power_requires_confirmation_and_route_never_executes() {
         const value = view();
         value.navigate("power.poweroff");

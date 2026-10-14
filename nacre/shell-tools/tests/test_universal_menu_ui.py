@@ -25,6 +25,7 @@ def stage(target):
         "NacreMenuIcon",
         "NacreMenuForm",
         "NacreMenuButton",
+        "NacreCalculatorPad",
     ):
         stage_qml(
             SHELL / "modules/launcher" / (name + ".qml"), target / (name + ".qml")
@@ -64,6 +65,13 @@ def stage(target):
         "NacrePanelState": """property QtObject view:QtObject{property bool launcher:true;property bool left:false;property bool leftPinned:false};property var calls:[];function getForActive(){return view;}function openSettings(page){calls=[...calls,["settings",page]];}function openMode(mode){calls=[...calls,["mode",mode]];}""",
         "PowerProfiles": """property int profile:1;property bool hasPerformanceProfile:true""",
     }
+    colors = fixtures / "NacreColours.qml"
+    colors.write_text(
+        colors.read_text().replace(
+            '"m3onPrimary": "black",',
+            '"m3onPrimary": "black", "m3primaryContainer":"#334455", "m3onPrimaryContainer":"white",',
+        )
+    )
     with (fixtures / "qmldir").open("a") as manifest:
         for name, body in definitions.items():
             (fixtures / (name + ".qml")).write_text(
@@ -71,13 +79,7 @@ def stage(target):
             )
             if name not in (fixtures / "qmldir").read_text():
                 manifest.write("singleton " + name + " 1.0 " + name + ".qml\n")
-    button = fixtures / "ActionButton.qml"
-    button.write_text(
-        button.read_text().replace(
-            "property bool selected:",
-            "property bool compact:false;property bool selected:",
-        )
-    )
+    stage_qml(SHELL / "widgets/ActionButton.qml", fixtures / "ActionButton.qml")
     # These are visual/external icon contracts, not the menu logic being tested.
     (fixtures / "NacreIcon.qml").write_text(
         "import QtQuick\nText {property real fill:0}\n"
