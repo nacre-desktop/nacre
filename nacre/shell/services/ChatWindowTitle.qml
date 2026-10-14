@@ -75,7 +75,7 @@ Singleton {
     Process {
         id: reader
         property int requestPid
-        command: ["python3", NacrePaths.tools + "/window-chat-title.py", requestPid.toString()]
+        command: [NacrePaths.helperBinary, "window-chat-title", requestPid.toString()]
         stdout: SplitParser {
             splitMarker: ""
             onRead: data => {
