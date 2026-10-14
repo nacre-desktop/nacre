@@ -18,6 +18,9 @@ Singleton {
     property bool received: false
     property int snapshotReads: 0
     property int retrySeconds: 2
+    property var wiredDevices: []
+    property bool wiredPending: false
+    readonly property bool wiredConnected: wiredDevices.length > 0
     readonly property bool busy: reader.running
     readonly property bool wifiAvailable: snapshot.wifiAvailable !== false
     readonly property bool wifiEnabled: snapshot.wifiEnabled
@@ -59,6 +62,10 @@ Singleton {
         }
     }
     function refresh() {
+        if (wiredReader.running)
+            wiredPending = true;
+        else
+            wiredReader.running = true;
         if (reader.running) {
             pending = true;
             return;
@@ -73,6 +80,31 @@ Singleton {
         debounce.restart();
     }
     Component.onCompleted: refresh()
+    function publishWired(text) {
+        if (text.length > 65536)
+            return false;
+        wiredDevices = text.trim().split("\n").map(line => line.split(":")).filter(row => row.length === 3 && /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$/.test(row[0]) && row[1] === "ethernet" && (row[2] === "connected" || row[2] === "connected (externally)")).map(row => row[0]);
+        return true;
+    }
+    Process {
+        id: wiredReader
+        objectName: "networkWiredReader"
+        command: ["nmcli", "--colors", "no", "--terse", "--fields", "DEVICE,TYPE,STATE", "device", "status"]
+        environment: ({
+                LC_ALL: "C"
+            })
+        stdout: StdioCollector {
+            onStreamFinished: root.publishWired(text)
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0 || exitStatus !== 0)
+                root.wiredDevices = [];
+            if (root.wiredPending) {
+                root.wiredPending = false;
+                root.scheduleRefresh();
+            }
+        }
+    }
     Timer {
         id: debounce
         interval: 200

@@ -6,32 +6,66 @@ import qs.utils
 
 Singleton {
     id: root
-    property var optionalTiles: []
+    readonly property var defaults: ["volume", "brightness", "network", "bluetooth", "battery", "night", "dnd", "awake", "appearance"]
+    property var tiles: defaults.slice()
+    readonly property var optionalTiles: tiles.filter(id => !defaults.includes(id))
     property string error: ""
-    readonly property var allowed: ["airplane", "vpn", "record", "mic"]
+    readonly property var allowed: defaults.concat(["airplane", "vpn", "record", "mic", "mic-volume", "keyboard", "screenshot", "picker", "clipboard", "wallpaper", "next-wallpaper", "updates", "displays"])
+    function normalize(values) {
+        return [...new Set(values.filter(value => typeof value === "string" && allowed.includes(value)))];
+    }
+    function save(values) {
+        tiles = normalize(values);
+        error = "";
+        store.setText(JSON.stringify({
+            version: 2,
+            tiles: tiles
+        }));
+    }
     function toggle(id) {
         if (!allowed.includes(id))
             return;
-        optionalTiles = optionalTiles.includes(id) ? optionalTiles.filter(value => value !== id) : [...optionalTiles, id];
-        store.setText(JSON.stringify({
-            version: 1,
-            optionalTiles: optionalTiles
-        }));
+        save(tiles.includes(id) ? tiles.filter(value => value !== id) : [...tiles, id]);
+    }
+    function move(id, offset, visibleIds = tiles) {
+        if (![1, -1].includes(offset) || !tiles.includes(id))
+            return false;
+        const visible = normalize(visibleIds).filter(value => tiles.includes(value));
+        const index = visible.indexOf(id), other = visible[index + offset];
+        if (index < 0 || !other)
+            return false;
+        const ordered = tiles.slice();
+        ordered.splice(ordered.indexOf(id), 1);
+        ordered.splice(ordered.indexOf(other) + (offset > 0 ? 1 : 0), 0, id);
+        save(ordered);
+        return true;
+    }
+    function reset() {
+        save(defaults);
+    }
+    function receive(text) {
+        try {
+            const data = JSON.parse(text);
+            if (data.version === 2 && Array.isArray(data.tiles))
+                tiles = normalize(data.tiles);
+            else if (data.version === 1 && Array.isArray(data.optionalTiles))
+                tiles = normalize(defaults.concat(data.optionalTiles));
+            else
+                throw new Error();
+            error = "";
+            return true;
+        } catch (failure) {
+            error = NacreI18n.tr("controlcenter.preferences.invalid", "Could not read the saved tiles.");
+            return false;
+        }
     }
     FileView {
         id: store
         path: NacrePaths.config + "/control-center.json"
         printErrors: false
         atomicWrites: true
-        onLoaded: {
-            try {
-                const data = JSON.parse(text());
-                if (data.version === 1 && Array.isArray(data.optionalTiles))
-                    root.optionalTiles = [...new Set(data.optionalTiles.filter(value => root.allowed.includes(value)))];
-            } catch (failure) {
-                root.error = NacreI18n.tr("controlcenter.preferences.invalid", "Could not read the saved tiles.");
-            }
-        }
+        objectName: "controlPreferencesStore"
+        onLoaded: root.receive(text())
         onSaveFailed: root.error = NacreI18n.tr("controlcenter.preferences.save-failed", "Could not save the tiles.")
     }
 }

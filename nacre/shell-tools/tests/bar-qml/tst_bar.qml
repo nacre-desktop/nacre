@@ -350,6 +350,10 @@ TestCase {
         NacreControlActions.calls = [];
         verify(view.quickToggle("network"));
         compare(NacreControlActions.calls[0].join("|"), "wifi-radio|off");
+        NacreNetwork.wiredConnected = true;
+        verify(!view.quickToggle("network"));
+        compare(NacreControlActions.calls.length, 1);
+        NacreNetwork.wiredConnected = false;
         NacreBluetooth.available = false;
         verify(!view.quickToggle("bluetooth"));
         compare(NacreControlActions.calls.length, 1);

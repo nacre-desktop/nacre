@@ -111,7 +111,7 @@ suites = {
         "test_quick_controls",
         "QuickControlsTests",
         "test_popups_and_settings_navigation_in_native_qt",
-        """const panel=createTemporaryObject(center,this);for(const section of ["home","network","bluetooth","audio","battery","history"]){panel.selectedSection=section;wait(100);capture(panel,"controls-"+section)}""",
+        """const panel=createTemporaryObject(center,this);for(const section of ["home","network","bluetooth","audio","battery","session","updates","history","edit"]){panel.selectedSection=section;wait(100);capture(panel,"controls-"+section)}const scroll=findChild(panel,"controlPageScroll");scroll.contentY=Math.max(0,scroll.contentHeight-scroll.height);wait(100);capture(panel,"controls-edit-actions");NacreControlPreferences.save(NacreControlPreferences.allowed);panel.selectedSection="home";wait(100);capture(panel,"controls-custom");scroll.contentY=Math.max(0,scroll.contentHeight-scroll.height);wait(100);capture(panel,"controls-custom-actions");NacreControlPreferences.reset()""",
         "",
     ),
     "launcher": (

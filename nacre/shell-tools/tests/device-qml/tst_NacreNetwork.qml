@@ -118,4 +118,34 @@ TestCase {
         compare(state.visibleNetworks.length, 1);
         compare(state.visibleNetworks[0].bssid, "00:11:22:33:44:56");
     }
+    function test_wired_state_ignores_virtual_and_disconnected_devices_and_clears_failures() {
+        const state = NacreNetwork;
+        const reader = findChild(state, "networkWiredReader");
+        compare(reader.command.join("|"), "nmcli|--colors|no|--terse|--fields|DEVICE,TYPE,STATE|device|status");
+        compare(reader.environment.LC_ALL, "C");
+        verify(state.publishWired("enp1s0:ethernet:connected\nwlan0:wifi:connected\neth1:ethernet:disconnected\nveth0:veth:connected\nlo:loopback:connected (externally)\n-bad:ethernet:connected\n"));
+        compare(state.wiredDevices.join("|"), "enp1s0");
+        verify(state.wiredConnected);
+        reader.running = false;
+        state.wiredPending = false;
+        reader.exited(1, 0);
+        verify(!state.wiredConnected);
+        verify(state.publishWired("enp1s0:ethernet:connected (externally)\n"));
+        verify(state.wiredConnected);
+        verify(state.publishWired("enp1s0:ethernet:disconnected\n"));
+        verify(!state.wiredConnected);
+        const starts = reader.starts;
+        state.refresh();
+        state.refresh();
+        compare(reader.starts, starts + 1);
+        verify(state.wiredPending);
+        reader.running = false;
+        reader.exited(0, 0);
+        wait(260);
+        compare(reader.starts, starts + 2);
+        reader.running = false;
+        reader.exited(0, 0);
+        wait(350);
+        compare(reader.starts, starts + 2);
+    }
 }

@@ -40,7 +40,7 @@ class BarControlsTests(unittest.TestCase):
                 "ChatWindowTitle": "property var titles:({})",
                 "NacreIcons": 'function getAppCategoryIcon(name,fallback){return name==="editor"?"code":fallback}function getNetworkIcon(strength){return strength>50?"signal_wifi_4_bar":"signal_wifi_0_bar"}',
                 "NacreAudio": "property real volume:.5;property bool available:true;property bool muted:false;property var writes:[];function setVolume(value){writes=[...writes,value];volume=value}function toggleMute(){muted=!muted}",
-                "NacreNetwork": "property var active:null;property bool wifiAvailable:true;property bool wifiEnabled:true",
+                "NacreNetwork": "property bool wiredConnected:false;property var active:null;property bool wifiAvailable:true;property bool wifiEnabled:true",
                 "NacreBluetooth": "property bool powered:false;property bool available:true",
                 "NacreControlActions": "property bool busy:false;property var calls:[];function request(args){calls=[...calls,args]}",
                 "NacreBrightness": "property QtObject monitor:QtObject {property bool available:true;property real brightness:.5;property var writes:[];function setBrightness(value){writes=[...writes,value];brightness=value}}function getMonitorForScreen(screen){return monitor}",

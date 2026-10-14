@@ -4,14 +4,17 @@ import qs.services
 
 Column {
     id: root
+    readonly property var displays: NacreBrightness.monitors.filter(monitor => monitor.available === true)
+    visible: displays.length > 0 || NacreKeyboardLight.available
     spacing: 14
     NacreText {
+        visible: root.displays.length > 0
         text: NacreI18n.tr("controlcenter.displays.title", "Display brightness")
         font.pointSize: 12
         font.weight: Font.Medium
     }
     Repeater {
-        model: NacreBrightness.monitors
+        model: root.displays
         delegate: Column {
             required property var modelData
             readonly property string displayName: modelData.modelData?.description || modelData.modelData?.name || modelData.name || NacreI18n.tr("controlcenter.levels.this-display", "This display")
@@ -36,7 +39,7 @@ Column {
             NacreText {
                 width: parent.width
                 visible: text !== ""
-                text: modelData.error || (!modelData.available ? NacreI18n.tr("controlcenter.levels.no-brightness", "No brightness control for this display") : "")
+                text: modelData.error || ""
                 wrapMode: Text.Wrap
                 color: NacreTokens.mutedInk
                 font.pointSize: 10
@@ -44,17 +47,13 @@ Column {
         }
     }
     NacreText {
-        width: parent.width
-        visible: !NacreBrightness.monitors.length
-        text: NacreI18n.tr("controlcenter.displays.none", "No controllable displays found.")
-        color: NacreTokens.mutedInk
-        wrapMode: Text.Wrap
-    }
-    NacreText {
+        visible: NacreKeyboardLight.available
         text: NacreI18n.tr("controlcenter.displays.keyboard", "Keyboard backlight")
         font.pointSize: 12
     }
     NacreControlSlider {
+        objectName: "controlKeyboardBrightness"
+        visible: NacreKeyboardLight.available
         width: parent.width
         enabled: NacreKeyboardLight.available
         value: NacreKeyboardLight.brightness
@@ -64,7 +63,8 @@ Column {
     }
     NacreText {
         width: parent.width
-        text: NacreKeyboardLight.error || (NacreKeyboardLight.available ? NacreI18n.number(Math.round(NacreKeyboardLight.brightness * 100)) + "%" : NacreI18n.tr("controlcenter.displays.keyboard-unavailable", "Keyboard backlight is unavailable on this device."))
+        visible: NacreKeyboardLight.available
+        text: NacreKeyboardLight.error || NacreI18n.number(Math.round(NacreKeyboardLight.brightness * 100)) + "%"
         color: NacreTokens.mutedInk
         font.pointSize: 10
         wrapMode: Text.Wrap

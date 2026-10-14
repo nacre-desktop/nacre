@@ -8,7 +8,7 @@ import qs.services
 Item {
     id: content
     readonly property real inset: 18
-    readonly property real preferredHeight: panel.section === "session" ? Math.max(300, page.y + page.contentHeight + 18) : 650
+    readonly property real preferredHeight: ["home", "session"].includes(panel.section) ? Math.max(300, page.y + page.contentHeight + 18) : 650
     RowLayout {
         id: status
         x: content.inset
@@ -153,7 +153,9 @@ Item {
             session: "NacreControlSession.qml",
             updates: "NacreControlUpdates.qml"
         };
-        const properties = name === "home" ? {
+        const properties = name === "edit" ? {
+            screen: panel.screen
+        } : name === "home" ? {
             screen: panel.screen,
             active: panel.hostActive && panel.visibility
         } : ["audio", "session"].includes(name) ? {

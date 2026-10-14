@@ -37,6 +37,20 @@ TestCase {
         AppLaunch.calls = [];
         DesktopActions.calls = [];
         NacreCompositor.logoutCount = 0;
+        NacreNetwork.wiredConnected = false;
+        NacreNetwork.wifiAvailable = true;
+        NacreBrightness.device.available = true;
+        NacreKeyboardLight.available = true;
+        NacrePlayers.active = null;
+        NacreControlPreferences.reset();
+        NacreControlTools.data = ({
+                screenshot: true,
+                colorPicker: true,
+                powerProfilesSupported: true,
+                nightLightSupported: true,
+                nightLightExternal: false,
+                nightLightEnabled: false
+            });
     }
 
     Component {
@@ -148,9 +162,9 @@ TestCase {
         scene.selectedSection = "home";
         wait(30);
         for (const id of ["airplane", "vpn", "record", "mic"]) {
-            NacreControlPreferences.optionalTiles = [id];
+            NacreControlPreferences.tiles = NacreControlPreferences.defaults.concat([id]);
             wait(0);
-            NacreControlPreferences.optionalTiles = [];
+            NacreControlPreferences.reset();
             wait(0);
         }
     }
@@ -251,6 +265,136 @@ TestCase {
         wait(230);
         verify(panel.height > 320 && panel.height < 480);
         compare(AppLaunch.calls.length, 0);
+    }
+    function test_wired_desktop_hides_unsupported_levels_and_has_no_media() {
+        NacreNetwork.wiredConnected = true;
+        NacreNetwork.wifiAvailable = false;
+        NacreBrightness.device.available = false;
+        NacreKeyboardLight.available = false;
+        NacrePlayers.active = ({
+                trackTitle: "Public demo track",
+                trackArtist: "Demo artist"
+            });
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        wait(250);
+        const network = findChild(panel, "controlWifi");
+        compare(network.label, "Ethernet");
+        compare(network.icon, "lan");
+        verify(network.selected && network.available);
+        const brightness = findChild(panel, "controlBrightnessRow");
+        verify(!brightness || !brightness.visible);
+        verify(panel.height < 560);
+        verify(!containsText(panel, "Public demo track"));
+        const request = NacreControlActions.lastRequest;
+        network.clicked();
+        wait(30);
+        compare(panel.section, "network");
+        compare(NacreControlActions.lastRequest, request);
+        verify(findChild(panel, "controlWiredConnection").visible);
+        scene.selectedSection = "battery";
+        wait(30);
+        verify(!findChild(panel, "controlKeyboardBrightness").visible);
+        NacreKeyboardLight.available = true;
+        verify(findChild(panel, "controlKeyboardBrightness").visible);
+        scene.selectedSection = "home";
+        wait(250);
+        NacreNetwork.wiredConnected = false;
+        NacreNetwork.wifiAvailable = true;
+        compare(findChild(panel, "controlWifi").label, "Wi-Fi");
+        const compactHeight = panel.height;
+        NacreBrightness.device.available = true;
+        wait(250);
+        verify(findChild(panel, "controlBrightnessRow").visible);
+        verify(panel.height > compactHeight);
+    }
+    function containsText(item, text) {
+        return item.text === text || (item.children || []).some(child => containsText(child, text));
+    }
+    function test_editor_removes_reorders_adds_and_resets_all_controls() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        scene.selectedSection = "edit";
+        wait(40);
+        verify(!!findChild(panel, "controlRemove-network"));
+        findChild(panel, "controlRemove-network").focusControl();
+        keyClick(Qt.Key_Space);
+        wait(30);
+        verify(!NacreControlPreferences.tiles.includes("network"));
+        verify(!!findChild(panel, "controlAdd-network"));
+        findChild(panel, "controlAdd-network").clicked();
+        wait(30);
+        compare(NacreControlPreferences.tiles[NacreControlPreferences.tiles.length - 1], "network");
+        findChild(panel, "controlMoveUp-network").clicked();
+        wait(30);
+        compare(NacreControlPreferences.tiles[NacreControlPreferences.tiles.length - 2], "network");
+        findChild(panel, "controlRemove-volume").clicked();
+        wait(30);
+        verify(!NacreControlPreferences.tiles.includes("volume"));
+        findChild(panel, "controlAdd-screenshot").clicked();
+        wait(30);
+        findChild(panel, "controlAdd-mic-volume").clicked();
+        wait(30);
+        scene.selectedSection = "home";
+        wait(40);
+        verify(!findChild(panel, "controlVolume"));
+        verify(findChild(panel, "controlMicrophone").visible);
+        const writes = NacreAudio.writes;
+        findChild(panel, "controlMicrophone").value = .55;
+        findChild(panel, "controlMicrophone").moved();
+        compare(NacreAudio.writes, writes + 1);
+        const captures = NacreControlTools.captures.length;
+        findChild(panel, "controlAction-screenshot").clicked();
+        compare(NacreControlTools.captures.length, captures + 1);
+        compare(NacreControlTools.captures[NacreControlTools.captures.length - 1], "screenshot");
+        scene.selectedSection = "edit";
+        wait(30);
+        findChild(panel, "controlLayoutReset").clicked();
+        compare(JSON.stringify(NacreControlPreferences.tiles), JSON.stringify(NacreControlPreferences.defaults));
+    }
+    function test_saved_layout_migration_validation_empty_layout_and_unsupported_features() {
+        const prefs = NacreControlPreferences;
+        verify(prefs.receive(JSON.stringify({
+            version: 1,
+            optionalTiles: ["mic", "unknown", "mic"]
+        })));
+        compare(prefs.tiles.length, prefs.defaults.length + 1);
+        compare(prefs.tiles[prefs.tiles.length - 1], "mic");
+        verify(prefs.receive(JSON.stringify({
+            version: 2,
+            tiles: ["bluetooth", "network", "bluetooth", "unknown"]
+        })));
+        compare(prefs.tiles.join("|"), "bluetooth|network");
+        verify(!prefs.receive("malformed"));
+        compare(prefs.tiles.join("|"), "bluetooth|network");
+        verify(!prefs.move("network", -2));
+        verify(prefs.move("network", -1));
+        compare(prefs.tiles.join("|"), "network|bluetooth");
+        compare(JSON.parse(findChild(prefs, "controlPreferencesStore").saved).version, 2);
+        verify(prefs.receive(JSON.stringify({
+            version: 2,
+            tiles: []
+        })));
+        compare(prefs.tiles.length, 0);
+        prefs.reset();
+        NacreControlTools.data = Object.assign({}, NacreControlTools.data, {
+            nightLightSupported: false,
+            screenshot: false,
+            colorPicker: false
+        });
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        wait(40);
+        verify(!findChild(panel, "controlNightLight"));
+        scene.selectedSection = "edit";
+        wait(30);
+        verify(!findChild(panel, "controlRemove-night"));
+        verify(!findChild(panel, "controlAdd-screenshot"));
+        verify(!findChild(panel, "controlAdd-picker"));
+        verify(prefs.tiles.includes("night"));
+        NacreControlTools.data = Object.assign({}, NacreControlTools.data, {
+            nightLightSupported: true
+        });
+        scene.selectedSection = "home";
+        wait(30);
+        verify(!!findChild(panel, "controlNightLight"));
     }
     Component {
         id: sessionControls

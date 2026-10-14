@@ -31,7 +31,7 @@ class RedockMotionTests(unittest.TestCase):
                 "DesktopSettings": "property var data:({animations:true})",
                 "NacreWallpapers": 'property var preferences:({layout:"carousel"})',
                 "DesktopExtras": 'property string brainQuery:"";property var notes:[];property var chats:[];property var busy:({capture:false});property string captured:"";property string message:"";function request(kind,payload){}',
-                "NacreNetwork": "property var active:null;property bool wifiEnabled:false;function refresh(){}",
+                "NacreNetwork": "property bool wiredConnected:false;property var active:null;property bool wifiEnabled:false;function refresh(){}",
                 "NacreBluetooth": "property bool powered:false",
                 "NacreBrightness": "function getMonitorForScreen(screen){return null}",
                 "NacreNotifs": "property bool dnd:false;property var retained:[];function clearHistory(){}",

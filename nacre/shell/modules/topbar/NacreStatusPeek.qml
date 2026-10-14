@@ -17,7 +17,7 @@ NacreWindow {
     readonly property string profile: PowerProfiles.profile === PowerProfile.PowerSaver ? NacreI18n.tr("popouts.battery-popup.label.power-saver", "Power saver") : PowerProfiles.profile === PowerProfile.Performance ? NacreI18n.tr("popouts.battery-popup.label.performance", "Performance") : NacreI18n.tr("popouts.battery-popup.label.balanced", "Balanced")
     readonly property string title: ({
             audio: NacreI18n.tr("popouts.sound-popup.text.sound", "Sound"),
-            network: NacreI18n.tr("controlcenter.control-center.label.wi-fi", "Wi-Fi"),
+            network: NacreNetwork.wiredConnected ? NacreI18n.tr("controlcenter.network.ethernet", "Ethernet") : NacreI18n.tr("controlcenter.control-center.label.wi-fi", "Wi-Fi"),
             bluetooth: NacreI18n.tr("controlcenter.control-center.label.bluetooth", "Bluetooth"),
             battery: NacreI18n.tr("status.peek.battery", "Battery"),
             updates: NacreI18n.tr("status.peek.updates", "Updates"),
@@ -27,7 +27,7 @@ NacreWindow {
         if (kind === "audio")
             return NacreAudio.available === false ? NacreI18n.tr("popouts.sound-popup.text.output-unavailable", "Output unavailable") : NacreAudio.muted ? NacreI18n.tr("status.peek.muted", "Muted") : NacreI18n.number(Math.round(NacreAudio.volume * 100)) + "%";
         if (kind === "network")
-            return NacreNetwork.wifiAvailable === false ? NacreI18n.tr("ui.status-icons.label.no-wi-fi-adapter", "No Wi-Fi adapter") : NacreNetwork.wifiEnabled ? NacreNetwork.active?.ssid || NacreI18n.tr("controlcenter.control-center.detail.not-connected", "Not connected") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off");
+            return NacreNetwork.wiredConnected ? NacreI18n.tr("controlcenter.network.wired-connected", "Connected by cable") : NacreNetwork.wifiAvailable === false ? NacreI18n.tr("ui.status-icons.label.no-wi-fi-adapter", "No Wi-Fi adapter") : NacreNetwork.wifiEnabled ? NacreNetwork.active?.ssid || NacreI18n.tr("controlcenter.control-center.detail.not-connected", "Not connected") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off");
         if (kind === "bluetooth")
             return NacreBluetooth.available === false ? NacreI18n.tr("ui.status-icons.label.no-bluetooth-adapter", "No Bluetooth adapter") : NacreBluetooth.powered ? connected.length === 1 ? NacreI18n.tr("status.peek.connected-device", "1 connected device") : connected.length ? NacreI18n.tr("status.peek.connected-devices", "{count} connected devices", {
                 count: connected.length
@@ -46,7 +46,7 @@ NacreWindow {
         if (kind === "audio")
             return NacreAudio.sink?.description || "";
         if (kind === "network")
-            return NacreNetwork.active ? NacreI18n.tr("status.peek.signal", "Signal {percent}%", {
+            return NacreNetwork.wiredConnected ? "" : NacreNetwork.active ? NacreI18n.tr("status.peek.signal", "Signal {percent}%", {
                 percent: NacreI18n.number(NacreNetwork.active.strength || 0)
             }) : "";
         if (kind === "battery" && batteryAvailable) {

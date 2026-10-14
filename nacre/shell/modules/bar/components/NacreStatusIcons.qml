@@ -24,7 +24,7 @@ Item {
     function quickToggle(name) {
         if (name === "audio" && NacreAudio.available !== false)
             NacreAudio.toggleMute();
-        else if (name === "network" && NacreNetwork.wifiAvailable !== false && !NacreControlActions.busy)
+        else if (name === "network" && !NacreNetwork.wiredConnected && NacreNetwork.wifiAvailable !== false && !NacreControlActions.busy)
             NacreControlActions.request(["wifi-radio", NacreNetwork.wifiEnabled ? "off" : "on"]);
         else if (name === "bluetooth" && NacreBluetooth.available !== false && !NacreControlActions.busy)
             NacreControlActions.request(["bluetooth-power", NacreBluetooth.powered ? "off" : "on"]);
@@ -81,8 +81,8 @@ Item {
             id: wifi
             key: "network"
             objectName: "nacreStatusNetwork"
-            icon: NacreNetwork.active ? NacreIcons.getNetworkIcon(NacreNetwork.active.strength || 0) : "wifi_off"
-            label: NacreNetwork.wifiAvailable === false ? NacreI18n.tr("ui.status-icons.label.no-wi-fi-adapter", "No Wi-Fi adapter") : NacreNetwork.active ? NacreI18n.tr("components.status-icons.label.wi-fi-connected", "Wi-Fi connected") : NacreI18n.tr("components.status-icons.label.wi-fi-disconnected", "Wi-Fi disconnected")
+            icon: NacreNetwork.wiredConnected ? "lan" : NacreNetwork.active ? NacreIcons.getNetworkIcon(NacreNetwork.active.strength || 0) : "wifi_off"
+            label: NacreNetwork.wiredConnected ? NacreI18n.tr("controlcenter.network.wired-connected", "Connected by cable") : NacreNetwork.wifiAvailable === false ? NacreI18n.tr("ui.status-icons.label.no-wi-fi-adapter", "No Wi-Fi adapter") : NacreNetwork.active ? NacreI18n.tr("components.status-icons.label.wi-fi-connected", "Wi-Fi connected") : NacreI18n.tr("components.status-icons.label.wi-fi-disconnected", "Wi-Fi disconnected")
             ink: root.colour
         }
         StatusTarget {

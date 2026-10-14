@@ -13,6 +13,7 @@ NacreClip {
     property bool hasDetails: false
     property bool contextDetails: false
     property string explanation: ""
+    property bool elideDetail: false
     property bool held: false
     readonly property color tileInk: !available ? NacreTokens.mutedInk : selected ? NacreColours.palette.m3onPrimaryContainer : NacreTokens.ink
     signal clicked
@@ -57,8 +58,8 @@ NacreClip {
                 color: root.selected && root.available ? root.tileInk : NacreTokens.mutedInk
                 opacity: root.available ? 1 : .55
                 wrapMode: Text.Wrap
-                maximumLineCount: 2
-                elide: Text.ElideRight
+                maximumLineCount: root.elideDetail ? 2 : 100
+                elide: root.elideDetail ? Text.ElideRight : Text.ElideNone
             }
         }
         NacreInteraction {

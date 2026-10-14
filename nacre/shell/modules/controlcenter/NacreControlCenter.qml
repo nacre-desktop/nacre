@@ -31,7 +31,7 @@ FocusScope {
     signal sectionRequested(string section)
     property real presentedWidth: visibility ? contentWidth : 0
     readonly property real contentWidth: Math.max(240, Math.min(detached ? 560 : 424, parent?.width ?? 424))
-    readonly property real contentHeight: Math.max(240, Math.min(detached ? 860 : section === "session" ? bodyLoader.item?.preferredHeight || 300 : 650, parent?.height ?? 650))
+    readonly property real contentHeight: Math.max(240, Math.min(detached ? 860 : ["home", "session"].includes(section) ? bodyLoader.item?.preferredHeight || 300 : 650, parent?.height ?? 650))
     property real presentedHeight: contentHeight
     implicitWidth: Math.min(contentWidth, presentedWidth)
     implicitHeight: Math.min(presentedHeight, parent?.height ?? presentedHeight)
@@ -83,7 +83,7 @@ FocusScope {
     }
     readonly property var detailNames: ({
             home: NacreI18n.tr("controlcenter.control-center.text.controls", "Controls"),
-            network: NacreI18n.tr("controlcenter.control-center.label.wi-fi", "Wi-Fi"),
+            network: NacreNetwork.wiredConnected ? NacreI18n.tr("controlcenter.network.title", "Network") : NacreI18n.tr("controlcenter.control-center.label.wi-fi", "Wi-Fi"),
             bluetooth: NacreI18n.tr("controlcenter.control-center.label.bluetooth", "Bluetooth"),
             audio: NacreI18n.tr("popouts.sound-popup.text.sound", "Sound"),
             battery: NacreI18n.tr("controlcenter.details.power-brightness", "Power & brightness"),

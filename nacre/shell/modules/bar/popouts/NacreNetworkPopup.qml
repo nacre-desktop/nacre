@@ -72,6 +72,29 @@ Item {
         width: root.width
         spacing: 10
         RowLayout {
+            objectName: "controlWiredConnection"
+            width: parent.width
+            visible: NacreNetwork.wiredConnected === true
+            NacreIcon {
+                text: "lan"
+                color: NacreTokens.accent
+                font.pointSize: 20
+            }
+            Column {
+                Layout.fillWidth: true
+                NacreText {
+                    text: NacreI18n.tr("controlcenter.network.ethernet", "Ethernet")
+                    font.pointSize: 12
+                    font.weight: Font.Medium
+                }
+                NacreText {
+                    text: NacreI18n.tr("controlcenter.network.wired-connected", "Connected by cable")
+                    font.pointSize: 10
+                    color: NacreTokens.mutedInk
+                }
+            }
+        }
+        RowLayout {
             width: parent.width
             NacreText {
                 Layout.fillWidth: true
