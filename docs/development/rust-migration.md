@@ -7,7 +7,7 @@ Developer-only Python tools and test harnesses remain permitted.
 | Wave | Status | Numbers / decisions |
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
-| 1 Service / frequent helpers | In progress; CI repaired | 13 native replacements validated; helper RSS 26.95 -> 10.21 MiB (busy). |
+| 1 Service / frequent helpers | In progress; CI repaired | 13 ports ready; helper RSS 26.95 -> 10.21 MiB (busy); publication/CI gate. |
 | 2 Compositor / pearls | Pending | Persistent native IPC; one neutral compositor contract. |
 | 3 Wallpaper / colors | Pending | Direct Orient crates; preserve paired publication. |
 | 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
@@ -57,7 +57,7 @@ Latest main `55c5a03b`: Source 38487998838 desktop and Niri fresh install pass;
 834 source tests, 12 original controls, 349 frozen cases. No new skips.
 Earlier `f3b42304` Source and performance both pass. CI workflow repair is retained; hardware checks are manual, correctness stays automatic.
 
-Next: finish final private check; push 13 helper commits and shared integration.
+Next: verify pushed Wave 1 CI and fresh-install smoke; then begin Wave 2 fixtures.
 526 native cases / 51 controls / 81 Rust tests pass; empty-PATH report passes.
 Rewritten main e9e80a42 CI green (source + fresh install), no skips.
 Busy fresh CPU: 55.67/38.50/35.55/16.88 -> 1.95/1.16/1.11/0.89 ms; Python 404 -> 0.
@@ -66,14 +66,15 @@ CLI: 62 menu + 39 hosted cases pass; seven exact retired-frame differences track
 Disposable release install/empty-PATH commands and atomic replacement tests pass.
 QML kill/malformed/timeout recovery passes with a native fixture; service Python retired.
 Two retired nmcli error IDs retain exact catalog/context; finite compatibility checks pass.
-Private integration Qt/D-Bus/software-GL gate: 783 tests / 51 controls / 526 cases.
+Final Qt/D-Bus/software-GL gate: 769 tests / 51 controls / 526 cases, zero failures.
 Media API: 64 frozen artwork cases pass (63 PNG files plus Pillow I;16 error);
 128px frames / 160 palettes unchanged; Orient `40c1a75` public, all 7 CI jobs green.
 Intended differences: unexpected telemetry/cache failures reach stderr; NVML
 replaces nvidia-smi; inventory CLI bridges the existing diagnostic module call.
 d920 fingerprint: native-image compares two declared IDs against lock/pin/build;
 17 controls and all 349 cases pass; frozen outputs/core/colors unchanged.
-No live machine/QML/config changes by this task; no tags or package uploads.
+Hyprland headless smoke cannot start its backend; native socket/capture fixtures pass.
+No live machine/config changes by this task; no tags or package uploads.
 Port security follow-ups: [security review](security-review.md#fix-during-port).
 Keep existing AI access/consent/retention policies; add explicit security cases
 and intended differences when implementing the reviewed port hardening.
