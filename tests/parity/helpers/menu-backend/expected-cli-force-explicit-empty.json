@@ -1,0 +1,9 @@
+{
+  "stdout": null,
+  "exit": 2,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": "usage: menu-backend.py [-h] [--force]\n                       {state,files,convert,packages,installed,fonts,ownership,tool,install,remove,webapp-create,webapp-remove,webapp-launch,reminder,cancel-reminder,config}\n                       [value]\nmenu-backend.py: error: argument --force: ignored explicit argument ''\n"
+}

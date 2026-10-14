@@ -1,0 +1,266 @@
+{
+  "reference": "CURRENT Python owned unit actions; disposable HOME; deterministic unit identities",
+  "cases": [
+    {
+      "operation": "record_stop",
+      "owner": "",
+      "record": {},
+      "active": [
+        false
+      ],
+      "outcome": {
+        "value": "No Nacre recording is running"
+      },
+      "calls": [],
+      "files": {
+        ".local/state/nacre/menu/recording.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    },
+    {
+      "operation": "record_stop",
+      "owner": "7:new",
+      "record": {
+        "owner": "7:old"
+      },
+      "active": [
+        false
+      ],
+      "outcome": {
+        "error": "ValueError",
+        "message": "This recording belongs to another controller"
+      },
+      "calls": [],
+      "files": {
+        ".local/state/nacre/menu/recording.json": {
+          "text": "{\"owner\": \"7:old\"}",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/recording.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    },
+    {
+      "operation": "record_stop",
+      "owner": "7:new",
+      "record": {
+        "owner": "7:new",
+        "path": "fixture.mp4"
+      },
+      "active": [
+        true,
+        false
+      ],
+      "outcome": {
+        "value": "Recording saved in Videos/Recordings"
+      },
+      "calls": [
+        {
+          "argv": [
+            "systemctl",
+            "--user",
+            "kill",
+            "--signal=SIGINT",
+            "nacre-screen-recording.service"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ],
+      "files": {
+        ".local/state/nacre/menu/recording.json": {
+          "text": "{\"owner\": \"7:new\", \"path\": \"fixture.mp4\"}",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/recording.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    },
+    {
+      "operation": "record_stop",
+      "owner": "7:new",
+      "record": {
+        "owner": "7:new"
+      },
+      "active": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "outcome": {
+        "error": "ValueError",
+        "message": "Recording is still finishing; try again shortly"
+      },
+      "calls": [
+        {
+          "argv": [
+            "systemctl",
+            "--user",
+            "kill",
+            "--signal=SIGINT",
+            "nacre-screen-recording.service"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ],
+      "files": {
+        ".local/state/nacre/menu/recording.json": {
+          "text": "{\"owner\": \"7:new\"}",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/recording.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    },
+    {
+      "operation": "stay_awake",
+      "owner": "7:new",
+      "record": {},
+      "active": [
+        false
+      ],
+      "outcome": {
+        "error": "ValueError",
+        "message": "Stay awake belongs to another controller"
+      },
+      "calls": [],
+      "files": {
+        ".local/state/nacre/menu/stay-awake.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    },
+    {
+      "operation": "stay_awake",
+      "owner": "7:new",
+      "record": {
+        "owner": "7:new"
+      },
+      "active": [
+        false
+      ],
+      "outcome": {
+        "value": "Normal idle behavior restored"
+      },
+      "calls": [
+        {
+          "argv": [
+            "systemctl",
+            "--user",
+            "stop",
+            "nacre-stay-awake.service"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ],
+      "files": {
+        ".local/state/nacre/menu/stay-awake.json": {
+          "text": "{\"owner\": \"7:new\"}",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/stay-awake.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    },
+    {
+      "operation": "stay_awake",
+      "owner": "",
+      "record": {},
+      "active": [
+        false
+      ],
+      "outcome": {
+        "value": "Stay awake enabled until you turn it off or log out"
+      },
+      "calls": [
+        {
+          "argv": [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=nacre-stay-awake",
+            "systemd-inhibit",
+            "--what=idle",
+            "--mode=block",
+            "--who=Nacre",
+            "--why=Nacre stay awake",
+            "sleep",
+            "infinity"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ],
+      "files": {
+        ".local/state/nacre/menu/stay-awake.json": {
+          "text": "{\"owner\": \"8:created\"}",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/stay-awake.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    }
+  ]
+}

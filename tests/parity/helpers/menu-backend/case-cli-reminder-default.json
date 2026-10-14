@@ -1,0 +1,14 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "reminder"
+  ],
+  "compare_stderr": true,
+  "stdin": "{}\n",
+  "reference_source_sha256": "d74ca0b2a6d6d41a173b399fa5fbf876472d9ef8b18572d604ea8b20108eb958",
+  "native_exception": {
+    "kind": "retired-python-traceback",
+    "terminal_line": "TypeError: float() argument must be a string or a real number, not 'NoneType'\n",
+    "reason": "Rust retains exception class/message, empty stdout, exit and lock; retired Python source frames are omitted."
+  }
+}

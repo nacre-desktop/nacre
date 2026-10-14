@@ -1,0 +1,24 @@
+{
+  "stdout": {
+    "rows": [
+      "Fixture Sans",
+      "Other Sans"
+    ]
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "fc-list",
+      "argv": [
+        ":lang=en",
+        "--format",
+        "%{family}\n"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": [],
+  "stderr": ""
+}

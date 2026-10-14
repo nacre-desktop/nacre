@@ -1,0 +1,378 @@
+{
+  "source_sha256": "d74ca0b2a6d6d41a173b399fa5fbf876472d9ef8b18572d604ea8b20108eb958",
+  "cases": [
+    {
+      "name": "hit",
+      "stamps": [
+        1,
+        1
+      ],
+      "times": [
+        1000,
+        1001
+      ],
+      "force": [
+        true,
+        false
+      ],
+      "results": [
+        {
+          "version": 1,
+          "packageStamp": 1,
+          "created": 1000,
+          "capabilities": {
+            "capture": false,
+            "record": false,
+            "ocr": false,
+            "qr": false,
+            "color-picker": false,
+            "packages": false,
+            "aur": false,
+            "ai": false,
+            "brain": false,
+            "fonts": false
+          },
+          "packages": [],
+          "fonts": [
+            "Fixture Sans"
+          ],
+          "stayAwake": false,
+          "recording": false,
+          "reminders": [],
+          "webapps": []
+        },
+        {
+          "version": 1,
+          "packageStamp": 1,
+          "created": 1000,
+          "capabilities": {
+            "capture": false,
+            "record": false,
+            "ocr": false,
+            "qr": false,
+            "color-picker": false,
+            "packages": false,
+            "aur": false,
+            "ai": false,
+            "brain": false,
+            "fonts": false
+          },
+          "packages": [],
+          "fonts": [
+            "Fixture Sans"
+          ],
+          "stayAwake": false,
+          "recording": false,
+          "reminders": [],
+          "webapps": []
+        }
+      ],
+      "calls": [
+        "installed",
+        "fonts"
+      ],
+      "cache": "{\"version\": 1, \"packageStamp\": 1, \"created\": 1000, \"capabilities\": {\"capture\": false, \"record\": false, \"ocr\": false, \"qr\": false, \"color-picker\": false, \"packages\": false, \"aur\": false, \"ai\": false, \"brain\": false, \"fonts\": false}, \"packages\": [], \"fonts\": [\"Fixture Sans\"], \"stayAwake\": false, \"recording\": false, \"reminders\": [], \"webapps\": []}",
+      "mode": "0o600"
+    },
+    {
+      "name": "package-change",
+      "stamps": [
+        1,
+        2
+      ],
+      "times": [
+        1000,
+        1001
+      ],
+      "force": [
+        true,
+        false
+      ],
+      "results": [
+        {
+          "version": 1,
+          "packageStamp": 1,
+          "created": 1000,
+          "capabilities": {
+            "capture": false,
+            "record": false,
+            "ocr": false,
+            "qr": false,
+            "color-picker": false,
+            "packages": false,
+            "aur": false,
+            "ai": false,
+            "brain": false,
+            "fonts": false
+          },
+          "packages": [],
+          "fonts": [
+            "Fixture Sans"
+          ],
+          "stayAwake": false,
+          "recording": false,
+          "reminders": [],
+          "webapps": []
+        },
+        {
+          "version": 1,
+          "packageStamp": 2,
+          "created": 1001,
+          "capabilities": {
+            "capture": true,
+            "record": true,
+            "ocr": true,
+            "qr": true,
+            "color-picker": true,
+            "packages": true,
+            "aur": true,
+            "ai": true,
+            "brain": false,
+            "fonts": true
+          },
+          "packages": [],
+          "fonts": [
+            "Fixture Sans"
+          ],
+          "stayAwake": false,
+          "recording": false,
+          "reminders": [],
+          "webapps": []
+        }
+      ],
+      "calls": [
+        "installed",
+        "fonts",
+        "installed",
+        "fonts"
+      ],
+      "cache": "{\"version\": 1, \"packageStamp\": 2, \"created\": 1001, \"capabilities\": {\"capture\": true, \"record\": true, \"ocr\": true, \"qr\": true, \"color-picker\": true, \"packages\": true, \"aur\": true, \"ai\": true, \"brain\": false, \"fonts\": true}, \"packages\": [], \"fonts\": [\"Fixture Sans\"], \"stayAwake\": false, \"recording\": false, \"reminders\": [], \"webapps\": []}",
+      "mode": "0o600"
+    },
+    {
+      "name": "expired",
+      "stamps": [
+        1,
+        1
+      ],
+      "times": [
+        1000,
+        1030
+      ],
+      "force": [
+        true,
+        false
+      ],
+      "results": [
+        {
+          "version": 1,
+          "packageStamp": 1,
+          "created": 1000,
+          "capabilities": {
+            "capture": false,
+            "record": false,
+            "ocr": false,
+            "qr": false,
+            "color-picker": false,
+            "packages": false,
+            "aur": false,
+            "ai": false,
+            "brain": false,
+            "fonts": false
+          },
+          "packages": [],
+          "fonts": [
+            "Fixture Sans"
+          ],
+          "stayAwake": false,
+          "recording": false,
+          "reminders": [],
+          "webapps": []
+        },
+        {
+          "version": 1,
+          "packageStamp": 1,
+          "created": 1030,
+          "capabilities": {
+            "capture": true,
+            "record": true,
+            "ocr": true,
+            "qr": true,
+            "color-picker": true,
+            "packages": true,
+            "aur": true,
+            "ai": true,
+            "brain": false,
+            "fonts": true
+          },
+          "packages": [],
+          "fonts": [
+            "Fixture Sans"
+          ],
+          "stayAwake": false,
+          "recording": false,
+          "reminders": [],
+          "webapps": []
+        }
+      ],
+      "calls": [
+        "installed",
+        "fonts",
+        "installed",
+        "fonts"
+      ],
+      "cache": "{\"version\": 1, \"packageStamp\": 1, \"created\": 1030, \"capabilities\": {\"capture\": true, \"record\": true, \"ocr\": true, \"qr\": true, \"color-picker\": true, \"packages\": true, \"aur\": true, \"ai\": true, \"brain\": false, \"fonts\": true}, \"packages\": [], \"fonts\": [\"Fixture Sans\"], \"stayAwake\": false, \"recording\": false, \"reminders\": [], \"webapps\": []}",
+      "mode": "0o600"
+    },
+    {
+      "name": "clock-backwards",
+      "stamps": [
+        1,
+        1
+      ],
+      "times": [
+        1000,
+        999
+      ],
+      "force": [
+        true,
+        false
+      ],
+      "results": [
+        {
+          "version": 1,
+          "packageStamp": 1,
+          "created": 1000,
+          "capabilities": {
+            "capture": false,
+            "record": false,
+            "ocr": false,
+            "qr": false,
+            "color-picker": false,
+            "packages": false,
+            "aur": false,
+            "ai": false,
+            "brain": false,
+            "fonts": false
+          },
+          "packages": [],
+          "fonts": [
+            "Fixture Sans"
+          ],
+          "stayAwake": false,
+          "recording": false,
+          "reminders": [],
+          "webapps": []
+        },
+        {
+          "version": 1,
+          "packageStamp": 1,
+          "created": 999,
+          "capabilities": {
+            "capture": true,
+            "record": true,
+            "ocr": true,
+            "qr": true,
+            "color-picker": true,
+            "packages": true,
+            "aur": true,
+            "ai": true,
+            "brain": false,
+            "fonts": true
+          },
+          "packages": [],
+          "fonts": [
+            "Fixture Sans"
+          ],
+          "stayAwake": false,
+          "recording": false,
+          "reminders": [],
+          "webapps": []
+        }
+      ],
+      "calls": [
+        "installed",
+        "fonts",
+        "installed",
+        "fonts"
+      ],
+      "cache": "{\"version\": 1, \"packageStamp\": 1, \"created\": 999, \"capabilities\": {\"capture\": true, \"record\": true, \"ocr\": true, \"qr\": true, \"color-picker\": true, \"packages\": true, \"aur\": true, \"ai\": true, \"brain\": false, \"fonts\": true}, \"packages\": [], \"fonts\": [\"Fixture Sans\"], \"stayAwake\": false, \"recording\": false, \"reminders\": [], \"webapps\": []}",
+      "mode": "0o600"
+    },
+    {
+      "name": "forced",
+      "stamps": [
+        1,
+        1
+      ],
+      "times": [
+        1000,
+        1001
+      ],
+      "force": [
+        true,
+        true
+      ],
+      "results": [
+        {
+          "version": 1,
+          "packageStamp": 1,
+          "created": 1000,
+          "capabilities": {
+            "capture": false,
+            "record": false,
+            "ocr": false,
+            "qr": false,
+            "color-picker": false,
+            "packages": false,
+            "aur": false,
+            "ai": false,
+            "brain": false,
+            "fonts": false
+          },
+          "packages": [],
+          "fonts": [
+            "Fixture Sans"
+          ],
+          "stayAwake": false,
+          "recording": false,
+          "reminders": [],
+          "webapps": []
+        },
+        {
+          "version": 1,
+          "packageStamp": 1,
+          "created": 1001,
+          "capabilities": {
+            "capture": true,
+            "record": true,
+            "ocr": true,
+            "qr": true,
+            "color-picker": true,
+            "packages": true,
+            "aur": true,
+            "ai": true,
+            "brain": false,
+            "fonts": true
+          },
+          "packages": [],
+          "fonts": [
+            "Fixture Sans"
+          ],
+          "stayAwake": false,
+          "recording": false,
+          "reminders": [],
+          "webapps": []
+        }
+      ],
+      "calls": [
+        "installed",
+        "fonts",
+        "installed",
+        "fonts"
+      ],
+      "cache": "{\"version\": 1, \"packageStamp\": 1, \"created\": 1001, \"capabilities\": {\"capture\": true, \"record\": true, \"ocr\": true, \"qr\": true, \"color-picker\": true, \"packages\": true, \"aur\": true, \"ai\": true, \"brain\": false, \"fonts\": true}, \"packages\": [], \"fonts\": [\"Fixture Sans\"], \"stayAwake\": false, \"recording\": false, \"reminders\": [], \"webapps\": []}",
+      "mode": "0o600"
+    }
+  ]
+}

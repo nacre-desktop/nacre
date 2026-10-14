@@ -1,0 +1,32 @@
+{
+  "stdout": {
+    "error": "Unknown Nacre reminder"
+  },
+  "exit": 1,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/menu": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.local/state/nacre/menu/reminders.lock": {
+      "mode": "0o600",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": ""
+}

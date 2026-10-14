@@ -827,7 +827,7 @@ Scope {
         return false;
     }
     function terminal(action, value, title) {
-        AppLaunch.run(["kitty", "--class", "nacre-control", "--title", title, "--", "python3", tools + "/menu-backend.py", action, value]);
+        AppLaunch.run(["kitty", "--class", "nacre-control", "--title", title, "--", NacrePaths.helperBinary, "menu-backend", action, value]);
     }
     function work(action, value = "", payload = {}) {
         if (shared)
@@ -863,7 +863,7 @@ Scope {
     NacreHelperTask {
         id: fileWorker
         property string query: ""
-        command: ["python3", root.tools + "/menu-backend.py", "files", query]
+        command: [NacrePaths.helperBinary, "menu-backend", "files", query]
         onOutput: text => {
             if (fileWorker.query !== root.fileWanted)
                 return;
@@ -894,7 +894,7 @@ Scope {
     NacreHelperTask {
         id: conversionWorker
         property string query: ""
-        command: ["python3", root.tools + "/menu-backend.py", "convert", query]
+        command: [NacrePaths.helperBinary, "menu-backend", "convert", query]
         onOutput: text => {
             if (conversionWorker.query !== root.conversionWanted)
                 return;
@@ -924,7 +924,7 @@ Scope {
     NacreHelperTask {
         id: ownershipWorker
         property string ident: ""
-        command: ["python3", root.tools + "/menu-backend.py", "ownership", ident]
+        command: [NacrePaths.helperBinary, "menu-backend", "ownership", ident]
         onOutput: text => {
             try {
                 const data = JSON.parse(text);
@@ -967,7 +967,7 @@ Scope {
     NacreHelperTask {
         id: stateWorker
         property bool force: false
-        command: ["python3", root.tools + "/menu-backend.py", "state", ...(force ? ["--force"] : [])]
+        command: [NacrePaths.helperBinary, "menu-backend", "state", ...(force ? ["--force"] : [])]
         onOutput: text => {
             try {
                 const data = JSON.parse(text);
@@ -986,7 +986,7 @@ Scope {
         property string value: ""
         property var payload: ({})
         stdinEnabled: true
-        command: ["python3", root.tools + "/menu-backend.py", action, value]
+        command: [NacrePaths.helperBinary, "menu-backend", action, value]
         onStarted: write(JSON.stringify(payload) + "\n")
         stdout: StdioCollector {
             onStreamFinished: {
@@ -1003,7 +1003,7 @@ Scope {
     NacreHelperTask {
         id: packageWorker
         property string query: ""
-        command: ["python3", root.tools + "/menu-backend.py", "packages", query]
+        command: [NacrePaths.helperBinary, "menu-backend", "packages", query]
         onOutput: text => {
             if (packageWorker.query !== root.packageWanted)
                 return;
@@ -1033,7 +1033,7 @@ Scope {
         id: captureDelay
         property string value: ""
         interval: 320
-        onTriggered: AppLaunch.run(["python3", root.tools + "/menu-backend.py", "tool", value])
+        onTriggered: AppLaunch.run([NacrePaths.helperBinary, "menu-backend", "tool", value])
     }
     Component.onCompleted: if (!shared)
         refresh()

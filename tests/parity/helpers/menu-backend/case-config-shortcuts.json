@@ -1,0 +1,16 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "config",
+    "shortcuts"
+  ],
+  "commands": {
+    "nano": [
+      {
+        "code": 0
+      }
+    ]
+  },
+  "env": {},
+  "stdout": "text"
+}

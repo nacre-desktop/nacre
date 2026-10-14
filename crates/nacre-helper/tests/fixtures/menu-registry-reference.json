@@ -1,0 +1,1533 @@
+{
+  "reference": "current menu-backend.py module actions; fixed developer UUID/time",
+  "source_sha256": "d74ca0b2a6d6d41a173b399fa5fbf876472d9ef8b18572d604ea8b20108eb958",
+  "uuid": "00000000000000000000000000000000",
+  "time": 1600000000.0,
+  "cases": [
+    {
+      "name": "package-paru-install",
+      "operation": "package_command",
+      "args": [
+        "install",
+        "lib32-mesa"
+      ],
+      "tools": {
+        "paru": "/fixture/bin/paru"
+      },
+      "seed": {},
+      "outcome": {
+        "value": [
+          "/fixture/bin/paru",
+          "-S",
+          "--needed",
+          "--skipreview",
+          "--",
+          "lib32-mesa"
+        ]
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "package-paru-remove",
+      "operation": "package_command",
+      "args": [
+        "remove",
+        "lib32-mesa"
+      ],
+      "tools": {
+        "paru": "/fixture/bin/paru"
+      },
+      "seed": {},
+      "outcome": {
+        "value": [
+          "/fixture/bin/paru",
+          "-Rns",
+          "--",
+          "lib32-mesa"
+        ]
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "package-yay-install",
+      "operation": "package_command",
+      "args": [
+        "install",
+        "lib32-mesa"
+      ],
+      "tools": {
+        "yay": "/fixture/bin/yay"
+      },
+      "seed": {},
+      "outcome": {
+        "value": [
+          "/fixture/bin/yay",
+          "-S",
+          "--needed",
+          "--",
+          "lib32-mesa"
+        ]
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "package-yay-remove",
+      "operation": "package_command",
+      "args": [
+        "remove",
+        "lib32-mesa"
+      ],
+      "tools": {
+        "yay": "/fixture/bin/yay"
+      },
+      "seed": {},
+      "outcome": {
+        "value": [
+          "/fixture/bin/yay",
+          "-Rns",
+          "--",
+          "lib32-mesa"
+        ]
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "package-pacman-install",
+      "operation": "package_command",
+      "args": [
+        "install",
+        "lib32-mesa"
+      ],
+      "tools": {
+        "pacman": "/fixture/bin/pacman"
+      },
+      "seed": {},
+      "outcome": {
+        "value": [
+          "pkexec",
+          "pacman",
+          "-S",
+          "--needed",
+          "--",
+          "lib32-mesa"
+        ]
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "package-pacman-remove",
+      "operation": "package_command",
+      "args": [
+        "remove",
+        "lib32-mesa"
+      ],
+      "tools": {
+        "pacman": "/fixture/bin/pacman"
+      },
+      "seed": {},
+      "outcome": {
+        "value": [
+          "pkexec",
+          "pacman",
+          "-Rns",
+          "--",
+          "lib32-mesa"
+        ]
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "package-None-install",
+      "operation": "package_command",
+      "args": [
+        "install",
+        "lib32-mesa"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Package management requires an Arch-compatible system"
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "package-None-remove",
+      "operation": "package_command",
+      "args": [
+        "remove",
+        "lib32-mesa"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Package management requires an Arch-compatible system"
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "invalid-package-8",
+      "operation": "package_command",
+      "args": [
+        "install",
+        "--help"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Invalid package name"
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "invalid-package-9",
+      "operation": "package_command",
+      "args": [
+        "install",
+        "foo;command"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Invalid package name"
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "invalid-package-10",
+      "operation": "package_command",
+      "args": [
+        "install",
+        ""
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Invalid package name"
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "invalid-package-11",
+      "operation": "package_command",
+      "args": [
+        "install",
+        "../file"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Invalid package name"
+      },
+      "files": {},
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "webapp-create",
+      "operation": "create_webapp",
+      "args": [
+        "  Demo \u25c7 \\\\ site  ",
+        "https://example.org/?q=$(touch%20x)"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Web app added to All apps"
+        }
+      },
+      "files": {
+        ".local/share/applications/nacre-web-00000000000000000000000000000000.desktop": {
+          "text": "[Desktop Entry]\nType=Application\nName=Demo \u25c7 \\\\\\\\ site\nIcon=web-browser\nExec=nacre-menu webapp-launch 00000000000000000000000000000000\nCategories=Network;\nTerminal=false\n",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.json": {
+          "text": "[{\"id\": \"00000000000000000000000000000000\", \"label\": \"Demo \\u25c7 \\\\\\\\ site\", \"url\": \"https://example.org/?q=$(touch%20x)\"}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "invalid-webapp-13",
+      "operation": "create_webapp",
+      "args": [
+        "Bad\nExec=x",
+        "https://example.org"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Choose a short application name"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "invalid-webapp-14",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://user:password@example.org"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Use an HTTP or HTTPS website URL without credentials"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "invalid-webapp-15",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "file:///tmp/example"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Use an HTTP or HTTPS website URL without credentials"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "invalid-webapp-16",
+      "operation": "create_webapp",
+      "args": [
+        "",
+        "https://example.org"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Choose a short application name"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "webapp-remove",
+      "operation": "remove_webapp",
+      "args": [
+        "00000000000000000000000000000000"
+      ],
+      "tools": {},
+      "seed": {
+        ".local/state/nacre/menu/webapps.json": "[{\"id\": \"00000000000000000000000000000000\", \"label\": \"Demo\", \"url\": \"https://example.org\"}]",
+        ".local/share/applications/nacre-web-00000000000000000000000000000000.desktop": "owned fixture",
+        ".cache/nacre/menu/state.json": "{}"
+      },
+      "outcome": {
+        "value": {
+          "message": "Web app removed"
+        }
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.json": {
+          "text": "[]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [
+        ".cache/nacre/menu/state.json",
+        ".local/share/applications/nacre-web-00000000000000000000000000000000.desktop"
+      ],
+      "calls": []
+    },
+    {
+      "name": "webapp-missing",
+      "operation": "remove_webapp",
+      "args": [
+        "00000000000000000000000000000000"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Web app no longer exists"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "webapp-invalid-id",
+      "operation": "remove_webapp",
+      "args": [
+        "../outside"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Invalid web app"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "reminder-20",
+      "operation": "set_reminder",
+      "args": [
+        0.1,
+        "  Take a break\nNow  "
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Reminder set"
+        }
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.json": {
+          "text": "[{\"unit\": \"nacre-reminder-00000000000000000000000000000000.timer\", \"label\": \"Take a break\\nNow\", \"due\": 1600000006.0}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": [
+        {
+          "argv": [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=nacre-reminder-00000000000000000000000000000000",
+            "--on-active=6.0s",
+            "--timer-property=AccuracySec=1s",
+            "notify-send",
+            "-a",
+            "Nacre Reminders",
+            "-i",
+            "nacre-notifications",
+            "Reminder",
+            "Take a break\nNow"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ]
+    },
+    {
+      "name": "reminder-21",
+      "operation": "set_reminder",
+      "args": [
+        "2.5",
+        "  Take a break\nNow  "
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Reminder set"
+        }
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.json": {
+          "text": "[{\"unit\": \"nacre-reminder-00000000000000000000000000000000.timer\", \"label\": \"Take a break\\nNow\", \"due\": 1600000150.0}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": [
+        {
+          "argv": [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=nacre-reminder-00000000000000000000000000000000",
+            "--on-active=150.0s",
+            "--timer-property=AccuracySec=1s",
+            "notify-send",
+            "-a",
+            "Nacre Reminders",
+            "-i",
+            "nacre-notifications",
+            "Reminder",
+            "Take a break\nNow"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ]
+    },
+    {
+      "name": "reminder-22",
+      "operation": "set_reminder",
+      "args": [
+        1440,
+        "  Take a break\nNow  "
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Reminder set"
+        }
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.json": {
+          "text": "[{\"unit\": \"nacre-reminder-00000000000000000000000000000000.timer\", \"label\": \"Take a break\\nNow\", \"due\": 1600086400.0}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": [
+        {
+          "argv": [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=nacre-reminder-00000000000000000000000000000000",
+            "--on-active=86400.0s",
+            "--timer-property=AccuracySec=1s",
+            "notify-send",
+            "-a",
+            "Nacre Reminders",
+            "-i",
+            "nacre-notifications",
+            "Reminder",
+            "Take a break\nNow"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ]
+    },
+    {
+      "name": "reminder-23",
+      "operation": "set_reminder",
+      "args": [
+        true,
+        "  Take a break\nNow  "
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Reminder set"
+        }
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.json": {
+          "text": "[{\"unit\": \"nacre-reminder-00000000000000000000000000000000.timer\", \"label\": \"Take a break\\nNow\", \"due\": 1600000060.0}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": [
+        {
+          "argv": [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=nacre-reminder-00000000000000000000000000000000",
+            "--on-active=60.0s",
+            "--timer-property=AccuracySec=1s",
+            "notify-send",
+            "-a",
+            "Nacre Reminders",
+            "-i",
+            "nacre-notifications",
+            "Reminder",
+            "Take a break\nNow"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ]
+    },
+    {
+      "name": "invalid-reminder-24",
+      "operation": "set_reminder",
+      "args": [
+        -1,
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Use a duration between 0.1 and 1440 minutes and a short message"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "invalid-reminder-25",
+      "operation": "set_reminder",
+      "args": [
+        0,
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Use a duration between 0.1 and 1440 minutes and a short message"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "invalid-reminder-26",
+      "operation": "set_reminder",
+      "args": [
+        1441,
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Use a duration between 0.1 and 1440 minutes and a short message"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "invalid-reminder-27",
+      "operation": "set_reminder",
+      "args": [
+        "invalid",
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "could not convert string to float: 'invalid'"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "reminder-no-notify",
+      "operation": "set_reminder",
+      "args": [
+        1,
+        "Break"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Desktop notifications are unavailable"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "reminder-cancel",
+      "operation": "cancel_reminder",
+      "args": [
+        "nacre-reminder-00000000000000000000000000000000.timer"
+      ],
+      "tools": {},
+      "seed": {
+        ".local/state/nacre/menu/reminders.json": "[{\"unit\": \"nacre-reminder-00000000000000000000000000000000.timer\", \"label\": \"Break\", \"due\": 1600000060.0}]",
+        ".cache/nacre/menu/state.json": "{}"
+      },
+      "outcome": {
+        "value": {
+          "message": "Reminder canceled"
+        }
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.json": {
+          "text": "[]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [
+        ".cache/nacre/menu/state.json"
+      ],
+      "calls": [
+        {
+          "argv": [
+            "systemctl",
+            "--user",
+            "stop",
+            "nacre-reminder-00000000000000000000000000000000.timer"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ]
+    },
+    {
+      "name": "reminder-missing",
+      "operation": "cancel_reminder",
+      "args": [
+        "nacre-reminder-00000000000000000000000000000000.timer"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Unknown Nacre reminder"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "reminder-invalid-unit",
+      "operation": "cancel_reminder",
+      "args": [
+        "unrelated.timer"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Unknown Nacre reminder"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-32",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https:///example.org"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Use an HTTP or HTTPS website URL without credentials"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-33",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https:////example.org"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Use an HTTP or HTTPS website URL without credentials"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-34",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://example.org\\@evil.example"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Use an HTTP or HTTPS website URL without credentials"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-35",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://example.org:999999"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Web app added to All apps"
+        }
+      },
+      "files": {
+        ".local/share/applications/nacre-web-00000000000000000000000000000000.desktop": {
+          "text": "[Desktop Entry]\nType=Application\nName=Demo\nIcon=web-browser\nExec=nacre-menu webapp-launch 00000000000000000000000000000000\nCategories=Network;\nTerminal=false\n",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.json": {
+          "text": "[{\"id\": \"00000000000000000000000000000000\", \"label\": \"Demo\", \"url\": \"https://example.org:999999\"}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-36",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://example.org:invalid"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Web app added to All apps"
+        }
+      },
+      "files": {
+        ".local/share/applications/nacre-web-00000000000000000000000000000000.desktop": {
+          "text": "[Desktop Entry]\nType=Application\nName=Demo\nIcon=web-browser\nExec=nacre-menu webapp-launch 00000000000000000000000000000000\nCategories=Network;\nTerminal=false\n",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.json": {
+          "text": "[{\"id\": \"00000000000000000000000000000000\", \"label\": \"Demo\", \"url\": \"https://example.org:invalid\"}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-37",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://exa mple.org"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Web app added to All apps"
+        }
+      },
+      "files": {
+        ".local/share/applications/nacre-web-00000000000000000000000000000000.desktop": {
+          "text": "[Desktop Entry]\nType=Application\nName=Demo\nIcon=web-browser\nExec=nacre-menu webapp-launch 00000000000000000000000000000000\nCategories=Network;\nTerminal=false\n",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.json": {
+          "text": "[{\"id\": \"00000000000000000000000000000000\", \"label\": \"Demo\", \"url\": \"https://exa mple.org\"}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-38",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        " HTTPS://example.org/path"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Web app added to All apps"
+        }
+      },
+      "files": {
+        ".local/share/applications/nacre-web-00000000000000000000000000000000.desktop": {
+          "text": "[Desktop Entry]\nType=Application\nName=Demo\nIcon=web-browser\nExec=nacre-menu webapp-launch 00000000000000000000000000000000\nCategories=Network;\nTerminal=false\n",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.json": {
+          "text": "[{\"id\": \"00000000000000000000000000000000\", \"label\": \"Demo\", \"url\": \" HTTPS://example.org/path\"}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-39",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://:@example.org"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Web app added to All apps"
+        }
+      },
+      "files": {
+        ".local/share/applications/nacre-web-00000000000000000000000000000000.desktop": {
+          "text": "[Desktop Entry]\nType=Application\nName=Demo\nIcon=web-browser\nExec=nacre-menu webapp-launch 00000000000000000000000000000000\nCategories=Network;\nTerminal=false\n",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.json": {
+          "text": "[{\"id\": \"00000000000000000000000000000000\", \"label\": \"Demo\", \"url\": \"https://:@example.org\"}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-40",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://user:@example.org"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Use an HTTP or HTTPS website URL without credentials"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-41",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://[::1]:invalid/path"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Web app added to All apps"
+        }
+      },
+      "files": {
+        ".local/share/applications/nacre-web-00000000000000000000000000000000.desktop": {
+          "text": "[Desktop Entry]\nType=Application\nName=Demo\nIcon=web-browser\nExec=nacre-menu webapp-launch 00000000000000000000000000000000\nCategories=Network;\nTerminal=false\n",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.json": {
+          "text": "[{\"id\": \"00000000000000000000000000000000\", \"label\": \"Demo\", \"url\": \"https://[::1]:invalid/path\"}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-42",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://[127.0.0.1]/"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "An IPv4 address cannot be in brackets"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-43",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://[invalid]/"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "'invalid' does not appear to be an IPv4 or IPv6 address"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-44",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://[v1.future]/"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Web app added to All apps"
+        }
+      },
+      "files": {
+        ".local/share/applications/nacre-web-00000000000000000000000000000000.desktop": {
+          "text": "[Desktop Entry]\nType=Application\nName=Demo\nIcon=web-browser\nExec=nacre-menu webapp-launch 00000000000000000000000000000000\nCategories=Network;\nTerminal=false\n",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.json": {
+          "text": "[{\"id\": \"00000000000000000000000000000000\", \"label\": \"Demo\", \"url\": \"https://[v1.future]/\"}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "url-edge-45",
+      "operation": "create_webapp",
+      "args": [
+        "Demo",
+        "https://example.org\uff1a80/"
+      ],
+      "tools": {},
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "netloc 'example.org\uff1a80' contains invalid characters under NFKC normalization"
+      },
+      "files": {
+        ".local/state/nacre/menu/webapps.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "duration-edge-46",
+      "operation": "set_reminder",
+      "args": [
+        "1_0",
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Reminder set"
+        }
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.json": {
+          "text": "[{\"unit\": \"nacre-reminder-00000000000000000000000000000000.timer\", \"label\": \"Break\", \"due\": 1600000600.0}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": [
+        {
+          "argv": [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=nacre-reminder-00000000000000000000000000000000",
+            "--on-active=600.0s",
+            "--timer-property=AccuracySec=1s",
+            "notify-send",
+            "-a",
+            "Nacre Reminders",
+            "-i",
+            "nacre-notifications",
+            "Reminder",
+            "Break"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ]
+    },
+    {
+      "name": "duration-edge-47",
+      "operation": "set_reminder",
+      "args": [
+        "\u0661.\u0665",
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Reminder set"
+        }
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.json": {
+          "text": "[{\"unit\": \"nacre-reminder-00000000000000000000000000000000.timer\", \"label\": \"Break\", \"due\": 1600000090.0}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": [
+        {
+          "argv": [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=nacre-reminder-00000000000000000000000000000000",
+            "--on-active=90.0s",
+            "--timer-property=AccuracySec=1s",
+            "notify-send",
+            "-a",
+            "Nacre Reminders",
+            "-i",
+            "nacre-notifications",
+            "Reminder",
+            "Break"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ]
+    },
+    {
+      "name": "duration-edge-48",
+      "operation": "set_reminder",
+      "args": [
+        " 2.5 ",
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Reminder set"
+        }
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.json": {
+          "text": "[{\"unit\": \"nacre-reminder-00000000000000000000000000000000.timer\", \"label\": \"Break\", \"due\": 1600000150.0}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": [
+        {
+          "argv": [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=nacre-reminder-00000000000000000000000000000000",
+            "--on-active=150.0s",
+            "--timer-property=AccuracySec=1s",
+            "notify-send",
+            "-a",
+            "Nacre Reminders",
+            "-i",
+            "nacre-notifications",
+            "Reminder",
+            "Break"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ]
+    },
+    {
+      "name": "duration-edge-49",
+      "operation": "set_reminder",
+      "args": [
+        "1__0",
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "could not convert string to float: '1__0'"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "duration-edge-50",
+      "operation": "set_reminder",
+      "args": [
+        "Infinity",
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Use a duration between 0.1 and 1440 minutes and a short message"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "duration-edge-51",
+      "operation": "set_reminder",
+      "args": [
+        "NaN",
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "Use a duration between 0.1 and 1440 minutes and a short message"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "message-python-whitespace",
+      "operation": "set_reminder",
+      "args": [
+        1,
+        "\u001cBreak\u001f"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "value": {
+          "message": "Reminder set"
+        }
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.json": {
+          "text": "[{\"unit\": \"nacre-reminder-00000000000000000000000000000000.timer\", \"label\": \"Break\", \"due\": 1600000060.0}]",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": [
+        {
+          "argv": [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=nacre-reminder-00000000000000000000000000000000",
+            "--on-active=60.0s",
+            "--timer-property=AccuracySec=1s",
+            "notify-send",
+            "-a",
+            "Nacre Reminders",
+            "-i",
+            "nacre-notifications",
+            "Reminder",
+            "Break"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ]
+    },
+    {
+      "name": "duration-ascii-separator",
+      "operation": "set_reminder",
+      "args": [
+        "\u001c1\u001f",
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "could not convert string to float: '\\x1c1\\x1f'"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    },
+    {
+      "name": "duration-unicode-separator",
+      "operation": "set_reminder",
+      "args": [
+        "\u001c\u0661.\u0665\u001f",
+        "Break"
+      ],
+      "tools": {
+        "notify-send": "/fixture/bin/notify-send"
+      },
+      "seed": {},
+      "outcome": {
+        "error": "ValueError",
+        "message": "could not convert string to float: '\\x1c\u0661.\u0665\\x1f'"
+      },
+      "files": {
+        ".local/state/nacre/menu/reminders.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      },
+      "deleted": [],
+      "calls": []
+    }
+  ]
+}

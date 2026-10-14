@@ -1,0 +1,153 @@
+{
+  "reference": "CURRENT Python record_start; disposable HOME; fixed date2024-01-02T03:04:05.678901",
+  "cases": [
+    {
+      "busy": true,
+      "code": 0,
+      "selection": "",
+      "owner": "",
+      "outcome": {
+        "error": "ValueError",
+        "message": "A Nacre recording is already running"
+      },
+      "calls": [],
+      "files": {
+        ".local/state/nacre/menu/recording.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    },
+    {
+      "busy": false,
+      "code": 1,
+      "selection": "",
+      "owner": "",
+      "outcome": {
+        "value": ""
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "timeout": 180,
+          "check": false
+        }
+      ],
+      "files": {
+        ".local/state/nacre/menu/recording.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    },
+    {
+      "busy": false,
+      "code": 0,
+      "selection": "",
+      "owner": "",
+      "outcome": {
+        "value": ""
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "timeout": 180,
+          "check": false
+        }
+      ],
+      "files": {
+        ".local/state/nacre/menu/recording.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    },
+    {
+      "busy": false,
+      "code": 0,
+      "selection": " 10,20 30x40\n",
+      "owner": "8:created",
+      "outcome": {
+        "value": "Recording started; use Actions \u203a Capture \u203a Stop recording"
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "timeout": 180,
+          "check": false
+        },
+        {
+          "argv": [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=nacre-screen-recording",
+            "wf-recorder",
+            "-g",
+            "10,20 30x40",
+            "-f",
+            "{home}/Videos/Recordings/recording_20240102_030405_678901.mp4"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ],
+      "files": {
+        ".local/state/nacre/menu/recording.json": {
+          "text": "{\"owner\": \"8:created\", \"path\": \"{home}/Videos/Recordings/recording_20240102_030405_678901.mp4\"}",
+          "mode": "0o600"
+        },
+        ".local/state/nacre/menu/recording.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    },
+    {
+      "busy": false,
+      "code": 0,
+      "selection": "10,20 30x40",
+      "owner": "",
+      "outcome": {
+        "error": "ValueError",
+        "message": "Recording could not start"
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "timeout": 180,
+          "check": false
+        },
+        {
+          "argv": [
+            "systemd-run",
+            "--user",
+            "--collect",
+            "--unit=nacre-screen-recording",
+            "wf-recorder",
+            "-g",
+            "10,20 30x40",
+            "-f",
+            "{home}/Videos/Recordings/recording_20240102_030405_678901.mp4"
+          ],
+          "timeout": 5,
+          "check": true
+        }
+      ],
+      "files": {
+        ".local/state/nacre/menu/recording.lock": {
+          "text": "",
+          "mode": "0o600"
+        }
+      }
+    }
+  ]
+}

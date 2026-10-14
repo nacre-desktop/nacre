@@ -1,0 +1,19 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "config",
+    "defaults"
+  ],
+  "commands": {
+    "nvim": [
+      {
+        "stdout": "edited\n",
+        "code": 7
+      }
+    ]
+  },
+  "env": {
+    "EDITOR": "nvim --example"
+  },
+  "stdout": "text"
+}

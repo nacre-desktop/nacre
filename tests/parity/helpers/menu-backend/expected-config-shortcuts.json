@@ -1,0 +1,29 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/shortcuts.lua": {
+      "mode": "0o600",
+      "text": "-- Personal Hyprland shortcut overrides.\n"
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "nano",
+      "argv": [
+        "/case/home/.config/nacre/shortcuts.lua"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

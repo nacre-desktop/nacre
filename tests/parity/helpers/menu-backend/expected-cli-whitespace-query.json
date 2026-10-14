@@ -1,0 +1,12 @@
+{
+  "stdout": {
+    "rows": [],
+    "message": "Type two or more characters to find files"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": ""
+}

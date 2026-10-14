@@ -1,0 +1,16 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "tool",
+    "capture-text"
+  ],
+  "commands": {
+    "slurp": [
+      {
+        "code": 1
+      }
+    ]
+  },
+  "env": {},
+  "stdout": "json"
+}

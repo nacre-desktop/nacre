@@ -1,0 +1,9 @@
+{
+  "stdout": "usage: menu-backend.py [-h] [--force]\n                       {state,files,convert,packages,installed,fonts,ownership,tool,install,remove,webapp-create,webapp-remove,webapp-launch,reminder,cancel-reminder,config}\n                       [value]\n\nBounded menu discovery and explicit user-selected tools; no search-text\nexecution.\n\npositional arguments:\n  {state,files,convert,packages,installed,fonts,ownership,tool,install,remove,webapp-create,webapp-remove,webapp-launch,reminder,cancel-reminder,config}\n  value\n\noptions:\n  -h, --help            show this help message and exit\n  --force\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": ""
+}

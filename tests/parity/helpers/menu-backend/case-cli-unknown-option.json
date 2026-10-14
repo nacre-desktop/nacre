@@ -1,0 +1,9 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "files",
+    "--unknown"
+  ],
+  "compare_stderr": true,
+  "reference_source_sha256": "d74ca0b2a6d6d41a173b399fa5fbf876472d9ef8b18572d604ea8b20108eb958"
+}

@@ -1,0 +1,66 @@
+{
+  "stdout": {
+    "message": "Text copied"
+  },
+  "exit": 0,
+  "files": {
+    "home/.cache": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre/menu": {
+      "mode": "0o700",
+      "directory": true
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "slurp",
+      "argv": [],
+      "stdin": ""
+    },
+    {
+      "command": "grim",
+      "argv": [
+        "-g",
+        "10,20 30x40",
+        "/case/home/.cache/nacre/menu/<temp>.png"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "tesseract",
+      "argv": [
+        "/case/home/.cache/nacre/menu/<temp>.png",
+        "stdout"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "wl-copy",
+      "argv": [
+        "--type",
+        "text/plain;charset=utf-8"
+      ],
+      "stdin": "Recognized fixture"
+    },
+    {
+      "command": "notify-send",
+      "argv": [
+        "-a",
+        "Nacre Capture",
+        "-i",
+        "nacre-notifications",
+        "Nacre",
+        "Text copied"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

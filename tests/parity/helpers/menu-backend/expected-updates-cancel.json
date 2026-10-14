@@ -1,0 +1,18 @@
+{
+  "stdout": "",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "dirname",
+      "argv": [
+        "--",
+        "/repo/nacre/shell-tools/updates.sh"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": [],
+  "stderr": ""
+}

@@ -1,0 +1,11 @@
+{
+  "stdout": {
+    "error": "Invalid package name"
+  },
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": ""
+}

@@ -1,0 +1,93 @@
+{
+  "stdout": {
+    "version": 1,
+    "packageStamp": 0,
+    "created": "<timestamp>",
+    "capabilities": {
+      "capture": false,
+      "record": false,
+      "ocr": false,
+      "qr": false,
+      "color-picker": false,
+      "packages": true,
+      "aur": false,
+      "ai": false,
+      "brain": false,
+      "fonts": true
+    },
+    "packages": [
+      {
+        "name": "demo",
+        "version": "1.2"
+      }
+    ],
+    "fonts": [
+      "Fixture Sans",
+      "Other Sans"
+    ],
+    "stayAwake": false,
+    "recording": false,
+    "reminders": [],
+    "webapps": []
+  },
+  "exit": 0,
+  "files": {
+    "home/.cache": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre/menu": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.cache/nacre/menu/state.json": {
+      "mode": "0o600",
+      "text": "{\"version\": 1, \"packageStamp\": 0, \"created\": \"<timestamp>\", \"capabilities\": {\"capture\": false, \"record\": false, \"ocr\": false, \"qr\": false, \"color-picker\": false, \"packages\": true, \"aur\": false, \"ai\": false, \"brain\": false, \"fonts\": true}, \"packages\": [{\"name\": \"demo\", \"version\": \"1.2\"}], \"fonts\": [\"Fixture Sans\", \"Other Sans\"], \"stayAwake\": false, \"recording\": false, \"reminders\": [], \"webapps\": []}"
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "pacman",
+      "argv": [
+        "-Q"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "fc-list",
+      "argv": [
+        ":lang=en",
+        "--format",
+        "%{family}\n"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "systemctl",
+      "argv": [
+        "--user",
+        "is-active",
+        "--quiet",
+        "nacre-stay-awake.service"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "systemctl",
+      "argv": [
+        "--user",
+        "is-active",
+        "--quiet",
+        "nacre-screen-recording.service"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": [],
+  "stderr": ""
+}

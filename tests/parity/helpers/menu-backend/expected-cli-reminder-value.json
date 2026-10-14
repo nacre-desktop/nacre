@@ -1,0 +1,30 @@
+{
+  "stdout": null,
+  "exit": 1,
+  "files": {
+    "home/.local": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.local/state/nacre/menu": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/.local/state/nacre/menu/reminders.lock": {
+      "mode": "0o600",
+      "text": ""
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": "Traceback (most recent call last):\n  File \"/repo/nacre/shell-tools/menu-backend.py\", line 1086, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/repo/nacre/shell-tools/menu-backend.py\", line 1070, in main\n    else set_reminder(data.get(\"minutes\"), data.get(\"message\"))\n         ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/repo/nacre/shell-tools/menu-backend.py\", line 41, in wrapped\n    return function(*args, **kwargs)\n  File \"/repo/nacre/shell-tools/menu-backend.py\", line 431, in set_reminder\n    minutes = float(minutes)\nTypeError: float() argument must be a string or a real number, not 'NoneType'\n"
+}

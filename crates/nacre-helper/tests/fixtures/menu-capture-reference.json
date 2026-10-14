@@ -1,0 +1,349 @@
+{
+  "reference": "CURRENT Python menu capture; private HOME, fake tools and compositor; fixed date 2024-01-02T03:04:05.678901",
+  "cases": [
+    {
+      "action": "capture-window",
+      "native": false,
+      "current": {},
+      "code": 0,
+      "selection": "",
+      "outcome": {
+        "error": "ValueError",
+        "message": "Focus the window you want to capture first"
+      },
+      "calls": [
+        {
+          "query": "active_window",
+          "timeout": 5
+        }
+      ],
+      "files": {}
+    },
+    {
+      "action": "capture-window",
+      "native": false,
+      "current": {
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          0,
+          10
+        ]
+      },
+      "code": 0,
+      "selection": "",
+      "outcome": {
+        "error": "ValueError",
+        "message": "Focus the window you want to capture first"
+      },
+      "calls": [
+        {
+          "query": "active_window",
+          "timeout": 5
+        }
+      ],
+      "files": {}
+    },
+    {
+      "action": "capture-window",
+      "native": false,
+      "current": {
+        "at": [
+          true,
+          0
+        ],
+        "size": [
+          10,
+          10
+        ]
+      },
+      "code": 0,
+      "selection": "",
+      "outcome": {
+        "error": "ValueError",
+        "message": "Focus the window you want to capture first"
+      },
+      "calls": [
+        {
+          "query": "active_window",
+          "timeout": 5
+        }
+      ],
+      "files": {}
+    },
+    {
+      "action": "capture-window",
+      "native": false,
+      "current": {
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          32769,
+          10
+        ]
+      },
+      "code": 0,
+      "selection": "",
+      "outcome": {
+        "error": "ValueError",
+        "message": "Focus the window you want to capture first"
+      },
+      "calls": [
+        {
+          "query": "active_window",
+          "timeout": 5
+        }
+      ],
+      "files": {}
+    },
+    {
+      "action": "capture-window",
+      "native": false,
+      "current": {
+        "at": [
+          -20,
+          30
+        ],
+        "size": [
+          200,
+          100
+        ]
+      },
+      "code": 0,
+      "selection": "",
+      "outcome": {
+        "value": "Window saved and copied"
+      },
+      "calls": [
+        {
+          "query": "active_window",
+          "timeout": 5
+        },
+        {
+          "argv": [
+            "grim",
+            "-g",
+            "-20,30 200x100",
+            "{home}/Pictures/Screenshots/screenshot_20240102_030405_678901.png"
+          ],
+          "input": "",
+          "check": true,
+          "capture_output": false,
+          "text": false
+        },
+        {
+          "argv": [
+            "wl-copy",
+            "--type",
+            "image/png"
+          ],
+          "input": "6669787475726520706e67",
+          "check": true,
+          "capture_output": false,
+          "text": false
+        }
+      ],
+      "files": {
+        "Pictures/Screenshots/screenshot_20240102_030405_678901.png": {
+          "bytes": "6669787475726520706e67",
+          "mode": "0o644"
+        }
+      }
+    },
+    {
+      "action": "capture-window",
+      "native": true,
+      "current": {},
+      "code": 0,
+      "selection": "",
+      "outcome": {
+        "error": "ValueError",
+        "message": "Focus the window you want to capture first"
+      },
+      "calls": [
+        {
+          "query": "active_window",
+          "timeout": 5
+        }
+      ],
+      "files": {}
+    },
+    {
+      "action": "capture-window",
+      "native": true,
+      "current": {
+        "windowId": "niri:42"
+      },
+      "code": 0,
+      "selection": "",
+      "outcome": {
+        "value": "Window saved and copied"
+      },
+      "calls": [
+        {
+          "query": "active_window",
+          "timeout": 5
+        },
+        {
+          "path": "{home}/Pictures/Screenshots/screenshot_20240102_030405_678901.png",
+          "window": "niri:42",
+          "timeout": 5
+        }
+      ],
+      "files": {
+        "Pictures/Screenshots/screenshot_20240102_030405_678901.png": {
+          "bytes": "6669787475726520706e67",
+          "mode": "0o644"
+        }
+      }
+    },
+    {
+      "action": "capture-area",
+      "native": false,
+      "current": {},
+      "code": 1,
+      "selection": "",
+      "outcome": {
+        "value": ""
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "input": "",
+          "check": false,
+          "capture_output": true,
+          "text": true
+        }
+      ],
+      "files": {}
+    },
+    {
+      "action": "capture-area",
+      "native": false,
+      "current": {},
+      "code": 0,
+      "selection": "",
+      "outcome": {
+        "value": ""
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "input": "",
+          "check": false,
+          "capture_output": true,
+          "text": true
+        }
+      ],
+      "files": {}
+    },
+    {
+      "action": "capture-area",
+      "native": false,
+      "current": {},
+      "code": 0,
+      "selection": " 10,20 30x40\n",
+      "outcome": {
+        "value": "Selection saved and copied"
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "input": "",
+          "check": false,
+          "capture_output": true,
+          "text": true
+        },
+        {
+          "argv": [
+            "grim",
+            "-g",
+            "10,20 30x40",
+            "-"
+          ],
+          "input": "",
+          "check": true,
+          "capture_output": true,
+          "text": false
+        },
+        {
+          "argv": [
+            "wl-copy",
+            "--type",
+            "image/png"
+          ],
+          "input": "6669787475726520706e67",
+          "check": true,
+          "capture_output": false,
+          "text": false
+        },
+        {
+          "argv": [
+            "wl-paste",
+            "--type",
+            "image/png"
+          ],
+          "input": "",
+          "check": true,
+          "capture_output": true,
+          "text": false
+        }
+      ],
+      "files": {
+        "Pictures/Screenshots/screenshot_20240102_030405_678901.png": {
+          "bytes": "6669787475726520706e67",
+          "mode": "0o644"
+        }
+      }
+    },
+    {
+      "action": "capture-screen",
+      "native": false,
+      "current": {},
+      "code": 0,
+      "selection": "",
+      "outcome": {
+        "value": "Saved to Pictures/Screenshots and copied to clipboard"
+      },
+      "calls": [
+        {
+          "argv": [
+            "grim",
+            "{home}/Pictures/Screenshots/screenshot_20240102_030405_678901.png"
+          ],
+          "input": "",
+          "check": true,
+          "capture_output": false,
+          "text": false
+        },
+        {
+          "argv": [
+            "wl-copy",
+            "--type",
+            "image/png"
+          ],
+          "input": "6669787475726520706e67",
+          "check": true,
+          "capture_output": false,
+          "text": false
+        }
+      ],
+      "files": {
+        "Pictures/Screenshots/screenshot_20240102_030405_678901.png": {
+          "bytes": "6669787475726520706e67",
+          "mode": "0o644"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "reference": "CURRENT Python edit_config; disposable HOME; child call returns7",
+  "cases": [
+    {
+      "route": "defaults",
+      "editor": "",
+      "tools": {
+        "nvim": "/fixture/nvim"
+      },
+      "seed": null,
+      "outcome": {
+        "value": 7
+      },
+      "files": {
+        ".config/nacre/apps.json": {
+          "text": "{\n  \"terminal\": [\n    \"kitty\"\n  ],\n  \"browser\": [\n    \"google-chrome-stable\"\n  ],\n  \"files\": [\n    \"nacre-shell\",\n    \"dolphin\"\n  ],\n  \"mail\": [\n    \"google-chrome-stable\",\n    \"--app=https://mail.google.com/\"\n  ],\n  \"emoji\": [\n    \"nacre-menu\",\n    \"actions.emoji\"\n  ]\n}\n",
+          "mode": "0o600"
+        }
+      },
+      "calls": [
+        [
+          "nvim",
+          "{home}/.config/nacre/apps.json"
+        ]
+      ]
+    },
+    {
+      "route": "shortcuts",
+      "editor": "",
+      "tools": {
+        "nano": "/fixture/nano"
+      },
+      "seed": null,
+      "outcome": {
+        "value": 7
+      },
+      "files": {
+        ".config/nacre/shortcuts.lua": {
+          "text": "-- Personal Hyprland shortcut overrides.\n",
+          "mode": "0o600"
+        }
+      },
+      "calls": [
+        [
+          "nano",
+          "{home}/.config/nacre/shortcuts.lua"
+        ]
+      ]
+    },
+    {
+      "route": "defaults",
+      "editor": "\"editor space\" --flag #literal",
+      "tools": {
+        "editor space": "/fixture/editor"
+      },
+      "seed": null,
+      "outcome": {
+        "value": 7
+      },
+      "files": {
+        ".config/nacre/apps.json": {
+          "text": "{\n  \"terminal\": [\n    \"kitty\"\n  ],\n  \"browser\": [\n    \"google-chrome-stable\"\n  ],\n  \"files\": [\n    \"nacre-shell\",\n    \"dolphin\"\n  ],\n  \"mail\": [\n    \"google-chrome-stable\",\n    \"--app=https://mail.google.com/\"\n  ],\n  \"emoji\": [\n    \"nacre-menu\",\n    \"actions.emoji\"\n  ]\n}\n",
+          "mode": "0o600"
+        }
+      },
+      "calls": [
+        [
+          "editor space",
+          "--flag",
+          "#literal",
+          "{home}/.config/nacre/apps.json"
+        ]
+      ]
+    },
+    {
+      "route": "defaults",
+      "editor": "editor 'quoted value'",
+      "tools": {
+        "editor": "/fixture/editor"
+      },
+      "seed": null,
+      "outcome": {
+        "value": 7
+      },
+      "files": {
+        ".config/nacre/apps.json": {
+          "text": "{\n  \"terminal\": [\n    \"kitty\"\n  ],\n  \"browser\": [\n    \"google-chrome-stable\"\n  ],\n  \"files\": [\n    \"nacre-shell\",\n    \"dolphin\"\n  ],\n  \"mail\": [\n    \"google-chrome-stable\",\n    \"--app=https://mail.google.com/\"\n  ],\n  \"emoji\": [\n    \"nacre-menu\",\n    \"actions.emoji\"\n  ]\n}\n",
+          "mode": "0o600"
+        }
+      },
+      "calls": [
+        [
+          "editor",
+          "quoted value",
+          "{home}/.config/nacre/apps.json"
+        ]
+      ]
+    },
+    {
+      "route": "defaults",
+      "editor": "editor \"a\\$b\"",
+      "tools": {
+        "editor": "/fixture/editor"
+      },
+      "seed": null,
+      "outcome": {
+        "value": 7
+      },
+      "files": {
+        ".config/nacre/apps.json": {
+          "text": "{\n  \"terminal\": [\n    \"kitty\"\n  ],\n  \"browser\": [\n    \"google-chrome-stable\"\n  ],\n  \"files\": [\n    \"nacre-shell\",\n    \"dolphin\"\n  ],\n  \"mail\": [\n    \"google-chrome-stable\",\n    \"--app=https://mail.google.com/\"\n  ],\n  \"emoji\": [\n    \"nacre-menu\",\n    \"actions.emoji\"\n  ]\n}\n",
+          "mode": "0o600"
+        }
+      },
+      "calls": [
+        [
+          "editor",
+          "a\\$b",
+          "{home}/.config/nacre/apps.json"
+        ]
+      ]
+    },
+    {
+      "route": "defaults",
+      "editor": "editor \"unterminated",
+      "tools": {
+        "editor": "/fixture/editor"
+      },
+      "seed": null,
+      "outcome": {
+        "error": "ValueError",
+        "message": "No closing quotation"
+      },
+      "files": {
+        ".config/nacre/apps.json": {
+          "text": "{\n  \"terminal\": [\n    \"kitty\"\n  ],\n  \"browser\": [\n    \"google-chrome-stable\"\n  ],\n  \"files\": [\n    \"nacre-shell\",\n    \"dolphin\"\n  ],\n  \"mail\": [\n    \"google-chrome-stable\",\n    \"--app=https://mail.google.com/\"\n  ],\n  \"emoji\": [\n    \"nacre-menu\",\n    \"actions.emoji\"\n  ]\n}\n",
+          "mode": "0o600"
+        }
+      },
+      "calls": []
+    },
+    {
+      "route": "defaults",
+      "editor": "",
+      "tools": {},
+      "seed": null,
+      "outcome": {
+        "error": "ValueError",
+        "message": "Install a text editor such as Neovim to edit configuration"
+      },
+      "files": {
+        ".config/nacre/apps.json": {
+          "text": "{\n  \"terminal\": [\n    \"kitty\"\n  ],\n  \"browser\": [\n    \"google-chrome-stable\"\n  ],\n  \"files\": [\n    \"nacre-shell\",\n    \"dolphin\"\n  ],\n  \"mail\": [\n    \"google-chrome-stable\",\n    \"--app=https://mail.google.com/\"\n  ],\n  \"emoji\": [\n    \"nacre-menu\",\n    \"actions.emoji\"\n  ]\n}\n",
+          "mode": "0o600"
+        }
+      },
+      "calls": []
+    },
+    {
+      "route": "unknown",
+      "editor": "",
+      "tools": {
+        "nvim": "/fixture/nvim"
+      },
+      "seed": null,
+      "outcome": {
+        "error": "ValueError",
+        "message": "Unknown configuration route"
+      },
+      "files": {},
+      "calls": []
+    },
+    {
+      "route": "defaults",
+      "editor": "",
+      "tools": {
+        "vim": "/fixture/vim"
+      },
+      "seed": "{\"keep\":\"existing\"}\n",
+      "outcome": {
+        "value": 7
+      },
+      "files": {
+        ".config/nacre/apps.json": {
+          "text": "{\"keep\":\"existing\"}\n",
+          "mode": "0o640"
+        }
+      },
+      "calls": [
+        [
+          "vim",
+          "{home}/.config/nacre/apps.json"
+        ]
+      ]
+    }
+  ]
+}

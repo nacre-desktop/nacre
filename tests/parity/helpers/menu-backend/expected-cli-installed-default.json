@@ -1,0 +1,19 @@
+{
+  "stdout": {
+    "rows": []
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "pacman",
+      "argv": [
+        "-Q"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": [],
+  "stderr": ""
+}

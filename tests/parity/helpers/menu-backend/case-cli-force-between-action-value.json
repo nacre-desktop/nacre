@@ -1,0 +1,148 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "state",
+    "--force",
+    "demo"
+  ],
+  "compare_stderr": true,
+  "commands": {
+    "pacman": [
+      {
+        "stdout": "demo 1.2\n"
+      }
+    ],
+    "fc-list": [
+      {
+        "stdout": "Fixture Sans\nFixture Sans\nOther Sans\n"
+      }
+    ],
+    "systemctl": [
+      {
+        "stdout": "inactive\n",
+        "code": 3
+      }
+    ]
+  },
+  "reference_source_sha256": "d74ca0b2a6d6d41a173b399fa5fbf876472d9ef8b18572d604ea8b20108eb958",
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/stdout/created",
+      "reason": "menu snapshot time.time()"
+    },
+    {
+      "kind": "timestamp",
+      "pointer": "/files/home~1.cache~1nacre~1menu~1state.json/text",
+      "json_pointer": "/created",
+      "reason": "same snapshot timestamp persisted"
+    }
+  ],
+  "dbus": [
+    {
+      "match": {
+        "destination": "org.freedesktop.systemd1",
+        "path": "/org/freedesktop/systemd1",
+        "interface": "org.freedesktop.systemd1.Manager",
+        "member": "GetUnit",
+        "signature": "s",
+        "body": [
+          "nacre-stay-awake.service"
+        ]
+      },
+      "reply": {
+        "signature": "o",
+        "body": [
+          "/org/freedesktop/systemd1/unit/nacre_2dstay_2dawake_2eservice"
+        ]
+      }
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.systemd1",
+        "path": "/org/freedesktop/systemd1/unit/nacre_2dstay_2dawake_2eservice",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.systemd1.Unit",
+          "ActiveState"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "s",
+            "value": "inactive"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "command": "systemctl",
+          "argv": [
+            "--user",
+            "is-active",
+            "--quiet",
+            "nacre-stay-awake.service"
+          ],
+          "stdin": ""
+        }
+      ]
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.systemd1",
+        "path": "/org/freedesktop/systemd1",
+        "interface": "org.freedesktop.systemd1.Manager",
+        "member": "GetUnit",
+        "signature": "s",
+        "body": [
+          "nacre-screen-recording.service"
+        ]
+      },
+      "reply": {
+        "signature": "o",
+        "body": [
+          "/org/freedesktop/systemd1/unit/nacre_2dscreen_2drecording_2eservice"
+        ]
+      }
+    },
+    {
+      "match": {
+        "destination": "org.freedesktop.systemd1",
+        "path": "/org/freedesktop/systemd1/unit/nacre_2dscreen_2drecording_2eservice",
+        "interface": "org.freedesktop.DBus.Properties",
+        "member": "Get",
+        "signature": "ss",
+        "body": [
+          "org.freedesktop.systemd1.Unit",
+          "ActiveState"
+        ]
+      },
+      "reply": {
+        "signature": "v",
+        "body": [
+          {
+            "variant": "s",
+            "value": "inactive"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "command": "systemctl",
+          "argv": [
+            "--user",
+            "is-active",
+            "--quiet",
+            "nacre-screen-recording.service"
+          ],
+          "stdin": ""
+        }
+      ]
+    }
+  ],
+  "native_transport_reason": "Direct systemd GetUnit/ActiveState replaces the exact is-active call; private peer checks every method and emits only its declared legacy effect. Original golden is unchanged."
+}

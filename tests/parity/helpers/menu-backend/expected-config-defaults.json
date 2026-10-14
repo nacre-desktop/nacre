@@ -1,0 +1,30 @@
+{
+  "stdout": "edited\n",
+  "exit": 7,
+  "files": {
+    "home/.config": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.config/nacre/apps.json": {
+      "mode": "0o600",
+      "text": "{\n  \"terminal\": [\n    \"kitty\"\n  ],\n  \"browser\": [\n    \"google-chrome-stable\"\n  ],\n  \"files\": [\n    \"nacre-shell\",\n    \"dolphin\"\n  ],\n  \"mail\": [\n    \"google-chrome-stable\",\n    \"--app=https://mail.google.com/\"\n  ],\n  \"emoji\": [\n    \"nacre-menu\",\n    \"actions.emoji\"\n  ]\n}\n"
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "nvim",
+      "argv": [
+        "--example",
+        "/case/home/.config/nacre/apps.json"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

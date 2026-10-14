@@ -1,0 +1,21 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "paru",
+      "argv": [
+        "-S",
+        "--needed",
+        "--skipreview",
+        "--",
+        "demo"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": [],
+  "stderr": ""
+}

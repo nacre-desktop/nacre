@@ -1,0 +1,50 @@
+{
+  "helper": "menu-backend",
+  "args": [
+    "tool",
+    "capture-qr"
+  ],
+  "commands": {
+    "slurp": [
+      {
+        "stdout": "10,20 30x40\n"
+      }
+    ],
+    "grim": [
+      {
+        "writes": {
+          "{arg2}": "fixture png"
+        }
+      }
+    ],
+    "zbarimg": [
+      {
+        "stdout": "https://example.org\n"
+      }
+    ],
+    "wl-copy": [
+      {
+        "read_stdin": true
+      }
+    ],
+    "notify-send": [
+      {}
+    ]
+  },
+  "normalizations": [
+    {
+      "kind": "temp-path",
+      "pointer": "/effects/1/argv/2",
+      "pattern": "\\A/case/home/\\.cache/nacre/menu/(?:tmp|\\.tmp)[A-Za-z0-9_-]+\\.png\\Z",
+      "replacement": "/case/home/.cache/nacre/menu/<temp>.png",
+      "reason": "Only the private mkstemp basename changes; root,format,argv,clipboard bytes and cleanup stay exact"
+    },
+    {
+      "kind": "temp-path",
+      "pointer": "/effects/2/argv/2",
+      "pattern": "\\A/case/home/\\.cache/nacre/menu/(?:tmp|\\.tmp)[A-Za-z0-9_-]+\\.png\\Z",
+      "replacement": "/case/home/.cache/nacre/menu/<temp>.png",
+      "reason": "Same ephemeral file as the preceding capture; exact recognition arguments remain compared"
+    }
+  ]
+}

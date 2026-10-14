@@ -1,0 +1,67 @@
+{
+  "stdout": {
+    "message": "QR content copied"
+  },
+  "exit": 0,
+  "files": {
+    "home/.cache": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre": {
+      "mode": "0o755",
+      "directory": true
+    },
+    "home/.cache/nacre/menu": {
+      "mode": "0o700",
+      "directory": true
+    }
+  },
+  "deleted": [],
+  "effects": [
+    {
+      "command": "slurp",
+      "argv": [],
+      "stdin": ""
+    },
+    {
+      "command": "grim",
+      "argv": [
+        "-g",
+        "10,20 30x40",
+        "/case/home/.cache/nacre/menu/<temp>.png"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "zbarimg",
+      "argv": [
+        "--quiet",
+        "--raw",
+        "/case/home/.cache/nacre/menu/<temp>.png"
+      ],
+      "stdin": ""
+    },
+    {
+      "command": "wl-copy",
+      "argv": [
+        "--type",
+        "text/plain;charset=utf-8"
+      ],
+      "stdin": "https://example.org"
+    },
+    {
+      "command": "notify-send",
+      "argv": [
+        "-a",
+        "Nacre Capture",
+        "-i",
+        "nacre-notifications",
+        "Nacre",
+        "QR content copied"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": []
+}

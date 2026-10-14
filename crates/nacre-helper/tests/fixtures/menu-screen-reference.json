@@ -1,0 +1,217 @@
+{
+  "reference": "CURRENT Python read_screen; disposable HOME and fixed temporary filename",
+  "cases": [
+    {
+      "kind": "text",
+      "selection": "",
+      "code": 1,
+      "text": "",
+      "outcome": {
+        "value": ""
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "timeout": 180,
+          "check": false
+        }
+      ],
+      "files": {}
+    },
+    {
+      "kind": "qr",
+      "selection": "",
+      "code": 0,
+      "text": "",
+      "outcome": {
+        "value": ""
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "timeout": 180,
+          "check": false
+        }
+      ],
+      "files": {}
+    },
+    {
+      "kind": "text",
+      "selection": " 10,20 30x40\n",
+      "code": 0,
+      "text": "  recognized text\n",
+      "outcome": {
+        "value": "Text copied"
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "timeout": 180,
+          "check": false
+        },
+        {
+          "argv": [
+            "grim",
+            "-g",
+            "10,20 30x40",
+            "{home}/.cache/nacre/menu/fixture.png"
+          ],
+          "input": "",
+          "check": true
+        },
+        {
+          "argv": [
+            "tesseract",
+            "{home}/.cache/nacre/menu/fixture.png",
+            "stdout"
+          ],
+          "timeout": 30,
+          "check": false
+        },
+        {
+          "argv": [
+            "wl-copy",
+            "--type",
+            "text/plain;charset=utf-8"
+          ],
+          "input": "7265636f676e697a65642074657874",
+          "check": true
+        }
+      ],
+      "files": {}
+    },
+    {
+      "kind": "qr",
+      "selection": "10,20 30x40",
+      "code": 0,
+      "text": " https://example.org\n",
+      "outcome": {
+        "value": "QR content copied"
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "timeout": 180,
+          "check": false
+        },
+        {
+          "argv": [
+            "grim",
+            "-g",
+            "10,20 30x40",
+            "{home}/.cache/nacre/menu/fixture.png"
+          ],
+          "input": "",
+          "check": true
+        },
+        {
+          "argv": [
+            "zbarimg",
+            "--quiet",
+            "--raw",
+            "{home}/.cache/nacre/menu/fixture.png"
+          ],
+          "timeout": 30,
+          "check": false
+        },
+        {
+          "argv": [
+            "wl-copy",
+            "--type",
+            "text/plain;charset=utf-8"
+          ],
+          "input": "68747470733a2f2f6578616d706c652e6f7267",
+          "check": true
+        }
+      ],
+      "files": {}
+    },
+    {
+      "kind": "text",
+      "selection": "10,20 30x40",
+      "code": 0,
+      "text": "",
+      "outcome": {
+        "error": "ValueError",
+        "message": "No text found"
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "timeout": 180,
+          "check": false
+        },
+        {
+          "argv": [
+            "grim",
+            "-g",
+            "10,20 30x40",
+            "{home}/.cache/nacre/menu/fixture.png"
+          ],
+          "input": "",
+          "check": true
+        },
+        {
+          "argv": [
+            "tesseract",
+            "{home}/.cache/nacre/menu/fixture.png",
+            "stdout"
+          ],
+          "timeout": 30,
+          "check": false
+        }
+      ],
+      "files": {}
+    },
+    {
+      "kind": "qr",
+      "selection": "10,20 30x40",
+      "code": 0,
+      "text": "",
+      "outcome": {
+        "error": "ValueError",
+        "message": "No QR code found"
+      },
+      "calls": [
+        {
+          "argv": [
+            "slurp"
+          ],
+          "timeout": 180,
+          "check": false
+        },
+        {
+          "argv": [
+            "grim",
+            "-g",
+            "10,20 30x40",
+            "{home}/.cache/nacre/menu/fixture.png"
+          ],
+          "input": "",
+          "check": true
+        },
+        {
+          "argv": [
+            "zbarimg",
+            "--quiet",
+            "--raw",
+            "{home}/.cache/nacre/menu/fixture.png"
+          ],
+          "timeout": 30,
+          "check": false
+        }
+      ],
+      "files": {}
+    }
+  ]
+}

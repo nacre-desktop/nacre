@@ -1,0 +1,21 @@
+{
+  "stdout": {
+    "package": "demo"
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "pacman",
+      "argv": [
+        "-Qoq",
+        "--",
+        "/usr/share/applications/demo.desktop"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": [],
+  "stderr": ""
+}

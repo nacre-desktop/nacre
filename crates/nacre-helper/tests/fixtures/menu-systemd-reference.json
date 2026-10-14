@@ -1,0 +1,636 @@
+{
+  "reference": "Existing systemd-run transient properties on a private mock manager; --no-block/--quiet suppress only job waiting/display during capture",
+  "version": "systemd 262 (262-1-arch)",
+  "cases": [
+    {
+      "message": "Break",
+      "call": {
+        "unit": "nacre-reminder-00000000000000000000000000000000.timer",
+        "mode": "fail",
+        "properties": [
+          [
+            "Description",
+            {
+              "signature": "s",
+              "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder Break"
+            }
+          ],
+          [
+            "CollectMode",
+            {
+              "signature": "s",
+              "value": "inactive-or-failed"
+            }
+          ],
+          [
+            "AddRef",
+            {
+              "signature": "b",
+              "value": true
+            }
+          ],
+          [
+            "TimersMonotonic",
+            {
+              "signature": "a(st)",
+              "value": [
+                [
+                  "OnActiveSec",
+                  6000000
+                ]
+              ]
+            }
+          ],
+          [
+            "AccuracyUSec",
+            {
+              "signature": "t",
+              "value": 1000000
+            }
+          ],
+          [
+            "RemainAfterElapse",
+            {
+              "signature": "b",
+              "value": false
+            }
+          ]
+        ],
+        "auxiliary": [
+          [
+            "nacre-reminder-00000000000000000000000000000000.service",
+            [
+              [
+                "Description",
+                {
+                  "signature": "s",
+                  "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder Break"
+                }
+              ],
+              [
+                "CollectMode",
+                {
+                  "signature": "s",
+                  "value": "inactive-or-failed"
+                }
+              ],
+              [
+                "AddRef",
+                {
+                  "signature": "b",
+                  "value": true
+                }
+              ],
+              [
+                "ExecStart",
+                {
+                  "signature": "a(sasb)",
+                  "value": [
+                    [
+                      "/usr/bin/notify-send",
+                      [
+                        "/usr/bin/notify-send",
+                        "-a",
+                        "Nacre Reminders",
+                        "-i",
+                        "nacre-notifications",
+                        "Reminder",
+                        "Break"
+                      ],
+                      false
+                    ]
+                  ]
+                }
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "message": "Say \"hello\" \\ now\nNext",
+      "call": {
+        "unit": "nacre-reminder-00000000000000000000000000000000.timer",
+        "mode": "fail",
+        "properties": [
+          [
+            "Description",
+            {
+              "signature": "s",
+              "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder \"Say \\\"hello\\\" \\\\ now\\nNext\""
+            }
+          ],
+          [
+            "CollectMode",
+            {
+              "signature": "s",
+              "value": "inactive-or-failed"
+            }
+          ],
+          [
+            "AddRef",
+            {
+              "signature": "b",
+              "value": true
+            }
+          ],
+          [
+            "TimersMonotonic",
+            {
+              "signature": "a(st)",
+              "value": [
+                [
+                  "OnActiveSec",
+                  6000000
+                ]
+              ]
+            }
+          ],
+          [
+            "AccuracyUSec",
+            {
+              "signature": "t",
+              "value": 1000000
+            }
+          ],
+          [
+            "RemainAfterElapse",
+            {
+              "signature": "b",
+              "value": false
+            }
+          ]
+        ],
+        "auxiliary": [
+          [
+            "nacre-reminder-00000000000000000000000000000000.service",
+            [
+              [
+                "Description",
+                {
+                  "signature": "s",
+                  "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder \"Say \\\"hello\\\" \\\\ now\\nNext\""
+                }
+              ],
+              [
+                "CollectMode",
+                {
+                  "signature": "s",
+                  "value": "inactive-or-failed"
+                }
+              ],
+              [
+                "AddRef",
+                {
+                  "signature": "b",
+                  "value": true
+                }
+              ],
+              [
+                "ExecStart",
+                {
+                  "signature": "a(sasb)",
+                  "value": [
+                    [
+                      "/usr/bin/notify-send",
+                      [
+                        "/usr/bin/notify-send",
+                        "-a",
+                        "Nacre Reminders",
+                        "-i",
+                        "nacre-notifications",
+                        "Reminder",
+                        "Say \"hello\" \\ now\nNext"
+                      ],
+                      false
+                    ]
+                  ]
+                }
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "message": "$HOME $(echo demo) & ;",
+      "call": {
+        "unit": "nacre-reminder-00000000000000000000000000000000.timer",
+        "mode": "fail",
+        "properties": [
+          [
+            "Description",
+            {
+              "signature": "s",
+              "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder \"\\$HOME \\$(echo demo) & ;\""
+            }
+          ],
+          [
+            "CollectMode",
+            {
+              "signature": "s",
+              "value": "inactive-or-failed"
+            }
+          ],
+          [
+            "AddRef",
+            {
+              "signature": "b",
+              "value": true
+            }
+          ],
+          [
+            "TimersMonotonic",
+            {
+              "signature": "a(st)",
+              "value": [
+                [
+                  "OnActiveSec",
+                  6000000
+                ]
+              ]
+            }
+          ],
+          [
+            "AccuracyUSec",
+            {
+              "signature": "t",
+              "value": 1000000
+            }
+          ],
+          [
+            "RemainAfterElapse",
+            {
+              "signature": "b",
+              "value": false
+            }
+          ]
+        ],
+        "auxiliary": [
+          [
+            "nacre-reminder-00000000000000000000000000000000.service",
+            [
+              [
+                "Description",
+                {
+                  "signature": "s",
+                  "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder \"\\$HOME \\$(echo demo) & ;\""
+                }
+              ],
+              [
+                "CollectMode",
+                {
+                  "signature": "s",
+                  "value": "inactive-or-failed"
+                }
+              ],
+              [
+                "AddRef",
+                {
+                  "signature": "b",
+                  "value": true
+                }
+              ],
+              [
+                "ExecStart",
+                {
+                  "signature": "a(sasb)",
+                  "value": [
+                    [
+                      "/usr/bin/notify-send",
+                      [
+                        "/usr/bin/notify-send",
+                        "-a",
+                        "Nacre Reminders",
+                        "-i",
+                        "nacre-notifications",
+                        "Reminder",
+                        "$HOME $(echo demo) & ;"
+                      ],
+                      false
+                    ]
+                  ]
+                }
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "message": "Drink caf\u00e9 \u2615",
+      "call": {
+        "unit": "nacre-reminder-00000000000000000000000000000000.timer",
+        "mode": "fail",
+        "properties": [
+          [
+            "Description",
+            {
+              "signature": "s",
+              "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder \"Drink caf\u00e9 \u2615\""
+            }
+          ],
+          [
+            "CollectMode",
+            {
+              "signature": "s",
+              "value": "inactive-or-failed"
+            }
+          ],
+          [
+            "AddRef",
+            {
+              "signature": "b",
+              "value": true
+            }
+          ],
+          [
+            "TimersMonotonic",
+            {
+              "signature": "a(st)",
+              "value": [
+                [
+                  "OnActiveSec",
+                  6000000
+                ]
+              ]
+            }
+          ],
+          [
+            "AccuracyUSec",
+            {
+              "signature": "t",
+              "value": 1000000
+            }
+          ],
+          [
+            "RemainAfterElapse",
+            {
+              "signature": "b",
+              "value": false
+            }
+          ]
+        ],
+        "auxiliary": [
+          [
+            "nacre-reminder-00000000000000000000000000000000.service",
+            [
+              [
+                "Description",
+                {
+                  "signature": "s",
+                  "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder \"Drink caf\u00e9 \u2615\""
+                }
+              ],
+              [
+                "CollectMode",
+                {
+                  "signature": "s",
+                  "value": "inactive-or-failed"
+                }
+              ],
+              [
+                "AddRef",
+                {
+                  "signature": "b",
+                  "value": true
+                }
+              ],
+              [
+                "ExecStart",
+                {
+                  "signature": "a(sasb)",
+                  "value": [
+                    [
+                      "/usr/bin/notify-send",
+                      [
+                        "/usr/bin/notify-send",
+                        "-a",
+                        "Nacre Reminders",
+                        "-i",
+                        "nacre-notifications",
+                        "Reminder",
+                        "Drink caf\u00e9 \u2615"
+                      ],
+                      false
+                    ]
+                  ]
+                }
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "message": "Control\u0001end",
+      "call": {
+        "unit": "nacre-reminder-00000000000000000000000000000000.timer",
+        "mode": "fail",
+        "properties": [
+          [
+            "Description",
+            {
+              "signature": "s",
+              "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder \"Control\\001end\""
+            }
+          ],
+          [
+            "CollectMode",
+            {
+              "signature": "s",
+              "value": "inactive-or-failed"
+            }
+          ],
+          [
+            "AddRef",
+            {
+              "signature": "b",
+              "value": true
+            }
+          ],
+          [
+            "TimersMonotonic",
+            {
+              "signature": "a(st)",
+              "value": [
+                [
+                  "OnActiveSec",
+                  6000000
+                ]
+              ]
+            }
+          ],
+          [
+            "AccuracyUSec",
+            {
+              "signature": "t",
+              "value": 1000000
+            }
+          ],
+          [
+            "RemainAfterElapse",
+            {
+              "signature": "b",
+              "value": false
+            }
+          ]
+        ],
+        "auxiliary": [
+          [
+            "nacre-reminder-00000000000000000000000000000000.service",
+            [
+              [
+                "Description",
+                {
+                  "signature": "s",
+                  "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder \"Control\\001end\""
+                }
+              ],
+              [
+                "CollectMode",
+                {
+                  "signature": "s",
+                  "value": "inactive-or-failed"
+                }
+              ],
+              [
+                "AddRef",
+                {
+                  "signature": "b",
+                  "value": true
+                }
+              ],
+              [
+                "ExecStart",
+                {
+                  "signature": "a(sasb)",
+                  "value": [
+                    [
+                      "/usr/bin/notify-send",
+                      [
+                        "/usr/bin/notify-send",
+                        "-a",
+                        "Nacre Reminders",
+                        "-i",
+                        "nacre-notifications",
+                        "Reminder",
+                        "Control\u0001end"
+                      ],
+                      false
+                    ]
+                  ]
+                }
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "message": "Delete\u007fend",
+      "call": {
+        "unit": "nacre-reminder-00000000000000000000000000000000.timer",
+        "mode": "fail",
+        "properties": [
+          [
+            "Description",
+            {
+              "signature": "s",
+              "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder \"Delete\\177end\""
+            }
+          ],
+          [
+            "CollectMode",
+            {
+              "signature": "s",
+              "value": "inactive-or-failed"
+            }
+          ],
+          [
+            "AddRef",
+            {
+              "signature": "b",
+              "value": true
+            }
+          ],
+          [
+            "TimersMonotonic",
+            {
+              "signature": "a(st)",
+              "value": [
+                [
+                  "OnActiveSec",
+                  6000000
+                ]
+              ]
+            }
+          ],
+          [
+            "AccuracyUSec",
+            {
+              "signature": "t",
+              "value": 1000000
+            }
+          ],
+          [
+            "RemainAfterElapse",
+            {
+              "signature": "b",
+              "value": false
+            }
+          ]
+        ],
+        "auxiliary": [
+          [
+            "nacre-reminder-00000000000000000000000000000000.service",
+            [
+              [
+                "Description",
+                {
+                  "signature": "s",
+                  "value": "[systemd-run] /usr/bin/notify-send -a \"Nacre Reminders\" -i nacre-notifications Reminder \"Delete\\177end\""
+                }
+              ],
+              [
+                "CollectMode",
+                {
+                  "signature": "s",
+                  "value": "inactive-or-failed"
+                }
+              ],
+              [
+                "AddRef",
+                {
+                  "signature": "b",
+                  "value": true
+                }
+              ],
+              [
+                "ExecStart",
+                {
+                  "signature": "a(sasb)",
+                  "value": [
+                    [
+                      "/usr/bin/notify-send",
+                      [
+                        "/usr/bin/notify-send",
+                        "-a",
+                        "Nacre Reminders",
+                        "-i",
+                        "nacre-notifications",
+                        "Reminder",
+                        "Delete\u007fend"
+                      ],
+                      false
+                    ]
+                  ]
+                }
+              ]
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

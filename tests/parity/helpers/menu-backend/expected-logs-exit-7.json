@@ -1,0 +1,22 @@
+{
+  "stdout": "Fixture journal output\n",
+  "exit": 7,
+  "files": {},
+  "deleted": [],
+  "effects": [
+    {
+      "command": "journalctl",
+      "argv": [
+        "--user",
+        "-u",
+        "nacre-shell.service",
+        "--since",
+        "30 minutes ago",
+        "--no-pager"
+      ],
+      "stdin": ""
+    }
+  ],
+  "ipc": [],
+  "stderr": ""
+}
