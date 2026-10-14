@@ -1,0 +1,10 @@
+{
+  "services/NacreColours.qml": "pragma Singleton\nimport QtQuick\nQtObject {property var palette:({m3primary:\"#ffffff\"})}\n",
+  "services/NacreAudio.qml": "pragma Singleton\nimport QtQuick\nQtObject {property real volume:0.5;function setVolume(value){}}\n",
+  "services/NacreI18n.qml": "pragma Singleton\nimport QtQuick\nQtObject {function tr(id,fallback){return fallback}function windowCaption(value,kind){return value}}\n",
+  "services/ChatWindowTitle.qml": "pragma Singleton\nimport QtQuick\nQtObject {property var titles:({})}\n",
+  "config/NacreAppearance.qml": "pragma Singleton\nimport QtQuick\nQtObject {property var spacing:({small:8});property var font:({family:{mono:\"monospace\"},size:{smaller:12}})}\n",
+  "utils/NacreIcons.qml": "pragma Singleton\nimport QtQuick\nQtObject {function getAppCategoryIcon(name,fallback){return fallback}}\n",
+  "widgets/NacreTokens.qml": "pragma Singleton\nimport QtQuick\nQtObject {property int textDuration:0;property bool motionEnabled:false;property color ink:\"white\";property string textFamily:\"monospace\";property real textPointSize:12}\n",
+  "shell.qml": "import QtQuick\nimport Quickshell\nimport Quickshell.Wayland\nimport \"modules/bar/components\"\nShellRoot {\n PanelWindow {\n  anchors {top:true;left:true;right:true}\n  implicitHeight:36;color:\"#151515\"\n  WlrLayershell.layer:WlrLayer.Overlay\n  WlrLayershell.keyboardFocus:WlrKeyboardFocus.None\n  exclusionMode:ExclusionMode.Ignore\n  mask:Region {}\n  NacreActiveTitle {anchors.fill:parent;monitor:null}\n }\n}\n"
+}

@@ -233,7 +233,7 @@ remain unverified until a real-session cycle.
 ### Full Nacre login preparation (2026-10-13)
 
 The operator prefers testing at the login screen; the interactive nested preview
-was closed. `uwsm/tools/niri-session-runtime.py prepare --backend "$PWD"` stages
+was closed. `nacre-helper niri-session-runtime prepare --backend "$PWD"` stages
 a separate niri shell/tool tree and personal generated configuration under
 `~/.local/share/nacre/niri-on-pc/session`. It validates niri config before writing
 the `source-revision` marker. The existing private profile remains live and intact;
@@ -315,13 +315,13 @@ before it can launch its browser. Brain now checks `fullscreenState` before
 clearing restored fullscreen state; niri does not implement that operation.
 
 For an already prepared full-login session with the optional Brain installed,
-update Brain and the installed `niri-session-runtime.py`, then route the watcher
+update Brain and the installed `nacre-helper`, then route the watcher
 through the same code overlay as the shell. Use a Brain-only service drop-in:
 
 ```ini
 [Service]
 ExecStart=
-ExecStart=/usr/bin/python3 %h/.local/share/nacre/niri-on-pc/niri-session-runtime.py brain
+ExecStart=%h/.local/share/nacre/shell/tools/nacre-helper niri-session-runtime brain
 ```
 
 Reload user units and restart only `nacre-brain.service`. The `brain` action

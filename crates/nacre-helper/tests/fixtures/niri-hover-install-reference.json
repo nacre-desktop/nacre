@@ -1,0 +1,192 @@
+{
+  "cases": [
+    {
+      "variant": "valid",
+      "proof": {
+        "nestedVerified": true,
+        "focusPreserved": true,
+        "legacyStreamUnaffected": true,
+        "hoverClearedOnClose": true,
+        "qmlCaptionVerified": true,
+        "sourceRevision": "8ed0da44d974c32c6877d2f4630c314da0717ecb",
+        "binarySha256": "60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9",
+        "patchSha256": "a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4"
+      },
+      "files": {
+        "LICENSE.niri": {
+          "text": "license fixture\n",
+          "mode": 420
+        },
+        "manifest.json": {
+          "text": "{\n  \"schema\": 1,\n  \"enabled\": true,\n  \"nestedVerified\": true,\n  \"sourceRevision\": \"8ed0da44d974c32c6877d2f4630c314da0717ecb\",\n  \"protocol\": \"NacreOverviewHoverStream\",\n  \"binarySha256\": \"60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9\",\n  \"patchSha256\": \"a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4\",\n  \"proof\": {\n    \"nestedVerified\": true,\n    \"focusPreserved\": true,\n    \"legacyStreamUnaffected\": true,\n    \"hoverClearedOnClose\": true,\n    \"qmlCaptionVerified\": true,\n    \"sourceRevision\": \"8ed0da44d974c32c6877d2f4630c314da0717ecb\",\n    \"binarySha256\": \"60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9\",\n    \"patchSha256\": \"a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4\"\n  }\n}\n",
+          "mode": 384
+        },
+        "niri": {
+          "text": "compiled compositor fixture\n",
+          "mode": 448
+        }
+      },
+      "error": null
+    },
+    {
+      "variant": "upgrade",
+      "proof": {
+        "nestedVerified": true,
+        "focusPreserved": true,
+        "legacyStreamUnaffected": true,
+        "hoverClearedOnClose": true,
+        "qmlCaptionVerified": true,
+        "sourceRevision": "8ed0da44d974c32c6877d2f4630c314da0717ecb",
+        "binarySha256": "60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9",
+        "patchSha256": "a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4"
+      },
+      "files": {
+        "LICENSE.niri": {
+          "text": "license fixture\n",
+          "mode": 420
+        },
+        "LICENSE.niri.before-20000102T030405006000Z": {
+          "text": "previous LICENSE.niri\n",
+          "mode": 384
+        },
+        "manifest.json": {
+          "text": "{\n  \"schema\": 1,\n  \"enabled\": true,\n  \"nestedVerified\": true,\n  \"sourceRevision\": \"8ed0da44d974c32c6877d2f4630c314da0717ecb\",\n  \"protocol\": \"NacreOverviewHoverStream\",\n  \"binarySha256\": \"60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9\",\n  \"patchSha256\": \"a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4\",\n  \"proof\": {\n    \"nestedVerified\": true,\n    \"focusPreserved\": true,\n    \"legacyStreamUnaffected\": true,\n    \"hoverClearedOnClose\": true,\n    \"qmlCaptionVerified\": true,\n    \"sourceRevision\": \"8ed0da44d974c32c6877d2f4630c314da0717ecb\",\n    \"binarySha256\": \"60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9\",\n    \"patchSha256\": \"a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4\"\n  }\n}\n",
+          "mode": 384
+        },
+        "manifest.json.before-20000102T030405006000Z": {
+          "text": "previous manifest.json\n",
+          "mode": 384
+        },
+        "niri": {
+          "text": "compiled compositor fixture\n",
+          "mode": 448
+        },
+        "niri.before-20000102T030405006000Z": {
+          "text": "previous niri\n",
+          "mode": 384
+        }
+      },
+      "error": null
+    },
+    {
+      "variant": "nestedVerified",
+      "proof": {
+        "nestedVerified": false,
+        "focusPreserved": true,
+        "legacyStreamUnaffected": true,
+        "hoverClearedOnClose": true,
+        "qmlCaptionVerified": true,
+        "sourceRevision": "8ed0da44d974c32c6877d2f4630c314da0717ecb",
+        "binarySha256": "60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9",
+        "patchSha256": "a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4"
+      },
+      "files": {},
+      "error": "Installation requires matching nested native and QML hover proof"
+    },
+    {
+      "variant": "focusPreserved",
+      "proof": {
+        "nestedVerified": true,
+        "focusPreserved": false,
+        "legacyStreamUnaffected": true,
+        "hoverClearedOnClose": true,
+        "qmlCaptionVerified": true,
+        "sourceRevision": "8ed0da44d974c32c6877d2f4630c314da0717ecb",
+        "binarySha256": "60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9",
+        "patchSha256": "a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4"
+      },
+      "files": {},
+      "error": "Installation requires matching nested native and QML hover proof"
+    },
+    {
+      "variant": "legacyStreamUnaffected",
+      "proof": {
+        "nestedVerified": true,
+        "focusPreserved": true,
+        "legacyStreamUnaffected": false,
+        "hoverClearedOnClose": true,
+        "qmlCaptionVerified": true,
+        "sourceRevision": "8ed0da44d974c32c6877d2f4630c314da0717ecb",
+        "binarySha256": "60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9",
+        "patchSha256": "a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4"
+      },
+      "files": {},
+      "error": "Installation requires matching nested native and QML hover proof"
+    },
+    {
+      "variant": "hoverClearedOnClose",
+      "proof": {
+        "nestedVerified": true,
+        "focusPreserved": true,
+        "legacyStreamUnaffected": true,
+        "hoverClearedOnClose": false,
+        "qmlCaptionVerified": true,
+        "sourceRevision": "8ed0da44d974c32c6877d2f4630c314da0717ecb",
+        "binarySha256": "60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9",
+        "patchSha256": "a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4"
+      },
+      "files": {},
+      "error": "Installation requires matching nested native and QML hover proof"
+    },
+    {
+      "variant": "qmlCaptionVerified",
+      "proof": {
+        "nestedVerified": true,
+        "focusPreserved": true,
+        "legacyStreamUnaffected": true,
+        "hoverClearedOnClose": true,
+        "qmlCaptionVerified": false,
+        "sourceRevision": "8ed0da44d974c32c6877d2f4630c314da0717ecb",
+        "binarySha256": "60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9",
+        "patchSha256": "a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4"
+      },
+      "files": {},
+      "error": "Installation requires matching nested native and QML hover proof"
+    },
+    {
+      "variant": "wrong-source",
+      "proof": {
+        "nestedVerified": true,
+        "focusPreserved": true,
+        "legacyStreamUnaffected": true,
+        "hoverClearedOnClose": true,
+        "qmlCaptionVerified": true,
+        "sourceRevision": "wrong",
+        "binarySha256": "60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9",
+        "patchSha256": "a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4"
+      },
+      "files": {},
+      "error": "Installation requires matching nested native and QML hover proof"
+    },
+    {
+      "variant": "wrong-binary",
+      "proof": {
+        "nestedVerified": true,
+        "focusPreserved": true,
+        "legacyStreamUnaffected": true,
+        "hoverClearedOnClose": true,
+        "qmlCaptionVerified": true,
+        "sourceRevision": "8ed0da44d974c32c6877d2f4630c314da0717ecb",
+        "binarySha256": "wrong",
+        "patchSha256": "a116e9e65845ba908da9c7cc0de11965e0b99b7e4bcf76e3d6953658ef4e98c4"
+      },
+      "files": {},
+      "error": "Installation requires matching nested native and QML hover proof"
+    },
+    {
+      "variant": "wrong-patch",
+      "proof": {
+        "nestedVerified": true,
+        "focusPreserved": true,
+        "legacyStreamUnaffected": true,
+        "hoverClearedOnClose": true,
+        "qmlCaptionVerified": true,
+        "sourceRevision": "8ed0da44d974c32c6877d2f4630c314da0717ecb",
+        "binarySha256": "60c0fd73246479809a31076d65f03eeb5cb3fcd7cf2a6d68aa4a448f27e684a9",
+        "patchSha256": "wrong"
+      },
+      "files": {},
+      "error": "Installation requires matching nested native and QML hover proof"
+    }
+  ]
+}

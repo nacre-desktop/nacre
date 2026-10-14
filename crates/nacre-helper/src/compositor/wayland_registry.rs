@@ -85,7 +85,7 @@ fn probe(connection: Connection, timeout: Duration) -> Result<bool> {
         }
     }
 }
-fn wait(
+pub(crate) fn wait(
     connection: &Connection,
     events: rustix::event::PollFlags,
     deadline: Instant,

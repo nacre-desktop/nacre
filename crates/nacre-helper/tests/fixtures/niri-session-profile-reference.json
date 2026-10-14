@@ -1,0 +1,482 @@
+{
+  "cases": [
+    {
+      "request": null,
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Unknown profile fields"
+        }
+      }
+    },
+    {
+      "request": [],
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Unknown profile fields"
+        }
+      }
+    },
+    {
+      "request": {},
+      "observed": {
+        "value": {
+          "version": 1,
+          "id": "default",
+          "components": [
+            "configs",
+            "shell"
+          ],
+          "workspaceCount": 5,
+          "workspaceNames": [],
+          "workspaceIcons": [],
+          "startup": [],
+          "routes": [],
+          "brainWorkspace": null,
+          "aiWorkspace": null,
+          "aiFullAccess": false,
+          "windowTrashBindings": false
+        },
+        "error": null
+      }
+    },
+    {
+      "request": {
+        "unknown": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Unknown profile fields"
+        }
+      }
+    },
+    {
+      "request": {
+        "version": true
+      },
+      "observed": {
+        "value": {
+          "version": true,
+          "id": "default",
+          "components": [
+            "configs",
+            "shell"
+          ],
+          "workspaceCount": 5,
+          "workspaceNames": [],
+          "workspaceIcons": [],
+          "startup": [],
+          "routes": [],
+          "brainWorkspace": null,
+          "aiWorkspace": null,
+          "aiFullAccess": false,
+          "windowTrashBindings": false
+        },
+        "error": null
+      }
+    },
+    {
+      "request": {
+        "version": 1.0
+      },
+      "observed": {
+        "value": {
+          "version": 1.0,
+          "id": "default",
+          "components": [
+            "configs",
+            "shell"
+          ],
+          "workspaceCount": 5,
+          "workspaceNames": [],
+          "workspaceIcons": [],
+          "startup": [],
+          "routes": [],
+          "brainWorkspace": null,
+          "aiWorkspace": null,
+          "aiFullAccess": false,
+          "windowTrashBindings": false
+        },
+        "error": null
+      }
+    },
+    {
+      "request": {
+        "version": 2
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Unsupported profile identity/version"
+        }
+      }
+    },
+    {
+      "request": {
+        "id": "Upper"
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Unsupported profile identity/version"
+        }
+      }
+    },
+    {
+      "request": {
+        "workspaceCount": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Workspace count must be 1\u201310"
+        }
+      }
+    },
+    {
+      "request": {
+        "workspaceCount": 0
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Workspace count must be 1\u201310"
+        }
+      }
+    },
+    {
+      "request": {
+        "workspaceCount": 11
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Workspace count must be 1\u201310"
+        }
+      }
+    },
+    {
+      "request": {
+        "workspaceCount": 1.0
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Workspace count must be 1\u201310"
+        }
+      }
+    },
+    {
+      "request": {
+        "components": [
+          "shell",
+          "shell"
+        ]
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid optional component list"
+        }
+      }
+    },
+    {
+      "request": {
+        "components": [
+          "unknown"
+        ]
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid optional component list"
+        }
+      }
+    },
+    {
+      "request": {
+        "components": "shell"
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid optional component list"
+        }
+      }
+    },
+    {
+      "request": {
+        "workspaceNames": [
+          5
+        ]
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid workspace labels/icons"
+        }
+      }
+    },
+    {
+      "request": {
+        "workspaceNames": [
+          "a\u0000b"
+        ]
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid workspace labels/icons"
+        }
+      }
+    },
+    {
+      "request": {
+        "workspaceNames": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ]
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid workspace labels/icons"
+        }
+      }
+    },
+    {
+      "request": {
+        "brainWorkspace": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid optional app workspace"
+        }
+      }
+    },
+    {
+      "request": {
+        "brainWorkspace": 20
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid optional app workspace"
+        }
+      }
+    },
+    {
+      "request": {
+        "aiFullAccess": 1
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid assistant permission preference"
+        }
+      }
+    },
+    {
+      "request": {
+        "windowTrashBindings": "true"
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Window trash binding preference must be a boolean"
+        }
+      }
+    },
+    {
+      "request": {
+        "startup": {}
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid profile routes/startup list"
+        }
+      }
+    },
+    {
+      "request": {
+        "startup": [
+          {}
+        ]
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid profile entry"
+        }
+      }
+    },
+    {
+      "request": {
+        "startup": [
+          {
+            "label": "Test",
+            "workspace": 1,
+            "argv": [
+              "kitty"
+            ],
+            "classes": [
+              "kitty"
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "value": {
+          "version": 1,
+          "id": "default",
+          "components": [
+            "configs",
+            "shell"
+          ],
+          "workspaceCount": 5,
+          "workspaceNames": [],
+          "workspaceIcons": [],
+          "startup": [
+            {
+              "label": "Test",
+              "workspace": 1,
+              "argv": [
+                "kitty"
+              ],
+              "classes": [
+                "kitty"
+              ]
+            }
+          ],
+          "routes": [],
+          "brainWorkspace": null,
+          "aiWorkspace": null,
+          "aiFullAccess": false,
+          "windowTrashBindings": false
+        },
+        "error": null
+      }
+    },
+    {
+      "request": {
+        "routes": [
+          {
+            "name": "Rule",
+            "match": "app",
+            "workspace": 2
+          }
+        ]
+      },
+      "observed": {
+        "value": {
+          "version": 1,
+          "id": "default",
+          "components": [
+            "configs",
+            "shell"
+          ],
+          "workspaceCount": 5,
+          "workspaceNames": [],
+          "workspaceIcons": [],
+          "startup": [],
+          "routes": [
+            {
+              "name": "Rule",
+              "match": "app",
+              "workspace": 2
+            }
+          ],
+          "brainWorkspace": null,
+          "aiWorkspace": null,
+          "aiFullAccess": false,
+          "windowTrashBindings": false
+        },
+        "error": null
+      }
+    },
+    {
+      "request": {
+        "routes": [
+          {
+            "name": "Rule\n",
+            "match": "app",
+            "workspace": 2
+          }
+        ]
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid profile entry text"
+        }
+      }
+    },
+    {
+      "request": {
+        "startup": [
+          {
+            "label": "Test",
+            "workspace": 1,
+            "argv": "kitty",
+            "classes": []
+          }
+        ]
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid startup arguments"
+        }
+      }
+    },
+    {
+      "request": {
+        "startup": [
+          {
+            "label": "Test",
+            "workspace": 1,
+            "argv": [
+              "kitty"
+            ],
+            "classes": [
+              3
+            ]
+          }
+        ]
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid startup class list"
+        }
+      }
+    }
+  ]
+}

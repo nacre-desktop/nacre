@@ -1,0 +1,2215 @@
+{
+  "source_sha256": "dabfb81335a2d41c5ea05347a578752e2069918161507c3f52d451dc5789b0d2",
+  "cases": [
+    {
+      "request": {
+        "name": "host-0",
+        "operation": "host_preferences",
+        "desktop": {}
+      },
+      "observed": {
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.25\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-1",
+        "operation": "host_preferences",
+        "desktop": {
+          "naturalScroll": false
+        }
+      },
+      "observed": {
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        scroll-factor 0.25\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-2",
+        "operation": "host_preferences",
+        "desktop": {
+          "naturalScroll": 1
+        }
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid natural scrolling preference"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-3",
+        "operation": "host_preferences",
+        "desktop": {
+          "gapsOut": 0,
+          "borderSize": 0
+        }
+      },
+      "observed": {
+        "value": "prefer-no-csd\nlayout {\n    gaps 0\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 0; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.25\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-4",
+        "operation": "host_preferences",
+        "desktop": {
+          "gapsOut": 1.5,
+          "borderSize": 2.0
+        }
+      },
+      "observed": {
+        "value": "prefer-no-csd\nlayout {\n    gaps 1.5\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 2.0; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.25\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-5",
+        "operation": "host_preferences",
+        "desktop": {
+          "gapsOut": -1
+        }
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid saved window margins"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-6",
+        "operation": "host_preferences",
+        "desktop": {
+          "borderSize": 101
+        }
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid saved window margins"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-7",
+        "operation": "host_preferences",
+        "desktop": {
+          "gapsOut": true
+        }
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid saved window margins"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-8",
+        "operation": "host_preferences",
+        "desktop": {
+          "displays": [
+            {
+              "name": "eDP-1",
+              "scale": 1.5
+            }
+          ]
+        }
+      },
+      "observed": {
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.25\n    }\n}\noutput \"eDP-1\" {\n    scale 1.5\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-9",
+        "operation": "host_preferences",
+        "desktop": {
+          "displays": [
+            {
+              "name": "DP-1",
+              "scale": 2
+            },
+            {
+              "name": "DP-2",
+              "scale": 1.25
+            }
+          ]
+        }
+      },
+      "observed": {
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.25\n    }\n}\noutput \"DP-1\" {\n    scale 2\n}\noutput \"DP-2\" {\n    scale 1.25\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-10",
+        "operation": "host_preferences",
+        "desktop": {
+          "displays": [
+            {
+              "name": "DP-\"\\\u00f8",
+              "scale": 1
+            }
+          ]
+        }
+      },
+      "observed": {
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.25\n    }\n}\noutput \"DP-\\\"\\\\\\u00f8\" {\n    scale 1\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-11",
+        "operation": "host_preferences",
+        "desktop": {
+          "displays": [
+            {
+              "name": "DP-1",
+              "scale": 0
+            }
+          ]
+        }
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid saved display scale"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-12",
+        "operation": "host_preferences",
+        "desktop": {
+          "displays": [
+            {
+              "name": "",
+              "scale": 1
+            }
+          ]
+        }
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid saved display scale"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-13",
+        "operation": "host_preferences",
+        "desktop": {
+          "displays": [
+            {
+              "name": "DP-1",
+              "scale": true
+            }
+          ]
+        }
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid saved display scale"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "host-14",
+        "operation": "host_preferences",
+        "desktop": {
+          "displays": [
+            {
+              "disabled": true,
+              "scale": "bad"
+            }
+          ]
+        }
+      },
+      "observed": {
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.25\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-0-shell-False",
+        "operation": "command",
+        "action": "shell",
+        "environment": {},
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-0-shell-True",
+        "operation": "command",
+        "action": "shell",
+        "environment": {},
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-0-brain-False",
+        "operation": "command",
+        "action": "brain",
+        "environment": {},
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-0-brain-True",
+        "operation": "command",
+        "action": "brain",
+        "environment": {},
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-0-compositor-False",
+        "operation": "command",
+        "action": "compositor",
+        "environment": {},
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-0-compositor-True",
+        "operation": "command",
+        "action": "compositor",
+        "environment": {},
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-0-widths-False",
+        "operation": "command",
+        "action": "widths",
+        "environment": {},
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-0-widths-True",
+        "operation": "command",
+        "action": "widths",
+        "environment": {},
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-0-widths-check-False",
+        "operation": "command",
+        "action": "widths-check",
+        "environment": {},
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-0-widths-check-True",
+        "operation": "command",
+        "action": "widths-check",
+        "environment": {},
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-1-shell-False",
+        "operation": "command",
+        "action": "shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "{home}/.local/bin/nacre-shell",
+            "start"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "Hyprland",
+            "NIRI_SOCKET": "/stale"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-1-shell-True",
+        "operation": "command",
+        "action": "shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "{home}/.local/bin/nacre-shell",
+            "start"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "Hyprland",
+            "NIRI_SOCKET": "/stale"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-1-brain-False",
+        "operation": "command",
+        "action": "brain",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "/usr/bin/python3",
+            "{home}/.local/share/nacre/brain/control.py",
+            "watch-brain"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "Hyprland",
+            "NIRI_SOCKET": "/stale"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-1-brain-True",
+        "operation": "command",
+        "action": "brain",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "/usr/bin/python3",
+            "{home}/.local/share/nacre/brain/control.py",
+            "watch-brain"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "Hyprland",
+            "NIRI_SOCKET": "/stale"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-1-compositor-False",
+        "operation": "command",
+        "action": "compositor",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-1-compositor-True",
+        "operation": "command",
+        "action": "compositor",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-1-widths-False",
+        "operation": "command",
+        "action": "widths",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-1-widths-True",
+        "operation": "command",
+        "action": "widths",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-1-widths-check-False",
+        "operation": "command",
+        "action": "widths-check",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-1-widths-check-True",
+        "operation": "command",
+        "action": "widths-check",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "Hyprland",
+          "NIRI_SOCKET": "/stale"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-2-shell-False",
+        "operation": "command",
+        "action": "shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Prepare the separate niri source before logging in"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-2-shell-True",
+        "operation": "command",
+        "action": "shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "/usr/bin/python3",
+            "{home}/.local/share/nacre/shell/tools/shell-supervisor.py"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "0"
+          }
+        },
+        "error": null,
+        "calls": [
+          {
+            "method": "overview_hover_binary"
+          }
+        ],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-2-brain-False",
+        "operation": "command",
+        "action": "brain",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Prepare the separate niri source before logging in"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-2-brain-True",
+        "operation": "command",
+        "action": "brain",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "/usr/bin/python3",
+            "{home}/.local/share/nacre/brain/control.py",
+            "watch-brain"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "0"
+          }
+        },
+        "error": null,
+        "calls": [
+          {
+            "method": "overview_hover_binary"
+          }
+        ],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-2-compositor-False",
+        "operation": "command",
+        "action": "compositor",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Prepare the separate niri source before logging in"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-2-compositor-True",
+        "operation": "command",
+        "action": "compositor",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "/usr/bin/niri",
+            "--session"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "0"
+          }
+        },
+        "error": null,
+        "calls": [
+          {
+            "method": "overview_hover_binary"
+          }
+        ],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-2-widths-False",
+        "operation": "command",
+        "action": "widths",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Prepare the separate niri source before logging in"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-2-widths-True",
+        "operation": "command",
+        "action": "widths",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "{home}/.local/share/nacre/shell/tools/nacre-helper",
+            "niri_widths"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "0"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-2-widths-check-False",
+        "operation": "command",
+        "action": "widths-check",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Prepare the separate niri source before logging in"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-2-widths-check-True",
+        "operation": "command",
+        "action": "widths-check",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "{home}/.local/share/nacre/shell/tools/nacre-helper",
+            "niri_widths",
+            "--check-session"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "0"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-3-shell-False",
+        "operation": "command",
+        "action": "shell",
+        "environment": {
+          "NIRI_SOCKET": "/private/niri.sock",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-3-shell-True",
+        "operation": "command",
+        "action": "shell",
+        "environment": {
+          "NIRI_SOCKET": "/private/niri.sock",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-3-brain-False",
+        "operation": "command",
+        "action": "brain",
+        "environment": {
+          "NIRI_SOCKET": "/private/niri.sock",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-3-brain-True",
+        "operation": "command",
+        "action": "brain",
+        "environment": {
+          "NIRI_SOCKET": "/private/niri.sock",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-3-compositor-False",
+        "operation": "command",
+        "action": "compositor",
+        "environment": {
+          "NIRI_SOCKET": "/private/niri.sock",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-3-compositor-True",
+        "operation": "command",
+        "action": "compositor",
+        "environment": {
+          "NIRI_SOCKET": "/private/niri.sock",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-3-widths-False",
+        "operation": "command",
+        "action": "widths",
+        "environment": {
+          "NIRI_SOCKET": "/private/niri.sock",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-3-widths-True",
+        "operation": "command",
+        "action": "widths",
+        "environment": {
+          "NIRI_SOCKET": "/private/niri.sock",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-3-widths-check-False",
+        "operation": "command",
+        "action": "widths-check",
+        "environment": {
+          "NIRI_SOCKET": "/private/niri.sock",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "ready": false
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "command-3-widths-check-True",
+        "operation": "command",
+        "action": "widths-check",
+        "environment": {
+          "NIRI_SOCKET": "/private/niri.sock",
+          "HYPRLAND_INSTANCE_SIGNATURE": "stale"
+        },
+        "ready": true
+      },
+      "observed": {
+        "value": null,
+        "error": {
+          "type": "ValueError",
+          "message": "Niri runtime requires an explicit niri session"
+        },
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "companion-shell-False",
+        "operation": "command",
+        "action": "shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true,
+        "companion": true,
+        "stock": false
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "/usr/bin/python3",
+            "{home}/.local/share/nacre/shell/tools/shell-supervisor.py"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "1"
+          }
+        },
+        "error": null,
+        "calls": [
+          {
+            "method": "overview_hover_binary"
+          }
+        ],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "companion-shell-True",
+        "operation": "command",
+        "action": "shell",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true,
+        "companion": true,
+        "stock": true
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "/usr/bin/python3",
+            "{home}/.local/share/nacre/shell/tools/shell-supervisor.py"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "0"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "companion-compositor-False",
+        "operation": "command",
+        "action": "compositor",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true,
+        "companion": true,
+        "stock": false
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "/companion/niri",
+            "--session"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "1"
+          }
+        },
+        "error": null,
+        "calls": [
+          {
+            "method": "overview_hover_binary"
+          }
+        ],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "companion-compositor-True",
+        "operation": "command",
+        "action": "compositor",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true,
+        "companion": true,
+        "stock": true
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "/usr/bin/niri",
+            "--session"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "0"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "companion-widths-False",
+        "operation": "command",
+        "action": "widths",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true,
+        "companion": true,
+        "stock": false
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "{home}/.local/share/nacre/shell/tools/nacre-helper",
+            "niri_widths"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "0"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "companion-widths-True",
+        "operation": "command",
+        "action": "widths",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true,
+        "companion": true,
+        "stock": true
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "{home}/.local/share/nacre/shell/tools/nacre-helper",
+            "niri_widths"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "0"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "companion-widths-check-False",
+        "operation": "command",
+        "action": "widths-check",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true,
+        "companion": true,
+        "stock": false
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "{home}/.local/share/nacre/shell/tools/nacre-helper",
+            "niri_widths",
+            "--check-session"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "0"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "companion-widths-check-True",
+        "operation": "command",
+        "action": "widths-check",
+        "environment": {
+          "XDG_CURRENT_DESKTOP": "niri",
+          "NIRI_SOCKET": "/private/niri.sock",
+          "DISPLAY": ":fixture"
+        },
+        "ready": true,
+        "companion": true,
+        "stock": true
+      },
+      "observed": {
+        "value": {
+          "argv": [
+            "bwrap",
+            "--bind",
+            "/",
+            "/",
+            "--dev-bind",
+            "/dev",
+            "/dev",
+            "--proc",
+            "/proc",
+            "--ro-bind",
+            "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell",
+            "{home}/.local/share/nacre/shell",
+            "--die-with-parent",
+            "{home}/.local/share/nacre/shell/tools/nacre-helper",
+            "niri_widths",
+            "--check-session"
+          ],
+          "environment": {
+            "XDG_CURRENT_DESKTOP": "niri",
+            "NIRI_SOCKET": "/private/niri.sock",
+            "DISPLAY": ":fixture",
+            "NACRE_COMPOSITOR": "niri",
+            "NACRE_COMPOSITOR_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_PEARL_TOOLS": "{home}/.local/share/nacre/shell/tools",
+            "NACRE_QS_CONFIG": "{home}/.config/quickshell/nacre/shell.qml",
+            "NACRE_NIRI_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/config.kdl",
+            "NACRE_NIRI_DESKTOP_CONFIG": "{home}/.local/share/nacre/niri-on-pc/session/config/desktop.kdl",
+            "NACRE_NIRI_TOOLS_SOURCE": "{home}/.local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell/tools",
+            "NACRE_NIRI_HOVER_STREAM": "0"
+          }
+        },
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "palette-False",
+        "operation": "palette_include",
+        "live": false
+      },
+      "observed": {
+        "value": "{home}/stage/config/colors.kdl",
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "palette-True",
+        "operation": "palette_include",
+        "live": true
+      },
+      "observed": {
+        "value": "{home}/.config/nacre/niri/palette.kdl",
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-valid",
+        "operation": "verified_hover_binary",
+        "variant": "valid"
+      },
+      "observed": {
+        "value": "{home}/companion/niri",
+        "error": null,
+        "calls": [
+          {
+            "method": "check_output",
+            "args": [
+              "/usr/bin/niri",
+              "--version"
+            ],
+            "kwargs": {
+              "text": true,
+              "timeout": 2
+            }
+          },
+          {
+            "method": "check_output",
+            "args": [
+              "{home}/companion/niri",
+              "--version"
+            ],
+            "kwargs": {
+              "text": true,
+              "timeout": 2
+            }
+          }
+        ],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-changed-binary",
+        "operation": "verified_hover_binary",
+        "variant": "changed-binary"
+      },
+      "observed": {
+        "value": null,
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-no-nested-proof",
+        "operation": "verified_hover_binary",
+        "variant": "no-nested-proof"
+      },
+      "observed": {
+        "value": null,
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-wrong-source",
+        "operation": "verified_hover_binary",
+        "variant": "wrong-source"
+      },
+      "observed": {
+        "value": null,
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-wrong-protocol",
+        "operation": "verified_hover_binary",
+        "variant": "wrong-protocol"
+      },
+      "observed": {
+        "value": null,
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-stock-new-version",
+        "operation": "verified_hover_binary",
+        "variant": "stock-new-version"
+      },
+      "observed": {
+        "value": null,
+        "error": null,
+        "calls": [
+          {
+            "method": "check_output",
+            "args": [
+              "/usr/bin/niri",
+              "--version"
+            ],
+            "kwargs": {
+              "text": true,
+              "timeout": 2
+            }
+          }
+        ],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-candidate-new-version",
+        "operation": "verified_hover_binary",
+        "variant": "candidate-new-version"
+      },
+      "observed": {
+        "value": null,
+        "error": null,
+        "calls": [
+          {
+            "method": "check_output",
+            "args": [
+              "/usr/bin/niri",
+              "--version"
+            ],
+            "kwargs": {
+              "text": true,
+              "timeout": 2
+            }
+          },
+          {
+            "method": "check_output",
+            "args": [
+              "{home}/companion/niri",
+              "--version"
+            ],
+            "kwargs": {
+              "text": true,
+              "timeout": 2
+            }
+          }
+        ],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-binary-symlink",
+        "operation": "verified_hover_binary",
+        "variant": "binary-symlink"
+      },
+      "observed": {
+        "value": null,
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-receipt-symlink",
+        "operation": "verified_hover_binary",
+        "variant": "receipt-symlink"
+      },
+      "observed": {
+        "value": null,
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-disabled",
+        "operation": "verified_hover_binary",
+        "variant": "disabled"
+      },
+      "observed": {
+        "value": null,
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-not-executable",
+        "operation": "verified_hover_binary",
+        "variant": "not-executable"
+      },
+      "observed": {
+        "value": null,
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-packaged",
+        "operation": "verified_hover_binary",
+        "variant": "packaged"
+      },
+      "observed": {
+        "value": "{home}/companion/niri",
+        "error": null,
+        "calls": [
+          {
+            "method": "check_output",
+            "args": [
+              "{home}/companion/niri",
+              "--version"
+            ],
+            "kwargs": {
+              "text": true,
+              "timeout": 2
+            }
+          }
+        ],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "request": {
+        "name": "trust-packaged-writable",
+        "operation": "verified_hover_binary",
+        "variant": "packaged-writable"
+      },
+      "observed": {
+        "value": null,
+        "error": null,
+        "calls": [],
+        "stdout": "",
+        "stderr": ""
+      },
+      "exit": 0,
+      "stderr": ""
+    }
+  ]
+}

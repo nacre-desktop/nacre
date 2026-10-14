@@ -13,7 +13,7 @@ pub mod niri_events;
 pub mod niri_night_light;
 pub mod niri_state;
 pub mod niri_transport;
-mod wayland_registry;
+pub(crate) mod wayland_registry;
 use crate::Result;
 use niri_ipc::{Action, Request};
 use serde_json::Value;

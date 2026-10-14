@@ -1,0 +1,83 @@
+{
+  "cases": [
+    {
+      "arguments": [
+        "bad",
+        "--help"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\nniri-session-runtime.py: error: argument action: invalid choice: 'bad' (choose from 'prepare', 'compositor', 'shell', 'brain', 'widths', 'widths-check')\n",
+      "exit": 2
+    },
+    {
+      "arguments": [
+        "--",
+        "--help"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\nniri-session-runtime.py: error: argument action: invalid choice: '--help' (choose from 'prepare', 'compositor', 'shell', 'brain', 'widths', 'widths-check')\n",
+      "exit": 2
+    },
+    {
+      "arguments": [
+        "--h"
+      ],
+      "stdout": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\n\nSelect an isolated Nacre code view for niri while preserving Hyprland startup.\n\npositional arguments:\n  {prepare,compositor,shell,brain,widths,widths-check}\n\noptions:\n  -h, --help            show this help message and exit\n  --backend BACKEND\n  --stock-niri          prepare a session using distribution Niri without\n                        hover support\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "arguments": [
+        "--he"
+      ],
+      "stdout": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\n\nSelect an isolated Nacre code view for niri while preserving Hyprland startup.\n\npositional arguments:\n  {prepare,compositor,shell,brain,widths,widths-check}\n\noptions:\n  -h, --help            show this help message and exit\n  --backend BACKEND\n  --stock-niri          prepare a session using distribution Niri without\n                        hover support\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "arguments": [
+        "--stock-niri=false"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\nniri-session-runtime.py: error: argument --stock-niri: ignored explicit argument 'false'\n",
+      "exit": 2
+    },
+    {
+      "arguments": [
+        "shell",
+        "--backend"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\nniri-session-runtime.py: error: argument --backend: expected one argument\n",
+      "exit": 2
+    },
+    {
+      "arguments": [
+        "prepare",
+        "--b"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\nniri-session-runtime.py: error: argument --backend: expected one argument\n",
+      "exit": 2
+    },
+    {
+      "arguments": [
+        "--backend=/tmp",
+        "--help"
+      ],
+      "stdout": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\n\nSelect an isolated Nacre code view for niri while preserving Hyprland startup.\n\npositional arguments:\n  {prepare,compositor,shell,brain,widths,widths-check}\n\noptions:\n  -h, --help            show this help message and exit\n  --backend BACKEND\n  --stock-niri          prepare a session using distribution Niri without\n                        hover support\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "arguments": [
+        "shell",
+        "--s",
+        "--help"
+      ],
+      "stdout": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\n\nSelect an isolated Nacre code view for niri while preserving Hyprland startup.\n\npositional arguments:\n  {prepare,compositor,shell,brain,widths,widths-check}\n\noptions:\n  -h, --help            show this help message and exit\n  --backend BACKEND\n  --stock-niri          prepare a session using distribution Niri without\n                        hover support\n",
+      "stderr": "",
+      "exit": 0
+    }
+  ]
+}

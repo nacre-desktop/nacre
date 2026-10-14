@@ -1,0 +1,64 @@
+{
+  "inputs": [
+    "hypr/config.lua",
+    "hypr/scripts/tool",
+    "hypr/__pycache__/bad",
+    "kitty/.qmlls.ini",
+    "fish/bad.pyc",
+    "uwsm/niri-shell-runtime.conf",
+    "fastfetch/config.jsonc",
+    "bin/orient",
+    "bin/nacre-app",
+    "bin/nacre-ai",
+    "bin/nacre-brain",
+    "nacre/desktop/nacre-ai.desktop",
+    "nacre/desktop/nacre-brain.desktop",
+    "nacre/desktop/nacre-settings.desktop",
+    "nacre/shell-tools/nacre-power-key.service",
+    "nacre/shell-tools/nacre-niri-widths.service",
+    "ai/systemd/nacre-brain-sync.service"
+  ],
+  "cases": [
+    {
+      "components": [
+        "configs",
+        "shell"
+      ],
+      "files": {
+        ".config/hypr/config.lua": "hypr/config.lua",
+        ".config/hypr/scripts/tool": "hypr/scripts/tool",
+        ".config/fastfetch/config.jsonc": "fastfetch/config.jsonc",
+        ".config/uwsm/niri-shell-runtime.conf": "uwsm/niri-shell-runtime.conf",
+        ".local/bin/nacre-app": "bin/nacre-app",
+        ".local/bin/orient": "bin/orient",
+        ".local/share/applications/nacre-settings.desktop": "nacre/desktop/nacre-settings.desktop",
+        ".config/systemd/user/nacre-power-key.service": "nacre/shell-tools/nacre-power-key.service",
+        ".config/systemd/user/nacre-niri-widths.service": "nacre/shell-tools/nacre-niri-widths.service"
+      }
+    },
+    {
+      "components": [
+        "configs",
+        "shell",
+        "ai",
+        "brain"
+      ],
+      "files": {
+        ".config/hypr/config.lua": "hypr/config.lua",
+        ".config/hypr/scripts/tool": "hypr/scripts/tool",
+        ".config/fastfetch/config.jsonc": "fastfetch/config.jsonc",
+        ".config/uwsm/niri-shell-runtime.conf": "uwsm/niri-shell-runtime.conf",
+        ".local/bin/nacre-app": "bin/nacre-app",
+        ".local/bin/nacre-ai": "bin/nacre-ai",
+        ".local/bin/orient": "bin/orient",
+        ".local/bin/nacre-brain": "bin/nacre-brain",
+        ".local/share/applications/nacre-ai.desktop": "nacre/desktop/nacre-ai.desktop",
+        ".local/share/applications/nacre-settings.desktop": "nacre/desktop/nacre-settings.desktop",
+        ".local/share/applications/nacre-brain.desktop": "nacre/desktop/nacre-brain.desktop",
+        ".config/systemd/user/nacre-brain-sync.service": "ai/systemd/nacre-brain-sync.service",
+        ".config/systemd/user/nacre-power-key.service": "nacre/shell-tools/nacre-power-key.service",
+        ".config/systemd/user/nacre-niri-widths.service": "nacre/shell-tools/nacre-niri-widths.service"
+      }
+    }
+  ]
+}

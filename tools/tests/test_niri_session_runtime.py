@@ -1,6 +1,5 @@
 """Niri code overlays never replace the working Hyprland source or preferences."""
 
-import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
@@ -12,11 +11,7 @@ import json
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location(
-    "session_runtime", ROOT / "uwsm/tools/niri-session-runtime.py"
-)
-runtime = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(runtime)
+import native_niri_session_runtime as runtime
 
 
 class NiriRuntimeTests(unittest.TestCase):

@@ -1,0 +1,13 @@
+usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]
+                               {prepare,compositor,shell,brain,widths,widths-check}
+
+Select an isolated Nacre code view for niri while preserving Hyprland startup.
+
+positional arguments:
+  {prepare,compositor,shell,brain,widths,widths-check}
+
+options:
+  -h, --help            show this help message and exit
+  --backend BACKEND
+  --stock-niri          prepare a session using distribution Niri without
+                        hover support

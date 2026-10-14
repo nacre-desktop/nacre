@@ -7,7 +7,7 @@ Developer-only Python tools and test harnesses remain permitted.
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
 | 1 Service / frequent helpers | Complete; quiet timings deferred | 13 ports; RSS 26.95 -> 10.21 MiB (busy); Source/install CI green. |
-| 2 Compositor / pearls | Compilers / compositor / pearls public; runtime scripts pending | Pearl CPU load/save 88.63/92.91 -> 2.82/3.85 ms (busy). |
+| 2 Compositor / pearls | Compilers / compositor / pearls public; runtime locally complete, validating | Runtime parser CPU 39.61 -> 0.96 ms (busy); no session timing claim. |
 | 3 Wallpaper / colors | Pending | Direct Orient crates; preserve paired publication. |
 | 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
 | 5 AI | Pending | Claude CLI stream-json; retain existing permissions/history. |
@@ -47,7 +47,7 @@ current frozen cases use defaults and remain unchanged.
 Main CI gate retained; 2753707f fixed isolation without changing goldens/skips.
 Wave 1 source/install CI passed; hardware checks remain manual.
 
-Next: publish prepared-session gate (132 Rust / 839 repo / 526 parity; 270 decisions / 14 CLI / 5 original + 3 native tests pass), then runtime; send receipts before publication. Gate CPU31.18 -> 0.98 ms (busy). Widths39ffa461:130 Rust / 836 repo / 526 parity, CPU41.36 -> 1.07 ms/RSS19.27 -> 8.23 MiB (busy); CI38581376661 running. Shared packaging stays with install task.
+Next: publish validated prepared runtime, check CI, then port acceptance monitor and preview (remaining installed Wave 2 scripts). Integrated owner defaults/pin e86acb13; 181 frozen cases, 149 Rust tests, 842 repo tests, 526 parity and 16 original runtime/package assertions; actual nested hover/QML proof passes. Native staging, locale1 keyboard, strict proof/backups and exec; Python runtime retired with callers. Custom XDG follows QML; keyboard/trust failures surface; native errors replace tracebacks; proof uses direct Wayland and sleep. Brain/supervisor children wait for their waves; shared packaging stays with install task. Gate282d6fc2/CI38583318581 and widths39ffa461/CI38581376661 green.
 Window-hide cutover: 126 Rust tests, 821 repo plus 3 native checks, 12 frozen cases, 11 original assertions and 3 socket/D-Bus goldens pass. Busy CPU 46.26 -> 2.19 ms, helper RSS 17.33 -> 7.27 MiB; 100 -> 0 Python starts. No state migration; notification failures reach stderr and lock symlinks are refused. CI repair 2c31dbd2 / CI38568187548 fully green; no new skips.
 Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.
 Three compiler sources retired; 84 integrated Rust tests / 770 repo tests / 526 cases pass.

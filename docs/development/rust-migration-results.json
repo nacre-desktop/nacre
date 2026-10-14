@@ -642,5 +642,29 @@
         "python_processes": 0
       }
     }
+  },
+  "wave2_session_runtime_busy_machine": {
+    "environment": "busy machine",
+    "method": "benchmark-helpers.py RUSAGE_CHILDREN user+sys delta; 100 fresh identical --help calls, private HOME and absent buses; no wall-clock evidence",
+    "scenario": "prepared-session argument parsing only, not compositor/session startup",
+    "helper_rss_note": "Runtime exec replaces itself; no resident helper. Fresh peak RSS not used because fork/pre-exec memory can contaminate it.",
+    "results": {
+      "python": {
+        "calls": 100,
+        "user_ms_per_call": 32.736670000000004,
+        "sys_ms_per_call": 6.86844,
+        "cpu_ms_per_call": 39.60511,
+        "python3_starts": 100,
+        "helper_rss_mib": null
+      },
+      "rust": {
+        "calls": 100,
+        "user_ms_per_call": 0.26607999999999965,
+        "sys_ms_per_call": 0.6899999999999995,
+        "cpu_ms_per_call": 0.9560799999999992,
+        "python3_starts": 0,
+        "helper_rss_mib": null
+      }
+    }
   }
 }

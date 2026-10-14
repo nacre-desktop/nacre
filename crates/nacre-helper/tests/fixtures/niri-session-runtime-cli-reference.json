@@ -1,0 +1,59 @@
+{
+  "cases": [
+    {
+      "arguments": [
+        "--help"
+      ],
+      "stdout": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\n\nSelect an isolated Nacre code view for niri while preserving Hyprland startup.\n\npositional arguments:\n  {prepare,compositor,shell,brain,widths,widths-check}\n\noptions:\n  -h, --help            show this help message and exit\n  --backend BACKEND\n  --stock-niri          prepare a session using distribution Niri without\n                        hover support\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "arguments": [],
+      "stdout": "",
+      "stderr": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\nniri-session-runtime.py: error: the following arguments are required: action\n",
+      "exit": 2
+    },
+    {
+      "arguments": [
+        "bad"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\nniri-session-runtime.py: error: argument action: invalid choice: 'bad' (choose from 'prepare', 'compositor', 'shell', 'brain', 'widths', 'widths-check')\n",
+      "exit": 2
+    },
+    {
+      "arguments": [
+        "prepare"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\nniri-session-runtime.py: error: prepare requires --backend\n",
+      "exit": 2
+    },
+    {
+      "arguments": [
+        "--backend"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\nniri-session-runtime.py: error: argument --backend: expected one argument\n",
+      "exit": 2
+    },
+    {
+      "arguments": [
+        "--foo"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\nniri-session-runtime.py: error: the following arguments are required: action\n",
+      "exit": 2
+    },
+    {
+      "arguments": [
+        "shell",
+        "extra"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-session-runtime.py [-h] [--backend BACKEND] [--stock-niri]\n                               {prepare,compositor,shell,brain,widths,widths-check}\nniri-session-runtime.py: error: unrecognized arguments: extra\n",
+      "exit": 2
+    }
+  ]
+}

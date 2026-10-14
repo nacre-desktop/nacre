@@ -1,0 +1,181 @@
+{
+  "cases": [
+    {
+      "request": null,
+      "error": "[\u00dc\u00f1\u0137\u00f1\u00f6\u0175\u00f1 \u00fe\u0155\u00f6\u0192\u00ef\u013e\u00eb \u0192\u00ef\u00eb\u013e\u010f\u0161 ~~~~~~~~]"
+    },
+    {
+      "request": [],
+      "error": "[\u00dc\u00f1\u0137\u00f1\u00f6\u0175\u00f1 \u00fe\u0155\u00f6\u0192\u00ef\u013e\u00eb \u0192\u00ef\u00eb\u013e\u010f\u0161 ~~~~~~~~]"
+    },
+    {
+      "request": {
+        "unknown": true
+      },
+      "error": "[\u00dc\u00f1\u0137\u00f1\u00f6\u0175\u00f1 \u00fe\u0155\u00f6\u0192\u00ef\u013e\u00eb \u0192\u00ef\u00eb\u013e\u010f\u0161 ~~~~~~~~]"
+    },
+    {
+      "request": {
+        "version": 2
+      },
+      "error": "[\u00dc\u00f1\u0161\u00fc\u00fe\u00fe\u00f6\u0155\u0163\u00eb\u010f \u00fe\u0155\u00f6\u0192\u00ef\u013e\u00eb \u00ef\u010f\u00eb\u00f1\u0163\u00ef\u0163\u00ff/\u1e7d\u00eb\u0155\u0161\u00ef\u00f6\u00f1 ~~~~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "id": "Upper"
+      },
+      "error": "[\u00dc\u00f1\u0161\u00fc\u00fe\u00fe\u00f6\u0155\u0163\u00eb\u010f \u00fe\u0155\u00f6\u0192\u00ef\u013e\u00eb \u00ef\u010f\u00eb\u00f1\u0163\u00ef\u0163\u00ff/\u1e7d\u00eb\u0155\u0161\u00ef\u00f6\u00f1 ~~~~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "workspaceCount": true
+      },
+      "error": "[\u0174\u00f6\u0155\u0137\u0161\u00fe\u00e1\u00e7\u00eb \u00e7\u00f6\u00fc\u00f1\u0163 \u1e3f\u00fc\u0161\u0163 \u0180\u00eb 1\u201310 ~~~~~~~~]"
+    },
+    {
+      "request": {
+        "workspaceCount": 0
+      },
+      "error": "[\u0174\u00f6\u0155\u0137\u0161\u00fe\u00e1\u00e7\u00eb \u00e7\u00f6\u00fc\u00f1\u0163 \u1e3f\u00fc\u0161\u0163 \u0180\u00eb 1\u201310 ~~~~~~~~]"
+    },
+    {
+      "request": {
+        "workspaceCount": 11
+      },
+      "error": "[\u0174\u00f6\u0155\u0137\u0161\u00fe\u00e1\u00e7\u00eb \u00e7\u00f6\u00fc\u00f1\u0163 \u1e3f\u00fc\u0161\u0163 \u0180\u00eb 1\u201310 ~~~~~~~~]"
+    },
+    {
+      "request": {
+        "workspaceCount": 1.0
+      },
+      "error": "[\u0174\u00f6\u0155\u0137\u0161\u00fe\u00e1\u00e7\u00eb \u00e7\u00f6\u00fc\u00f1\u0163 \u1e3f\u00fc\u0161\u0163 \u0180\u00eb 1\u201310 ~~~~~~~~]"
+    },
+    {
+      "request": {
+        "components": [
+          "shell",
+          "shell"
+        ]
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u00f6\u00fe\u0163\u00ef\u00f6\u00f1\u00e1\u013e \u00e7\u00f6\u1e3f\u00fe\u00f6\u00f1\u00eb\u00f1\u0163 \u013e\u00ef\u0161\u0163 ~~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "components": [
+          "unknown"
+        ]
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u00f6\u00fe\u0163\u00ef\u00f6\u00f1\u00e1\u013e \u00e7\u00f6\u1e3f\u00fe\u00f6\u00f1\u00eb\u00f1\u0163 \u013e\u00ef\u0161\u0163 ~~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "components": "shell"
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u00f6\u00fe\u0163\u00ef\u00f6\u00f1\u00e1\u013e \u00e7\u00f6\u1e3f\u00fe\u00f6\u00f1\u00eb\u00f1\u0163 \u013e\u00ef\u0161\u0163 ~~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "workspaceNames": [
+          5
+        ]
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u0175\u00f6\u0155\u0137\u0161\u00fe\u00e1\u00e7\u00eb \u013e\u00e1\u0180\u00eb\u013e\u0161/\u00ef\u00e7\u00f6\u00f1\u0161 ~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "workspaceNames": [
+          "a\u0000b"
+        ]
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u0175\u00f6\u0155\u0137\u0161\u00fe\u00e1\u00e7\u00eb \u013e\u00e1\u0180\u00eb\u013e\u0161/\u00ef\u00e7\u00f6\u00f1\u0161 ~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "workspaceNames": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ]
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u0175\u00f6\u0155\u0137\u0161\u00fe\u00e1\u00e7\u00eb \u013e\u00e1\u0180\u00eb\u013e\u0161/\u00ef\u00e7\u00f6\u00f1\u0161 ~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "brainWorkspace": true
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u00f6\u00fe\u0163\u00ef\u00f6\u00f1\u00e1\u013e \u00e1\u00fe\u00fe \u0175\u00f6\u0155\u0137\u0161\u00fe\u00e1\u00e7\u00eb ~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "brainWorkspace": 20
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u00f6\u00fe\u0163\u00ef\u00f6\u00f1\u00e1\u013e \u00e1\u00fe\u00fe \u0175\u00f6\u0155\u0137\u0161\u00fe\u00e1\u00e7\u00eb ~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "aiFullAccess": 1
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u00e1\u0161\u0161\u00ef\u0161\u0163\u00e1\u00f1\u0163 \u00fe\u00eb\u0155\u1e3f\u00ef\u0161\u0161\u00ef\u00f6\u00f1 \u00fe\u0155\u00eb\u0192\u00eb\u0155\u00eb\u00f1\u00e7\u00eb ~~~~~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "windowTrashBindings": "true"
+      },
+      "error": "[\u0174\u00ef\u00f1\u010f\u00f6\u0175 \u0163\u0155\u00e1\u0161\u0127 \u0180\u00ef\u00f1\u010f\u00ef\u00f1\u011f \u00fe\u0155\u00eb\u0192\u00eb\u0155\u00eb\u00f1\u00e7\u00eb \u1e3f\u00fc\u0161\u0163 \u0180\u00eb \u00e1 \u0180\u00f6\u00f6\u013e\u00eb\u00e1\u00f1 ~~~~~~~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "startup": {}
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u00fe\u0155\u00f6\u0192\u00ef\u013e\u00eb \u0155\u00f6\u00fc\u0163\u00eb\u0161/\u0161\u0163\u00e1\u0155\u0163\u00fc\u00fe \u013e\u00ef\u0161\u0163 ~~~~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "startup": [
+          {}
+        ]
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u00fe\u0155\u00f6\u0192\u00ef\u013e\u00eb \u00eb\u00f1\u0163\u0155\u00ff ~~~~~~~~]"
+    },
+    {
+      "request": {
+        "routes": [
+          {
+            "name": "Rule\n",
+            "match": "app",
+            "workspace": 2
+          }
+        ]
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u00fe\u0155\u00f6\u0192\u00ef\u013e\u00eb \u00eb\u00f1\u0163\u0155\u00ff \u0163\u00eb\u1e8b\u0163 ~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "startup": [
+          {
+            "label": "Test",
+            "workspace": 1,
+            "argv": "kitty",
+            "classes": []
+          }
+        ]
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u0161\u0163\u00e1\u0155\u0163\u00fc\u00fe \u00e1\u0155\u011f\u00fc\u1e3f\u00eb\u00f1\u0163\u0161 ~~~~~~~~~~]"
+    },
+    {
+      "request": {
+        "startup": [
+          {
+            "label": "Test",
+            "workspace": 1,
+            "argv": [
+              "kitty"
+            ],
+            "classes": [
+              3
+            ]
+          }
+        ]
+      },
+      "error": "[\u00cf\u00f1\u1e7d\u00e1\u013e\u00ef\u010f \u0161\u0163\u00e1\u0155\u0163\u00fc\u00fe \u00e7\u013e\u00e1\u0161\u0161 \u013e\u00ef\u0161\u0163 ~~~~~~~~~~]"
+    }
+  ]
+}

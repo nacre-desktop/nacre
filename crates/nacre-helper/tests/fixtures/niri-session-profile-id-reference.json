@@ -1,0 +1,90 @@
+{
+  "cases": [
+    {
+      "request": {
+        "id": 0
+      },
+      "observed": {
+        "value": {
+          "version": 1,
+          "id": 0,
+          "components": [
+            "configs",
+            "shell"
+          ],
+          "workspaceCount": 5,
+          "workspaceNames": [],
+          "workspaceIcons": [],
+          "startup": [],
+          "routes": [],
+          "brainWorkspace": null,
+          "aiWorkspace": null,
+          "aiFullAccess": false,
+          "windowTrashBindings": false
+        },
+        "error": null
+      }
+    },
+    {
+      "request": {
+        "id": 1
+      },
+      "observed": {
+        "value": {
+          "version": 1,
+          "id": 1,
+          "components": [
+            "configs",
+            "shell"
+          ],
+          "workspaceCount": 5,
+          "workspaceNames": [],
+          "workspaceIcons": [],
+          "startup": [],
+          "routes": [],
+          "brainWorkspace": null,
+          "aiWorkspace": null,
+          "aiFullAccess": false,
+          "windowTrashBindings": false
+        },
+        "error": null
+      }
+    },
+    {
+      "request": {
+        "id": -1
+      },
+      "observed": {
+        "value": null,
+        "error": "Unsupported profile identity/version"
+      }
+    },
+    {
+      "request": {
+        "id": 1.0
+      },
+      "observed": {
+        "value": null,
+        "error": "Unsupported profile identity/version"
+      }
+    },
+    {
+      "request": {
+        "id": true
+      },
+      "observed": {
+        "value": null,
+        "error": "Unsupported profile identity/version"
+      }
+    },
+    {
+      "request": {
+        "id": null
+      },
+      "observed": {
+        "value": null,
+        "error": "Unsupported profile identity/version"
+      }
+    }
+  ]
+}

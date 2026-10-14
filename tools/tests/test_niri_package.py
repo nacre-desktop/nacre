@@ -20,7 +20,7 @@ def load(relative, name):
 
 stage = load("packaging/arch/niri/stage.py", "companion_stage_test")
 recipe = load("packaging/arch/niri/recipe.py", "companion_recipe_test")
-runtime = load("uwsm/tools/niri-session-runtime.py", "companion_runtime_test")
+import native_niri_session_runtime as runtime
 
 
 class NiriPackageTests(unittest.TestCase):

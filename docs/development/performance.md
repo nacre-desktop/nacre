@@ -995,3 +995,19 @@ check with exit 1 and unchanged files.
 
 No reliable fresh-helper RSS sample was collected for this short-lived command;
 no aggregate memory, shell latency or idle CPU change is claimed.
+
+### Wave 2 prepared-session runtime (busy machine)
+
+The existing `benchmark-helpers.py` child CPU method measured 100 fresh,
+identical `--help` requests with a disposable HOME and absent D-Bus/display
+connections. This measures argument parsing, not compositor or session startup.
+
+| Helper measurement; busy machine | Python reference | Rust release |
+| --- | ---: | ---: |
+| User + system CPU per fresh request (ms) | 39.605 | 0.956 |
+| Direct Python starts in 100 measured requests | 100 | 0 |
+
+The runtime replaces itself when launching the compositor or watcher, so it has
+no separate resident helper. No fresh peak RSS, whole-shell action timing,
+aggregate RSS/PSS, idle CPU or launches-per-minute improvement is claimed.
+The quiet-window A/B/A/B gate remains required before Wave 3 lands.
