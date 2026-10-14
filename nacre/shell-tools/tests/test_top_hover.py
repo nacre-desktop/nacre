@@ -63,13 +63,24 @@ TestCase {
   Component.onCompleted: {NacrePanelState.screens={test:flags};NacrePanelState.panels={test:{popouts:{hasCurrent:false,pinned:false}}}}
  }}
  function init(){NacrePanelState.hidden=false;DesktopSettings.data={animations:false,clickEdgeMenus:false};NacreCompositor.activeWindow=null;NacreHoverIntent.blocked=({});NacreHoverIntent.lipRegions=({});}
+ function test_dashboard_delay_cancels_transit_and_keeps_reduced_motion_static(){
+  const view=createTemporaryObject(scene,this);mouseMove(view,100,180);wait(30);
+  mouseMove(view,500,25);wait(220);verify(!view.flags.dashboard);verify(view.lips.dashboardWaiting);compare(view.lips.dashboardProgress,1);
+  mouseMove(view,500,180);wait(340);verify(!view.flags.dashboard);verify(!view.lips.dashboardWaiting);compare(view.lips.dashboardProgress,0);
+  mouseMove(view,500,25);wait(250);mouseMove(view,504,25);wait(290);verify(view.flags.dashboard);
+ }
+ function test_dashboard_progress_animates_without_restarting_for_motion(){
+  DesktopSettings.data={animations:true};const view=createTemporaryObject(scene,this);mouseMove(view,100,180);wait(30);
+  mouseMove(view,500,25);wait(180);verify(view.lips.dashboardProgress>0 && view.lips.dashboardProgress<.9);verify(!view.flags.dashboard);
+  mouseMove(view,504,25);wait(160);verify(!view.flags.dashboard);wait(220);verify(view.flags.dashboard);
+ }
  function test_only_marked_regions_open_and_explicit_dismissal_rearms(){
   const view=createTemporaryObject(scene,this);wait(30);
   mouseMove(view,100,25);verify(!view.flags.dashboard);
-  mouseMove(view,500,25);verify(view.flags.dashboard);
+  mouseMove(view,500,25);verify(!view.flags.dashboard);wait(530);verify(view.flags.dashboard);
   NacreHoverIntent.dismiss(view.screen);view.flags.dashboard=false;
   mouseMove(view,501,25);verify(!view.flags.dashboard);
-  mouseMove(view,500,180);NacreHoverIntent.observe(view.screen,500,180);mouseMove(view,500,25);verify(view.flags.dashboard);
+  mouseMove(view,500,180);NacreHoverIntent.observe(view.screen,500,180);mouseMove(view,500,25);verify(!view.flags.dashboard);wait(530);verify(view.flags.dashboard);
   mouseMove(view,1,90);verify(!view.flags.left);
   mouseMove(view,8,350);verify(view.flags.left);verify(!view.flags.leftPinned);
   mouseMove(view,995,620);verify(!view.flags.osd);

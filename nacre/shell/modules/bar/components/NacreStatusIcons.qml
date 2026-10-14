@@ -8,6 +8,8 @@ import qs.utils
 
 Item {
     id: root
+    property string revealName: ""
+    property real revealProgress: 0
     property string screenName: "unknown"
     property bool horizontal: false
     property color colour: NacreColours.palette.m3secondary
@@ -156,6 +158,7 @@ Item {
         property real radius: 12
         Row {
             id: content
+            z: 1
             anchors.centerIn: parent
             rotation: root.horizontal ? 90 : 0
             spacing: 2
@@ -178,6 +181,15 @@ Item {
                 color: parent.parent.ink
                 font.pointSize: 10
             }
+        }
+        NacreHoverCue {
+            objectName: cell.objectName + "Reveal"
+            anchors.centerIn: parent
+            width: root.horizontal ? parent.height : parent.width
+            height: root.horizontal ? parent.width : parent.height
+            rotation: root.horizontal ? 90 : 0
+            ink: cell.ink
+            progress: root.revealName === cell.key ? root.revealProgress : 0
         }
         NacreInteraction {
             objectName: cell.objectName + "Activation"

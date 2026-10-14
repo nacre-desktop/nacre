@@ -37,7 +37,7 @@ class HeaderWidgetTests(unittest.TestCase):
                 "import QtQuick\nItem {property bool compact:false;property bool ai:false;property bool brain:false;property bool colorsApp:false;property bool settings:false;implicitWidth:32;implicitHeight:30}"
             )
             (fixtures / "NacreActiveTitle.qml").write_text(
-                "import QtQuick\nItem {property bool horizontal:false;property var monitor:null}"
+                'import QtQuick\nItem {property color colour:"cyan";property bool horizontal:false;property var monitor:null}'
             )
             (fixtures / "NacrePowerButton.qml").write_text(
                 "import QtQuick\nItem {implicitWidth:30;implicitHeight:30}"
@@ -49,6 +49,8 @@ class HeaderWidgetTests(unittest.TestCase):
 Item {
  id:root
  property bool horizontal:false
+ property string revealName:""
+ property real revealProgress:0
  property string screenName:""
  signal activated(string name,var item,bool pointerOwned)
  signal peekRequested(string name,var item,bool hovered)

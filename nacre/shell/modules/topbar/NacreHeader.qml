@@ -14,10 +14,14 @@ Item {
     readonly property bool clickMenus: DesktopSettings.data.clickEdgeMenus === true
     property string hoverHint: ""
     property real hoverHintCenter: 0
+    property real peekProgress: 0
+    readonly property real dashboardProgress: panel?.input?.lips?.dashboardProgress ?? 0
     property string peekName: ""
     property real peekCenter: 0
     function clearPeek(close = true) {
         peekDelay.stop();
+        peekReveal.stop();
+        peekProgress = 0;
         peekName = "";
         if (close && panel?.popouts.currentName === "peek")
             panel.popouts.hasCurrent = false;
@@ -38,6 +42,10 @@ Item {
         hoverHint = "";
         peekName = name;
         peekCenter = item.mapToItem(root, item.width / 2, item.height / 2).x;
+        if (NacreTokens.motionEnabled)
+            peekReveal.restart();
+        else
+            peekProgress = 1;
         peekDelay.restart();
     }
     function openStatus(name, item, pointerOwned = true) {
@@ -56,10 +64,19 @@ Item {
     }
     onVisibleChanged: if (!visible)
         clearPeek()
+    NumberAnimation {
+        id: peekReveal
+        target: root
+        property: "peekProgress"
+        from: 0
+        to: 1
+        duration: 400
+    }
     Timer {
         id: peekDelay
         interval: 400
         onTriggered: {
+            root.peekProgress = 1;
             const popup = root.panel?.popouts;
             if (!popup || !root.peekName || NacrePanelState.hidden)
                 return;
@@ -76,6 +93,15 @@ Item {
         function onHiddenChanged() {
             if (NacrePanelState.hidden)
                 root.clearPeek();
+        }
+    }
+    Connections {
+        target: NacreTokens
+        function onMotionEnabledChanged() {
+            if (!NacreTokens.motionEnabled) {
+                peekReveal.stop();
+                root.peekProgress = root.peekName ? 1 : 0;
+            }
         }
     }
     property string registeredName: ""
@@ -111,20 +137,39 @@ Item {
         height: parent.height
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
+        cursorShape: Qt.PointingHandCursor
+        activeFocusOnTab: visible && enabled
+        Accessible.role: Accessible.Button
+        Accessible.name: NacreI18n.tr("ui.frame-lip.name.open-dashboard", "Open dashboard")
+        Accessible.onPressAction: openImmediately()
+        function openImmediately() {
+            root.panel?.input?.lips?.cancelDashboard();
+            NacrePanelState.openEdge("dashboard", root.screen.name);
+        }
+        Keys.onReturnPressed: event => {
+            openImmediately();
+            event.accepted = true;
+        }
+        Keys.onSpacePressed: event => {
+            openImmediately();
+            event.accepted = true;
+        }
         function approach(buttons) {
             NacreHoverIntent.observe(root.screen, x + mouseX, mouseY);
             NacreHoverIntent.setHeaderHover(root.screen.name, "bar", containsMouse);
             if (!root.clickMenus && root.visibility && !root.panel?.input?.modal && NacreHoverIntent.canOpen("dashboard", root.screen, buttons))
-                NacrePanelState.hoverEdge("dashboard", root.screen.name);
+                root.panel?.input?.lips?.requestDashboard(buttons);
         }
+        onPressed: event => approach(event.buttons)
         onEntered: approach(pressedButtons)
         onPositionChanged: event => approach(event.buttons)
         onExited: {
             NacreHoverIntent.setHeaderHover(root.screen.name, "bar", false);
             NacreHoverIntent.rearm("dashboard", root.screen);
+            root.panel?.input?.lips?.settleDashboard();
             root.panel?.input?.settleHover();
         }
-        onClicked: NacrePanelState.openEdge("dashboard", root.screen.name)
+        onClicked: openImmediately()
     }
     Rectangle {
         anchors.fill: parent
@@ -245,7 +290,16 @@ Item {
             }
         }
     }
+    NacreHoverCue {
+        objectName: "nacreHeaderTitleCue"
+        anchors.centerIn: parent
+        width: Math.min(centerBand.width, Math.max(120, activeTitle.implicitWidth + 24))
+        height: 32
+        progress: centerBand.activeFocus ? 1 : root.dashboardProgress
+    }
     NacreActiveTitle {
+        id: activeTitle
+        colour: Qt.tint(NacreColours.palette.m3primary, Qt.alpha(NacreTokens.ink, root.dashboardProgress * .25))
         anchors.centerIn: parent
         width: Math.max(0, Math.min(650, root.width - 2 * Math.max(left.width, right.width) - 50))
         height: 30
@@ -273,6 +327,7 @@ Item {
             color: updatesInput.hovered ? NacreColours.palette.m3surfaceContainerHighest : "transparent"
             Row {
                 id: updates
+                z: 1
                 anchors.centerIn: parent
                 spacing: 4
                 NacreIcon {
@@ -283,6 +338,10 @@ Item {
                     text: Updates.message || String(Updates.count)
                     color: NacreColours.palette.m3primary
                 }
+            }
+            NacreHoverCue {
+                anchors.fill: parent
+                progress: root.peekName === "updates" ? root.peekProgress : 0
             }
             NacreInteraction {
                 id: updatesInput
@@ -308,6 +367,8 @@ Item {
                 anchors.centerIn: parent
                 screenName: root.screen.name
                 horizontal: true
+                revealName: root.peekName
+                revealProgress: root.peekProgress
                 rotation: -90
                 onActivated: (name, item, pointerOwned) => root.openStatus(name, item, pointerOwned)
                 onPeekRequested: (name, item, hovered) => root.requestPeek(name, item, hovered)

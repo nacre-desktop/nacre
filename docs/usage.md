@@ -81,7 +81,9 @@ button; their switches and profile choices stay inside those pages. Click other
 toggle tiles to switch them; action tiles open their tool. Right-click or long-press
 a toggle tile for details (keyboard: Menu or Shift+F10). Back or Escape returns to the overview. Light, Dark and Auto share
 one appearance selector. The attached panel shares the right wall's surface.
-The top battery row includes edit, settings and power. Lock, log out, restart
+The overview includes the two newest notifications below the controls; expand
+individual cards or open the full history with its arrow. The top battery row
+includes edit, settings and power. Lock, log out, restart
 and power off stay on its Power page; the bar power button and session shortcuts
 open that page too. Log out, restart and power off require inline confirmation.
 Wi-Fi passwords, Bluetooth devices, audio inputs/outputs and the
@@ -95,8 +97,12 @@ Edit lists detected microphone and keyboard sliders first; adding one places it
 beside its related output or display slider. Layouts are saved separately from
 the main desktop settings and keep their order across sessions; existing optional
 tile preferences migrate automatically. The same controls work in a detached pearl.
-Hover a bar status icon for a read-only dropdown after 400 ms. It unfolds from
-the bar using the same frame and motion as other Nacre popups. Click opens its
+Hover a bar status icon for a read-only dropdown after 400 ms. A palette-colored
+highlight and filling underline show the wait. The middle title and top lip wait
+500 ms before opening the dashboard; leaving cancels it, while a click opens
+immediately. Reduced motion keeps the delay with a static highlight. Dropdowns
+unfold from the bar using the same frame and motion as other Nacre popups. Clicking
+a status icon opens its
 control-center detail page; the bell opens notification history inside the same
 panel. Notification history can also be added as a tile in Edit, or opened by
 right-clicking Do Not Disturb. Pointer-opened controls

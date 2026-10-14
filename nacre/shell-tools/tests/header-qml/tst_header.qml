@@ -326,6 +326,7 @@ TestCase {
         };
         view.requestPeek("audio", region, true);
         wait(330);
+        verify(view.peekProgress > .4 && view.peekProgress < 1);
         verify(!popup.hasCurrent);
         compare(NacrePanelState.calls.length, 0);
         wait(110);
@@ -371,6 +372,38 @@ TestCase {
         compare(activated, 1);
         compare(NacrePanelState.calls.length, 2);
         NacrePanelState.panels = ({});
+    }
+    function test_reduced_motion_keeps_hover_delay_and_title_keyboard_opens_immediately() {
+        DesktopSettings.data = {
+            animations: false
+        };
+        const popup = {
+            hasCurrent: false,
+            currentName: "",
+            peekKind: "",
+            currentCenter: 0,
+            pinned: false,
+            headerHovered: false
+        };
+        NacrePanelState.panels = {
+            test: {
+                popouts: popup,
+                popoutHovered: false
+            }
+        };
+        const view = createTemporaryObject(header, test), region = findChild(view, "nacreHeaderStatus");
+        view.requestPeek("audio", region, true);
+        compare(view.peekProgress, 1);
+        wait(300);
+        verify(!popup.hasCurrent);
+        wait(140);
+        verify(popup.hasCurrent);
+        view.clearPeek();
+        compare(view.peekProgress, 0);
+        const band = findChild(view, "nacreHeaderCenterBand");
+        band.forceActiveFocus();
+        keyClick(Qt.Key_Return);
+        compare(NacrePanelState.calls[NacrePanelState.calls.length - 1], "dashboard");
     }
     function test_status_container_does_not_cover_icon_hover() {
         const view = createTemporaryObject(header, test);

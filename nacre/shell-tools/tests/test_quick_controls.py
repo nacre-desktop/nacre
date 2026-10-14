@@ -108,6 +108,7 @@ class QuickControlsTests(unittest.TestCase):
                 "NacreControlLevels",
                 "NacreControlTile",
                 "NacreControlOverview",
+                "NacreControlNotices",
                 "NacreControlCatalog",
                 "NacreControlUpdates",
                 "NacreControlDetail",

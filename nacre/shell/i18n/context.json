@@ -327,6 +327,7 @@
   "controlcenter.network.radio": "Control center UI. Preserve placeholders; device and application names are runtime data.",
   "controlcenter.network.title": "Control center and bar network status; a wired link is distinct from the Wi-Fi radio.",
   "controlcenter.network.wired-connected": "Control center customization and quick actions; names identify existing Nacre controls and actions.",
+  "controlcenter.notifications.view-all": "Accessible name and tooltip for opening all notification history from the control-center overview.",
   "controlcenter.overview.airplane": "Control center customization and quick actions; names identify existing Nacre controls and actions.",
   "controlcenter.overview.appearance": "Control center customization and quick actions; names identify existing Nacre controls and actions.",
   "controlcenter.overview.dark": "Control center customization and quick actions; names identify existing Nacre controls and actions.",

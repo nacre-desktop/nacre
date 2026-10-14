@@ -829,6 +829,39 @@ TestCase {
             compare(popup.currentItem, null);
         }
     }
+    function test_overview_shows_two_latest_notices_and_opens_full_history() {
+        NacreNotifs.retained = [
+            {
+                summary: "First",
+                expanded: false
+            },
+            {
+                summary: "Second",
+                expanded: false
+            },
+            {
+                summary: "Newest",
+                expanded: false
+            }
+        ];
+        NacreNotifs.clears = 0;
+        const host = createTemporaryObject(center, test), panel = host.panel;
+        wait(40);
+        const overview = findChild(panel, "controlPageLoader").item;
+        const loader = findChild(overview, "controlNotificationLoader");
+        verify(loader.item !== null);
+        compare(loader.item.preview.length, 2);
+        compare(loader.item.preview[0].summary, "Newest");
+        compare(NacreNotifs.clears, 0);
+        overview.active = false;
+        wait(20);
+        compare(loader.item, null);
+        overview.active = true;
+        wait(20);
+        findChild(loader.item, "controlAllNotifications").clicked();
+        compare(panel.section, "notifications");
+        NacreNotifs.retained = [];
+    }
     function test_notification_control_page_is_lazy_and_reuses_history() {
         NacreNotifs.retained = [
             {

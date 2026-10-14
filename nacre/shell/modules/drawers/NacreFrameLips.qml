@@ -31,19 +31,89 @@ Item {
     onTopRectChanged: publishRegions()
     onLeftRectChanged: publishRegions()
     onRightRectChanged: publishRegions()
+    property real dashboardProgress: 0
+    readonly property bool dashboardWaiting: dashboardDelay.running
+    function cancelDashboard() {
+        dashboardDelay.stop();
+        dashboardReveal.stop();
+        dashboardProgress = 0;
+    }
+    function settleDashboard() {
+        if (!NacreHoverIntent.headers[screen.name])
+            cancelDashboard();
+    }
+    function requestDashboard(buttons) {
+        if (buttons !== Qt.NoButton) {
+            cancelDashboard();
+            return;
+        }
+        if (visibilities.dashboard || DesktopSettings.data.clickEdgeMenus === true || !available || !NacreHoverIntent.canOpen("dashboard", screen, buttons))
+            return;
+        if (dashboardDelay.running)
+            return;
+        dashboardProgress = 0;
+        if (NacreTokens.motionEnabled)
+            dashboardReveal.restart();
+        else
+            dashboardProgress = 1;
+        dashboardDelay.restart();
+    }
+    onAvailableChanged: if (!available)
+        cancelDashboard()
+    Timer {
+        id: dashboardDelay
+        interval: 500
+        onTriggered: {
+            if (!NacreHoverIntent.headers[root.screen.name] || !root.available || DesktopSettings.data.clickEdgeMenus === true || !NacreHoverIntent.canOpen("dashboard", root.screen, Qt.NoButton)) {
+                root.cancelDashboard();
+                return;
+            }
+            root.dashboardProgress = 1;
+            NacrePanelState.hoverEdge("dashboard", root.screen.name);
+        }
+    }
+    NumberAnimation {
+        id: dashboardReveal
+        target: root
+        property: "dashboardProgress"
+        from: 0
+        to: 1
+        duration: 500
+    }
+    Connections {
+        target: root.visibilities
+        function onDashboardChanged() {
+            if (!root.visibilities.dashboard)
+                root.cancelDashboard();
+        }
+    }
+    Connections {
+        target: NacreTokens
+        function onMotionEnabledChanged() {
+            if (!NacreTokens.motionEnabled) {
+                dashboardReveal.stop();
+                root.dashboardProgress = root.dashboardWaiting ? 1 : 0;
+            }
+        }
+    }
     function approach(name, lip, buttons) {
         const point = lip.mapToItem(root, lip.pointerX, lip.pointerY);
         NacreHoverIntent.observe(screen, point.x, point.y);
-        if (name === "dashboard")
+        if (name === "dashboard") {
             NacreHoverIntent.setHeaderHover(screen.name, "lip", true);
+            requestDashboard(buttons);
+            return;
+        }
         if (DesktopSettings.data.clickEdgeMenus === true || !available || !NacreHoverIntent.canOpen(name, screen, buttons))
             return;
         if (!visibilities[name])
             NacrePanelState.hoverEdge(name, screen.name);
     }
     function leave(name) {
-        if (name === "dashboard")
+        if (name === "dashboard") {
             NacreHoverIntent.setHeaderHover(screen.name, "lip", false);
+            settleDashboard();
+        }
         NacreHoverIntent.rearm(name, screen);
         controller.settleHover();
     }
@@ -62,7 +132,10 @@ Item {
         onEntered: buttons => root.approach("dashboard", this, buttons)
         onMoved: buttons => root.approach("dashboard", this, buttons)
         onExited: root.leave("dashboard")
-        onClicked: NacrePanelState.openEdge("dashboard", root.screen.name)
+        onClicked: {
+            root.cancelDashboard();
+            NacrePanelState.openEdge("dashboard", root.screen.name);
+        }
     }
     NacreFrameLip {
         id: left

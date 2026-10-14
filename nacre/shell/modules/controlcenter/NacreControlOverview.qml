@@ -106,6 +106,19 @@ Column {
             }
         }
     }
+    Loader {
+        id: noticesLoader
+        objectName: "controlNotificationLoader"
+        width: parent.width
+        active: root.active
+        source: Qt.resolvedUrl("NacreControlNotices.qml")
+        Connections {
+            target: noticesLoader.item
+            function onDetailsRequested(section, pointerOwned) {
+                root.detailsRequested(section, pointerOwned);
+            }
+        }
+    }
     NacreText {
         width: parent.width
         visible: text !== ""
