@@ -936,6 +936,36 @@ TestCase {
         compare(panel.section, "notifications");
         NacreNotifs.retained = [];
     }
+    function test_notification_history_fills_resizes_and_reaches_last_card_without_outer_scroll() {
+        NacreNotifs.retained = Array.from({
+            length: 18
+        }, (_, index) => ({
+                    summary: "Public message " + index,
+                    expanded: false
+                }));
+        const host = createTemporaryObject(center, test), panel = host.panel;
+        panel.navigate("notifications");
+        wait(40);
+        const page = findChild(panel, "controlPageScroll"), history = findChild(panel, "controlPageLoader").item, list = findChild(history, "notificationHistoryList"), bottom = findChild(history, "notificationHistoryBottomFade");
+        verify(!page.interactive);
+        fuzzyCompare(list.y + list.height, page.height, .5);
+        verify(list.contentHeight > list.height && bottom.visible);
+        verify(!findChild(panel, "controlPageWheel").enabled);
+        mouseWheel(list, list.width / 2, 40, 0, -120);
+        tryVerify(() => list.contentY > 0, 1000);
+        tryCompare(findChild(list, "quickListScroll").motion, "running", false, 1000);
+        compare(page.contentY, 0);
+        panel.detached = true;
+        host.height = 540;
+        wait(40);
+        fuzzyCompare(history.availableHeight, page.height, .5);
+        fuzzyCompare(list.y + list.height, page.height, .5);
+        list.contentY = list.contentHeight - list.height;
+        wait(20);
+        verify(list.atYEnd && !bottom.visible);
+        compare(page.contentY, 0);
+        NacreNotifs.retained = [];
+    }
     function test_notification_control_page_is_lazy_and_reuses_history() {
         NacreNotifs.retained = [
             {

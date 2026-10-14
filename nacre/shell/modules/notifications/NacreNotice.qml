@@ -14,7 +14,7 @@ NacreSurface {
     property bool expanded: false
     property real dragOffset: 0
     readonly property var availableActions: !history && modelData.notification ? [...modelData.actions].filter(action => action.identifier !== "default") : []
-    readonly property bool hasDetails: !!modelData.body || !!modelData.image || availableActions.length > 0
+    readonly property bool hasDetails: !!modelData.body || !!modelData.image || availableActions.length > 0 || history && (summary.truncated || expanded)
     implicitWidth: NacreNotifications.sizes.width
     implicitHeight: contents.implicitHeight + 28
     x: dragOffset
@@ -161,12 +161,13 @@ NacreSurface {
             }
         }
         NacreText {
+            id: summary
             objectName: "noticeSummary"
             width: parent.width
             text: root.modelData.summary
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
-            maximumLineCount: root.expanded ? 6 : 2
+            maximumLineCount: root.expanded ? root.history ? 2147483647 : 6 : 2
             elide: Text.ElideRight
             font.pointSize: 12
             font.weight: Font.DemiBold
@@ -178,7 +179,7 @@ NacreSurface {
             text: root.modelData.body
             textFormat: Text.PlainText
             wrapMode: Text.Wrap
-            maximumLineCount: root.expanded ? 12 : 2
+            maximumLineCount: root.expanded ? root.history ? 2147483647 : 12 : 2
             elide: Text.ElideRight
             color: NacreColours.palette.m3onSurfaceVariant
             font.pointSize: 10

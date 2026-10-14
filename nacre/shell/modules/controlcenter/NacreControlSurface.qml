@@ -114,8 +114,11 @@ Item {
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         flickableDirection: Flickable.VerticalFlick
+        interactive: panel.section !== "notifications"
         ScrollBar.vertical: NacreScrollBar {}
         FastScroll {
+            objectName: "controlPageWheel"
+            enabled: page.interactive
             view: page
         }
         Loader {
@@ -158,16 +161,19 @@ Item {
             screen: panel.screen
         } : name === "home" ? {
             screen: panel.screen,
-            active: panel.hostActive && panel.visibility
+            active: Qt.binding(() => panel.hostActive && panel.visibility)
         } : ["audio", "session"].includes(name) ? {
-            active: panel.hostActive && panel.visibility
-        } : ["network", "bluetooth", "notifications"].includes(name) ? {
+            active: Qt.binding(() => panel.hostActive && panel.visibility)
+        } : name === "notifications" ? {
             showHeading: false,
-            maximumListHeight: Math.max(140, page.height - (name === "network" ? 180 : 130))
+            availableHeight: Qt.binding(() => page.height)
+        } : ["network", "bluetooth"].includes(name) ? {
+            showHeading: false,
+            maximumListHeight: Qt.binding(() => Math.max(140, page.height - (name === "network" ? 180 : 130)))
         } : !paths[name] ? {
             section: name,
             screen: panel.screen,
-            active: panel.hostActive && panel.visibility
+            active: Qt.binding(() => panel.hostActive && panel.visibility)
         } : {};
         pageLoader.source = "";
         pageLoader.setSource(Qt.resolvedUrl(paths[name] || "NacreControlDetail.qml"), properties);
@@ -188,18 +194,6 @@ Item {
         function onDetailsRequested(name, pointerOwned) {
             panel.navigate(name, pointerOwned === true);
         }
-    }
-    Binding {
-        target: pageLoader.item && pageLoader.item.maximumListHeight !== undefined ? pageLoader.item : null
-        property: "maximumListHeight"
-        value: Math.max(140, page.height - (panel.section === "network" ? 180 : 130))
-        when: !!target
-    }
-    Binding {
-        target: pageLoader.item && pageLoader.item.active !== undefined ? pageLoader.item : null
-        property: "active"
-        value: panel.hostActive && panel.visibility
-        when: !!target
     }
     NacreSurface {
         objectName: "controlDetachedBackground"

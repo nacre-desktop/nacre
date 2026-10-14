@@ -82,7 +82,8 @@ toggle tiles to switch them; action tiles open their tool. Right-click or long-p
 a toggle tile for details (keyboard: Menu or Shift+F10). Back or Escape returns to the overview. Light, Dark and Auto share
 one appearance selector. The attached panel shares the right wall's surface.
 The overview includes the two newest notifications below the controls; expand
-individual cards or open the full history with its arrow. The top battery row
+individual cards or open the full history with its arrow. History fills the panel
+with one scrolling list; long summary-only messages can also expand fully. The top battery row
 includes edit, settings and power. Lock, log out, restart
 and power off stay on its Power page; the bar power button and session shortcuts
 open that page too. Log out, restart and power off require inline confirmation.
@@ -102,7 +103,7 @@ summaries are read-only; the calendar keeps its month controls. Clicking the
 clock pins its calendar for keyboard use until Escape or dismissal. Status hover
 highlights fill their segment of the shared pill, following its rounded ends.
 A palette-colored
-highlight and filling underline show the wait. The left and right frame edges have thin arrows on quiet neutral surfaces inside the existing border, with a taller hover target and the same delayed
+highlight and filling underline show the wait. The left and right frame edges have thin Orient-gradient arrows inside the existing border, with a taller hover target and the same delayed
 fill; clicks open or close their panels immediately. The middle title and top lip wait
 350 ms before opening the dashboard; leaving cancels it, while a click opens
 immediately. The fill follows display frames and stays complete briefly before the panel

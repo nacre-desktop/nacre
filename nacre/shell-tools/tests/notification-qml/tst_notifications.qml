@@ -70,6 +70,24 @@ TestCase {
             compare(findChild(view, "noticeAppIcon").source.toString(), "");
         }
     }
+    function test_history_summary_only_can_expand_and_read_all_text() {
+        const view = makeCard();
+        view.history = true;
+        view.modelData.body = "";
+        view.modelData.image = "";
+        view.modelData.summary = "A long public notification summary with readable words. ".repeat(35);
+        wait(30);
+        const summary = findChild(view, "noticeSummary"), button = findChild(view, "noticeExpand");
+        verify(summary.truncated && button.visible);
+        const compact = view.height;
+        mouseClick(button, 15, 15);
+        wait(30);
+        verify(view.expanded && !summary.truncated);
+        verify(view.height > compact && button.visible);
+        verify(summary.y + summary.height <= view.height - 14);
+        mouseClick(button, 15, 15);
+        verify(!view.expanded);
+    }
     function test_text_bounds_expand_and_plain_text() {
         const view = makeCard();
         view.modelData.summary = "A long summary with words ".repeat(20);

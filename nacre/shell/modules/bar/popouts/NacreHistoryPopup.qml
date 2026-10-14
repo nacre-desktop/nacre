@@ -7,6 +7,7 @@ Item {
     id: root
     property bool showHeading: true
     property real maximumListHeight: 440
+    property real availableHeight: 0
     readonly property var entries: NacreNotifs.retained
     implicitWidth: 380
     implicitHeight: body.implicitHeight
@@ -19,6 +20,7 @@ Item {
         width: root.width
         spacing: 12
         Row {
+            id: toolbar
             width: parent.width
             spacing: 10
             NacreText {
@@ -54,8 +56,10 @@ Item {
             color: NacreTokens.mutedInk
         }
         NacreQuickList {
+            id: list
+            objectName: "notificationHistoryList"
             width: parent.width
-            maximumHeight: root.maximumListHeight
+            maximumHeight: root.availableHeight > 0 ? Math.max(0, root.availableHeight - toolbar.height - body.spacing) : root.maximumListHeight
             Column {
                 width: parent.width
                 spacing: 8
@@ -66,6 +70,42 @@ Item {
                         history: true
                     }
                 }
+            }
+        }
+    }
+    Rectangle {
+        objectName: "notificationHistoryTopFade"
+        x: list.x
+        y: list.y
+        width: list.width - 10
+        height: Math.min(16, list.height / 2)
+        visible: root.availableHeight > 0 && !list.atYBeginning
+        gradient: Gradient {
+            GradientStop {
+                position: 0
+                color: NacreTokens.body
+            }
+            GradientStop {
+                position: 1
+                color: "transparent"
+            }
+        }
+    }
+    Rectangle {
+        objectName: "notificationHistoryBottomFade"
+        x: list.x
+        y: list.y + list.height - height
+        width: list.width - 10
+        height: Math.min(20, list.height / 2)
+        visible: root.availableHeight > 0 && !list.atYEnd
+        gradient: Gradient {
+            GradientStop {
+                position: 0
+                color: "transparent"
+            }
+            GradientStop {
+                position: 1
+                color: NacreTokens.body
             }
         }
     }

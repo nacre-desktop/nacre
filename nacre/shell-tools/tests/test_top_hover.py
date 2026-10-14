@@ -166,7 +166,7 @@ TestCase {
   DesktopSettings.data={animations:true};const view=createTemporaryObject(scene,this);mouseMove(view,500,180);wait(30);
   const tab=findChild(view,"frameRightLip"),arrow=findChild(tab,"edgeTabArrow");
   compare(arrow.height,18);verify(arrow.width>=6);verify(arrow.x>=0 && arrow.x+arrow.width<=tab.width);
-  const patch=findChild(tab,"edgeTabPatch");compare(patch.height,46);verify(patch.x>=0 && patch.x+patch.width<=tab.width);
+  verify(!findChild(tab,"edgeTabPatch"));verify(!findChild(tab,"edgeTabTrace"));
   mouseMove(view,view.width-3,view.height/2-60);wait(430);verify(view.flags.osd);
   mouseClick(view,view.width-3,view.height/2-60);verify(!view.flags.osd);
   mouseMove(view,500,180);wait(30);
