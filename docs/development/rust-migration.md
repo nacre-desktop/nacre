@@ -47,12 +47,12 @@ current frozen cases use defaults and remain unchanged.
 Main CI gate retained; 2753707f fixed isolation without changing goldens/skips.
 Wave 1 source/install CI passed; hardware checks remain manual.
 
-Next: wire/validate window-hide native runtime; port widths/session runtimes; watch CI38566527567.
+Next: publish CI fixture repair; finish window-hide parity/cutover, then widths/session runtimes.
 Wave 1 main 3e155f5c CI 38528354524: source + fresh Niri install green; no skips.
 Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.
 Three compiler sources retired; 84 integrated Rust tests / 770 repo tests / 526 cases pass.
 Native-only Python clients remain until their later-wave callers are ported; no backend implementation remains.
-Compositor busy fresh CPU 46.07 -> 1.35 ms; persistent RSS 7.90 MiB, one connection. Main69ceaeec/116a337b:123Rust/821repo/526parity pass; compat77131ae9:124Rust/821repo/526 pass; CI38564916648 running. Niri exact: 79 snapshots / 78 actions / 12 frames / 45 emissions / 8 handshakes / 110 config/query / 7 bindings / 21 display / 13 file / 18 night-light / 11 metadata; Hyprland 195 cases; CLI 34 dispatch cases.
+Compositor busy fresh CPU 46.07 -> 1.35 ms; persistent RSS 7.90 MiB, one connection. Main69ceaeec/116a337b:123Rust/821repo/526parity pass; compat77131ae9:124Rust/821repo/526 pass. CI38564916648: fresh-install passed; control fixture failed because Python availability mocks did not reach Rust. Explicit fixture input preserves all assertions; 8 control tests pass with empty PATH; no skips. Niri exact: 79 snapshots / 78 actions / 12 frames / 45 emissions / 8 handshakes / 110 config/query / 7 bindings / 21 display / 13 file / 18 night-light / 11 metadata; Hyprland 195 cases; CLI 34 dispatch cases.
 Busy fresh CPU: 55.67/38.50/35.55/16.88 -> 1.95/1.16/1.11/0.89 ms; Python 404 -> 0.
 Capture: 11 frozen cases match; 0600/0700 security difference tracked; IPC/events pass.
 Disposable release install/empty-PATH commands and atomic replacement tests pass.

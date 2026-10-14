@@ -109,6 +109,15 @@ class ControlToolsTests(unittest.TestCase):
             socket.assert_not_called()
 
     def setUp(self):
+        # Tool availability is a fixture input now that the backend runs in Rust.
+        # Keep the existing per-test shutil.which mocks as that input.
+        self.enterContext(
+            patch.object(
+                tools.compositor,
+                "night_light_available",
+                side_effect=lambda: bool(tools.shutil.which("hyprsunset")),
+            )
+        )
         # Fixtures never discover sockets in the user's real display namespace.
         self.enterContext(
             patch.dict(
