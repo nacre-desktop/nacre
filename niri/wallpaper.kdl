@@ -11,6 +11,11 @@ layout {
 
 overview {
     workspace-shadow {
-        off
+        // A thin edge reveals empty workspaces without shading their interiors.
+        on
+        softness 0
+        spread 2
+        offset x=0 y=0
+        color "#ffffff40"
     }
 }

@@ -256,8 +256,9 @@ properties win. Included files contain full top-level sections; includes inside
 `binds` or `layout` are invalid. See the upstream
 [include merge rules](https://niri-wm.github.io/niri/Configuration:-Include.html).
 The separate `niri/wallpaper.kdl` fragment places the existing `nacre-background`
-surface in Niri's backdrop with transparent workspace backgrounds and no workspace
-shadows. This keeps one stationary wallpaper visible behind the native overview,
+surface in Niri's backdrop with transparent workspace backgrounds and a thin,
+translucent workspace outline. This keeps empty workspace boundaries visible over
+one stationary wallpaper behind the native overview,
 following [Noctalia's stationary wallpaper setup](https://github.com/noctalia-dev/noctalia-docs/blob/main/src/content/docs/noctalia/compositor-settings/niri.mdx#option-2-stationary-wallpaper).
 Both session and preview preparation include this fragment before user settings.
 Validate without a session or a user-config write:
