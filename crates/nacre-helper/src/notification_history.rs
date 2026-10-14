@@ -4,6 +4,16 @@ use regex::Regex;
 use serde_json::Value;
 use std::{fs, os::unix::fs::PermissionsExt, path::Path};
 
+const RETENTION_SECONDS: i64 = 30 * 24 * 60 * 60;
+
+fn within_retention(row: &Value, now: i64) -> bool {
+    // Old snapshots without a valid date cannot be aged reliably.
+    row["time"]
+        .as_str()
+        .and_then(|stamp| chrono::DateTime::parse_from_rfc3339(stamp).ok())
+        .is_none_or(|stamp| stamp.timestamp() > now - RETENTION_SECONDS)
+}
+
 const FIELDS: [&str; 8] = [
     "key", "time", "summary", "body", "appName", "appIcon", "image", "urgency",
 ];
@@ -91,9 +101,16 @@ pub fn load(path: &Path, policy: &Value) -> Result<Value> {
     })?;
     let mut result = Vec::new();
     for row in rows {
-        if retained(row, policy)? {
+        if retained(row, policy)? && within_retention(row, chrono::Utc::now().timestamp()) {
             result.push(row.clone());
         }
+    }
+    if rows
+        .iter()
+        .any(|row| !within_retention(row, chrono::Utc::now().timestamp()))
+    {
+        // Also remove expired snapshots from disk when history is opened.
+        save(path, &Value::Array(result.clone()), policy)?;
     }
     Ok(Value::Array(result))
 }
@@ -109,7 +126,7 @@ pub fn save(path: &Path, rows: &Value, policy: &Value) -> Result<()> {
         })?;
     let mut selected = Vec::new();
     for row in rows {
-        if retained(row, policy)? {
+        if retained(row, policy)? && within_retention(row, chrono::Utc::now().timestamp()) {
             let mut display = serde_json::Map::new();
             for key in FIELDS {
                 if let Some(value) = row.get(key) {
@@ -154,5 +171,47 @@ pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Valu
             "Unknown history action",
         )
         .into()),
+    }
+}
+
+#[cfg(test)]
+mod retention_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn thirty_days_boundary_and_unknown_dates() {
+        let now = 1_800_000_000;
+        let row = |seconds| json!({"time": chrono::DateTime::from_timestamp(seconds, 0).unwrap().to_rfc3339()});
+        assert!(within_retention(&row(now - RETENTION_SECONDS + 1), now));
+        assert!(!within_retention(&row(now - RETENTION_SECONDS), now));
+        assert!(!within_retention(&row(now - RETENTION_SECONDS - 1), now));
+        assert!(within_retention(&json!({}), now));
+        assert!(within_retention(&json!({"time":"invalid"}), now));
+    }
+
+    #[test]
+    fn expired_snapshots_are_removed_on_load_and_save() -> Result<()> {
+        let folder = tempfile::tempdir()?;
+        let path = folder.path().join("history.json");
+        let policy = serde_json::from_str(include_str!(
+            "../../../nacre/shell-tools/notification-policy.json"
+        ))?;
+        let rows = json!([
+            {"key":"old", "time":"2000-01-01T00:00:00Z", "appName":"Demo"},
+            {"key":"recent", "time":chrono::Utc::now().to_rfc3339(), "appName":"Demo"}
+        ]);
+        fs::write(&path, serde_json::to_vec(&rows)?)?;
+        assert_eq!(load(&path, &policy)?[0]["key"], "recent");
+        assert_eq!(
+            serde_json::from_slice::<Value>(&fs::read(&path)?)?
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        save(&path, &rows, &policy)?;
+        assert_eq!(load(&path, &policy)?.as_array().unwrap().len(), 1);
+        Ok(())
     }
 }

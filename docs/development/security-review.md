@@ -97,11 +97,29 @@ HTTP tests bind ephemeral loopback ports. Frozen helper fixtures are replayed,
 not regenerated. No live desktop, installer apply, root operation, external
 probe, release or deployment is part of validation.
 
-Decisions for the owner: choose retention periods for notifications, clipboard,
-draft screenshots and chats; decide whether weather IP lookup and default lyric
-lookup need separate consent controls; choose a required provider credential
-backend if upstream defaults are insufficient. Until those decisions, preserve
-current behavior and implement the scoped hardening during the Rust port.
+## Owner decisions (2026-10-14)
+
+- Notification history: **30 days**. Clipboard history: **7 days**, retaining
+  pinned items. Draft screenshots: **30 days**. AI chats: **until explicitly
+  deleted by the owner**, with no automatic age expiry.
+- Weather IP lookup and lyrics lookup: **enabled in the personal profile**;
+  **opt-in in the general profile**, asked separately in Welcome. A configured
+  weather city does not require IP lookup consent. Disabling lyrics must prevent
+  the lookup, including cache refreshes.
+- Provider credentials: **system keyring through libsecret where available**,
+  otherwise the existing **private 0600 file**. `nacre doctor` must report the
+  backend actually used, without exposing credentials. Provider-owned stores
+  remain provider-owned; do not copy authentication between accounts.
+
+Implementation scope: the Rust notification helper now expires dated snapshots
+on load and save. Undated or invalid legacy timestamps are preserved pending an
+explicit timestamp migration, rather than silently deleting unknown-age data.
+The clipboard, draft screenshot, chat, weather, Welcome and provider-account
+implementations are still Python and belong to the ongoing Rust port. Dashboard
+preferences/lyrics UI belongs to the active dashboard redesign. Implement their
+policies during those ports/redesigns, including profile-aware consent and doctor
+backend reporting; this decision record does not claim those changes are live.
+No live histories, credentials, desktop or configuration were changed.
 
 ## Fix during port
 
@@ -125,7 +143,7 @@ network triggers. No runtime Python or parity fixture changed in that review.
   0600 sensitive data, including screenshot captures and city/accuracy records.
   Refuse linked destinations; repair existing leaf modes. Clipboard thumbnails
   need cleanup after deletion/clear without reopening the view; draft screenshots
-  need cleanup when removed. Coordinate age/count retention with the owner and
+  need cleanup when removed. Apply the owner periods above and coordinate with the
   renderer; expiry must cover caches/backups intentionally, without deleting
   user-kept chats, pins or screenshots silently.
 - **Sidebar IPC (`sidebar-chat`):** limit line bytes, client count and idle read
@@ -134,7 +152,8 @@ network triggers. No runtime Python or parity fixture changed in that review.
   caps/tool allowlist must remain intact.
 - **Credentials (`bin/nacre-ai-account`, `bin/nacre-ai-claude`, workflow helpers):**
   apply private umask before all provider launches, repair existing account-home
-  modes without copying authentication, and verify provider storage selection.
+  modes without copying authentication, and use libsecret-backed system keyring storage where available, otherwise
+  the private 0600 file; report the actual backend in `nacre doctor`.
   Keep tokens/API keys out of argv/logs; inherited key environment is sensitive.
   Shell Codex entrypoints now apply umask 077, but Python entrypoints can launch
   pinned binaries directly and need the same protection during their port.

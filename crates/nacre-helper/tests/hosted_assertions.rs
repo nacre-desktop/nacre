@@ -171,7 +171,7 @@ fn private_roundtrip_keeps_only_display_fields_and_clear_is_durable() {
         return;
     }
     let path = home().join("notifications/history.json");
-    history::save(&path, &json!([{"key":"fixture","time":"2026-10-03T21:00:00Z","summary":"Test","body":"Body","appName":"Fixture","actions":["stale native action"],"notification":5}]), &policy()).unwrap();
+    history::save(&path, &json!([{"key":"fixture","time":chrono::Utc::now().to_rfc3339(),"summary":"Test","body":"Body","appName":"Fixture","actions":["stale native action"],"notification":5}]), &policy()).unwrap();
     let rows = history::load(&path, &policy()).unwrap();
     assert_eq!(rows[0]["body"], "Body");
     assert!(rows[0].get("actions").is_none());
