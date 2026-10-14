@@ -45,6 +45,9 @@ pkgdesc='Desktop shell and guided per-user setup'
 arch=('x86_64')
 url='https://github.com/nacre-desktop/nacre'
 license=('GPL-3.0-only')
+# The Rust decoder links C archives; GCC LTO objects cannot be read by Rust's lld.
+# Cargo's own release optimization and normal strip/debug processing remain enabled.
+options=('!lto')
 depends={array(all_runtime)}
 makedepends={array(mapping["build"])}
 checkdepends={array(mapping["check"])}

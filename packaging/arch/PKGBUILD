@@ -9,6 +9,9 @@ pkgdesc='Desktop shell and guided per-user setup'
 arch=('x86_64')
 url='https://github.com/nacre-desktop/nacre'
 license=('GPL-3.0-only')
+# The Rust decoder links C archives; GCC LTO objects cannot be read by Rust's lld.
+# Cargo's own release optimization and normal strip/debug processing remain enabled.
+options=('!lto')
 depends=('python' 'python-pillow' 'orient=0.1.0dev6' 'quickshell' 'hyprland' 'uwsm' 'fish' 'kitty' 'fastfetch' 'dolphin' 'kio-extras' 'qt6ct' 'breeze' 'kconfig' 'kcolorscheme' 'gtk3' 'hypridle' 'hyprlock' 'grim' 'slurp' 'wl-clipboard' 'libnotify' 'brightnessctl' 'ffmpeg' 'fontconfig' 'librsvg' 'qt6-imageformats' 'qt6-multimedia' 'qt6-multimedia-ffmpeg' 'ddcutil' 'wtype' 'papirus-icon-theme' 'networkmanager' 'bluez' 'pipewire' 'wireplumber' 'xdg-utils' 'rofi' 'kwallet-pam' 'polkit-gnome' 'cliphist' 'qt6-base' 'glibc' 'python-gobject' 'libgweather-4' 'geoclue' 'bash' 'jq' 'qt6-declarative' 'libgcc' 'libstdc++' 'glib2' 'python-dbus' 'libsecret' 'openssh' 'tmux' 'python-yaml')
 makedepends=('git' 'python-build' 'python-installer' 'python-hatchling' 'nodejs' 'rust' 'cargo' 'cmake')
 checkdepends=('ruff' 'npm' 'lua' 'xorg-server-xvfb' 'xorg-xauth' 'mesa' 'dbus' 'ttf-dejavu' 'python-dbus-next' 'bubblewrap')
