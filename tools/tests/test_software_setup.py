@@ -4,6 +4,7 @@ import json
 import os
 import pty
 import select
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -16,6 +17,77 @@ BINARY = Path(os.environ.get("NACRE_HELPER_BINARY", ROOT / "target/debug/nacre-h
 
 @unittest.skipUnless(BINARY.is_file(), "Candidate native helper required")
 class SetupTests(unittest.TestCase):
+    def test_combined_keyboard_scroll_and_touchpad_config_passes_actual_niri_parser(
+        self,
+    ):
+        niri = (
+            Path("/usr/bin/niri")
+            if Path("/usr/bin/niri").is_file()
+            else Path(shutil.which("niri") or "/absent-niri")
+        )
+        if not niri.is_file():
+            self.skipTest("Native Niri validator required")
+        with tempfile.TemporaryDirectory(prefix="nacre-input-parser-") as name:
+            root = Path(name)
+            env = dict(os.environ)
+            for key, suffix in [
+                ("HOME", "home"),
+                ("XDG_CONFIG_HOME", "config"),
+                ("XDG_STATE_HOME", "state"),
+                ("XDG_DATA_HOME", "data"),
+                ("XDG_CACHE_HOME", "cache"),
+                ("XDG_RUNTIME_DIR", "runtime"),
+            ]:
+                env[key] = str(root / suffix)
+            Path(env["HOME"]).mkdir()
+            Path(env["XDG_RUNTIME_DIR"]).mkdir(mode=0o700)
+            env.update(
+                DBUS_SESSION_BUS_ADDRESS="unix:path=" + str(root / "absent"),
+                DBUS_SYSTEM_BUS_ADDRESS="unix:path=" + str(root / "absent"),
+            )
+            for key in [
+                "DISPLAY",
+                "WAYLAND_DISPLAY",
+                "NIRI_SOCKET",
+                "HYPRLAND_INSTANCE_SIGNATURE",
+            ]:
+                env.pop(key, None)
+            for preferences in [
+                {"keyboardLayouts": "us,no", "naturalScroll": True},
+                {
+                    "keyboardLayouts": "us,no",
+                    "naturalScroll": False,
+                    "touchpadEnabled": False,
+                },
+            ]:
+                with self.subTest(preferences=preferences):
+                    render = subprocess.run(
+                        [
+                            str(BINARY),
+                            "compositor-render",
+                            "niri",
+                            "render_desktop_options",
+                            json.dumps(preferences),
+                        ],
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                    )
+                    self.assertEqual(render.returncode, 0, render.stderr)
+                    path = root / "input.kdl"
+                    path.write_text(json.loads(render.stdout))
+                    result = subprocess.run(
+                        [str(niri), "validate", "-c", str(path)],
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    self.assertEqual(
+                        result.returncode, 0, result.stdout + result.stderr
+                    )
+
     def test_wifi_qr_never_prints_plaintext_credentials_or_uses_secret_arguments(self):
         if Path("/proc/self/uid_map").read_text().split() != ["0", "0", "4294967295"]:
             self.skipTest(
