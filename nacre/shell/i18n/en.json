@@ -432,6 +432,7 @@
   "dashboard.media-page.label.previous-track": "Previous track",
   "dashboard.media-page.label.shuffle": "Shuffle",
   "dashboard.media-page.label.track-position": "Track position",
+  "dashboard.media-page.playback-animation": "Playback animation",
   "dashboard.media-page.text.duration": "Duration  {value}",
   "dashboard.media-page.text.empty-details": "Play a track to see artwork, playback controls and lyrics here.",
   "dashboard.media-page.text.lyrics": "Lyrics",

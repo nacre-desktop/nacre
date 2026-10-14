@@ -285,8 +285,11 @@ precipitation chances at labelled times. A percentage is the chance of rain/snow
 not its amount. Storage uses compact Main/Boot filesystem choices when needed.
 
 Focus presets select a duration; **Start focus** begins the timer. Media shows
-live audio activity while visible and motion is enabled. Volume and connections
-remain in the right-side controls. Optional pages stay off by default; Focus can
+live audio activity while visible and motion is enabled. When playback continues
+without local audio (for example Spotify playing on a phone), a labelled,
+decorative playback animation appears after a short silence. Actual audio levels
+take over immediately when available; both modes stop when hidden or paused.
+Volume and connections remain in the right-side controls. Optional pages stay off by default; Focus can
 be enabled without adding the other extras to the top strip.
 
 **City photos in Weather**, in Customize or Settings → Workflows, is opt-in.

@@ -420,6 +420,7 @@
   "dashboard.media-page.label.previous-track": "nacre/shell/modules/dashboard/NacreMediaPage.qml: label",
   "dashboard.media-page.label.shuffle": "nacre/shell/modules/dashboard/NacreMediaPage.qml: label",
   "dashboard.media-page.label.track-position": "nacre/shell/modules/dashboard/NacreMediaPage.qml: label",
+  "dashboard.media-page.playback-animation": "Label for a decorative animation when player playback is active but local audio levels are unavailable; do not imply that it measures audio.",
   "dashboard.media-page.text.duration": "Dashboard Media page. Preserve placeholders; translate the complete label or sentence.",
   "dashboard.media-page.text.empty-details": "Dashboard Media page. Preserve placeholders; translate the complete label or sentence.",
   "dashboard.media-page.text.lyrics": "Dashboard Media page. Preserve placeholders; translate the complete label or sentence.",

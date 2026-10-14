@@ -330,6 +330,55 @@ TestCase {
         view.shouldUpdate = false;
         compare(bar.height, 2);
     }
+    function test_silent_playback_animation_yields_to_audio_and_stops_when_inactive() {
+        const {
+            actor,
+            view
+        } = setup();
+        DesktopSettings.data = {
+            animations: true
+        };
+        const spectrum = findChild(view, "mediaSpectrum"), timer = findChild(view, "mediaPlaybackAnimation");
+        NacreMediaDetails.spectrum = Array(32).fill(0);
+        compare(spectrum.simulated, false);
+        wait(1300);
+        verify(spectrum.simulated);
+        verify(timer.running);
+        verify(findChild(view, "mediaPlaybackAnimationLabel").visible);
+        const phase = spectrum.phase;
+        wait(100);
+        verify(spectrum.phase !== phase);
+        NacreMediaDetails.spectrum = Array(32).fill(.3);
+        compare(spectrum.simulated, false);
+        compare(timer.running, false);
+        NacreMediaDetails.spectrum = Array(32).fill(0);
+        actor.isPlaying = false;
+        wait(1300);
+        compare(spectrum.simulated, false);
+        compare(timer.running, false);
+        actor.isPlaying = true;
+        wait(1300);
+        verify(timer.running);
+        view.visible = false;
+        compare(timer.running, false);
+        compare(spectrum.simulated, false);
+        view.visible = true;
+        wait(1300);
+        verify(timer.running);
+        DesktopSettings.data = {
+            reduceMotion: true
+        };
+        compare(timer.running, false);
+        DesktopSettings.data = {
+            animations: true
+        };
+        WallpaperPlayback.locked = true;
+        wait(1300);
+        compare(timer.running, false);
+        WallpaperPlayback.locked = false;
+        view.shouldUpdate = false;
+        compare(timer.running, false);
+    }
     function test_cached_city_photo_ready_on_creation_and_reopening() {
         NacreDashboardState.weatherPhotos = true;
         NacreWeatherPhoto.image = Qt.resolvedUrl("city.png").toString() + "?v=123";

@@ -347,9 +347,34 @@ Item {
                     property color first: root.pagePrimary
                     property color second: root.pageSecondary
                     property color third: NacreColours.palette.m3tertiary
-                    readonly property bool active: root.shouldUpdate && root.player?.isPlaying === true && NacreTokens.motionEnabled
+                    readonly property bool active: root.shouldUpdate && root.visible && root.player?.isPlaying === true && NacreTokens.motionEnabled && !WallpaperPlayback.sleeping && !WallpaperPlayback.locked
+                    readonly property bool audible: samples.some(value => Number.isFinite(value) && value > .005)
+                    property bool simulated: false
+                    property real phase: 0
+                    function syncMode() {
+                        if (!active || audible) {
+                            silence.stop();
+                            simulated = false;
+                        } else if (!simulated && !silence.running)
+                            silence.start();
+                    }
+                    onActiveChanged: syncMode()
+                    onAudibleChanged: syncMode()
+                    Component.onCompleted: syncMode()
                     Accessible.role: Accessible.Indicator
-                    Accessible.name: NacreI18n.tr("dashboard.media-page.audio-activity", "Audio activity")
+                    Accessible.name: simulated ? NacreI18n.tr("dashboard.media-page.playback-animation", "Playback animation") : NacreI18n.tr("dashboard.media-page.audio-activity", "Audio activity")
+                    Timer {
+                        id: silence
+                        interval: 1200
+                        onTriggered: spectrum.simulated = spectrum.active && !spectrum.audible
+                    }
+                    Timer {
+                        objectName: "mediaPlaybackAnimation"
+                        interval: 80
+                        repeat: true
+                        running: spectrum.simulated && spectrum.active
+                        onTriggered: spectrum.phase = (spectrum.phase + .16) % (Math.PI * 2)
+                    }
                     // Native items survive surface moves without a Canvas texture
                     // repaint, and only change when the shared audio data changes.
                     Repeater {
@@ -357,7 +382,7 @@ Item {
                         delegate: Rectangle {
                             required property int index
                             readonly property real slot: spectrum.width / 32
-                            readonly property real level: spectrum.active && Number.isFinite(spectrum.samples[index]) ? Math.max(0, Math.min(1, spectrum.samples[index])) : 0
+                            readonly property real level: !spectrum.active ? 0 : spectrum.simulated ? .06 + .3 * Math.pow((1 + Math.sin(index * .63 + spectrum.phase)) / 2, 2) + .12 * Math.pow((1 + Math.sin(index * .21 - spectrum.phase * .7)) / 2, 2) : Number.isFinite(spectrum.samples[index]) ? Math.max(0, Math.min(1, spectrum.samples[index])) : 0
                             objectName: "mediaSpectrumBar" + index
                             x: index * slot + (slot - width) / 2
                             y: spectrum.height - height
@@ -380,6 +405,15 @@ Item {
                             }
                             opacity: spectrum.active ? .9 : .25
                         }
+                    }
+                    NacreText {
+                        objectName: "mediaPlaybackAnimationLabel"
+                        anchors.right: parent.right
+                        y: 0
+                        visible: spectrum.simulated
+                        text: NacreI18n.tr("dashboard.media-page.playback-animation", "Playback animation")
+                        font.pointSize: 7
+                        color: NacreTokens.mutedInk
                     }
                 }
                 Controls.NacreMediaSlider {
