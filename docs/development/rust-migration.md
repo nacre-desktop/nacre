@@ -7,7 +7,7 @@ Developer-only Python tools and test harnesses remain permitted.
 | Wave | Status | Numbers / decisions |
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
-| 1 Service / frequent helpers | In progress; CI repaired | 13 ports ready; helper RSS 26.95 -> 10.21 MiB (busy); publication/CI gate. |
+| 1 Service / frequent helpers | In progress; CI repaired | 13 ports published; helper RSS 26.95 -> 10.21 MiB (busy); CI pending. |
 | 2 Compositor / pearls | Pending | Persistent native IPC; one neutral compositor contract. |
 | 3 Wallpaper / colors | Pending | Direct Orient crates; preserve paired publication. |
 | 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
@@ -40,9 +40,9 @@ STOP before wave 3 lands if no announced quiet-window comparison is available.
 Wave 1 candidates combine the shared service and six hosted helpers with the
 five frequent helpers. Runtime integration is consolidated; peer audits cover
 historical assertions, cache files, private buses, translations and CLI grammar.
-Caller swaps/Python deletions are ready to publish; 23 historical test methods map
+Caller swaps/Python deletions are published; 23 historical test methods map
 explicitly to Rust. Diagnostics/mixed-dashboard tests pass (17). Native service
-crash/concurrency/framing contracts pass. Per-helper publication is in progress.
+crash/concurrency/framing contracts pass. Per-helper publication completed at 3ca5d316.
 Frozen helper corpus: `tests/parity/helpers` (separate parity task; do not regenerate).
 
 Follow-up: Rust Paths accepts absolute config/state/cache XDG roots, otherwise
@@ -57,7 +57,7 @@ Latest main `55c5a03b`: Source 38487998838 desktop and Niri fresh install pass;
 834 source tests, 12 original controls, 349 frozen cases. No new skips.
 Earlier `f3b42304` Source and performance both pass. CI workflow repair is retained; hardware checks are manual, correctness stays automatic.
 
-Next: verify pushed Wave 1 CI and fresh-install smoke; then begin Wave 2 fixtures.
+Next: verify pushed Wave 1 CI; then begin Wave 2 fixtures. Niri install smoke passes.
 526 native cases / 51 controls / 81 Rust tests pass; empty-PATH report passes.
 Rewritten main e9e80a42 CI green (source + fresh install), no skips.
 Busy fresh CPU: 55.67/38.50/35.55/16.88 -> 1.95/1.16/1.11/0.89 ms; Python 404 -> 0.

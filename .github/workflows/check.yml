@@ -99,6 +99,7 @@ jobs:
       - name: Source and native UI regression checks
         run: |
           export NACRE_ORIENT_BINARY="$PWD/deps/orient/target/release/orient"
+          export NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper"
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/check.py
       - name: Native English and pseudo gallery
         run: |
