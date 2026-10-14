@@ -22,6 +22,7 @@ pub mod network_state;
 pub mod notification_history;
 pub mod orient;
 pub mod paths;
+pub mod pearl_state;
 pub mod process;
 pub mod resource_state;
 pub mod service;

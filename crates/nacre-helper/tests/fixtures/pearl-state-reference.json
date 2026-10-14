@@ -1,0 +1,198 @@
+{
+  "source_sha256": "778a05bc8727c3cc34097c8cc25f8f5082aae7f33c7e0f60e93bc1f903c8a148",
+  "cases": [
+    {
+      "request": {
+        "name": "missing",
+        "command": "load",
+        "initial": null,
+        "input": ""
+      },
+      "stdout": "{\"version\": 1, \"windows\": [], \"ai\": {\"edge\": \"\", \"channels\": [\"\"]}}\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {},
+      "parent_mode": null
+    },
+    {
+      "request": {
+        "name": "empty-layout",
+        "command": "save",
+        "initial": null,
+        "input": "{\"version\":1,\"windows\":[]}\n"
+      },
+      "stdout": "",
+      "stderr": "",
+      "exit": 0,
+      "files": {
+        ".local/state/nacre/shell/pearls.json": {
+          "hex": "7b2276657273696f6e223a20312c202277696e646f7773223a205b5d7d",
+          "mode": "0o600"
+        }
+      },
+      "parent_mode": "0o700"
+    },
+    {
+      "request": {
+        "name": "layout-unicode",
+        "command": "save",
+        "initial": null,
+        "input": "{\"version\": 1, \"windows\": [{\"kind\": \"launcher\", \"initial\": {\"query\": \"fixture \\u00e7\"}}], \"ai\": {\"edge\": \"panel\", \"channels\": [\"\", \"panel\"]}}\n"
+      },
+      "stdout": "",
+      "stderr": "",
+      "exit": 0,
+      "files": {
+        ".local/state/nacre/shell/pearls.json": {
+          "hex": "7b2276657273696f6e223a20312c202277696e646f7773223a205b7b226b696e64223a20226c61756e63686572222c2022696e697469616c223a207b227175657279223a202266697874757265205c7530306537227d7d5d2c20226169223a207b2265646765223a202270616e656c222c20226368616e6e656c73223a205b22222c202270616e656c225d7d7d",
+          "mode": "0o600"
+        }
+      },
+      "parent_mode": "0o700"
+    },
+    {
+      "request": {
+        "name": "existing",
+        "command": "load",
+        "initial": "{\"version\":1,\"windows\":[],\"future\":\"retained\"}",
+        "input": ""
+      },
+      "stdout": "{\"version\": 1, \"windows\": [], \"future\": \"retained\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {
+        ".local/state/nacre/shell/pearls.json": {
+          "hex": "7b2276657273696f6e223a312c2277696e646f7773223a5b5d2c22667574757265223a2272657461696e6564227d",
+          "mode": "0o644"
+        }
+      },
+      "parent_mode": "0o755"
+    },
+    {
+      "request": {
+        "name": "corrupt",
+        "command": "load",
+        "initial": "bad saved data",
+        "input": ""
+      },
+      "stdout": "{\"error\": \"Expecting value: line 1 column 1 (char 0)\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {
+        ".local/state/nacre/shell/pearls.json": {
+          "hex": "6261642073617665642064617461",
+          "mode": "0o644"
+        }
+      },
+      "parent_mode": "0o755"
+    },
+    {
+      "request": {
+        "name": "wrong-version",
+        "command": "load",
+        "initial": "{\"version\":2,\"windows\":[]}",
+        "input": ""
+      },
+      "stdout": "{\"error\": \"Unsupported panel layout version\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {
+        ".local/state/nacre/shell/pearls.json": {
+          "hex": "7b2276657273696f6e223a322c2277696e646f7773223a5b5d7d",
+          "mode": "0o644"
+        }
+      },
+      "parent_mode": "0o755"
+    },
+    {
+      "request": {
+        "name": "non-object",
+        "command": "load",
+        "initial": "[]",
+        "input": ""
+      },
+      "stdout": "{\"error\": \"Unsupported panel layout version\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {
+        ".local/state/nacre/shell/pearls.json": {
+          "hex": "5b5d",
+          "mode": "0o644"
+        }
+      },
+      "parent_mode": "0o755"
+    },
+    {
+      "request": {
+        "name": "invalid-save",
+        "command": "save",
+        "initial": "{\"version\":1,\"windows\":[]}",
+        "input": "{\"version\":1,\"windows\":{}}\n"
+      },
+      "stdout": "{\"error\": \"Invalid panel layout\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {
+        ".local/state/nacre/shell/pearls.json": {
+          "hex": "7b2276657273696f6e223a312c2277696e646f7773223a5b5d7d",
+          "mode": "0o644"
+        }
+      },
+      "parent_mode": "0o755"
+    },
+    {
+      "request": {
+        "name": "save-bad-json",
+        "command": "save",
+        "initial": "{\"version\":1,\"windows\":[]}",
+        "input": "invalid\n"
+      },
+      "stdout": "{\"error\": \"Expecting value: line 1 column 1 (char 0)\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {
+        ".local/state/nacre/shell/pearls.json": {
+          "hex": "7b2276657273696f6e223a312c2277696e646f7773223a5b5d7d",
+          "mode": "0o644"
+        }
+      },
+      "parent_mode": "0o755"
+    },
+    {
+      "request": {
+        "name": "one-line-only",
+        "command": "save",
+        "initial": null,
+        "input": "{\"version\":1,\"windows\":[]}\ninvalid\n"
+      },
+      "stdout": "",
+      "stderr": "",
+      "exit": 0,
+      "files": {
+        ".local/state/nacre/shell/pearls.json": {
+          "hex": "7b2276657273696f6e223a20312c202277696e646f7773223a205b5d7d",
+          "mode": "0o600"
+        }
+      },
+      "parent_mode": "0o700"
+    },
+    {
+      "request": {
+        "name": "boolean-version",
+        "command": "save",
+        "initial": null,
+        "input": "{\"version\":true,\"windows\":[]}\n"
+      },
+      "stdout": "",
+      "stderr": "",
+      "exit": 0,
+      "files": {
+        ".local/state/nacre/shell/pearls.json": {
+          "hex": "7b2276657273696f6e223a20747275652c202277696e646f7773223a205b5d7d",
+          "mode": "0o600"
+        }
+      },
+      "parent_mode": "0o700"
+    }
+  ]
+}

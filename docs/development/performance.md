@@ -907,3 +907,20 @@ python tools/benchmark-helpers.py --tools BASELINE/nacre/shell-tools --count 100
 python tools/benchmark-helpers.py --helper-binary target/release/nacre-helper --count 100 --busy-machine --output after-fresh.json
 # Repeat both commands with --service for the persistent helper.
 ```
+
+### Wave 2 pearl-state helper (busy machine)
+
+The fresh-process method from `benchmark-helpers.py` measured 100 calls after
+one warm-up per operation, using child user + system CPU and disposable HOME.
+Both versions used identical request data; Rust used the release build.
+
+| Per-call helper CPU (ms); busy machine | Python reference | Rust release |
+| --- | ---: | ---: |
+| pearl-state load | 88.630 | 2.820 |
+| pearl-state save | 92.912 | 3.847 |
+| Direct Python starts, 200 measured calls | 200 | 0 |
+
+These are loaded-machine observations, not shell latency evidence. A preceding
+run recorded 32.74/32.79 ms Python CPU, showing substantial machine variability;
+quiet-window A/B/A/B remains required. Helper RSS, shell action timings, aggregate
+RSS/PSS, idle CPU and Python launches per minute are unmeasured for this helper.

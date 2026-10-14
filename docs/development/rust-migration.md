@@ -7,7 +7,7 @@ Developer-only Python tools and test harnesses remain permitted.
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
 | 1 Service / frequent helpers | Complete; quiet timings deferred | 13 ports; RSS 26.95 -> 10.21 MiB (busy); Source/install CI green. |
-| 2 Compositor / pearls | Compiler cutover validation | Persistent native IPC; one neutral compositor contract. |
+| 2 Compositor / pearls | Compilers public; pearl-state ready | 11 + 4 cases exact; busy CPU load/save 88.63/92.91 -> 2.82/3.85 ms. |
 | 3 Wallpaper / colors | Pending | Direct Orient crates; preserve paired publication. |
 | 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
 | 5 AI | Pending | Claude CLI stream-json; retain existing permissions/history. |
@@ -53,7 +53,7 @@ Latest main `55c5a03b`: Source 38487998838 desktop and Niri fresh install pass;
 834 source tests, 12 original controls, 349 frozen cases. No new skips.
 Earlier `f3b42304` Source and performance both pass. CI workflow repair is retained; hardware checks are manual, correctness stays automatic.
 
-Next: port Niri state/events against 22 frozen sequences / 79 snapshot observations.
+Next: publish pearl-state (85 Rust / 784 repo / 526 cases pass), check CI, then backend cutover.
 526 native cases / 51 controls / 81 Rust tests pass; empty-PATH report passes.
 Wave 1 main 3e155f5c CI 38528354524: source + fresh Niri install green; no skips.
 Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.

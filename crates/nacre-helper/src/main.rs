@@ -11,6 +11,9 @@ fn run() -> Result<i32> {
     let mut arguments = std::env::args().skip(1);
     let tool = arguments.next().ok_or("Expected a helper command")?;
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "pearl-state" {
+        return nacre_helper::pearl_state::run(&arguments);
+    }
     if let Some(module) = match tool.as_str() {
         "compositor_config" => Some("neutral"),
         "hyprland_config" | "compositor-backends-hyprland-config" => Some("hyprland"),

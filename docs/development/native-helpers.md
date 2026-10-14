@@ -58,3 +58,12 @@ native helper; this disappears when those callers become Rust. The package test
 guards release operations against installation commands while allowing rendering.
 Native compiler I/O and malformed-file errors surface with native diagnostic
 wording; captured declaration-validation errors remain byte-identical.
+
+Pearl state retains four original black-box cases and 11 additional frozen
+stdout/file cases. Existing layouts and unknown fields remain readable; invalid
+saves preserve previous bytes. The writer consumes one stdin line and exits
+without waiting for pipe EOF. File and directory permissions match the reference.
+Custom absolute XDG_STATE_HOME follows NacrePaths.qml as an intended difference;
+the explicit NACRE_PEARL_STATE override keeps precedence.
+Disposable release checks cover absolute XDG state, relative-XDG fallback and
+the explicit state-file override; no existing state file is migrated.

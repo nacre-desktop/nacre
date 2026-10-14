@@ -17,6 +17,10 @@ SHELL = TOOLS.parent / "shell"
 
 
 def module(name):
+    if name == "pearl-state":
+        import native_pearl_state
+
+        return native_pearl_state
     spec = importlib.util.spec_from_file_location(
         name.replace("-", "_"), TOOLS / (name + ".py")
     )
@@ -203,7 +207,7 @@ TestCase {
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "state.json"
             process = subprocess.Popen(
-                [sys.executable, str(TOOLS / "pearl-state.py"), "save"],
+                [*module("pearl-state").command(), "save"],
                 env={**os.environ, "NACRE_PEARL_STATE": str(path)},
                 stdin=subprocess.PIPE,
                 text=True,

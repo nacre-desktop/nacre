@@ -22,6 +22,7 @@ MIGRATED = frozenset(
         "menu-cli",
         "network-state",
         "notification-history",
+        "pearl-state",
         "resource-state",
         "window-chat-title",
         "compositor_config",

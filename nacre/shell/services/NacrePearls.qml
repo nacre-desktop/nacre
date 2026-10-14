@@ -211,7 +211,7 @@ Singleton {
     Process {
         id: layoutReader
         running: NacreProfile.ready
-        command: ["python3", NacrePaths.pearlTools + "/pearl-state.py", "load"]
+        command: [NacrePaths.helperBinary, "pearl-state", "load"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -226,7 +226,7 @@ Singleton {
         id: layoutWriter
         property var value
         stdinEnabled: true
-        command: ["python3", NacrePaths.pearlTools + "/pearl-state.py", "save"]
+        command: [NacrePaths.helperBinary, "pearl-state", "save"]
         onStarted: write(JSON.stringify(value) + "\n")
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0)
