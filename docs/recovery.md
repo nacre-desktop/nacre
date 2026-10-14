@@ -7,6 +7,15 @@ refuse to overwrite later edits. `nacre status` shows the current release;
 `nacre rollback` restores managed private files. It does not undo system package
 upgrades or restore accounts, conversations, notes or personal preferences.
 
+## Package update checks in isolated sessions
+
+The update checker uses `checkupdates` and its separate pacman database, leaving
+the system database untouched. In a session with remapped user IDs, Nacre runs
+package checks through the systemd user manager. The interactive updater also
+uses a user service so pacman's download user and the normal sudo password prompt
+work. Update confirmation, Qt compatibility checks and package signatures remain
+in effect; normal sessions continue to run the tools directly.
+
 ## Recover from a TTY
 
 A TTY is a text console that works independently of the graphical desktop.

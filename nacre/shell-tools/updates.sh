@@ -9,7 +9,19 @@ failed() {
     exit "$code"
 }
 trap failed ERR
-source "$(dirname -- "${BASH_SOURCE[0]}")/qt-check.sh"
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+# A preview/session code overlay can run in a single-user namespace. Pacman's
+# DownloadUser and sudo must run with the host's real IDs and privileges.
+if python3 "$script_dir/updates.py" --needs-host; then
+    step="starting the host update service"
+    printf 'Opening the package updater in your normal user session.\n'
+    terminal_mode=--pipe
+    if [[ -t 0 && -t 1 ]]; then terminal_mode=--pty; fi
+    systemd-run --user --wait "$terminal_mode" --collect --quiet -- \
+        /usr/bin/bash "$script_dir/updates.sh"
+    exit 0
+fi
+source "$script_dir/qt-check.sh"
 if command -v gum >/dev/null; then
     palette="$HOME/.config/nacre/colors"
     accent=$(cat "$palette/primary" 2>/dev/null || printf '#808080')
@@ -20,7 +32,7 @@ else
     [[ "$answer" == [yY] ]] || exit 0
 fi
 step="Quickshell update preflight"
-python3 "$(dirname -- "${BASH_SOURCE[0]}")/updates.py" --preflight
+python3 "$script_dir/updates.py" --preflight
 step="system package update"
 if command -v paru >/dev/null; then
     printf '\nUpdating packages without opening the AUR file-review screen.\n'

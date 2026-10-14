@@ -15,6 +15,27 @@ from pathlib import Path
 CACHE = Path.home() / ".cache/nacre/updates.json"
 
 
+def needs_host_runtime():
+    """Package tools need real user IDs, including pacman's download user."""
+    mapping = Path("/proc/self/uid_map")
+    return mapping.is_file() and mapping.read_text().split() != ["0", "0", "4294967295"]
+
+
+def package_command(command):
+    if needs_host_runtime():
+        return [
+            "systemd-run",
+            "--user",
+            "--wait",
+            "--pipe",
+            "--collect",
+            "--quiet",
+            "--",
+            *command,
+        ]
+    return command
+
+
 def count_updates():
     commands = (
         [["checkupdates"]] if shutil.which("checkupdates") else [["pacman", "-Qu"]]
@@ -26,7 +47,9 @@ def count_updates():
     for command in commands:
         if not shutil.which(command[0]):
             continue
-        result = subprocess.run(command, capture_output=True, text=True, timeout=90)
+        result = subprocess.run(
+            package_command(command), capture_output=True, text=True, timeout=90
+        )
         allowed = (0, 2) if command[0] == "checkupdates" else (0, 1)
         if result.returncode not in allowed or (
             result.returncode == 1 and result.stderr.strip()
@@ -118,7 +141,9 @@ def qt_update_status(pending):
 
 def preflight():
     command = ["checkupdates"] if shutil.which("checkupdates") else ["pacman", "-Qu"]
-    result = subprocess.run(command, capture_output=True, text=True, timeout=90)
+    result = subprocess.run(
+        package_command(command), capture_output=True, text=True, timeout=90
+    )
     if result.returncode not in (0, 2) and not (
         command[0] == "pacman" and result.returncode == 1 and not result.stderr.strip()
     ):
@@ -150,7 +175,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--refresh", action="store_true")
     parser.add_argument("--preflight", action="store_true")
+    parser.add_argument("--needs-host", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.needs_host:
+        raise SystemExit(0 if needs_host_runtime() else 1)
     if args.preflight:
         status = preflight()
         if status["message"]:

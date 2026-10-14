@@ -2,6 +2,8 @@ import importlib.util
 from pathlib import Path
 import subprocess
 import unittest
+import os
+import tempfile
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
@@ -19,6 +21,7 @@ class UpdateTests(unittest.TestCase):
         ]
         with (
             patch.object(updates.shutil, "which", side_effect=lambda name: name),
+            patch.object(updates, "needs_host_runtime", return_value=False),
             patch.object(updates.subprocess, "run", side_effect=results),
         ):
             return updates.count_updates()
@@ -72,7 +75,7 @@ class UpdateFailureTests(unittest.TestCase):
             root = Path(directory)
             for name, body in {
                 "gum": "exit 0",
-                "python3": "exit 0",
+                "python3": '[[ "$*" == *--needs-host ]] && exit 1; exit 0',
                 "paru": 'printf "%s\\n" "$*"; exit 7',
             }.items():
                 executable = root / name
@@ -100,6 +103,85 @@ class QtReleaseTests(unittest.TestCase):
         self.assertTrue(
             updates.pending_qt_release_change("qt6-base 6.12.0-2 -> 1:6.12.0-1")
         )
+
+
+class UpdateRuntimeTests(unittest.TestCase):
+    def test_namespace_detection(self):
+        for mapping, expected in (
+            ("0 0 4294967295\n", False),
+            ("1000 1000 1\n", True),
+            ("0 1000 1\n", True),
+        ):
+            with patch.object(Path, "read_text", return_value=mapping):
+                self.assertEqual(updates.needs_host_runtime(), expected)
+
+    def test_native_package_commands_remain_direct(self):
+        with patch.object(updates, "needs_host_runtime", return_value=False):
+            self.assertEqual(
+                updates.package_command(["checkupdates"]), ["checkupdates"]
+            )
+
+    def test_namespaced_check_preserves_output_and_failure(self):
+        for code, output, error in (
+            (0, "fish 4 -> 5\n", ""),
+            (1, "", "Cannot fetch updates"),
+        ):
+            with (
+                patch.object(updates, "needs_host_runtime", return_value=True),
+                patch.object(
+                    updates.shutil, "which", side_effect=lambda n: n == "checkupdates"
+                ),
+                patch.object(
+                    updates.subprocess,
+                    "run",
+                    return_value=subprocess.CompletedProcess([], code, output, error),
+                ) as run,
+            ):
+                if code:
+                    with self.assertRaises(RuntimeError):
+                        updates.preflight()
+                else:
+                    with patch.object(updates, "qt_update_status", return_value={}):
+                        updates.preflight()
+                self.assertEqual(
+                    run.call_args.args[0],
+                    [
+                        "systemd-run",
+                        "--user",
+                        "--wait",
+                        "--pipe",
+                        "--collect",
+                        "--quiet",
+                        "--",
+                        "checkupdates",
+                    ],
+                )
+
+    def test_interactive_script_routes_before_confirmation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name, body in {
+                "python3": '[[ "$*" == *--needs-host ]]',
+                "gum": 'echo "confirmation must happen in the host service"; exit 99',
+                "systemd-run": 'printf "%s\\n" "$*"; exit 7',
+            }.items():
+                executable = root / name
+                executable.write_text("#!/usr/bin/env bash\n" + body + "\n")
+                executable.chmod(0o755)
+            result = subprocess.run(
+                ["bash", str(Path(__file__).parents[1] / "updates.sh")],
+                env=dict(os.environ, PATH=str(root) + ":/usr/bin:/bin"),
+                stdin=subprocess.DEVNULL,
+                timeout=10,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 7)
+            self.assertIn(
+                "--user --wait --pipe --collect --quiet -- /usr/bin/bash", result.stdout
+            )
+            self.assertNotIn("confirmation must happen", result.stdout)
+            self.assertIn("starting the host update service (exit 7)", result.stderr)
 
 
 if __name__ == "__main__":
