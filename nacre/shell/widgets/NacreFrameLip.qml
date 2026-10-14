@@ -5,6 +5,18 @@ import qs.services
 Item {
     id: root
     required property string edge
+    property bool pointerActivation: false
+    activeFocusOnTab: visible && enabled
+    Keys.onReturnPressed: event => {
+        pointerActivation = false;
+        clicked();
+        event.accepted = true;
+    }
+    Keys.onSpacePressed: event => {
+        pointerActivation = false;
+        clicked();
+        event.accepted = true;
+    }
     property bool decorationEnabled: true
     property real base: 10
     property real progress: 0
@@ -181,9 +193,15 @@ Item {
         onEntered: root.entered(pressedButtons)
         onPositionChanged: event => root.moved(event.buttons)
         onExited: root.exited()
-        onClicked: root.clicked()
+        onClicked: {
+            root.pointerActivation = true;
+            root.clicked();
+        }
     }
     Accessible.role: Accessible.Button
-    Accessible.name: edge === "top" ? NacreI18n.tr("ui.frame-lip.name.open-dashboard", "Open dashboard") : edge === "left" ? NacreI18n.tr("ui.frame-lip.name.open-assistant", "Open assistant") : NacreI18n.tr("ui.frame-lip.name.open-control-center", "Open control center")
-    Accessible.onPressAction: clicked()
+    Accessible.name: active && edge !== "top" ? edge === "left" ? NacreI18n.tr("ui.frame-lip.name.close-assistant", "Close assistant") : NacreI18n.tr("ui.frame-lip.name.close-control-center", "Close control center") : edge === "top" ? NacreI18n.tr("ui.frame-lip.name.open-dashboard", "Open dashboard") : edge === "left" ? NacreI18n.tr("ui.frame-lip.name.open-assistant", "Open assistant") : NacreI18n.tr("ui.frame-lip.name.open-control-center", "Open control center")
+    Accessible.onPressAction: {
+        pointerActivation = false;
+        clicked();
+    }
 }

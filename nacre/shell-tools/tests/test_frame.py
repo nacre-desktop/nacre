@@ -306,6 +306,11 @@ TestCase {
                 SHELL / "widgets/NacreFrameLip.qml",
                 target / "widgets/NacreFrameLip.qml",
             )
+            for name in ("NacreHoverDwell", "NacreEdgeTab", "NacreIcon", "NacreText"):
+                shutil.copy2(
+                    SHELL / "widgets" / (name + ".qml"),
+                    target / "widgets" / (name + ".qml"),
+                )
             helpers = {
                 "services/NacreColours": "property bool light:false;property var palette:"
                 + json.dumps(
@@ -399,13 +404,16 @@ TestCase {
             self.assertEqual(quiet.getpixel((5, 200)), rim.getpixel((5, 200)))
             self.assertEqual(pixels("light").getpixel((5, 200)), (245, 242, 237))
 
-            # Flat hover targets must not paint protrusions into the wallpaper.
+            self.assertNotEqual(closed.getpixel((26, 200)), (86, 125, 154))
+            self.assertNotEqual(closed.getpixel((574, 200)), (86, 125, 154))
+
+            # Top targets stay flat; only the two side tabs protrude into the wallpaper.
             for point in (
                 (250, 54),
                 (350, 54),
                 (218, 54),
-                (14, 200),
-                (585, 200),
+                (32, 200),
+                (567, 200),
                 (15, 100),
             ):
                 self.assertEqual(closed.getpixel(point), (86, 125, 154))

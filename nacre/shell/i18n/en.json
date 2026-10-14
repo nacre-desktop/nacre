@@ -2091,6 +2091,8 @@
   "ui.displays-page.title.keep-this-display-change": "Keep this display change?",
   "ui.displays-page.title.value0-value1-value2-value3-hz": "{value0} · {value1}×{value2} · {value3} Hz",
   "ui.focus-page.text.value0-min": "{value0} min",
+  "ui.frame-lip.name.close-assistant": "Close assistant",
+  "ui.frame-lip.name.close-control-center": "Close control center",
   "ui.frame-lip.name.open-assistant": "Open assistant",
   "ui.frame-lip.name.open-control-center": "Open control center",
   "ui.frame-lip.name.open-dashboard": "Open dashboard",

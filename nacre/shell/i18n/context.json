@@ -2064,6 +2064,8 @@
   "ui.displays-page.title.keep-this-display-change": "nacre/shell/modules/settings/pages/NacreDisplaysPage.qml: title",
   "ui.displays-page.title.value0-value1-value2-value3-hz": "nacre/shell/modules/settings/pages/NacreDisplaysPage.qml: complete title message; placeholders preserve dynamic/user content.",
   "ui.focus-page.text.value0-min": "nacre/shell/modules/dashboard/NacreFocusPage.qml: complete text message; placeholders preserve dynamic/user content.",
+  "ui.frame-lip.name.close-assistant": "Accessible name of the active left frame arrow tab; closes the assistant panel.",
+  "ui.frame-lip.name.close-control-center": "Accessible name of the active right frame arrow tab; closes the control-center panel.",
   "ui.frame-lip.name.open-assistant": "nacre/shell/widgets/NacreFrameLip.qml: name",
   "ui.frame-lip.name.open-control-center": "nacre/shell/widgets/NacreFrameLip.qml: name",
   "ui.frame-lip.name.open-dashboard": "nacre/shell/widgets/NacreFrameLip.qml: name",

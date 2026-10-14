@@ -9,11 +9,25 @@ Item {
     required property var visibilities
     required property var controller
     property real focusProgress: 0
-    readonly property var rimHandles: []
+    readonly property var rimHandles: [left.visible ? {
+            x: NacreFrame.left,
+            y: leftRect.y,
+            width: 18,
+            height: leftRect.height,
+            edge: "left",
+            shoulder: 10
+        } : null, right.visible ? {
+            x: rightRect.x,
+            y: rightRect.y,
+            width: 18,
+            height: rightRect.height,
+            edge: "right",
+            shoulder: 10
+        } : null].filter(Boolean)
     readonly property bool available: !NacrePanelState.hidden && !controller.modal && !visibilities.launcher && !visibilities.session && !visibilities.dashboardPinned && !NacreHoverIntent.fullscreenFor(screen.name)
     readonly property rect topRect: NacreFrame.headerHeight > 0 ? Qt.rect((width - 208) / 2, 0, 208, NacreFrame.headerHeight) : Qt.rect(0, 0, 0, 0)
-    readonly property rect leftRect: NacreFrame.left > 0 ? Qt.rect(0, (height - 144) / 2, NacreFrame.left, 144) : Qt.rect(0, 0, 0, 0)
-    readonly property rect rightRect: NacreFrame.right > 0 ? Qt.rect(width - NacreFrame.right, (height - 144) / 2, NacreFrame.right, 144) : Qt.rect(0, 0, 0, 0)
+    readonly property rect leftRect: NacreFrame.left > 0 ? Qt.rect(0, (height - 52) / 2, NacreFrame.left + 18, 52) : Qt.rect(0, 0, 0, 0)
+    readonly property rect rightRect: NacreFrame.right > 0 ? Qt.rect(width - NacreFrame.right - 18, (height - 52) / 2, NacreFrame.right + 18, 52) : Qt.rect(0, 0, 0, 0)
     function publishRegions() {
         if (!screen?.name)
             return;
@@ -22,8 +36,8 @@ Item {
             left: leftRect,
             osd: rightRect,
             resting: {
-                left: Qt.rect(0, (height - 144) / 2, NacreFrame.left, 144),
-                osd: Qt.rect(width - NacreFrame.right, (height - 144) / 2, NacreFrame.right, 144)
+                left: Qt.rect(0, (height - 52) / 2, NacreFrame.left + 18, 52),
+                osd: Qt.rect(width - NacreFrame.right - 18, (height - 52) / 2, NacreFrame.right + 18, 52)
             }
         };
     }
@@ -31,12 +45,10 @@ Item {
     onTopRectChanged: publishRegions()
     onLeftRectChanged: publishRegions()
     onRightRectChanged: publishRegions()
-    property real dashboardProgress: 0
-    readonly property bool dashboardWaiting: dashboardDelay.running
+    readonly property real dashboardProgress: dashboardDwell.progress
+    readonly property bool dashboardWaiting: dashboardDwell.waiting
     function cancelDashboard() {
-        dashboardDelay.stop();
-        dashboardReveal.stop();
-        dashboardProgress = 0;
+        dashboardDwell.cancel();
     }
     function settleDashboard() {
         if (!NacreHoverIntent.headers[screen.name])
@@ -47,53 +59,64 @@ Item {
             cancelDashboard();
             return;
         }
-        if (visibilities.dashboard || DesktopSettings.data.clickEdgeMenus === true || !available || !NacreHoverIntent.canOpen("dashboard", screen, buttons))
+        if (visibilities.dashboard || DesktopSettings.data.clickEdgeMenus === true || !available || !NacreHoverIntent.canOpen("dashboard", screen, buttons) || dashboardWaiting)
             return;
-        if (dashboardDelay.running)
-            return;
-        dashboardProgress = 0;
-        if (NacreTokens.motionEnabled)
-            dashboardReveal.restart();
-        else
-            dashboardProgress = 1;
-        dashboardDelay.restart();
+        dashboardDwell.start();
     }
-    onAvailableChanged: if (!available)
-        cancelDashboard()
-    Timer {
-        id: dashboardDelay
-        interval: 500
+    function sideDwell(name) {
+        return name === "left" ? leftDwell : rightDwell;
+    }
+    function cancelSides() {
+        leftDwell.cancel();
+        rightDwell.cancel();
+    }
+    function openSide(name, pointerOwned) {
+        sideDwell(name).cancel();
+        if (visibilities[name]) {
+            NacreHoverIntent.dismiss(screen, pointerOwned);
+            visibilities[name] = false;
+            if (name === "left")
+                visibilities.leftPinned = false;
+            if (visibilities.edgeMenu === name)
+                visibilities.edgeMenu = "";
+            controller.settleHover();
+        } else if (name === "left")
+            NacrePanelState.openEdge(name, screen.name);
+        else
+            NacrePanelState.openControls("home", screen.name, false, pointerOwned);
+    }
+    onAvailableChanged: if (!available) {
+        cancelDashboard();
+        cancelSides();
+    }
+    NacreHoverDwell {
+        id: dashboardDwell
+        objectName: "nacreDashboardDwell"
         onTriggered: {
             if (!NacreHoverIntent.headers[root.screen.name] || !root.available || DesktopSettings.data.clickEdgeMenus === true || !NacreHoverIntent.canOpen("dashboard", root.screen, Qt.NoButton)) {
                 root.cancelDashboard();
                 return;
             }
-            root.dashboardProgress = 1;
             NacrePanelState.hoverEdge("dashboard", root.screen.name);
         }
     }
-    NumberAnimation {
-        id: dashboardReveal
-        target: root
-        property: "dashboardProgress"
-        from: 0
-        to: 1
-        duration: 500
+    NacreHoverDwell {
+        id: leftDwell
+        objectName: "nacreLeftDwell"
+        onTriggered: if (left.hovered && root.available && DesktopSettings.data.clickEdgeMenus !== true && NacreHoverIntent.canOpen("left", root.screen, Qt.NoButton))
+            NacrePanelState.hoverEdge("left", root.screen.name)
+    }
+    NacreHoverDwell {
+        id: rightDwell
+        objectName: "nacreRightDwell"
+        onTriggered: if (right.hovered && root.available && DesktopSettings.data.clickEdgeMenus !== true && NacreHoverIntent.canOpen("osd", root.screen, Qt.NoButton))
+            NacrePanelState.hoverEdge("osd", root.screen.name)
     }
     Connections {
         target: root.visibilities
         function onDashboardChanged() {
             if (!root.visibilities.dashboard)
                 root.cancelDashboard();
-        }
-    }
-    Connections {
-        target: NacreTokens
-        function onMotionEnabledChanged() {
-            if (!NacreTokens.motionEnabled) {
-                dashboardReveal.stop();
-                root.dashboardProgress = root.dashboardWaiting ? 1 : 0;
-            }
         }
     }
     function approach(name, lip, buttons) {
@@ -106,14 +129,16 @@ Item {
         }
         if (DesktopSettings.data.clickEdgeMenus === true || !available || !NacreHoverIntent.canOpen(name, screen, buttons))
             return;
-        if (!visibilities[name])
-            NacrePanelState.hoverEdge(name, screen.name);
+        if (!visibilities[name] && !sideDwell(name).waiting)
+            sideDwell(name).start();
     }
     function leave(name) {
         if (name === "dashboard") {
             NacreHoverIntent.setHeaderHover(screen.name, "lip", false);
             settleDashboard();
         }
+        if (name !== "dashboard")
+            sideDwell(name).cancel();
         NacreHoverIntent.rearm(name, screen);
         controller.settleHover();
     }
@@ -152,7 +177,16 @@ Item {
         onEntered: buttons => root.approach("left", this, buttons)
         onMoved: buttons => root.approach("left", this, buttons)
         onExited: root.leave("left")
-        onClicked: NacrePanelState.openEdge("left", root.screen.name)
+        onClicked: root.openSide("left", pointerActivation)
+        NacreEdgeTab {
+            objectName: "frameLeftArrow"
+            anchors.fill: parent
+            edge: "left"
+            base: NacreFrame.left
+            progress: leftDwell.progress
+            active: left.active
+            keyboardFocused: left.activeFocus
+        }
     }
     NacreFrameLip {
         id: right
@@ -169,6 +203,15 @@ Item {
         onEntered: buttons => root.approach("osd", this, buttons)
         onMoved: buttons => root.approach("osd", this, buttons)
         onExited: root.leave("osd")
-        onClicked: NacrePanelState.openControls("home", root.screen.name)
+        onClicked: root.openSide("osd", pointerActivation)
+        NacreEdgeTab {
+            objectName: "frameRightArrow"
+            anchors.fill: parent
+            edge: "right"
+            base: NacreFrame.right
+            progress: rightDwell.progress
+            active: right.active
+            keyboardFocused: right.activeFocus
+        }
     }
 }

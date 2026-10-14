@@ -325,12 +325,11 @@ TestCase {
             }
         };
         view.requestPeek("audio", region, true);
-        wait(330);
-        verify(view.peekProgress > .4 && view.peekProgress < 1);
+        wait(170);
+        verify(view.peekProgress > .1 && view.peekProgress < 1);
         verify(!popup.hasCurrent);
         compare(NacrePanelState.calls.length, 0);
-        wait(110);
-        verify(popup.hasCurrent);
+        tryVerify(() => popup.hasCurrent, 450);
         compare(popup.currentName, "peek");
         compare(popup.peekKind, "audio");
         verify(!popup.pinned);
@@ -404,6 +403,37 @@ TestCase {
         band.forceActiveFocus();
         keyClick(Qt.Key_Return);
         compare(NacrePanelState.calls[NacrePanelState.calls.length - 1], "dashboard");
+    }
+    function test_popup_waits_for_rendered_fill_even_when_animation_is_paused() {
+        const popup = {
+            hasCurrent: false,
+            currentName: "",
+            peekKind: "",
+            currentCenter: 0,
+            pinned: false,
+            headerHovered: false
+        };
+        NacrePanelState.panels = {
+            test: {
+                popouts: popup,
+                popoutHovered: false
+            }
+        };
+        const view = createTemporaryObject(header, test), region = findChild(view, "nacreHeaderStatus");
+        view.requestPeek("audio", region, true);
+        wait(170);
+        const dwell = findChild(view, "nacreStatusDwell"), fill = findChild(dwell, "hoverDwellAnimation");
+        fill.pause();
+        const partial = view.peekProgress;
+        verify(partial > 0 && partial < .9);
+        wait(420);
+        compare(view.peekProgress, partial);
+        verify(!popup.hasCurrent);
+        fill.resume();
+        tryVerify(() => popup.hasCurrent, 500);
+        compare(view.peekProgress, 1);
+        view.clearPeek();
+        compare(view.peekProgress, 0);
     }
     function test_status_highlight_uses_the_shared_pill_end_corners() {
         const view = createTemporaryObject(header, test), holder = findChild(view, "nacreHeaderStatus"), cue = findChild(view, "nacreHeaderStatusCue");

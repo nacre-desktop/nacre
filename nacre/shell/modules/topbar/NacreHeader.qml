@@ -15,15 +15,13 @@ Item {
     property string hoverHint: ""
     property real hoverHintCenter: 0
     property string statusHoveredName: ""
-    property real peekProgress: 0
+    readonly property real peekProgress: peekDwell.progress
     readonly property real dashboardProgress: panel?.input?.lips?.dashboardProgress ?? 0
     property string peekName: ""
     property real peekCenter: 0
     function clearPeek(close = true) {
         const calendarHover = peekName === "calendar";
-        peekDelay.stop();
-        peekReveal.stop();
-        peekProgress = 0;
+        peekDwell.cancel();
         peekName = "";
         if (close && panel && (panel.popouts.currentName === "peek" || calendarHover && panel.popouts.currentName === "calendar" && !panel.popouts.pinned))
             panel.popouts.hasCurrent = false;
@@ -44,11 +42,7 @@ Item {
         hoverHint = "";
         peekName = name;
         peekCenter = item.mapToItem(root, item.width / 2, item.height / 2).x;
-        if (NacreTokens.motionEnabled)
-            peekReveal.restart();
-        else
-            peekProgress = 1;
-        peekDelay.restart();
+        peekDwell.start();
     }
     function openStatus(name, item, pointerOwned = true) {
         clearPeek();
@@ -66,19 +60,10 @@ Item {
     }
     onVisibleChanged: if (!visible)
         clearPeek()
-    NumberAnimation {
-        id: peekReveal
-        target: root
-        property: "peekProgress"
-        from: 0
-        to: 1
-        duration: 400
-    }
-    Timer {
-        id: peekDelay
-        interval: 400
+    NacreHoverDwell {
+        id: peekDwell
+        objectName: "nacreStatusDwell"
         onTriggered: {
-            root.peekProgress = 1;
             const popup = root.panel?.popouts;
             if (!popup || !root.peekName || NacrePanelState.hidden)
                 return;
@@ -95,15 +80,6 @@ Item {
         function onHiddenChanged() {
             if (NacrePanelState.hidden)
                 root.clearPeek();
-        }
-    }
-    Connections {
-        target: NacreTokens
-        function onMotionEnabledChanged() {
-            if (!NacreTokens.motionEnabled) {
-                peekReveal.stop();
-                root.peekProgress = root.peekName ? 1 : 0;
-            }
         }
     }
     property string registeredName: ""
@@ -250,7 +226,7 @@ Item {
         hoverHint = "";
         NacreHoverIntent.popupHovered[screen.name] = statusMouse.containsMouse || updatesInput.hovered || clockMouse.containsMouse;
         NacreHoverIntent.rearm("popouts", screen);
-        if (panel)
+        if (panel?.popouts)
             panel.popouts.headerHovered = statusMouse.containsMouse || updatesInput.hovered || clockMouse.containsMouse;
         popupExpiry.restart();
     }
@@ -258,7 +234,7 @@ Item {
         id: popupExpiry
         interval: 120
         onTriggered: {
-            if (!root.panel)
+            if (!root.panel?.popouts)
                 return;
             root.panel.popouts.headerHovered = statusMouse.containsMouse || updatesInput.hovered || clockMouse.containsMouse;
             if (!root.panel.popouts.headerHovered && !root.panel.popoutHovered && !root.panel.popouts.pinned)
