@@ -45,6 +45,9 @@ impl Request {
 fn call(helper: &str, operation: &str, request: &Request) -> Result<Value> {
     let paths = Paths::environment()?;
     match (helper, operation) {
+        ("demo-wallpapers", "collection") => {
+            nacre_helper::demo_wallpapers::collection(&paths.assets().join("demo-wallpapers"))
+        }
         ("login-appearance", "prepare") => {
             let wallpaper = match request.argument(0, "wallpaper")? {
                 Value::String(path) => PathBuf::from(path),

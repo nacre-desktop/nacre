@@ -1,0 +1,1599 @@
+{
+  "source_sha256": "55da8cf370c09068fb0fcba53289a576a07633932491a6c803fee6fc1915b24c",
+  "manifest_sha256": "204cb4273f986c8af763fdbcbce29d678d744d71e70165f53d103b1cf0d566fa",
+  "normalizations": "Only disposable/source roots and filesystem device/inode/mtime/ctime are canonicalized; receipt values are first checked against actual stat; cached image SHA256/bytes and all other fields exact.",
+  "collection": [
+    {
+      "file": "forest.jpg",
+      "name": "Forest Edge",
+      "title": "At the edge of a conifer forest (Unsplash).jpg",
+      "artist": "Ales Krivec aleskrivec",
+      "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+      "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+      "size": [
+        3840,
+        2563
+      ],
+      "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+    },
+    {
+      "file": "aurora.jpg",
+      "name": "Northern Lights",
+      "title": "Aurora in Fairbanks.jpg",
+      "artist": "Karthik Sridharan",
+      "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+      "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+      "size": [
+        3840,
+        2560
+      ],
+      "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+    },
+    {
+      "file": "canyon.jpg",
+      "name": "Canyon Sunset",
+      "title": "Grand Canyon South Rim at Sunset.jpg",
+      "artist": "Mgimelfarb",
+      "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+      "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+      "size": [
+        3840,
+        1226
+      ],
+      "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+    },
+    {
+      "file": "coast.jpg",
+      "name": "Clear Coast",
+      "title": "Still and clear sea.jpg",
+      "artist": "Jdszekeres",
+      "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+      "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+      "size": [
+        3840,
+        2880
+      ],
+      "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+      "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+    }
+  ],
+  "cases": [
+    {
+      "operation": "ensure",
+      "name": "fresh",
+      "result": [
+        {
+          "file": "forest.jpg",
+          "name": "Forest Edge",
+          "title": "At the edge of a conifer forest (Unsplash).jpg",
+          "artist": "Ales Krivec aleskrivec",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+          "size": [
+            3840,
+            2563
+          ],
+          "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg"
+        },
+        {
+          "file": "aurora.jpg",
+          "name": "Northern Lights",
+          "title": "Aurora in Fairbanks.jpg",
+          "artist": "Karthik Sridharan",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+          "size": [
+            3840,
+            2560
+          ],
+          "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg"
+        },
+        {
+          "file": "canyon.jpg",
+          "name": "Canyon Sunset",
+          "title": "Grand Canyon South Rim at Sunset.jpg",
+          "artist": "Mgimelfarb",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "size": [
+            3840,
+            1226
+          ],
+          "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg"
+        },
+        {
+          "file": "coast.jpg",
+          "name": "Clear Coast",
+          "title": "Still and clear sea.jpg",
+          "artist": "Jdszekeres",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+          "size": [
+            3840,
+            2880
+          ],
+          "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg"
+        }
+      ],
+      "files": {
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg": {
+          "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+          "size": 1877446,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg": {
+          "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+          "size": 1111390,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg": {
+          "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+          "size": 3082611,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg": {
+          "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+          "size": 2679953,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/verified.json": {
+          "json": {
+            "/fixture/assets/forest.jpg": [
+              "@DEV@",
+              "@INODE@",
+              2679953,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg": [
+              "@DEV@",
+              "@INODE@",
+              2679953,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/aurora.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1877446,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1877446,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/canyon.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1111390,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1111390,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/coast.jpg": [
+              "@DEV@",
+              "@INODE@",
+              3082611,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg": [
+              "@DEV@",
+              "@INODE@",
+              3082611,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ]
+          },
+          "mode": 384
+        }
+      },
+      "pictures_created": false
+    },
+    {
+      "operation": "ensure",
+      "name": "repeat",
+      "result": [
+        {
+          "file": "forest.jpg",
+          "name": "Forest Edge",
+          "title": "At the edge of a conifer forest (Unsplash).jpg",
+          "artist": "Ales Krivec aleskrivec",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+          "size": [
+            3840,
+            2563
+          ],
+          "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg"
+        },
+        {
+          "file": "aurora.jpg",
+          "name": "Northern Lights",
+          "title": "Aurora in Fairbanks.jpg",
+          "artist": "Karthik Sridharan",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+          "size": [
+            3840,
+            2560
+          ],
+          "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg"
+        },
+        {
+          "file": "canyon.jpg",
+          "name": "Canyon Sunset",
+          "title": "Grand Canyon South Rim at Sunset.jpg",
+          "artist": "Mgimelfarb",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "size": [
+            3840,
+            1226
+          ],
+          "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg"
+        },
+        {
+          "file": "coast.jpg",
+          "name": "Clear Coast",
+          "title": "Still and clear sea.jpg",
+          "artist": "Jdszekeres",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+          "size": [
+            3840,
+            2880
+          ],
+          "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg"
+        }
+      ],
+      "files": {
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg": {
+          "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+          "size": 1877446,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg": {
+          "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+          "size": 1111390,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg": {
+          "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+          "size": 3082611,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg": {
+          "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+          "size": 2679953,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/verified.json": {
+          "json": {
+            "/fixture/assets/forest.jpg": [
+              "@DEV@",
+              "@INODE@",
+              2679953,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg": [
+              "@DEV@",
+              "@INODE@",
+              2679953,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/aurora.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1877446,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1877446,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/canyon.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1111390,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1111390,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/coast.jpg": [
+              "@DEV@",
+              "@INODE@",
+              3082611,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg": [
+              "@DEV@",
+              "@INODE@",
+              3082611,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ]
+          },
+          "mode": 384
+        }
+      },
+      "pictures_created": false
+    },
+    {
+      "operation": "ensure",
+      "name": "fast",
+      "result": [
+        {
+          "file": "forest.jpg",
+          "name": "Forest Edge",
+          "title": "At the edge of a conifer forest (Unsplash).jpg",
+          "artist": "Ales Krivec aleskrivec",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+          "size": [
+            3840,
+            2563
+          ],
+          "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg"
+        },
+        {
+          "file": "aurora.jpg",
+          "name": "Northern Lights",
+          "title": "Aurora in Fairbanks.jpg",
+          "artist": "Karthik Sridharan",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+          "size": [
+            3840,
+            2560
+          ],
+          "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg"
+        },
+        {
+          "file": "canyon.jpg",
+          "name": "Canyon Sunset",
+          "title": "Grand Canyon South Rim at Sunset.jpg",
+          "artist": "Mgimelfarb",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "size": [
+            3840,
+            1226
+          ],
+          "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg"
+        },
+        {
+          "file": "coast.jpg",
+          "name": "Clear Coast",
+          "title": "Still and clear sea.jpg",
+          "artist": "Jdszekeres",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+          "size": [
+            3840,
+            2880
+          ],
+          "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg"
+        }
+      ],
+      "files": {
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg": {
+          "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+          "size": 1877446,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg": {
+          "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+          "size": 1111390,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg": {
+          "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+          "size": 3082611,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg": {
+          "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+          "size": 2679953,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/verified.json": {
+          "json": {
+            "/fixture/assets/forest.jpg": [
+              "@DEV@",
+              "@INODE@",
+              2679953,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg": [
+              "@DEV@",
+              "@INODE@",
+              2679953,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/aurora.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1877446,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1877446,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/canyon.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1111390,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1111390,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/coast.jpg": [
+              "@DEV@",
+              "@INODE@",
+              3082611,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg": [
+              "@DEV@",
+              "@INODE@",
+              3082611,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ]
+          },
+          "mode": 384
+        }
+      },
+      "pictures_created": false
+    },
+    {
+      "operation": "ensure",
+      "name": "damaged",
+      "result": [
+        {
+          "file": "forest.jpg",
+          "name": "Forest Edge",
+          "title": "At the edge of a conifer forest (Unsplash).jpg",
+          "artist": "Ales Krivec aleskrivec",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+          "size": [
+            3840,
+            2563
+          ],
+          "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg"
+        },
+        {
+          "file": "aurora.jpg",
+          "name": "Northern Lights",
+          "title": "Aurora in Fairbanks.jpg",
+          "artist": "Karthik Sridharan",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+          "size": [
+            3840,
+            2560
+          ],
+          "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg"
+        },
+        {
+          "file": "canyon.jpg",
+          "name": "Canyon Sunset",
+          "title": "Grand Canyon South Rim at Sunset.jpg",
+          "artist": "Mgimelfarb",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "size": [
+            3840,
+            1226
+          ],
+          "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg"
+        },
+        {
+          "file": "coast.jpg",
+          "name": "Clear Coast",
+          "title": "Still and clear sea.jpg",
+          "artist": "Jdszekeres",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+          "size": [
+            3840,
+            2880
+          ],
+          "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg"
+        }
+      ],
+      "files": {
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg": {
+          "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+          "size": 1877446,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg": {
+          "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+          "size": 1111390,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg": {
+          "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+          "size": 3082611,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg": {
+          "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+          "size": 2679953,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/verified.json": {
+          "json": {
+            "/fixture/assets/forest.jpg": [
+              "@DEV@",
+              "@INODE@",
+              2679953,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg": [
+              "@DEV@",
+              "@INODE@",
+              2679953,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/aurora.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1877446,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1877446,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/canyon.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1111390,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1111390,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/coast.jpg": [
+              "@DEV@",
+              "@INODE@",
+              3082611,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg": [
+              "@DEV@",
+              "@INODE@",
+              3082611,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ]
+          },
+          "mode": 384
+        }
+      },
+      "pictures_created": false
+    },
+    {
+      "operation": "ensure",
+      "name": "missing",
+      "result": [
+        {
+          "file": "forest.jpg",
+          "name": "Forest Edge",
+          "title": "At the edge of a conifer forest (Unsplash).jpg",
+          "artist": "Ales Krivec aleskrivec",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+          "size": [
+            3840,
+            2563
+          ],
+          "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg"
+        },
+        {
+          "file": "aurora.jpg",
+          "name": "Northern Lights",
+          "title": "Aurora in Fairbanks.jpg",
+          "artist": "Karthik Sridharan",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+          "size": [
+            3840,
+            2560
+          ],
+          "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg"
+        },
+        {
+          "file": "canyon.jpg",
+          "name": "Canyon Sunset",
+          "title": "Grand Canyon South Rim at Sunset.jpg",
+          "artist": "Mgimelfarb",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+          "size": [
+            3840,
+            1226
+          ],
+          "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg"
+        },
+        {
+          "file": "coast.jpg",
+          "name": "Clear Coast",
+          "title": "Still and clear sea.jpg",
+          "artist": "Jdszekeres",
+          "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+          "license": "CC0",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+          "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+          "size": [
+            3840,
+            2880
+          ],
+          "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+          "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain.",
+          "path": "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg"
+        }
+      ],
+      "files": {
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg": {
+          "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+          "size": 1877446,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg": {
+          "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+          "size": 1111390,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg": {
+          "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+          "size": 3082611,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg": {
+          "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+          "size": 2679953,
+          "mode": 384
+        },
+        ".cache/nacre/demo-wallpapers/204cb4273f986c8a/verified.json": {
+          "json": {
+            "/fixture/assets/forest.jpg": [
+              "@DEV@",
+              "@INODE@",
+              2679953,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/forest.jpg": [
+              "@DEV@",
+              "@INODE@",
+              2679953,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/aurora.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1877446,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/aurora.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1877446,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/canyon.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1111390,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/canyon.jpg": [
+              "@DEV@",
+              "@INODE@",
+              1111390,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/assets/coast.jpg": [
+              "@DEV@",
+              "@INODE@",
+              3082611,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ],
+            "/fixture/home/.cache/nacre/demo-wallpapers/204cb4273f986c8a/coast.jpg": [
+              "@DEV@",
+              "@INODE@",
+              3082611,
+              "@MTIME_NS@",
+              "@CTIME_NS@"
+            ]
+          },
+          "mode": 384
+        }
+      },
+      "pictures_created": false
+    },
+    {
+      "operation": "collection",
+      "name": "version",
+      "manifest": {
+        "version": 2,
+        "wallpapers": [
+          {
+            "file": "forest.jpg",
+            "name": "Forest Edge",
+            "title": "At the edge of a conifer forest (Unsplash).jpg",
+            "artist": "Ales Krivec aleskrivec",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+            "size": [
+              3840,
+              2563
+            ],
+            "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          },
+          {
+            "file": "aurora.jpg",
+            "name": "Northern Lights",
+            "title": "Aurora in Fairbanks.jpg",
+            "artist": "Karthik Sridharan",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+            "size": [
+              3840,
+              2560
+            ],
+            "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "canyon.jpg",
+            "name": "Canyon Sunset",
+            "title": "Grand Canyon South Rim at Sunset.jpg",
+            "artist": "Mgimelfarb",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "size": [
+              3840,
+              1226
+            ],
+            "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "coast.jpg",
+            "name": "Clear Coast",
+            "title": "Still and clear sea.jpg",
+            "artist": "Jdszekeres",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+            "size": [
+              3840,
+              2880
+            ],
+            "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          }
+        ]
+      },
+      "error": {
+        "type": "ValueError",
+        "message": "The bundled wallpaper manifest is incomplete. Reinstall the shell."
+      }
+    },
+    {
+      "operation": "collection",
+      "name": "count",
+      "manifest": {
+        "version": 1,
+        "wallpapers": [
+          {
+            "file": "forest.jpg",
+            "name": "Forest Edge",
+            "title": "At the edge of a conifer forest (Unsplash).jpg",
+            "artist": "Ales Krivec aleskrivec",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+            "size": [
+              3840,
+              2563
+            ],
+            "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          },
+          {
+            "file": "aurora.jpg",
+            "name": "Northern Lights",
+            "title": "Aurora in Fairbanks.jpg",
+            "artist": "Karthik Sridharan",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+            "size": [
+              3840,
+              2560
+            ],
+            "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "canyon.jpg",
+            "name": "Canyon Sunset",
+            "title": "Grand Canyon South Rim at Sunset.jpg",
+            "artist": "Mgimelfarb",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "size": [
+              3840,
+              1226
+            ],
+            "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          }
+        ]
+      },
+      "error": {
+        "type": "ValueError",
+        "message": "The bundled wallpaper manifest is incomplete. Reinstall the shell."
+      }
+    },
+    {
+      "operation": "collection",
+      "name": "filename",
+      "manifest": {
+        "version": 1,
+        "wallpapers": [
+          {
+            "file": "../outside.jpg",
+            "name": "Forest Edge",
+            "title": "At the edge of a conifer forest (Unsplash).jpg",
+            "artist": "Ales Krivec aleskrivec",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+            "size": [
+              3840,
+              2563
+            ],
+            "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          },
+          {
+            "file": "aurora.jpg",
+            "name": "Northern Lights",
+            "title": "Aurora in Fairbanks.jpg",
+            "artist": "Karthik Sridharan",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+            "size": [
+              3840,
+              2560
+            ],
+            "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "canyon.jpg",
+            "name": "Canyon Sunset",
+            "title": "Grand Canyon South Rim at Sunset.jpg",
+            "artist": "Mgimelfarb",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "size": [
+              3840,
+              1226
+            ],
+            "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "coast.jpg",
+            "name": "Clear Coast",
+            "title": "Still and clear sea.jpg",
+            "artist": "Jdszekeres",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+            "size": [
+              3840,
+              2880
+            ],
+            "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          }
+        ]
+      },
+      "error": {
+        "type": "ValueError",
+        "message": "Invalid bundled wallpaper filename"
+      }
+    },
+    {
+      "operation": "collection",
+      "name": "suffix",
+      "manifest": {
+        "version": 1,
+        "wallpapers": [
+          {
+            "file": "unsafe.JPG",
+            "name": "Forest Edge",
+            "title": "At the edge of a conifer forest (Unsplash).jpg",
+            "artist": "Ales Krivec aleskrivec",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+            "size": [
+              3840,
+              2563
+            ],
+            "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          },
+          {
+            "file": "aurora.jpg",
+            "name": "Northern Lights",
+            "title": "Aurora in Fairbanks.jpg",
+            "artist": "Karthik Sridharan",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+            "size": [
+              3840,
+              2560
+            ],
+            "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "canyon.jpg",
+            "name": "Canyon Sunset",
+            "title": "Grand Canyon South Rim at Sunset.jpg",
+            "artist": "Mgimelfarb",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "size": [
+              3840,
+              1226
+            ],
+            "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "coast.jpg",
+            "name": "Clear Coast",
+            "title": "Still and clear sea.jpg",
+            "artist": "Jdszekeres",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+            "size": [
+              3840,
+              2880
+            ],
+            "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          }
+        ]
+      },
+      "error": {
+        "type": "ValueError",
+        "message": "Invalid bundled wallpaper filename"
+      }
+    },
+    {
+      "operation": "collection",
+      "name": "checksum",
+      "manifest": {
+        "version": 1,
+        "wallpapers": [
+          {
+            "file": "forest.jpg",
+            "name": "Forest Edge",
+            "title": "At the edge of a conifer forest (Unsplash).jpg",
+            "artist": "Ales Krivec aleskrivec",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+            "size": [
+              3840,
+              2563
+            ],
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          },
+          {
+            "file": "aurora.jpg",
+            "name": "Northern Lights",
+            "title": "Aurora in Fairbanks.jpg",
+            "artist": "Karthik Sridharan",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+            "size": [
+              3840,
+              2560
+            ],
+            "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "canyon.jpg",
+            "name": "Canyon Sunset",
+            "title": "Grand Canyon South Rim at Sunset.jpg",
+            "artist": "Mgimelfarb",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "size": [
+              3840,
+              1226
+            ],
+            "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "coast.jpg",
+            "name": "Clear Coast",
+            "title": "Still and clear sea.jpg",
+            "artist": "Jdszekeres",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+            "size": [
+              3840,
+              2880
+            ],
+            "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          }
+        ]
+      },
+      "error": {
+        "type": "ValueError",
+        "message": "Bundled wallpaper checksum failed: forest.jpg. Reinstall the shell."
+      }
+    },
+    {
+      "operation": "collection",
+      "name": "resolution",
+      "manifest": {
+        "version": 1,
+        "wallpapers": [
+          {
+            "file": "forest.jpg",
+            "name": "Forest Edge",
+            "title": "At the edge of a conifer forest (Unsplash).jpg",
+            "artist": "Ales Krivec aleskrivec",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+            "size": [
+              1,
+              1
+            ],
+            "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          },
+          {
+            "file": "aurora.jpg",
+            "name": "Northern Lights",
+            "title": "Aurora in Fairbanks.jpg",
+            "artist": "Karthik Sridharan",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+            "size": [
+              3840,
+              2560
+            ],
+            "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "canyon.jpg",
+            "name": "Canyon Sunset",
+            "title": "Grand Canyon South Rim at Sunset.jpg",
+            "artist": "Mgimelfarb",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "size": [
+              3840,
+              1226
+            ],
+            "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "coast.jpg",
+            "name": "Clear Coast",
+            "title": "Still and clear sea.jpg",
+            "artist": "Jdszekeres",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+            "size": [
+              3840,
+              2880
+            ],
+            "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          }
+        ]
+      },
+      "error": {
+        "type": "ValueError",
+        "message": "Bundled wallpaper resolution does not match its manifest"
+      }
+    },
+    {
+      "operation": "collection",
+      "name": "license",
+      "manifest": {
+        "version": 1,
+        "wallpapers": [
+          {
+            "file": "forest.jpg",
+            "name": "Forest Edge",
+            "title": "At the edge of a conifer forest (Unsplash).jpg",
+            "artist": "Ales Krivec aleskrivec",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "license": "unknown",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+            "size": [
+              3840,
+              2563
+            ],
+            "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          },
+          {
+            "file": "aurora.jpg",
+            "name": "Northern Lights",
+            "title": "Aurora in Fairbanks.jpg",
+            "artist": "Karthik Sridharan",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+            "size": [
+              3840,
+              2560
+            ],
+            "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "canyon.jpg",
+            "name": "Canyon Sunset",
+            "title": "Grand Canyon South Rim at Sunset.jpg",
+            "artist": "Mgimelfarb",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "size": [
+              3840,
+              1226
+            ],
+            "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "coast.jpg",
+            "name": "Clear Coast",
+            "title": "Still and clear sea.jpg",
+            "artist": "Jdszekeres",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+            "size": [
+              3840,
+              2880
+            ],
+            "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          }
+        ]
+      },
+      "error": {
+        "type": "ValueError",
+        "message": "Bundled wallpaper source information is incomplete"
+      }
+    },
+    {
+      "operation": "collection",
+      "name": "artist",
+      "manifest": {
+        "version": 1,
+        "wallpapers": [
+          {
+            "file": "forest.jpg",
+            "name": "Forest Edge",
+            "title": "At the edge of a conifer forest (Unsplash).jpg",
+            "artist": "",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+            "size": [
+              3840,
+              2563
+            ],
+            "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          },
+          {
+            "file": "aurora.jpg",
+            "name": "Northern Lights",
+            "title": "Aurora in Fairbanks.jpg",
+            "artist": "Karthik Sridharan",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+            "size": [
+              3840,
+              2560
+            ],
+            "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "canyon.jpg",
+            "name": "Canyon Sunset",
+            "title": "Grand Canyon South Rim at Sunset.jpg",
+            "artist": "Mgimelfarb",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "size": [
+              3840,
+              1226
+            ],
+            "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "coast.jpg",
+            "name": "Clear Coast",
+            "title": "Still and clear sea.jpg",
+            "artist": "Jdszekeres",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+            "size": [
+              3840,
+              2880
+            ],
+            "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          }
+        ]
+      },
+      "error": {
+        "type": "ValueError",
+        "message": "Bundled wallpaper source information is incomplete"
+      }
+    },
+    {
+      "operation": "collection",
+      "name": "source",
+      "manifest": {
+        "version": 1,
+        "wallpapers": [
+          {
+            "file": "forest.jpg",
+            "name": "Forest Edge",
+            "title": "At the edge of a conifer forest (Unsplash).jpg",
+            "artist": "Ales Krivec aleskrivec",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:At_the_edge_of_a_conifer_forest_(Unsplash).jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/8/87/At_the_edge_of_a_conifer_forest_%28Unsplash%29.jpg",
+            "size": [
+              3840,
+              2563
+            ],
+            "sha256": "c0a71ce95d06dc77184d09dcb47c755c6ac49d1e6022c2ba1b492abb63ca2ab9",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          },
+          {
+            "file": "aurora.jpg",
+            "name": "Northern Lights",
+            "title": "Aurora in Fairbanks.jpg",
+            "artist": "Karthik Sridharan",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Aurora_in_Fairbanks.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/7/72/Aurora_in_Fairbanks.jpg",
+            "size": [
+              3840,
+              2560
+            ],
+            "sha256": "613d79b00f5adb22facef2a5431d05d3ae1f3a3df99c996e43ebca6f9004197b",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "canyon.jpg",
+            "name": "Canyon Sunset",
+            "title": "Grand Canyon South Rim at Sunset.jpg",
+            "artist": "Mgimelfarb",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/1/12/Grand_Canyon_South_Rim_at_Sunset.jpg",
+            "size": [
+              3840,
+              1226
+            ],
+            "sha256": "cffd167c9aaad604df8d4059830a7f731b00111cbe0ddc551dc7cc61b525dd37",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain. Long edge limited to 3840 pixels with Lanczos resampling; JPEG quality 92 with standard chroma subsampling and optimized progressive encoding."
+          },
+          {
+            "file": "coast.jpg",
+            "name": "Clear Coast",
+            "title": "Still and clear sea.jpg",
+            "artist": "Jdszekeres",
+            "artistUrl": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "license": "CC0",
+            "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "source": "https://commons.wikimedia.org/wiki/File:Still_and_clear_sea.jpg",
+            "download": "https://upload.wikimedia.org/wikipedia/commons/6/66/Still_and_clear_sea.jpg",
+            "size": [
+              3840,
+              2880
+            ],
+            "sha256": "bbab53a6e9a762d4715063419ee9a33ee298551f284ea70f80cdf55e976c8864",
+            "changes": "Auto-oriented, converted to sRGB and JPEG-recompressed for 4K displays; metadata removed. Public domain."
+          }
+        ]
+      },
+      "error": {
+        "type": "ValueError",
+        "message": "Bundled wallpaper source information is incomplete"
+      }
+    }
+  ]
+}

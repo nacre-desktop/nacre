@@ -119,6 +119,7 @@ def retire_native_helpers(directory):
         "kde-palette",
         "terminal-branding",
         "login-appearance",
+        "demo-wallpapers",
         "helper-service",
         "diagnostics",
         "menu-backend",
@@ -230,7 +231,7 @@ def deploy(code_only=False):
     # Licensed demo artwork is ready offline on fresh installs. Validate/cache the
     # bundled bytes; never import into or overwrite the private library.
     subprocess.run(
-        [str(runtime / "venv/bin/python"), str(DEST / "tools/demo-wallpapers.py")],
+        [str(target), "demo-wallpapers"],
         check=True,
         stdout=subprocess.DEVNULL,
     )

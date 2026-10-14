@@ -1547,5 +1547,39 @@
         }
       }
     }
+  },
+  "wave3_demo_wallpapers_busy_machine": {
+    "label": "busy machine; fresh non-fast verified cache hits; child user+system CPU; no wall-clock claim",
+    "rows": [
+      {
+        "implementation": "Python",
+        "count": 100,
+        "cpu_ms_per_call": 59.05798999999999,
+        "python_launches": 100
+      },
+      {
+        "implementation": "Rust",
+        "count": 100,
+        "cpu_ms_per_call": 10.38519,
+        "python_launches": 0
+      }
+    ],
+    "fast_receipt": {
+      "label": "busy machine; fresh fast stat-receipt cache hits; child user+system CPU; no wall-clock claim",
+      "rows": [
+        {
+          "implementation": "Python",
+          "count": 100,
+          "cpu_ms_per_call": 43.489760000000004,
+          "python_launches": 100
+        },
+        {
+          "implementation": "Rust",
+          "count": 100,
+          "cpu_ms_per_call": 0.9133700000000021,
+          "python_launches": 0
+        }
+      ]
+    }
   }
 }

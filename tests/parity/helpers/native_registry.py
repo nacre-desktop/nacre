@@ -19,6 +19,7 @@ MIGRATED = frozenset(
         "kde-palette",
         "terminal-branding",
         "login-appearance",
+        "demo-wallpapers",
         "launcher-preferences",
         "light-devices",
         "menu-backend",

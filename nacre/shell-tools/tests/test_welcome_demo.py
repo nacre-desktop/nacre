@@ -13,6 +13,10 @@ ROOT = Path(__file__).parents[1]
 
 
 def load(name):
+    if name == "demo-wallpapers":
+        import native_demo_wallpapers
+
+        return native_demo_wallpapers
     spec = importlib.util.spec_from_file_location(
         name.replace("-", "_"), ROOT / (name + ".py")
     )

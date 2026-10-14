@@ -1033,6 +1033,7 @@ dependencies = [
  "fancy-regex",
  "flate2",
  "futures-lite",
+ "image",
  "niri-ipc",
  "nix",
  "nvml-wrapper",

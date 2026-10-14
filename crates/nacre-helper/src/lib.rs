@@ -7,6 +7,7 @@ pub mod compositor_config;
 pub mod dashboard_data;
 pub mod dashboard_media;
 pub mod dashboard_system;
+pub mod demo_wallpapers;
 pub mod diagnostics;
 pub mod diagnostics_native;
 pub mod files;

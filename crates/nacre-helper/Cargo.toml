@@ -12,6 +12,7 @@ orient-decoder = { path = "../../deps/orient/crates/orient-decoder" }
 serde.workspace = true
 serde_json.workspace = true
 base64 = "=0.23.1"
+image = { version = "=0.25.9", default-features = false, features = ["jpeg", "png", "webp"] }
 sha2 = "0.10"
 tempfile = "3"
 regex = "1"

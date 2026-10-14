@@ -1130,3 +1130,18 @@ checks retain private/staged-home boundaries and existing file modes. Absolute
 XDG roots and journaled image/publication failures are intended differences.
 The generic Orient image-preview API changes the decoder build fingerprint;
 its core palette output and prior frozen image/artwork outputs stay unchanged.
+
+### Wave 3 demo wallpapers (busy machine)
+
+One hundred fresh calls revalidating the already cached four-image collection
+measured child user + system CPU of 59.058→10.385 ms per call. Direct Python
+starts were 100→0. This retains full collection checks on ordinary calls; the
+existing stat-receipt fast path remains available to the picker: 100 fresh fast
+calls measured 43.490→0.913 ms CPU, with Python starts 100→0. These helper
+numbers are not whole-desktop action timings.
+
+Fourteen frozen cases preserve licensed collection metadata, cached image
+bytes, file modes, source/destination stat receipts and damaged/missing-file
+repair. The bundle remains offline and the private wallpaper library is untouched.
+Absolute XDG cache roots and surfaced unexpected receipt I/O errors are intended
+differences. Existing cache identities and receipts remain readable.

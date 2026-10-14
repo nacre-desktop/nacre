@@ -787,7 +787,16 @@ def demo_scenes():
             ]
         except (OSError, ValueError, subprocess.SubprocessError):
             pass
-    return demo_module("demo-wallpapers").ensure(HOME, fast=True)
+    from nacre_native_config import _binary
+
+    result = subprocess.run(
+        [str(_binary()), "demo-wallpapers", "--home", str(HOME), "--fast"],
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
+        timeout=60,
+    )
+    return json.loads(result.stdout)
 
 
 def demo_start():
