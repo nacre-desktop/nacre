@@ -12,6 +12,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--compositor", choices=("hyprland", "niri", "both"), required=True)
@@ -128,7 +129,14 @@ if backend in {"niri", "both"}:
         '"nacre-niri-startup.service"'
         in (home / ".config/nacre/niri/config.kdl").read_text()
     )
-    run("systemd-analyze", "--user", "verify", str(startup))
+    with tempfile.TemporaryDirectory(prefix="nacre-unit-verify-") as runtime:
+        verified = subprocess.run(
+            ["systemd-analyze", "--user", "verify", str(startup)],
+            env={**os.environ, "XDG_RUNTIME_DIR": runtime},
+            text=True,
+            capture_output=True,
+        )
+        assert verified.returncode == 0, verified.stderr
 if backend in {"hyprland", "both"}:
     assert Path("/usr/share/wayland-sessions/nacre-hyprland.desktop").is_file()
     assert (home / ".config/systemd/user/nacre-hyprland.target").is_file()

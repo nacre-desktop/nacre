@@ -483,15 +483,19 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertIn("After=graphical-session.target", startup.read_text())
                 self.assertIn("RemainAfterExit=yes", startup.read_text())
                 if shutil.which("systemd-analyze"):
-                    subprocess.run(
+                    runtime = home / "verify-runtime"
+                    runtime.mkdir(mode=0o700)
+                    verified = subprocess.run(
                         ["systemd-analyze", "--user", "verify", str(startup)],
                         env={
                             **os.environ,
+                            "XDG_RUNTIME_DIR": str(runtime),
                             "SYSTEMD_UNIT_PATH": str(startup.parent) + ":",
                         },
-                        check=True,
+                        text=True,
                         capture_output=True,
                     )
+                    self.assertEqual(verified.returncode, 0, verified.stderr)
                 for path, content in before.items():
                     self.assertEqual(path.read_bytes(), content)
                 releases.restore(Path(record["release"]), record)
