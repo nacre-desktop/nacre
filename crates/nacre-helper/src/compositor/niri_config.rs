@@ -105,9 +105,6 @@ pub fn desktop(preferences: &Value) -> Result<String> {
         }
     }
     let mut lines = Vec::new();
-    if let Some(layout) = preferences.get("keyboardLayouts") {
-        lines.push(keyboard(&serde_json::json!({"layout":layout}))?);
-    }
     if let Some(value) = preferences.get("animations") {
         lines.push(format!(
             "animations {{ {} }}",
@@ -143,6 +140,12 @@ pub fn desktop(preferences: &Value) -> Result<String> {
         lines.push(format!("window-rule {{\n    {}\n}}", rules.join("\n    ")));
     }
     let mut input = Vec::new();
+    if let Some(layout) = preferences.get("keyboardLayouts") {
+        input.push(format!(
+            "keyboard {{\n        xkb {{ layout {}; }}\n    }}",
+            text(layout)?
+        ));
+    }
     if preferences.get("followMouse") == Some(&Value::Bool(true)) {
         input.push("focus-follows-mouse".to_string());
     }
@@ -545,5 +548,16 @@ mod tests {
         }
         assert_eq!(count, 34);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod input_node_regression {
+    #[test]
+    fn layout_scroll_and_touchpad_share_one_input_node() {
+        let output = super::desktop(&serde_json::json!({"keyboardLayouts":"no","naturalScroll":true,"touchpadEnabled":false})).unwrap();
+        assert_eq!(output.matches("input {").count(), 1);
+        assert!(output.contains("layout \"no\""));
+        assert!(output.contains("touchpad { off; natural-scroll;"));
     }
 }
