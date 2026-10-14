@@ -165,8 +165,8 @@ TestCase {
  function test_side_arrow_is_readable_and_target_reaches_above_and_below_it(){
   DesktopSettings.data={animations:true};const view=createTemporaryObject(scene,this);mouseMove(view,500,180);wait(30);
   const tab=findChild(view,"frameRightLip"),arrow=findChild(tab,"edgeTabArrow");
-  compare(arrow.height,16);verify(arrow.width>=6);verify(arrow.x>=0 && arrow.x+arrow.width<=tab.width);
-  const patch=findChild(tab,"edgeTabPatch");compare(patch.height,38);verify(patch.x>=0 && patch.x+patch.width<=tab.width);
+  compare(arrow.height,18);verify(arrow.width>=6);verify(arrow.x>=0 && arrow.x+arrow.width<=tab.width);
+  const patch=findChild(tab,"edgeTabPatch");compare(patch.height,46);verify(patch.x>=0 && patch.x+patch.width<=tab.width);
   mouseMove(view,view.width-3,view.height/2-60);wait(430);verify(view.flags.osd);
   mouseClick(view,view.width-3,view.height/2-60);verify(!view.flags.osd);
   mouseMove(view,500,180);wait(30);

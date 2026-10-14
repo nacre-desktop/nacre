@@ -15,17 +15,30 @@ Item {
         id: patch
         objectName: "edgeTabPatch"
         width: Math.max(0, parent.width - 2)
-        height: 38
+        height: 46
         anchors.centerIn: parent
         radius: Math.min(3, width / 2)
-        color: Qt.tint(NacreTokens.frame, Qt.alpha(NacreTokens.accent, .18 + .12 * root.amount))
+        opacity: .72 + .23 * root.amount
+        // Foreground contrast uses the painted gradient's midpoint over the wall.
+        readonly property color midpoint: Qt.tint(NacreTokens.accent, Qt.alpha(NacreTokens.orientSecondary, .5))
+        color: Qt.tint(NacreTokens.frame, Qt.alpha(midpoint, opacity))
+        gradient: Gradient {
+            GradientStop {
+                position: 0
+                color: NacreTokens.accent
+            }
+            GradientStop {
+                position: 1
+                color: NacreTokens.orientSecondary
+            }
+        }
     }
     Shape {
         id: arrow
         objectName: "edgeTabArrow"
         readonly property bool pointsRight: root.edge === "left" ? !root.active : root.active
         width: Math.max(0, Math.min(8, parent.width - 2))
-        height: 16
+        height: 18
         visible: width >= 4
         x: (parent.width - width) / 2
         anchors.verticalCenter: parent.verticalCenter
