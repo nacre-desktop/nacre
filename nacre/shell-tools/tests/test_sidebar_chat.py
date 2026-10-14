@@ -126,8 +126,8 @@ class SidebarTests(unittest.TestCase):
                 manager = module.Manager()
                 setter = Mock()
                 with patch.object(
-                    module.runpy,
-                    "run_path",
+                    __import__("nacre_ai_controller"),
+                    "load",
                     return_value={"set_default_assistant": setter},
                 ):
                     manager.handle(dict(action="provider", provider="claude"))

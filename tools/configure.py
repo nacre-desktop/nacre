@@ -58,6 +58,7 @@ def files(root=ROOT):
         "nacre-welcome",
         "orient",
         "nacre-terminal-logo",
+        "nacre-terminal",
         "nacre-brain",
         "nacre-brain-maintain",
         "nacre-brain-sync",
@@ -78,6 +79,9 @@ def files(root=ROOT):
     )
     result[Path(".local/share/applications/nacre-settings.desktop")] = (
         root / "nacre/desktop/nacre-settings.desktop"
+    )
+    result[Path(".local/share/applications/nacre-terminal.desktop")] = (
+        root / "nacre/desktop/nacre-terminal.desktop"
     )
     result[Path(".local/share/applications/nacre-brain.desktop")] = (
         root / "nacre/desktop/nacre-brain.desktop"
@@ -266,7 +270,11 @@ def plan(
     )
     known = {key: value for key, value in known.items() if key not in seeds}
     for relative, source in desired.items():
-        if str(relative) in seeds and (home / relative).exists():
+        if (
+            str(relative) in seeds
+            and (home / relative).exists()
+            and not legacy_empty_launcher(relative, home / relative)
+        ):
             continue  # Defaults seed first login; later palette/private state stays local.
         dest = home / relative
         current, wanted = digest(dest), wanted_digest(source, home)
@@ -286,6 +294,7 @@ def plan(
             and not (
                 str(relative) not in known and current == LEGACY_SYNC.get(str(relative))
             )
+            and not (str(relative) in seeds and legacy_empty_launcher(relative, dest))
             and not (
                 relative == Path(".config/hypr/hyprland.lua")
                 and power_policy(home, root, migrate_idle) is not None
@@ -315,6 +324,26 @@ def plan(
             raise RuntimeError(f"Local edit preserved: {dest}")
         changed.append((Path(relative), None))
     return changed, links, known
+
+
+def legacy_empty_launcher(relative, path):
+    # Migrate an empty first-preview launcher once, preserving hidden/usage
+    # metadata. After the defaults receipt exists, a cleared list stays empty.
+    if str(relative) != ".config/nacre/launcher.json" or path.is_symlink():
+        return False
+    home = path.parents[2]
+    if (home / ".local/state/nacre/defaults.json").exists():
+        return False
+    try:
+        data = json.loads(path.read_text())
+        return (
+            isinstance(data, dict)
+            and data.get("favorites") == []
+            and isinstance(data.get("hidden"), list)
+            and set(data) <= {"favorites", "hidden", "recent", "usage"}
+        )
+    except (OSError, ValueError):
+        return False
 
 
 def apply(

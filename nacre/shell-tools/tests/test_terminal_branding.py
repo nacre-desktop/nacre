@@ -27,6 +27,43 @@ spec.loader.exec_module(branding)
 
 
 class TerminalBrandingTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("fish"), "Fish unavailable")
+    def test_nacre_terminal_overrides_distro_greeting_without_changing_user_config(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            commands = home / "bin"
+            commands.mkdir()
+            (commands / "nacre-terminal-logo").write_text(
+                '#!/bin/sh\ntest "$1" = --prepare\n'
+            )
+            (commands / "fastfetch").write_text(
+                '#!/bin/sh\ntest "$1" = --config && test "$2" = "$HOME/.config/nacre/terminal/fastfetch.jsonc" || exit 1\nprintf "NACRE_GREETING_OK\\n"\n'
+            )
+            for path in commands.iterdir():
+                path.chmod(0o755)
+            result = subprocess.run(
+                [
+                    "fish",
+                    "--no-config",
+                    "-c",
+                    "function fish_greeting; echo CACHYOS_GREETING; end; source $argv[1]; fish_greeting",
+                    str(ROOT / "kitty/greeting.fish"),
+                ],
+                env={
+                    **os.environ,
+                    "HOME": str(home),
+                    "PATH": str(commands) + os.pathsep + os.environ["PATH"],
+                },
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), "NACRE_GREETING_OK")
+            self.assertFalse((home / ".config/fish").exists())
+
     @unittest.skipUnless(shutil.which("rsvg-convert"), "SVG renderer unavailable")
     def test_prepared_branding_reuses_pixels_and_invalidates_changed_geometry(self):
         with tempfile.TemporaryDirectory() as directory:

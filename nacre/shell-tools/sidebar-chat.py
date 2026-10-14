@@ -7,7 +7,6 @@ import re
 import json
 import os
 import queue
-import runpy
 import signal
 import socket
 import subprocess
@@ -115,19 +114,19 @@ def atomic(path, value):
 
 
 def preferences():
-    w = runpy.run_path(str((HOME / ".local/bin/nacre-ai").resolve()))
+    from nacre_ai_controller import load
+
+    w = load(home=HOME)
     agent = w["default_assistant"]()
     return agent, w["effective_account"](agent)
 
 
 def env_for(agent, account):
+    from nacre_ai_controller import load
+
     if agent == "codex":
-        return runpy.run_path(str((HOME / ".local/bin/nacre-ai").resolve()))[
-            "local_environment"
-        ](account)
-    return runpy.run_path(str((HOME / ".local/bin/nacre-ai-claude").resolve()))[
-        "environment"
-    ](account)
+        return load(home=HOME)["local_environment"](account)
+    return load("nacre-ai-claude", home=HOME)["environment"](account)
 
 
 def friendly_error(error):
@@ -882,7 +881,9 @@ class Manager:
             agent = command.get("provider")
             if agent not in ("codex", "claude"):
                 return
-            workflow = runpy.run_path(str((HOME / ".local/bin/nacre-ai").resolve()))
+            from nacre_ai_controller import load
+
+            workflow = load(home=HOME)
             workflow["set_default_assistant"](agent)
             self.update()
         elif action == "workspace":

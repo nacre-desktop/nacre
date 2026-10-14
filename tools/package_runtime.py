@@ -22,6 +22,52 @@ def files(root, profile):
     return result
 
 
+def presentation_seed(home, common, temporary):
+    """A first image needs its palette record too; keep existing private choices."""
+    relative = Path(".local/state/nacre/presentation.json")
+    if relative not in common or (home / relative).exists():
+        return common
+    data = json.loads(common[relative].read_text())
+    wallpaper = home / ".local/state/nacre/wallpaper/last.txt"
+    if wallpaper.is_file():
+        path = Path(wallpaper.read_text().strip())
+        if path.is_absolute() and path.is_file():
+            data["poster"] = str(path)
+    scheme = home / ".local/state/nacre/scheme.json"
+    if scheme.is_file():
+        values = json.loads(scheme.read_text())
+        if isinstance(values.get("colours"), dict) and values.get("mode") in (
+            "light",
+            "dark",
+        ):
+            data["colours"] = values["colours"]
+            data["mode"] = values["mode"]
+    source = temporary / "presentation.json"
+    source.write_text(json.dumps(data))
+    return {**common, relative: source}
+
+
+def launcher_seed(home, common, temporary):
+    from configure import legacy_empty_launcher
+
+    relative = Path(".config/nacre/launcher.json")
+    target = home / relative
+    if (
+        relative not in common
+        or not target.exists()
+        or not legacy_empty_launcher(relative, target)
+    ):
+        return common
+    data = json.loads(target.read_text())
+    defaults = json.loads(common[relative].read_text())
+    data["favorites"] = [
+        name for name in defaults["favorites"] if name not in data["hidden"]
+    ]
+    source = temporary / "launcher.json"
+    source.write_text(json.dumps(data))
+    return {**common, relative: source}
+
+
 def links(root, profile, compositor="hyprland"):
     values = {
         ".local/share/nacre/shell/source": root / "nacre/shell",

@@ -32,8 +32,15 @@ that user. It verifies signing fingerprint
 are required. It backs up pacman.conf before adding its dedicated include. It
 does not replace Arch/CachyOS repositories or their package signatures.
 
-The wizard offers Niri, Hyprland or both, keyboard/profile choices and optional
-AI/Brain apps. It installs missing dependencies through pacman. You need a
+The wizard asks only which compositor(s) to use and whether to enable AI tools
+(Nacre AI and Brain). Enter `niri,hyprland` to prepare both, with the first as
+primary. It inherits the system keyboard, keeps an existing profile, and seeds
+a bundled wallpaper and useful launcher favorites. Keyboard and profile
+overrides remain available through command-line options and Settings.
+
+Missing dependencies are installed through pacman. Routine provider defaults
+follow the configured repository priority, with FFmpeg selected for Qt's
+multimedia backend. Pacman's transaction approval remains interactive. You need a
 working network and a normal local user login. If there is no display manager,
 log out of any existing graphical session and start the prepared login from a
 TTY with `nacre session niri` or `nacre session hyprland`. An existing login
@@ -54,8 +61,8 @@ nacre setup
 Pacman installs shared code and resolves repository dependencies. Run setup as
 your ordinary user, without sudo. Binary installation needs no compiler, npm or
 Python package downloads. The wizard confirms keyboard layout, compositor,
-optional apps and profile, then shows the private files it will deploy and asks
-before applying. A custom profile is a validated JSON file; see
+optional AI tools, then asks before applying. `nacre setup --plan` shows the
+complete private file plan. A custom profile is a validated JSON file; see
 [configuration](configuration.md).
 
 For an explicit preview or unattended application:

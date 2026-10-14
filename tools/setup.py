@@ -88,16 +88,11 @@ def selection(args, root, home, interactive):
             tr(
                 "setup.keyboard.detected",
                 "System keyboard: {keyboard}",
-                {"keyboard": json.dumps(keyboard)},
+                {"keyboard": keyboard["layout"]},
             )
         )
     for name in ("layout", "variant", "model", "options"):
         value = getattr(args, name)
-        if value is None and interactive:
-            value = ask(
-                tr("setup.prompt.keyboard", "Keyboard {option}", {"option": name}),
-                keyboard[name],
-            )
         if value is not None:
             if value and not re.fullmatch(r"[a-zA-Z0-9_+:,.-]{1,200}", value):
                 raise ValueError(
@@ -135,7 +130,9 @@ def selection(args, root, home, interactive):
         if interactive
         else detected
     )
-    if compositor not in choices:
+    selected = [name.strip().lower() for name in compositor.split(",")]
+    compositor, *from_prompt = selected
+    if any(name not in choices for name in selected):
         raise ValueError(
             tr(
                 "setup.error.unavailable-backend",
@@ -143,20 +140,7 @@ def selection(args, root, home, interactive):
                 {"compositor": compositor},
             )
         )
-    additional = list(getattr(args, "additional_compositors", []))
-    if interactive and len(choices) > 1:
-        value = ask(
-            tr(
-                "setup.prompt.additional-compositors",
-                "Additional compositors (comma separated, or none)",
-            ),
-            ",".join(additional) if additional else "none",
-        )
-        additional = (
-            []
-            if value.lower() == "none"
-            else [name.strip() for name in value.split(",")]
-        )
+    additional = [*from_prompt, *getattr(args, "additional_compositors", [])]
     if any(name not in choices for name in additional):
         raise ValueError("Unknown additional compositor")
     args.additional_compositors = [
@@ -164,17 +148,6 @@ def selection(args, root, home, interactive):
     ]
     profiles = policy(root)
     chosen = args.profile
-    if chosen is None and interactive:
-        chosen = ask(
-            tr(
-                "setup.prompt.profile",
-                "Profile ({default} or JSON path; {installed} keeps current)",
-                {"default": "default", "installed": "installed"},
-            ),
-            "installed"
-            if (home / ".config/nacre/profile.json").exists()
-            else "default",
-        )
     if chosen in (None, "installed"):
         profile = profiles.load(home)
     else:
@@ -187,30 +160,31 @@ def selection(args, root, home, interactive):
     profile = copy.deepcopy(profile)
     optional = list(args.optional)
     if interactive:
-        for name in ("ai", "brain"):
-            default = (
-                "yes" if name in profile["components"] or name in optional else "no"
-            )
-            enabled = ask(
+        default = (
+            "yes" if {"ai", "brain"} & set(profile["components"] + optional) else "no"
+        )
+        enabled = ask(
+            tr(
+                "setup.prompt.ai-tools",
+                "Enable AI tools ({ai} and {brain})?",
+                {"ai": "Nacre AI", "brain": "Brain"},
+            ),
+            default,
+        ).lower()
+        if enabled not in ("yes", "no", "y", "n"):
+            raise ValueError(
                 tr(
-                    "setup.prompt.optional",
-                    "Enable optional {component}",
-                    {"component": name},
-                ),
-                default,
-            ).lower()
-            if enabled not in ("yes", "no", "y", "n"):
-                raise ValueError(
-                    tr(
-                        "setup.error.answer-yes-no",
-                        "Answer {yes} or {no}",
-                        {"yes": "yes", "no": "no"},
-                    )
+                    "setup.error.answer-yes-no",
+                    "Answer {yes} or {no}",
+                    {"yes": "yes", "no": "no"},
                 )
-            profile["components"] = [c for c in profile["components"] if c != name]
-            optional = [value for value in optional if value != name]
-            if enabled in ("yes", "y"):
-                optional.append(name)
+            )
+        profile["components"] = [
+            c for c in profile["components"] if c not in ("ai", "brain")
+        ]
+        optional = [value for value in optional if value not in ("ai", "brain")]
+        if enabled in ("yes", "y"):
+            optional.extend(("ai", "brain"))
     profile["components"] = list(
         dict.fromkeys(["configs", "shell", *profile["components"], *optional])
     )
@@ -359,9 +333,10 @@ def main(argv=None):
                     {"keyboard": json.dumps(keyboard)},
                 )
             )
-            print(tr("setup.plan.files", "Private file plan:"))
-            for path in plan:
-                print("  " + str(path))
+            if args.plan:
+                print(tr("setup.plan.files", "Private file plan:"))
+                for path in plan:
+                    print("  " + str(path))
             if missing:
                 print(
                     tr(

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Nacre Terminal
+Comment=Terminal with Nacre appearance
+Exec=nacre-terminal
+Icon=utilities-terminal
+Terminal=false
+Categories=System;TerminalEmulator;

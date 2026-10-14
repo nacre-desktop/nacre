@@ -292,7 +292,8 @@ take over immediately when available; both modes stop when hidden or paused.
 Volume and connections remain in the right-side controls. Optional pages stay off by default; Focus can
 be enabled without adding the other extras to the top strip.
 
-**City photos in Weather**, in Customize or Settings → Workflows, is opt-in.
+**City photos in Weather**, in Customize or Settings → Workflows, is enabled
+by default for new settings; an existing off preference is preserved.
 It sends the city name to Wikipedia/Wikimedia, checks the place against the
 existing weather coordinates locally, and caches one bounded raster photo for
 seven days. The photo credit opens its Commons source. Failed lookups use local

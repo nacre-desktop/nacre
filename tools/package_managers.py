@@ -27,9 +27,11 @@ class Arch:
         # A full upgrade keeps Arch/CachyOS libraries coherent. Pacman's normal
         # transaction preview/password prompt remains the owner of installation.
         try:
-            subprocess.run(
-                ["sudo", "pacman", "-Syu", "--needed", "--", *packages], check=True
-            )
+            from package_transaction import transaction
+
+            status = transaction(packages)
+            if status:
+                raise subprocess.CalledProcessError(status, "pacman")
         except subprocess.CalledProcessError as error:
             raise RuntimeError(
                 "Package installation did not complete; no configuration was applied. "

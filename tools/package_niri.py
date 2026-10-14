@@ -211,6 +211,21 @@ def validate(config):
         raise RuntimeError("Niri configuration validation timed out") from error
 
 
+def command(config):
+    return [
+        "uwsm",
+        "start",
+        "-e",
+        "-D",
+        "niri",
+        "--",
+        "niri",
+        "--session",
+        "--config",
+        str(config),
+    ]
+
+
 def session(home=None):
     home = Path.home() if home is None else home
     config = home / ".config/nacre/niri/config.kdl"
@@ -232,17 +247,7 @@ def session(home=None):
         environment.pop(name, None)
     os.execvpe(
         "uwsm",
-        [
-            "uwsm",
-            "start",
-            "-e",
-            "-D",
-            "niri",
-            "niri",
-            "--session",
-            "--config",
-            str(config),
-        ],
+        command(config),
         environment,
     )
 

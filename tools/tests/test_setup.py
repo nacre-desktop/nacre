@@ -29,6 +29,60 @@ def load(path, name):
 
 
 class PackageSetupTests(unittest.TestCase):
+    def test_initial_wallpaper_record_keeps_private_palette_and_image(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            home = base / "home"
+            state = home / ".local/state/nacre"
+            state.mkdir(parents=True)
+            image = home / "custom.jpg"
+            image.write_bytes(b"fixture image")
+            (state / "wallpaper").mkdir()
+            (state / "wallpaper/last.txt").write_text(str(image))
+            (state / "scheme.json").write_text(
+                json.dumps({"mode": "light", "colours": {"primary": "#123456"}})
+            )
+            template = base / "template.json"
+            template.write_text(
+                json.dumps(
+                    {"mode": "dark", "colours": {}, "poster": "/bundled/forest.jpg"}
+                )
+            )
+            relative = Path(".local/state/nacre/presentation.json")
+            values = package_runtime.presentation_seed(home, {relative: template}, base)
+            seeded = json.loads(values[relative].read_text())
+            self.assertEqual(seeded["mode"], "light")
+            self.assertEqual(seeded["poster"], str(image))
+            self.assertEqual(seeded["colours"], {"primary": "#123456"})
+            self.assertFalse((state / "presentation.json").exists())
+
+    def test_empty_preview_launcher_defaults_upgrade_but_cleared_user_favorites_stay(
+        self,
+    ):
+        import configure
+
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            relative = Path(".config/nacre/launcher.json")
+            source = root / "deployment/core" / relative
+            source.write_text('{"favorites":["nacre-terminal.desktop"],"hidden":[]}')
+            (root / "seed-paths.json").write_text(json.dumps([str(relative)]))
+            target = home / relative
+            target.parent.mkdir(parents=True)
+            target.write_text('{"favorites":[],"hidden":[]}')
+            with patch.object(configure, "selected_profile", return_value=profile):
+                configure.apply(home, root, only=[str(relative)])
+                self.assertEqual(
+                    json.loads(target.read_text())["favorites"],
+                    ["nacre-terminal.desktop"],
+                )
+                marker = home / ".local/state/nacre/defaults.json"
+                marker.parent.mkdir(parents=True, exist_ok=True)
+                marker.write_text('{"launcher":1}')
+                target.write_text('{"favorites":[],"hidden":[],"recent":[],"usage":{}}')
+                configure.apply(home, root, only=[str(relative)])
+                self.assertEqual(json.loads(target.read_text())["favorites"], [])
+
     def fixture(self, folder):
         root = Path(folder) / "package"
         home = Path(folder) / "home"
@@ -97,31 +151,23 @@ class PackageSetupTests(unittest.TestCase):
                 ):
                     results.append(setup.selection(args, root, home, True))
                 prompts.append(labels)
-                self.assertIn(json.dumps(keyboard_values), output.getvalue())
+                self.assertIn(keyboard_values["layout"], output.getvalue())
             self.assertEqual(results[0], results[1])
             self.assertEqual(results[0][1], keyboard_values)
             self.assertEqual(results[0][2], "hyprland")
             self.assertEqual(
                 prompts[0],
                 [
-                    "Keyboard layout",
-                    "Keyboard variant",
-                    "Keyboard model",
-                    "Keyboard options",
                     "Compositor (hyprland)",
-                    "Profile (default or JSON path; installed keeps current)",
-                    "Enable optional ai",
-                    "Enable optional brain",
+                    "Enable AI tools (Nacre AI and Brain)?",
                 ],
             )
             for caption in prompts[1]:
                 self.assertTrue(caption.startswith("["), caption)
             for token, caption in [
-                ("hyprland", prompts[1][4]),
-                ("default", prompts[1][5]),
-                ("installed", prompts[1][5]),
-                ("ai", prompts[1][6]),
-                ("brain", prompts[1][7]),
+                ("hyprland", prompts[1][0]),
+                ("Nacre AI", prompts[1][1]),
+                ("Brain", prompts[1][1]),
             ]:
                 self.assertIn(token, caption)
             with patch.dict(os.environ, {"NACRE_LANGUAGE": "en"}):
@@ -585,6 +631,27 @@ class PackageSetupTests(unittest.TestCase):
             with patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": "niri"}):
                 self.assertEqual(setup.selection(args, root, home, False)[2], "niri")
 
+    def test_normal_wizard_only_asks_compositors_and_ai_tools(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, _ = self.niri_fixture(folder)
+            args = setup.argparse.Namespace(
+                layout=None,
+                variant=None,
+                model=None,
+                options=None,
+                compositor=None,
+                profile=None,
+                optional=[],
+            )
+            with patch.object(
+                setup, "ask", side_effect=["niri,hyprland", "yes"]
+            ) as prompts:
+                profile, _, primary = setup.selection(args, root, home, True)
+            self.assertEqual(prompts.call_count, 2)
+            self.assertEqual(primary, "niri")
+            self.assertEqual(args.additional_compositors, ["hyprland"])
+            self.assertTrue({"ai", "brain"} <= set(profile["components"]))
+
     def test_dependencies_check_providers_and_selected_niri_requirements(self):
         with tempfile.TemporaryDirectory() as folder:
             root, _, profile = self.fixture(folder)
@@ -680,7 +747,9 @@ class PackageSetupTests(unittest.TestCase):
             )
             command, arguments, environment = execute.call_args.args
             self.assertEqual(command, "uwsm")
-            self.assertEqual(arguments[-3:], ["--session", "--config", config])
+            self.assertEqual(
+                arguments[5:], ["--", "niri", "--session", "--config", config]
+            )
             self.assertEqual(environment["NACRE_COMPOSITOR"], "niri")
             self.assertNotIn("HYPRLAND_INSTANCE_SIGNATURE", environment)
             self.assertNotIn("GDK_BACKEND", environment)
@@ -884,4 +953,23 @@ class ArchPackageLayoutTests(unittest.TestCase):
                 0o755,
             )
             self.assertIn(Path("usr/bin/nacre"), owned)
+            core = base / "core/usr/share/nacre"
+            wallpaper = (
+                (core / "deployment/core/.local/state/nacre/wallpaper/last.txt")
+                .read_text()
+                .strip()
+            )
+            self.assertTrue((base / "core" / wallpaper.lstrip("/")).is_file())
+            self.assertIn(
+                "nacre-terminal",
+                json.loads(
+                    (core / "deployment/core/.config/nacre/launcher.json").read_text()
+                )["favorites"],
+            )
+            self.assertIn(
+                "shell fish --init-command",
+                (
+                    core / "deployment/core/.config/nacre/terminal/kitty.conf"
+                ).read_text(),
+            )
             self.assertIn(Path("usr/share/nacre/brain/templates/AGENTS.md"), owned)

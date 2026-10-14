@@ -7,7 +7,6 @@ import hashlib
 import json
 import os
 import re
-import runpy
 import subprocess
 import sys
 import unicodedata
@@ -79,7 +78,9 @@ def launch(command):
 
 
 def ai():
-    return runpy.run_path(str((HOME / ".local/bin/nacre-ai").resolve()))
+    from nacre_ai_controller import load
+
+    return load(home=HOME)
 
 
 def chat_list():

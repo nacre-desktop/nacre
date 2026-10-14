@@ -499,6 +499,10 @@ def package_configuration(repo, profile, keyboard, compositor, *, validate_confi
             scope = ()
             desired = {}
             common = original_files(repo)
+            import package_runtime
+
+            common = package_runtime.presentation_seed(HOME, common, Path(temporary))
+            common = package_runtime.launcher_seed(HOME, common, Path(temporary))
             for name in package_sessions.backends(compositor):
                 backend = package_sessions.integration(repo, name)
                 if backend is None:

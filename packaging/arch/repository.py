@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+import shlex
 import subprocess
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -295,7 +296,11 @@ def build(root, artifacts, output, fingerprint, revision, run_id, previous=None)
     )
     sign(checksums, fingerprint)
     shutil.copy2(root / "packaging/keys/nacre-repo.asc", output / "nacre-repo.asc")
-    shutil.copy2(root / "packaging/arch/bootstrap.sh", output / "install-arch.sh")
+    bootstrap = (root / "packaging/arch/bootstrap.sh").read_text()
+    if "@NACRE_PACMAN_FRONTEND@" in bootstrap:
+        frontend = (root / "tools/package_transaction.py").read_text() + "\nmain()\n"
+        bootstrap = bootstrap.replace("@NACRE_PACMAN_FRONTEND@", shlex.quote(frontend))
+    (output / "install-arch.sh").write_text(bootstrap)
     sign(output / "install-arch.sh", fingerprint)
     links = "\n".join(
         '<li><a href="arch/dev/x86_64/'

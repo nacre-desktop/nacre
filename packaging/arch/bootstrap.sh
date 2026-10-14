@@ -45,5 +45,9 @@ if ! grep -Fxq "$include" /etc/pacman.conf; then
   sudo cp -a /etc/pacman.conf "/etc/pacman.conf.nacre-backup-$(date -u +%Y%m%dT%H%M%SZ)"
   printf '\n%s\n' "$include" | sudo tee -a /etc/pacman.conf >/dev/null
 fi
-sudo pacman -Syu --needed nacre
+if ! command -v python3 >/dev/null; then
+  sudo pacman -Syu --needed python
+fi
+# The publisher embeds the same provider-aware transaction code used by setup.
+python3 -c @NACRE_PACMAN_FRONTEND@ nacre
 exec nacre setup

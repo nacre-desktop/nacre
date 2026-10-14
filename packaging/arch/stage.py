@@ -78,6 +78,7 @@ def stage(root, destination, component, build):
             "nacre-colors",
             "nacre-welcome",
             "nacre-terminal-logo",
+            "nacre-terminal",
             "xdg-open",
         ):
             copy(root / "bin" / name, shared / "bin" / name)
@@ -143,12 +144,53 @@ def stage(root, destination, component, build):
             if source.suffix not in (".png", ".jpg", ".webp"):
                 try:
                     target.write_text(
-                        source.read_text().replace(
-                            str(build / "defaults"), "@NACRE_HOME@"
-                        )
+                        source.read_text()
+                        .replace(str(build / "defaults"), "@NACRE_HOME@")
+                        .replace(str(root), "/usr/share/nacre")
                     )
                 except UnicodeDecodeError:
                     pass
+        # First-login defaults are private seeds, never re-applied over choices.
+        text(
+            ".local/state/nacre/wallpaper/last.txt",
+            "/usr/share/nacre/nacre/shell-tools/demo-wallpapers/forest.jpg\n",
+        )
+        text(
+            ".config/nacre/launcher.json",
+            json.dumps(
+                {
+                    "favorites": [
+                        "nacre-welcome",
+                        "nacre-settings",
+                        "nacre-colors",
+                        "nacre-ai",
+                        "nacre-brain",
+                        "nacre-terminal",
+                        "org.kde.dolphin",
+                    ],
+                    "hidden": [],
+                }
+            )
+            + "\n",
+        )
+        text(".local/state/nacre/defaults.json", '{"launcher":1}\n')
+        terminal = ".config/nacre/terminal/"
+        text(
+            terminal + "kitty.conf",
+            (root / "kitty/kitty.conf").read_text()
+            + "\nshell fish --init-command 'source \"$HOME/.config/nacre/terminal/greeting.fish\"'\n",
+        )
+        copy(root / "kitty/greeting.fish", deploy / terminal / "greeting.fish")
+        copy(root / "fastfetch/system-age.sh", deploy / terminal / "system-age.sh")
+        text(
+            terminal + "fastfetch.jsonc",
+            (root / "fastfetch/config.jsonc")
+            .read_text()
+            .replace(
+                "$HOME/.config/fastfetch/system-age.sh",
+                "$HOME/.config/nacre/terminal/system-age.sh",
+            ),
+        )
         (shared / "seed-paths.json").write_text(
             json.dumps(
                 [
@@ -156,6 +198,11 @@ def stage(root, destination, component, build):
                     for p in (build / "defaults").rglob("*")
                     if p.is_file()
                     and (".cache" not in p.parts or "lock-ready" in p.parts)
+                ]
+                + [
+                    ".local/state/nacre/wallpaper/last.txt",
+                    ".config/nacre/launcher.json",
+                    ".local/state/nacre/defaults.json",
                 ]
             )
         )

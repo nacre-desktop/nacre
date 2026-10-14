@@ -110,6 +110,9 @@ def build(root, output, sources):
     state = home / ".local/state/nacre"
     state.mkdir(parents=True, exist_ok=True)
     shutil.copy2(tools / "reference-style.json", state / "scheme.json")
+    wallpaper = state / "wallpaper/last.txt"
+    wallpaper.parent.mkdir(parents=True, exist_ok=True)
+    wallpaper.write_text(str(tools / "demo-wallpapers/forest.jpg") + "\n")
     for version in ("3.0", "4.0"):
         settings = home / f".config/gtk-{version}/settings.ini"
         settings.parent.mkdir(parents=True, exist_ok=True)

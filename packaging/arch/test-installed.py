@@ -75,6 +75,7 @@ base = (
 )
 if backend == "both":
     base += ("--also-compositor", "hyprland")
+os.environ["NACRE_COMPOSITOR"] = "hyprland" if backend == "hyprland" else "niri"
 run(*base, "--plan")
 assert not (home / ".config/nacre").exists()
 account = home / ".codex/account-fixture"
@@ -89,6 +90,9 @@ assert profile["aiFullAccess"] is False and {"ai", "brain", "configs", "shell"} 
 )
 keyboard = home / ".config/nacre/keyboard.lua"
 assert '"no"' in keyboard.read_text()
+assert '["input.kb_layout"] = "no"' in keyboard.read_text(), (
+    "Hyprland must receive Lua even when setup runs from Niri"
+)
 keyboard_hash = digest(keyboard)
 for relative in (
     ".config/quickshell/nacre",
@@ -105,14 +109,46 @@ assert not (
 assert digest(plain) == plain_hash
 if backend in {"niri", "both"}:
     sys.path.insert(0, "/usr/share/nacre/tools")
-    from package_niri import validate
+    from package_niri import validate, command
 
     validate(home / ".config/nacre/niri/config.kdl")
+    launch = command(home / ".config/nacre/niri/config.kdl")
+    parsed = subprocess.run(
+        [*launch[:2], "-n", *launch[2:]], text=True, capture_output=True, timeout=15
+    )
+    assert "unrecognized arguments" not in parsed.stderr, parsed.stderr
+    assert "Command Line:" in parsed.stdout and "--session --config" in parsed.stdout, (
+        parsed.stdout + parsed.stderr
+    )
     assert Path("/usr/share/wayland-sessions/nacre-niri.desktop").is_file()
     assert (home / ".config/systemd/user/nacre-niri.target").is_file()
 if backend in {"hyprland", "both"}:
     assert Path("/usr/share/wayland-sessions/nacre-hyprland.desktop").is_file()
     assert (home / ".config/systemd/user/nacre-hyprland.target").is_file()
+wallpaper = Path((home / ".local/state/nacre/wallpaper/last.txt").read_text().strip())
+assert wallpaper.is_file() and wallpaper.suffix == ".jpg"
+presentation = json.loads((home / ".local/state/nacre/presentation.json").read_text())
+assert presentation["poster"] == str(wallpaper) and presentation["colours"]
+favorites = json.loads((home / ".config/nacre/launcher.json").read_text())["favorites"]
+assert {
+    "nacre-settings",
+    "nacre-ai",
+    "nacre-brain",
+    "nacre-terminal",
+    "org.kde.dolphin",
+} <= set(favorites)
+assert (
+    "shell fish --init-command"
+    in (home / ".config/nacre/terminal/kitty.conf").read_text()
+)
+run(
+    "python",
+    "-c",
+    "import sys; sys.path.insert(0, '/usr/share/nacre/nacre/shell-tools'); from nacre_ai_controller import load; assert load()['default_assistant']() in ('codex','claude')",
+)
+print(
+    "Real UWSM argument parsing, inherited keyboard syntax, default wallpaper/favorites/terminal and packaged AI controller imports pass."
+)
 for command in (
     ("nacre-welcome", "--help"),
     ("nacre-ai", "--help"),

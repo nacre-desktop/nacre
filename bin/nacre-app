@@ -21,6 +21,10 @@ def main():
     config = Path.home() / ".config/nacre/apps.json"
     choices = json.loads(config.read_text()) if config.exists() else {}
     argv = choices.get(name, DEFAULTS.get(name))
+    if name == "terminal" and name not in choices:
+        config = Path.home() / ".config/nacre/terminal/kitty.conf"
+        if config.is_file():
+            argv = ["kitty", "--config", str(config)]
     if (
         not isinstance(argv, list)
         or not argv

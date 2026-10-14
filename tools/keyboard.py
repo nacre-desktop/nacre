@@ -1,6 +1,7 @@
 """Seed a private keyboard override once from the system's XKB configuration."""
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 import re
@@ -36,7 +37,7 @@ def system_keyboard():
 
 def seed(home, settings=None):
     target = Path(home) / ".config/nacre/keyboard.lua"
-    if target.exists() or target.is_symlink():
+    if target.is_symlink():
         return False
     values = system_keyboard() if settings is None else settings
     spec = importlib.util.spec_from_file_location(
@@ -46,7 +47,27 @@ def seed(home, settings=None):
     )
     compositor = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(compositor)
-    content = compositor.render_keyboard(values)
+    content = compositor.render_for_backend("hyprland", "render_keyboard", values)
+    if target.exists():
+        # Early packaged setup selected the *running* backend. Repair only its
+        # exact generated KDL accidentally saved as Lua; never parse user Lua.
+        previous = target.read_text()
+        fields = re.findall(
+            r'^            (layout|model|variant|options) ("(?:[^"\\]|\\.)*")$',
+            previous,
+            re.M,
+        )
+        if len(fields) != 4 or len(dict(fields)) != 4:
+            return False
+        saved = {key: json.loads(value) for key, value in fields}
+        legacy = compositor.render_for_backend("niri", "render_keyboard", saved)
+        if previous != legacy:
+            return False
+        content = compositor.render_for_backend("hyprland", "render_keyboard", saved)
+        from configure import atomic
+
+        atomic(target, content.encode(), 0o600)
+        return True
     target.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive creation preserves an override created concurrently.
     try:
