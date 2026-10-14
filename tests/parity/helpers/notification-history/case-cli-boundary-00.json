@@ -1,0 +1,11 @@
+{
+  "helper": "notification-history",
+  "args": [],
+  "compare_stderr": true,
+  "reference_source_sha256": "a2ebaf16a33ac477cbf5ac58484075406d4d4a9ebb39acaf2ae9eccedbf6fb7a",
+  "native_exception": {
+    "kind": "retired-python-traceback",
+    "terminal_line": "IndexError: list index out of range\n",
+    "reason": "Rust retains exception class/message, stdout, exit and files; retired Python source frames are omitted."
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "stdout": "",
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": "Traceback (most recent call last):\n  File \"/repo/nacre/shell-tools/notification-history.py\", line 72, in <module>\n    raise ValueError(\n    ...<4 lines>...\n    )\nValueError: Unknown history action\n"
+}

@@ -30,7 +30,7 @@ Singleton {
             feedbackSummaries: [],
             feedbackPatterns: []
         })
-    readonly property string helper: NacrePaths.tools + "/notification-history.py"
+    readonly property string helper: "notification-history"
     function shouldRetain(app, summary, transient) {
         if (transient)
             return false;
@@ -207,7 +207,7 @@ Singleton {
     NacreHelperTask {
         id: reader
         objectName: "noticeHistoryReader"
-        command: ["python3", root.helper, "load"]
+        command: [NacrePaths.helperBinary, root.helper, "load"]
         running: true
         onOutput: text => root.restore(text)
         onExited: (exitCode, exitStatus) => {
@@ -219,7 +219,7 @@ Singleton {
         id: writer
         objectName: "noticeHistoryWriter"
         stdinEnabled: true
-        command: ["python3", root.helper, "save"]
+        command: [NacrePaths.helperBinary, root.helper, "save"]
         onStarted: write(JSON.stringify(root.retained.map(entry => entry.record())) + "\n")
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0) {

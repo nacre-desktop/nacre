@@ -1,0 +1,9 @@
+{
+  "helper": "notification-history",
+  "args": [
+    "load",
+    "extra"
+  ],
+  "compare_stderr": true,
+  "reference_source_sha256": "a2ebaf16a33ac477cbf5ac58484075406d4d4a9ebb39acaf2ae9eccedbf6fb7a"
+}

@@ -1,0 +1,17 @@
+{
+  "stdout": null,
+  "exit": 0,
+  "files": {
+    "home/notifications": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/notifications/history.json": {
+      "mode": "0o600",
+      "text": "[{\"key\": \"fixture\", \"body\": \"Body\"}]"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}
