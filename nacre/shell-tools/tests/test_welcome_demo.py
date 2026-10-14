@@ -187,11 +187,9 @@ class WelcomeDemoTests(unittest.TestCase):
                 ),
             ):
                 start = media.demo_start()
+                self.assertEqual(media.read(state / "scheme.json", {}), scheme)
                 self.assertEqual(
-                    json.loads((state / "scheme.json").read_text()), scheme
-                )
-                self.assertEqual(
-                    json.loads((state / "wallpaper/media.json").read_text()), original
+                    media.read(state / "wallpaper/media.json", {}), original
                 )
                 media.atomic(
                     prefs,
@@ -206,9 +204,7 @@ class WelcomeDemoTests(unittest.TestCase):
                 with patch.object(publisher, "apply_palette") as publish:
                     result = media.demo_restore(start["snapshot"])
                 self.assertEqual(result["media"], original)
-                self.assertEqual(
-                    json.loads((state / "scheme.json").read_text()), scheme
-                )
+                self.assertEqual(media.read(state / "scheme.json", {}), scheme)
                 restored = json.loads(prefs.read_text())
                 self.assertEqual(restored["palettePreset"], "super-red")
                 self.assertEqual(restored["paletteMode"], "light")

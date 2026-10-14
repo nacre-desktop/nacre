@@ -1,6 +1,7 @@
 """Revision cache and bounded local worker; no document upload or inference network calls."""
 
 import json
+import nacre_state as _state
 import os
 import selectors
 import subprocess
@@ -23,7 +24,7 @@ class SemanticClient:
             return {}
         with self.lock:
             try:
-                cache = json.loads(path.read_text()) if path.exists() else {}
+                cache = _state.read_json_file(path) if path.exists() else {}
             except (OSError, ValueError):
                 cache = {}
             missing = [
@@ -69,7 +70,8 @@ class SemanticClient:
                     tmp = path.with_suffix(".tmp")
                     tmp.write_text(json.dumps(cache))
                     tmp.chmod(0o600)
-                    os.replace(tmp, path)
+                    _state.write(path, cache)
+                    tmp.unlink(missing_ok=True)
                 except (
                     OSError,
                     ValueError,

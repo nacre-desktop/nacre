@@ -5,6 +5,7 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import nacre_state as _state
 import subprocess
 import sys
 import time
@@ -93,7 +94,7 @@ def state():
     managed = STATE / "configuration.json"
     drift = []
     for name, expected in (
-        json.loads(managed.read_text()).items() if managed.exists() else []
+        _state.read_json_file(managed).items() if managed.exists() else []
     ):
         path = HOME / name
         if (
@@ -102,7 +103,7 @@ def state():
         ):
             drift.append(name)
     cache = HOME / ".cache/nacre/updates.json"
-    current = json.loads(release.read_text()) if release.exists() else {}
+    current = _state.read_json_file(release) if release.exists() else {}
     session = STATE / "session/latest.json"
     profile = STATE / "performance/latest.json"
     versions = {
@@ -116,7 +117,7 @@ def state():
     return dict(
         release=current,
         services=services,
-        brainSync=json.loads((STATE / "brain-sync.json").read_text())
+        brainSync=_state.read_json_file(STATE / "brain-sync.json")
         if (STATE / "brain-sync.json").exists()
         else {"state": "unrecorded", "message": "No synchronization attempt recorded"},
         serviceDetails=details,
@@ -128,8 +129,8 @@ def state():
         updatesAgeSeconds=int(time.time() - cache.stat().st_mtime)
         if cache.exists()
         else None,
-        session=json.loads(session.read_text()) if session.exists() else {},
-        performance=json.loads(profile.read_text()) if profile.exists() else {},
+        session=_state.read_json_file(session) if session.exists() else {},
+        performance=_state.read_json_file(profile) if profile.exists() else {},
         versions=versions,
         checked=dt.datetime.now(dt.timezone.utc).isoformat(),
     )
@@ -176,7 +177,7 @@ def sample(seconds, label):
     )
     path = STATE / "performance/latest.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value))
+    _state.write(path, value)
     return value
 
 

@@ -65,6 +65,9 @@ fn run() -> Result<i32> {
             }
         }
     }
+    if tool == "state-file" {
+        return nacre_helper::state::run(&arguments);
+    }
     if tool == "pearl-state" {
         return nacre_helper::pearl_state::run(&arguments);
     }

@@ -41,6 +41,7 @@ def main():
     import importlib.util
     import os
     import json
+    import nacre_state as _state
 
     spec = importlib.util.spec_from_file_location(
         "profile_policy", ROOT / "nacre/shell-tools/profile-policy.py"
@@ -53,7 +54,7 @@ def main():
         else (Path(args.profile).resolve() if args.profile else None)
     )
     profile = (
-        policy.validate(json.loads(profile_path.read_text()))
+        policy.validate(_state.read_json_file(profile_path))
         if profile_path
         else policy.load()
     )

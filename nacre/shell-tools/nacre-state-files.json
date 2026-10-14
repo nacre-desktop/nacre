@@ -1,0 +1,754 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "id": "profile",
+      "paths": [
+        "nacre/profile.json"
+      ],
+      "owner": "profile-policy / installer",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {}
+    },
+    {
+      "id": "cli",
+      "paths": [
+        "nacre/cli.json"
+      ],
+      "owner": "shell-cli",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "desktop",
+      "paths": [
+        "nacre/desktop.json"
+      ],
+      "owner": "desktop-settings",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "launcher",
+      "paths": [
+        "nacre/launcher.json"
+      ],
+      "owner": "launcher-preferences",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "launcher-menu",
+      "paths": [
+        "nacre/launcher-menu.json"
+      ],
+      "owner": "installer seeds; user-edited entries",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {}
+    },
+    {
+      "id": "launcher-workflows",
+      "paths": [
+        "nacre/launcher-workflows.json"
+      ],
+      "owner": "launcher-workflows",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {
+        "version": 1,
+        "entries": [],
+        "roots": []
+      }
+    },
+    {
+      "id": "dashboard",
+      "paths": [
+        "nacre/dashboard.json"
+      ],
+      "owner": "dashboard-data",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "dashboard-extras",
+      "paths": [
+        "nacre/dashboard-extras.json"
+      ],
+      "owner": "NacreDashboardState",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {}
+    },
+    {
+      "id": "wallpaper-picker",
+      "paths": [
+        "nacre/wallpaper-picker.json"
+      ],
+      "owner": "wallpaper-media / shell-cli",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "colors",
+      "paths": [
+        "nacre/colors.json"
+      ],
+      "owner": "colors / shell-cli",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {}
+    },
+    {
+      "id": "welcome",
+      "paths": [
+        "nacre/welcome.json"
+      ],
+      "owner": "welcome",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {}
+    },
+    {
+      "id": "workflows",
+      "paths": [
+        "nacre/workflows.json"
+      ],
+      "owner": "workflow-profiles",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "ai-settings",
+      "paths": [
+        "nacre/ai/settings.json"
+      ],
+      "owner": "nacre-ai",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "ai-projects",
+      "paths": [
+        "nacre/ai/projects.json"
+      ],
+      "owner": "nacre-ai / AI installer",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {
+        "projects": []
+      }
+    },
+    {
+      "id": "brain-sync-config",
+      "paths": [
+        "nacre/brain-sync.json"
+      ],
+      "owner": "user-edited sync configuration",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "control-center",
+      "paths": [
+        "nacre/control-center.json"
+      ],
+      "owner": "NacreControlPreferences",
+      "shape": "object",
+      "version": 2,
+      "keepVersion": true,
+      "defaults": {
+        "version": 2,
+        "tiles": [
+          "volume",
+          "brightness",
+          "network",
+          "bluetooth",
+          "battery",
+          "night",
+          "dnd",
+          "awake",
+          "appearance"
+        ]
+      }
+    },
+    {
+      "id": "scheme",
+      "paths": [
+        "nacre/scheme.json"
+      ],
+      "owner": "shell-cli / classic-state",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "presentation",
+      "paths": [
+        "nacre/presentation.json"
+      ],
+      "owner": "classic-state / package runtime",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "wallpaper-media",
+      "paths": [
+        "nacre/wallpaper/media.json"
+      ],
+      "owner": "wallpaper-media",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "dashboard-focus",
+      "paths": [
+        "nacre/dashboard-focus.json"
+      ],
+      "owner": "dashboard-data",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "pearls",
+      "paths": [
+        "nacre/shell/pearls.json"
+      ],
+      "owner": "pearl-state",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {
+        "version": 1,
+        "windows": [],
+        "ai": {
+          "edge": "",
+          "channels": [
+            ""
+          ]
+        }
+      }
+    },
+    {
+      "id": "notifications",
+      "paths": [
+        "nacre/shell/notifications/history.json"
+      ],
+      "owner": "notification-history",
+      "shape": "array",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": []
+    },
+    {
+      "id": "chat-list",
+      "paths": [
+        "nacre/shell/extras/chats.json"
+      ],
+      "owner": "desktop-extras / sidebar-chat",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "clipboard-pins",
+      "paths": [
+        "nacre/shell/extras/pins.json"
+      ],
+      "owner": "desktop-extras",
+      "shape": "array",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": []
+    },
+    {
+      "id": "brain-focus",
+      "paths": [
+        "nacre/shell/extras/brain-focus.json"
+      ],
+      "owner": "desktop-extras",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "drafts",
+      "paths": [
+        "nacre/shell/drafts/*.json"
+      ],
+      "owner": "composer",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "sidebar",
+      "paths": [
+        "nacre/shell/sidebar/*.json"
+      ],
+      "owner": "sidebar-chat",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "control-tools",
+      "paths": [
+        "nacre/control-tools.json",
+        "nacre/control-tools-niri.json"
+      ],
+      "owner": "control-tools",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "display-pending",
+      "paths": [
+        "nacre/display-pending.json",
+        "nacre/display-pending-niri.json"
+      ],
+      "owner": "desktop-settings",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "battery-alerts",
+      "paths": [
+        "nacre/battery-alert-state.json"
+      ],
+      "owner": "NacreBatteryAlerts",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {}
+    },
+    {
+      "id": "welcome-session",
+      "paths": [
+        "nacre/welcome/session.json"
+      ],
+      "owner": "welcome",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "welcome-demo",
+      "paths": [
+        "nacre/welcome/demo/*.json"
+      ],
+      "owner": "wallpaper-media",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {}
+    },
+    {
+      "id": "recording",
+      "paths": [
+        "nacre/menu/recording.json"
+      ],
+      "owner": "menu actions / launcher-workflows",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "recording-audio",
+      "paths": [
+        "nacre/menu/recording-audio.json"
+      ],
+      "owner": "launcher-workflows",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "stay-awake",
+      "paths": [
+        "nacre/menu/stay-awake.json"
+      ],
+      "owner": "menu actions",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "webapps",
+      "paths": [
+        "nacre/menu/webapps.json"
+      ],
+      "owner": "menu registry",
+      "shape": "array",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": []
+    },
+    {
+      "id": "reminders",
+      "paths": [
+        "nacre/menu/reminders.json"
+      ],
+      "owner": "menu registry",
+      "shape": "array",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": []
+    },
+    {
+      "id": "configuration",
+      "paths": [
+        "nacre/configuration.json"
+      ],
+      "owner": "configure",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "package-links",
+      "paths": [
+        "nacre/package-links.json"
+      ],
+      "owner": "package runtime",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "defaults",
+      "paths": [
+        "nacre/defaults.json"
+      ],
+      "owner": "package seed",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "release-current",
+      "paths": [
+        "nacre/releases/current.json"
+      ],
+      "owner": "releases",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "release-record",
+      "paths": [
+        "nacre/releases/*/release.json"
+      ],
+      "owner": "releases",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "retired-native",
+      "paths": [
+        "nacre/releases/*/retired-native.json"
+      ],
+      "owner": "releases",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "session-latest",
+      "paths": [
+        "nacre/session/latest.json"
+      ],
+      "owner": "session-watch",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "performance-latest",
+      "paths": [
+        "nacre/performance/latest.json"
+      ],
+      "owner": "maintenance",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "brain-sync-status",
+      "paths": [
+        ".local/state/nacre/brain-sync.json"
+      ],
+      "owner": "nacre-brain-sync",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "chat-titles",
+      "paths": [
+        "nacre/ai/chat-titles/*.json"
+      ],
+      "owner": "nacre-ai-chat",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "chat-directories",
+      "paths": [
+        "nacre/ai/chat-titles/directories/*.json"
+      ],
+      "owner": "nacre-ai-chat",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "fonts",
+      "paths": [
+        "nacre/fonts/installed.json"
+      ],
+      "owner": "font-setup",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {}
+    },
+    {
+      "id": "font-transaction",
+      "paths": [
+        "nacre/fonts/*/transaction.json"
+      ],
+      "owner": "font-setup",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "dolphin-default",
+      "paths": [
+        "nacre/dolphin-default.json"
+      ],
+      "owner": "dolphin-files",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "thunar-default",
+      "paths": [
+        "nacre/thunar-default.json"
+      ],
+      "owner": "install-thunar",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "thunar-style",
+      "paths": [
+        "nacre/thunar-style.json"
+      ],
+      "owner": "thunar-files",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "timezone-config",
+      "paths": [
+        "etc/nacre/timezone.json"
+      ],
+      "owner": "timezone",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "timezone-status",
+      "paths": [
+        "nacre/timezone/status.json"
+      ],
+      "owner": "timezone",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "brain-auth",
+      "paths": [
+        "nacre/brain/auth/session.json",
+        "nacre/brain/auth/bootstrap.json",
+        "nacre/brain/auth/browser.json"
+      ],
+      "owner": "Brain auth",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "brain-overrides",
+      "paths": [
+        ".brain-state/discovery/overrides.json"
+      ],
+      "owner": "Brain discovery",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "brain-subjects",
+      "paths": [
+        ".brain-state/discovery/subjects.json"
+      ],
+      "owner": "Brain discovery",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "brain-vectors",
+      "paths": [
+        ".brain-state/discovery/vectors.json"
+      ],
+      "owner": "Brain semantic client",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "brain-peers",
+      "paths": [
+        ".brain-state/peers/*.json"
+      ],
+      "owner": "nacre-brain-sync",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "brain-conflicts",
+      "paths": [
+        ".brain-state/conflicts/*.json"
+      ],
+      "owner": "nacre-brain-sync",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "brain-captures",
+      "paths": [
+        ".brain-state/capture-*.json"
+      ],
+      "owner": "nacre-ai-memory",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
+      "id": "brain-backups",
+      "paths": [
+        ".brain-state/backups/*.json"
+      ],
+      "owner": "nacre-brain-sync",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {}
+    },
+    {
+      "id": "install-backups",
+      "paths": [
+        "nacre/backups/*/manifest.json",
+        "nacre/shell/backups/*/manifest.json",
+        "nacre/config-backups/*/manifest.json"
+      ],
+      "owner": "install / configure",
+      "shape": "array",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": []
+    },
+    {
+      "id": "apps",
+      "paths": [
+        "nacre/apps.json"
+      ],
+      "owner": "menu actions / user editor",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    }
+  ]
+}

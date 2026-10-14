@@ -1,5 +1,5 @@
 //! Private notification snapshots; preserve feedback filtering and publication modes.
-use crate::{i18n::tr, json, paths::Paths, Result};
+use crate::{i18n::tr, paths::Paths, Result};
 use regex::Regex;
 use serde_json::Value;
 use std::{fs, os::unix::fs::PermissionsExt, path::Path};
@@ -85,14 +85,11 @@ fn policy(paths: &Paths) -> Result<Value> {
     )?)?)
 }
 pub fn load(path: &Path, policy: &Value) -> Result<Value> {
-    let bytes = match fs::read(path) {
-        Ok(bytes) => bytes,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(Value::Array(Vec::new()))
-        }
-        Err(error) => return Err(error.into()),
-    };
-    let rows: Value = serde_json::from_slice(&bytes)?;
+    let rows = crate::state::read_as(
+        path,
+        Some(crate::state::by_id("notifications")?),
+        Value::Array(Vec::new()),
+    )?;
     let rows = rows.as_array().ok_or_else(|| {
         tr(
             "helper.notification-history.invalid-notification-history",
@@ -139,12 +136,11 @@ pub fn save(path: &Path, rows: &Value, policy: &Value) -> Result<()> {
     let parent = path.parent().ok_or("Invalid notification history path")?;
     fs::create_dir_all(parent)?;
     fs::set_permissions(parent, fs::Permissions::from_mode(0o700))?;
-    let mut file = tempfile::NamedTempFile::new_in(parent)?;
-    use std::io::Write;
-    file.write_all(json::encode(&selected)?.as_bytes())?;
-    file.as_file().sync_all()?;
-    file.persist(path)?;
-    fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+    crate::state::write_as(
+        path,
+        Some(crate::state::by_id("notifications")?),
+        &Value::Array(selected),
+    )?;
     Ok(())
 }
 pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Value>> {
@@ -204,7 +200,7 @@ mod retention_tests {
         fs::write(&path, serde_json::to_vec(&rows)?)?;
         assert_eq!(load(&path, &policy)?[0]["key"], "recent");
         assert_eq!(
-            serde_json::from_slice::<Value>(&fs::read(&path)?)?
+            serde_json::from_slice::<Value>(&fs::read(&path)?)?["items"]
                 .as_array()
                 .unwrap()
                 .len(),

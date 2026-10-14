@@ -15,6 +15,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 # Also resolve the shared message runtime when invoked from installed packages.
 sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
+_state = importlib.import_module("nacre_state")
+
 tr = importlib.import_module("nacre_i18n").tr
 
 
@@ -46,7 +48,7 @@ def distro(mapping, release=Path("/etc/os-release")):
 
 def supported_compositors(root):
     # Only advertise backends whose complete setup contract is installed.
-    metadata = json.loads((root / "package.json.installed").read_text())
+    metadata = _state.read_json_file(root / "package.json.installed")
     choices = ["hyprland"]
     contract = root / "nacre/shell-tools/nacre_native_config.py"
     if contract.exists():
@@ -156,7 +158,7 @@ def selection(args, root, home, interactive):
             if chosen == "default"
             else Path(chosen).expanduser()
         )
-        profile = profiles.validate(json.loads(path.read_text()))
+        profile = profiles.validate(_state.read_json_file(path))
     profile = copy.deepcopy(profile)
     optional = list(args.optional)
     if interactive:
@@ -195,7 +197,7 @@ def missing_packages(root, profile, compositor="hyprland"):
     import package_sessions
     import package_managers
 
-    mapping = json.loads((root / "packaging/packages.json").read_text())
+    mapping = _state.read_json_file(root / "packaging/packages.json")
     names = mapping[distro(mapping)]
     packages = list(
         dict.fromkeys(
@@ -351,7 +353,7 @@ def main(argv=None):
                 if args.install_deps or interactive:
                     import package_managers
 
-                    mapping = json.loads((ROOT / "packaging/packages.json").read_text())
+                    mapping = _state.read_json_file(ROOT / "packaging/packages.json")
                     package_managers.manager(distro(mapping)).install(missing)
                     # Dependencies may upgrade Nacre itself. Review/apply through
                     # a fresh interpreter, never a mixture of old/new modules.

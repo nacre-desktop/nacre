@@ -6,6 +6,7 @@ import nacre_native_compositor as compositor
 import argparse
 import fcntl
 import json
+import nacre_state as _state
 import os
 import subprocess
 import sys
@@ -25,7 +26,7 @@ PENDING = STATE.with_name(
     if compositor.backend_name == "niri"
     else "display-pending.json"
 )
-DEFAULTS = json.loads(Path(__file__).with_name("desktop-defaults.json").read_text())
+DEFAULTS = _state.read_json_file(Path(__file__).with_name("desktop-defaults.json"))
 PRESET_KEYS = [
     key
     for key in DEFAULTS
@@ -83,9 +84,7 @@ def initial():
 
 
 def load():
-    data = (
-        {**DEFAULTS, **json.loads(STATE.read_text())} if STATE.exists() else initial()
-    )
+    data = {**DEFAULTS, **_state.read_json_file(STATE)} if STATE.exists() else initial()
     data.pop("wallpaperTransition", None)
     if compositor.capabilities.get("perOutputWorkspaces"):
         data["displays"] = data.get("compositorDisplays", {}).get(
@@ -143,7 +142,7 @@ def persist(data):
     text = config_lua(data) + monitor_lua(monitors) + "\n"
     stored = dict(data)
     if compositor.capabilities.get("perOutputWorkspaces"):
-        previous = json.loads(STATE.read_text()) if STATE.exists() else {}
+        previous = _state.read_json_file(STATE) if STATE.exists() else {}
         stored["compositorDisplays"] = {
             **previous.get("compositorDisplays", {}),
             compositor.backend_name: data.get("displays", []),
@@ -190,7 +189,7 @@ def display_plan(monitors, primary, mode):
 def revert(token=None):
     if not PENDING.exists():
         return
-    saved = json.loads(PENDING.read_text())
+    saved = _state.read_json_file(PENDING)
     if token and token != saved["token"]:
         return
     compositor.configure_monitors(saved["monitors"], timeout=8)

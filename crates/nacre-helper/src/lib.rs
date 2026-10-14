@@ -38,6 +38,7 @@ pub mod pearl_window;
 pub mod process;
 pub mod resource_state;
 pub mod service;
+pub mod state;
 pub mod systemd;
 pub mod unicode;
 pub mod window_chat_title;

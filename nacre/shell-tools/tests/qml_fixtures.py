@@ -136,7 +136,11 @@ def install_modules(directory):
     )
     manifest = directory / "qmldir"
     lines = manifest.read_text().splitlines() if manifest.exists() else []
-    entries = {}
+    state_file = imports / "NacreStateFile.qml"
+    state_file.write_text(
+        "import Quickshell.Io\nFileView {function saveText(value) {setText(value)}}\n"
+    )
+    entries = {"NacreStateFile": (False, state_file)}
     for line in lines:
         fields = line.split()
         if len(fields) < 3 or fields[0] in ("module", "prefer", "import", "depends"):

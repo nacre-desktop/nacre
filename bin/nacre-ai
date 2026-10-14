@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 import unicodedata
 import datetime as dt
 import json
+import nacre_state as _state
 import os
 from pathlib import Path
 import re
@@ -22,7 +23,7 @@ import sys
 def agent_full_access():
     try:
         return (
-            json.loads((Path.home() / ".config/nacre/profile.json").read_text()).get(
+            _state.read_json_file(Path.home() / ".config/nacre/profile.json").get(
                 "aiFullAccess"
             )
             is True
@@ -104,7 +105,7 @@ def effective_account(agent, override=None):
         validate_account(override)
         return override
     path = preferences_path()
-    data = json.loads(path.read_text()) if path.exists() else {}
+    data = _state.read_json_file(path, "ai-settings") if path.exists() else {}
     value = data.get("accounts", {}).get(agent, "")
     validate_account(value)
     return value or ""
@@ -112,7 +113,7 @@ def effective_account(agent, override=None):
 
 def default_assistant():
     path = preferences_path()
-    data = json.loads(path.read_text()) if path.exists() else {}
+    data = _state.read_json_file(path, "ai-settings") if path.exists() else {}
     value = data.get("default_assistant", "codex")
     return value if value in ("codex", "claude") else "codex"
 
@@ -124,13 +125,16 @@ def set_default_assistant(agent):
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.with_suffix(".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        data = json.loads(path.read_text()) if path.exists() else {}
+        data = _state.read_json_file(path, "ai-settings") if path.exists() else {}
         data["default_assistant"] = agent
         with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as output:
             json.dump(data, output, indent=2)
             output.write("\n")
             temporary = Path(output.name)
-        os.replace(temporary, path)
+        try:
+            _state.write(path, data, schema_id="ai-settings")
+        finally:
+            temporary.unlink(missing_ok=True)
 
 
 def setup_status():
@@ -265,13 +269,16 @@ def select_account(agent, account):
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.with_suffix(".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        data = json.loads(path.read_text()) if path.exists() else {}
+        data = _state.read_json_file(path, "ai-settings") if path.exists() else {}
         data.setdefault("accounts", {})[agent] = account
         with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as output:
             json.dump(data, output, indent=2)
             output.write("\n")
             temporary = Path(output.name)
-        os.replace(temporary, path)
+        try:
+            _state.write(path, data, schema_id="ai-settings")
+        finally:
+            temporary.unlink(missing_ok=True)
 
 
 def account_choices(agent):
@@ -426,7 +433,7 @@ def projects():
         raise ValueError(
             f"Create {p} using the example in the OS repository's ai/ directory"
         )
-    values = json.loads(p.read_text())["projects"]
+    values = _state.read_json_file(p, "ai-projects")["projects"]
     for item in values:
         if item["id"] == "general-chat":
             raise ValueError(
@@ -902,7 +909,11 @@ def create_project(name):
     config.parent.mkdir(parents=True, exist_ok=True)
     with config.with_suffix(".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        data = json.loads(config.read_text()) if config.exists() else {"projects": []}
+        data = (
+            _state.read_json_file(config, "ai-projects")
+            if config.exists()
+            else {"projects": []}
+        )
         if any(p["id"] == identifier for p in data["projects"]):
             raise ValueError("That project already exists")
         folder = Path.home() / "Projects" / identifier
@@ -918,7 +929,7 @@ def create_project(name):
             output.write("\n")
             temp = Path(output.name)
         try:
-            os.replace(temp, config)
+            _state.write(config, data, schema_id="ai-projects")
         finally:
             temp.unlink(missing_ok=True)
         return project

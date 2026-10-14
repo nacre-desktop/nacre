@@ -9,6 +9,7 @@ import fcntl
 import hashlib
 import importlib.util
 import json
+import nacre_state as _state
 import math
 import os
 from pathlib import Path
@@ -51,7 +52,7 @@ media = module("wallpaper-media")
 
 def load(path, default):
     try:
-        return json.loads(path.read_text())
+        return _state.read_json_file(path)
     except FileNotFoundError:
         return default
 

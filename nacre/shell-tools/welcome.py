@@ -6,6 +6,7 @@ from nacre_i18n import tr
 from contextlib import contextmanager
 import fcntl
 import json
+import nacre_state as _state
 import os
 from pathlib import Path
 import shutil
@@ -24,6 +25,9 @@ def paths(home):
 
 
 def atomic(path, value):
+    if _state.schema(path):
+        _state.write(path, value)
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix=".welcome-", dir=path.parent)
     try:
@@ -48,7 +52,7 @@ def locked(home):
 
 def preferences(home):
     path, _ = paths(home)
-    value = json.loads(path.read_text()) if path.exists() else {}
+    value = _state.read_json_file(path) if path.exists() else {}
     if not isinstance(value, dict) or value.get("version", 1) != 1:
         raise ValueError(
             tr(
@@ -442,7 +446,7 @@ def claim_login(home, instance):
             return {"show": False, "claim": ""}
         _, path = paths(home)
         try:
-            previous = json.loads(path.read_text())
+            previous = _state.read_json_file(path)
         except (OSError, ValueError):
             previous = {}
         if isinstance(previous, dict) and previous.get("instance") == instance:
@@ -456,7 +460,7 @@ def acknowledge_login(home, instance, claim):
     """Only a successful first-run activation consumes automatic startup."""
     with locked(home):
         _, path = paths(home)
-        previous = json.loads(path.read_text()) if path.exists() else {}
+        previous = _state.read_json_file(path) if path.exists() else {}
         if previous != {"instance": instance, "claim": claim}:
             raise ValueError(
                 tr(
@@ -474,7 +478,7 @@ def release_login(home, instance, claim):
     with locked(home):
         _, path = paths(home)
         try:
-            previous = json.loads(path.read_text())
+            previous = _state.read_json_file(path)
         except (OSError, ValueError):
             return
         if previous == {"instance": instance, "claim": claim}:

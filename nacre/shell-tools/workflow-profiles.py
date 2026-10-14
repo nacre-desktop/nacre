@@ -2,6 +2,7 @@
 """Saved personal audio/display/startup intent, applied only on explicit preset use."""
 
 import json
+import nacre_state as _state
 from nacre_i18n import tr
 import subprocess
 from pathlib import Path
@@ -17,7 +18,7 @@ def run(args):
 
 
 def load():
-    return json.loads(PATH.read_text()) if PATH.exists() else {}
+    return _state.read_json_file(PATH) if PATH.exists() else {}
 
 
 def devices():
@@ -67,7 +68,7 @@ def save(name, roles):
         roles=roles,
     )
     PATH.parent.mkdir(parents=True, exist_ok=True)
-    PATH.write_text(json.dumps(profiles, indent=2))
+    _state.write(PATH, profiles)
     PATH.chmod(0o600)
 
 

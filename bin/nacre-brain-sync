@@ -9,6 +9,7 @@ import hashlib
 import importlib.machinery
 import importlib.util
 import json
+import nacre_state as _state
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -91,6 +92,8 @@ def snapshot(root):
 
 
 def atomic(path, body):
+    if _state.write_text_if_managed(path, body):
+        return
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with tempfile.NamedTemporaryFile(
         mode="w", dir=path.parent, prefix=".pending-", delete=False
@@ -183,7 +186,7 @@ STATUS = Path.home() / ".local/state/nacre/brain-sync.json"
 
 def read_status():
     try:
-        return json.loads(STATUS.read_text())
+        return _state.read_json_file(STATUS)
     except (OSError, ValueError):
         return {}
 
@@ -272,7 +275,7 @@ def main():
                 )
             )
             return
-        host = json.loads(args.config.read_text())["host"]
+        host = _state.read_json_file(args.config)["host"]
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._@-]*", host):
             raise ValueError("Invalid SSH alias")
         base_path = (
@@ -280,7 +283,7 @@ def main():
             / ".brain-state/peers"
             / (hashlib.sha256(host.encode()).hexdigest() + ".json")
         )
-        base = json.loads(base_path.read_text()) if base_path.exists() else {}
+        base = _state.read_json_file(base_path) if base_path.exists() else {}
         if not read_status().get("lastSuccess") and base_path.exists():
             atomic(
                 STATUS,

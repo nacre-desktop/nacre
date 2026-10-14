@@ -24,11 +24,7 @@ fn invalid() -> crate::Error {
     .into()
 }
 pub fn load(path: &Path) -> Result<Value> {
-    let data: Value = match fs::read(path) {
-        Ok(bytes) => serde_json::from_slice(&bytes)?,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => json!({}),
-        Err(error) => return Err(error.into()),
-    };
+    let data = crate::state::read_as(path, Some(crate::state::by_id("launcher")?), json!({}))?;
     let data = data.as_object().ok_or_else(invalid)?;
     let mut result = serde_json::Map::new();
     for key in ["favorites", "hidden", "recent"] {
@@ -75,7 +71,8 @@ pub fn initialize(path: &Path) -> Result<Value> {
         {
             Ok(mut file) => {
                 file.write_all(
-                    crate::json::encode(&json!({"favorites":[],"hidden":[]}))?.as_bytes(),
+                    crate::json::encode(&json!({"version":1,"favorites":[],"hidden":[]}))?
+                        .as_bytes(),
                 )?;
                 fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
             }
@@ -138,7 +135,7 @@ pub fn change(path: &Path, action: &str, value: &Value) -> Result<Value> {
             items.push(json!(id));
         }
     }
-    files::json_write(path, &data)?;
+    crate::state::write_as(path, Some(crate::state::by_id("launcher")?), &data)?;
     Ok(data)
 }
 pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Value>> {

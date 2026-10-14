@@ -57,6 +57,9 @@ def benchmark(services, tools, count, helper_binary=None):
         utils = root / "utils"
         utils.mkdir()
         shutil.copy2(services.parent / "utils/NacrePaths.qml", utils / "NacrePaths.qml")
+        state_file = services.parent / "utils/NacreStateFile.qml"
+        if state_file.exists():
+            shutil.copy2(state_file, utils / state_file.name)
         for name in (
             "NacreDashboardState",
             "NacreDashboardRegistry",

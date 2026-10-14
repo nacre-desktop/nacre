@@ -34,14 +34,8 @@ fn run(program: &str, args: &[&str], seconds: u64) -> Result<std::process::Outpu
         Duration::from_secs(seconds),
     )
 }
-fn read(path: &Path, fallback: Value) -> Value {
-    if fs::metadata(path).is_ok_and(|m| m.len() > 2_097_152) {
-        return fallback;
-    }
-    fs::read(path)
-        .ok()
-        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-        .unwrap_or(fallback)
+fn read(path: &Path, fallback: Value) -> Result<Value> {
+    crate::state::read(path, fallback)
 }
 fn regex(pattern: &str) -> regex::Regex {
     regex::Regex::new(pattern).expect("checked helper expression")
@@ -110,7 +104,7 @@ pub fn fonts() -> Result<Value> {
 }
 pub fn webapps() -> Result<Value> {
     let paths = Paths::environment()?;
-    let data = read(&paths.state.join("menu/webapps.json"), json!([]));
+    let data = read(&paths.state.join("menu/webapps.json"), json!([]))?;
     let id = regex(r"\A[0-9a-f]{32}\z");
     Ok(json!(data
         .as_array()
@@ -126,7 +120,7 @@ pub fn webapps() -> Result<Value> {
 }
 pub fn reminders() -> Result<Value> {
     let paths = Paths::environment()?;
-    let data = read(&paths.state.join("menu/reminders.json"), json!([]));
+    let data = read(&paths.state.join("menu/reminders.json"), json!([]))?;
     let now = now();
     Ok(json!(data
         .as_array()
@@ -161,7 +155,7 @@ fn snapshot_with(
     discover: impl FnOnce() -> Result<Value>,
 ) -> Result<Value> {
     let path = paths.cache.join("menu/state.json");
-    let cached = read(&path, json!({}));
+    let cached = read(&path, json!({}))?;
     if !force
         && cached["version"] == 1
         && cached["packageStamp"] == stamp

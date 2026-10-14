@@ -96,3 +96,11 @@ layouts move to it when redesigned by their owning tasks.
 
 The existing `textPointSize`, `cornerRadius` and `spacing` aliases retain their
 12/12/8 defaults for modules awaiting redesign. New UI uses the named groups.
+
+## Persistent settings and state
+
+Register new persistent JSON in the [state inventory](development/versioned-state.md)
+and use the shared Rust/Python guard or the QML `NacreStateFile` publisher. Preserve
+original-byte migration backups and reject newer versions at the writer, including
+reset/default actions. Add migration, backup, downgrade-refusal and corrupt-recovery
+cases when changing a schema; preserve frozen legacy evidence.

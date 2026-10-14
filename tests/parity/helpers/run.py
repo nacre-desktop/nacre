@@ -31,6 +31,7 @@ _registry_spec = importlib.util.spec_from_file_location(
 native_registry = importlib.util.module_from_spec(_registry_spec)
 _registry_spec.loader.exec_module(native_registry)
 from native_compositor_peer import Peer as NativeCompositorPeer
+from state_schema import compatible_files, recovery_reference
 
 NATIVE_CLIENT_CALLERS = {
     "pearl-window",
@@ -974,11 +975,14 @@ def main():
                 expected = json.loads(reference.read_text())
                 expected = engine_provenance_reference(expected, actual, case)
                 expected = native_exception_reference(expected, actual, case)
+                expected = compatible_files(recovery_reference(expected, case), case)
+                actual = compatible_files(actual, case)
                 if args.orient_direct or (
                     args.command is None and case["helper"] in native_registry.MIGRATED
                 ):
                     expected = orient_direct_equivalence(expected, case)
                     actual = orient_direct_equivalence(actual, case)
+                rendered = json.dumps(actual, indent=2, ensure_ascii=True) + "\n"
                 if expected != actual:
                     failures += 1
                     diff = list(

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import nacre_state as _state
 import os
 from pathlib import Path
 import secrets
@@ -10,6 +11,8 @@ from urllib.parse import urlencode
 
 
 def private_write(path, text):
+    if _state.write_text_if_managed(path, text):
+        return
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     if path.is_symlink() or path.parent.is_symlink():
         raise RuntimeError("Refusing linked authentication files")
@@ -34,9 +37,16 @@ class BrowserAuth:
         if session.is_symlink():
             raise RuntimeError("Refusing linked browser credential")
         if session.exists():
-            self.cookie = json.loads(session.read_text())["cookie"]
+            try:
+                self.cookie = _state.read_json_file(session).get("cookie")
+            except (ValueError, AttributeError):
+                self.cookie = None
             if not isinstance(self.cookie, str) or len(self.cookie) < 40:
-                raise ValueError("Invalid private browser credential")
+                self.cookie = secrets.token_urlsafe(32)
+                if _state.schema(session):
+                    _state.recover(session, {"cookie": self.cookie})
+                else:
+                    private_write(session, json.dumps({"cookie": self.cookie}))
             session.chmod(0o600)
         else:
             self.cookie = secrets.token_urlsafe(32)
@@ -74,7 +84,7 @@ class BrowserAuth:
 
     def browser_ready(self):
         try:
-            value = json.loads((self.directory / "browser.json").read_text())["session"]
+            value = _state.read_json_file(self.directory / "browser.json")["session"]
             return secrets.compare_digest(
                 value, hashlib.sha256(self.cookie.encode()).hexdigest()
             )

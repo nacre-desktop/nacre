@@ -1,12 +1,17 @@
 """Pacman-owned runtime references; private configuration uses configure.py."""
 
 import json
+import importlib
 from pathlib import Path
 import os
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "nacre/shell-tools"))
+_state = importlib.import_module("nacre_state")
 
 
 def metadata(root):
-    return json.loads((root / "package.json.installed").read_text())
+    return _state.read_json_file(root / "package.json.installed")
 
 
 def files(root, profile):
@@ -27,7 +32,7 @@ def presentation_seed(home, common, temporary):
     relative = Path(".local/state/nacre/presentation.json")
     if relative not in common or (home / relative).exists():
         return common
-    data = json.loads(common[relative].read_text())
+    data = _state.read_json_file(common[relative])
     wallpaper = home / ".local/state/nacre/wallpaper/last.txt"
     if wallpaper.is_file():
         path = Path(wallpaper.read_text().strip())
@@ -35,7 +40,7 @@ def presentation_seed(home, common, temporary):
             data["poster"] = str(path)
     scheme = home / ".local/state/nacre/scheme.json"
     if scheme.is_file():
-        values = json.loads(scheme.read_text())
+        values = _state.read_json_file(scheme)
         if isinstance(values.get("colours"), dict) and values.get("mode") in (
             "light",
             "dark",
@@ -58,8 +63,8 @@ def launcher_seed(home, common, temporary):
         or not legacy_empty_launcher(relative, target)
     ):
         return common
-    data = json.loads(target.read_text())
-    defaults = json.loads(common[relative].read_text())
+    data = _state.read_json_file(target)
+    defaults = _state.read_json_file(common[relative])
     data["favorites"] = [
         name for name in defaults["favorites"] if name not in data["hidden"]
     ]
@@ -94,7 +99,7 @@ def links(root, profile, compositor="hyprland"):
 
 def plan(home, root, profile, compositor="hyprland"):
     known_path = home / ".local/state/nacre/package-links.json"
-    known = json.loads(known_path.read_text()) if known_path.exists() else {}
+    known = _state.read_json_file(known_path) if known_path.exists() else {}
     permitted = {
         str(path)
         for backend in ("hyprland", "niri")

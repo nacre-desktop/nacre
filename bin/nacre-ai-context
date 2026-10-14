@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import nacre_state as _state
 import os
 import re
 from pathlib import Path
@@ -15,7 +16,7 @@ def resolve(query):
             str(Path.home() / ".config/nacre/ai/projects.json"),
         )
     )
-    registry = json.loads(path.read_text()) if path.exists() else {}
+    registry = _state.read_json_file(path, "ai-projects") if path.exists() else {}
     words = query.casefold()
     candidates = []
     for project in registry.get("projects", []):

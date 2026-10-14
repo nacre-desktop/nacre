@@ -60,7 +60,7 @@ Singleton {
     }
     function saveExtras() {
         if (extrasReady)
-            extraFile.setText(JSON.stringify({
+            extraFile.saveText(JSON.stringify({
                 version: 1,
                 enabled: enabledExtras,
                 order: extraOrder,
@@ -82,7 +82,7 @@ Singleton {
         extraOrder = items;
         saveExtras();
     }
-    FileView {
+    NacreStateFile {
         id: extraFile
         path: NacrePaths.config + "/dashboard-extras.json"
         atomicWrites: true

@@ -243,6 +243,14 @@ class PackageSetupTests(unittest.TestCase):
             (staged / "nacre/shell-tools").mkdir(parents=True)
             (staged / "nacre/shell/i18n").mkdir(parents=True)
             for source, target in [
+                (
+                    TOOLS.parent / "nacre/shell-tools/nacre_state.py",
+                    staged / "nacre/shell-tools/nacre_state.py",
+                ),
+                (
+                    TOOLS.parent / "nacre/shell-tools/nacre-state-files.json",
+                    staged / "nacre/shell-tools/nacre-state-files.json",
+                ),
                 (TOOLS / "setup.py", staged / "tools/setup.py"),
                 (
                     TOOLS.parent / "nacre/shell-tools/nacre_i18n.py",
@@ -365,7 +373,7 @@ class PackageSetupTests(unittest.TestCase):
             root, home, profile = self.fixture(folder)
             seed = root / "deployment/core/.local/state/nacre/scheme.json"
             seed.parent.mkdir(parents=True)
-            seed.write_text("initial")
+            seed.write_text(json.dumps({"fixture": "initial"}))
             (root / "seed-paths.json").write_text(
                 json.dumps([".local/state/nacre/scheme.json"])
             )

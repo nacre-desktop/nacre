@@ -50,7 +50,7 @@ Singleton {
     }
     function save() {
         if (cacheReady && !restoring)
-            ledger.setText(JSON.stringify({
+            ledger.saveText(JSON.stringify({
                 version: 1,
                 severity: policy.severity
             }));
@@ -107,7 +107,7 @@ Singleton {
             retry.stop();
         }
     }
-    FileView {
+    NacreStateFile {
         id: ledger
         objectName: "batteryAlertLedger"
         path: NacrePaths.state + "/battery-alert-state.json"

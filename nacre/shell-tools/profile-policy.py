@@ -4,6 +4,7 @@ import argparse
 from nacre_i18n import tr
 import copy
 import json
+import nacre_state as _state
 import importlib.util
 import os
 from pathlib import Path
@@ -165,7 +166,7 @@ def validate(value):
 def load(home=None):
     path = (home or Path.home()) / ".config/nacre/profile.json"
     return (
-        validate(json.loads(path.read_text()))
+        validate(_state.read_json_file(path))
         if path.exists()
         else copy.deepcopy(DEFAULT)
     )
@@ -173,7 +174,7 @@ def load(home=None):
 
 def selected():
     path = os.environ.get("NACRE_PROFILE_FILE")
-    return validate(json.loads(Path(path).read_text())) if path else load()
+    return validate(_state.read_json_file(Path(path))) if path else load()
 
 
 def lua(profile):
@@ -197,6 +198,8 @@ def install(home=None):
         ("profile.lua", lua(value)),
     ):
         target = directory / name
+        if _state.write_text_if_managed(target, text):
+            continue
         pending = target.with_name("." + name + ".next")
         pending.write_text(text)
         pending.chmod(0o600)

@@ -21,6 +21,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from http.cookies import SimpleCookie, CookieError
 from urllib.parse import urlparse, parse_qs, quote, unquote
 
+# Shared state is independent of the palette Python environment.
+for _state_directory in (
+    Path(__file__).resolve().parents[1] / "nacre/shell-tools",
+    Path.home() / ".local/share/nacre/shell/tools",
+):
+    if (_state_directory / "nacre_state.py").is_file():
+        sys.path.insert(0, str(_state_directory))
+        break
+_state = importlib.import_module("nacre_state")
+
 ROOT = Path(__file__).resolve().parent
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre/brain"
@@ -479,7 +489,7 @@ def graph():
     derived = VAULT / ".brain-state/discovery"
     try:
         overrides = (
-            json.loads((derived / "overrides.json").read_text())
+            _state.read_json_file(derived / "overrides.json")
             if (derived / "overrides.json").exists()
             else {}
         )
@@ -504,7 +514,7 @@ def graph():
             return cached
         try:
             prior = (
-                json.loads((derived / "subjects.json").read_text())
+                _state.read_json_file(derived / "subjects.json")
                 if (derived / "subjects.json").exists()
                 else {}
             )
@@ -516,7 +526,10 @@ def graph():
         tmp = derived / "subjects.next"
         tmp.write_text(json.dumps(report))
         tmp.chmod(0o600)
-        os.replace(tmp, derived / "subjects.json")
+        try:
+            _state.write(derived / "subjects.json", report)
+        finally:
+            tmp.unlink(missing_ok=True)
         nodes = _graph_group_nodes(subjects, notes, links)
         nodes.extend(
             {
@@ -561,9 +574,7 @@ def search_notes(query):
 
 def desktop_theme():
     try:
-        return json.loads((HOME / ".local/state/nacre/scheme.json").read_text())[
-            "colours"
-        ]
+        return _state.read_json_file(HOME / ".local/state/nacre/scheme.json")["colours"]
     except (OSError, ValueError, KeyError):
         return {}
 
@@ -649,7 +660,7 @@ def action(name, value=""):
         path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         with (path.parent / "override.lock").open("w") as guard:
             fcntl.flock(guard, fcntl.LOCK_EX)
-            overrides = json.loads(path.read_text()) if path.exists() else {}
+            overrides = _state.read_json_file(path) if path.exists() else {}
             ident = "note:" + hashlib.sha256(rel.encode()).hexdigest()[:16]
             if data.get("reset"):
                 overrides.pop(ident, None)
@@ -662,7 +673,8 @@ def action(name, value=""):
             temp = path.with_suffix(".tmp")
             temp.write_text(json.dumps(overrides))
             temp.chmod(0o600)
-            os.replace(temp, path)
+            _state.write(path, overrides)
+            temp.unlink(missing_ok=True)
         return
     if name == "open-note":
         p = note_path(value)
@@ -749,7 +761,7 @@ def bootstrap_existing_browser():
     # upgrade of an already-open old browser needs a tiny, auto-closing handoff.
     auth = object.__new__(auth_module().BrowserAuth)
     auth.directory = directory
-    auth.cookie = json.loads((directory / "session.json").read_text())["cookie"]
+    auth.cookie = _state.read_json_file(directory / "session.json")["cookie"]
     if not auth.browser_ready():
         launch(browser_command(directory / "handoff.html", True))
 
@@ -830,7 +842,7 @@ class Handler(BaseHTTPRequestHandler):
                 )
             if path.path == "/api/navigation":
                 nav = HOME / ".local/state/nacre/shell/extras/brain-focus.json"
-                value = json.loads(nav.read_text()) if nav.exists() else {}
+                value = _state.read_json_file(nav) if nav.exists() else {}
                 if time.time() - value.get("created", 0) > 60:
                     value = {}
                 return self.send(json.dumps(value))
@@ -856,8 +868,8 @@ class Handler(BaseHTTPRequestHandler):
                     requested = os.environ.get("NACRE_LANGUAGE", "")
                     if not requested:
                         try:
-                            preference = json.loads(
-                                (HOME / ".config/nacre/desktop.json").read_text()
+                            preference = _state.read_json_file(
+                                HOME / ".config/nacre/desktop.json"
                             )
                             requested = (
                                 preference.get("language", "system")
@@ -1038,7 +1050,7 @@ def brain_browser_running():
 
 def preferred_workspace():
     try:
-        value = json.loads((HOME / ".config/nacre/profile.json").read_text()).get(
+        value = _state.read_json_file(HOME / ".config/nacre/profile.json").get(
             "brainWorkspace"
         )
         return value if type(value) is int and 1 <= value <= 10 else None

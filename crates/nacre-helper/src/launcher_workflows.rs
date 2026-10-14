@@ -17,19 +17,9 @@ fn available(name: &str) -> bool {
         .any(|p| p.is_file() && fs::metadata(p).is_ok_and(|m| m.permissions().mode() & 0o111 != 0))
 }
 fn read(path: &Path, fallback: Value) -> Result<Value> {
-    match fs::File::open(path) {
-        Ok(file) => {
-            let mut bytes = Vec::new();
-            file.take(2_097_153).read_to_end(&mut bytes)?;
-            if bytes.len() > 2_097_152 {
-                return Err("Launcher data is too large".into());
-            }
-            Ok(serde_json::from_slice(&bytes)?)
-        }
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(fallback),
-        Err(e) => Err(e.into()),
-    }
+    crate::state::read(path, fallback)
 }
+
 fn defaults() -> Value {
     json!({"version":1,"entries":[],"roots":[]})
 }

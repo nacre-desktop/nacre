@@ -387,11 +387,7 @@ pub fn collect(context: &Context, platform: &Platform, queries: &mut impl Probe)
     redact(&report, &names.into_iter().collect::<Vec<_>>())
 }
 fn json_file(path: &Path, fallback: Value) -> Result<Value> {
-    if path.exists() {
-        Ok(serde_json::from_slice(&fs::read(path)?)?)
-    } else {
-        Ok(fallback)
-    }
+    crate::state::read_strict(path, fallback)
 }
 fn maintenance_run(args: Vec<String>, queries: &mut impl Probe) -> Result<String> {
     match queries.call(Call {

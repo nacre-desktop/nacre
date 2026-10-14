@@ -17,12 +17,10 @@ fn now() -> f64 {
         .unwrap_or_default()
         .as_secs_f64()
 }
-fn read(path: &Path, fallback: Value) -> Value {
-    fs::read(path)
-        .ok()
-        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-        .unwrap_or(fallback)
+fn read(path: &Path, fallback: Value) -> Result<Value> {
+    crate::state::read(path, fallback)
 }
+
 fn expanded(path: &str, paths: &Paths) -> PathBuf {
     if path == "~" {
         paths.home.clone()
@@ -326,10 +324,10 @@ pub fn brain_context() -> Value {
 }
 pub fn snapshot(include_brain: bool) -> Result<Value> {
     let paths = Paths::environment()?;
-    let preferences = validate(&read(&paths.config.join("dashboard.json"), json!({})))?;
-    let focus = read(&paths.state.join("dashboard-focus.json"), json!({}));
+    let preferences = validate(&read(&paths.config.join("dashboard.json"), json!({}))?)?;
+    let focus = read(&paths.state.join("dashboard-focus.json"), json!({}))?;
     let configured = preferences["homeZone"].as_str().unwrap_or("");
-    let system = read(Path::new("/etc/nacre/timezone.json"), json!({}));
+    let system = read(Path::new("/etc/nacre/timezone.json"), json!({}))?;
     let zone_name = if configured.is_empty() {
         system["confirmedTimezone"].as_str().unwrap_or("")
     } else {
@@ -349,7 +347,7 @@ pub fn snapshot(include_brain: bool) -> Result<Value> {
 }
 pub fn focus_action(kind: &str, minutes: &Value, dnd: &Value, clock: f64) -> Result<Value> {
     let path = Paths::environment()?.state.join("dashboard-focus.json");
-    let mut state = read(&path, json!({}));
+    let mut state = read(&path, json!({}))?;
     match kind {
         "start" => {
             let minutes = minutes

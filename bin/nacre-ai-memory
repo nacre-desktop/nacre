@@ -8,6 +8,7 @@ import hashlib
 import importlib.machinery
 import importlib.util
 import json
+import nacre_state as _state
 import os
 import re
 import subprocess
@@ -65,7 +66,7 @@ def remember(args, body):
         fcntl.flock(lock, fcntl.LOCK_EX)
         record = state / ("capture-" + signature + ".json")
         if record.exists():
-            note = Path(json.loads(record.read_text())["path"])
+            note = Path(_state.read_json_file(record)["path"])
         else:
             result = subprocess.run(
                 [
@@ -86,7 +87,7 @@ def remember(args, body):
                 check=True,
             )
             note = Path(result.stdout.strip())
-            record.write_text(json.dumps({"path": str(note)}))
+            _state.write(record, {"path": str(note)})
             record.chmod(0o600)
         # Create only missing descriptors. Current curated pages are never overwritten.
         for world in worlds:

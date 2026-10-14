@@ -5,7 +5,7 @@ import argparse
 from nacre_i18n import tr
 import hashlib
 import json
-import os
+import nacre_state as _state
 import subprocess
 import sys
 import uuid
@@ -76,15 +76,12 @@ def attachments(values):
 def save(key, text, files):
     ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
     path = key_path(key)
-    temp = path.with_suffix(".next")
-    temp.write_text(json.dumps(dict(text=text, attachments=files)))
-    temp.chmod(0o600)
-    os.replace(temp, path)
+    _state.write(path, dict(text=text, attachments=files))
 
 
 def load(key):
     try:
-        return json.loads(key_path(key).read_text())
+        return _state.read_json_file(key_path(key))
     except (OSError, ValueError):
         return dict(text="", attachments=[])
 

@@ -6,6 +6,7 @@ import nacre_native_compositor as compositor
 import fcntl
 from nacre_i18n import tr
 import json
+import nacre_state as _state
 import os
 import re
 import signal
@@ -68,7 +69,7 @@ def validated_colors(data):
             tr("helper.classic-state.invalid-palette-mode", "Invalid palette mode")
         )
     values = data.get("colours")
-    roles = json.loads(Path(__file__).with_name("reference-style.json").read_text())[
+    roles = _state.read_json_file(Path(__file__).with_name("reference-style.json"))[
         "colours"
     ]
     if not isinstance(values, dict) or not roles.keys() <= values.keys():
@@ -105,6 +106,8 @@ def validated_colors(data):
 
 
 def atomic_write(path, text):
+    if _state.write_text_if_managed(path, text):
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp = tempfile.mkstemp(prefix="." + path.name, dir=path.parent)
     try:
@@ -157,7 +160,7 @@ def commit_prepared(
         ):
             return False
         config = home / ".config/nacre/cli.json"
-        if config.exists() and json.loads(config.read_text()).get("wallpaper", {}).get(
+        if config.exists() and _state.read_json_file(config).get("wallpaper", {}).get(
             "postHook"
         ):
             return False
@@ -166,7 +169,7 @@ def commit_prepared(
     state.mkdir(parents=True, exist_ok=True)
     with publication_lock(home):
         try:
-            current = json.loads((state / "scheme.json").read_text())
+            current = _state.read_json_file(state / "scheme.json")
         except FileNotFoundError:
             if not allow_mode_change:
                 return False
@@ -356,13 +359,13 @@ def _publish_presentation(home, state, data, colors, wallpaper, fixed, preset, o
     )
     if selected:
         presentation = state / "presentation.json"
-        previous = json.loads(presentation.read_text()) if presentation.exists() else {}
+        previous = _state.read_json_file(presentation) if presentation.exists() else {}
         changed_at = (
             previous.get("changedAtMs", 0) if previous.get("poster") == selected else 0
         )
         if not changed_at and previous.get("poster") == selected:
             media_path = state / "wallpaper/media.json"
-            media = json.loads(media_path.read_text()) if media_path.exists() else {}
+            media = _state.read_json_file(media_path) if media_path.exists() else {}
             if media.get("poster") == selected:
                 changed_at = media.get("appliedAtMs") or int(
                     media_path.stat().st_mtime * 1000
@@ -399,8 +402,8 @@ def _publish_presentation(home, state, data, colors, wallpaper, fixed, preset, o
                         "background_from_wallpaper",
                         options.get("paletteBackgroundFromWallpaper", False),
                     ),
-                    "workspaceColors": json.loads(
-                        (home / ".config/nacre/colors.json").read_text()
+                    "workspaceColors": _state.read_json_file(
+                        home / ".config/nacre/colors.json"
                     )
                     .get("wallpapers", {})
                     .get(selected, {})
@@ -615,7 +618,7 @@ def _publish_lock_login(home, state, colors, wallpaper):
     lock_config = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(lock_config)
     try:
-        preferences = json.loads((home / ".config/nacre/desktop.json").read_text())
+        preferences = _state.read_json_file(home / ".config/nacre/desktop.json")
     except (OSError, ValueError):
         preferences = {}
     atomic_write(
@@ -727,17 +730,17 @@ def _reload_desktop_consumers(data, icon_theme, lua, live):
 
 def _apply_palette(home, wallpaper=None, live=True):
     state = home / ".local/state/nacre"
-    data = json.loads((state / "scheme.json").read_text())
+    data = _state.read_json_file(state / "scheme.json")
     preferences = home / ".config/nacre/wallpaper-picker.json"
-    options = json.loads(preferences.read_text()) if preferences.exists() else {}
+    options = _state.read_json_file(preferences) if preferences.exists() else {}
     preset = options.get("palettePreset", "wallpaper")
     fixed = preset != "wallpaper"
     if fixed:
-        presets = json.loads(
-            Path(__file__).with_name("palette-presets.json").read_text()
+        presets = _state.read_json_file(
+            Path(__file__).with_name("palette-presets.json")
         )
         for favorite in (
-            json.loads((home / ".config/nacre/colors.json").read_text()).get(
+            _state.read_json_file(home / ".config/nacre/colors.json").get(
                 "favorites", []
             )
             if (home / ".config/nacre/colors.json").exists()

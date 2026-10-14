@@ -5,6 +5,7 @@ import argparse
 from nacre_i18n import tr
 import datetime as dt
 import json
+import nacre_state as _state
 import os
 import re
 import shutil
@@ -87,12 +88,15 @@ def valid_zone(zone):
 
 def read(path, default):
     try:
-        return json.loads(path.read_text())
+        return _state.read_json_file(path)
     except (OSError, ValueError):
         return default
 
 
 def atomic(path, data, mode=0o644):
+    if _state.schema(path):
+        _state.write(path, data, mode=mode)
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + ".next")
     temp.write_text(json.dumps(data, indent=2) + "\n")

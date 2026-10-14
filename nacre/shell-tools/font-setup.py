@@ -6,6 +6,7 @@ from nacre_i18n import tr
 import fcntl
 import hashlib
 import json
+import nacre_state as _state
 import os
 from pathlib import Path
 import shutil
@@ -22,10 +23,12 @@ def digest(path):
 
 
 def read(path):
-    return json.loads(path.read_text()) if path.exists() else {}
+    return _state.read_json_file(path) if path.exists() else {}
 
 
 def write(path, data):
+    if _state.write_text_if_managed(path, data):
+        return
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     fd, temporary = tempfile.mkstemp(dir=path.parent)
     try:

@@ -3,6 +3,7 @@
 
 import fcntl
 import json
+import nacre_state as _state
 import time
 import os
 from pathlib import Path
@@ -89,8 +90,8 @@ def setup_locked(env):
                 )
             time.sleep(0.05)
     marker.parent.mkdir(parents=True, exist_ok=True)
-    marker.write_text(
-        json.dumps({"before": before, "applied": defaults}, indent=2) + "\n"
+    _state.write_text_if_managed(
+        marker, json.dumps({"before": before, "applied": defaults}, indent=2) + "\n"
     )
     marker.chmod(0o600)
 

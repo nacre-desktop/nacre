@@ -6,6 +6,7 @@ import datetime as dt
 import fcntl
 import io
 import json
+import nacre_state as _state
 import os
 from pathlib import Path
 import shutil
@@ -98,8 +99,9 @@ def setup(home=None):
         ]:
             mime["Default Applications"][kind] = "org.kde.dolphin.desktop"
         save(home / ".config/mimeapps.list", mime)
-        marker.write_text(
-            json.dumps({"backup": str(backup), "defaults": defaults}, indent=2) + "\n"
+        _state.write_text_if_managed(
+            marker,
+            json.dumps({"backup": str(backup), "defaults": defaults}, indent=2) + "\n",
         )
         marker.chmod(0o600)
 

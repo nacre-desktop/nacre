@@ -1,5 +1,5 @@
 //! Shared atomic private file publication and advisory locks.
-use crate::{json, Result};
+use crate::Result;
 use nix::fcntl::{Flock, FlockArg};
 use serde::Serialize;
 use std::{
@@ -19,7 +19,7 @@ pub fn atomic(path: &Path, content: &[u8]) -> Result<()> {
     Ok(())
 }
 pub fn json_write<T: Serialize>(path: &Path, value: &T) -> Result<()> {
-    atomic(path, json::encode(value)?.as_bytes())
+    crate::state::write(path, &serde_json::to_value(value)?)
 }
 pub fn lock(path: &Path) -> Result<Flock<File>> {
     if let Some(parent) = path.parent() {

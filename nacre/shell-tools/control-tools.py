@@ -6,12 +6,12 @@ import nacre_native_compositor as compositor
 import argparse
 from nacre_i18n import tr
 import json
+import nacre_state as _state
 import os
 from pathlib import Path
 import shutil
 import time
 import subprocess
-import tempfile
 
 
 def record_path(home=None):
@@ -62,7 +62,7 @@ def service():
 
 def load(home=None):
     try:
-        data = json.loads(record_path(home).read_text())
+        data = _state.read_json_file(record_path(home))
         return data if isinstance(data, dict) else {}
     except (OSError, ValueError):
         return {}
@@ -70,16 +70,7 @@ def load(home=None):
 
 def save(data, home=None):
     path = record_path(home)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(dir=path.parent)
-    try:
-        with os.fdopen(fd, "w") as stream:
-            json.dump(data, stream)
-        os.chmod(temporary, 0o600)
-        os.replace(temporary, path)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+    _state.write(path, data)
 
 
 def configured_elsewhere(home=None):

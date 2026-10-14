@@ -7,6 +7,7 @@ import argparse
 from nacre_i18n import tr
 import datetime as dt
 import json
+import nacre_state as _state
 import os
 import selectors
 import subprocess
@@ -69,9 +70,12 @@ def check(event="manual"):
     temp = STATE / "latest.next"
     temp.write_text(json.dumps(record))
     temp.chmod(0o600)
-    os.replace(temp, STATE / "latest.json")
+    try:
+        _state.write(STATE / "latest.json", record)
+    finally:
+        temp.unlink(missing_ok=True)
     with (STATE / "events.jsonl").open("a") as stream:
-        stream.write(json.dumps(record) + "\n")
+        stream.write(json.dumps(dict(record, version=1)) + "\n")
     (STATE / "events.jsonl").chmod(0o600)
     return record
 

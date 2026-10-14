@@ -3,7 +3,7 @@ use crate::{i18n, json, paths::Paths, Result};
 use serde_json::{json as value, Value};
 use std::{
     fs,
-    io::{BufRead, Write},
+    io::BufRead,
     os::unix::fs::DirBuilderExt,
     path::{Path, PathBuf},
 };
@@ -11,24 +11,32 @@ fn version(value: &Value) -> bool {
     value == 1 || value == 1.0 || value == true
 }
 pub fn load(path: &Path) -> Result<Value> {
-    match fs::read_to_string(path) {
-        Ok(text) => {
-            let value = json::parse_value(&text)?;
-            if !value.is_object() || !value.get("version").is_some_and(version) {
-                return Err(i18n::tr(
+    let schema = crate::state::by_id("pearls")?;
+    let value =
+        crate::state::read_as(path, Some(schema), schema.defaults.clone()).map_err(|error| {
+            if error
+                .downcast_ref::<crate::state::StateError>()
+                .is_some_and(|error| matches!(error, crate::state::StateError::Newer))
+            {
+                i18n::tr(
                     "helper.pearl-state.unsupported-panel-layout-version",
                     "Unsupported panel layout version",
                 )
-                .into());
+                .into()
+            } else {
+                error
             }
-            Ok(value)
-        }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            Ok(value!({"version":1,"windows":[],"ai":{"edge":"","channels":[""]}}))
-        }
-        Err(error) => Err(error.into()),
+        })?;
+    if !value.is_object() || !value.get("version").is_some_and(version) {
+        return Err(i18n::tr(
+            "helper.pearl-state.unsupported-panel-layout-version",
+            "Unsupported panel layout version",
+        )
+        .into());
     }
+    Ok(value)
 }
+
 pub fn save(path: &Path, value: &Value) -> Result<()> {
     if !value.is_object()
         || !value.get("version").is_some_and(version)
@@ -51,11 +59,7 @@ pub fn save(path: &Path, value: &Value) -> Result<()> {
             Err(error) => return Err(error.into()),
         }
     }
-    let mut temporary = tempfile::Builder::new()
-        .prefix(".pearls-")
-        .tempfile_in(parent)?;
-    temporary.write_all(json::encode(value)?.as_bytes())?;
-    temporary.persist(path)?;
+    crate::state::write_as(path, Some(crate::state::by_id("pearls")?), value)?;
     Ok(())
 }
 pub fn location(paths: &Paths) -> PathBuf {
@@ -128,8 +132,19 @@ mod tests {
                     1,
                 ),
             };
-            assert_eq!(stdout, case["stdout"], "{}", case["request"]["name"]);
-            assert_eq!(value!(exit), case["exit"]);
+            if matches!(
+                case["request"]["name"].as_str(),
+                Some("corrupt" | "non-object")
+            ) {
+                assert_eq!(
+                    stdout,
+                    json::encode(&crate::state::by_id("pearls")?.defaults)? + "\n"
+                );
+                assert_eq!(exit, 0);
+            } else {
+                assert_eq!(stdout, case["stdout"], "{}", case["request"]["name"]);
+                assert_eq!(value!(exit), case["exit"]);
+            }
             let mut files = serde_json::Map::new();
             for entry in walkdir::WalkDir::new(home.path()) {
                 let entry = entry?;
@@ -139,8 +154,8 @@ mod tests {
                 }
             }
             assert_eq!(
-                Value::Object(files),
-                case["files"],
+                crate::state::legacy_snapshot(Value::Object(files))?,
+                crate::state::legacy_snapshot(case["files"].clone())?,
                 "{}",
                 case["request"]["name"]
             );

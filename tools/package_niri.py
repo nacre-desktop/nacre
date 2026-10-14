@@ -8,6 +8,16 @@ import shlex
 import subprocess
 import sys
 
+# Shared state is independent of the palette Python environment.
+for _state_directory in (
+    Path(__file__).resolve().parents[1] / "nacre/shell-tools",
+    Path.home() / ".local/share/nacre/shell/tools",
+):
+    if (_state_directory / "nacre_state.py").is_file():
+        sys.path.insert(0, str(_state_directory))
+        break
+_state = importlib.import_module("nacre_state")
+
 DEPENDENCIES = ("niri", "xwayland-satellite", "xdg-desktop-portal-gnome")
 TOOLKIT_ENVIRONMENT = {
     "QT_QPA_PLATFORM": "wayland;xcb",
@@ -107,16 +117,14 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
     else:
         # The preview installer emitted an empty file on a fresh account. Seed
         # real Nacre geometry there too; never import another host's monitors.
-        values = json.loads(
-            (root / "nacre/shell-tools/desktop-defaults.json").read_text()
-        )
+        values = _state.read_json_file(root / "nacre/shell-tools/desktop-defaults.json")
         preferences = home / ".config/nacre/desktop.json"
         backend = module(
             root / "nacre/shell-tools/nacre_native_compositor.py",
             "package_niri_preferences",
         )
         if preferences.is_file():
-            values.update(json.loads(preferences.read_text()))
+            values.update(_state.read_json_file(preferences))
         desktop = "prefer-no-csd\n" + backend.render_for_backend(
             "niri", "render_desktop_options", values
         )
@@ -135,7 +143,7 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         if not scheme.is_file():
             scheme = common.get(Path(".local/state/nacre/scheme.json"))
         if scheme is not None and scheme.is_file():
-            colors = json.loads(scheme.read_text())["colours"]
+            colors = _state.read_json_file(scheme)["colours"]
             text = (
                 root / "nacre/shell-tools/compositor_backends/niri/palette.kdl.in"
             ).read_text()

@@ -6,7 +6,7 @@ import datetime as dt
 import hashlib
 import importlib.machinery
 import importlib.util
-import json
+import nacre_state as _state
 from pathlib import Path
 import re
 import sys
@@ -59,13 +59,13 @@ def check(root):
                 f"{name}: review older than 30 days; verify time-sensitive claims"
             )
     for path in sorted((root / ".brain-state/conflicts").glob("*.json")):
-        record = json.loads(path.read_text())
+        record = _state.read_json_file(path)
         findings.append(f"Unresolved sync conflict: {record['path']} ({path.stem})")
     return findings
 
 
 def restore(archive, destination):
-    record = json.loads(archive.read_text())
+    record = _state.read_json_file(archive)
     notes = record["files"]
     if record.get("version") != 1 or sync.digest(notes) != record["sha256"]:
         raise ValueError("Backup checksum mismatch")

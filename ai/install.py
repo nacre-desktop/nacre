@@ -3,13 +3,23 @@
 
 import argparse
 import datetime as dt
-import json
 import os
+import importlib
 from pathlib import Path
 import re
 import shutil
 import subprocess
 import tempfile
+import sys
+
+for _state_directory in (
+    Path(__file__).resolve().parents[1] / "nacre/shell-tools",
+    Path.home() / ".local/share/nacre/shell/tools",
+):
+    if (_state_directory / "nacre_state.py").is_file():
+        sys.path.insert(0, str(_state_directory))
+        break
+_state = importlib.import_module("nacre_state")
 
 
 def install_launcher(repo, home, apply=False, name="nacre-ai"):
@@ -240,12 +250,8 @@ def main():
     config = home / ".config/nacre/ai/projects.json"
     if not config.exists():
         config.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        config.write_text(
-            json.dumps(
-                {"projects": [{"id": "os", "label": "Nacre", "path": str(repo)}]},
-                indent=2,
-            )
-            + "\n"
+        _state.write(
+            config, {"projects": [{"id": "os", "label": "Nacre", "path": str(repo)}]}
         )
         config.chmod(0o600)
     subprocess.run([str(home / ".local/bin/nacre-brain"), "init"], check=True)

@@ -6,6 +6,7 @@ from nacre_i18n import tr
 import datetime as dt
 import hashlib
 import json
+import nacre_state as _state
 import os
 import shutil
 import signal
@@ -25,7 +26,7 @@ STATE = HOME / ".local/state/nacre/shell"
 
 def refresh_orient(runtime):
     state = HOME / ".local/state/nacre"
-    scheme = json.loads((state / "scheme.json").read_text())
+    scheme = _state.read_json_file(state / "scheme.json")
     # Fixed presets are resolved by the existing publisher, not by this command.
     subprocess.run(
         [
@@ -410,7 +411,7 @@ def deploy(code_only=False):
             )
         )
     # The reference style is code; wallpaper files remain private user assets.
-    style = json.loads((ROOT / "reference-style.json").read_text())
+    style = _state.read_json_file(ROOT / "reference-style.json")
     scheme = HOME / ".local/state/nacre/scheme"
     if not (scheme / "current.txt").exists():
         write(
@@ -463,7 +464,7 @@ def deploy(code_only=False):
         subprocess.run(["python3", str(DEST / "tools/classic-state.py")], check=True)
         for entry in entries:
             entry["after_hash"] = digest(Path(entry["target"]))
-    (backup / "manifest.json").write_text(json.dumps(entries, indent=2))
+    _state.write(backup / "manifest.json", entries)
     (STATE / "latest-backup").write_text(str(backup))
     stop_other_shells()
     subprocess.run(
@@ -552,7 +553,7 @@ def validate_live(expected=None):
 
 def restore():
     backup = Path((STATE / "latest-backup").read_text())
-    entries = json.loads((backup / "manifest.json").read_text())
+    entries = _state.read_json_file(backup / "manifest.json")
     for e in entries:
         path = Path(e["target"])
         if (

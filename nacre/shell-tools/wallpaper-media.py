@@ -7,6 +7,7 @@ import functools
 import fcntl
 import hashlib
 import json
+import nacre_state as _state
 import os
 import re
 import shutil
@@ -28,6 +29,9 @@ VIDEOS = {".mp4", ".webm", ".mkv", ".mov", ".avi", ".m4v"}
 
 
 def atomic(path, data):
+    if _state.schema(path):
+        _state.write(path, data)
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(dir=path.parent)
     try:
@@ -42,7 +46,7 @@ def atomic(path, data):
 
 def read(path, default):
     try:
-        return json.loads(path.read_text())
+        return _state.read_json_file(path)
     except FileNotFoundError:
         return default
 

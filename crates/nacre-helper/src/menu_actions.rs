@@ -626,14 +626,18 @@ fn configuration_command(
         }
     };
     let path = paths.config.join(name);
-    if !path.exists() {
-        let content = if route == "defaults" {
+    if route == "defaults" {
+        let schema = crate::state::by_id("apps")?;
+        if !path.exists() {
             let defaults = json!({"terminal":["kitty"],"browser":["google-chrome-stable"],"files":["nacre-shell","dolphin"],"mail":["google-chrome-stable","--app=https://mail.google.com/"],"emoji":["nacre-menu","actions.emoji"]});
-            serde_json::to_string_pretty(&defaults)? + "\n"
+            crate::state::write_as(&path, Some(schema), &defaults)?;
         } else {
-            "-- Personal Hyprland shortcut overrides.\n".into()
-        };
-        files::atomic(&path, content.as_bytes())?;
+            // Validate before launching an editor; migrate legacy data with backup.
+            let data = crate::state::read_as(&path, Some(schema), json!({}))?;
+            crate::state::write_as(&path, Some(schema), &data)?;
+        }
+    } else if !path.exists() {
+        files::atomic(&path, b"-- Personal Hyprland shortcut overrides.\n")?;
     }
     let preferred = editor_words(editor)?;
     let mut command = if preferred.first().is_some_and(|name| find(name)) {
@@ -717,20 +721,7 @@ impl Units for NativeUnits {
 }
 fn record(paths: &Paths, name: &str) -> Result<serde_json::Value> {
     let path = paths.state.join(format!("menu/{name}.json"));
-    match fs::read(&path) {
-        Ok(bytes) => match serde_json::from_slice(&bytes) {
-            Ok(value) => Ok(value),
-            Err(error) => {
-                eprintln!("Menu state {name}: {error}");
-                Ok(json!({}))
-            }
-        },
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(json!({})),
-        Err(error) => {
-            eprintln!("Menu state {name}: {error}");
-            Ok(json!({}))
-        }
-    }
+    crate::state::read(&path, json!({}))
 }
 pub fn record_stop() -> Result<String> {
     record_stop_with(&Paths::environment()?, &mut NativeUnits)
@@ -1197,7 +1188,10 @@ mod tests {
                 let path = item?.path();
                 observed.insert(format!(".local/state/nacre/menu/{}",path.file_name().ok_or("Missing filename")?.to_string_lossy()),json!({"text":fs::read_to_string(&path)?.replace(&home.path().to_string_lossy().into_owned(),"{home}"),"mode":format!("0o{:o}",fs::metadata(path)?.permissions().mode()&0o777)}));
             }
-            assert_eq!(Value::Object(observed), case["files"]);
+            assert_eq!(
+                crate::state::legacy_snapshot(Value::Object(observed))?,
+                crate::state::legacy_snapshot(case["files"].clone())?
+            );
         }
         let stamp = chrono::NaiveDateTime::parse_from_str(
             "2024-01-02 03:04:05.678901",
@@ -1299,7 +1293,10 @@ mod tests {
                 let path = entry?.path();
                 observed.insert(format!(".local/state/nacre/menu/{}",path.file_name().ok_or("Missing filename")?.to_string_lossy()),json!({"text":fs::read_to_string(&path)?,"mode":format!("0o{:o}",fs::metadata(path)?.permissions().mode()&0o777)}));
             }
-            assert_eq!(Value::Object(observed), case["files"]);
+            assert_eq!(
+                crate::state::legacy_snapshot(Value::Object(observed))?,
+                crate::state::legacy_snapshot(case["files"].clone())?
+            );
         }
         Ok(())
     }
@@ -1428,7 +1425,15 @@ mod tests {
                     observed.insert(format!(".config/nacre/{name}"),json!({"text":fs::read_to_string(&path)?,"mode":format!("0o{:o}",fs::metadata(path)?.permissions().mode()&0o777)}));
                 }
             }
-            assert_eq!(Value::Object(observed), case["files"]);
+            let mut expected = crate::state::legacy_snapshot(case["files"].clone())?;
+            if !expected[".config/nacre/apps.json"].is_null() {
+                // Versioned preference publication also makes the primary private.
+                expected[".config/nacre/apps.json"]["mode"] = json!("0o600");
+            }
+            assert_eq!(
+                crate::state::legacy_snapshot(Value::Object(observed))?,
+                expected
+            );
         }
         Ok(())
     }

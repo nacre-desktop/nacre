@@ -18,3 +18,8 @@ packages = ["src/nacre_shell"]
 [tool.ruff]
 extend = "../../ruff.toml"
 line-length = 120
+
+# The standalone guard also ships with the palette adapter; source stays shared.
+[tool.hatch.build.targets.wheel.force-include]
+"../shell-tools/nacre_state.py" = "nacre_state.py"
+"../shell-tools/nacre-state-files.json" = "nacre-state-files.json"

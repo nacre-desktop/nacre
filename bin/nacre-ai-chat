@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import nacre_state as _state
 import os
 from pathlib import Path
 import re
@@ -191,7 +192,10 @@ def cache_title(thread_id, title, cwd=None):
         if cwd:
             record["cwd"] = str(cwd)
         json.dump(record, output)
-    os.replace(temp, root / f"{thread_id}.json")
+    try:
+        _state.write(root / f"{thread_id}.json", record)
+    finally:
+        Path(temp).unlink(missing_ok=True)
     if cwd:
         directory = Path(cwd)
         if (
@@ -203,7 +207,10 @@ def cache_title(thread_id, title, cwd=None):
             fd, temp = tempfile.mkstemp(dir=index, prefix=".directory-")
             with os.fdopen(fd, "w") as output:
                 json.dump({"threadId": thread_id}, output)
-            os.replace(temp, index / f"{directory.name}.json")
+            try:
+                _state.write(index / f"{directory.name}.json", {"threadId": thread_id})
+            finally:
+                Path(temp).unlink(missing_ok=True)
 
 
 def cache_named_thread(codex, thread_id, title):

@@ -2,6 +2,7 @@
 """Build only the app-scoped style module for the pacman-managed Thunar."""
 
 import json
+import nacre_state as _state
 from pathlib import Path
 import subprocess
 
@@ -64,8 +65,9 @@ def install():
             check=True,
         )
         marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.write_text(
-            json.dumps({"before": before, "applied": "nacre-thunar.desktop"}) + "\n"
+        _state.write_text_if_managed(
+            marker,
+            json.dumps({"before": before, "applied": "nacre-thunar.desktop"}) + "\n",
         )
         marker.chmod(0o600)
 

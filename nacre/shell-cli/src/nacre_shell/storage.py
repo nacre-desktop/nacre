@@ -9,6 +9,7 @@ from pathlib import Path
 import tempfile
 
 from . import ENGINE_ID
+import nacre_state as _state
 
 
 def roots():
@@ -22,12 +23,14 @@ def roots():
 
 def read(path, default):
     try:
-        return json.loads(path.read_text())
+        return _state.read_json_file(path)
     except FileNotFoundError:
         return default
 
 
 def atomic(path, text):
+    if _state.write_text_if_managed(path, text):
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix="." + path.name, dir=path.parent)
     try:

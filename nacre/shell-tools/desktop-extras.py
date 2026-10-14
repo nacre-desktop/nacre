@@ -5,6 +5,7 @@ import argparse
 from nacre_i18n import tr
 import hashlib
 import json
+import nacre_state as _state
 import os
 import re
 import subprocess
@@ -124,7 +125,7 @@ def chat_list():
 
 
 def resume(key, terminal=False):
-    records = json.loads((STATE / "chats.json").read_text())
+    records = _state.read_json_file(STATE / "chats.json")
     item = records[key]
     if not terminal:
         for client in compositor.query("windows", timeout=12):
@@ -274,7 +275,7 @@ def fingerprint(row, data=None):
 
 def pins_for(rows):
     path = STATE / "pins.json"
-    original = json.loads(path.read_text()) if path.exists() else []
+    original = _state.read_json_file(path) if path.exists() else []
     pins = []
     for pin in original:
         if isinstance(pin, dict):

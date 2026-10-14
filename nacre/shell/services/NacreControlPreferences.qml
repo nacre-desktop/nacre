@@ -17,7 +17,7 @@ Singleton {
     function save(values) {
         tiles = normalize(values);
         error = "";
-        store.setText(JSON.stringify({
+        store.saveText(JSON.stringify({
             version: 2,
             tiles: tiles
         }));
@@ -66,7 +66,7 @@ Singleton {
             return false;
         }
     }
-    FileView {
+    NacreStateFile {
         id: store
         path: NacrePaths.config + "/control-center.json"
         printErrors: false

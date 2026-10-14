@@ -908,7 +908,7 @@ mod tests {
             let read = |name: &str| -> Result<Value> {
                 let file = paths.state.join(format!("menu/{name}.json"));
                 if file.exists() {
-                    Ok(serde_json::from_slice(&fs::read(file)?)?)
+                    crate::state::read(&file, json!([]))
                 } else {
                     Ok(json!([]))
                 }
@@ -976,7 +976,12 @@ mod tests {
             };
             assert_eq!(outcome, case["outcome"], "{}: result", case["name"]);
             let files = snapshot(home.path())?;
-            assert_eq!(files, case["files"], "{}: files/modes", case["name"]);
+            assert_eq!(
+                crate::state::legacy_snapshot(files.clone())?,
+                crate::state::legacy_snapshot(case["files"].clone())?,
+                "{}: files/modes",
+                case["name"]
+            );
             let mut deleted: Vec<_> = case["seed"]
                 .as_object()
                 .ok_or("Missing seed")?

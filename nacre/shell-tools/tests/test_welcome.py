@@ -83,11 +83,17 @@ class WelcomeTests(unittest.TestCase):
             path.write_text(json.dumps({"version": 1, "custom": "preserve"}))
             welcome.set_startup(home, False)
             self.assertEqual(welcome.preferences(home)["custom"], "preserve")
-            for text in ('{"showAtLogin":"no"}', '{"version":2}', "broken json"):
+            for text in ('{"showAtLogin":"no"}', '{"version":2}'):
                 path.write_text(text)
-                with self.assertRaises(ValueError):
+                with self.assertRaises((ValueError, RuntimeError)):
                     welcome.set_startup(home, True)
                 self.assertEqual(path.read_text(), text)
+            path.write_text("broken json")
+            welcome.set_startup(home, True)
+            self.assertEqual(
+                path.with_name(path.name + ".corrupt.bak").read_text(), "broken json"
+            )
+            self.assertTrue(welcome.preferences(home)["showAtLogin"])
             with self.assertRaises(ValueError):
                 welcome.set_startup(home, "false")
 

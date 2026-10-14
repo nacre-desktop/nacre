@@ -53,7 +53,9 @@ class ChatTitles(unittest.TestCase):
         ):
             chat.cache_title("thread-one", "A title\x1b\n")
             file = Path(home) / ".local/state/nacre/ai/chat-titles/thread-one.json"
-            self.assertEqual(json.loads(file.read_text()), {"title": "A title"})
+            self.assertEqual(
+                json.loads(file.read_text()), {"title": "A title", "version": 1}
+            )
             self.assertEqual(file.stat().st_mode & 0o777, 0o600)
             with self.assertRaises(ValueError):
                 chat.cache_title("../escape", "no")
@@ -102,7 +104,8 @@ class ChatTitles(unittest.TestCase):
             )
             file = Path(home) / ".local/state/nacre/ai/chat-titles/thread-one.json"
             self.assertEqual(
-                json.loads(file.read_text()), {"title": "Title", "cwd": "/chat"}
+                json.loads(file.read_text()),
+                {"title": "Title", "cwd": "/chat", "version": 1},
             )
 
     def test_directory_identity_survives_older_title_only_cache_writers(self):
@@ -116,11 +119,13 @@ class ChatTitles(unittest.TestCase):
             chat.cache_title(thread, "Renamed chat")
             root = Path(home) / ".local/state/nacre/ai/chat-titles"
             identity = root / "directories" / f"{directory.name}.json"
-            self.assertEqual(json.loads(identity.read_text()), {"threadId": thread})
+            self.assertEqual(
+                json.loads(identity.read_text()), {"threadId": thread, "version": 1}
+            )
             self.assertEqual(identity.stat().st_mode & 0o777, 0o600)
             self.assertEqual(
                 json.loads((root / f"{thread}.json").read_text()),
-                {"title": "Renamed chat"},
+                {"title": "Renamed chat", "version": 1},
             )
 
     def test_failed_handshake_always_cleans_child(self):

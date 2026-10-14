@@ -7,6 +7,7 @@ import hashlib
 import json
 import sys
 import os
+import importlib
 from pathlib import Path
 import shutil
 import tempfile
@@ -14,6 +15,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 # Standalone helpers share the translation runtime during source-tree tooling.
 sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
+_state = importlib.import_module("nacre_state")
+
 ACTIVE_DIRS = (
     "uwsm",
     "hypr",
@@ -146,6 +149,8 @@ def selected_profile(root=ROOT):
 
 
 def atomic(path, data, mode=0o644):
+    if _state.write_text_if_managed(path, data, mode=mode):
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp = tempfile.mkstemp(dir=path.parent, prefix="." + path.name)
     try:
@@ -225,7 +230,7 @@ def plan(
         idle_policy(home, root, migrate_idle)
         power_policy(home, root, migrate_idle)
     manifest = home / ".local/state/nacre/configuration.json"
-    known = json.loads(manifest.read_text()) if manifest.exists() else {}
+    known = _state.read_json_file(manifest) if manifest.exists() else {}
     desired = files(root)
     if only and scope - desired.keys():
         raise ValueError("Requested file is not managed by this configuration")
@@ -264,7 +269,7 @@ def plan(
             links[path] = target
     changed = []
     seeds = (
-        set(json.loads((root / "seed-paths.json").read_text()))
+        set(_state.read_json_file(root / "seed-paths.json"))
         if (root / "seed-paths.json").exists()
         else set()
     )
@@ -335,7 +340,7 @@ def legacy_empty_launcher(relative, path):
     if (home / ".local/state/nacre/defaults.json").exists():
         return False
     try:
-        data = json.loads(path.read_text())
+        data = _state.read_json_file(path)
         return (
             isinstance(data, dict)
             and data.get("favorites") == []
@@ -351,7 +356,7 @@ def apply(
 ):
     scope = configuration_scope(app_routes_only, only)
     seeds = (
-        set(json.loads((root / "seed-paths.json").read_text()))
+        set(_state.read_json_file(root / "seed-paths.json"))
         if (root / "seed-paths.json").exists()
         else set()
     )

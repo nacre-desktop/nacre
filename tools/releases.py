@@ -16,6 +16,16 @@ import sys
 import tempfile
 from pathlib import Path
 
+# Shared state is independent of the palette Python environment.
+for _state_directory in (
+    Path(__file__).resolve().parents[1] / "nacre/shell-tools",
+    Path.home() / ".local/share/nacre/shell/tools",
+):
+    if (_state_directory / "nacre_state.py").is_file():
+        sys.path.insert(0, str(_state_directory))
+        break
+_state = importlib.import_module("nacre_state")
+
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre/releases"
 CONTROL = HOME / ".local/share/nacre/control"
@@ -35,6 +45,9 @@ def compositor():
 
 
 def atomic(path, data):
+    if _state.schema(path):
+        _state.write(path, data)
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name("." + path.name + ".next")
     temp.write_text(json.dumps(data, indent=2))
@@ -120,7 +133,7 @@ def paths(repo):
         HOME / ".local/share/applications/nacre-thunar.desktop",
     ]
     managed = HOME / ".local/state/nacre/configuration.json"
-    for rel in json.loads(managed.read_text()) if managed.exists() else []:
+    for rel in _state.read_json_file(managed) if managed.exists() else []:
         p = Path(rel)
         if p.is_absolute() or ".." in p.parts:
             raise RuntimeError("Invalid managed path")
@@ -146,7 +159,7 @@ def capture(repo, revision, extra=(), package=False):
     release = STATE / dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     release.mkdir(mode=0o700)
     current = (
-        json.loads((STATE / "current.json").read_text())
+        _state.read_json_file(STATE / "current.json")
         if (STATE / "current.json").exists()
         else {}
     )
@@ -199,7 +212,7 @@ def capture(repo, revision, extra=(), package=False):
 
 
 def restore(release, record=None, force=False):
-    record = record or json.loads((release / "release.json").read_text())
+    record = record or _state.read_json_file(release / "release.json")
     if not force:
         for e in record["entries"]:
             if "after" in e and fingerprint(Path(e["path"])) != e["after"]:
@@ -280,7 +293,7 @@ def install_controller(repo):
 
 def prune_releases(keep=10):
     current = (
-        json.loads((STATE / "current.json").read_text())
+        _state.read_json_file(STATE / "current.json")
         if (STATE / "current.json").exists()
         else {}
     )
@@ -293,7 +306,7 @@ def prune_releases(keep=10):
         ):
             continue
         try:
-            record = json.loads((path / "release.json").read_text())
+            record = _state.read_json_file(path / "release.json")
         except (OSError, ValueError):
             continue
         rows.append((path, record))
@@ -708,7 +721,7 @@ def main():
                 else "{}"
             )
         else:
-            current = json.loads((STATE / "current.json").read_text())
+            current = _state.read_json_file(STATE / "current.json")
             print(json.dumps(dict(restored=restore(Path(current["release"])))))
 
 

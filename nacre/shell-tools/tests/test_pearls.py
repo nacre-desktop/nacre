@@ -723,9 +723,12 @@ TestCase {
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
             self.assertEqual(path.parent.stat().st_mode & 0o777, 0o700)
             path.write_text("bad saved data")
-            with self.assertRaises(ValueError):
-                state.load(path)
+            self.assertEqual(state.load(path)["windows"], [])
             self.assertEqual(path.read_text(), "bad saved data")
+            state.save(path, value)
+            self.assertEqual(
+                path.with_name(path.name + ".corrupt.bak").read_text(), "bad saved data"
+            )
 
     def test_ai_namespaces_preserve_default_and_reject_path_injection(self):
         sidebar = module("sidebar-chat")

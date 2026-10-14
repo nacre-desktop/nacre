@@ -5,6 +5,7 @@ import argparse
 from nacre_i18n import tr
 import re
 import json
+import nacre_state as _state
 import os
 import queue
 import signal
@@ -91,7 +92,7 @@ INSTRUCTIONS = """You are Nacre AI in an ongoing desktop sidebar conversation. I
 def agent_full_access():
     try:
         return (
-            json.loads((Path.home() / ".config/nacre/profile.json").read_text()).get(
+            _state.read_json_file(Path.home() / ".config/nacre/profile.json").get(
                 "aiFullAccess"
             )
             is True
@@ -564,7 +565,7 @@ class Manager:
         key = hashlib.sha256((agent + "|" + account).encode()).hexdigest()[:20]
         self.path = STATE / (key + ".json")
         meta = (
-            json.loads(self.path.read_text())
+            _state.read_json_file(self.path)
             if self.path.exists() and not fresh and not item
             else None
         )
@@ -838,8 +839,8 @@ class Manager:
                 self.peer.close()
             item = None
             if action == "load":
-                item = json.loads(
-                    (HOME / ".local/state/nacre/shell/extras/chats.json").read_text()
+                item = _state.read_json_file(
+                    HOME / ".local/state/nacre/shell/extras/chats.json"
                 )[command["key"]]
             self.choose(item, fresh=action == "new")
             self.broadcast(dict(type="history", messages=[]))
@@ -890,7 +891,7 @@ class Manager:
             if self.busy or not self.metadata.get("id"):
                 return
             path = HOME / ".local/state/nacre/shell/extras/chats.json"
-            records = json.loads(path.read_text()) if path.exists() else {}
+            records = _state.read_json_file(path) if path.exists() else {}
             key = uuid.uuid4().hex[:24]
             records[key] = dict(
                 id=self.metadata["id"],

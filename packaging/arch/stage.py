@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import importlib.util
 import shutil
 from pathlib import Path
 
@@ -34,14 +35,27 @@ def stage(root, destination, component, build):
             shutil.copy2(source, target)
             target.chmod(0o755 if source.stat().st_mode & 0o111 else 0o644)
 
+    state_spec = importlib.util.spec_from_file_location(
+        "stage_state", root / "nacre/shell-tools/nacre_state.py"
+    )
+    state = importlib.util.module_from_spec(state_spec)
+    state_spec.loader.exec_module(state)
+
     def text(relative, body, executable=False):
         target = deploy / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(body)
+        entry = state.schema(target)
+        if entry and not target.exists():
+            target.write_bytes(state._encode(json.loads(body), entry))
+        elif not state.write_text_if_managed(
+            target, body, mode=0o755 if executable else 0o644
+        ):
+            target.write_text(body)
         target.chmod(0o755 if executable else 0o644)
 
     tools = root / "nacre/shell-tools"
     if component == "core":
+        copy(root / "bin/nacre_state.py", shared / "bin/nacre_state.py")
         for name in (
             "hypr",
             "kitty",
