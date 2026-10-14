@@ -143,9 +143,22 @@ pub fn render_desktop(preferences: &Value) -> Result<String> {
         }
     }
     let mut result = render_options(&Value::Object(options))?;
-    if let Some(layout) = preferences.get("keyboardLayouts") {
+    if preferences.get("keyboardLayouts").is_some() || preferences.get("touchpadEnabled").is_some()
+    {
         result.push_str("-- Nacre software input begin\n");
-        result.push_str(&render_keyboard(&json!({"layout":layout}))?);
+        if let Some(layout) = preferences.get("keyboardLayouts") {
+            result.push_str(&render_keyboard(&json!({"layout":layout}))?);
+        }
+        if let Some(enabled) = preferences.get("touchpadEnabled").and_then(Value::as_bool) {
+            if let Some(devices) = preferences.get("touchpadDevices").and_then(Value::as_array) {
+                for device in devices {
+                    result.push_str(&format!(
+                        "hl.device({{name={},enabled={enabled}}})\n",
+                        lua(device)?
+                    ));
+                }
+            }
+        }
         result.push_str("-- Nacre software input end\n");
     }
     Ok(result)

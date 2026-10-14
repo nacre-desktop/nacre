@@ -427,6 +427,38 @@ TestCase {
         value.cancelForm();
     }
 
+    function test_hardware_actions_are_filtered_and_globally_searchable() {
+        const value = view();
+        value.menu.library.data = Object.assign({}, value.menu.library.data, {
+            system: {
+                hardware: [
+                    {
+                        id: "touchpad-disable",
+                        name: "Disable touchpad",
+                        description: "Detected supported touchpad",
+                        section: "setup.hardware",
+                        root: false
+                    },
+                    {
+                        id: "laptop-display-off",
+                        name: "Turn off laptop display",
+                        description: "External output is active",
+                        section: "setup.hardware",
+                        root: false
+                    }
+                ]
+            }
+        });
+        value.navigate("setup.hardware");
+        compare(value.entries.length, 2);
+        verify(!value.entries.some(row => row.value === "hibernate" || row.value === "laptop-mirror"));
+        const entry = value.entries.find(row => row.value === "touchpad-disable");
+        verify(!!entry.confirm);
+        value.navigate("software.development");
+        findChild(value, "launcherSearch").text = "touchpad";
+        verify(value.entries.some(row => row.value === "touchpad-disable"));
+    }
+
     function test_setup_actions_use_hardware_results_and_confirmation() {
         const value = view();
         value.menu.library.data = Object.assign({}, value.menu.library.data, {

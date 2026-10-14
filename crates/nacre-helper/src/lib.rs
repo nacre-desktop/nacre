@@ -42,6 +42,7 @@ pub mod service;
 pub mod software_actions;
 pub mod software_ai;
 pub mod software_environments;
+pub mod software_hardware;
 pub mod software_input;
 pub mod software_library;
 pub mod software_setup;

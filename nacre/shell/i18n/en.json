@@ -3279,5 +3279,14 @@
   "software.setup.input-methods": "Input methods",
   "software.setup.input-methods.detail": "Open the installed input-method configuration tool",
   "launcher.catalog.setup.system.label": "System setup",
-  "launcher.catalog.setup.system.description": "Devices, networking and input"
+  "launcher.catalog.setup.system.description": "Devices, networking and input",
+  "software.hardware.touchpad-enable": "Enable touchpad",
+  "software.hardware.touchpad-disable": "Disable touchpad",
+  "software.hardware.laptop-display-off": "Turn off laptop display",
+  "software.hardware.laptop-display-on": "Turn on laptop display",
+  "software.hardware.laptop-mirror": "Mirror laptop display",
+  "software.hardware.gpu": "GPU mode: {mode}",
+  "software.hardware.hibernate": "Hibernate",
+  "launcher.catalog.setup.hardware.label": "Hardware controls",
+  "launcher.catalog.setup.hardware.description": "Supported input, display and power controls"
 }

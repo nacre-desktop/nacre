@@ -3333,5 +3333,14 @@
   "software.setup.input-methods": "System setup device or networking action",
   "software.setup.input-methods.detail": "System setup device or networking action",
   "launcher.catalog.setup.system.label": "System setup launcher catalog label",
-  "launcher.catalog.setup.system.description": "System setup launcher catalog description"
+  "launcher.catalog.setup.system.description": "System setup launcher catalog description",
+  "software.hardware.touchpad-enable": "Supported hardware action",
+  "software.hardware.touchpad-disable": "Supported hardware action",
+  "software.hardware.laptop-display-off": "Supported hardware action",
+  "software.hardware.laptop-display-on": "Supported hardware action",
+  "software.hardware.laptop-mirror": "Supported hardware action",
+  "software.hardware.gpu": "Supported hardware action",
+  "software.hardware.hibernate": "Supported hardware action",
+  "launcher.catalog.setup.hardware.label": "Hardware controls catalog label",
+  "launcher.catalog.setup.hardware.description": "Hardware controls catalog description"
 }

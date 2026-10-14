@@ -19,17 +19,42 @@ pub fn preferences(config: &Path) -> Result<Value> {
             return Err("Use comma-separated XKB layout identifiers".into());
         }
     }
+    if value
+        .get("touchpadEnabled")
+        .is_some_and(|v| !v.is_boolean())
+    {
+        return Err("Invalid touchpad preference".into());
+    }
+    if let Some(devices) = value.get("touchpadDevices") {
+        if devices.as_array().is_none_or(|a| {
+            a.len() > 32
+                || a.iter().any(|v| {
+                    v.as_str().is_none_or(|s| {
+                        s.len() > 160 || !s.is_ascii() || s.chars().any(|c| c.is_control())
+                    })
+                })
+        }) {
+            return Err("Invalid touchpad identities".into());
+        }
+    }
     Ok(value)
 }
 pub fn overlay(config: &Path, base: &Value) -> Result<Value> {
     let mut value = base.clone();
     let map = value.as_object_mut().ok_or("Invalid input configuration")?;
     let input = preferences(config)?;
-    if let Some(layout) = input.get("keyboardLayouts") {
-        map.entry("keyboardLayouts")
-            .or_insert_with(|| layout.clone());
+    for key in ["keyboardLayouts", "touchpadEnabled", "touchpadDevices"] {
+        if let Some(value) = input.get(key) {
+            map.entry(key).or_insert_with(|| value.clone());
+        }
     }
     Ok(value)
+}
+pub fn set_touchpad(paths: &Paths, enabled: bool, devices: Vec<String>) -> Result<Value> {
+    apply(
+        paths,
+        json!({"touchpadEnabled":enabled,"touchpadDevices":devices}),
+    )
 }
 pub fn set_layouts(paths: &Paths, layouts: &str) -> Result<Value> {
     if layouts.len() > 160
@@ -43,6 +68,9 @@ pub fn set_layouts(paths: &Paths, layouts: &str) -> Result<Value> {
     {
         return Err("Use comma-separated XKB layout identifiers".into());
     }
+    apply(paths, json!({"keyboardLayouts":layouts}))
+}
+fn apply(paths: &Paths, patch: Value) -> Result<Value> {
     let mut backend = Backend::new(paths.clone(), std::env::vars().collect())?;
     let path = paths.config.join("software-input.json");
     let _guard = files::lock(&path.with_extension("action.lock"))?;
@@ -61,7 +89,10 @@ pub fn set_layouts(paths: &Paths, layouts: &str) -> Result<Value> {
         None
     };
     let mut input = preferences(&paths.config)?;
-    input["keyboardLayouts"] = json!(layouts);
+    input
+        .as_object_mut()
+        .ok_or("Invalid input preferences")?
+        .extend(patch.as_object().unwrap().clone());
     state::write(&path, &input)?;
     let published = fs::read(&path)?;
     let mut generated = None;
@@ -83,13 +114,18 @@ pub fn set_layouts(paths: &Paths, layouts: &str) -> Result<Value> {
                 body.replace_range(start..end, "");
             }
             body.push_str(BEGIN);
-            body.push_str(&backend.render_keyboard(&json!({"layout":layouts}))?);
+            let projection = backend.render_desktop(&json!({}))?;
+            let fragment = projection
+                .split_once(BEGIN)
+                .map(|(_, rest)| rest.split_once(END).map(|(value, _)| value).unwrap_or(rest))
+                .unwrap_or("");
+            body.push_str(fragment);
             body.push_str(END);
             files::atomic(&target, body.as_bytes())?;
             generated = Some(body.into_bytes());
         }
         backend.set_desktop(&json!({}), Duration::from_secs(8))?;
-        Ok(json!({"message":"Keyboard layouts saved and applied"}))
+        Ok(json!({"message":"Input preferences saved and applied"}))
     })();
     if result.is_err() && fs::read(&path)? == published {
         match previous {
@@ -111,6 +147,31 @@ pub fn set_layouts(paths: &Paths, layouts: &str) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn touchpad_projection_keeps_scroll_and_layout_preferences() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        state::write(
+            &paths.config.join("software-input.json"),
+            &json!({"keyboardLayouts":"us,no","touchpadEnabled":false,"touchpadDevices":["fixture-touchpad"]}),
+        )?;
+        for compositor in ["niri", "hyprland"] {
+            let backend = Backend::new(
+                paths.clone(),
+                std::collections::BTreeMap::from([("NACRE_COMPOSITOR".into(), compositor.into())]),
+            )?;
+            let text = backend.render_desktop(&json!({"naturalScroll":true}))?;
+            assert!(text.contains("us,no"));
+            if compositor == "niri" {
+                assert!(text.contains("off; natural-scroll"));
+            } else {
+                assert!(text.contains("enabled=false"));
+                assert!(text.contains("fixture-touchpad"));
+            }
+        }
+        Ok(())
+    }
     #[test]
     fn renderer_projects_only_registered_keyboard_preference() -> Result<()> {
         let home = tempfile::tempdir()?;

@@ -38,7 +38,7 @@ fn unit(name: &str, user: bool) -> bool {
     };
     read("systemctl", &args).is_some_and(|s| s.trim() == "loaded")
 }
-fn touchpads() -> Vec<String> {
+pub fn touchpads() -> Vec<String> {
     if std::env::var("NACRE_COMPOSITOR").is_ok_and(|s| s != "hyprland")
         || std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_none()
     {
@@ -182,7 +182,12 @@ pub fn snapshot() -> Value {
     let setup = Paths::environment()
         .map(|paths| crate::software_setup::facts(&paths))
         .unwrap_or(Value::Null);
-    json!({"health":health_rows(&facts),"setup":crate::software_setup::rows(&setup),"facts":facts,"setupFacts":setup})
+    {
+        let hardware = Paths::environment()
+            .map(|paths| crate::software_hardware::facts(&paths))
+            .unwrap_or(Value::Null);
+        json!({"health":health_rows(&facts),"setup":crate::software_setup::rows(&setup),"hardware":crate::software_hardware::rows(&hardware),"hardwareFacts":hardware,"facts":facts,"setupFacts":setup})
+    }
 }
 
 fn step(args: &[&str], root: bool) -> Value {
@@ -246,7 +251,13 @@ pub fn run_health(id: &str) -> Result<i32> {
     let facts = facts();
     let paths = Paths::environment()?;
     let setup = crate::software_setup::facts(&paths);
-    let mut plan = if crate::software_setup::rows(&setup)
+    let hardware = crate::software_hardware::facts(&paths);
+    let mut plan = if crate::software_hardware::rows(&hardware)
+        .iter()
+        .any(|r| r["id"] == id)
+    {
+        crate::software_hardware::plan(id, &hardware)?
+    } else if crate::software_setup::rows(&setup)
         .iter()
         .any(|r| r["id"] == id)
     {
@@ -332,8 +343,21 @@ pub fn run_health(id: &str) -> Result<i32> {
             .code()
             .unwrap_or(1));
     }
+    if id.starts_with("laptop-display-") || id == "laptop-mirror" {
+        plan = crate::software_hardware::plan(id, &crate::software_hardware::facts(&paths))?;
+    }
     let mut code = 0;
     for step in plan["steps"].as_array().unwrap() {
+        if let Some(enabled) = step["touchpad"].as_bool() {
+            let devices = step["devices"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|v| v.as_str().map(str::to_string))
+                .collect();
+            crate::software_input::set_touchpad(&paths, enabled, devices)?;
+            continue;
+        }
         if let Some(layouts) = step["input"].as_str() {
             crate::software_input::set_layouts(&paths, layouts)?;
             continue;
@@ -446,7 +470,13 @@ fn wifi_qr(connection: &str) -> Result<()> {
 pub fn open(paths: &Paths, id: &str) -> Result<Value> {
     let health = health_rows(&facts());
     let setup = crate::software_setup::rows(&crate::software_setup::facts(paths));
-    if !health.iter().chain(setup.iter()).any(|r| r["id"] == id) {
+    let hardware = crate::software_hardware::rows(&crate::software_hardware::facts(paths));
+    if !health
+        .iter()
+        .chain(setup.iter())
+        .chain(hardware.iter())
+        .any(|r| r["id"] == id)
+    {
         return Err("Action is not available".into());
     }
     let helper = std::env::current_exe()?.to_string_lossy().into_owned();

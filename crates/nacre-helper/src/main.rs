@@ -151,6 +151,17 @@ fn run() -> Result<i32> {
             "plan" => {
                 let paths = nacre_helper::paths::Paths::environment()?;
                 let setup = nacre_helper::software_setup::facts(&paths);
+                let hardware = nacre_helper::software_hardware::facts(&paths);
+                if nacre_helper::software_hardware::rows(&hardware)
+                    .iter()
+                    .any(|r| r["id"] == id)
+                {
+                    return {
+                        let value = nacre_helper::software_hardware::plan(id, &hardware)?;
+                        println!("{}", json::encode(&value)?);
+                        Ok(0)
+                    };
+                }
                 if nacre_helper::software_setup::rows(&setup)
                     .iter()
                     .any(|r| r["id"] == id)

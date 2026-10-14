@@ -1614,6 +1614,16 @@
       "provider": "system-setup",
       "labelId": "launcher.catalog.setup.system.label",
       "descriptionId": "launcher.catalog.setup.system.description"
+    },
+    {
+      "id": "setup.hardware",
+      "kind": "group",
+      "label": "Hardware controls",
+      "icon": "devices",
+      "description": "Supported input, display and power controls",
+      "provider": "system-hardware",
+      "labelId": "launcher.catalog.setup.hardware.label",
+      "descriptionId": "launcher.catalog.setup.hardware.description"
     }
   ],
   "software": [

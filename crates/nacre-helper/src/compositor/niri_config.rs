@@ -144,14 +144,24 @@ pub fn desktop(preferences: &Value) -> Result<String> {
     }
     let mut input = Vec::new();
     if preferences.get("followMouse") == Some(&Value::Bool(true)) {
-        input.push("focus-follows-mouse");
+        input.push("focus-follows-mouse".to_string());
     }
+    let enabled = preferences
+        .get("touchpadEnabled")
+        .map(|v| {
+            v.as_bool()
+                .ok_or_else(|| invalid("Invalid touchpad preference"))
+        })
+        .transpose()?;
     if let Some(value) = preferences.get("naturalScroll") {
+        let off = if enabled == Some(false) { "off; " } else { "" };
         input.push(if value == true {
-            "touchpad { natural-scroll; scroll-factor 0.25; }"
+            format!("touchpad {{ {off}natural-scroll; scroll-factor 0.25; }}")
         } else {
-            "touchpad { scroll-factor 0.25; }"
+            format!("touchpad {{ {off}scroll-factor 0.25; }}")
         });
+    } else if enabled == Some(false) {
+        input.push("touchpad { off; }".into());
     }
     if !input.is_empty() || preferences.contains_key("followMouse") {
         lines.push(format!("input {{\n    {}\n}}", input.join("\n    ")));

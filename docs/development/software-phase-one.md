@@ -129,3 +129,20 @@ in command arguments, launcher state or plaintext output. Enterprise network
 credentials are not exported in this format. All privileged setup follows the
 same visible review/authentication and normal-session bridge as Health. No root
 setup action is executed by source validation.
+
+## Supported hardware controls
+
+Setup → Hardware controls offers explicit touchpad enable/disable actions when a
+physical device and managed compositor configuration exist. These reuse the
+registered `software-input` provider; regeneration retains scrolling and keyboard
+layout preferences. Output actions require an active external display and recheck
+that condition after confirmation. They target built-in outputs only. Mirroring
+is offered for Hyprland and omitted for Niri, whose backend reports it unsupported.
+
+GPU choices come from supergfxctl's supported modes and require multiple detected
+GPUs. Hibernate requires logind permission/capability, configured resume and swap;
+Nacre does not configure hibernation, change drivers or relax kernel policy.
+Administrator actions follow the same visible command/authentication boundary.
+Native/launcher tests use synthetic capabilities and verify that no single-output
+off, unsupported mirror or unconfigured hibernate action is offered. No hardware
+mode is changed during validation.

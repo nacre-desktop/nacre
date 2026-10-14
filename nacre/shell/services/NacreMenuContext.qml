@@ -395,6 +395,8 @@ Scope {
                         value0: NacreI18n.time(new Date(entry.due * 1000), "hh:mm")
                     })
                 }));
+        if (node.provider === "system-hardware")
+            return systemRows("hardware");
         if (node.provider === "system-setup")
             return systemRows("setup");
         if (node.provider === "health-fixits")
@@ -988,7 +990,7 @@ Scope {
         return softwareRows("software.discover.ai").filter(row => row.category === "ai" && row.checked && !row.desktopId);
     }
     function globalRows(query) {
-        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), installedAiRows(), sourceOptions.actions ? systemRows("health").concat(systemRows("setup")) : [], tuiRows().filter(row => !apps.some(app => app.id.replace(/\.desktop$/, "") === "nacre-tui-" + row.value)), captureRows());
+        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), installedAiRows(), sourceOptions.actions ? systemRows("health").concat(systemRows("setup"), systemRows("hardware")) : [], tuiRows().filter(row => !apps.some(app => app.id.replace(/\.desktop$/, "") === "nacre-tui-" + row.value)), captureRows());
     }
     function itemActions(entry) {
         if (!entry)

@@ -71,8 +71,10 @@ impl Configuration {
             .ok_or_else(|| error("TypeError", "Desktop preferences must be an object"))?;
         let input = crate::software_input::preferences(&self.config)
             .map_err(|e| error("RuntimeError", e.to_string()))?;
-        if let Some(layout) = input.get("keyboardLayouts") {
-            values_map.insert("keyboardLayouts".into(), layout.clone());
+        for key in ["keyboardLayouts", "touchpadEnabled", "touchpadDevices"] {
+            if let Some(value) = input.get(key) {
+                values_map.insert(key.into(), value.clone());
+            }
         }
         values_map.extend(preferences.clone());
         let parent = self
