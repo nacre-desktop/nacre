@@ -1,0 +1,9 @@
+{
+  "helper": "dashboard-media",
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/dashboard-media.py",
+  "args": [
+    "lyrics",
+    "{\"args\": [\"[ar:artist]\\r\\n[00:02.50][00:10.000]Two\\n[00:01.1]One\"]}"
+  ],
+  "reference_source_sha256": "8fbbe42b736ffeffd5130eac87c9e2b8fa3e313e2b104c0a7885af4714bca77d"
+}

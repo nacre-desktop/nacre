@@ -1,0 +1,9 @@
+{
+  "stdout": null,
+  "exit": 1,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": [],
+  "stderr": "Traceback (most recent call last):\n  File \"/repo/nacre/shell-tools/dashboard-media.py\", line 172, in <module>\n    if sys.argv[1] == \"spectrum\":\n       ~~~~~~~~^^^\nIndexError: list index out of range\n"
+}

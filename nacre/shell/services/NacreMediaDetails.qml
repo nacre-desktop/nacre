@@ -28,13 +28,12 @@ Singleton {
     property string plain: ""
     property string message: ""
     property var spectrum: []
-    readonly property string python: NacrePaths.palettePython
-    readonly property string tool: NacrePaths.dashboardTools + "/dashboard-media.py"
+    readonly property string tool: "dashboard-media"
     function load() {
         if (!shown || !player || details.running || loadedKey === trackKey)
             return;
         requestedKey = trackKey;
-        details.command = [python, tool, requestedKey];
+        details.command = [NacrePaths.helperBinary, tool, requestedKey];
         details.running = true;
     }
     onTrackKeyChanged: {
@@ -71,7 +70,7 @@ Singleton {
     }
     Process {
         id: visualizer
-        command: ["python3", root.tool, "spectrum"]
+        command: [NacrePaths.helperBinary, root.tool, "spectrum"]
         running: root.spectrumVisible && root.player?.isPlaying === true && NacreTokens.motionEnabled && !WallpaperPlayback.sleeping && !WallpaperPlayback.locked
         stdout: SplitParser {
             onRead: line => {

@@ -1,0 +1,9 @@
+{
+  "helper": "dashboard-media",
+  "args": [
+    "bad json",
+    "extra"
+  ],
+  "compare_stderr": true,
+  "reference_source_sha256": "8fbbe42b736ffeffd5130eac87c9e2b8fa3e313e2b104c0a7885af4714bca77d"
+}

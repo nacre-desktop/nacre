@@ -1,0 +1,14 @@
+{
+  "stdout": {
+    "cacheSeconds": 9999999999,
+    "key": "cached-public",
+    "plain": "Fixture lyrics",
+    "lines": [],
+    "palette": {}
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

@@ -1,0 +1,21 @@
+{
+  "stdout": [
+    {
+      "time": 1.1,
+      "text": "One"
+    },
+    {
+      "time": 2.5,
+      "text": "Two"
+    },
+    {
+      "time": 10.0,
+      "text": "Two"
+    }
+  ],
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}
