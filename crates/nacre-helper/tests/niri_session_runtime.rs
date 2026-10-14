@@ -82,6 +82,10 @@ fn compositor_exec_preserves_environment_and_code_only_namespace() -> Result<()>
 }
 #[test]
 fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> {
+    if !Path::new("/usr/bin/niri").is_file() {
+        eprintln!("Skipping offline stock preparation: /usr/bin/niri is not installed");
+        return Ok(());
+    }
     let home = tempfile::tempdir()?;
     let repo = home.path().join("repo");
     let original = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
