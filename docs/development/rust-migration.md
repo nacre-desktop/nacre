@@ -7,7 +7,7 @@ Developer-only Python tools and test harnesses remain permitted.
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
 | 1 Service / frequent helpers | Complete; quiet timings deferred | 13 ports; RSS 26.95 -> 10.21 MiB (busy); Source/install CI green. |
-| 2 Compositor / pearls | Complete locally; final preview publication / CI pending | Preview parserCPU52.58 ->1.26ms/RSS21.54 ->7.30MiB (busy). |
+| 2 Compositor / pearls | Complete; quiet timings deferred | Preview parserCPU52.58 ->1.26ms/RSS21.54 ->7.30MiB (busy). |
 | 3 Wallpaper / colors | Pending | Direct Orient crates; preserve paired publication. |
 | 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
 | 5 AI | Pending | Claude CLI stream-json; retain existing permissions/history. |
@@ -47,7 +47,7 @@ current frozen cases use defaults and remain unchanged.
 Main CI gate retained; 2753707f fixed isolation without changing goldens/skips.
 Wave 1 source/install CI passed; hardware checks remain manual.
 
-Next: publish the final preview helper and check CI; then wait for the owner's explicit quiet-window announcement. Before Wave3 lands, compare baseline/current A/B/A/B with zero swap activity. Preview:35 frozen /171 Rust /857 repo /526 parity /8 original assertions /3 production tests; actual Bubblewrap isolation and real nested Niri clean-exit checks pass; fmt/Clippy/2745 translations current. No copied credentials or session takeover; force a private system-bus address for native hardware APIs (intended difference), preserve explicit AI permissions. Busy parser CPU52.58 ->1.26ms/RSS21.54 ->7.30MiB (one controlled-child sample),100 ->0 Python. Runtime424+c78 CI38604183117 and recorder51f8ee91 CI38611294733 fully green. Environment has no signal, keeps2s refresh; errors journaled, no readiness claims. Shared packaging remains install task.
+Next: wait for the owner's explicit quiet-window announcement; compare baseline/current A/B/A/B with zero vmstat si/so and SwapPss before Wave3 lands. Wave2 final preview d3127939 is public; Source CI38618169781 desktop + fresh-install fully green. Preview:35 frozen /171 Rust /857 repo /526 parity /8 original assertions /3 production tests; actual Bubblewrap isolation and real nested Niri clean-exit pass; fmt/Clippy/2745 translations current. No copied credentials or session takeover; private system-bus address for native hardware APIs is an intended difference; explicit AI permissions retained. Busy parser CPU52.58 ->1.26ms/RSS21.54 ->7.30MiB (one controlled-child sample),100 ->0 Python. Runtime424+c78 CI38604183117 and recorder51f8ee91 CI38611294733 fully green. Shared packaging remains install task.
 Window-hide cutover: 126 Rust tests, 821 repo plus 3 native checks, 12 frozen cases, 11 original assertions and 3 socket/D-Bus goldens pass. Busy CPU 46.26 -> 2.19 ms, helper RSS 17.33 -> 7.27 MiB; 100 -> 0 Python starts. No state migration; notification failures reach stderr and lock symlinks are refused. CI repair 2c31dbd2 / CI38568187548 fully green; no new skips.
 Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.
 Three compiler sources retired; 84 integrated Rust tests / 770 repo tests / 526 cases pass.
