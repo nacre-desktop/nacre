@@ -961,7 +961,7 @@
       "kind": "group",
       "label": "Apps",
       "icon": "apps",
-      "description": "Browse apps by purpose, preview them and manage installation",
+      "description": "Discover and manage apps",
       "provider": "software",
       "labelId": "launcher.catalog.software.discover.label",
       "descriptionId": "launcher.catalog.software.discover.description",

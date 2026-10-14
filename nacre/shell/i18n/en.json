@@ -1369,7 +1369,7 @@
   "launcher.catalog.slack-desktop.description": "Team messaging",
   "launcher.catalog.slack-desktop.label": "Slack",
   "launcher.catalog.software.description": "Discover and manage software",
-  "launcher.catalog.software.discover.description": "Browse apps by purpose, preview them and manage installation",
+  "launcher.catalog.software.discover.description": "Discover and manage apps",
   "launcher.catalog.software.discover.label": "Apps",
   "launcher.catalog.software.installed.description": "Search installed software and remove it",
   "launcher.catalog.software.installed.label": "Installed packages",
