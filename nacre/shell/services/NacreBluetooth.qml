@@ -18,7 +18,11 @@ Singleton {
                     icon: device.icon || "bluetooth",
                     connected: device.connected,
                     paired: device.paired,
-                    trusted: device.trusted
+                    trusted: device.trusted,
+                    batteryAvailable: device.batteryAvailable,
+                    battery: device.battery,
+                    pairing: device.pairing,
+                    native: device
                 })).sort((left, right) => Number(right.connected) - Number(left.connected) || left.alias.localeCompare(right.alias) || left.address.localeCompare(right.address));
     }
     // Native BlueZ signals already update views; this only invalidates cached callers.

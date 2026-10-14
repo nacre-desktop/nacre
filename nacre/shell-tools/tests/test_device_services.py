@@ -43,13 +43,16 @@ class DeviceServiceTests(unittest.TestCase):
                 "Pipewire": "property var nodes:({values:[]});property var defaultAudioSink:null;property var defaultAudioSource:null",
                 "Bluetooth": "property var devices:({values:[]});property var defaultAdapter:null",
             }
-            if name == "DeviceActions":
+            if name in ("DeviceActions", "NacreControlActions"):
                 definitions.update(
                     {
-                        "NacreNetwork": "property int refreshes:0;function refresh(){refreshes++}",
-                        "NacreBluetooth": "function refresh(){}",
+                        "DeviceActions": 'property bool busy:false;property string message:"";function request(args){}',
+                        "NacreNetwork": 'property int refreshes:0;function refresh(){refreshes++}property bool wifiAvailable:true;property bool wifiEnabled:true;property var visibleNetworks:[{ssid:"Fixture Guest",bssid:"02:00:00:00:00:01",interface:"wlan0"}]',
+                        "NacreBluetooth": "property bool available:true;property bool powered:true;property var adapter:({enabled:true});function refresh(){}",
                     }
                 )
+            if name == "DeviceActions":
+                definitions.pop("DeviceActions", None)
             for kind, body in definitions.items():
                 (fixtures / (kind + ".qml")).write_text(
                     "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
@@ -58,7 +61,7 @@ class DeviceServiceTests(unittest.TestCase):
                 "import QtQuick\nQtObject {property var objects:[]}"
             )
             (fixtures / "Process.qml").write_text(
-                "import QtQuick\nQtObject {property var command:[];property var environment:({});property bool running:false;property QtObject stdout;property QtObject stderr;signal exited(int exitCode,int exitStatus);signal started();property bool stdinEnabled:false;property var writes:[];function write(text){writes=[...writes,text]}property int starts:0;onRunningChanged:if(running){starts++;Qt.callLater(()=>{if(running)started()})}}"
+                "import QtQuick\nQtObject {property var command:[];property var environment:({});property bool running:false;property QtObject stdout;property QtObject stderr;signal exited(int exitCode,int exitStatus);signal started();property bool stdinEnabled:false;property var writes:[];function write(text){writes=[...writes,text]}property var signals:[];function signal(value){signals=[...signals,value]}property int starts:0;onRunningChanged:if(running){starts++;Qt.callLater(()=>{if(running)started()})}}"
             )
             (fixtures / "NacreHelperTask.qml").write_text(
                 "import QtQuick\nProcess {signal output(string text)}"
@@ -78,7 +81,7 @@ class DeviceServiceTests(unittest.TestCase):
             (fixtures / "qmldir").write_text(
                 "singleton NacreWelcomeApp 1.0 NacreWelcomeApp.qml\nsingleton NacrePresentation 1.0 NacrePresentation.qml\nsingleton NacrePaths 1.0 NacrePaths.qml\nsingleton Environment 1.0 Environment.qml\nsingleton NacreBrightness 1.0 NacreBrightness.qml\nsingleton NacreCompositor 1.0 NacreCompositor.qml\nsingleton Hyprland 1.0 Hyprland.qml\nsingleton DesktopEntries 1.0 DesktopEntries.qml\nsingleton LauncherPreferences 1.0 LauncherPreferences.qml\nsingleton AppLaunch 1.0 AppLaunch.qml\nsingleton DesktopSettings 1.0 DesktopSettings.qml\nsingleton NacreNotifications 1.0 NacreNotifications.qml\nsingleton NacrePanelState 1.0 NacrePanelState.qml\nsingleton Mpris 1.0 Mpris.qml\nsingleton Pipewire 1.0 Pipewire.qml\nsingleton Bluetooth 1.0 Bluetooth.qml\nPwObjectTracker 1.0 PwObjectTracker.qml\nProcess 1.0 Process.qml\nStdioCollector 1.0 StdioCollector.qml\nSplitParser 1.0 SplitParser.qml\nNacreHelperTask 1.0 NacreHelperTask.qml\n"
             )
-            if name == "DeviceActions":
+            if name in ("DeviceActions", "NacreControlActions"):
                 with (fixtures / "qmldir").open("a") as manifest:
                     manifest.write(
                         "singleton NacreNetwork 1.0 NacreNetwork.qml\nsingleton NacreBluetooth 1.0 NacreBluetooth.qml\n"
@@ -233,6 +236,12 @@ QtObject {
 
     def test_network_snapshot_publication_and_coalescing(self):
         self.run_service("NacreNetwork")
+
+    def test_saved_vpn_profiles_parse_without_writes_and_guard_actions(self):
+        self.run_service("NacreVpn")
+
+    def test_inline_wifi_is_private_and_cancels_cleanly(self):
+        self.run_service("NacreControlActions")
 
     def test_wifi_connection_window_is_tracked_and_refreshes_after_exit(self):
         self.run_service("DeviceActions")
