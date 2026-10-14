@@ -10,7 +10,9 @@ permissions:
   contents: read
 jobs:
   packages:
-    runs-on: ubuntu-24.04
+    # Match source CI: Ubuntu24.04 denies nested Bubblewrap network setup.
+    # Keep the parity sandbox intact rather than relaxing host protections.
+    runs-on: ubuntu-22.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -44,6 +46,12 @@ jobs:
             printf "builder ALL=(ALL) NOPASSWD: ALL\n" > /etc/sudoers.d/builder
             printf "\nMAKEFLAGS=-j2\nexport CARGO_BUILD_JOBS=2\n" >> /etc/makepkg.conf
             chown -R builder:builder /work
+            # Fail early if this host cannot run the sandbox used by check().
+            mkarchroot /var/tmp/nacre-namespace-probe/root base-devel bubblewrap
+            arch-nspawn /var/tmp/nacre-namespace-probe/root useradd -m -u 1000 probe
+            arch-nspawn /var/tmp/nacre-namespace-probe/root runuser -u probe -- \
+              bwrap --unshare-all --ro-bind / / --proc /proc --dev /dev /usr/bin/true
+            rm -rf --one-file-system /var/tmp/nacre-namespace-probe
             cd /work/orient
             sudo -u builder extra-x86_64-build 2>&1 | tee /work/orient.log
             # Each invocation cleans its working chroot; inject only the tested engine.
