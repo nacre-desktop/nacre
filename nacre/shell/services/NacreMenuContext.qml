@@ -16,6 +16,17 @@ Scope {
     readonly property NacreLauncherPreview previews: NacreLauncherPreview {
         helper: root.workflows.helper
     }
+    readonly property NacreSoftwareLibrary libraryOwner: NacreSoftwareLibrary {
+        active: !root.shared
+    }
+    readonly property var library: shared ? shared.library : libraryOwner
+    readonly property Connections libraryChanges: Connections {
+        target: root.library
+        function onCompleted(operation, success) {
+            if (success && (operation.startsWith("theme-") || operation === "extension-theme"))
+                NacreWallpapers.refresh();
+        }
+    }
     property var localEmojiCatalog: []
     readonly property var emojiCatalog: shared ? shared.emojiCatalog : localEmojiCatalog
     property string brainWanted: ""
@@ -55,7 +66,17 @@ Scope {
     property bool refreshing: stateWorker.running
     readonly property var rows: NacreI18n.localize(catalog.rows)
     readonly property var navigation: Model.rail(rows)
-    readonly property var apps: NacreApps.list.map(entry => NacreI18n.applicationRow(Model.application(entry)))
+    readonly property var softwareDesktopMetadata: new Map(softwareRows("software.discover").filter(row => row.desktopId).map(row => [row.desktopId, row]))
+    readonly property var apps: NacreApps.list.map(entry => {
+        const row = NacreI18n.applicationRow(Model.application(entry));
+        const metadata = softwareDesktopMetadata.get(entry.id);
+        if (!metadata)
+            return row;
+        const extra = {};
+        for (const key of ["software", "package", "desktopId", "categoryLabel", "website", "screenshots", "screenshotSource", "repository", "version", "checked", "status"])
+            extra[key] = metadata[key];
+        return Object.assign(row, extra);
+    })
     readonly property var legacy: Legacy.actions(DesktopActions.list).map(entry => Object.assign({}, entry, {
             operation: "legacy-action",
             label: entry.name,
@@ -94,6 +115,7 @@ Scope {
     function refreshOnOpen() {
         refresh();
         workflows.refresh();
+        library.refresh();
         DesktopExtras.request("clips", {});
         DesktopExtras.request("keys", {});
         NacreControlTools.refresh();
@@ -343,15 +365,11 @@ Scope {
                     status: NacreI18n.tr("ui.menu-context.status.installed", "Installed")
                 }));
         if (node.provider === "software")
-            return NacreI18n.localize(catalog.software).map(entry => valueRow(route, Qt.md5(entry.package), entry.label, "install-package", entry.package, "download", entry.description, {
-                    package: entry.package,
-                    aliases: [entry.package, ...(entry.aliases || [])],
-                    repository: entry.repository || "",
-                    checked: packageNames.has(entry.package),
-                    status: packageNames.has(entry.package) ? NacreI18n.tr("ui.menu-context.status.installed", "Installed") : NacreI18n.tr("ui.menu-context.status.install", "Install"),
-                    disabled: packageNames.has(entry.package) || !snapshot.capabilities.packages,
-                    reason: packageNames.has(entry.package) ? NacreI18n.tr("launcher.disabled.installed-use-item-actions-to-remove-it", "Installed; use item actions to remove it") : !snapshot.capabilities.packages ? NacreI18n.tr("launcher.disabled.requires-an-arch-compatible-package-manager", "Requires an Arch-compatible package manager") : ""
-                }));
+            return softwareRows(route);
+        if (node.provider === "software-themes")
+            return themeRows();
+        if (node.provider === "software-extensions")
+            return extensionRows();
         if (node.provider === "packages")
             return packageQuery === Model.scope(query).text ? packageRows.map(entry => valueRow(route, Qt.md5(entry.name), entry.name, "install-package", entry.name, "download", entry.description, {
                     package: entry.name,
@@ -682,28 +700,143 @@ Scope {
                 searchQuery: query
             }));
     }
+    readonly property var softwareCategories: [
+        {
+            value: "all",
+            label: NacreI18n.tr("software.category.all", "All apps")
+        },
+        {
+            value: "browsers",
+            label: NacreI18n.tr("software.category.browsers", "Browsers")
+        },
+        {
+            value: "communication",
+            label: NacreI18n.tr("software.category.communication", "Communication")
+        },
+        {
+            value: "games",
+            label: NacreI18n.tr("software.category.games", "Games")
+        },
+        {
+            value: "creative",
+            label: NacreI18n.tr("software.category.creative", "Creative")
+        },
+        {
+            value: "office",
+            label: NacreI18n.tr("software.category.office", "Office and reading")
+        },
+        {
+            value: "development",
+            label: NacreI18n.tr("software.category.development", "Development")
+        },
+        {
+            value: "network",
+            label: NacreI18n.tr("software.category.network", "Network")
+        },
+        {
+            value: "utilities",
+            label: NacreI18n.tr("software.category.utilities", "Utilities")
+        }
+    ]
+    readonly property var softwareAppIndex: {
+        const names = new Set(), ids = new Set(), visible = new Map();
+        for (const app of NacreApps.all || []) {
+            names.add(Model.normalized(app.name));
+            ids.add(Model.normalized(app.id.replace(/\.desktop$/, "")));
+            ids.add(Model.normalized(app.id.replace(/\.desktop$/, "").split(".").pop()));
+        }
+        for (const app of NacreApps.list || []) {
+            visible.set(Model.normalized(app.name), app.id);
+            visible.set(Model.normalized(app.id.replace(/\.desktop$/, "")), app.id);
+            visible.set(Model.normalized(app.id.replace(/\.desktop$/, "").split(".").pop()), app.id);
+        }
+        return {
+            names: names,
+            ids: ids,
+            visible: visible
+        };
+    }
+    function softwareRows(route) {
+        const index = softwareAppIndex;
+        return NacreI18n.localize(catalog.software).map(entry => {
+            const packageId = Model.normalized(entry.package.replace(/-(bin|git)$/, ""));
+            const appId = Model.normalized(entry.appId || "");
+            const name = Model.normalized(entry.label);
+            const installed = packageNames.has(entry.package) || index.names.has(name) || index.ids.has(packageId) || !!appId && index.ids.has(appId);
+            const desktopId = index.visible.get(name) || index.visible.get(appId) || index.visible.get(packageId) || "";
+            const aurMissing = entry.repository === "AUR" && !snapshot.capabilities.aur;
+            return valueRow(route, Qt.md5(entry.package), entry.label, installed ? desktopId ? "software-open" : "info" : "install-package", entry.package, "download", entry.description, {
+                package: entry.package,
+                software: true,
+                category: entry.category || "utilities",
+                categoryLabel: softwareCategories.find(row => row.value === entry.category)?.label || "",
+                version: (snapshot.packages || []).find(row => row.name === entry.package)?.version || "",
+                desktopId: desktopId,
+                website: entry.website || "",
+                screenshots: entry.screenshots || [],
+                screenshotSource: entry.screenshotSource || "",
+                repository: entry.repository || "",
+                aliases: [entry.package, ...(entry.aliases || [])],
+                checked: installed,
+                status: installed ? NacreI18n.tr("ui.menu-context.status.installed", "Installed") : NacreI18n.tr("ui.menu-context.status.install", "Install"),
+                disabled: !installed && (!snapshot.capabilities.packages || aurMissing),
+                reason: installed && !desktopId ? NacreI18n.tr("launcher.disabled.installed-use-item-actions-to-remove-it", "Installed; use item actions to remove it") : !installed && aurMissing ? NacreI18n.tr("launcher.install-offer.aur", "Requires paru or yay for AUR installation") : !installed && !snapshot.capabilities.packages ? NacreI18n.tr("launcher.disabled.requires-an-arch-compatible-package-manager", "Requires an Arch-compatible package manager") : ""
+            });
+        });
+    }
     function installOffers() {
-        const installedApps = NacreApps.all || [];
-        return provider("software.discover").filter(row => {
-            if (row.checked)
-                return false;
-            const packageId = Model.normalized(row.package.replace(/-(bin|git)$/, ""));
-            return !installedApps.some(app => Model.normalized(app.name) === Model.normalized(row.name) || Model.normalized(app.id.replace(/\.desktop$/, "").split(".").pop()) === packageId);
-        }).map(row => {
-            const aurMissing = row.repository === "AUR" && !snapshot.capabilities.aur;
-            return Object.assign({}, row, {
+        return softwareRows("software.discover").filter(row => !row.checked).map(row => Object.assign({}, row, {
                 installOffer: true,
                 description: NacreI18n.tr("launcher.install-offer.description", "Install {app} · {purpose}", {
                     app: row.name,
                     purpose: row.description
-                }),
-                disabled: row.disabled || aurMissing,
-                reason: aurMissing ? NacreI18n.tr("launcher.install-offer.aur", "Requires paru or yay for AUR installation") : row.reason
-            });
-        });
+                })
+            }));
+    }
+    function themeRows() {
+        return (library.data.themes || NacreWallpapers.palettes || []).map(theme => valueRow("software.themes", Qt.md5(theme.id), theme.name, "software-theme", theme.id, "palette", NacreI18n.tr("software.theme.description", "Use this palette throughout your desktop and applications"), {
+                theme: true,
+                colors: theme.swatches || [theme.modes?.dark?.primary, theme.modes?.dark?.secondary, theme.modes?.dark?.tertiary].filter(Boolean),
+                themeModes: theme.modes || ({}),
+                surface: theme.surface || theme.modes?.dark?.surface || "#151515",
+                group: theme.group || "",
+                checked: NacreWallpapers.appearancePreferences.palettePreset === theme.id,
+                status: NacreWallpapers.appearancePreferences.palettePreset === theme.id ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : "",
+                aliases: [NacreI18n.tr("software.theme.alias", "theme colors palette")]
+            }));
+    }
+    function extensionRows() {
+        return (library.data.extensions || []).map(item => valueRow("software.extensions", Qt.md5(item.id), item.name, item.available ? "software-extension-install" : "software-extension-toggle", item.id, "extension", item.description, {
+                extension: item,
+                version: item.version || "",
+                website: item.website || "",
+                preview: item.previewPath || "",
+                checked: item.enabled === true,
+                status: item.available ? NacreI18n.tr("software.extension.available", "Available") : item.enabled ? NacreI18n.tr("software.extension.enabled", "Enabled") : NacreI18n.tr("software.extension.disabled", "Disabled"),
+                disabled: item.broken === true,
+                reason: item.broken ? item.description : "",
+                aliases: [item.id, ...(item.kinds || [])]
+            }));
+    }
+    function extensionActions() {
+        const result = [];
+        for (const extension of library.data.extensions || []) {
+            if (!extension.enabled || extension.broken)
+                continue;
+            for (const action of extension.actions || [])
+                result.push(valueRow("software.extensions", Qt.md5(extension.id + ":" + action.id), action.name, "software-extension-action", extension.id, action.icon || "extension", action.description || extension.name, {
+                    extension: extension,
+                    extensionAction: action.id
+                }));
+            if ((extension.kinds || []).includes("panel"))
+                result.push(valueRow("software.extensions", Qt.md5(extension.id + ":panel"), extension.name, "software-extension-open", extension.id, "extension", extension.description, {
+                    extension: extension
+                }));
+        }
+        return result;
     }
     function globalRows(query) {
-        return apps.concat(allStatic(), provider("actions.windows"), provider("actions.clipboard"), fileResults(query), brainRows(query), workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), captureRows());
+        return apps.concat(allStatic(), provider("actions.windows"), provider("actions.clipboard"), fileResults(query), brainRows(query), workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), captureRows());
     }
     function itemActions(entry) {
         if (!entry)
@@ -734,6 +867,52 @@ Scope {
             }
             result.push(row);
         };
+        if (entry.website)
+            add(NacreI18n.tr("software.action.website", "Project website"), "url", entry.website);
+        if (entry.software && entry.checked) {
+            if (entry.desktopId)
+                add(NacreI18n.tr("software.action.open", "Open app"), "software-open", entry.package);
+            add(NacreI18n.tr("software.action.updates", "Check system updates"), "tool", "updates");
+            if (packageNames.has(entry.package))
+                add(NacreI18n.tr("software.action.remove", "Remove app"), "remove-package", entry.package, {
+                    confirm: NacreI18n.tr("software.action.remove-confirm", "Open the package manager to remove this app?")
+                });
+        }
+        if (entry.theme || entry.screenshots?.length)
+            add(NacreI18n.tr("software.preview.more", "View previews"), "software-preview");
+        if (entry.theme) {
+            add(NacreI18n.tr("software.theme.apply-dark", "Apply dark theme"), "software-theme", entry.value, {
+                themeMode: "dark"
+            });
+            add(NacreI18n.tr("software.theme.apply-light", "Apply light theme"), "software-theme", entry.value, {
+                themeMode: "light"
+            });
+            add(NacreI18n.tr("software.theme.export", "Export theme"), "form", "software-theme-export", {
+                themePreset: entry.value
+            });
+            if (entry.value.startsWith("favorite:") && !entry.checked)
+                add(NacreI18n.tr("software.theme.remove", "Remove saved theme"), "software-theme-remove", entry.value, {
+                    confirm: NacreI18n.tr("software.theme.remove-confirm", "Remove this saved palette? Your other themes will be kept.")
+                });
+        }
+        if (entry.extension && !entry.extension.available) {
+            add(entry.extension.enabled ? NacreI18n.tr("software.action.disable", "Disable extension") : NacreI18n.tr("software.action.enable", "Enable extension"), "software-extension-toggle");
+            if ((entry.extension.kinds || []).includes("panel") && entry.extension.enabled)
+                add(NacreI18n.tr("software.action.open-panel", "Open panel"), "software-extension-open");
+            if ((entry.extension.kinds || []).includes("theme"))
+                add(NacreI18n.tr("software.action.install-theme", "Add theme to Themes"), "software-extension-theme");
+            add(NacreI18n.tr("software.action.open-folder", "Open extension folder"), "software-extension-folder");
+            if ((entry.extension.source || "").startsWith("https://"))
+                add(NacreI18n.tr("software.action.update", "Update extension"), "software-extension-update", entry.value, {
+                    confirm: NacreI18n.tr("software.action.update-confirm", "Download the current version? It will be disabled until you enable it again.")
+                });
+            add(NacreI18n.tr("software.action.clone", "Clone to edit"), "form", "software-clone", {
+                sourceExtension: entry.value
+            });
+            add(NacreI18n.tr("software.action.remove-extension", "Remove extension"), "software-extension-remove", entry.value, {
+                confirm: NacreI18n.tr("software.action.remove-extension-confirm", "Remove this extension and its managed files?")
+            });
+        }
         if (entry.kind === "app") {
             const key = String(entry.id).replace(/\.desktop$/, "").toLowerCase();
             const keys = [key, key.split(".").pop()];
@@ -786,7 +965,7 @@ Scope {
     function ranked(items, query) {
         return Model.ranked(items, query, LauncherPreferences.usage || {}, LauncherPreferences.recent);
     }
-    function content(route, query, filter = "all") {
+    function content(route, query, filter = "all", softwareCategory = "all") {
         const scope = Model.scope(query);
         if (scope.kind === "files")
             return fileResults(scope.text);
@@ -868,6 +1047,8 @@ Scope {
             return NacreApps.all.filter(entry => LauncherPreferences.hidden.includes(entry.id)).map(entry => Object.assign(Model.application(entry), {
                     hidden: true
                 }));
+        if (route === "software.discover" && softwareCategory !== "all")
+            return provider(route).filter(row => row.category === softwareCategory);
         if (route === "actions.saved")
             return Model.children(route, rows).map(decorate).concat(workflowRows());
         if (route === "actions.capture")
@@ -879,7 +1060,7 @@ Scope {
             LauncherPreferences.update("record", Model.stable(row), true);
     }
     function keepOpen(row) {
-        return ["toggle", "setting-toggle", "personality", "background", "palette-mode", "accent", "wallpaper", "next-wallpaper", "font", "info", "scope", "form", "timer-cancel", "webapp-remove", "power-profile", "media", "audio-output", "clip-pin", "clip-delete", "file-action", "workflow-remove"].includes(row.operation);
+        return ["toggle", "setting-toggle", "personality", "background", "palette-mode", "accent", "wallpaper", "next-wallpaper", "font", "info", "scope", "form", "timer-cancel", "webapp-remove", "power-profile", "media", "audio-output", "clip-pin", "clip-delete", "file-action", "workflow-remove", "software-theme", "software-extension-toggle", "software-extension-install", "software-extension-update", "software-extension-remove", "software-extension-theme"].includes(row.operation);
     }
     function execute(row, confirmed = false) {
         if (shared)
@@ -1030,6 +1211,41 @@ Scope {
         if (["install-package", "remove-package"].includes(operation)) {
             terminal(operation === "install-package" ? "install" : "remove", value, (operation === "install-package" ? "Install " : "Remove ") + row.name);
             return true;
+        }
+        if (operation === "software-open") {
+            const entry = softwareRows("software.discover").find(item => item.package === value);
+            const app = NacreApps.list.find(item => item.id === entry?.desktopId);
+            return app ? NacreApps.launch(app) : false;
+        }
+        if (operation === "software-theme") {
+            NacreWallpapers.preference({
+                palettePreset: value,
+                paletteMode: row.themeMode || NacreWallpapers.appearancePreferences.paletteMode || "dark"
+            });
+            return true;
+        }
+        if (operation === "software-theme-remove")
+            return library.work("theme-remove", value);
+        if (operation.startsWith("software-extension-")) {
+            const item = (library.data.extensions || []).find(item => item.id === value);
+            if (!item)
+                return false;
+            const action = operation.slice("software-extension-".length);
+            if (action === "toggle")
+                return library.work(item.enabled ? "disable" : "enable", value);
+            if (action === "action")
+                return library.work("open", value, {
+                    action: row.extensionAction
+                });
+            if (action === "folder") {
+                AppLaunch.run(["xdg-open", item.folder]);
+                return true;
+            }
+            if (action === "theme")
+                return library.work("extension-theme", value);
+            if (action === "install")
+                return library.work("install-builtin", value);
+            return library.work(action, value);
         }
         if (operation === "webapp") {
             AppLaunch.run(["nacre-menu", "webapp-launch", value]);

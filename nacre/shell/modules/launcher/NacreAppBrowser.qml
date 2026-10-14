@@ -17,6 +17,9 @@ NacreSurface {
     property real viewportWidth: Quickshell.screens[0].width
     property real viewportHeight: Quickshell.screens[0].height
     property string resultFilter: "all"
+    property string softwareCategory: "all"
+    property var softwareDetails: null
+    readonly property bool softwareBrowse: !picker && !form && !scope.text && route === "software.discover"
     property string route: "home"
     property var history: []
     property bool keyboardSelection: false
@@ -72,7 +75,7 @@ NacreSurface {
                     value: calculationResult.value
                 }
             ] : [];
-        return root.menu.content(route, query, resultFilter);
+        return root.menu.content(route, query, resultFilter, softwareCategory);
     }
     readonly property bool hasSelection: keyboardSelection || !!scope.text || picker
     readonly property var selectedEntry: hasSelection && selection >= 0 ? entries[selection] || null : null
@@ -148,6 +151,7 @@ NacreSurface {
         return {
             route: route,
             resultFilter: resultFilter,
+            softwareCategory: softwareCategory,
             query: query,
             calculatorAnswerReady: calculation && calculatorAnswerReady,
             history: history,
@@ -162,6 +166,7 @@ NacreSurface {
     }
     function restoreState(data) {
         route = data.route || "home";
+        softwareCategory = data.softwareCategory || "all";
         resultFilter = root.menu.searchFilters.some(row => row.value === data.resultFilter) ? data.resultFilter : "all";
         history = data.history || [];
         search.text = data.query || "";
@@ -185,6 +190,8 @@ NacreSurface {
         if (remember && route !== resolved)
             history = [...history, route];
         resultFilter = "all";
+        softwareCategory = "all";
+        softwareDetails = null;
         route = node?.kind === "action" ? Menu.parentOf(resolved) || "home" : resolved;
         search.text = "";
         keyboardSelection = false;
@@ -216,6 +223,8 @@ NacreSurface {
     function reset() {
         calculatorAnswerReady = false;
         resultFilter = "all";
+        softwareCategory = "all";
+        softwareDetails = null;
         activePrompt = NacreMenuPrompt.active && NacreMenuPrompt.ownerView === visibilities ? NacreMenuPrompt.request : null;
         history = [];
         route = visibilities.launcherRoute || "home";
@@ -248,6 +257,10 @@ NacreSurface {
         Qt.callLater(root.focusExplicit);
     }
     function back() {
+        if (softwareDetails) {
+            softwareDetails = null;
+            return;
+        }
         if (form) {
             cancelForm();
             return;
@@ -268,6 +281,17 @@ NacreSurface {
         }
     }
     function primaryAction(entry) {
+        if (!entry)
+            return "";
+        if (entry.theme)
+            return NacreI18n.tr("software.preview.apply", "Apply theme");
+        if (entry.operation === "software-extension-install")
+            return NacreI18n.tr("software.action.install-extension", "Install extension");
+        if (entry.operation === "software-extension-toggle")
+            return entry.extension?.enabled ? NacreI18n.tr("software.action.disable", "Disable extension") : NacreI18n.tr("software.action.enable", "Enable extension");
+        if (entry.operation === "software-extension-open")
+            return NacreI18n.tr("software.action.open-panel", "Open panel");
+
         if (entry?.kind === "app")
             return NacreI18n.tr("launcher.app-browser.text.open-app", "Open app");
         if (entry?.file)
@@ -281,6 +305,61 @@ NacreSurface {
         if (entry?.operation === "workflow")
             return NacreI18n.tr("launcher.workflows.open-saved", "Open saved item");
         return NacreI18n.tr("launcher.app-browser.text.run", "Run");
+    }
+    function softwareForm(entry) {
+        const kind = entry.value;
+        if (kind === "software-extension-import")
+            return {
+                kind: kind,
+                software: "import",
+                title: NacreI18n.tr("software.form.add-extension", "Add an extension"),
+                description: NacreI18n.tr("software.form.import-description", "Import a Nacre extension repository. It stays disabled until you review and enable it."),
+                fields: [
+                    {
+                        id: "url",
+                        label: NacreI18n.tr("software.form.repository", "Repository URL"),
+                        placeholder: "https://github.com/owner/extension"
+                    }
+                ],
+                button: NacreI18n.tr("software.form.import", "Import extension")
+            };
+        if (kind === "software-clone")
+            return {
+                kind: kind,
+                software: "clone",
+                value: entry.sourceExtension,
+                title: NacreI18n.tr("software.form.clone", "Clone extension to edit"),
+                fields: [
+                    {
+                        id: "id",
+                        label: NacreI18n.tr("software.form.id", "Your extension ID"),
+                        placeholder: "user.my-extension"
+                    },
+                    {
+                        id: "name",
+                        label: NacreI18n.tr("software.form.name", "Name")
+                    }
+                ],
+                button: NacreI18n.tr("software.form.create-clone", "Create clone")
+            };
+        return {
+            kind: kind,
+            software: kind === "software-theme-export" ? "theme-export" : "theme-import",
+            value: entry.themePreset || "",
+            title: kind === "software-theme-export" ? NacreI18n.tr("software.form.export-theme", "Export theme") : NacreI18n.tr("software.form.import-theme", "Import theme"),
+            fields: [
+                {
+                    id: "path",
+                    label: NacreI18n.tr("software.form.theme-file", "Theme manifest file"),
+                    placeholder: kind === "software-theme-export" ? NacreI18n.tr("software.form.export-path", "{home}/Documents/my-theme.json", {
+                        home: NacrePaths.home
+                    }) : NacreI18n.tr("software.form.import-path", "{home}/Downloads/nacre.extension.json", {
+                        home: NacrePaths.home
+                    })
+                }
+            ],
+            button: kind === "software-theme-export" ? NacreI18n.tr("software.form.export", "Export") : NacreI18n.tr("software.form.import-theme-button", "Import theme")
+        };
     }
     function workflowForm(kind) {
         const field = function (id, label, initial, multiline) {
@@ -393,6 +472,14 @@ NacreSurface {
                 ],
                 button: NacreI18n.tr("launcher.capture.start", "Start recording")
             };
+            return;
+        }
+        if (entry.operation === "software-preview") {
+            softwareDetails = entry;
+            return;
+        }
+        if (entry.operation === "form" && entry.value.startsWith("software-")) {
+            form = softwareForm(entry);
             return;
         }
         if (entry.operation === "form") {
@@ -611,6 +698,9 @@ NacreSurface {
             if (!detached || closeAfterLaunch)
                 visibilities.launcher = false;
             root.menu.workflows.startRecording(options);
+        } else if (form.software) {
+            formPending = root.menu.library.work(form.software, form.value || "", values);
+            return;
         } else if (form.workflow) {
             formPending = root.menu.workflows.work("save", form.kind, values);
             return;
@@ -642,6 +732,17 @@ NacreSurface {
             selection = -1;
         else if (selection >= entries.length)
             selection = entries.length - 1;
+    }
+    Connections {
+        target: root.menu.library
+        function onCompleted(operation, success) {
+            if (root.form?.software && root.formPending) {
+                root.formPending = false;
+                if (success)
+                    root.form = null;
+                root.focusExplicit();
+            }
+        }
     }
     Component.onCompleted: reset()
     Connections {
@@ -1007,14 +1108,44 @@ NacreSurface {
             step: 300
         }
     }
+    Flickable {
+        objectName: "softwareCategoryStrip"
+        visible: root.softwareBrowse && !root.softwareDetails
+        x: root.contentX
+        y: 84
+        width: root.contentWidth
+        height: 34
+        clip: true
+        contentWidth: softwareCategories.width
+        contentHeight: height
+        flickableDirection: Flickable.HorizontalFlick
+        boundsBehavior: Flickable.StopAtBounds
+        Row {
+            id: softwareCategories
+            spacing: 5
+            Repeater {
+                model: root.menu.softwareCategories
+                NacreMenuButton {
+                    required property var modelData
+                    compact: true
+                    text: modelData.label
+                    selected: root.softwareCategory === modelData.value
+                    onClicked: {
+                        root.softwareCategory = modelData.value;
+                        root.selection = -1;
+                    }
+                }
+            }
+        }
+    }
     ListView {
         id: results
         objectName: "launcherResults"
         visible: !root.appLayout && !root.form && !root.calculation
         x: root.contentX
-        y: root.picker ? 54 : 84
+        y: root.picker ? 54 : root.softwareBrowse ? 126 : 84
         width: root.contentWidth
-        height: Math.floor(root.bodyHeight / 58) * 58 + (root.picker ? 30 : 0)
+        height: Math.floor((root.bodyHeight - (root.softwareBrowse ? 42 : 0)) / 58) * 58 + (root.picker ? 30 : 0)
         model: root.entries
         currentIndex: root.selection
         keyNavigationEnabled: false
@@ -1126,9 +1257,33 @@ NacreSurface {
             onActionRequested: action => root.calculatorAction(action)
         }
     }
+    Loader {
+        objectName: "softwarePreviewLoader"
+        active: !!root.softwareDetails
+        visible: active
+        x: root.contentX
+        y: 84
+        width: root.width - root.contentX - 20
+        height: root.bodyHeight
+        z: 25
+        sourceComponent: NacreSoftwarePreview {
+            entry: root.softwareDetails || ({})
+            mode: NacreWallpapers.appearancePreferences.paletteMode || "dark"
+            onCloseRequested: {
+                root.softwareDetails = null;
+                root.focusExplicit();
+            }
+            onApplyRequested: mode => {
+                root.run(Object.assign({}, root.softwareDetails, {
+                    themeMode: mode
+                }));
+                root.softwareDetails = null;
+            }
+        }
+    }
     NacreSurface {
         id: details
-        visible: root.showDetails && !root.form
+        visible: root.showDetails && !root.form && !root.softwareDetails
         x: parent.width - 252
         y: 84
         width: 234
@@ -1178,12 +1333,34 @@ NacreSurface {
                 Image {
                     width: parent.width
                     height: width * 9 / 16
-                    visible: !!root.previewEntry?.preview || !!root.menu.previews.preview.image && root.menu.previews.previewPath === (root.previewEntry?.filePath || root.previewEntry?.value)
-                    source: visible ? root.previewEntry?.preview || root.menu.previews.preview.image : ""
+                    visible: !!root.previewEntry?.screenshots?.length || !!root.previewEntry?.preview || !!root.menu.previews.preview.image && root.menu.previews.previewPath === (root.previewEntry?.filePath || root.previewEntry?.value)
+                    source: visible ? root.previewEntry?.screenshots?.[0] || root.previewEntry?.preview || root.menu.previews.preview.image : ""
                     sourceSize.width: 512
                     sourceSize.height: 288
                     asynchronous: true
-                    fillMode: Image.PreserveAspectCrop
+                    fillMode: Image.PreserveAspectFit
+                }
+                NacreThemePreview {
+                    width: parent.width
+                    visible: root.previewEntry?.theme === true
+                    entry: root.previewEntry || ({})
+                    mode: NacreWallpapers.appearancePreferences.paletteMode || "dark"
+                }
+                NacreText {
+                    width: parent.width
+                    visible: root.previewEntry?.software === true || !!root.previewEntry?.extension
+                    text: [root.previewEntry?.categoryLabel, root.previewEntry?.repository, root.previewEntry?.version, root.previewEntry?.status].filter(Boolean).join(" · ")
+                    textFormat: Text.PlainText
+                    font.pointSize: 9
+                    wrapMode: Text.Wrap
+                    color: NacreColours.palette.m3onSurfaceVariant
+                }
+                NacreMenuButton {
+                    width: parent.width
+                    visible: root.previewEntry?.theme === true || !!root.previewEntry?.screenshots?.length
+                    text: NacreI18n.tr("software.preview.more", "View previews")
+                    icon: "image"
+                    onClicked: root.softwareDetails = root.previewEntry
                 }
                 NacreText {
                     width: parent.width
@@ -1220,6 +1397,36 @@ NacreSurface {
                     visible: !!root.previewEntry && root.previewEntry.kind !== "group" && !root.previewEntry.disabled && root.previewEntry.operation !== "info"
                     text: root.previewEntry?.operation === "wallpaper" ? NacreI18n.tr("launcher.app-browser.text.use-wallpaper", "Use wallpaper") : root.previewEntry?.operation === "font" ? NacreI18n.tr("launcher.app-browser.text.use-font", "Use font") : root.previewEntry?.operation === "install-package" ? NacreI18n.tr("launcher.app-browser.text.install", "Install") : root.primaryAction(root.previewEntry)
                     onClicked: root.run(root.previewEntry)
+                }
+                NacreMenuButton {
+                    width: parent.width
+                    visible: root.previewEntry?.software === true && root.previewEntry?.checked === true && root.menu.packageNames.has(root.previewEntry.package)
+                    text: NacreI18n.tr("software.action.updates", "Check system updates")
+                    icon: "update"
+                    onClicked: root.run(Object.assign({}, root.previewEntry, {
+                        kind: "action",
+                        operation: "tool",
+                        value: "updates"
+                    }))
+                }
+                NacreMenuButton {
+                    width: parent.width
+                    visible: root.previewEntry?.software === true && root.previewEntry?.checked === true && root.menu.packageNames.has(root.previewEntry.package)
+                    text: NacreI18n.tr("software.action.remove", "Remove app")
+                    icon: "delete"
+                    onClicked: root.run(Object.assign({}, root.previewEntry, {
+                        kind: "action",
+                        operation: "remove-package",
+                        value: root.previewEntry.package,
+                        confirm: NacreI18n.tr("software.action.remove-confirm", "Open the package manager to remove this app?")
+                    }))
+                }
+                NacreMenuButton {
+                    width: parent.width
+                    visible: !!root.previewEntry?.website
+                    text: NacreI18n.tr("software.action.website", "Project website")
+                    icon: "open_in_new"
+                    onClicked: AppLaunch.run(["xdg-open", root.previewEntry.website])
                 }
                 NacreMenuButton {
                     id: detailActions
@@ -1292,12 +1499,12 @@ NacreSurface {
         x: 20
         y: parent.height - 88
         width: parent.width - 40
-        text: root.menu.catalog.error || root.menu.workflows.message || root.menu.message || (root.calculation ? NacreI18n.tr("launcher.app-browser.text.enter-copies-the-result", "Enter copies the result") : root.picker ? NacreI18n.tr("launcher.app-browser.text.enter-chooses-escape-cancels", "Enter chooses · Escape cancels") : NacreI18n.tr("launcher.app-browser.text.enter-opens-tab-item-actions-ctrl-d-favorite", "Enter opens · Tab item actions · Ctrl+D favorite"))
+        text: root.menu.catalog.error || root.menu.library.message || root.menu.workflows.message || root.menu.message || (root.calculation ? NacreI18n.tr("launcher.app-browser.text.enter-copies-the-result", "Enter copies the result") : root.picker ? NacreI18n.tr("launcher.app-browser.text.enter-chooses-escape-cancels", "Enter chooses · Escape cancels") : NacreI18n.tr("launcher.app-browser.text.enter-opens-tab-item-actions-ctrl-d-favorite", "Enter opens · Tab item actions · Ctrl+D favorite"))
         textFormat: Text.PlainText
         font.pointSize: 9
         color: NacreColours.palette.m3onSurfaceVariant
         elide: Text.ElideRight
-        visible: !root.form && !root.confirmation && (!!root.selectedEntry || root.calculation || root.picker || !!root.menu.catalog.error || !!root.menu.message || !!root.menu.workflows.message)
+        visible: !root.form && !root.confirmation && (!!root.selectedEntry || root.calculation || root.picker || !!root.menu.catalog.error || !!root.menu.message || !!root.menu.workflows.message || !!root.menu.library.message)
     }
     NacreTextField {
         id: search
@@ -1363,7 +1570,7 @@ NacreSurface {
         anchors.bottomMargin: 30
         active: !!root.form
         sourceComponent: NacreMenuForm {
-            error: root.form?.workflow ? root.menu.workflows.message : ""
+            error: root.form?.software ? root.menu.library.message : root.form?.workflow ? root.menu.workflows.message : ""
             enabled: !root.formPending
             form: root.form || {}
             onSubmitted: values => root.submitForm(values)

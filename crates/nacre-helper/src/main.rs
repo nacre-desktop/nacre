@@ -109,6 +109,34 @@ fn run() -> Result<i32> {
         println!("{}", json::encode(&value)?);
         return Ok(code);
     }
+    if tool == "software-library" {
+        use std::io::Read;
+        let input = if arguments.first().is_some_and(|a| {
+            matches!(
+                a.as_str(),
+                "import" | "clone" | "theme-import" | "theme-export" | "open"
+            )
+        }) {
+            let mut line = String::new();
+            io::stdin().take(262_145).read_to_string(&mut line)?;
+            if line.len() > 262_144 {
+                return Err("Software library input is too large".into());
+            }
+            if line.trim().is_empty() {
+                None
+            } else {
+                Some(serde_json::from_str(&line)?)
+            }
+        } else {
+            None
+        };
+        let (value, code) = match nacre_helper::software_library::execute(&arguments, input) {
+            Ok(value) => (value, 0),
+            Err(error) => (serde_json::json!({"error":error.to_string()}), 1),
+        };
+        println!("{}", json::encode(&value)?);
+        return Ok(code);
+    }
     if tool == "launcher-workflows" {
         use std::io::Read;
         let input = if arguments

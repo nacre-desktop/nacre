@@ -349,3 +349,26 @@ seven days. The photo credit opens its Commons source. Failed lookups use local
 weather illustrations matching the condition and time of day. With city photos
 off, these local illustrations need no image downloads. Requests stop when
 Weather is hidden.
+
+Software groups app browsing, themes and extensions. **Apps** offers optional
+category chips for browsers, communication, games, creative tools, office and
+reading, development, network and utilities. Typing still searches everything,
+even from these pages. App details include project links, install source and
+project screenshots when available. Installed Arch packages offer removal and
+system-update controls; updates follow the existing full-system updater. No
+repository refresh or installation happens because you type a search.
+
+**Themes** previews the actual palette in dark and light modes before applying
+it. Import and export use a Nacre theme manifest with both palettes. Saved palettes
+share the existing Nacre Colors library; built-in palettes cannot be removed,
+and apply another palette before removing the one currently in use.
+
+**Extensions** manages launcher packs, palette themes and independent Quickshell
+panels. Quick folders and Reference shortcuts are bundled starter packs. Imported
+extensions and local clones start disabled. Updates validate the repository,
+preserve local edits, and leave the new version disabled for review. Panels run
+in separate processes with the same user permissions as other applications;
+they do not receive the main shell's live objects. See the
+[extension format](development/software-extensions.md) for examples and supported
+kinds. This format does not embed third-party widgets into the built-in bar or
+dashboard.

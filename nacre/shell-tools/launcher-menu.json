@@ -959,12 +959,15 @@
     {
       "id": "software.discover",
       "kind": "group",
-      "label": "Recommended software",
+      "label": "Apps",
       "icon": "apps",
-      "description": "A small catalog, with installed status",
+      "description": "Browse apps by purpose, preview them and manage installation",
       "provider": "software",
       "labelId": "launcher.catalog.software.discover.label",
-      "descriptionId": "launcher.catalog.software.discover.description"
+      "descriptionId": "launcher.catalog.software.discover.description",
+      "aliases": [
+        "software.apps"
+      ]
     },
     {
       "id": "software.packages",
@@ -1483,6 +1486,59 @@
         "localsend"
       ],
       "capability": "share"
+    },
+    {
+      "id": "software.themes",
+      "kind": "group",
+      "label": "Themes",
+      "icon": "palette",
+      "description": "Preview and apply desktop palettes",
+      "provider": "software-themes",
+      "labelId": "software.catalog.themes.label",
+      "descriptionId": "software.catalog.themes.description"
+    },
+    {
+      "id": "software.themes.import",
+      "kind": "action",
+      "label": "Import a theme",
+      "icon": "download",
+      "description": "Add a Nacre theme manifest from a local file",
+      "operation": "form",
+      "value": "software-theme-import",
+      "labelId": "software.catalog.themes.import.label",
+      "descriptionId": "software.catalog.themes.import.description"
+    },
+    {
+      "id": "software.themes.create",
+      "kind": "action",
+      "label": "Create a theme",
+      "icon": "palette",
+      "description": "Fine-tune and save a palette in Nacre Colors",
+      "operation": "settings",
+      "value": "colors",
+      "labelId": "software.catalog.themes.create.label",
+      "descriptionId": "software.catalog.themes.create.description"
+    },
+    {
+      "id": "software.extensions",
+      "kind": "group",
+      "label": "Extensions",
+      "icon": "extension",
+      "description": "Add launcher packs, themes and independent panels",
+      "provider": "software-extensions",
+      "labelId": "software.catalog.extensions.label",
+      "descriptionId": "software.catalog.extensions.description"
+    },
+    {
+      "id": "software.extensions.import",
+      "kind": "action",
+      "label": "Add an extension",
+      "icon": "add",
+      "description": "Import a Nacre extension from an HTTPS Git repository",
+      "operation": "form",
+      "value": "software-extension-import",
+      "labelId": "software.catalog.extensions.import.label",
+      "descriptionId": "software.catalog.extensions.import.description"
     }
   ],
   "software": [
@@ -1492,7 +1548,16 @@
       "description": "Web browser",
       "labelId": "launcher.catalog.firefox.label",
       "descriptionId": "launcher.catalog.firefox.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "browsers",
+      "website": "https://www.firefox.com/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org.mozilla.firefox-stable/752x423/org.mozilla.firefox-af5d1ae7c121ea4864b3c5a1098f8f9c.png",
+        "https://dl.flathub.org/media/org.mozilla.firefox-stable/752x423/org.mozilla.firefox-c6f98b38b8b28b113a75a6b34037b759.png",
+        "https://dl.flathub.org/media/org.mozilla.firefox-stable/752x423/org.mozilla.firefox-60e855c1f4180607e40c9762a0fb9fa6.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.mozilla.firefox",
+      "appId": "org.mozilla.firefox"
     },
     {
       "package": "chromium",
@@ -1500,7 +1565,14 @@
       "description": "Web browser",
       "labelId": "launcher.catalog.chromium.label",
       "descriptionId": "launcher.catalog.chromium.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "browsers",
+      "website": "https://www.chromium.org/Home",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/chromium/Chromium/f7ea274f83f1b61455f300ecf1c01ec2/screenshots/image-1_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.chromium.Chromium",
+      "appId": "org.chromium.Chromium"
     },
     {
       "package": "zen-browser-bin",
@@ -1508,7 +1580,9 @@
       "description": "Web browser",
       "labelId": "launcher.catalog.zen-browser-bin.label",
       "descriptionId": "launcher.catalog.zen-browser-bin.description",
-      "repository": "AUR"
+      "repository": "AUR",
+      "category": "browsers",
+      "website": "https://github.com/zen-browser/desktop"
     },
     {
       "package": "code",
@@ -1521,7 +1595,14 @@
         "vs code",
         "code editor"
       ],
-      "repository": "extra"
+      "repository": "extra",
+      "category": "development",
+      "website": "https://github.com/microsoft/vscode",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/visualstudio/code/929ab57f09f2d5a5bc7cea0648c9a332/screenshots/image-1_752x408@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.visualstudio.code",
+      "appId": "com.visualstudio.code"
     },
     {
       "package": "neovim",
@@ -1529,7 +1610,9 @@
       "description": "Terminal editor",
       "labelId": "launcher.catalog.neovim.label",
       "descriptionId": "launcher.catalog.neovim.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "development",
+      "website": "https://neovim.io"
     },
     {
       "package": "helix",
@@ -1537,7 +1620,9 @@
       "description": "Terminal editor",
       "labelId": "launcher.catalog.helix.label",
       "descriptionId": "launcher.catalog.helix.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "development",
+      "website": "https://helix-editor.com"
     },
     {
       "package": "btop",
@@ -1545,7 +1630,9 @@
       "description": "System monitor",
       "labelId": "launcher.catalog.btop.label",
       "descriptionId": "launcher.catalog.btop.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://github.com/aristocratos/btop"
     },
     {
       "package": "tmux",
@@ -1553,7 +1640,9 @@
       "description": "Terminal sessions",
       "labelId": "launcher.catalog.tmux.label",
       "descriptionId": "launcher.catalog.tmux.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "development",
+      "website": "https://github.com/tmux/tmux/wiki"
     },
     {
       "package": "ripgrep",
@@ -1561,7 +1650,9 @@
       "description": "Search files",
       "labelId": "launcher.catalog.ripgrep.label",
       "descriptionId": "launcher.catalog.ripgrep.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "development",
+      "website": "https://github.com/BurntSushi/ripgrep"
     },
     {
       "package": "fd",
@@ -1569,7 +1660,9 @@
       "description": "Find files",
       "labelId": "launcher.catalog.fd.label",
       "descriptionId": "launcher.catalog.fd.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "development",
+      "website": "https://github.com/sharkdp/fd"
     },
     {
       "package": "bat",
@@ -1577,7 +1670,9 @@
       "description": "Read files",
       "labelId": "launcher.catalog.bat.label",
       "descriptionId": "launcher.catalog.bat.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "development",
+      "website": "https://github.com/sharkdp/bat"
     },
     {
       "package": "obs-studio",
@@ -1589,7 +1684,14 @@
         "obs",
         "open broadcaster"
       ],
-      "repository": "extra"
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://obsproject.com",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/obsproject/Studio/b24d8f7f7f9672e48342e70759b01e5e/screenshots/image-1_752x526@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.obsproject.Studio",
+      "appId": "com.obsproject.Studio"
     },
     {
       "package": "vlc",
@@ -1597,7 +1699,15 @@
       "description": "Media player",
       "labelId": "launcher.catalog.vlc.label",
       "descriptionId": "launcher.catalog.vlc.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://www.videolan.org/vlc/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/videolan/VLC/34e7c2b6a026c5c290606225a84582d3/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/org/videolan/VLC/34e7c2b6a026c5c290606225a84582d3/screenshots/image-2_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.videolan.VLC",
+      "appId": "org.videolan.VLC"
     },
     {
       "package": "mpv",
@@ -1605,7 +1715,9 @@
       "description": "Media player",
       "labelId": "launcher.catalog.mpv.label",
       "descriptionId": "launcher.catalog.mpv.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://mpv.io/"
     },
     {
       "package": "spotify",
@@ -1613,7 +1725,16 @@
       "description": "Music",
       "labelId": "launcher.catalog.spotify.label",
       "descriptionId": "launcher.catalog.spotify.description",
-      "repository": "AUR"
+      "repository": "AUR",
+      "category": "utilities",
+      "website": "https://www.spotify.com",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/spotify/Client/2be38d678bbcc0e04cec0c19c60a80fe/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/com/spotify/Client/2be38d678bbcc0e04cec0c19c60a80fe/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/com/spotify/Client/2be38d678bbcc0e04cec0c19c60a80fe/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.spotify.Client",
+      "appId": "com.spotify.Client"
     },
     {
       "package": "gimp",
@@ -1621,7 +1742,16 @@
       "description": "Image editor",
       "labelId": "launcher.catalog.gimp.label",
       "descriptionId": "launcher.catalog.gimp.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://www.gimp.org/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/gimp/GIMP/95e6d7d59d33a0f9364535dbe023d807/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/org/gimp/GIMP/95e6d7d59d33a0f9364535dbe023d807/screenshots/image-2_752x410@1.png",
+        "https://dl.flathub.org/media/org/gimp/GIMP/95e6d7d59d33a0f9364535dbe023d807/screenshots/image-3_752x410@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.gimp.GIMP",
+      "appId": "org.gimp.GIMP"
     },
     {
       "package": "krita",
@@ -1629,7 +1759,16 @@
       "description": "Painting",
       "labelId": "launcher.catalog.krita.label",
       "descriptionId": "launcher.catalog.krita.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://krita.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/kde/krita/1348962dcc0842250c4ce6876acc36cc/screenshots/image-1_752x408@1.png",
+        "https://dl.flathub.org/media/org/kde/krita/1348962dcc0842250c4ce6876acc36cc/screenshots/image-2_752x408@1.png",
+        "https://dl.flathub.org/media/org/kde/krita/1348962dcc0842250c4ce6876acc36cc/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.kde.krita",
+      "appId": "org.kde.krita"
     },
     {
       "package": "inkscape",
@@ -1637,7 +1776,16 @@
       "description": "Vector graphics",
       "labelId": "launcher.catalog.inkscape.label",
       "descriptionId": "launcher.catalog.inkscape.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://inkscape.org/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/inkscape/Inkscape/d06b79da7ad6df73032683fbcf8c4d56/screenshots/image-1_752x462@1.png",
+        "https://dl.flathub.org/media/org/inkscape/Inkscape/d06b79da7ad6df73032683fbcf8c4d56/screenshots/image-2_752x461@1.png",
+        "https://dl.flathub.org/media/org/inkscape/Inkscape/d06b79da7ad6df73032683fbcf8c4d56/screenshots/image-3_752x460@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.inkscape.Inkscape",
+      "appId": "org.inkscape.Inkscape"
     },
     {
       "package": "steam",
@@ -1645,7 +1793,16 @@
       "description": "Games",
       "labelId": "launcher.catalog.steam.label",
       "descriptionId": "launcher.catalog.steam.description",
-      "repository": "multilib"
+      "repository": "multilib",
+      "category": "games",
+      "website": "https://steampowered.com/",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/valvesoftware/Steam/71bd4338705ac5f74c133bfbaacaa3d8/screenshots/image-1_752x642@1.png",
+        "https://dl.flathub.org/media/com/valvesoftware/Steam/71bd4338705ac5f74c133bfbaacaa3d8/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/com/valvesoftware/Steam/71bd4338705ac5f74c133bfbaacaa3d8/screenshots/image-3_752x364@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.valvesoftware.Steam",
+      "appId": "com.valvesoftware.Steam"
     },
     {
       "package": "lutris",
@@ -1653,7 +1810,14 @@
       "description": "Game library",
       "labelId": "launcher.catalog.lutris.label",
       "descriptionId": "launcher.catalog.lutris.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "games",
+      "website": "https://lutris.net",
+      "screenshots": [
+        "https://dl.flathub.org/media/net/lutris/Lutris/3cc8d32fd68604816f0a5f6872bf91b5/screenshots/image-1_752x486@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/net.lutris.Lutris",
+      "appId": "net.lutris.Lutris"
     },
     {
       "package": "heroic-games-launcher-bin",
@@ -1665,7 +1829,16 @@
         "epic games",
         "gog"
       ],
-      "repository": "AUR"
+      "repository": "AUR",
+      "category": "games",
+      "website": "https://heroicgameslauncher.com/",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/heroicgameslauncher/hgl/d6d41679a8e80808f6cf60bb082b9f37/screenshots/image-1_752x526@1.png",
+        "https://dl.flathub.org/media/com/heroicgameslauncher/hgl/d6d41679a8e80808f6cf60bb082b9f37/screenshots/image-2_752x526@1.png",
+        "https://dl.flathub.org/media/com/heroicgameslauncher/hgl/d6d41679a8e80808f6cf60bb082b9f37/screenshots/image-3_752x526@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.heroicgameslauncher.hgl",
+      "appId": "com.heroicgameslauncher.hgl"
     },
     {
       "package": "localsend",
@@ -1673,7 +1846,16 @@
       "description": "Share files locally",
       "labelId": "launcher.catalog.localsend.label",
       "descriptionId": "launcher.catalog.localsend.description",
-      "repository": "AUR"
+      "repository": "AUR",
+      "category": "utilities",
+      "website": "https://github.com/localsend/localsend",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/localsend/localsend_app/e1bb6e9a29b498c0a48de1a5683c652a/screenshots/image-1_752x551@1.png",
+        "https://dl.flathub.org/media/org/localsend/localsend_app/e1bb6e9a29b498c0a48de1a5683c652a/screenshots/image-2_752x551@1.png",
+        "https://dl.flathub.org/media/org/localsend/localsend_app/e1bb6e9a29b498c0a48de1a5683c652a/screenshots/image-3_752x551@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.localsend.localsend_app",
+      "appId": "org.localsend.localsend_app"
     },
     {
       "package": "tailscale",
@@ -1681,7 +1863,9 @@
       "description": "Private network",
       "labelId": "launcher.catalog.tailscale.label",
       "descriptionId": "launcher.catalog.tailscale.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "network",
+      "website": "https://tailscale.com"
     },
     {
       "package": "keepassxc",
@@ -1689,7 +1873,16 @@
       "description": "Password manager",
       "labelId": "launcher.catalog.keepassxc.label",
       "descriptionId": "launcher.catalog.keepassxc.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://keepassxc.org/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/keepassxc/KeePassXC.desktop/4c36ed73b0a57050b7fda2be02da09f1/screenshots/image-1_752x571@1.png",
+        "https://dl.flathub.org/media/org/keepassxc/KeePassXC.desktop/4c36ed73b0a57050b7fda2be02da09f1/screenshots/image-2_752x535@1.png",
+        "https://dl.flathub.org/media/org/keepassxc/KeePassXC.desktop/4c36ed73b0a57050b7fda2be02da09f1/screenshots/image-3_752x536@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.keepassxc.KeePassXC",
+      "appId": "org.keepassxc.KeePassXC"
     },
     {
       "package": "wf-recorder",
@@ -1697,7 +1890,9 @@
       "description": "Record Wayland screens",
       "labelId": "launcher.catalog.wf-recorder.label",
       "descriptionId": "launcher.catalog.wf-recorder.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://github.com/ammen99/wf-recorder"
     },
     {
       "package": "tesseract",
@@ -1705,7 +1900,9 @@
       "description": "Read text in screenshots",
       "labelId": "launcher.catalog.tesseract.label",
       "descriptionId": "launcher.catalog.tesseract.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://github.com/tesseract-ocr/tesseract"
     },
     {
       "package": "zbar",
@@ -1713,7 +1910,9 @@
       "description": "Read QR codes",
       "labelId": "launcher.catalog.zbar.label",
       "descriptionId": "launcher.catalog.zbar.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://github.com/mchehab/zbar"
     },
     {
       "package": "hyprpicker",
@@ -1721,7 +1920,9 @@
       "description": "Copy a color from the screen",
       "labelId": "launcher.catalog.hyprpicker.label",
       "descriptionId": "launcher.catalog.hyprpicker.description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://github.com/hyprwm/hyprpicker"
     },
     {
       "package": "satty",
@@ -1729,7 +1930,9 @@
       "description": "Draw and write on screenshots",
       "labelId": "launcher.catalog.optional-satty",
       "descriptionId": "launcher.catalog.optional-satty-description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://github.com/gabm/satty"
     },
     {
       "package": "ffmpeg",
@@ -1737,7 +1940,9 @@
       "description": "Compress videos and convert media files",
       "labelId": "launcher.catalog.optional-ffmpeg",
       "descriptionId": "launcher.catalog.optional-ffmpeg-description",
-      "repository": "extra"
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://ffmpeg.org"
     },
     {
       "package": "voxtype-bin",
@@ -1745,7 +1950,9 @@
       "description": "Optional dictation; configure your model and service before use",
       "labelId": "launcher.catalog.optional-voxtype-bin",
       "descriptionId": "launcher.catalog.optional-voxtype-bin-description",
-      "repository": "AUR"
+      "repository": "AUR",
+      "category": "utilities",
+      "website": "https://voxtype.io"
     },
     {
       "package": "discord",
@@ -1753,7 +1960,15 @@
       "description": "Voice and text chat",
       "repository": "extra",
       "labelId": "launcher.catalog.discord.label",
-      "descriptionId": "launcher.catalog.discord.description"
+      "descriptionId": "launcher.catalog.discord.description",
+      "category": "communication",
+      "website": "https://discord.com",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/discordapp/Discord/54df1825f8e41c063a8e94978db804df/screenshots/image-1_752x577@1.png",
+        "https://dl.flathub.org/media/com/discordapp/Discord/54df1825f8e41c063a8e94978db804df/screenshots/image-2_752x577@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.discordapp.Discord",
+      "appId": "com.discordapp.Discord"
     },
     {
       "package": "google-chrome",
@@ -1761,7 +1976,16 @@
       "description": "Web browser",
       "repository": "AUR",
       "labelId": "launcher.catalog.google-chrome.label",
-      "descriptionId": "launcher.catalog.google-chrome.description"
+      "descriptionId": "launcher.catalog.google-chrome.description",
+      "category": "browsers",
+      "website": "https://www.google.com/chrome",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/google/Chrome/c98e8834585bfc78fada8796976bf768/screenshots/image-1_752x438@1.png",
+        "https://dl.flathub.org/media/com/google/Chrome/c98e8834585bfc78fada8796976bf768/screenshots/image-2_752x438@1.png",
+        "https://dl.flathub.org/media/com/google/Chrome/c98e8834585bfc78fada8796976bf768/screenshots/image-3_752x438@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.google.Chrome",
+      "appId": "com.google.Chrome"
     },
     {
       "package": "brave-bin",
@@ -1769,7 +1993,15 @@
       "description": "Web browser",
       "repository": "AUR",
       "labelId": "launcher.catalog.brave-bin.label",
-      "descriptionId": "launcher.catalog.brave-bin.description"
+      "descriptionId": "launcher.catalog.brave-bin.description",
+      "category": "browsers",
+      "website": "https://brave.com",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/brave/Browser/1f9e30f4dddffcb63e107f3a04f9d000/screenshots/image-1_752x528@1.png",
+        "https://dl.flathub.org/media/com/brave/Browser/1f9e30f4dddffcb63e107f3a04f9d000/screenshots/image-2_752x475@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.brave.Browser",
+      "appId": "com.brave.Browser"
     },
     {
       "package": "vivaldi",
@@ -1777,7 +2009,9 @@
       "description": "Web browser",
       "repository": "extra",
       "labelId": "launcher.catalog.vivaldi.label",
-      "descriptionId": "launcher.catalog.vivaldi.description"
+      "descriptionId": "launcher.catalog.vivaldi.description",
+      "category": "browsers",
+      "website": "https://vivaldi.com"
     },
     {
       "package": "torbrowser-launcher",
@@ -1785,7 +2019,9 @@
       "description": "Privacy browser",
       "repository": "extra",
       "labelId": "launcher.catalog.torbrowser-launcher.label",
-      "descriptionId": "launcher.catalog.torbrowser-launcher.description"
+      "descriptionId": "launcher.catalog.torbrowser-launcher.description",
+      "category": "browsers",
+      "website": "https://github.com/torproject/torbrowser-launcher"
     },
     {
       "package": "thunderbird",
@@ -1793,7 +2029,9 @@
       "description": "Email and calendar",
       "repository": "extra",
       "labelId": "launcher.catalog.thunderbird.label",
-      "descriptionId": "launcher.catalog.thunderbird.description"
+      "descriptionId": "launcher.catalog.thunderbird.description",
+      "category": "communication",
+      "website": "https://www.thunderbird.net/"
     },
     {
       "package": "telegram-desktop",
@@ -1801,7 +2039,16 @@
       "description": "Messaging",
       "repository": "extra",
       "labelId": "launcher.catalog.telegram-desktop.label",
-      "descriptionId": "launcher.catalog.telegram-desktop.description"
+      "descriptionId": "launcher.catalog.telegram-desktop.description",
+      "category": "communication",
+      "website": "https://desktop.telegram.org/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/telegram/desktop/0477faef98bba31f7de7ec0031eb1e57/screenshots/image-1_752x519@1.png",
+        "https://dl.flathub.org/media/org/telegram/desktop/0477faef98bba31f7de7ec0031eb1e57/screenshots/image-2_752x470@1.png",
+        "https://dl.flathub.org/media/org/telegram/desktop/0477faef98bba31f7de7ec0031eb1e57/screenshots/image-3_752x470@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.telegram.desktop",
+      "appId": "org.telegram.desktop"
     },
     {
       "package": "signal-desktop",
@@ -1809,7 +2056,14 @@
       "description": "Private messaging",
       "repository": "extra",
       "labelId": "launcher.catalog.signal-desktop.label",
-      "descriptionId": "launcher.catalog.signal-desktop.description"
+      "descriptionId": "launcher.catalog.signal-desktop.description",
+      "category": "communication",
+      "website": "https://signal.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/signal/Signal/9b9ec85132f9b02718c7ad45f509bfc0/screenshots/image-1_752x458@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.signal.Signal",
+      "appId": "org.signal.Signal"
     },
     {
       "package": "element-desktop",
@@ -1817,7 +2071,14 @@
       "description": "Matrix messaging",
       "repository": "extra",
       "labelId": "launcher.catalog.element-desktop.label",
-      "descriptionId": "launcher.catalog.element-desktop.description"
+      "descriptionId": "launcher.catalog.element-desktop.description",
+      "category": "communication",
+      "website": "https://element.io",
+      "screenshots": [
+        "https://dl.flathub.org/media/im/riot/Riot/5b69dc50d129dec06a4fe293caf32ce1/screenshots/image-1_752x409@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/im.riot.Riot",
+      "appId": "im.riot.Riot"
     },
     {
       "package": "slack-desktop",
@@ -1825,7 +2086,9 @@
       "description": "Team messaging",
       "repository": "AUR",
       "labelId": "launcher.catalog.slack-desktop.label",
-      "descriptionId": "launcher.catalog.slack-desktop.description"
+      "descriptionId": "launcher.catalog.slack-desktop.description",
+      "category": "communication",
+      "website": "https://slack.com/downloads"
     },
     {
       "package": "vesktop-bin",
@@ -1833,7 +2096,15 @@
       "description": "Discord client",
       "repository": "AUR",
       "labelId": "launcher.catalog.vesktop-bin.label",
-      "descriptionId": "launcher.catalog.vesktop-bin.description"
+      "descriptionId": "launcher.catalog.vesktop-bin.description",
+      "category": "communication",
+      "website": "https://vesktop.dev/",
+      "screenshots": [
+        "https://dl.flathub.org/media/dev/vencord/Vesktop/34c98d1300f4807d83af629811965394/screenshots/image-1_752x507@1.png",
+        "https://dl.flathub.org/media/dev/vencord/Vesktop/34c98d1300f4807d83af629811965394/screenshots/image-2_752x507@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/dev.vencord.Vesktop",
+      "appId": "dev.vencord.Vesktop"
     },
     {
       "package": "zoom",
@@ -1841,7 +2112,9 @@
       "description": "Video meetings",
       "repository": "AUR",
       "labelId": "launcher.catalog.zoom.label",
-      "descriptionId": "launcher.catalog.zoom.description"
+      "descriptionId": "launcher.catalog.zoom.description",
+      "category": "communication",
+      "website": "https://zoom.us/"
     },
     {
       "package": "libreoffice-fresh",
@@ -1849,7 +2122,16 @@
       "description": "Documents, spreadsheets and presentations",
       "repository": "extra",
       "labelId": "launcher.catalog.libreoffice-fresh.label",
-      "descriptionId": "launcher.catalog.libreoffice-fresh.description"
+      "descriptionId": "launcher.catalog.libreoffice-fresh.description",
+      "category": "office",
+      "website": "https://www.libreoffice.org/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/libreoffice/LibreOffice/6a06e0ec2876ffc989b0e2a1340d3331/screenshots/image-1_752x526@1.png",
+        "https://dl.flathub.org/media/org/libreoffice/LibreOffice/6a06e0ec2876ffc989b0e2a1340d3331/screenshots/image-2_752x436@1.png",
+        "https://dl.flathub.org/media/org/libreoffice/LibreOffice/6a06e0ec2876ffc989b0e2a1340d3331/screenshots/image-3_752x546@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.libreoffice.LibreOffice",
+      "appId": "org.libreoffice.LibreOffice"
     },
     {
       "package": "joplin-desktop",
@@ -1857,7 +2139,9 @@
       "description": "Notes and notebooks",
       "repository": "AUR",
       "labelId": "launcher.catalog.joplin-desktop.label",
-      "descriptionId": "launcher.catalog.joplin-desktop.description"
+      "descriptionId": "launcher.catalog.joplin-desktop.description",
+      "category": "office",
+      "website": "https://joplinapp.org/"
     },
     {
       "package": "foliate",
@@ -1865,7 +2149,16 @@
       "description": "E-book reader",
       "repository": "extra",
       "labelId": "launcher.catalog.foliate.label",
-      "descriptionId": "launcher.catalog.foliate.description"
+      "descriptionId": "launcher.catalog.foliate.description",
+      "category": "office",
+      "website": "https://johnfactotum.github.io/foliate/",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/github/johnfactotum.Foliate/50c58d8da7fe3fa08d1fbf5174369d7d/screenshots/image-1_752x478@1.png",
+        "https://dl.flathub.org/media/com/github/johnfactotum.Foliate/50c58d8da7fe3fa08d1fbf5174369d7d/screenshots/image-2_752x478@1.png",
+        "https://dl.flathub.org/media/com/github/johnfactotum.Foliate/50c58d8da7fe3fa08d1fbf5174369d7d/screenshots/image-3_752x478@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.github.johnfactotum.Foliate",
+      "appId": "com.github.johnfactotum.Foliate"
     },
     {
       "package": "shotcut",
@@ -1873,7 +2166,16 @@
       "description": "Video editor",
       "repository": "extra",
       "labelId": "launcher.catalog.shotcut.label",
-      "descriptionId": "launcher.catalog.shotcut.description"
+      "descriptionId": "launcher.catalog.shotcut.description",
+      "category": "creative",
+      "website": "https://www.shotcut.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/shotcut/Shotcut/6740996b9caf645b4d2d71211d68fd3f/screenshots/image-1_752x464@1.png",
+        "https://dl.flathub.org/media/org/shotcut/Shotcut/6740996b9caf645b4d2d71211d68fd3f/screenshots/image-2_orig.png",
+        "https://dl.flathub.org/media/org/shotcut/Shotcut/6740996b9caf645b4d2d71211d68fd3f/screenshots/image-3_752x629@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.shotcut.Shotcut",
+      "appId": "org.shotcut.Shotcut"
     },
     {
       "package": "rawtherapee",
@@ -1881,7 +2183,9 @@
       "description": "Photo editing",
       "repository": "extra",
       "labelId": "launcher.catalog.rawtherapee.label",
-      "descriptionId": "launcher.catalog.rawtherapee.description"
+      "descriptionId": "launcher.catalog.rawtherapee.description",
+      "category": "creative",
+      "website": "https://www.rawtherapee.com/"
     },
     {
       "package": "vscodium-bin",
@@ -1889,7 +2193,9 @@
       "description": "Code editor",
       "repository": "AUR",
       "labelId": "launcher.catalog.vscodium-bin.label",
-      "descriptionId": "launcher.catalog.vscodium-bin.description"
+      "descriptionId": "launcher.catalog.vscodium-bin.description",
+      "category": "development",
+      "website": "https://github.com/VSCodium/vscodium"
     },
     {
       "package": "android-studio",
@@ -1897,7 +2203,9 @@
       "description": "Android development",
       "repository": "AUR",
       "labelId": "launcher.catalog.android-studio.label",
-      "descriptionId": "launcher.catalog.android-studio.description"
+      "descriptionId": "launcher.catalog.android-studio.description",
+      "category": "development",
+      "website": "https://developer.android.com/"
     },
     {
       "package": "bottles",
@@ -1905,7 +2213,16 @@
       "description": "Run Windows applications",
       "repository": "AUR",
       "labelId": "launcher.catalog.bottles.label",
-      "descriptionId": "launcher.catalog.bottles.description"
+      "descriptionId": "launcher.catalog.bottles.description",
+      "category": "games",
+      "website": "https://github.com/bottlesdevs/Bottles",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/usebottles/bottles/9d262585bbb7e779072f16bec4824a7e/screenshots/image-1_752x586@1.png",
+        "https://dl.flathub.org/media/com/usebottles/bottles/9d262585bbb7e779072f16bec4824a7e/screenshots/image-2_752x586@1.png",
+        "https://dl.flathub.org/media/com/usebottles/bottles/9d262585bbb7e779072f16bec4824a7e/screenshots/image-3_752x586@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.usebottles.bottles",
+      "appId": "com.usebottles.bottles"
     },
     {
       "package": "protonup-qt",
@@ -1913,7 +2230,9 @@
       "description": "Manage game compatibility tools",
       "repository": "AUR",
       "labelId": "launcher.catalog.protonup-qt.label",
-      "descriptionId": "launcher.catalog.protonup-qt.description"
+      "descriptionId": "launcher.catalog.protonup-qt.description",
+      "category": "games",
+      "website": "https://davidotek.github.io/protonup-qt"
     },
     {
       "package": "obsidian",
@@ -1921,7 +2240,16 @@
       "description": "Notes and knowledge",
       "repository": "extra",
       "labelId": "launcher.catalog.obsidian.label",
-      "descriptionId": "launcher.catalog.obsidian.description"
+      "descriptionId": "launcher.catalog.obsidian.description",
+      "category": "office",
+      "website": "https://obsidian.md",
+      "screenshots": [
+        "https://dl.flathub.org/media/md/obsidian/Obsidian/4902fe5d9fec13519c5524761123cdeb/screenshots/image-1_752x398@1.png",
+        "https://dl.flathub.org/media/md/obsidian/Obsidian/4902fe5d9fec13519c5524761123cdeb/screenshots/image-2_752x863@1.png",
+        "https://dl.flathub.org/media/md/obsidian/Obsidian/4902fe5d9fec13519c5524761123cdeb/screenshots/image-3_752x526@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/md.obsidian.Obsidian",
+      "appId": "md.obsidian.Obsidian"
     },
     {
       "package": "calibre",
@@ -1929,7 +2257,16 @@
       "description": "E-book library",
       "repository": "extra",
       "labelId": "launcher.catalog.calibre.label",
-      "descriptionId": "launcher.catalog.calibre.description"
+      "descriptionId": "launcher.catalog.calibre.description",
+      "category": "office",
+      "website": "https://calibre-ebook.com",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/calibre_ebook/calibre/42df4cc1fa6830a00f75081dbbda07cd/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/com/calibre_ebook/calibre/42df4cc1fa6830a00f75081dbbda07cd/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/com/calibre_ebook/calibre/42df4cc1fa6830a00f75081dbbda07cd/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.calibre_ebook.calibre",
+      "appId": "com.calibre_ebook.calibre"
     },
     {
       "package": "okular",
@@ -1937,7 +2274,9 @@
       "description": "PDF reader",
       "repository": "extra",
       "labelId": "launcher.catalog.okular.label",
-      "descriptionId": "launcher.catalog.okular.description"
+      "descriptionId": "launcher.catalog.okular.description",
+      "category": "office",
+      "website": "https://apps.kde.org/okular/"
     },
     {
       "package": "blender",
@@ -1945,7 +2284,16 @@
       "description": "3D modeling and animation",
       "repository": "extra",
       "labelId": "launcher.catalog.blender.label",
-      "descriptionId": "launcher.catalog.blender.description"
+      "descriptionId": "launcher.catalog.blender.description",
+      "category": "creative",
+      "website": "https://www.blender.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/blender/Blender/c6b07403115901571923d99f1b725b0e/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/org/blender/Blender/c6b07403115901571923d99f1b725b0e/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/org/blender/Blender/c6b07403115901571923d99f1b725b0e/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.blender.Blender",
+      "appId": "org.blender.Blender"
     },
     {
       "package": "kdenlive",
@@ -1953,7 +2301,16 @@
       "description": "Video editor",
       "repository": "extra",
       "labelId": "launcher.catalog.kdenlive.label",
-      "descriptionId": "launcher.catalog.kdenlive.description"
+      "descriptionId": "launcher.catalog.kdenlive.description",
+      "category": "creative",
+      "website": "https://apps.kde.org/kdenlive/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/kde/kdenlive.desktop/ed746a0f36b42446cedf1605b1c4f0cb/screenshots/image-1_752x445@1.png",
+        "https://dl.flathub.org/media/org/kde/kdenlive.desktop/ed746a0f36b42446cedf1605b1c4f0cb/screenshots/image-2_752x429@1.png",
+        "https://dl.flathub.org/media/org/kde/kdenlive.desktop/ed746a0f36b42446cedf1605b1c4f0cb/screenshots/image-3_752x431@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.kde.kdenlive",
+      "appId": "org.kde.kdenlive"
     },
     {
       "package": "audacity",
@@ -1961,7 +2318,14 @@
       "description": "Audio editor",
       "repository": "extra",
       "labelId": "launcher.catalog.audacity.label",
-      "descriptionId": "launcher.catalog.audacity.description"
+      "descriptionId": "launcher.catalog.audacity.description",
+      "category": "creative",
+      "website": "https://audacityteam.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/audacityteam/Audacity/0ad4a24524b6c06220649dc83a08ae81/screenshots/image-1_752x473@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.audacityteam.Audacity",
+      "appId": "org.audacityteam.Audacity"
     },
     {
       "package": "ardour",
@@ -1969,7 +2333,9 @@
       "description": "Music recording and production",
       "repository": "extra",
       "labelId": "launcher.catalog.ardour.label",
-      "descriptionId": "launcher.catalog.ardour.description"
+      "descriptionId": "launcher.catalog.ardour.description",
+      "category": "creative",
+      "website": "https://ardour.org/"
     },
     {
       "package": "darktable",
@@ -1977,7 +2343,16 @@
       "description": "Photo editing",
       "repository": "extra",
       "labelId": "launcher.catalog.darktable.label",
-      "descriptionId": "launcher.catalog.darktable.description"
+      "descriptionId": "launcher.catalog.darktable.description",
+      "category": "creative",
+      "website": "https://darktable.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/darktable/Darktable/1b5cfd7af8bcd84fc939759726f1ba7d/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/org/darktable/Darktable/1b5cfd7af8bcd84fc939759726f1ba7d/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/org/darktable/Darktable/1b5cfd7af8bcd84fc939759726f1ba7d/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.darktable.Darktable",
+      "appId": "org.darktable.Darktable"
     },
     {
       "package": "handbrake",
@@ -1985,7 +2360,16 @@
       "description": "Video conversion",
       "repository": "extra",
       "labelId": "launcher.catalog.handbrake.label",
-      "descriptionId": "launcher.catalog.handbrake.description"
+      "descriptionId": "launcher.catalog.handbrake.description",
+      "category": "creative",
+      "website": "https://handbrake.fr/",
+      "screenshots": [
+        "https://dl.flathub.org/media/fr/handbrake/ghb/ba64e7a37b2b3270d6065fdca313dfa3/screenshots/image-1_orig.png",
+        "https://dl.flathub.org/media/fr/handbrake/ghb/ba64e7a37b2b3270d6065fdca313dfa3/screenshots/image-2_orig.png",
+        "https://dl.flathub.org/media/fr/handbrake/ghb/ba64e7a37b2b3270d6065fdca313dfa3/screenshots/image-3_orig.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/fr.handbrake.ghb",
+      "appId": "fr.handbrake.ghb"
     },
     {
       "package": "qbittorrent",
@@ -1993,7 +2377,9 @@
       "description": "Torrent downloads",
       "repository": "extra",
       "labelId": "launcher.catalog.qbittorrent.label",
-      "descriptionId": "launcher.catalog.qbittorrent.description"
+      "descriptionId": "launcher.catalog.qbittorrent.description",
+      "category": "network",
+      "website": "https://www.qbittorrent.org"
     },
     {
       "package": "transmission-gtk",
@@ -2001,7 +2387,8 @@
       "description": "Torrent downloads",
       "repository": "extra",
       "labelId": "launcher.catalog.transmission-gtk.label",
-      "descriptionId": "launcher.catalog.transmission-gtk.description"
+      "descriptionId": "launcher.catalog.transmission-gtk.description",
+      "category": "network"
     },
     {
       "package": "filezilla",
@@ -2009,7 +2396,14 @@
       "description": "File transfer",
       "repository": "extra",
       "labelId": "launcher.catalog.filezilla.label",
-      "descriptionId": "launcher.catalog.filezilla.description"
+      "descriptionId": "launcher.catalog.filezilla.description",
+      "category": "network",
+      "website": "https://filezilla-project.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/filezillaproject/Filezilla/5160b88ed6c01ce752c9e46f86093d6e/screenshots/image-1_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.filezillaproject.Filezilla",
+      "appId": "org.filezillaproject.Filezilla"
     },
     {
       "package": "nextcloud-client",
@@ -2017,7 +2411,9 @@
       "description": "File synchronization",
       "repository": "extra",
       "labelId": "launcher.catalog.nextcloud-client.label",
-      "descriptionId": "launcher.catalog.nextcloud-client.description"
+      "descriptionId": "launcher.catalog.nextcloud-client.description",
+      "category": "network",
+      "website": "https://nextcloud.com/"
     },
     {
       "package": "syncthing",
@@ -2025,7 +2421,9 @@
       "description": "File synchronization",
       "repository": "extra",
       "labelId": "launcher.catalog.syncthing.label",
-      "descriptionId": "launcher.catalog.syncthing.description"
+      "descriptionId": "launcher.catalog.syncthing.description",
+      "category": "network",
+      "website": "https://syncthing.net/"
     },
     {
       "package": "bitwarden",
@@ -2033,7 +2431,14 @@
       "description": "Password manager",
       "repository": "extra",
       "labelId": "launcher.catalog.bitwarden.label",
-      "descriptionId": "launcher.catalog.bitwarden.description"
+      "descriptionId": "launcher.catalog.bitwarden.description",
+      "category": "utilities",
+      "website": "https://github.com/bitwarden/clients/tree/main/apps/desktop",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/bitwarden/desktop/c3c69a622a87154439c45280aebce2a8/screenshots/image-1_752x451@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.bitwarden.desktop",
+      "appId": "com.bitwarden.desktop"
     },
     {
       "package": "zed",
@@ -2041,7 +2446,9 @@
       "description": "Code editor",
       "repository": "extra",
       "labelId": "launcher.catalog.zed.label",
-      "descriptionId": "launcher.catalog.zed.description"
+      "descriptionId": "launcher.catalog.zed.description",
+      "category": "development",
+      "website": "https://zed.dev"
     },
     {
       "package": "kate",
@@ -2049,7 +2456,9 @@
       "description": "Text editor",
       "repository": "extra",
       "labelId": "launcher.catalog.kate.label",
-      "descriptionId": "launcher.catalog.kate.description"
+      "descriptionId": "launcher.catalog.kate.description",
+      "category": "development",
+      "website": "https://apps.kde.org/kate/"
     },
     {
       "package": "geany",
@@ -2057,7 +2466,9 @@
       "description": "Code editor",
       "repository": "extra",
       "labelId": "launcher.catalog.geany.label",
-      "descriptionId": "launcher.catalog.geany.description"
+      "descriptionId": "launcher.catalog.geany.description",
+      "category": "development",
+      "website": "https://www.geany.org/"
     },
     {
       "package": "dbeaver",
@@ -2065,7 +2476,9 @@
       "description": "Database client",
       "repository": "extra",
       "labelId": "launcher.catalog.dbeaver.label",
-      "descriptionId": "launcher.catalog.dbeaver.description"
+      "descriptionId": "launcher.catalog.dbeaver.description",
+      "category": "development",
+      "website": "https://dbeaver.io/"
     },
     {
       "package": "wireshark-qt",
@@ -2073,7 +2486,9 @@
       "description": "Network inspection",
       "repository": "extra",
       "labelId": "launcher.catalog.wireshark-qt.label",
-      "descriptionId": "launcher.catalog.wireshark-qt.description"
+      "descriptionId": "launcher.catalog.wireshark-qt.description",
+      "category": "network",
+      "website": "https://www.wireshark.org/"
     },
     {
       "package": "remmina",
@@ -2081,7 +2496,16 @@
       "description": "Remote desktop",
       "repository": "extra",
       "labelId": "launcher.catalog.remmina.label",
-      "descriptionId": "launcher.catalog.remmina.description"
+      "descriptionId": "launcher.catalog.remmina.description",
+      "category": "network",
+      "website": "https://www.remmina.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/remmina/Remmina/25c1e58ee7a9bb3b88dbb89f0083eab8/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/org/remmina/Remmina/25c1e58ee7a9bb3b88dbb89f0083eab8/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/org/remmina/Remmina/25c1e58ee7a9bb3b88dbb89f0083eab8/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.remmina.Remmina",
+      "appId": "org.remmina.Remmina"
     },
     {
       "package": "virtualbox",
@@ -2089,7 +2513,9 @@
       "description": "Virtual machines",
       "repository": "extra",
       "labelId": "launcher.catalog.virtualbox.label",
-      "descriptionId": "launcher.catalog.virtualbox.description"
+      "descriptionId": "launcher.catalog.virtualbox.description",
+      "category": "utilities",
+      "website": "https://virtualbox.org/"
     },
     {
       "package": "virt-manager",
@@ -2097,7 +2523,9 @@
       "description": "Virtual machines",
       "repository": "extra",
       "labelId": "launcher.catalog.virt-manager.label",
-      "descriptionId": "launcher.catalog.virt-manager.description"
+      "descriptionId": "launcher.catalog.virt-manager.description",
+      "category": "utilities",
+      "website": "https://virt-manager.org/"
     },
     {
       "package": "prismlauncher",
@@ -2105,7 +2533,16 @@
       "description": "Minecraft launcher",
       "repository": "extra",
       "labelId": "launcher.catalog.prismlauncher.label",
-      "descriptionId": "launcher.catalog.prismlauncher.description"
+      "descriptionId": "launcher.catalog.prismlauncher.description",
+      "category": "games",
+      "website": "https://prismlauncher.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/prismlauncher/PrismLauncher/61a6268120825540bced2adcb8e6b734/screenshots/image-1_752x557@1.png",
+        "https://dl.flathub.org/media/org/prismlauncher/PrismLauncher/61a6268120825540bced2adcb8e6b734/screenshots/image-2_752x567@1.png",
+        "https://dl.flathub.org/media/org/prismlauncher/PrismLauncher/61a6268120825540bced2adcb8e6b734/screenshots/image-3_752x547@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.prismlauncher.PrismLauncher",
+      "appId": "org.prismlauncher.PrismLauncher"
     },
     {
       "package": "retroarch",
@@ -2113,7 +2550,15 @@
       "description": "Retro games",
       "repository": "extra",
       "labelId": "launcher.catalog.retroarch.label",
-      "descriptionId": "launcher.catalog.retroarch.description"
+      "descriptionId": "launcher.catalog.retroarch.description",
+      "category": "games",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/libretro/RetroArch/0f9e059f4695b7116bab0d3d1cae1936/screenshots/image-1_752x413@1.png",
+        "https://dl.flathub.org/media/org/libretro/RetroArch/0f9e059f4695b7116bab0d3d1cae1936/screenshots/image-2_752x658@1.png",
+        "https://dl.flathub.org/media/org/libretro/RetroArch/0f9e059f4695b7116bab0d3d1cae1936/screenshots/image-3_752x563@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.libretro.RetroArch",
+      "appId": "org.libretro.RetroArch"
     },
     {
       "package": "gamescope",
@@ -2121,7 +2566,9 @@
       "description": "Game display compositor",
       "repository": "extra",
       "labelId": "launcher.catalog.gamescope.label",
-      "descriptionId": "launcher.catalog.gamescope.description"
+      "descriptionId": "launcher.catalog.gamescope.description",
+      "category": "games",
+      "website": "https://github.com/ValveSoftware/gamescope"
     },
     {
       "package": "mangohud",
@@ -2129,7 +2576,9 @@
       "description": "Game performance overlay",
       "repository": "extra",
       "labelId": "launcher.catalog.mangohud.label",
-      "descriptionId": "launcher.catalog.mangohud.description"
+      "descriptionId": "launcher.catalog.mangohud.description",
+      "category": "games",
+      "website": "https://github.com/flightlessmango/MangoHud"
     },
     {
       "package": "pavucontrol",
@@ -2137,7 +2586,9 @@
       "description": "Sound settings",
       "repository": "extra",
       "labelId": "launcher.catalog.pavucontrol.label",
-      "descriptionId": "launcher.catalog.pavucontrol.description"
+      "descriptionId": "launcher.catalog.pavucontrol.description",
+      "category": "utilities",
+      "website": "https://freedesktop.org/software/pulseaudio/pavucontrol/"
     },
     {
       "package": "gparted",
@@ -2145,7 +2596,9 @@
       "description": "Disk partitions",
       "repository": "extra",
       "labelId": "launcher.catalog.gparted.label",
-      "descriptionId": "launcher.catalog.gparted.description"
+      "descriptionId": "launcher.catalog.gparted.description",
+      "category": "utilities",
+      "website": "https://gparted.org/"
     },
     {
       "package": "baobab",
@@ -2153,7 +2606,9 @@
       "description": "Find large files",
       "repository": "extra",
       "labelId": "launcher.catalog.baobab.label",
-      "descriptionId": "launcher.catalog.baobab.description"
+      "descriptionId": "launcher.catalog.baobab.description",
+      "category": "utilities",
+      "website": "https://apps.gnome.org/Baobab"
     },
     {
       "package": "mission-center",
@@ -2161,7 +2616,9 @@
       "description": "System monitor",
       "repository": "extra",
       "labelId": "launcher.catalog.mission-center.label",
-      "descriptionId": "launcher.catalog.mission-center.description"
+      "descriptionId": "launcher.catalog.mission-center.description",
+      "category": "utilities",
+      "website": "https://missioncenter.io"
     }
   ]
 }

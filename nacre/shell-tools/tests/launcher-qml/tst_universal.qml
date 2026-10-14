@@ -30,6 +30,14 @@ TestCase {
             "webapps": []
         };
         NacreMenu.message = "";
+        NacreMenu.library.data = {
+            extensions: [],
+            themes: []
+        };
+        NacreMenu.library.message = "";
+        const softwareWorker = findChild(NacreMenu.library, "softwareLibraryAction");
+        if (softwareWorker)
+            softwareWorker.running = false;
         const emojiWorker = findChild(NacreMenu.previews, "launcherEmojiSearch");
         if (emojiWorker)
             emojiWorker.running = false;
@@ -267,6 +275,147 @@ TestCase {
             }
         ];
         compare(value.entries.find(row => row.operation === "copy-clip").name, "Updated Discord clipboard");
+    }
+
+    function test_software_categories_are_optional_and_global_typing_stays_default() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        value.navigate("software.discover");
+        verify(findChild(value, "softwareCategoryStrip").visible);
+        value.softwareCategory = "creative";
+        verify(value.entries.length > 0);
+        verify(value.entries.every(row => row.category === "creative"));
+        field.text = "chrome";
+        verify(!findChild(value, "softwareCategoryStrip").visible);
+        compare(value.entries[0].kind, "app");
+        compare(value.entries[0].name, "Google Chrome");
+        value.navigate("software.themes");
+        field.text = "obs";
+        verify(value.entries.some(row => row.package === "obs-studio"));
+    }
+    function test_software_metadata_and_installed_management() {
+        const value = view();
+        value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
+            packages: [
+                {
+                    name: "obs-studio",
+                    version: "32.0.0"
+                }
+            ],
+            capabilities: {
+                packages: true,
+                aur: true
+            }
+        });
+        const row = value.menu.softwareRows("software.discover").find(row => row.package === "obs-studio");
+        verify(row.checked);
+        compare(row.operation, "info");
+        verify(row.website.startsWith("https://"));
+        const actions = value.menu.itemActions(row);
+        verify(actions.some(row => row.operation === "remove-package"));
+        verify(actions.some(row => row.operation === "tool" && row.value === "updates"));
+        const chrome = value.menu.apps.find(row => row.name === "Google Chrome");
+        verify(chrome.software);
+        compare(chrome.package, "google-chrome");
+        compare(chrome.kind, "app");
+    }
+    function test_themes_preview_light_and_dark_without_applying_until_requested() {
+        const value = view();
+        value.menu.library.data = {
+            extensions: [],
+            themes: [
+                {
+                    id: "sample",
+                    name: "Sample theme",
+                    group: "soft",
+                    modes: {
+                        dark: {
+                            surface: "121212",
+                            background: "101010",
+                            primary: "ccccaa",
+                            secondary: "bbccaa",
+                            tertiary: "aabbcc",
+                            onSurface: "ffffff"
+                        },
+                        light: {
+                            surface: "eeeeee",
+                            background: "ffffff",
+                            primary: "333355",
+                            onSurface: "111111"
+                        }
+                    }
+                }
+            ]
+        };
+        value.navigate("software.themes");
+        const row = value.entries.find(row => row.theme);
+        verify(row !== undefined);
+        const oldCount = NacreWallpapers.preferences.length;
+        value.softwareDetails = row;
+        tryVerify(() => findChild(value, "softwarePreviewLoader").item !== null);
+        const panel = findChild(value, "softwarePreviewLoader").item;
+        panel.mode = "light";
+        compare(NacreWallpapers.preferences.length, oldCount);
+        panel.applyRequested("light");
+        compare(NacreWallpapers.preferences.length, oldCount + 1);
+        compare(NacreWallpapers.preferences[oldCount].palettePreset, "sample");
+        compare(NacreWallpapers.preferences[oldCount].paletteMode, "light");
+        verify(value.softwareDetails === null);
+    }
+    function test_extension_management_and_actions_use_the_native_worker() {
+        const value = view();
+        value.menu.library.data = {
+            themes: [],
+            extensions: [
+                {
+                    id: "test.shortcuts",
+                    name: "Test shortcuts",
+                    description: "Example",
+                    version: "1.0",
+                    source: "https://example.org/repo",
+                    kinds: ["launcher"],
+                    enabled: false,
+                    actions: [
+                        {
+                            id: "notes",
+                            name: "Open sample notes",
+                            command: ["xdg-open", "/fixture/notes"]
+                        }
+                    ]
+                }
+            ]
+        };
+        value.navigate("software.extensions");
+        const row = value.entries.find(row => row.extension);
+        verify(row !== undefined);
+        compare(row.status, "Disabled");
+        verify(!value.menu.extensionActions().length);
+        const worker = findChild(value.menu.library, "softwareLibraryAction");
+        worker.running = false;
+        value.run(row);
+        compare(worker.command.slice(-3).join("|"), "software-library|enable|test.shortcuts");
+        worker.running = false;
+        value.menu.library.data = {
+            themes: [],
+            extensions: [Object.assign({}, row.extension, {
+                    enabled: true
+                })]
+        };
+        const action = value.menu.extensionActions()[0];
+        compare(action.name, "Open sample notes");
+        value.run(action);
+        compare(worker.command.slice(-3).join("|"), "software-library|open|test.shortcuts");
+        compare(worker.payload.action, "notes");
+        worker.running = false;
+        value.run(value.menu.node("software.extensions.import"));
+        compare(value.form.software, "import");
+        value.submitForm({
+            url: "https://example.org/extension.git"
+        });
+        compare(worker.command.slice(-3).join("|"), "software-library|import|");
+        compare(worker.payload.url, "https://example.org/extension.git");
+        verify(value.formPending);
+        worker.running = false;
+        value.cancelForm();
     }
 
     function test_filter_applies_before_global_result_limit() {

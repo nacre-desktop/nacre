@@ -26,6 +26,8 @@ def stage(target):
         "NacreMenuForm",
         "NacreMenuButton",
         "NacreCalculatorPad",
+        "NacreThemePreview",
+        "NacreSoftwarePreview",
     ):
         stage_qml(
             SHELL / "modules/launcher" / (name + ".qml"), target / (name + ".qml")
@@ -42,7 +44,16 @@ def stage(target):
     )
     with (fixtures / "qmldir").open("a") as manifest:
         manifest.write("\nNacreLauncherWorkflows 1.0 NacreLauncherWorkflows.qml\n")
-    menu_data = json.dumps((TOOLS / "launcher-menu.json").read_text())
+    stage_qml(
+        SHELL / "services/NacreSoftwareLibrary.qml",
+        fixtures / "NacreSoftwareLibrary.qml",
+    )
+    with (fixtures / "qmldir").open("a") as manifest:
+        manifest.write("\nNacreSoftwareLibrary 1.0 NacreSoftwareLibrary.qml\n")
+    catalog = json.loads((TOOLS / "launcher-menu.json").read_text())
+    for item in catalog["software"]:
+        item["screenshots"] = []  # External image transport is covered separately.
+    menu_data = json.dumps(json.dumps(catalog))
     emoji_data = json.dumps((TOOLS / "emoji-catalog.json").read_text())
     (fixtures / "FileView.qml").write_text(
         'import QtQuick\nQtObject {property string path: "";property bool preload:false;property bool printErrors:false;property bool watchChanges:false;signal loaded();signal fileChanged();function reload(){loaded()}function text(){return path.includes("/shell/tools/launcher-menu.json") ? '
@@ -59,7 +70,7 @@ def stage(target):
         "DesktopActions": """property var list:[{name:"Open terminal",action:"terminal",icon:"terminal",description:"Terminal"},{name:"Disable blur",action:"toggle-setting",value:"blur",icon:"blur_on",launcher:false}];property var calls:[];function execute(action,value){calls=[...calls,[action,value]];}""",
         "AppLaunch": """property var commands:[];function run(command){commands=[...commands,command];}""",
         "DesktopSettings": """property var data:({animations:true,blur:true,shadow:true,dnd:false,interfaceFont:""});property var changes:[];function set(key,value){data=Object.assign({},data,{[key]:value});changes=[...changes,[key,value]];}""",
-        "NacreWallpapers": """property var list:[{path:"/fixture/blue.png",name:"Blue garden",dynamic:false,thumbnail:""}];property string current:"/fixture/blue.png";property var appearancePreferences:({palettePersonality:"natural",paletteMode:"dark",paletteBackgroundFromWallpaper:false});property var paletteOptions:[{name:"Blue",accent:"blue",colors:[]}];property string selectedAccent:"blue";property var preferences:[];function preference(value){preferences=[...preferences,value];appearancePreferences=Object.assign({},appearancePreferences,value);}function setWallpaper(value){current=value;}""",
+        "NacreWallpapers": """property var list:[{path:"/fixture/blue.png",name:"Blue garden",dynamic:false,thumbnail:""}];property string current:"/fixture/blue.png";property var appearancePreferences:({palettePersonality:"natural",paletteMode:"dark",paletteBackgroundFromWallpaper:false});property var paletteOptions:[{name:"Blue",accent:"blue",colors:[]}];property string selectedAccent:"blue";property var preferences:[];function preference(value){preferences=[...preferences,value];appearancePreferences=Object.assign({},appearancePreferences,value);}function refresh(){}function setWallpaper(value){current=value;}""",
         "NacreControlTools": """property bool busy:false;property var data:({nightLightSupported:true,nightLightEnabled:false,nightLightExternal:false});property int refreshes:0;function refresh(){refreshes++}function toggleNightLight(){data=Object.assign({},data,{nightLightEnabled:!data.nightLightEnabled});}""",
         "NacreAudio": """property var outputs:[];property var sink:null;function chooseOutput(id){return true;}property bool available:true;property bool micAvailable:true;property bool muted:false;property bool micMuted:false;function toggleMute(){muted=!muted;}function toggleMic(){micMuted=!micMuted;}""",
         "NacrePlayers": """property var active:({canTogglePlaying:true,canGoNext:true,canGoPrevious:true});property var actions:[];function control(value){actions=[...actions,value];return true;}""",
