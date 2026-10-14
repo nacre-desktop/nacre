@@ -29,7 +29,8 @@ permissions:
   contents: read
 jobs:
   packages:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_sha == github.sha)
+    # Measurement/documentation pushes may request source CI without a package release.
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_sha == github.sha && !contains(github.event.workflow_run.head_commit.message, '[no-publish]'))
     name: Arch packages (${{ inputs.component || 'core' }})
     # Match source CI: Ubuntu24.04 denies nested Bubblewrap network setup.
     # Keep the parity sandbox intact rather than relaxing host protections.

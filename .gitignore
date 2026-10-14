@@ -48,3 +48,6 @@ node_modules/
 # Built native runtime; source and CI stage it without committing binaries.
 /nacre/shell-tools/nacre-helper
 /.research/
+
+# Private power measurement captures.
+/.power-baseline/
