@@ -1,4 +1,4 @@
-# Arch packages (not yet published)
+# Arch packages
 
 One package base builds `nacre` (core), `nacre-ai`, `nacre-brain`,
 `nacre-session-niri` and `nacre-session-hyprland`. Orient owns
@@ -84,10 +84,69 @@ the package workflow performs all three in a runtime-only Arch image. Test the t
 confirm cancellation creates no configuration, then confirm apply. Cold-login graphical validation needs a VM/Wayland session and is a
 separate gate; headless configuration success is not proof of desktop rendering.
 
-The manual `Pinned Arch packages` GitHub workflow builds the committed Orient,
-Nacre and Niri companion VCS recipes in clean stock-Arch chroots. Supply the exact
-Orient recipe commit when dispatching it. It preserves the Git source pins and
-uploads the recipes, package archives, checksums and build logs as run artifacts.
+## Tested development publication
+
+`Pinned Arch packages` runs after successful Source CI for the latest main
+revision. Its default Core build fetches the independently released, signed
+Orient archive, verifies its source/version/recipe against Nacre's lock, and
+injects it into a clean stock-Arch chroot. No replacement Orient archive is
+rebuilt under that version. A manual `use_released_orient=false` run is available
+for dependency development; that run cannot publish to the binary repository.
+The optional Niri companion remains a separately pinned build.
+
+`Publish tested Arch repository` admits only successful package runs from this
+repository's main branch and requires passing Source CI for the exact compiled
+source. It checks archive recipe digests, split versions and all three installed
+setup proofs. Signing uses a separate ephemeral GnuPG home and only the Actions
+signing subkey. Package and database signatures are required by the public
+installer. Source checks, namespace probes and installed tests are not optional.
+
+Before publication, the delivery job installs Core through the signed pacman
+database in a disposable Arch environment. Niri is initially absent; setup must
+install its dependencies, validate configuration, preserve a plain Niri fixture
+and succeed on repeat setup. This checks package-manager behavior as well as
+archive contents. Hardware login/unlock/display/screen-sharing acceptance is
+still separate from this headless proof.
+
+Passing snapshots publish immutable GitHub preview assets and an atomic Pages
+repository. The database selects the current versions; previous package files
+are retained to allow downloads already in progress to finish. The immutable
+assets include exact PKGBUILD/`.SRCINFO`, package checksums/signatures and source
+receipt. Use `PACKAGE-SHA256SUMS` for the files in that release; the site's
+`SHA256SUMS` additionally covers its database and retained archives. The public
+installation/update path is in [the installation guide](../../docs/installation.md).
+The first Nacre repository cut is still being validated; check the package index
+before treating it as available.
+
+To validate a cut manually:
+
+```sh
+gh workflow run arch-packages.yml --repo nacre-desktop/nacre --ref main \
+  -f component=core -f use_released_orient=true
+# Recovery only: promote the SAME successful, source-checked package run.
+gh workflow run publish-arch.yml --repo nacre-desktop/nacre --ref main -f run_id=RUN_ID
+```
+
+An existing package version cannot be replaced with different archive bytes.
+Publication rejects older cuts, mismatched recipes, a different Orient engine,
+missing runtime proofs and foreign/fork workflow runs. Repair a failed check and
+produce a new tested cut instead of changing signature or sandbox policy.
+
+## Signing maintenance
+
+The pinned public key/fingerprint are in `packaging/keys`; bootstrap has the same
+fingerprint, checked by a regression test. Back up the certification key and
+revocation certificate in a secure offline/OS key store. GitHub receives only an
+expiring signing subkey as `ARCH_REPO_SIGNING_KEY`, never the certification key.
+No key values belong in commands, logs or Git history.
+
+Track signing-subkey and certificate expiry. Renew or replace the signing subkey
+before expiry, publish its updated public certificate, and arrange trusted-key
+refresh for existing installations before retiring the old signing key. A
+primary-key change also requires a deliberately reviewed bootstrap fingerprint
+change and trust transition. Revocation/recovery must not disable pacman
+signature checks. Stable-channel promotion and AUR publication are separate
+maintainer actions; this workflow currently publishes development previews.
 
 ## AUR publishing — maintainer action only
 
