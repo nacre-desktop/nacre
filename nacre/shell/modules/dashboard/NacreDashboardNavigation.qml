@@ -34,13 +34,46 @@ Flickable {
     onContentWidthChanged: Qt.callLater(revealSelection)
     Component.onCompleted: Qt.callLater(revealSelection)
     Rectangle {
+        id: pearl
         objectName: "dashboardSelection"
         x: root.selectedSlot * root.slotWidth + (root.slotWidth - width) / 2
-        y: 36
-        width: 7
-        height: 7
-        radius: 3.5
-        color: NacreTokens.accent
+        y: 31
+        width: 8
+        height: 8
+        radius: 4
+        border.width: .5
+        border.color: Qt.alpha(NacreTokens.ink, .18)
+        gradient: Gradient {
+            GradientStop {
+                position: 0
+                color: NacreTokens.orientHighlight ?? NacreTokens.accent
+            }
+            GradientStop {
+                position: .45
+                color: NacreColours.palette.m3tertiary ?? NacreTokens.accent
+            }
+            GradientStop {
+                position: 1
+                color: NacreTokens.accent
+            }
+        }
+        Rectangle {
+            x: -2
+            y: -2
+            width: 12
+            height: 12
+            radius: 6
+            color: Qt.alpha(NacreTokens.accent, .12)
+            z: -1
+        }
+        Rectangle {
+            x: 1.5
+            y: 1
+            width: 3
+            height: 2
+            radius: 1
+            color: Qt.alpha(NacreTokens.light ? NacreTokens.body : NacreTokens.ink, .85)
+        }
     }
     Row {
         Repeater {
