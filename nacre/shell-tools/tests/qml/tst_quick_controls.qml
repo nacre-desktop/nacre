@@ -104,10 +104,9 @@ TestCase {
         const scroll = findChild(panel, "controlPageScroll");
         verify(scroll.contentHeight <= scroll.height);
         const tile = findChild(panel, "controlWifi");
+        const beforeRequest = JSON.stringify(NacreControlActions.lastRequest);
         tile.clicked();
-        compare(NacreControlActions.lastRequest.join("|"), "wifi-radio|off");
-        compare(panel.section, "home");
-        tile.detailsRequested();
+        verify(NacreControlActions.lastRequest[0] === "wifi-scan" || JSON.stringify(NacreControlActions.lastRequest) === beforeRequest);
         compare(panel.section, "network");
         wait(30);
         verify(!!findChild(panel, "quickWifiPower"));
@@ -204,10 +203,11 @@ TestCase {
         const dnd = findChild(panel, "controlDnd"), wifi = findChild(panel, "controlWifi");
         verify(dnd && wifi);
         compare(dnd.hasDetails, false);
-        compare(wifi.hasDetails, true);
+        compare(wifi.hasDetails, false);
+        verify(wifi.navigation);
         const toggle = findChild(wifi, "controlWifiToggle");
         compare(toggle.radius, wifi.radius);
-        compare(toggle.topRightRadius, 0);
+        compare(toggle.topRightRadius, wifi.radius);
         compare(toggle.drawFocusOutline, false);
         verify(!toggle.containsPoint(Qt.point(2, 2)));
         const request = NacreControlActions.lastRequest.join("|");
@@ -246,6 +246,66 @@ TestCase {
         scene.selectedSection = "home";
         wait(30);
         verify(!findChild(panel, "controlSession-lock"));
+    }
+    function test_radio_and_power_tiles_have_one_safe_navigation_target() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        const before = JSON.stringify(NacreControlActions.lastRequest), profile = PowerProfiles.profile;
+        for (const entry of [
+            {
+                id: "controlWifi",
+                section: "network"
+            },
+            {
+                id: "controlBluetooth",
+                section: "bluetooth"
+            },
+            {
+                id: "controlPowerMode",
+                section: "battery"
+            }
+        ]) {
+            scene.selectedSection = "home";
+            wait(40);
+            const tile = findChild(panel, entry.id);
+            verify(tile.navigation && !tile.hasDetails);
+            const input = findChild(tile, entry.id + "Toggle");
+            compare(input.width, tile.width);
+            mouseClick(tile, tile.width - 14, tile.height / 2, Qt.LeftButton);
+            wait(30);
+            compare(panel.section, entry.section);
+            compare(JSON.stringify(NacreControlActions.lastRequest), before);
+            compare(PowerProfiles.profile, profile);
+        }
+    }
+    function test_detected_input_sliders_are_prominent_and_added_beside_related_levels() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        scene.selectedSection = "edit";
+        wait(40);
+        const mic = findChild(panel, "controlAdd-mic-volume"), keyboard = findChild(panel, "controlAdd-keyboard");
+        verify(mic && keyboard);
+        const page = findChild(panel, "controlPageScroll");
+        verify(mic.mapToItem(page, 0, 0).y < page.height);
+        verify(keyboard.mapToItem(page, 0, 0).y < page.height);
+        mic.clicked();
+        wait(30);
+        findChild(panel, "controlAdd-keyboard").clicked();
+        wait(30);
+        compare(NacreControlPreferences.tiles.indexOf("mic-volume"), NacreControlPreferences.tiles.indexOf("volume") + 1);
+        compare(NacreControlPreferences.tiles.indexOf("keyboard"), NacreControlPreferences.tiles.indexOf("brightness") + 1);
+        scene.selectedSection = "home";
+        wait(40);
+        verify(findChild(panel, "controlMicrophone").visible);
+        verify(findChild(panel, "controlKeyboard").visible);
+        NacreControlPreferences.toggle("mic-volume");
+        NacreControlPreferences.toggle("keyboard");
+        NacreKeyboardLight.available = false;
+        NacreAudio.micAvailable = false;
+        scene.selectedSection = "edit";
+        wait(30);
+        verify(!findChild(panel, "controlAdd-mic-volume"));
+        verify(!findChild(panel, "controlAdd-keyboard"));
+        NacreKeyboardLight.available = true;
+        NacreAudio.micAvailable = true;
     }
     function test_profiles_are_navigation_and_power_view_fits_its_actions() {
         const scene = createTemporaryObject(center, test), panel = scene.panel;

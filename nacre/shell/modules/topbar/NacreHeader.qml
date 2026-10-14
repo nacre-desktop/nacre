@@ -322,14 +322,14 @@ Item {
                 objectName: "nacreHeaderStatusMouse"
                 anchors.fill: parent
                 readonly property bool containsMouse: statusHover.hovered
-                HoverHandler {
-                    id: statusHover
-                    blocking: false
-                    onHoveredChanged: {
-                        NacreHoverIntent.popupHovered[root.screen.name] = hovered;
-                        if (!hovered)
-                            root.leavePopup();
-                    }
+            }
+            HoverHandler {
+                id: statusHover
+                blocking: false
+                onHoveredChanged: {
+                    NacreHoverIntent.popupHovered[root.screen.name] = hovered;
+                    if (!hovered)
+                        root.leavePopup();
                 }
             }
         }

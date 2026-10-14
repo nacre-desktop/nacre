@@ -92,7 +92,7 @@ Column {
                         elideDetail: ["network", "bluetooth"].includes(slot.modelData)
                         selected: entry.on
                         available: entry.available
-                        hasDetails: ["network", "bluetooth", "battery"].includes(slot.modelData)
+                        navigation: ["network", "bluetooth", "battery"].includes(slot.modelData)
                         contextDetails: ["network", "bluetooth", "battery", "night", "dnd", "awake", "airplane", "vpn", "record", "mic"].includes(slot.modelData)
                         explanation: slot.modelData === "night" && !entry.available ? NacreControlTools.data.nightLightReason || NacreI18n.tr("controlcenter.details.night-unavailable", "Night light is unavailable on this compositor.") : ""
                         onClicked: catalog.toggle(slot.modelData)

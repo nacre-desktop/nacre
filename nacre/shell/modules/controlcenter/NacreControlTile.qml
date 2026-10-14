@@ -11,6 +11,7 @@ NacreClip {
     property bool selected: false
     property bool available: true
     property bool hasDetails: false
+    property bool navigation: false
     property bool contextDetails: false
     property string explanation: ""
     property bool elideDetail: false
@@ -39,7 +40,7 @@ NacreClip {
             id: labels
             x: 44
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - x - 8
+            width: parent.width - x - 8 - (root.navigation ? 24 : 0)
             spacing: 3
             NacreText {
                 width: parent.width
@@ -84,6 +85,16 @@ NacreClip {
                 }
             }
         }
+    }
+    NacreIcon {
+        objectName: root.objectName + "NavigationGlyph"
+        anchors.right: parent.right
+        anchors.rightMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.navigation
+        text: "chevron_right"
+        color: root.tileInk
+        font.pointSize: 17
     }
     NacreSurface {
         anchors.right: parent.right

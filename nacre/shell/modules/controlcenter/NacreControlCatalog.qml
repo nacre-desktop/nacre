@@ -16,7 +16,7 @@ QtObject {
             icon: NacreNetwork.wiredConnected ? "lan" : "wifi",
             status: NacreNetwork.wiredConnected ? NacreI18n.tr("controlcenter.network.wired-connected", "Connected by cable") : NacreNetwork.active?.ssid || (NacreNetwork.wifiEnabled ? NacreI18n.tr("controlcenter.control-center.detail.not-connected", "Not connected") : offText),
             on: NacreNetwork.wiredConnected || NacreNetwork.wifiEnabled,
-            available: NacreNetwork.wiredConnected || (NacreNetwork.wifiAvailable && !NacreControlActions.busy)
+            available: true
         },
         {
             id: "bluetooth",
@@ -24,7 +24,7 @@ QtObject {
             icon: "bluetooth",
             status: NacreBluetooth.powered ? NacreBluetooth.devices.filter(device => device.connected).map(device => device.alias || device.name).join(", ") || onText : offText,
             on: NacreBluetooth.powered,
-            available: NacreBluetooth.available && !NacreControlActions.busy
+            available: true
         },
         {
             id: "battery",
@@ -32,7 +32,7 @@ QtObject {
             icon: PowerProfiles.profile === PowerProfile.PowerSaver ? "eco" : PowerProfiles.profile === PowerProfile.Performance ? "bolt" : "balance",
             status: NacreControlTools.data.powerProfilesSupported ? profile : NacreI18n.tr("popouts.battery-popup.text.power-profiles-unavailable", "Power profiles unavailable"),
             on: false,
-            available: NacreControlTools.data.powerProfilesSupported === true
+            available: true
         },
         {
             id: "night",
@@ -96,15 +96,8 @@ QtObject {
     function toggle(id) {
         if (!supported(id) || !find(id)?.available)
             return;
-        if (id === "network") {
-            if (NacreNetwork.wiredConnected)
-                root.detailsRequested("network");
-            else
-                NacreControlActions.request(["wifi-radio", NacreNetwork.wifiEnabled ? "off" : "on"]);
-        } else if (id === "bluetooth")
-            NacreControlActions.request(["bluetooth-power", NacreBluetooth.powered ? "off" : "on"]);
-        else if (id === "battery")
-            root.detailsRequested("battery");
+        if (["network", "bluetooth", "battery"].includes(id))
+            root.detailsRequested(id);
         else if (id === "night")
             NacreControlTools.toggleNightLight();
         else if (id === "dnd")

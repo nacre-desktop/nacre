@@ -68,21 +68,25 @@ Super+Escape or Super+X opens the power menu.
 The control center groups volume, supported brightness controls and everyday
 toggles on one compact page. Media stays outside the control center. Ethernet
 connections show a cable icon and wired status; click to view connection details.
-Click a toggle tile to switch it; action tiles open their tool. Wi-Fi, Bluetooth and power have separate detail
-chevrons; right-click or long-press any tile for details (keyboard: Menu or
-Shift+F10). Back or Escape returns to the overview. Light, Dark and Auto share
+Wi-Fi, Bluetooth and power tiles open their detail pages with one full-card
+button; their switches and profile choices stay inside those pages. Click other
+toggle tiles to switch them; action tiles open their tool. Right-click or long-press
+a toggle tile for details (keyboard: Menu or Shift+F10). Back or Escape returns to the overview. Light, Dark and Auto share
 one appearance selector. The attached panel shares the right wall's surface.
 The top battery row includes edit, settings and power. Lock, log out, restart
 and power off stay on its Power page; the bar power button and session shortcuts
 open that page too. Log out, restart and power off require inline confirmation.
 Wi-Fi passwords, Bluetooth devices, audio inputs/outputs and the
-application mixer stay inside the panel. Power details show supported display and keyboard brightness controls only.
+application mixer stay inside the panel. Power details show supported display
+and keyboard brightness controls only.
 Unsupported night light is hidden. Edit can add, remove, and reorder every tile,
 slider, and the appearance selector, with a Reset action. Optional controls include
 microphone and keyboard sliders, airplane mode, VPN, recording, mic mute,
 screenshot, color picker, clipboard, wallpaper, updates, and display settings.
-Layouts are saved separately from the main desktop settings and keep their order
-across sessions; existing optional-tile preferences migrate automatically. The same controls work in a detached pearl.
+Edit lists detected microphone and keyboard sliders first; adding one places it
+beside its related output or display slider. Layouts are saved separately from
+the main desktop settings and keep their order across sessions; existing optional
+tile preferences migrate automatically. The same controls work in a detached pearl.
 Hover a bar status icon for a read-only peek after 400 ms. Click opens its detail
 page; the bell opens notification history separately. Scroll sound for volume
 or battery for brightness. Right-click sound, Wi-Fi or Bluetooth for a quick

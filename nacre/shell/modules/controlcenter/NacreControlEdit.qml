@@ -7,7 +7,8 @@ Column {
     id: root
     required property var screen
     readonly property var selectedIds: NacreControlPreferences.tiles.filter(id => catalog.supported(id))
-    readonly property var availableEntries: catalog.entries.filter(entry => catalog.supported(entry.id) && !NacreControlPreferences.tiles.includes(entry.id))
+    readonly property var detectedEntries: catalog.entries.filter(entry => ["mic-volume", "keyboard"].includes(entry.id) && catalog.supported(entry.id) && !NacreControlPreferences.tiles.includes(entry.id))
+    readonly property var availableEntries: catalog.entries.filter(entry => !["mic-volume", "keyboard"].includes(entry.id) && catalog.supported(entry.id) && !NacreControlPreferences.tiles.includes(entry.id))
     spacing: 12
     NacreControlCatalog {
         id: catalog
@@ -31,7 +32,7 @@ Column {
     function add(id) {
         root.forceActiveFocus(Qt.OtherFocusReason);
         NacreControlPreferences.toggle(id);
-        Qt.callLater(() => chosen.itemAt(chosen.count - 1)?.removeButton.focusControl());
+        Qt.callLater(() => chosen.itemAt(root.selectedIds.indexOf(id))?.removeButton.focusControl());
     }
     NacreText {
         width: parent.width
@@ -39,6 +40,33 @@ Column {
         wrapMode: Text.Wrap
         color: NacreTokens.mutedInk
         font.pointSize: 11
+    }
+    NacreText {
+        width: parent.width
+        visible: root.detectedEntries.length > 0
+        text: NacreI18n.tr("controlcenter.edit.detected-sliders", "Detected sliders")
+        font.pointSize: 12
+        font.weight: Font.Medium
+    }
+    GridLayout {
+        width: parent.width
+        visible: root.detectedEntries.length > 0
+        columns: 2
+        columnSpacing: 8
+        Repeater {
+            model: root.detectedEntries
+            delegate: NacreControlTile {
+                required property var modelData
+                objectName: "controlAdd-" + modelData.id
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.columnSpan: root.detectedEntries.length === 1 ? 2 : 1
+                label: modelData.name
+                icon: modelData.icon
+                detail: NacreI18n.tr("controlcenter.edit.add-slider", "Add slider")
+                onClicked: root.add(modelData.id)
+            }
+        }
     }
     RowLayout {
         width: parent.width

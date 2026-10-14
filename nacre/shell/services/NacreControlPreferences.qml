@@ -25,7 +25,14 @@ Singleton {
     function toggle(id) {
         if (!allowed.includes(id))
             return;
-        save(tiles.includes(id) ? tiles.filter(value => value !== id) : [...tiles, id]);
+        if (tiles.includes(id)) {
+            save(tiles.filter(value => value !== id));
+            return;
+        }
+        const ordered = tiles.slice(), after = id === "mic-volume" ? "volume" : id === "keyboard" ? "brightness" : "";
+        const index = after ? ordered.indexOf(after) : -1;
+        ordered.splice(index < 0 ? ordered.length : index + 1, 0, id);
+        save(ordered);
     }
     function move(id, offset, visibleIds = tiles) {
         if (![1, -1].includes(offset) || !tiles.includes(id))

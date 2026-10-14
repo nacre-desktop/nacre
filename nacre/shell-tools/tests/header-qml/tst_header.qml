@@ -358,6 +358,21 @@ TestCase {
         compare(NacrePanelState.calls.length, 2);
         NacrePanelState.panels = ({});
     }
+    function test_status_container_does_not_cover_icon_hover() {
+        const view = createTemporaryObject(header, test);
+        const network = findChild(view, "fixtureHeaderNetwork");
+        const loader = findChild(view, "nacreStatusPeekLoader");
+        mouseMove(test, 900, 300);
+        mouseMove(network, network.width / 2, network.height / 2);
+        wait(330);
+        compare(loader.item, null);
+        wait(110);
+        verify(loader.item !== null);
+        compare(loader.item.kind, "network");
+        mouseMove(test, 900, 300);
+        wait(20);
+        compare(loader.item, null);
+    }
     function test_open_dashboard_keeps_its_full_header_width_without_widening_initial_target() {
         NacrePanelState.screens = {
             test: {

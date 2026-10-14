@@ -65,6 +65,29 @@ TestCase {
             rotation: -90
         }
     }
+    SignalSpy {
+        id: statusHoverSpy
+        signalName: "peekRequested"
+    }
+    function test_each_status_icon_receives_real_pointer_hover_and_exit() {
+        const view = createTemporaryObject(status, test, {
+            x: 250,
+            y: 100
+        });
+        statusHoverSpy.target = view;
+        statusHoverSpy.clear();
+        for (const pair of [[view.audioItem, "audio"], [view.network, "network"], [view.bluetoothItem, "bluetooth"], [view.battery, "battery"]]) {
+            const item = pair[0], kind = pair[1];
+            statusHoverSpy.clear();
+            mouseMove(item, item.width / 2, item.height / 2);
+            wait(40);
+            verify(statusHoverSpy.signalArguments.some(args => args[0] === kind && args[2] === true), kind + " hover missing");
+            mouseMove(test, 680, 580);
+            wait(40);
+            verify(statusHoverSpy.signalArguments.some(args => args[0] === kind && args[2] === false), kind + " exit missing");
+        }
+        statusHoverSpy.target = null;
+    }
     Component {
         id: battery
         NacreBatteryPopup {}

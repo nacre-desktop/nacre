@@ -47,6 +47,7 @@ class HeaderWidgetTests(unittest.TestCase):
             )
             (fixtures / "NacreStatusIcons.qml").write_text("""import QtQuick
 Item {
+ id:root
  property bool horizontal:false
  property string screenName:""
  signal activated(string name,var item)
@@ -60,7 +61,7 @@ Item {
  readonly property Item bluetoothItem:b
  readonly property Item battery:c
  readonly property Item notificationsItem:d
- Column {Item{id:a;width:24;height:24}Item{id:n;width:24;height:24}Item{id:b;width:24;height:24}Item{id:c;width:24;height:36}Item{id:d;width:24;height:36}}
+ Column {Item{id:a;width:24;height:24}Item{id:n;objectName:"fixtureHeaderNetwork";width:24;height:24;HoverHandler{blocking:false;onHoveredChanged:root.peekRequested("network",n,hovered)}}Item{id:b;width:24;height:24}Item{id:c;width:24;height:36}Item{id:d;width:24;height:36}}
 }""")
             definitions = {
                 "NacreMenu": "property QtObject workflows:QtObject {property var calls:[];function work(action){calls=[...calls,action]}}",
