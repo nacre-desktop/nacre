@@ -211,7 +211,11 @@ def stage(target, *, icons=False):
             )
             rows.append(f"{prefix}{path.stem} 1.0 {path.name}")
         if rows:
-            (folder / "qmldir").write_text("\n".join(rows) + "\n")
+            manifest = folder / "qmldir"
+            declared = manifest.read_text().splitlines()[0] if manifest.exists() else ""
+            if declared.startswith("module "):
+                rows.insert(0, declared)
+            manifest.write_text("\n".join(rows) + "\n")
     return target
 
 

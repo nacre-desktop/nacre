@@ -66,6 +66,7 @@ def run(output, gallery, keep):
             QT_QUICK_CONTROLS_STYLE="Basic",
             QT_NO_XDG_DESKTOP_PORTAL="1",
             DBUS_SESSION_BUS_ADDRESS="unix:path=" + str(runtime / "bus"),
+            DBUS_SYSTEM_BUS_ADDRESS="unix:path=" + str(runtime / "bus"),
         )
         niri_config = root / "config.kdl"
         niri_config.write_text("""
@@ -143,7 +144,12 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                     result = ipc("state")
                     return json.loads(result.stdout) if result.returncode == 0 else {}
 
-                wait_for(snapshot, lambda value: value.get("writable"))
+                initial = wait_for(snapshot, lambda value: value.get("writable"))
+                if initial.get("systemBus") != env["DBUS_SYSTEM_BUS_ADDRESS"]:
+                    raise RuntimeError(
+                        "Preview system bus is not isolated: "
+                        + str(initial.get("systemBus"))
+                    )
                 report = {
                     "version": 1,
                     "baseRevision": subprocess.check_output(

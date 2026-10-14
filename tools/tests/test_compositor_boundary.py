@@ -23,6 +23,22 @@ class CompositorBoundaryTests(unittest.TestCase):
             (root / "new.qml").write_text("import Quickshell.Hyprland\nItem {}\n")
             self.assertEqual(len(boundary.check(root)), 1)
 
+    def test_settings_review_exception_is_one_explicit_fixture(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            command = 'command=["/usr/bin/niri","msg","windows"]\n'
+            for name, allowed in [
+                ("tools/settings-preview.py", True),
+                ("tools/settings-preview-other.py", False),
+                ("nacre/shell-tools/settings-preview.py", False),
+            ]:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(command)
+                self.assertEqual(
+                    not bool(boundary.violations(path, root)), allowed, name
+                )
+
     def test_python_qml_shell_and_expressions_cannot_bypass_service(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

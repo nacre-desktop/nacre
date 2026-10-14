@@ -54,7 +54,7 @@ python3 tools/settings-preview.py
 
 Requires Niri, Quickshell, D-Bus and fontconfig. A missing pinned icon font is
 fetched into the disposable preview tree with size/hash verification; it is
-never installed. The preview uses a private HOME, XDG paths, D-Bus and Wayland/IPC
+never installed. The preview uses a private HOME, XDG paths, session/system D-Bus addresses and Wayland/IPC
 sockets. All child processes run nice 10. It reads no personal stores and calls
 no live shell, package, systemd or hardware mutation APIs.
 
@@ -63,8 +63,11 @@ light/dark changes, restores the initial choices, rejects wrong types, checks
 battery and AI route gates, and verifies legacy AI fallback to Add-ons.
 [Capture metadata](gallery.json) records the base revision and exact hashes of
 prototype source inputs because images are captured before their commit.
-The only nested warning was Qt's Wayland text-input focus warning; there were
-no QML scene/parse errors. The native Qt unit suite passed without QWARN.
+The private bus intentionally has no login, locale or power services; its
+service-unavailable warnings are expected. Qt also emitted a Wayland text-input
+focus warning. There were no QML scene/parse errors. The native Qt unit suite passed without QWARN.
+The compositor boundary has a regression-tested exception for this one nested
+fixture; production callers remain rejected.
 
 [Architecture, inventory and research](../../../docs/development/settings-architecture.md)
 contain the final destinations and backend boundaries. Owner review should cover

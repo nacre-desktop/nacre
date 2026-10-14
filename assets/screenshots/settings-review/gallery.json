@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseRevision": "9483e2f22a93f01f228d6ccc3282ec97eab0f09b",
+  "baseRevision": "8fc5e2fc43badf6ed3fa6a25f49a9df51cc4f7b6",
   "fixture": "Synthetic desktop; AI/Brain/battery/Wi-Fi/Bluetooth available; packages absent; planned backends disabled",
   "surfaces": [
     {
@@ -275,27 +275,27 @@
     }
   ],
   "sourceHashes": {
-    "nacre/shell/modules/settings/prototype/SettingsRegistry.qml": "61f2bc185c83499fd0ac0f32f0faed693ba10b6830ef7a999ab428920b2c8a45",
-    "nacre/shell/modules/settings/prototype/SettingsCard.qml": "2aac1f5b93784bc4b07aac91ed9671d11d8c29515073de1e76e71fd588f80ed5",
-    "nacre/shell/modules/settings/prototype/SettingsRow.qml": "ab284380c2e8ba5dc692073e44c92e2208505e3b37afa0c0e350f17e14d2b68b",
-    "nacre/shell/modules/settings/prototype/PanelsDiagram.qml": "58b30a843954871436e9702846c778085cbd7690422f213cf586fc33e9701069",
     "nacre/shell/modules/settings/prototype/ColorsPreview.qml": "0aa78b933eb6da439716be9a21afc009966987f5a54c02d7fe3b5897f137c4e0",
-    "nacre/shell/modules/settings/prototype/SharedEditor.qml": "2310d2003f991210eb24a1e82b8d9f13dce34b145f92d9c20ae6df266ab345ff",
-    "nacre/shell/modules/settings/prototype/SettingsCapabilities.qml": "fd51ae3455101c05df6f675742222c9cc76a716b499e4983af9284871e7e3d5d",
-    "nacre/shell/modules/settings/prototype/SettingsStore.qml": "9dafbaeb1d1a2bfd78ec322084ec604a061a73d0c346886e4e20b4fccf37841b",
-    "nacre/shell/modules/settings/prototype/SettingsPreviewContext.qml": "f1aac93e907fc7e04c8d4e2fe1a3a1a5fe6fb039a80e00d6257c1d75e236f281",
+    "nacre/shell/modules/settings/prototype/PanelsDiagram.qml": "58b30a843954871436e9702846c778085cbd7690422f213cf586fc33e9701069",
     "nacre/shell/modules/settings/prototype/PreviewBackend.qml": "b30b68b3766e3e9a2e9569aa38119633d52b7a4536f63945b0bc35d1a0645095",
+    "nacre/shell/modules/settings/prototype/SettingsCapabilities.qml": "fd51ae3455101c05df6f675742222c9cc76a716b499e4983af9284871e7e3d5d",
+    "nacre/shell/modules/settings/prototype/SettingsCard.qml": "2aac1f5b93784bc4b07aac91ed9671d11d8c29515073de1e76e71fd588f80ed5",
+    "nacre/shell/modules/settings/prototype/SettingsPreview.qml": "25588f1eeb3b77a59f950abcb4d7fd28e49c62870ba9b27a70ade7c30597bcce",
+    "nacre/shell/modules/settings/prototype/SettingsPreviewContext.qml": "f1aac93e907fc7e04c8d4e2fe1a3a1a5fe6fb039a80e00d6257c1d75e236f281",
+    "nacre/shell/modules/settings/prototype/SettingsRegistry.qml": "61f2bc185c83499fd0ac0f32f0faed693ba10b6830ef7a999ab428920b2c8a45",
+    "nacre/shell/modules/settings/prototype/SettingsRow.qml": "ab284380c2e8ba5dc692073e44c92e2208505e3b37afa0c0e350f17e14d2b68b",
+    "nacre/shell/modules/settings/prototype/SettingsStore.qml": "9dafbaeb1d1a2bfd78ec322084ec604a061a73d0c346886e4e20b4fccf37841b",
     "nacre/shell/modules/settings/prototype/SettingsView.qml": "859a6c593f8037c3374aea0b86be76a48af91de8a10c876afeea409fff17ad0c",
-    "nacre/shell/modules/settings/prototype/SettingsPreview.qml": "97238ee4b7ca07defbd2fd7fbe88962e4db9a0f09907024ecb096fb940d11485",
+    "nacre/shell/modules/settings/prototype/SharedEditor.qml": "2310d2003f991210eb24a1e82b8d9f13dce34b145f92d9c20ae6df266ab345ff",
+    "nacre/shell/modules/settings/registry/fragment.schema.json": "3e49701d18baddfe8f72598eb9c9e68b5bb162d567c67ea30cba7a21c7a14d6a",
     "nacre/shell/modules/settings/registry/manifest.json": "09e2f2672a24f3f42a6a5983f6a80cd99f44e25a402f21d5e008cfcd6f9433e7",
     "nacre/shell/modules/settings/registry/navigation.json": "4269129b06b23eab2141363d0812e8718f5827945d1fa2c4db0767d810d5cce9",
     "nacre/shell/modules/settings/registry/prototype.json": "90fbb2ed037e90e6352db517f30176e39723226f09ef503790fa3928cb008850",
-    "nacre/shell/modules/settings/registry/fragment.schema.json": "3e49701d18baddfe8f72598eb9c9e68b5bb162d567c67ea30cba7a21c7a14d6a",
     "nacre/shell/modules/settings/registry/registry.js": "1954c7a2392d6e0109c71c7356ba9be8fa4e7f17e9c4c1b290a081536d93014a",
-    "nacre/shell/i18n/en.json": "5dd49a67a9faf02f99f5545ed73c54eb7e2d7359614683b256f6067b60d315db",
+    "nacre/shell/i18n/en.json": "1a118f3a0842bd96510dd1356699c304f590fc7ca3ffc90b53f7e67b354e4228",
     "nacre/shell/widgets/size-scale.json": "24e3c4609c06592f710561b6ad14b9724556c7d127f22094f7a20c0bf2b3b170",
-    "tools/settings-preview.py": "49dbc2b19a7094ae74be57f3f58cb18944dbc592424fb8a33b3e933e2bc12ba2",
-    "tools/settings_preview_fixtures.py": "d1b2931cd2a596ad06f8641acc7cfeba6fa2e4f3337baf0f16d16c8c850b8c75"
+    "tools/settings-preview.py": "1fdfc33e4376b9cd74438eb4ab4b5e5a47d331822bbd61a280f550a24ddf81a6",
+    "tools/settings_preview_fixtures.py": "6204ad8ef05cd3eed2d50e5244b75ddb079c5bbef6f44d32616f6c712b594840"
   },
   "capture": "Native Qt grabToImage on the rendered window surface inside nested Niri",
   "persistence": "Native click/hover and light/dark writes acknowledged and stored; choices restored; invalid type rejected",

@@ -141,6 +141,7 @@ FloatingWindow {
         }
         function state(): string {
             return JSON.stringify({
+                systemBus: Quickshell.env("DBUS_SYSTEM_BUS_ADDRESS"),
                 page: view.page,
                 query: view.query,
                 highlight: view.highlight,

@@ -497,7 +497,7 @@ old catalog. Packages/Software are gated, empty reservations, with no manager.
 
 Run `python3 tools/settings-preview.py --gallery --output /tmp/nacre-settings-gallery`
 to reproduce the review, or omit `--gallery` for interactive review. It launches
-only a private nested Niri, a private D-Bus without service activation, a private
+only a private nested Niri, private session/system D-Bus addresses without service activation, a private
 HOME/XDG state tree and Quickshell with synthetic providers. It reuses unchanged
 widgets and both owning editor components. The font is a bounded, checksum-
 verified preview copy from the existing pinned asset manifest; no font install.
@@ -544,3 +544,11 @@ for the targeted translation tests. Phase 1 Source CI passed desktop and fresh
 install. Phase 2's exact CI result is recorded in the owner handoff.
 
 **Awaiting owner review. No phase 3 migration has begun.**
+
+
+Integration follow-up: the compositor-boundary checker now declares exactly
+`tools/settings-preview.py` alongside the existing nested performance/soak
+harnesses. A regression still rejects sibling files and production callers;
+the production boundary is not disabled. Both D-Bus addresses point to the
+private daemon, so native read-only PowerProfiles cannot consult the host.
+Gallery evidence was refreshed after rebasing onto concurrent main changes.
