@@ -219,6 +219,9 @@ class NiriConfigTests(unittest.TestCase):
             root = Path(directory)
             (root / "bindings.kdl").write_text(generated["niri/bindings.kdl"])
             (root / "rules.kdl").write_text(generated["niri/window-rules.kdl"])
+            (root / "wallpaper.kdl").write_text(
+                (ROOT / "niri/wallpaper.kdl").read_text()
+            )
             palette = (
                 ROOT / "nacre/shell-tools/compositor_backends/niri/palette.kdl.in"
             ).read_text()
@@ -232,7 +235,7 @@ class NiriConfigTests(unittest.TestCase):
             (root / "colors.kdl").write_text(palette)
             # Includes precede user-owned choices: duplicate keys across files
             # are explicitly merged by niri, while user settings remain intact.
-            text = 'include "bindings.kdl"\ninclude "rules.kdl"\ninclude "colors.kdl"\nlayout { gaps 13; border { width 2; active-color "#abcdef"; }; }\nbinds { Super+2 { focus-workspace 1; }; }\n'
+            text = 'include "wallpaper.kdl"\ninclude "bindings.kdl"\ninclude "rules.kdl"\ninclude "colors.kdl"\nlayout { gaps 13; border { width 2; active-color "#abcdef"; }; }\nbinds { Super+2 { focus-workspace 1; }; }\n'
             path = root / "config.kdl"
             path.write_text(text)
             result = subprocess.run(

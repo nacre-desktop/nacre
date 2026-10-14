@@ -257,6 +257,7 @@ def prepare(backend, destination, home, *, stock_niri=False):
     config.mkdir(mode=0o700)
     for name, text in render.render(render.load(), backend="niri").items():
         (config / Path(name).name).write_text(text)
+    (config / "wallpaper.kdl").write_text((backend / "niri/wallpaper.kdl").read_text())
     (config / "keyboard.kdl").write_text(
         render.render_keyboard(keyboard.system_keyboard(), backend="niri")
     )
@@ -315,6 +316,7 @@ def prepare(backend, destination, home, *, stock_niri=False):
                 )
             )
             for name in (
+                "wallpaper.kdl",
                 "bindings.kdl",
                 "window-rules.kdl",
                 "keyboard.kdl",

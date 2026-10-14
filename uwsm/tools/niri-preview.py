@@ -142,6 +142,7 @@ def prepare(backend, destination, home):
         target = generated_dir / Path(path).name
         target.write_text(text)
         target.chmod(0o600)
+    private_copy(backend / "niri/wallpaper.kdl", generated_dir / "wallpaper.kdl")
     keyboard = module(backend / "tools/keyboard.py", "niri_preview_keyboard")
     (generated_dir / "keyboard.kdl").write_text(
         config.render_keyboard(keyboard.system_keyboard(), backend="niri")
@@ -169,6 +170,7 @@ def prepare(backend, destination, home):
         palette = palette.replace("{{" + role + "}}", color)
     (generated_dir / "colors.kdl").write_text(palette)
     includes = [
+        "wallpaper.kdl",
         "bindings.kdl",
         "window-rules.kdl",
         "keyboard.kdl",
