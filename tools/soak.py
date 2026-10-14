@@ -272,6 +272,11 @@ def prepare(directory):
         tools,
         ignore=shutil.ignore_patterns("tests", "__pycache__"),
     )
+    # QML dispatches through the native runtime after the helper migration.
+    helper = Path(
+        os.environ.get("NACRE_HELPER_BINARY", ROOT / "target/release/nacre-helper")
+    ).resolve(strict=True)
+    shutil.copy2(helper, tools / "nacre-helper")
     (tools / "branding").symlink_to(ROOT / "nacre/branding")
     runtime = home / ".local/share/nacre/palette-runtime/venv"
     runtime.parent.mkdir(parents=True)
@@ -469,6 +474,17 @@ def environment(directory, backend):
     if (directory / "orient").is_file():
         env["NACRE_ORIENT_BINARY"] = str(directory / "orient")
     return env
+
+
+def renderer_command(directory):
+    """Use the real renderer launcher so allocator/toolkit policy cannot drift."""
+    return [
+        "bash",
+        str(ROOT / "nacre/shell-tools/launch.sh"),
+        "-n",
+        "-p",
+        str(directory / "shell"),
+    ]
 
 
 def measure(pid):
@@ -853,7 +869,7 @@ def worker(args, directory):
             env["QSG_RENDER_LOOP"] = args.render_loop
         # Display and signature were just resolved in this private namespace.
         # Do not rediscover another instance through a supervisor startup query.
-        shell = start(["quickshell", "-n", "-p", str(directory / "shell")], "shell")
+        shell = start(renderer_command(directory), "shell")
         pid = shell.pid
 
         def ready():
@@ -967,6 +983,7 @@ def worker(args, directory):
                 )
             },
             "wayland_trace": bool(traces),
+            "renderer_launcher": "nacre/shell-tools/launch.sh",
             "hyprland_headless": args.hyprland_headless,
             "requested_hours": args.hours,
             "warmup_seconds": args.warmup,

@@ -16,7 +16,10 @@ nice -n 10 .venv/bin/python tools/soak.py \
 Use the [development environment](../contributing.md), Bubblewrap, Quickshell,
 both compositors, D-Bus tools, `notify-send` and `wl-copy`. FFmpeg optionally
 creates a synthetic video. Build prerequisites with `-j2`. The driver also lowers
-its own priority. It retains the public Qt toolkit policy. Hyprland uses a guest
+its own priority. It invokes the actual renderer `launch.sh`, including Qt compatibility checks and
+renderer-scoped allocator defaults. Build the candidate native helper with
+`cargo build -j2 --locked --release -p nacre-helper` and optionally select it with
+`NACRE_HELPER_BINARY`; it is copied into the disposable fixture. Hyprland uses a guest
 virtual output because its nested Wayland-backed output reproduced a presentation
 stall; this does not establish physical-output performance.
 
@@ -55,35 +58,73 @@ Python helper internals remain report-only; port acceptance is tracked in
 
 ## Results and fixes
 
-Corrected baseline: seed 20261013, revision `b17827f7`, public Qt policy, default
-render loop, guest Hyprland headless output. Both three-hour measurements completed
-with zero shell exits and zero action/probe failures. Long-lived helpers stayed
-flat. Shell growth continued in the final hour; no plateau was observed.
+Seed 20261013; baseline source `b17827f7`, confirmation source `092ebad0`.
+Both baselines completed 180 measured minutes after ten-minute warmup; both
+confirmations completed 60 measured minutes after the same warmup. Every run had
+zero shell exits, action failures and probe failures; each long-lived service and
+wallpaper watcher started once. These frozen captures predate the native helper
+migration and are not measurements of the newer integrated runtime.
 
-| Compositor/run | Measured minutes | Shell PSS + SwapPss slope, MiB/h (R²) | Dismissal keys at end | Result |
-| --- | ---: | ---: | ---: | --- |
-| Niri before | 180 | +119.9 (.816); first hour +163.3 (.576) | 711 | Healthy workload; continuing shell growth |
-| Hyprland before | 180 | +144.7 (.880); first hour +58.3 (.228) | 718 | Healthy workload; continuing shell growth |
-| Niri after | Pending | Pending | Pending | Confirmation required |
-| Hyprland after | Pending | Pending | Pending | Confirmation required |
+| Compositor/run | Measured minutes | Shell PSS + SwapPss, MiB/h (R²) | Dismissal keys at end | Qt focus warnings, disable / enable |
+| --- | ---: | ---: | ---: | ---: |
+| Niri before | 180 | +119.9 (.816); matched first hour +163.3 (.576) | 711 | 647 / 471 |
+| Hyprland before | 180 | +144.7 (.880); matched first hour +58.3 (.228) | 718 | 705 / 421 |
+| Niri after | 60 | +177.2 (.670); final 30 minutes −45.3 (.095) | 0 | 321 / 43 |
+| Hyprland after | 60 | +171.8 (.738); final 30 minutes +25.4 (.030) | 0 | 286 / 146 |
 
-Fixed: dismissal tombstones now protect only the initial asynchronous load;
-removed entries drop native references, snapshots/images and timers immediately.
-Native expiry no longer depends on popup visibility: long-timeout notifications
-and DND notifications can expire while their text remains in history. Permanent
-zero-timeout notifications remain permanent. Expired history drops live images.
-Regression coverage includes load/reentrant races, repeated clear cycles, image
-release, hidden long-timeout/DND expiry and hidden launcher focus requests.
-An isolated real D-Bus/Quickshell check passed 30 raw-image cycles plus automatic
-hidden/DND expiry; a nested image probe also returned tracked/referenced/image/key
-counts to zero. Baseline notifications had no images, so this does not attribute
-its large memory signal to image retention.
+The notification defect is fixed; **broad memory-growth flattening is not
+established**. Whole-hour shell fits remain positive. Final half-hour fits are
+weak, consistent with fluctuating working sets, but do not prove a durable plateau;
+three-hour AFTER behavior is unmeasured. Baseline growth continued in its final
+hour. Long-lived helpers stayed near flat in both comparisons; the largest after
+fit was about +0.4 MiB/h. Short-lived processes remain insufficiently sampled.
+Both after endpoints had zero retained rows, popups, tracked native notifications,
+native references, images and stale dismissal keys. Baselines did not measure all
+of those native counters; their scripted notification workload contained no images.
 
-Settings remapping now leaves native rendering enabled and lets Qt suppress
-unexposed frames. Toggling Quickshell's update gate explicitly requests a frame;
-failed traces identified Settings attaching a buffer before its initial configure.
-The native rapid-remap regression and long confirmations must establish the fix's
-practical limits. Earlier protocol failures and an interrupted warmup remain
-preserved failed attempts. Repeated Qt Wayland text-input focus warnings remain
-unresolved; warnings are not suppressed. Wallpaper/video and pearl operations
-have weak mixed-action associations with memory changes, insufficient attribution.
+### Launcher-policy correction
+
+The historical harness launched Quickshell directly, bypassing `launch.sh`'s
+jemalloc policy. Therefore **all table rows are matched default-allocator stress
+captures**, despite retaining the public Qt toolkit policy. They are not normal
+launcher-policy memory measurements. The harness now invokes the actual launcher
+so these defaults cannot silently drift again.
+
+A separate three-minute same-seed Niri probe verified effective allocator settings:
+direct launch had background reclamation disabled, dirty decay 10000 ms and muzzy
+decay 0; normal launch enabled background reclamation with both decays 2000 ms.
+Final jemalloc allocated / active / resident / metadata MiB were
+165.8 / 190.3 / 234.2 / 17.2 directly and
+171.0 / 194.8 / 218.2 / 17.3 through the launcher. This demonstrates reclamation
+policy and some allocator overhead, not attribution of the entire hourly signal.
+Allocator resident statistics are not process PSS and omit allocations outside
+jemalloc. Passive confirmation mapping summaries locate most residual growth in
+anonymous shell mappings, with much smaller shared-buffer/file-backed changes.
+A longer normal-policy AFTER measurement remains necessary for production trend
+claims. These busy-host/swapped runs are not quiet hardware performance evidence.
+
+### Application fixes and remaining Qt issue
+
+Dismissal tombstones protect only the initial asynchronous history load; successful
+restore drops them. Removed entries immediately release native references,
+snapshots/images and timers. Long-timeout and DND native expiry no longer depends
+on popup visibility, while retained text remains in history; zero-timeout notices
+remain permanent. Expired history drops live image URLs. Regressions cover initial
+load/reentrant races, repeated clears, image release and hidden/DND expiry. A real
+isolated D-Bus/Quickshell check passed 30 raw-image cycles and automatic expiry.
+
+Settings remapping leaves native rendering enabled and lets Qt suppress unexposed
+frames. Toggling Quickshell's update gate requested a frame during remapping;
+failed traces identified Settings attaching a buffer before initial configure.
+The native rapid-remap regression passed and both hour-long confirmations were
+healthy. Earlier failed/interrupted attempts remain preserved; the AFTER tests
+cover one measured hour per backend, not every historical failure interval.
+
+Repeated Qt Wayland text-input warnings **remain unresolved in Qt 6.12**. Bounded
+call stacks identify Qt's focus-window dispatch and focus-object clearing. Plain
+Qt Window/TextInput controls, with no Nacre UI, reproduced 83 warnings in one
+minute; removing explicit text-field focus requests still reproduced 36. Private
+pre-hide and activation-timing Nacre candidates passed focus-preservation unit
+checks but did not reduce native warnings (13 control, 15 / 14 candidates), so
+both were withdrawn. No warning suppression or input-method disabling was added.
+The minimal reproducer is retained with private evidence for a Qt-side correction.

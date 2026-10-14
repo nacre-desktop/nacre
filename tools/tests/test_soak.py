@@ -105,6 +105,27 @@ class AnalysisTests(unittest.TestCase):
 
 
 class IsolationTests(unittest.TestCase):
+    def test_renderer_executes_actual_launcher_allocator_policy(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            tools = root / "nacre/shell-tools"
+            tools.mkdir(parents=True)
+            source = (TOOLS.parent / "nacre/shell-tools/launch.sh").read_text()
+            source = source.replace(
+                'exec /usr/bin/quickshell "$@"', 'printf "%s" "$MALLOC_CONF"'
+            )
+            (tools / "launch.sh").write_text(source)
+            (tools / "qt-check.sh").write_text("qt_match_check() { return 0; }\n")
+            with patch.object(soak, "ROOT", root):
+                command = soak.renderer_command(root)
+            result = subprocess.check_output(
+                command, env={"PATH": "/usr/bin:/bin", "HOME": folder}, text=True
+            )
+            options = dict(value.split(":", 1) for value in result.split(","))
+            self.assertEqual(options["background_thread"], "true")
+            self.assertEqual(options["dirty_decay_ms"], "2000")
+            self.assertEqual(options["muzzy_decay_ms"], "2000")
+
     def test_public_toolkit_policy_survives_environment_isolation(self):
         result = subprocess.check_output(
             [
