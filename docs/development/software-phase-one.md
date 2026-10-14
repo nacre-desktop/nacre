@@ -50,3 +50,10 @@ When an applicable package/manager is unavailable, ChatGPT and Claude offer a
 managed Chromium web app. Existing managed web apps remain searchable and
 removable through their existing registry. This does not provide the vendor's
 native desktop integrations.
+
+## Validation boundary
+
+Source validation exercises the launcher and native action plans in nested test
+sessions. It does not require installing the catalog's software, restarting host
+services or changing the active desktop. CI-only commits for this follow-up use
+`[no-publish]` to keep automatic Arch package publication outside this phase.
