@@ -7,7 +7,7 @@ Developer-only Python tools and test harnesses remain permitted.
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
 | 1 Service / frequent helpers | Complete; quiet timings deferred | 13 ports; RSS 26.95 -> 10.21 MiB (busy); Source/install CI green. |
-| 2 Compositor / pearls | Compilers + pearl-state public; backends local | Pearl CPU load/save 88.63/92.91 -> 2.82/3.85 ms (busy). |
+| 2 Compositor / pearls | Compilers / compositor / pearls public; runtime scripts pending | Pearl CPU load/save 88.63/92.91 -> 2.82/3.85 ms (busy). |
 | 3 Wallpaper / colors | Pending | Direct Orient crates; preserve paired publication. |
 | 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
 | 5 AI | Pending | Claude CLI stream-json; retain existing permissions/history. |
@@ -47,12 +47,12 @@ current frozen cases use defaults and remain unchanged.
 Main CI gate retained; 2753707f fixed isolation without changing goldens/skips.
 Wave 1 source/install CI passed; hardware checks remain manual.
 
-Next: final integrated gate (526 parity pass), rebase latest green main, publish compositor + pearl-window.
+Next: finish compositor-compat, window-hide and widths/session runtimes; check CI38564916648.
 Wave 1 main 3e155f5c CI 38528354524: source + fresh Niri install green; no skips.
 Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.
 Three compiler sources retired; 84 integrated Rust tests / 770 repo tests / 526 cases pass.
-Temporary native-only compiler client is removed as its Python callers are ported.
-Compositor busy fresh CPU 46.07 -> 1.35 ms; persistent RSS 7.90 MiB, one connection. Niri exact: 79 snapshots / 78 actions / 12 frames / 45 emissions / 8 handshakes / 110 config/query / 7 bindings / 21 display / 13 file / 18 night-light / 11 metadata; Hyprland 195 cases; CLI 34 dispatch cases.
+Native-only Python clients remain until their later-wave callers are ported; no backend implementation remains.
+Compositor busy fresh CPU 46.07 -> 1.35 ms; persistent RSS 7.90 MiB, one connection. Main69ceaeec/116a337b:123Rust/821repo/526parity pass; CI38564916648 running. Niri exact: 79 snapshots / 78 actions / 12 frames / 45 emissions / 8 handshakes / 110 config/query / 7 bindings / 21 display / 13 file / 18 night-light / 11 metadata; Hyprland 195 cases; CLI 34 dispatch cases.
 Busy fresh CPU: 55.67/38.50/35.55/16.88 -> 1.95/1.16/1.11/0.89 ms; Python 404 -> 0.
 Capture: 11 frozen cases match; 0600/0700 security difference tracked; IPC/events pass.
 Disposable release install/empty-PATH commands and atomic replacement tests pass.
