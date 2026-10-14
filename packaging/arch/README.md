@@ -111,12 +111,17 @@ still separate from this headless proof.
 Passing snapshots publish immutable GitHub preview assets and an atomic Pages
 repository. The database selects the current versions; previous package files
 are retained to allow downloads already in progress to finish. The immutable
-assets include exact PKGBUILD/`.SRCINFO`, package checksums/signatures and source
-receipt. Use `PACKAGE-SHA256SUMS` for the files in that release; the site's
+assets include exact PKGBUILD/`.SRCINFO` bytes (GitHub names the latter
+`default.SRCINFO`), package checksums/signatures and source receipt. Release tags
+record publication state on `main`; signed `release.json` identifies the exact
+compiled source and successful build. This lets the standard workflow token
+publish a tested older source snapshot without permission to modify workflows.
+Use `PACKAGE-SHA256SUMS` for the files in that release; the site's
 `SHA256SUMS` additionally covers its database and retained archives. The public
 installation/update path is in [the installation guide](../../docs/installation.md).
-The first Nacre repository cut is still being validated; check the package index
-before treating it as available.
+The first signed preview is published at the package index. Installed-runtime
+checks cover all three session selections; real desktop hardware acceptance
+remains separate.
 
 To validate a cut manually:
 

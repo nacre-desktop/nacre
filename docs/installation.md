@@ -2,15 +2,15 @@
 
 Use an updated Arch or CachyOS system. Setup can install the selected Wayland
 compositor if it is missing, or prepare Nacre alongside an existing session. Arch package
-recipes are available, but **Nacre packages are not yet published to the AUR**.
-Obtain matching, tested binary archives from the maintainer. The tested Hyprland
+recipes are available, but **Nacre packages are not published to the AUR**.
+Use the signed binary repository below. The tested Hyprland
 stack uses Hyprland 0.56.2 (Lua configuration), Quickshell 0.3.2, Qt 6.12 and UWSM.
 Upgrade the desktop and Qt together; avoid partial system upgrades.
 
 ## Development repository
 
-The first signed repository cut is being validated. Check the
-[package index](https://nacre-desktop.github.io/nacre/) for an available build;
+The signed repository is available from the
+[package index](https://nacre-desktop.github.io/nacre/);
 this is a development preview, with Niri still experimental.
 
 The installer configures a separate, signed pacman repository and installs core
