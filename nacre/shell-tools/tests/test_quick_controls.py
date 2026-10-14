@@ -105,6 +105,7 @@ class QuickControlsTests(unittest.TestCase):
             )
             for component in (
                 "NacreControlCenter",
+                "NacreControlEdit",
                 "NacreControlLevels",
                 "NacreControlTile",
                 "NacreControlOverview",

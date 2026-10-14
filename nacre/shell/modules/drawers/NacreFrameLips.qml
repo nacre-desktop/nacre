@@ -9,6 +9,10 @@ Item {
     required property var visibilities
     required property var controller
     property real focusProgress: 0
+    readonly property int hoverDelay: {
+        const saved = DesktopSettings.data.lipHoverDelay;
+        return Number.isInteger(saved) ? Math.max(0, Math.min(800, saved)) : 350;
+    }
     readonly property var rimHandles: []
     readonly property bool available: !NacrePanelState.hidden && !controller.modal && !visibilities.launcher && !visibilities.session && !visibilities.dashboardPinned && !NacreHoverIntent.fullscreenFor(screen.name)
     readonly property rect topRect: NacreFrame.headerHeight > 0 ? Qt.rect((width - 208) / 2, 0, 208, NacreFrame.headerHeight) : Qt.rect(0, 0, 0, 0)
@@ -78,6 +82,7 @@ Item {
     NacreHoverDwell {
         id: dashboardDwell
         objectName: "nacreDashboardDwell"
+        duration: root.hoverDelay
         onTriggered: {
             if (!NacreHoverIntent.headers[root.screen.name] || !root.available || DesktopSettings.data.clickEdgeMenus === true || !NacreHoverIntent.canOpen("dashboard", root.screen, Qt.NoButton)) {
                 root.cancelDashboard();
@@ -89,12 +94,14 @@ Item {
     NacreHoverDwell {
         id: leftDwell
         objectName: "nacreLeftDwell"
+        duration: root.hoverDelay
         onTriggered: if (left.hovered && root.available && DesktopSettings.data.clickEdgeMenus !== true && NacreHoverIntent.canOpen("left", root.screen, Qt.NoButton))
             NacrePanelState.hoverEdge("left", root.screen.name)
     }
     NacreHoverDwell {
         id: rightDwell
         objectName: "nacreRightDwell"
+        duration: root.hoverDelay
         onTriggered: if (right.hovered && root.available && DesktopSettings.data.clickEdgeMenus !== true && NacreHoverIntent.canOpen("osd", root.screen, Qt.NoButton))
             NacrePanelState.hoverEdge("osd", root.screen.name)
     }

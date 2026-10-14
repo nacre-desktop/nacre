@@ -20,7 +20,10 @@ Item {
         cancel();
         waiting = true;
         animatedCycle = NacreTokens.motionEnabled;
-        if (animatedCycle)
+        if (duration <= 0) {
+            progress = 1;
+            finish();
+        } else if (animatedCycle)
             fill.restart();
         else {
             progress = 1;

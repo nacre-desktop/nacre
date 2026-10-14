@@ -6,10 +6,27 @@ import qs.services
 Column {
     id: root
     required property var screen
+    property string section: "all"
+    property bool showHeadings: true
+    property bool showHint: true
+    property bool showReset: true
+    property bool settingsRows: false
     readonly property var selectedIds: NacreControlPreferences.tiles.filter(id => catalog.supported(id))
     readonly property var detectedEntries: catalog.entries.filter(entry => ["mic-volume", "keyboard"].includes(entry.id) && catalog.supported(entry.id) && !NacreControlPreferences.tiles.includes(entry.id))
     readonly property var availableEntries: catalog.entries.filter(entry => !["mic-volume", "keyboard"].includes(entry.id) && catalog.supported(entry.id) && !NacreControlPreferences.tiles.includes(entry.id))
-    spacing: 12
+    spacing: settingsRows ? NacreTokens.space.sm : 12
+    function includesSection(name) {
+        return section === "all" || section === name;
+    }
+    function focusChoice(index) {
+        const row = chosen.itemAt(Math.max(0, Math.min(chosen.count - 1, index)));
+        if (row && row.visible && row.enabled)
+            row.removeButton.focusControl();
+        else if (reset.visible && reset.enabled)
+            reset.focusControl();
+        else
+            (detected.itemAt(0) || available.itemAt(0))?.focusControl();
+    }
     NacreControlCatalog {
         id: catalog
         screen: root.screen
@@ -22,47 +39,47 @@ Column {
         else
             NacreControlPreferences.move(id, direction, selectedIds);
         Qt.callLater(() => {
-            const row = chosen.itemAt(Math.max(0, Math.min(selectedIds.length - 1, index + direction)));
-            if (row)
-                row.removeButton.focusControl();
-            else
-                reset.focusControl();
+            root.focusChoice(index + direction);
         });
     }
     function add(id) {
         root.forceActiveFocus(Qt.OtherFocusReason);
         NacreControlPreferences.toggle(id);
-        Qt.callLater(() => chosen.itemAt(root.selectedIds.indexOf(id))?.removeButton.focusControl());
+        Qt.callLater(() => root.focusChoice(root.selectedIds.indexOf(id)));
     }
     NacreText {
+        objectName: "controlEditHint"
         width: parent.width
+        visible: root.showHint
         text: NacreI18n.tr("controlcenter.edit.hint", "Add, remove, and reorder your controls. Unsupported features stay hidden.")
         wrapMode: Text.Wrap
         color: NacreTokens.mutedInk
         font.pointSize: 11
     }
     NacreText {
+        objectName: "controlEditDetectedHeading"
         width: parent.width
-        visible: root.detectedEntries.length > 0
+        visible: root.showHeadings && root.includesSection("detected") && root.detectedEntries.length > 0
         text: NacreI18n.tr("controlcenter.edit.detected-sliders", "Detected sliders")
         font.pointSize: 12
         font.weight: Font.Medium
     }
     GridLayout {
         width: parent.width
-        visible: root.detectedEntries.length > 0
-        columns: 2
+        visible: root.includesSection("detected") && root.detectedEntries.length > 0
+        columns: root.settingsRows ? 1 : 2
         columnSpacing: 8
         Repeater {
-            model: root.detectedEntries
-            delegate: NacreControlTile {
+            id: detected
+            model: root.includesSection("detected") ? root.detectedEntries : []
+            delegate: NacreControlAddOption {
                 required property var modelData
                 objectName: "controlAdd-" + modelData.id
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
-                Layout.columnSpan: root.detectedEntries.length === 1 ? 2 : 1
-                label: modelData.name
-                icon: modelData.icon
+                Layout.columnSpan: root.settingsRows ? 1 : root.detectedEntries.length === 1 ? 2 : 1
+                entry: modelData
+                settingsRows: root.settingsRows
                 detail: NacreI18n.tr("controlcenter.edit.add-slider", "Add slider")
                 onClicked: root.add(modelData.id)
             }
@@ -70,8 +87,11 @@ Column {
     }
     RowLayout {
         width: parent.width
+        visible: root.includesSection("layout") && (root.showHeadings || root.showReset)
         NacreText {
+            objectName: "controlEditLayoutHeading"
             Layout.fillWidth: true
+            visible: root.showHeadings
             text: NacreI18n.tr("controlcenter.edit.layout", "Your layout")
             font.pointSize: 12
             font.weight: Font.Medium
@@ -79,6 +99,7 @@ Column {
         NacreControlButton {
             id: reset
             objectName: "controlLayoutReset"
+            visible: root.showReset
             label: NacreI18n.tr("controlcenter.edit.reset", "Reset")
             icon: "restart_alt"
             onClicked: {
@@ -90,7 +111,7 @@ Column {
     }
     Repeater {
         id: chosen
-        model: root.selectedIds
+        model: root.includesSection("layout") ? root.selectedIds : []
         delegate: RowLayout {
             id: row
             required property string modelData
@@ -98,23 +119,27 @@ Column {
             readonly property var entry: catalog.find(modelData)
             property alias removeButton: remove
             width: root.width
-            spacing: 4
+            spacing: root.settingsRows ? NacreTokens.space.sm : 4
+            opacity: enabled ? 1 : .45
+            implicitHeight: Math.max(remove.implicitHeight, name.implicitHeight, root.settingsRows ? NacreTokens.space.huge + 2 * NacreTokens.space.sm : 0)
             NacreIcon {
                 text: row.entry.icon
-                font.pointSize: 17
+                font.pointSize: root.settingsRows ? NacreTokens.iconSize.medium : 17
                 color: NacreTokens.accent
             }
             NacreText {
+                id: name
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
                 text: row.entry.name
-                font.pointSize: 11
+                font.pointSize: root.settingsRows ? NacreTokens.textSize.body : 11
                 wrapMode: Text.Wrap
             }
             NacreControlButton {
                 objectName: "controlMoveUp-" + row.modelData
                 icon: "arrow_upward"
                 enabled: row.index > 0
+                opacity: enabled || !root.settingsRows ? 1 : .35
                 label: NacreI18n.tr("controlcenter.edit.move-up", "Move {name} up", {
                     name: row.entry.name
                 })
@@ -124,6 +149,7 @@ Column {
                 objectName: "controlMoveDown-" + row.modelData
                 icon: "arrow_downward"
                 enabled: row.index < root.selectedIds.length - 1
+                opacity: enabled || !root.settingsRows ? 1 : .35
                 label: NacreI18n.tr("controlcenter.edit.move-down", "Move {name} down", {
                     name: row.entry.name
                 })
@@ -133,6 +159,7 @@ Column {
                 id: remove
                 objectName: "controlRemove-" + row.modelData
                 icon: "remove"
+                opacity: enabled || !root.settingsRows ? 1 : .35
                 label: NacreI18n.tr("controlcenter.edit.remove", "Remove {name}", {
                     name: row.entry.name
                 })
@@ -141,26 +168,29 @@ Column {
         }
     }
     NacreText {
+        objectName: "controlEditAvailableHeading"
         width: parent.width
-        visible: root.availableEntries.length > 0
+        visible: root.showHeadings && root.includesSection("available") && root.availableEntries.length > 0
         text: NacreI18n.tr("controlcenter.edit.available", "Available controls")
         font.pointSize: 12
         font.weight: Font.Medium
     }
     GridLayout {
         width: parent.width
-        columns: 2
+        visible: root.includesSection("available") && root.availableEntries.length > 0
+        columns: root.settingsRows ? 1 : 2
         columnSpacing: 8
         rowSpacing: 8
         Repeater {
-            model: root.availableEntries
-            delegate: NacreControlTile {
+            id: available
+            model: root.includesSection("available") ? root.availableEntries : []
+            delegate: NacreControlAddOption {
                 required property var modelData
                 objectName: "controlAdd-" + modelData.id
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
-                label: modelData.name
-                icon: modelData.icon
+                entry: modelData
+                settingsRows: root.settingsRows
                 detail: NacreI18n.tr("controlcenter.edit.add", "Add to controls")
                 onClicked: root.add(modelData.id)
             }

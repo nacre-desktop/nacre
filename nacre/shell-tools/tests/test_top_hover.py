@@ -187,6 +187,20 @@ TestCase {
   view.flags.dashboard=false;view.flags.dashboard=true;wait(30);
   compare(lip.sheenRunning,false);
  }
+ function test_lip_delay_setting_has_safe_defaults_bounds_and_zero_is_instant(){
+  DesktopSettings.data={animations:true};const view=createTemporaryObject(scene,this);mouseMove(view,500,180);wait(30);
+  compare(view.lips.hoverDelay,350);
+  DesktopSettings.data={animations:true,lipHoverDelay:800};
+  for(const id of ["nacreDashboardDwell","nacreLeftDwell","nacreRightDwell"])compare(findChild(view,id).duration,800);
+  mouseMove(view,view.width-3,view.height/2);wait(200);verify(!view.flags.osd);
+  mouseMove(view,500,180);wait(30);
+  DesktopSettings.data={animations:true,lipHoverDelay:0};
+  mouseMove(view,view.width-3,view.height/2);tryCompare(view.flags,"osd",true,100);
+  mouseMove(view,500,180);view.flags.osd=false;wait(30);
+  DesktopSettings.data={animations:true,lipHoverDelay:1000};compare(view.lips.hoverDelay,800);
+  DesktopSettings.data={animations:true,lipHoverDelay:-1};compare(view.lips.hoverDelay,0);
+  DesktopSettings.data={animations:true,lipHoverDelay:false};compare(view.lips.hoverDelay,350);
+ }
  function test_click_only_and_fullscreen_held_button_guards(){
   DesktopSettings.data={animations:false,clickEdgeMenus:true};
   const view=createTemporaryObject(scene,this);wait(30);

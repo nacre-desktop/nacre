@@ -54,6 +54,17 @@ TestCase {
     }
 
     Component {
+        id: editor
+        NacreControlEdit {
+            width: 560
+            screen: ({
+                    name: "test",
+                    width: 1000,
+                    height: 700
+                })
+        }
+    }
+    Component {
         id: scrollingList
         NacreQuickList {
             width: 300
@@ -402,6 +413,69 @@ TestCase {
     }
     function containsText(item, text) {
         return item.text === text || (item.children || []).some(child => containsText(child, text));
+    }
+    function test_editor_filtered_layout_keeps_one_heading_and_shared_keyboard_order() {
+        const view = createTemporaryObject(editor, test, {
+            section: "layout",
+            settingsRows: true,
+            showHeadings: false,
+            showHint: false,
+            showReset: false
+        });
+        wait(30);
+        verify(!findChild(view, "controlEditHint").visible);
+        verify(!findChild(view, "controlEditLayoutHeading").visible);
+        verify(!findChild(view, "controlLayoutReset").visible);
+        verify(!findChild(view, "controlAdd-mic-volume"));
+        verify(!findChild(view, "controlAdd-screenshot"));
+        const first = NacreControlPreferences.tiles[0], next = findChild(view, "controlMoveDown-" + first), previous = findChild(view, "controlMoveUp-" + first);
+        verify(!previous.enabled && previous.opacity < 1);
+        next.focusControl();
+        keyClick(Qt.Key_Space);
+        wait(30);
+        compare(NacreControlPreferences.tiles[1], first);
+        const remove = findChild(view, "controlRemove-network");
+        remove.focusControl();
+        keyClick(Qt.Key_Space);
+        wait(30);
+        verify(!NacreControlPreferences.tiles.includes("network"));
+    }
+    function test_editor_detected_and_available_rows_filter_support_and_inherit_disabled() {
+        const view = createTemporaryObject(editor, test, {
+            section: "detected",
+            settingsRows: true,
+            showHeadings: false,
+            showHint: false,
+            showReset: false
+        });
+        wait(30);
+        verify(!findChild(view, "controlRemove-network"));
+        verify(!findChild(view, "controlAdd-screenshot"));
+        const mic = findChild(view, "controlAdd-mic-volume"), add = findChild(view, "controlAdd-mic-volumeButton");
+        verify(mic && add);
+        fuzzyCompare(add.mapToItem(view, 0, 0).x + add.width, view.width, .5);
+        mic.focusControl();
+        keyClick(Qt.Key_Space);
+        wait(30);
+        compare(NacreControlPreferences.tiles.indexOf("mic-volume"), NacreControlPreferences.tiles.indexOf("volume") + 1);
+        verify(!findChild(view, "controlAdd-mic-volume"));
+        const keyboard = findChild(view, "controlAdd-keyboardButton"), row = findChild(view, "controlAdd-keyboardRow"), before = JSON.stringify(NacreControlPreferences.tiles);
+        view.enabled = false;
+        verify(!row.enabled && row.opacity < 1 && !keyboard.enabled);
+        mouseClick(keyboard, keyboard.width / 2, keyboard.height / 2);
+        compare(JSON.stringify(NacreControlPreferences.tiles), before);
+        view.enabled = true;
+        view.section = "available";
+        wait(30);
+        verify(!findChild(view, "controlAdd-keyboard"));
+        verify(!!findChild(view, "controlAdd-screenshot"));
+        NacreControlTools.data = Object.assign({}, NacreControlTools.data, {
+            screenshot: false,
+            colorPicker: false
+        });
+        wait(30);
+        verify(!findChild(view, "controlAdd-screenshot"));
+        verify(!findChild(view, "controlAdd-picker"));
     }
     function test_editor_removes_reorders_adds_and_resets_all_controls() {
         const scene = createTemporaryObject(center, test), panel = scene.panel;
