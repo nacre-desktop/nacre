@@ -105,6 +105,9 @@ pub fn desktop(preferences: &Value) -> Result<String> {
         }
     }
     let mut lines = Vec::new();
+    if let Some(layout) = preferences.get("keyboardLayouts") {
+        lines.push(keyboard(&serde_json::json!({"layout":layout}))?);
+    }
     if let Some(value) = preferences.get("animations") {
         lines.push(format!(
             "animations {{ {} }}",

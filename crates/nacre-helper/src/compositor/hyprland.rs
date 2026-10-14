@@ -142,7 +142,13 @@ pub fn render_desktop(preferences: &Value) -> Result<String> {
             );
         }
     }
-    render_options(&Value::Object(options))
+    let mut result = render_options(&Value::Object(options))?;
+    if let Some(layout) = preferences.get("keyboardLayouts") {
+        result.push_str("-- Nacre software input begin\n");
+        result.push_str(&render_keyboard(&json!({"layout":layout}))?);
+        result.push_str("-- Nacre software input end\n");
+    }
+    Ok(result)
 }
 pub fn render_keyboard(values: &Value) -> Result<String> {
     let mut rows = vec![

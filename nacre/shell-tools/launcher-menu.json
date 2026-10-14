@@ -1604,6 +1604,16 @@
       "provider": "health-fixits",
       "labelId": "launcher.catalog.health.fixits.label",
       "descriptionId": "launcher.catalog.health.fixits.description"
+    },
+    {
+      "id": "setup.system",
+      "kind": "group",
+      "label": "System setup",
+      "icon": "settings_suggest",
+      "description": "Devices, networking and input",
+      "provider": "system-setup",
+      "labelId": "launcher.catalog.setup.system.label",
+      "descriptionId": "launcher.catalog.setup.system.description"
     }
   ],
   "software": [

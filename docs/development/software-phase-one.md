@@ -105,3 +105,27 @@ its owned targets. Missing hardware, services, tools or an administrator agent
 omit their corresponding fix-it rows. Private test fixtures cover cancellation,
 non-TTY rejection, root command dispatch and capability gates; they never restart
 host services or update firmware.
+
+## System setup
+
+Setup → System setup exposes fingerprint enrollment only when fprintd reports a
+reader, and FIDO2 information/PIN actions only for connected keys. PINs stay in
+the key tool's interactive input. Active NetworkManager connections offer DHCP,
+Cloudflare, Google or validated custom IPv4/IPv6 DNS addresses. SSH on/off uses
+the installed OpenSSH unit. Input methods open an installed Fcitx5 or IBus
+configuration tool. Missing devices and tools omit their actions.
+
+Keyboard layouts are selected from the installed XKB list. The registered
+`software-input` state schema owns `keyboardLayouts`; its provider projects the
+selection into the existing managed Niri/Hyprland desktop configuration. Missing
+input preferences do not change legacy output. Apply failures restore only
+unchanged task-owned state/config bytes, preserving later changes. Existing
+Desktop settings regeneration retains the selected layouts.
+
+Wi-Fi sharing displays a QR for a selected active personal/open network. Secret
+reads occur only after terminal confirmation and administrator authentication.
+Credentials go through captured memory and the encoder's stdin; they are not put
+in command arguments, launcher state or plaintext output. Enterprise network
+credentials are not exported in this format. All privileged setup follows the
+same visible review/authentication and normal-session bridge as Health. No root
+setup action is executed by source validation.

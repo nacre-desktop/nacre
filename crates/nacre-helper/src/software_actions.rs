@@ -179,8 +179,12 @@ pub fn health_rows(facts: &Value) -> Vec<Value> {
 }
 pub fn snapshot() -> Value {
     let facts = facts();
-    json!({"health":health_rows(&facts),"facts":facts})
+    let setup = Paths::environment()
+        .map(|paths| crate::software_setup::facts(&paths))
+        .unwrap_or(Value::Null);
+    json!({"health":health_rows(&facts),"setup":crate::software_setup::rows(&setup),"facts":facts,"setupFacts":setup})
 }
+
 fn step(args: &[&str], root: bool) -> Value {
     json!({"arguments":args,"root":root})
 }
@@ -240,7 +244,17 @@ pub fn run_health(id: &str) -> Result<i32> {
         return Err("System actions require a visible interactive terminal".into());
     }
     let facts = facts();
-    let mut plan = health_plan(id, &facts)?;
+    let paths = Paths::environment()?;
+    let setup = crate::software_setup::facts(&paths);
+    let mut plan = if crate::software_setup::rows(&setup)
+        .iter()
+        .any(|r| r["id"] == id)
+    {
+        let request = crate::software_setup::request(id, &setup)?;
+        crate::software_setup::plan(id, &setup, &request)?
+    } else {
+        health_plan(id, &facts)?
+    };
     if id == "orphans-remove" {
         let output = process::run(
             "pacman",
@@ -320,6 +334,14 @@ pub fn run_health(id: &str) -> Result<i32> {
     }
     let mut code = 0;
     for step in plan["steps"].as_array().unwrap() {
+        if let Some(layouts) = step["input"].as_str() {
+            crate::software_input::set_layouts(&paths, layouts)?;
+            continue;
+        }
+        if let Some(connection) = step["wifiQr"].as_str() {
+            wifi_qr(connection)?;
+            continue;
+        }
         let args = step["arguments"]
             .as_array()
             .unwrap()
@@ -357,8 +379,74 @@ pub fn run_health(id: &str) -> Result<i32> {
     io::stdin().read_line(&mut answer)?;
     Ok(code)
 }
+fn wifi_qr(connection: &str) -> Result<()> {
+    fn field(connection: &str, key: &str) -> Result<String> {
+        let mut command = Command::new(if tool("pkexec") { "pkexec" } else { "sudo" });
+        command.args([
+            "nmcli",
+            "--show-secrets",
+            "--get-values",
+            key,
+            "connection",
+            "show",
+            connection,
+        ]);
+        let output = process::capture(command, None, Duration::from_secs(60))?;
+        if !output.status.success() {
+            return Err("Could not read the selected Wi-Fi connection".into());
+        }
+        Ok(String::from_utf8(output.stdout)?.trim_end().to_string())
+    }
+    let ssid = field(connection, "802-11-wireless.ssid")?;
+    let security = field(connection, "802-11-wireless-security.key-mgmt")?;
+    let mode = match security.as_str() {
+        "wpa-psk" | "sae" => "WPA",
+        "none" => "WEP",
+        "" | "--" => "nopass",
+        _ => return Err("Enterprise Wi-Fi credentials cannot be shared as this QR format".into()),
+    };
+    let password = if mode == "nopass" {
+        String::new()
+    } else {
+        field(
+            connection,
+            if mode == "WEP" {
+                "802-11-wireless-security.wep-key0"
+            } else {
+                "802-11-wireless-security.psk"
+            },
+        )?
+    };
+    let escape = |s: &str| {
+        s.replace('\\', "\\\\")
+            .replace(';', "\\;")
+            .replace(',', "\\,")
+            .replace(':', "\\:")
+            .replace('"', "\\\"")
+    };
+    let payload = format!(
+        "WIFI:T:{mode};S:{};P:{};;",
+        escape(&ssid),
+        escape(&password)
+    );
+    let mut child = Command::new("qrencode")
+        .args(["--type", "ANSIUTF8"])
+        .stdin(std::process::Stdio::piped())
+        .spawn()?;
+    child
+        .stdin
+        .take()
+        .ok_or("QR encoder input is unavailable")?
+        .write_all(payload.as_bytes())?;
+    if !child.wait()?.success() {
+        return Err("QR encoding failed".into());
+    }
+    Ok(())
+}
 pub fn open(paths: &Paths, id: &str) -> Result<Value> {
-    if !health_rows(&facts()).iter().any(|r| r["id"] == id) {
+    let health = health_rows(&facts());
+    let setup = crate::software_setup::rows(&crate::software_setup::facts(paths));
+    if !health.iter().chain(setup.iter()).any(|r| r["id"] == id) {
         return Err("Action is not available".into());
     }
     let helper = std::env::current_exe()?.to_string_lossy().into_owned();

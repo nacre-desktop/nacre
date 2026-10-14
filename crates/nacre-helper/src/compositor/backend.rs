@@ -480,6 +480,15 @@ impl Backend {
         }
     }
     pub fn render_desktop(&self, values: &Value) -> Result<String> {
+        let paths = match self {
+            Self::Hyprland(b) => &b.paths,
+            Self::Niri(b) => &b.paths,
+        };
+        let values = crate::software_input::overlay(&paths.config, values).map_err(|e| Error {
+            kind: "RuntimeError",
+            message: e.to_string(),
+        })?;
+        let values = &values;
         match self {
             Self::Hyprland(_) => hyprland::render_desktop(values),
             Self::Niri(_) => super::niri_config::desktop(values),
@@ -498,6 +507,15 @@ impl Backend {
         }
     }
     pub fn set_desktop(&mut self, values: &Value, timeout: Duration) -> Result<Value> {
+        let paths = match self {
+            Self::Hyprland(b) => &b.paths,
+            Self::Niri(b) => &b.paths,
+        };
+        let values = crate::software_input::overlay(&paths.config, values).map_err(|e| Error {
+            kind: "RuntimeError",
+            message: e.to_string(),
+        })?;
+        let values = &values;
         match self {
             Self::Hyprland(backend) => backend.actions.execute(
                 "set_desktop_options",

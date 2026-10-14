@@ -148,10 +148,23 @@ fn run() -> Result<i32> {
         }
         let result = match action {
             "load" => Ok(nacre_helper::software_actions::snapshot()),
-            "plan" => nacre_helper::software_actions::health_plan(
-                id,
-                &nacre_helper::software_actions::facts(),
-            ),
+            "plan" => {
+                let paths = nacre_helper::paths::Paths::environment()?;
+                let setup = nacre_helper::software_setup::facts(&paths);
+                if nacre_helper::software_setup::rows(&setup)
+                    .iter()
+                    .any(|r| r["id"] == id)
+                {
+                    let request =
+                        serde_json::from_str(arguments.get(2).map(String::as_str).unwrap_or("{}"))?;
+                    nacre_helper::software_setup::plan(id, &setup, &request)
+                } else {
+                    nacre_helper::software_actions::health_plan(
+                        id,
+                        &nacre_helper::software_actions::facts(),
+                    )
+                }
+            }
             _ => Err("Unknown system action".into()),
         };
         let (value, code) = match result {

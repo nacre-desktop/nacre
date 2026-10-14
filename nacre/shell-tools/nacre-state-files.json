@@ -874,6 +874,17 @@
         "root": "state",
         "access": "read"
       }
+    },
+    {
+      "id": "software-input",
+      "paths": [
+        "nacre/software-input.json"
+      ],
+      "owner": "software input compositor provider",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
     }
   ]
 }

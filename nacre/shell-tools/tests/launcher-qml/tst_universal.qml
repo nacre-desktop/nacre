@@ -427,6 +427,50 @@ TestCase {
         value.cancelForm();
     }
 
+    function test_setup_actions_use_hardware_results_and_confirmation() {
+        const value = view();
+        value.menu.library.data = Object.assign({}, value.menu.library.data, {
+            system: {
+                setup: [
+                    {
+                        id: "dns-cloudflare",
+                        name: "Cloudflare DNS",
+                        description: "Resolver addresses",
+                        section: "setup.system",
+                        root: true
+                    },
+                    {
+                        id: "fingerprint-enroll",
+                        name: "Enroll a fingerprint",
+                        description: "Detected reader",
+                        section: "setup.system",
+                        root: false
+                    }
+                ]
+            }
+        });
+        value.navigate("setup.system");
+        compare(value.entries.length, 2);
+        const dns = value.entries.find(row => row.value === "dns-cloudflare");
+        verify(!!dns.confirm);
+        verify(!value.menu.execute(dns));
+        value.menu.execute(dns, true);
+        const worker = findChild(value.menu.library, "softwareLibraryAction");
+        compare(worker.operation, "system-open");
+        compare(worker.value, "dns-cloudflare");
+        worker.running = false;
+        value.navigate("software.development");
+        findChild(value, "launcherSearch").text = "fingerprint";
+        verify(value.entries.some(row => row.value === "fingerprint-enroll"));
+        value.menu.library.data = Object.assign({}, value.menu.library.data, {
+            system: {
+                setup: []
+            }
+        });
+        value.navigate("setup.system");
+        compare(value.entries.length, 0);
+    }
+
     function test_health_actions_are_searchable_and_require_confirmation() {
         const value = view();
         value.menu.library.data = Object.assign({}, value.menu.library.data, {
