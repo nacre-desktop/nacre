@@ -2,6 +2,12 @@ name: Pinned Arch packages
 on:
   workflow_dispatch:
     inputs:
+      component:
+        description: Package family (core builds Orient first)
+        required: true
+        default: all
+        type: choice
+        options: [all, core, niri]
       orient_recipe_revision:
         description: Exact Orient commit containing the package recipe to verify
         required: true
@@ -10,6 +16,7 @@ permissions:
   contents: read
 jobs:
   packages:
+    name: Arch packages (${{ inputs.component }})
     # Match source CI: Ubuntu24.04 denies nested Bubblewrap network setup.
     # Keep the parity sandbox intact rather than relaxing host protections.
     runs-on: ubuntu-22.04
@@ -24,10 +31,12 @@ jobs:
       - name: Build the committed VCS recipes in clean Arch chroots
         shell: bash
         env:
+          PACKAGE_COMPONENT: ${{ inputs.component }}
           ORIENT_RECIPE_REVISION: ${{ inputs.orient_recipe_revision }}
         run: |
           set -euo pipefail
           [[ "$ORIENT_RECIPE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PACKAGE_COMPONENT" == all || "$PACKAGE_COMPONENT" == core || "$PACKAGE_COMPONENT" == niri ]]
           work="$RUNNER_TEMP/pinned-arch"
           mkdir -p "$work"/{orient,nacre,niri}
           cp orient-recipe/packaging/arch/PKGBUILD "$work/orient/"
@@ -38,7 +47,7 @@ jobs:
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v "$work:/work" \
             archlinux:base-devel /usr/lib/systemd/systemd)
           trap 'docker rm --force "$container"' EXIT
-          docker exec "$container" bash -euxo pipefail -c '
+          docker exec --env PACKAGE_COMPONENT "$container" bash -euxo pipefail -c '
             export USER=root
             pacman-key --init
             pacman-key --populate archlinux
@@ -61,15 +70,22 @@ jobs:
               --symlink usr/bin /bin --symlink usr/lib /lib --symlink usr/lib64 /lib64 \
               --ro-bind /fixture-proc /proc --dev /dev /usr/bin/true
             rm -rf --one-file-system /var/tmp/nacre-namespace-probe
-            cd /work/orient
-            sudo -u builder extra-x86_64-build 2>&1 | tee /work/orient.log
-            # Each invocation cleans its working chroot; inject only the tested engine.
-            cd /work/nacre
-            sudo -u builder extra-x86_64-build -- -I /work/orient/orient-[0-9]*.pkg.tar.zst \
-              2>&1 | tee /work/nacre.log
-            cd /work/niri
-            sudo -u builder extra-x86_64-build 2>&1 | tee /work/niri.log
-            sha256sum /work/{orient,nacre,niri}/*.pkg.tar.zst > /work/package-sha256.txt
+            if [[ "$PACKAGE_COMPONENT" != niri ]]; then
+              cd /work/orient
+              sudo -u builder extra-x86_64-build 2>&1 | tee /work/orient.log
+              # Each invocation cleans its root; inject only the tested engine.
+              cd /work/nacre
+              sudo -u builder extra-x86_64-build -- -I /work/orient/orient-[0-9]*.pkg.tar.zst \
+                2>&1 | tee /work/nacre.log
+            fi
+            if [[ "$PACKAGE_COMPONENT" != core ]]; then
+              cd /work/niri
+              sudo -u builder extra-x86_64-build 2>&1 | tee /work/niri.log
+            fi
+            shopt -s nullglob
+            archives=(/work/{orient,nacre,niri}/*.pkg.tar.zst)
+            (( ${#archives[@]} > 0 ))
+            sha256sum "${archives[@]}" > /work/package-sha256.txt
           '
       - name: Package archives, recipes and build logs
         if: always()
