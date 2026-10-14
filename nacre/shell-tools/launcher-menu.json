@@ -1491,217 +1491,677 @@
       "label": "Firefox",
       "description": "Web browser",
       "labelId": "launcher.catalog.firefox.label",
-      "descriptionId": "launcher.catalog.firefox.description"
+      "descriptionId": "launcher.catalog.firefox.description",
+      "repository": "extra"
     },
     {
       "package": "chromium",
       "label": "Chromium",
       "description": "Web browser",
       "labelId": "launcher.catalog.chromium.label",
-      "descriptionId": "launcher.catalog.chromium.description"
+      "descriptionId": "launcher.catalog.chromium.description",
+      "repository": "extra"
     },
     {
       "package": "zen-browser-bin",
       "label": "Zen",
       "description": "Web browser",
       "labelId": "launcher.catalog.zen-browser-bin.label",
-      "descriptionId": "launcher.catalog.zen-browser-bin.description"
+      "descriptionId": "launcher.catalog.zen-browser-bin.description",
+      "repository": "AUR"
     },
     {
       "package": "code",
       "label": "Visual Studio Code",
       "description": "Code editor",
       "labelId": "launcher.catalog.code.label",
-      "descriptionId": "launcher.catalog.code.description"
+      "descriptionId": "launcher.catalog.code.description",
+      "aliases": [
+        "vscode",
+        "vs code",
+        "code editor"
+      ],
+      "repository": "extra"
     },
     {
       "package": "neovim",
       "label": "Neovim",
       "description": "Terminal editor",
       "labelId": "launcher.catalog.neovim.label",
-      "descriptionId": "launcher.catalog.neovim.description"
+      "descriptionId": "launcher.catalog.neovim.description",
+      "repository": "extra"
     },
     {
       "package": "helix",
       "label": "Helix",
       "description": "Terminal editor",
       "labelId": "launcher.catalog.helix.label",
-      "descriptionId": "launcher.catalog.helix.description"
+      "descriptionId": "launcher.catalog.helix.description",
+      "repository": "extra"
     },
     {
       "package": "btop",
       "label": "btop",
       "description": "System monitor",
       "labelId": "launcher.catalog.btop.label",
-      "descriptionId": "launcher.catalog.btop.description"
+      "descriptionId": "launcher.catalog.btop.description",
+      "repository": "extra"
     },
     {
       "package": "tmux",
       "label": "tmux",
       "description": "Terminal sessions",
       "labelId": "launcher.catalog.tmux.label",
-      "descriptionId": "launcher.catalog.tmux.description"
+      "descriptionId": "launcher.catalog.tmux.description",
+      "repository": "extra"
     },
     {
       "package": "ripgrep",
       "label": "ripgrep",
       "description": "Search files",
       "labelId": "launcher.catalog.ripgrep.label",
-      "descriptionId": "launcher.catalog.ripgrep.description"
+      "descriptionId": "launcher.catalog.ripgrep.description",
+      "repository": "extra"
     },
     {
       "package": "fd",
       "label": "fd",
       "description": "Find files",
       "labelId": "launcher.catalog.fd.label",
-      "descriptionId": "launcher.catalog.fd.description"
+      "descriptionId": "launcher.catalog.fd.description",
+      "repository": "extra"
     },
     {
       "package": "bat",
       "label": "bat",
       "description": "Read files",
       "labelId": "launcher.catalog.bat.label",
-      "descriptionId": "launcher.catalog.bat.description"
+      "descriptionId": "launcher.catalog.bat.description",
+      "repository": "extra"
     },
     {
       "package": "obs-studio",
       "label": "OBS Studio",
       "description": "Capture and stream",
       "labelId": "launcher.catalog.obs-studio.label",
-      "descriptionId": "launcher.catalog.obs-studio.description"
+      "descriptionId": "launcher.catalog.obs-studio.description",
+      "aliases": [
+        "obs",
+        "open broadcaster"
+      ],
+      "repository": "extra"
     },
     {
       "package": "vlc",
       "label": "VLC",
       "description": "Media player",
       "labelId": "launcher.catalog.vlc.label",
-      "descriptionId": "launcher.catalog.vlc.description"
+      "descriptionId": "launcher.catalog.vlc.description",
+      "repository": "extra"
     },
     {
       "package": "mpv",
       "label": "mpv",
       "description": "Media player",
       "labelId": "launcher.catalog.mpv.label",
-      "descriptionId": "launcher.catalog.mpv.description"
+      "descriptionId": "launcher.catalog.mpv.description",
+      "repository": "extra"
     },
     {
       "package": "spotify",
       "label": "Spotify",
       "description": "Music",
       "labelId": "launcher.catalog.spotify.label",
-      "descriptionId": "launcher.catalog.spotify.description"
+      "descriptionId": "launcher.catalog.spotify.description",
+      "repository": "AUR"
     },
     {
       "package": "gimp",
       "label": "GIMP",
       "description": "Image editor",
       "labelId": "launcher.catalog.gimp.label",
-      "descriptionId": "launcher.catalog.gimp.description"
+      "descriptionId": "launcher.catalog.gimp.description",
+      "repository": "extra"
     },
     {
       "package": "krita",
       "label": "Krita",
       "description": "Painting",
       "labelId": "launcher.catalog.krita.label",
-      "descriptionId": "launcher.catalog.krita.description"
+      "descriptionId": "launcher.catalog.krita.description",
+      "repository": "extra"
     },
     {
       "package": "inkscape",
       "label": "Inkscape",
       "description": "Vector graphics",
       "labelId": "launcher.catalog.inkscape.label",
-      "descriptionId": "launcher.catalog.inkscape.description"
+      "descriptionId": "launcher.catalog.inkscape.description",
+      "repository": "extra"
     },
     {
       "package": "steam",
       "label": "Steam",
       "description": "Games",
       "labelId": "launcher.catalog.steam.label",
-      "descriptionId": "launcher.catalog.steam.description"
+      "descriptionId": "launcher.catalog.steam.description",
+      "repository": "multilib"
     },
     {
       "package": "lutris",
       "label": "Lutris",
       "description": "Game library",
       "labelId": "launcher.catalog.lutris.label",
-      "descriptionId": "launcher.catalog.lutris.description"
+      "descriptionId": "launcher.catalog.lutris.description",
+      "repository": "extra"
     },
     {
       "package": "heroic-games-launcher-bin",
       "label": "Heroic",
       "description": "Game launcher",
       "labelId": "launcher.catalog.heroic-games-launcher-bin.label",
-      "descriptionId": "launcher.catalog.heroic-games-launcher-bin.description"
+      "descriptionId": "launcher.catalog.heroic-games-launcher-bin.description",
+      "aliases": [
+        "epic games",
+        "gog"
+      ],
+      "repository": "AUR"
     },
     {
       "package": "localsend",
       "label": "LocalSend",
       "description": "Share files locally",
       "labelId": "launcher.catalog.localsend.label",
-      "descriptionId": "launcher.catalog.localsend.description"
+      "descriptionId": "launcher.catalog.localsend.description",
+      "repository": "AUR"
     },
     {
       "package": "tailscale",
       "label": "Tailscale",
       "description": "Private network",
       "labelId": "launcher.catalog.tailscale.label",
-      "descriptionId": "launcher.catalog.tailscale.description"
+      "descriptionId": "launcher.catalog.tailscale.description",
+      "repository": "extra"
     },
     {
       "package": "keepassxc",
       "label": "KeePassXC",
       "description": "Password manager",
       "labelId": "launcher.catalog.keepassxc.label",
-      "descriptionId": "launcher.catalog.keepassxc.description"
+      "descriptionId": "launcher.catalog.keepassxc.description",
+      "repository": "extra"
     },
     {
       "package": "wf-recorder",
       "label": "Screen recording",
       "description": "Record Wayland screens",
       "labelId": "launcher.catalog.wf-recorder.label",
-      "descriptionId": "launcher.catalog.wf-recorder.description"
+      "descriptionId": "launcher.catalog.wf-recorder.description",
+      "repository": "extra"
     },
     {
       "package": "tesseract",
       "label": "Screen text recognition",
       "description": "Read text in screenshots",
       "labelId": "launcher.catalog.tesseract.label",
-      "descriptionId": "launcher.catalog.tesseract.description"
+      "descriptionId": "launcher.catalog.tesseract.description",
+      "repository": "extra"
     },
     {
       "package": "zbar",
       "label": "QR recognition",
       "description": "Read QR codes",
       "labelId": "launcher.catalog.zbar.label",
-      "descriptionId": "launcher.catalog.zbar.description"
+      "descriptionId": "launcher.catalog.zbar.description",
+      "repository": "extra"
     },
     {
       "package": "hyprpicker",
       "label": "Screen color picker",
       "description": "Copy a color from the screen",
       "labelId": "launcher.catalog.hyprpicker.label",
-      "descriptionId": "launcher.catalog.hyprpicker.description"
+      "descriptionId": "launcher.catalog.hyprpicker.description",
+      "repository": "extra"
     },
     {
       "package": "satty",
       "label": "Screenshot annotation",
       "description": "Draw and write on screenshots",
       "labelId": "launcher.catalog.optional-satty",
-      "descriptionId": "launcher.catalog.optional-satty-description"
+      "descriptionId": "launcher.catalog.optional-satty-description",
+      "repository": "extra"
     },
     {
       "package": "ffmpeg",
       "label": "Media conversion",
       "description": "Compress videos and convert media files",
       "labelId": "launcher.catalog.optional-ffmpeg",
-      "descriptionId": "launcher.catalog.optional-ffmpeg-description"
+      "descriptionId": "launcher.catalog.optional-ffmpeg-description",
+      "repository": "extra"
     },
     {
       "package": "voxtype-bin",
       "label": "Voice typing",
       "description": "Optional dictation; configure your model and service before use",
       "labelId": "launcher.catalog.optional-voxtype-bin",
-      "descriptionId": "launcher.catalog.optional-voxtype-bin-description"
+      "descriptionId": "launcher.catalog.optional-voxtype-bin-description",
+      "repository": "AUR"
+    },
+    {
+      "package": "discord",
+      "label": "Discord",
+      "description": "Voice and text chat",
+      "repository": "extra",
+      "labelId": "launcher.catalog.discord.label",
+      "descriptionId": "launcher.catalog.discord.description"
+    },
+    {
+      "package": "google-chrome",
+      "label": "Google Chrome",
+      "description": "Web browser",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.google-chrome.label",
+      "descriptionId": "launcher.catalog.google-chrome.description"
+    },
+    {
+      "package": "brave-bin",
+      "label": "Brave",
+      "description": "Web browser",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.brave-bin.label",
+      "descriptionId": "launcher.catalog.brave-bin.description"
+    },
+    {
+      "package": "vivaldi",
+      "label": "Vivaldi",
+      "description": "Web browser",
+      "repository": "extra",
+      "labelId": "launcher.catalog.vivaldi.label",
+      "descriptionId": "launcher.catalog.vivaldi.description"
+    },
+    {
+      "package": "torbrowser-launcher",
+      "label": "Tor Browser",
+      "description": "Privacy browser",
+      "repository": "extra",
+      "labelId": "launcher.catalog.torbrowser-launcher.label",
+      "descriptionId": "launcher.catalog.torbrowser-launcher.description"
+    },
+    {
+      "package": "thunderbird",
+      "label": "Thunderbird",
+      "description": "Email and calendar",
+      "repository": "extra",
+      "labelId": "launcher.catalog.thunderbird.label",
+      "descriptionId": "launcher.catalog.thunderbird.description"
+    },
+    {
+      "package": "telegram-desktop",
+      "label": "Telegram",
+      "description": "Messaging",
+      "repository": "extra",
+      "labelId": "launcher.catalog.telegram-desktop.label",
+      "descriptionId": "launcher.catalog.telegram-desktop.description"
+    },
+    {
+      "package": "signal-desktop",
+      "label": "Signal",
+      "description": "Private messaging",
+      "repository": "extra",
+      "labelId": "launcher.catalog.signal-desktop.label",
+      "descriptionId": "launcher.catalog.signal-desktop.description"
+    },
+    {
+      "package": "element-desktop",
+      "label": "Element",
+      "description": "Matrix messaging",
+      "repository": "extra",
+      "labelId": "launcher.catalog.element-desktop.label",
+      "descriptionId": "launcher.catalog.element-desktop.description"
+    },
+    {
+      "package": "slack-desktop",
+      "label": "Slack",
+      "description": "Team messaging",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.slack-desktop.label",
+      "descriptionId": "launcher.catalog.slack-desktop.description"
+    },
+    {
+      "package": "vesktop-bin",
+      "label": "Vesktop",
+      "description": "Discord client",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.vesktop-bin.label",
+      "descriptionId": "launcher.catalog.vesktop-bin.description"
+    },
+    {
+      "package": "zoom",
+      "label": "Zoom",
+      "description": "Video meetings",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.zoom.label",
+      "descriptionId": "launcher.catalog.zoom.description"
+    },
+    {
+      "package": "libreoffice-fresh",
+      "label": "LibreOffice",
+      "description": "Documents, spreadsheets and presentations",
+      "repository": "extra",
+      "labelId": "launcher.catalog.libreoffice-fresh.label",
+      "descriptionId": "launcher.catalog.libreoffice-fresh.description"
+    },
+    {
+      "package": "joplin-desktop",
+      "label": "Joplin",
+      "description": "Notes and notebooks",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.joplin-desktop.label",
+      "descriptionId": "launcher.catalog.joplin-desktop.description"
+    },
+    {
+      "package": "foliate",
+      "label": "Foliate",
+      "description": "E-book reader",
+      "repository": "extra",
+      "labelId": "launcher.catalog.foliate.label",
+      "descriptionId": "launcher.catalog.foliate.description"
+    },
+    {
+      "package": "shotcut",
+      "label": "Shotcut",
+      "description": "Video editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.shotcut.label",
+      "descriptionId": "launcher.catalog.shotcut.description"
+    },
+    {
+      "package": "rawtherapee",
+      "label": "RawTherapee",
+      "description": "Photo editing",
+      "repository": "extra",
+      "labelId": "launcher.catalog.rawtherapee.label",
+      "descriptionId": "launcher.catalog.rawtherapee.description"
+    },
+    {
+      "package": "vscodium-bin",
+      "label": "VSCodium",
+      "description": "Code editor",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.vscodium-bin.label",
+      "descriptionId": "launcher.catalog.vscodium-bin.description"
+    },
+    {
+      "package": "android-studio",
+      "label": "Android Studio",
+      "description": "Android development",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.android-studio.label",
+      "descriptionId": "launcher.catalog.android-studio.description"
+    },
+    {
+      "package": "bottles",
+      "label": "Bottles",
+      "description": "Run Windows applications",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.bottles.label",
+      "descriptionId": "launcher.catalog.bottles.description"
+    },
+    {
+      "package": "protonup-qt",
+      "label": "ProtonUp-Qt",
+      "description": "Manage game compatibility tools",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.protonup-qt.label",
+      "descriptionId": "launcher.catalog.protonup-qt.description"
+    },
+    {
+      "package": "obsidian",
+      "label": "Obsidian",
+      "description": "Notes and knowledge",
+      "repository": "extra",
+      "labelId": "launcher.catalog.obsidian.label",
+      "descriptionId": "launcher.catalog.obsidian.description"
+    },
+    {
+      "package": "calibre",
+      "label": "Calibre",
+      "description": "E-book library",
+      "repository": "extra",
+      "labelId": "launcher.catalog.calibre.label",
+      "descriptionId": "launcher.catalog.calibre.description"
+    },
+    {
+      "package": "okular",
+      "label": "Okular",
+      "description": "PDF reader",
+      "repository": "extra",
+      "labelId": "launcher.catalog.okular.label",
+      "descriptionId": "launcher.catalog.okular.description"
+    },
+    {
+      "package": "blender",
+      "label": "Blender",
+      "description": "3D modeling and animation",
+      "repository": "extra",
+      "labelId": "launcher.catalog.blender.label",
+      "descriptionId": "launcher.catalog.blender.description"
+    },
+    {
+      "package": "kdenlive",
+      "label": "Kdenlive",
+      "description": "Video editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.kdenlive.label",
+      "descriptionId": "launcher.catalog.kdenlive.description"
+    },
+    {
+      "package": "audacity",
+      "label": "Audacity",
+      "description": "Audio editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.audacity.label",
+      "descriptionId": "launcher.catalog.audacity.description"
+    },
+    {
+      "package": "ardour",
+      "label": "Ardour",
+      "description": "Music recording and production",
+      "repository": "extra",
+      "labelId": "launcher.catalog.ardour.label",
+      "descriptionId": "launcher.catalog.ardour.description"
+    },
+    {
+      "package": "darktable",
+      "label": "Darktable",
+      "description": "Photo editing",
+      "repository": "extra",
+      "labelId": "launcher.catalog.darktable.label",
+      "descriptionId": "launcher.catalog.darktable.description"
+    },
+    {
+      "package": "handbrake",
+      "label": "HandBrake",
+      "description": "Video conversion",
+      "repository": "extra",
+      "labelId": "launcher.catalog.handbrake.label",
+      "descriptionId": "launcher.catalog.handbrake.description"
+    },
+    {
+      "package": "qbittorrent",
+      "label": "qBittorrent",
+      "description": "Torrent downloads",
+      "repository": "extra",
+      "labelId": "launcher.catalog.qbittorrent.label",
+      "descriptionId": "launcher.catalog.qbittorrent.description"
+    },
+    {
+      "package": "transmission-gtk",
+      "label": "Transmission",
+      "description": "Torrent downloads",
+      "repository": "extra",
+      "labelId": "launcher.catalog.transmission-gtk.label",
+      "descriptionId": "launcher.catalog.transmission-gtk.description"
+    },
+    {
+      "package": "filezilla",
+      "label": "FileZilla",
+      "description": "File transfer",
+      "repository": "extra",
+      "labelId": "launcher.catalog.filezilla.label",
+      "descriptionId": "launcher.catalog.filezilla.description"
+    },
+    {
+      "package": "nextcloud-client",
+      "label": "Nextcloud",
+      "description": "File synchronization",
+      "repository": "extra",
+      "labelId": "launcher.catalog.nextcloud-client.label",
+      "descriptionId": "launcher.catalog.nextcloud-client.description"
+    },
+    {
+      "package": "syncthing",
+      "label": "Syncthing",
+      "description": "File synchronization",
+      "repository": "extra",
+      "labelId": "launcher.catalog.syncthing.label",
+      "descriptionId": "launcher.catalog.syncthing.description"
+    },
+    {
+      "package": "bitwarden",
+      "label": "Bitwarden",
+      "description": "Password manager",
+      "repository": "extra",
+      "labelId": "launcher.catalog.bitwarden.label",
+      "descriptionId": "launcher.catalog.bitwarden.description"
+    },
+    {
+      "package": "zed",
+      "label": "Zed",
+      "description": "Code editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.zed.label",
+      "descriptionId": "launcher.catalog.zed.description"
+    },
+    {
+      "package": "kate",
+      "label": "Kate",
+      "description": "Text editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.kate.label",
+      "descriptionId": "launcher.catalog.kate.description"
+    },
+    {
+      "package": "geany",
+      "label": "Geany",
+      "description": "Code editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.geany.label",
+      "descriptionId": "launcher.catalog.geany.description"
+    },
+    {
+      "package": "dbeaver",
+      "label": "DBeaver",
+      "description": "Database client",
+      "repository": "extra",
+      "labelId": "launcher.catalog.dbeaver.label",
+      "descriptionId": "launcher.catalog.dbeaver.description"
+    },
+    {
+      "package": "wireshark-qt",
+      "label": "Wireshark",
+      "description": "Network inspection",
+      "repository": "extra",
+      "labelId": "launcher.catalog.wireshark-qt.label",
+      "descriptionId": "launcher.catalog.wireshark-qt.description"
+    },
+    {
+      "package": "remmina",
+      "label": "Remmina",
+      "description": "Remote desktop",
+      "repository": "extra",
+      "labelId": "launcher.catalog.remmina.label",
+      "descriptionId": "launcher.catalog.remmina.description"
+    },
+    {
+      "package": "virtualbox",
+      "label": "VirtualBox",
+      "description": "Virtual machines",
+      "repository": "extra",
+      "labelId": "launcher.catalog.virtualbox.label",
+      "descriptionId": "launcher.catalog.virtualbox.description"
+    },
+    {
+      "package": "virt-manager",
+      "label": "Virtual Machine Manager",
+      "description": "Virtual machines",
+      "repository": "extra",
+      "labelId": "launcher.catalog.virt-manager.label",
+      "descriptionId": "launcher.catalog.virt-manager.description"
+    },
+    {
+      "package": "prismlauncher",
+      "label": "Prism Launcher",
+      "description": "Minecraft launcher",
+      "repository": "extra",
+      "labelId": "launcher.catalog.prismlauncher.label",
+      "descriptionId": "launcher.catalog.prismlauncher.description"
+    },
+    {
+      "package": "retroarch",
+      "label": "RetroArch",
+      "description": "Retro games",
+      "repository": "extra",
+      "labelId": "launcher.catalog.retroarch.label",
+      "descriptionId": "launcher.catalog.retroarch.description"
+    },
+    {
+      "package": "gamescope",
+      "label": "Gamescope",
+      "description": "Game display compositor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.gamescope.label",
+      "descriptionId": "launcher.catalog.gamescope.description"
+    },
+    {
+      "package": "mangohud",
+      "label": "MangoHud",
+      "description": "Game performance overlay",
+      "repository": "extra",
+      "labelId": "launcher.catalog.mangohud.label",
+      "descriptionId": "launcher.catalog.mangohud.description"
+    },
+    {
+      "package": "pavucontrol",
+      "label": "PulseAudio Volume Control",
+      "description": "Sound settings",
+      "repository": "extra",
+      "labelId": "launcher.catalog.pavucontrol.label",
+      "descriptionId": "launcher.catalog.pavucontrol.description"
+    },
+    {
+      "package": "gparted",
+      "label": "GParted",
+      "description": "Disk partitions",
+      "repository": "extra",
+      "labelId": "launcher.catalog.gparted.label",
+      "descriptionId": "launcher.catalog.gparted.description"
+    },
+    {
+      "package": "baobab",
+      "label": "Disk Usage Analyzer",
+      "description": "Find large files",
+      "repository": "extra",
+      "labelId": "launcher.catalog.baobab.label",
+      "descriptionId": "launcher.catalog.baobab.description"
+    },
+    {
+      "package": "mission-center",
+      "label": "Mission Center",
+      "description": "System monitor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.mission-center.label",
+      "descriptionId": "launcher.catalog.mission-center.description"
     }
   ]
 }

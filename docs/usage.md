@@ -7,6 +7,14 @@ characters; apps and commands appear immediately. The Everything filter is the
 default each time you open the launcher. Its other choices narrow results when
 useful, and also work from deep menu sections.
 
+Ordinary launcher search also offers installation for missing common applications,
+including Discord, Google Chrome, Steam and OBS Studio. Installed applications
+keep their launch result; their install offer is omitted. The catalog covers
+browsers, messaging, office, creative, gaming, developer and utility applications.
+Selecting an install result opens the existing package-manager terminal. AUR
+applications require paru or yay; the launcher explains that requirement when
+neither helper is available. Searching installs nothing automatically.
+
 Enter opens the selected result. Tab opens item actions: switch to an app's
 existing window, pin or delete a clipboard item, or open a file's folder, copy
 its path or file, share it, annotate an image or convert media. Image and small

@@ -232,6 +232,70 @@ TestCase {
         compare(worker.command.slice(-3).join("|"), "launcher-workflows|capture|capture-screen");
         worker.running = false;
     }
+    function test_missing_common_apps_offer_install_from_ordinary_search() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
+            capabilities: {
+                packages: true,
+                aur: true
+            },
+            packages: []
+        });
+        const originalApps = NacreApps.all;
+        NacreApps.all = [];
+        for (const query of ["discord", "chrome", "steam", "obs"]) {
+            field.text = query;
+            const offer = value.entries.find(row => row.operation === "install-package" && row.installOffer);
+            verify(offer !== undefined, query);
+            verify(!offer.disabled);
+            verify(offer.description.startsWith("Install "));
+        }
+        field.text = "disc";
+        compare(value.entries[0].package, "discord");
+        const entry = value.entries[0];
+        value.run(entry);
+        verify(AppLaunch.commands.length > 0);
+        compare(AppLaunch.commands[0].slice(-2).join("|"), "install|discord");
+        NacreApps.all = originalApps;
+        const oldApps = NacreApps.all;
+        try {
+            NacreApps.all = [...oldApps,
+                {
+                    id: "com.discordapp.Discord",
+                    name: "Discord",
+                    icon: "",
+                    comment: "Chat"
+                }
+            ];
+            field.text = "discord";
+            verify(!value.entries.some(row => row.installOffer && row.package === "discord"));
+            compare(value.entries[0].kind, "app");
+        } finally {
+            NacreApps.all = oldApps;
+        }
+        value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
+            packages: [
+                {
+                    name: "steam"
+                }
+            ],
+            capabilities: {
+                packages: true,
+                aur: false
+            }
+        });
+        field.text = "steam";
+        verify(!value.entries.some(row => row.installOffer && row.package === "steam"));
+        NacreApps.all = [];
+        field.text = "chrome";
+        const unsupported = value.entries.find(row => row.installOffer && row.package === "google-chrome");
+        verify(unsupported.disabled);
+        verify(unsupported.reason.includes("paru"));
+        field.text = "spotify";
+        verify(value.entries.find(row => row.installOffer && row.package === "spotify").disabled);
+        NacreApps.all = originalApps;
+    }
+
     function test_full_emoji_catalog_and_stop_are_available_during_other_work() {
         tryVerify(() => NacreMenu.emojiCatalog.length === 3944);
         const penguin = NacreMenu.emojiCatalog.find(row => row.value === "🐧");
