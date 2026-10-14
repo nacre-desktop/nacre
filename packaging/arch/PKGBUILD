@@ -3,7 +3,7 @@
 # Maintainer: siverteh <92440237+Siverteh@users.noreply.github.com>
 pkgbase=nacre
 pkgname=('nacre' 'nacre-ai' 'nacre-brain' 'nacre-session-hyprland' 'nacre-session-niri')
-pkgver=0.1.0dev2.r380.ga74d79b162a1
+pkgver=0.1.0dev2.r382.g9c9e8792ed16
 pkgrel=1
 pkgdesc='Desktop shell and guided per-user setup'
 arch=('x86_64')
@@ -15,7 +15,7 @@ options=('!lto')
 depends=('python' 'python-pillow' 'orient=0.1.0dev6' 'quickshell' 'xdg-desktop-portal' 'uwsm' 'fish' 'kitty' 'fastfetch' 'dolphin' 'kio-extras' 'qt6ct' 'breeze' 'kconfig' 'kcolorscheme' 'gtk3' 'hypridle' 'hyprlock' 'grim' 'slurp' 'wl-clipboard' 'libnotify' 'brightnessctl' 'ffmpeg' 'fontconfig' 'librsvg' 'qt6-imageformats' 'qt6-multimedia' 'qt6-multimedia-ffmpeg' 'ddcutil' 'wtype' 'papirus-icon-theme' 'networkmanager' 'bluez' 'pipewire' 'wireplumber' 'xdg-utils' 'rofi' 'kwallet-pam' 'polkit-gnome' 'cliphist' 'qt6-base' 'glibc' 'python-gobject' 'libgweather-4' 'geoclue' 'bash' 'jq' 'qt6-declarative' 'libgcc' 'libstdc++' 'glib2' 'python-dbus' 'libsecret' 'openssh' 'tmux' 'python-yaml' 'hyprland>=0.56.2' 'xdg-desktop-portal-hyprland' 'niri>=26.04' 'xwayland-satellite' 'xdg-desktop-portal-gnome')
 makedepends=('git' 'python-build' 'python-installer' 'python-hatchling' 'nodejs' 'rust' 'cargo' 'cmake')
 checkdepends=('ruff' 'npm' 'lua' 'xorg-server-xvfb' 'xorg-xauth' 'mesa' 'dbus' 'ttf-dejavu' 'python-dbus-next' 'bubblewrap')
-source=('nacre::git+https://github.com/nacre-desktop/nacre.git#commit=a74d79b162a191d7c4db75046393abc6e3f8962d' 'orient::git+https://github.com/nacre-desktop/orient.git#commit=17bf36efc7f6e85c2ded2ce4b7bd4cda4ea659b5' 'IBMPlexSans.ttf::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf' 'IBMPlexSans-OFL.txt::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/OFL.txt' 'MaterialSymbolsRounded.ttf::https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf' 'MaterialSymbols-LICENSE.txt::https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/LICENSE')
+source=('nacre::git+https://github.com/nacre-desktop/nacre.git#commit=9c9e8792ed16cbfa0f47ab9a7f7ab9eb1caf5951' 'orient::git+https://github.com/nacre-desktop/orient.git#commit=17bf36efc7f6e85c2ded2ce4b7bd4cda4ea659b5' 'IBMPlexSans.ttf::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf' 'IBMPlexSans-OFL.txt::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/OFL.txt' 'MaterialSymbolsRounded.ttf::https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf' 'MaterialSymbols-LICENSE.txt::https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/LICENSE')
 sha256sums=('SKIP' 'SKIP' '3b031aa4216174205bd8471f88a49b91f093169e9e87bd5262242bc5967fe2e3' '7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da' '95b24392bb49efd1bc3e92cff4e2452ad094461bab7c97e7d8723fab97e330ca' '58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd')
 
 prepare() {
