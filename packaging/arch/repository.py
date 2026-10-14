@@ -272,9 +272,18 @@ def build(root, artifacts, output, fingerprint, revision, run_id, previous=None)
         packages=records,
         retained=retained,
     )
+    shutil.copy2(artifacts / "nacre/PKGBUILD", destination / "PKGBUILD")
+    shutil.copy2(artifacts / "nacre/.SRCINFO", destination / ".SRCINFO")
     manifest = destination / "release.json"
     manifest.write_text(json.dumps(release, indent=2, sort_keys=True) + "\n")
     sign(manifest, fingerprint)
+    package_checksums = destination / "PACKAGE-SHA256SUMS"
+    assets = [destination / item["filename"] for item in records.values()]
+    assets += [destination / "PKGBUILD", destination / ".SRCINFO", manifest]
+    package_checksums.write_text(
+        "".join(digest(path) + "  " + path.name + "\n" for path in assets)
+    )
+    sign(package_checksums, fingerprint)
     checksums = destination / "SHA256SUMS"
     checksums.write_text(
         "".join(
@@ -286,6 +295,7 @@ def build(root, artifacts, output, fingerprint, revision, run_id, previous=None)
     sign(checksums, fingerprint)
     shutil.copy2(root / "packaging/keys/nacre-repo.asc", output / "nacre-repo.asc")
     shutil.copy2(root / "packaging/arch/bootstrap.sh", output / "install-arch.sh")
+    sign(output / "install-arch.sh", fingerprint)
     links = "\n".join(
         '<li><a href="arch/dev/x86_64/'
         + html.escape(record["filename"], quote=True)

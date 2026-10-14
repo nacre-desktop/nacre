@@ -80,6 +80,7 @@ class RepositoryTests(unittest.TestCase):
             + "a" * 40
             + "')\n"
         )
+        (self.artifacts / "nacre/.SRCINFO").write_text("pkgbase = nacre\n")
         (self.artifacts / "installed-runtime.log").write_text(
             "FRESH_USER_PACKAGE_PROOF_OK\n" * 3
         )

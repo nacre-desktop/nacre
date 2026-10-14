@@ -28,10 +28,11 @@ jobs:
       eligible: ${{ steps.candidate.outputs.eligible }}
     steps:
       - name: Repository tools
-        run: pacman -Syu --noconfirm --needed git github-cli python gnupg libarchive
+        run: pacman -Syu --noconfirm --needed git github-cli python gnupg libarchive sudo
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Admit only successful main builds with passing source CI
         id: candidate
         env:
@@ -64,6 +65,25 @@ jobs:
           else
             python packaging/arch/repository.py candidate --output site --revision "$TESTED_REVISION" --run-id "$PACKAGE_RUN_ID"
           fi
+      - name: Verify signed pacman installation and missing-compositor setup
+        if: steps.candidate.outputs.eligible == 'true'
+        run: |
+          set -eu
+          ! command -v niri
+          pacman-key --init
+          pacman-key --populate archlinux
+          pacman-key --add packaging/keys/nacre-repo.asc
+          pacman-key --lsign-key "$(cat packaging/keys/nacre-repo.fingerprint)"
+          printf '\n[nacre-dev]\nSigLevel = Required DatabaseRequired TrustedOnly\nServer = file://%s/site/arch/dev/x86_64\n' "$PWD" >> /etc/pacman.conf
+          pacman -Syu --noconfirm --needed nacre
+          ! command -v niri
+          ! command -v hyprland
+          useradd -m nacre-package-test-delivery
+          printf 'nacre-package-test-delivery ALL=(ALL) NOPASSWD: /usr/bin/pacman\n' > /etc/sudoers.d/nacre-delivery
+          chmod 440 /etc/sudoers.d/nacre-delivery
+          # Keep pacman interactive in the product; this controlled fixture
+          # supplies confirmation only for its expected dependency transaction.
+          printf 'y\n' | runuser -u nacre-package-test-delivery -- python packaging/arch/test-delivery.py
       - name: Preserve an immutable downloadable package cut
         if: steps.candidate.outputs.eligible == 'true'
         env:
@@ -83,7 +103,7 @@ jobs:
           else:
               files = [folder/record['filename'] for record in receipt['packages'].values()]
               files += [pathlib.Path(str(path)+'.sig') for path in files]
-              files += [folder/'release.json',folder/'release.json.sig',folder/'SHA256SUMS',folder/'SHA256SUMS.sig',pathlib.Path('site/nacre-repo.asc'),pathlib.Path('site/install-arch.sh')]
+              files += [folder/'release.json',folder/'release.json.sig',folder/'PACKAGE-SHA256SUMS',folder/'PACKAGE-SHA256SUMS.sig',folder/'PKGBUILD',folder/'.SRCINFO',pathlib.Path('site/nacre-repo.asc'),pathlib.Path('site/install-arch.sh'),pathlib.Path('site/install-arch.sh.sig')]
               subprocess.run(['gh','release','create',tag,'--target',receipt['sourceRevision'],'--prerelease','--latest=false','--title','Nacre Arch development '+receipt['packages']['nacre']['version'],'--notes','Tested Arch/CachyOS preview. Install through the signed pacman repository for dependency resolution and updates. Source and installed-runtime proof are linked in release.json.',*[str(path) for path in files]], check=True)
           PY
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
