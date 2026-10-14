@@ -40,6 +40,9 @@ Item {
     readonly property bool sampling: clock.running
     readonly property bool canSeek: !!(shouldUpdate && player?.canControl && player?.canSeek && player?.positionSupported && player?.lengthSupported && Number.isFinite(player.length) && player.length > 0)
     readonly property real progress: player?.lengthSupported && player?.length > 0 ? Model.fraction(positionSeconds / player.length) : 0
+    readonly property bool audioPlaying: shouldUpdate && visible && player?.isPlaying === true && !WallpaperPlayback.sleeping && !WallpaperPlayback.locked
+    readonly property bool localAudio: audioPlaying && NacreMediaDetails.spectrum.some(value => Number.isFinite(value) && value > .005)
+    readonly property real bassLevel: localAudio && NacreTokens.motionEnabled ? NacreMediaDetails.spectrum.slice(0, 8).reduce((sum, value) => sum + (Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0), 0) / 8 : 0
     readonly property bool compact: width < 680
     readonly property real inset: width < 400 ? 14 : 22
     readonly property real secondaryHeight: Math.max(78, Math.min(150, height * .22))
@@ -268,13 +271,21 @@ Item {
                 id: metadata
                 objectName: "mediaMetadata"
                 width: parent.width
-                height: Math.max(72, Math.min(root.compact ? 144 : 260, parent.height - transport.height - 20))
+                height: Math.max(72, Math.min(root.compact ? 172 : 310, parent.height - transport.height - 20))
                 y: Math.max(0, (parent.height - height - transport.height - 16) / 2)
                 NacreClip {
                     id: cover
                     objectName: "fullAlbum"
-                    width: Math.min(parent.height, parent.width * (root.compact ? .32 : .4))
+                    width: Math.min(parent.height, parent.width * (root.localAudio ? (root.compact ? .32 : .4) : (root.compact ? .4 : .52)))
                     height: width
+                    scale: 1 + root.bassLevel * .04
+                    Behavior on scale {
+                        enabled: root.localAudio && NacreTokens.motionEnabled
+                        NumberAnimation {
+                            duration: 90
+                            easing.type: Easing.OutQuad
+                        }
+                    }
                     anchors.verticalCenter: parent.verticalCenter
                     radius: 14
                     color: Qt.alpha(root.pagePrimary, .12)
@@ -342,39 +353,15 @@ Item {
                     id: spectrum
                     objectName: "mediaSpectrum"
                     width: parent.width
-                    height: root.compact ? 32 : 76
+                    visible: root.localAudio
+                    height: visible ? (root.compact ? 32 : 76) : 0
                     property var samples: NacreMediaDetails.spectrum
                     property color first: root.pagePrimary
                     property color second: root.pageSecondary
                     property color third: NacreColours.palette.m3tertiary
-                    readonly property bool active: root.shouldUpdate && root.visible && root.player?.isPlaying === true && NacreTokens.motionEnabled && !WallpaperPlayback.sleeping && !WallpaperPlayback.locked
-                    readonly property bool audible: samples.some(value => Number.isFinite(value) && value > .005)
-                    property bool simulated: false
-                    property real phase: 0
-                    function syncMode() {
-                        if (!active || audible) {
-                            silence.stop();
-                            simulated = false;
-                        } else if (!simulated && !silence.running)
-                            silence.start();
-                    }
-                    onActiveChanged: syncMode()
-                    onAudibleChanged: syncMode()
-                    Component.onCompleted: syncMode()
+                    readonly property bool active: root.audioPlaying && NacreTokens.motionEnabled
                     Accessible.role: Accessible.Indicator
-                    Accessible.name: simulated ? NacreI18n.tr("dashboard.media-page.playback-animation", "Playback animation") : NacreI18n.tr("dashboard.media-page.audio-activity", "Audio activity")
-                    Timer {
-                        id: silence
-                        interval: 1200
-                        onTriggered: spectrum.simulated = spectrum.active && !spectrum.audible
-                    }
-                    Timer {
-                        objectName: "mediaPlaybackAnimation"
-                        interval: 80
-                        repeat: true
-                        running: spectrum.simulated && spectrum.active
-                        onTriggered: spectrum.phase = (spectrum.phase + .16) % (Math.PI * 2)
-                    }
+                    Accessible.name: NacreI18n.tr("dashboard.media-page.audio-activity", "Audio activity")
                     // Native items survive surface moves without a Canvas texture
                     // repaint, and only change when the shared audio data changes.
                     Repeater {
@@ -382,7 +369,7 @@ Item {
                         delegate: Rectangle {
                             required property int index
                             readonly property real slot: spectrum.width / 32
-                            readonly property real level: !spectrum.active ? 0 : spectrum.simulated ? .06 + .3 * Math.pow((1 + Math.sin(index * .63 + spectrum.phase)) / 2, 2) + .12 * Math.pow((1 + Math.sin(index * .21 - spectrum.phase * .7)) / 2, 2) : Number.isFinite(spectrum.samples[index]) ? Math.max(0, Math.min(1, spectrum.samples[index])) : 0
+                            readonly property real level: spectrum.active && Number.isFinite(spectrum.samples[index]) ? Math.max(0, Math.min(1, spectrum.samples[index])) : 0
                             objectName: "mediaSpectrumBar" + index
                             x: index * slot + (slot - width) / 2
                             y: spectrum.height - height
@@ -405,15 +392,6 @@ Item {
                             }
                             opacity: spectrum.active ? .9 : .25
                         }
-                    }
-                    NacreText {
-                        objectName: "mediaPlaybackAnimationLabel"
-                        anchors.right: parent.right
-                        y: 0
-                        visible: spectrum.simulated
-                        text: NacreI18n.tr("dashboard.media-page.playback-animation", "Playback animation")
-                        font.pointSize: 7
-                        color: NacreTokens.mutedInk
                     }
                 }
                 Controls.NacreMediaSlider {

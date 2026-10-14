@@ -295,8 +295,10 @@ Flickable {
                 anchors.fill: parent
                 property var values: hourly.points
                 property color first: NacreTokens.accent
+                property color second: NacreTokens.orientSecondary
                 onValuesChanged: requestPaint()
                 onFirstChanged: requestPaint()
+                onSecondChanged: requestPaint()
                 onWidthChanged: requestPaint()
                 onHeightChanged: requestPaint()
                 onAvailableChanged: if (available)
@@ -307,7 +309,10 @@ Flickable {
                     if (!values.length)
                         return;
                     ctx.lineWidth = 2;
-                    ctx.strokeStyle = first;
+                    const temperature = ctx.createLinearGradient(0, 0, 0, height);
+                    temperature.addColorStop(0, first);
+                    temperature.addColorStop(1, second);
+                    ctx.strokeStyle = temperature;
                     ctx.beginPath();
                     values.forEach((p, i) => {
                         if (i)
@@ -467,7 +472,17 @@ Flickable {
                             width: Math.max(3, parent.width * (parent.parent.modelData.high - parent.parent.modelData.low) / root.span)
                             height: parent.height
                             radius: 2.5
-                            color: NacreTokens.accent
+                            gradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop {
+                                    position: 0
+                                    color: NacreTokens.orientSecondary
+                                }
+                                GradientStop {
+                                    position: 1
+                                    color: NacreTokens.accent
+                                }
+                            }
                         }
                     }
                     NacreText {

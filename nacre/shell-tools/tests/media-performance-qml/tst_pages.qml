@@ -266,22 +266,25 @@ TestCase {
             actor,
             view
         } = setup();
-        for (const size of [[940, 562], [516, 472], [300, 400], [1400, 800]]) {
-            view.width = size[0];
-            view.height = size[1];
-            wait(20);
-            for (const name of ["fullAlbum", "fullMediaTitle", "mediaTransport", "mediaSecondary", "fullPlayerChoices"]) {
-                const item = findChild(view, name);
-                const point = item.mapToItem(view, 0, 0);
-                verify(point.x >= 0 && point.y >= 0, name + " begins inside the page");
-                verify(point.x + item.width <= view.width + .01, name + " fits width");
-                verify(point.y + item.height <= view.height + .01, name + " fits height");
+        for (const audio of [[], Array(32).fill(.8)]) {
+            NacreMediaDetails.spectrum = audio;
+            for (const size of [[940, 562], [516, 472], [300, 400], [1400, 800]]) {
+                view.width = size[0];
+                view.height = size[1];
+                wait(20);
+                for (const name of ["fullAlbum", "fullMediaTitle", "mediaTransport", "mediaSecondary", "fullPlayerChoices"]) {
+                    const item = findChild(view, name);
+                    const point = item.mapToItem(view, 0, 0);
+                    verify(point.x >= 0 && point.y >= 0, name + " begins inside the page");
+                    verify(point.x + item.width <= view.width + .01, name + " fits width");
+                    verify(point.y + item.height <= view.height + .01, name + " fits height");
+                }
+                const title = findChild(view, "fullMediaTitle");
+                const transport = findChild(view, "mediaTransport");
+                const metadata = findChild(view, "mediaMetadata");
+                verify(title.mapToItem(view, 0, title.height).y <= transport.mapToItem(view, 0, 0).y, "metadata stays above controls");
+                compare(transport.y - metadata.y - metadata.height, 16, "artwork and transport stay grouped at every size");
             }
-            const title = findChild(view, "fullMediaTitle");
-            const transport = findChild(view, "mediaTransport");
-            const metadata = findChild(view, "mediaMetadata");
-            verify(title.mapToItem(view, 0, title.height).y <= transport.mapToItem(view, 0, 0).y, "metadata stays above controls");
-            compare(transport.y - metadata.y - metadata.height, 16, "artwork and transport stay grouped at every size");
         }
     }
     function test_spectrum_lease_stops_when_hidden() {
@@ -330,7 +333,7 @@ TestCase {
         view.shouldUpdate = false;
         compare(bar.height, 2);
     }
-    function test_silent_playback_animation_yields_to_audio_and_stops_when_inactive() {
+    function test_cover_expands_without_audio_and_pulses_only_with_measured_sound() {
         const {
             actor,
             view
@@ -338,46 +341,38 @@ TestCase {
         DesktopSettings.data = {
             animations: true
         };
-        const spectrum = findChild(view, "mediaSpectrum"), timer = findChild(view, "mediaPlaybackAnimation");
+        const cover = findChild(view, "fullAlbum"), spectrum = findChild(view, "mediaSpectrum");
         NacreMediaDetails.spectrum = Array(32).fill(0);
-        compare(spectrum.simulated, false);
-        wait(1300);
-        verify(spectrum.simulated);
-        verify(timer.running);
-        verify(findChild(view, "mediaPlaybackAnimationLabel").visible);
-        const phase = spectrum.phase;
-        wait(100);
-        verify(spectrum.phase !== phase);
-        NacreMediaDetails.spectrum = Array(32).fill(.3);
-        compare(spectrum.simulated, false);
-        compare(timer.running, false);
-        NacreMediaDetails.spectrum = Array(32).fill(0);
+        const quietWidth = cover.width;
+        compare(cover.scale, 1);
+        compare(spectrum.visible, false);
+        wait(1400);
+        compare(cover.scale, 1);
+        compare(findChild(view, "mediaPlaybackAnimation"), null);
+        NacreMediaDetails.spectrum = Array(32).fill(.8);
+        verify(cover.width < quietWidth);
+        verify(spectrum.visible);
+        tryCompare(cover, "scale", 1.032);
+        NacreMediaDetails.spectrum = Array(32).fill(.2);
+        tryCompare(cover, "scale", 1.008);
         actor.isPlaying = false;
-        wait(1300);
-        compare(spectrum.simulated, false);
-        compare(timer.running, false);
+        tryCompare(cover, "scale", 1);
+        compare(cover.width, quietWidth);
+        compare(spectrum.visible, false);
         actor.isPlaying = true;
-        wait(1300);
-        verify(timer.running);
-        view.visible = false;
-        compare(timer.running, false);
-        compare(spectrum.simulated, false);
-        view.visible = true;
-        wait(1300);
-        verify(timer.running);
         DesktopSettings.data = {
             reduceMotion: true
         };
-        compare(timer.running, false);
+        tryCompare(cover, "scale", 1);
         DesktopSettings.data = {
             animations: true
         };
         WallpaperPlayback.locked = true;
-        wait(1300);
-        compare(timer.running, false);
+        tryCompare(cover, "scale", 1);
         WallpaperPlayback.locked = false;
-        view.shouldUpdate = false;
-        compare(timer.running, false);
+        view.visible = false;
+        tryCompare(cover, "scale", 1);
+        compare(NacreMediaDetails.mediaSpectrumUsers, 0);
     }
     function test_cached_city_photo_ready_on_creation_and_reopening() {
         NacreDashboardState.weatherPhotos = true;
