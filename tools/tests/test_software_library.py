@@ -30,9 +30,9 @@ class SoftwareLibraryIntegrationTests(unittest.TestCase):
             repo.mkdir()
             identity = [
                 "-c",
-                "user.name=siverteh",
+                "user.name=Nacre Fixture",
                 "-c",
-                "user.email=92440237+Siverteh@users.noreply.github.com",
+                "user.email=fixture@example.com",
             ]
 
             def git(*args):
