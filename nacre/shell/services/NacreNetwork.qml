@@ -81,7 +81,7 @@ Singleton {
     NacreHelperTask {
         id: reader
         objectName: "networkReader"
-        command: ["python3", NacrePaths.tools + "/network-state.py"]
+        command: [NacrePaths.helperBinary, "network-state"]
         onOutput: text => root.publish(text)
         onExited: (exitCode, exitStatus) => {
             if ((!root.received || exitCode !== 0) && !root.error)
@@ -95,7 +95,7 @@ Singleton {
     Process {
         id: monitor
         objectName: "networkMonitor"
-        command: ["nmcli", "--colors", "no", "monitor"]
+        command: [NacrePaths.helperBinary, "network-state", "watch"]
         environment: ({
                 LC_ALL: "C"
             })
