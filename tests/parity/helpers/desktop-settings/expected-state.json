@@ -8,7 +8,7 @@
       "naturalScroll": true,
       "gapsIn": 6,
       "gapsOut": 12,
-      "borderSize": 1,
+      "borderSize": 3,
       "rounding": 10,
       "frameWidth": 10,
       "frameRounding": 25,

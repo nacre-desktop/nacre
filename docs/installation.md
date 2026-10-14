@@ -60,8 +60,8 @@ nacre setup
 
 Pacman installs shared code and resolves repository dependencies. Run setup as
 your ordinary user, without sudo. Binary installation needs no compiler, npm or
-Python package downloads. The wizard confirms keyboard layout, compositor,
-optional AI tools, then asks before applying. `nacre setup --plan` shows the
+Python package downloads. The wizard inherits the keyboard layout, asks for
+compositor(s) and optional AI tools, then asks before applying. `nacre setup --plan` shows the
 complete private file plan. A custom profile is a validated JSON file; see
 [configuration](configuration.md).
 

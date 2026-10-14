@@ -4,7 +4,7 @@ hl.config({
     ["general.gaps_in"] = 6,
     ["general.gaps_out"] = 12,
     ["general.float_gaps"] = -1,
-    ["general.border_size"] = 1,
+    ["general.border_size"] = 3,
     ["general.resize_on_border"] = true,
     ["general.col.active_border"] = {
         colors = { var_primary, var_on_primary },

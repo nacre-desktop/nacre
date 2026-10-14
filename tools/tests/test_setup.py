@@ -481,8 +481,8 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertIn('include "desktop.kdl"', config.read_text())
                 self.assertIn('include "palette.kdl"', config.read_text())
                 appearance = (config.parent / "desktop.kdl").read_text()
-                self.assertIn("focus-ring { width 1; }", appearance)
-                self.assertIn("border { width 1; }", appearance)
+                self.assertIn("focus-ring { width 3; }", appearance)
+                self.assertIn("border { width 3; }", appearance)
                 self.assertIn("geometry-corner-radius 10", appearance)
                 self.assertIn("prefer-no-csd", appearance)
                 self.assertIn(
@@ -592,7 +592,7 @@ class PackageSetupTests(unittest.TestCase):
                     record = releases.deploy_package(
                         root, profile, {"layout": "no"}, "niri"
                     )
-                    width, rounding = (1, 10) if saved is None else (2, 7)
+                    width, rounding = (3, 10) if saved is None else (2, 7)
                     self.assertIn(
                         f"focus-ring {{ width {width}; }}", desktop.read_text()
                     )

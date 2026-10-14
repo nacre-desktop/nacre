@@ -103,6 +103,13 @@ actions. On niri, night light needs wlsunset and output gamma control. Niri disp
 changes support scale, mode and extension with rollback; mirroring is unavailable.
 Read [Nacre on niri](../README.md#nacre-on-niri) for limits.
 
+New Nacre sessions use a window border width of 3. On Niri this is measured in
+logical pixels: each display's scale determines its physical thickness, so scale
+1 draws 3 pixels and scale 2 draws 6. Niri handles fractional scales and moving
+windows between displays. Adjust **Settings → Desktop → Window border width**
+to suit your preference; saved widths remain intact when you update Nacre.
+See [Niri's border configuration](https://niri-wm.github.io/niri/Configuration%3A-Layout.html#width).
+
 [Optional AI and Brain](optional-apps.md) need separate setup. Supported panels
 can [open as ordinary windows](detachable-panels.md): Super+Ctrl+D detaches the
 open panel. Hyprland also supports holding Super and dragging it away from the edge.
