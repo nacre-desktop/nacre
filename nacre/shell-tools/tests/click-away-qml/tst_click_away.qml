@@ -84,6 +84,41 @@ TestCase {
         mouseClick(view, 20, 500);
         verify(!view.visibilities.osd);
     }
+    function test_pointer_controls_close_after_leaving_but_allow_header_to_panel_transfer() {
+        const view = createTemporaryObject(scene, test);
+        view.visibilities.launcher = false;
+        mouseMove(view, 350, 25);
+        view.visibilities.controlsPointerOwned = true;
+        view.visibilities.edgeMenu = "osd";
+        view.visibilities.osd = true;
+        wait(700);
+        verify(view.visibilities.osd);
+        mouseMove(view, 350, 100);
+        wait(180);
+        verify(view.visibilities.osd);
+        mouseMove(view, 350, 200);
+        wait(30);
+        verify(view.controlsEntered);
+        mouseMove(view, 20, 500);
+        wait(60);
+        verify(view.visibilities.osd);
+        tryCompare(view.visibilities, "osd", false, 400);
+    }
+    function test_pointer_controls_hold_geometry_changes_until_pointer_really_leaves() {
+        const view = createTemporaryObject(scene, test);
+        view.visibilities.launcher = false;
+        view.visibilities.controlsPointerOwned = true;
+        view.visibilities.edgeMenu = "osd";
+        view.visibilities.osd = true;
+        mouseMove(view, 350, 200);
+        wait(30);
+        verify(view.controlsEntered);
+        view.panels.osd.y = 400;
+        wait(250);
+        verify(view.visibilities.osd);
+        mouseMove(view, 100, 200);
+        tryCompare(view.visibilities, "osd", false, 400);
+    }
 
     function test_right_click_outside_also_dismisses() {
         const view = createTemporaryObject(scene, test);
@@ -303,6 +338,7 @@ TestCase {
                 property bool leftPinned: false
                 property bool dashboard: false
                 property bool osd: false
+                property bool controlsPointerOwned: false
                 property bool session: false
                 property bool previewOnly: false
                 property bool hoverDocked: false

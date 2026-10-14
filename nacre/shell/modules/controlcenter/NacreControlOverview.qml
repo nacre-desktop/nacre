@@ -7,7 +7,8 @@ Column {
     id: root
     required property var screen
     property bool active: true
-    signal detailsRequested(string section)
+    signal detailsRequested(string section, bool pointerOwned)
+    property bool pointerActivation: false
     readonly property var tileIds: NacreControlPreferences.tiles.filter(id => catalog.supported(id))
     function fullWidth(id) {
         return ["volume", "brightness", "mic-volume", "keyboard", "appearance"].includes(id);
@@ -26,7 +27,7 @@ Column {
     NacreControlCatalog {
         id: catalog
         screen: root.screen
-        onDetailsRequested: section => root.detailsRequested(section)
+        onDetailsRequested: section => root.detailsRequested(section, root.pointerActivation)
     }
     Component.onCompleted: if (NacreControlPreferences.optionalTiles.includes("vpn"))
         NacreVpn.refresh()
@@ -54,7 +55,7 @@ Column {
                         width: slot.width
                         kind: slot.modelData
                         monitor: NacreBrightness.getMonitorForScreen(root.screen)
-                        onDetailsRequested: section => root.detailsRequested(section)
+                        onDetailsRequested: (section, pointerOwned) => root.detailsRequested(section, pointerOwned)
                     }
                 }
                 Component {
@@ -95,8 +96,11 @@ Column {
                         navigation: ["network", "bluetooth", "battery"].includes(slot.modelData)
                         contextDetails: ["network", "bluetooth", "battery", "night", "dnd", "awake", "airplane", "vpn", "record", "mic"].includes(slot.modelData)
                         explanation: slot.modelData === "night" && !entry.available ? NacreControlTools.data.nightLightReason || NacreI18n.tr("controlcenter.details.night-unavailable", "Night light is unavailable on this compositor.") : ""
-                        onClicked: catalog.toggle(slot.modelData)
-                        onDetailsRequested: root.detailsRequested(slot.modelData)
+                        onClicked: {
+                            root.pointerActivation = pointerActivation;
+                            catalog.toggle(slot.modelData);
+                        }
+                        onDetailsRequested: root.detailsRequested(slot.modelData, pointerActivation)
                     }
                 }
             }

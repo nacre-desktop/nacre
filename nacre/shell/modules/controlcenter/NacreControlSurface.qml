@@ -46,7 +46,7 @@ Item {
             NacreInteraction {
                 accessibleName: NacreI18n.tr("controlcenter.footer.power-details", "Open power and battery details")
                 function onClicked() {
-                    panel.navigate("battery");
+                    panel.navigate("battery", focusByPointer);
                 }
             }
         }
@@ -55,7 +55,7 @@ Item {
             icon: "edit"
             label: NacreI18n.tr("controlcenter.edit.button", "Edit")
             selected: panel.section === "edit"
-            onClicked: panel.navigate("edit")
+            onClicked: panel.navigate("edit", pointerActivation)
         }
         NacreControlButton {
             icon: "settings"
@@ -67,7 +67,7 @@ Item {
             selected: panel.section === "session"
             icon: "power_settings_new"
             label: NacreI18n.tr("controlcenter.footer.power", "Power menu")
-            onClicked: panel.navigate("session")
+            onClicked: panel.navigate("session", pointerActivation)
         }
     }
     RowLayout {
@@ -82,7 +82,7 @@ Item {
             objectName: "controlBack"
             icon: "arrow_back"
             label: NacreI18n.tr("controlcenter.control-center.text.back", "Back")
-            onClicked: panel.navigate("home")
+            onClicked: panel.navigate("home", pointerActivation)
         }
         NacreText {
             id: heading
@@ -184,8 +184,8 @@ Item {
     Connections {
         target: pageLoader.item
         ignoreUnknownSignals: true
-        function onDetailsRequested(name) {
-            panel.navigate(name);
+        function onDetailsRequested(name, pointerOwned) {
+            panel.navigate(name, pointerOwned === true);
         }
     }
     Binding {

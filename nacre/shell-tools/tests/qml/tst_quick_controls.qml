@@ -106,7 +106,7 @@ TestCase {
         const tile = findChild(panel, "controlWifi");
         const beforeRequest = JSON.stringify(NacreControlActions.lastRequest);
         tile.clicked();
-        verify(NacreControlActions.lastRequest[0] === "wifi-scan" || JSON.stringify(NacreControlActions.lastRequest) === beforeRequest);
+        compare(JSON.stringify(NacreControlActions.lastRequest), beforeRequest);
         compare(panel.section, "network");
         wait(30);
         verify(!!findChild(panel, "quickWifiPower"));
@@ -142,6 +142,39 @@ TestCase {
         compare(field.text, "");
         popup.cancelPending();
         compare(popup.pendingNetwork, null);
+    }
+    function test_wifi_open_shows_cache_while_refreshing_and_never_starts_a_scan() {
+        NacreNetwork.busy = true;
+        NacreControlActions.lastRequest = [];
+        const popup = createTemporaryObject(network, test);
+        wait(30);
+        verify(popup.nearby.length > 0);
+        verify(popup.implicitHeight > 0);
+        compare(NacreControlActions.lastRequest.length, 0);
+        const scan = findChild(popup, "quickWifiScan");
+        verify(scan.enabled);
+        scan.clicked();
+        compare(NacreControlActions.lastRequest.join("|"), "wifi-scan");
+        NacreNetwork.busy = false;
+    }
+    function test_pointer_navigation_retains_exit_policy_and_keyboard_navigation_pins() {
+        NacrePanelState.screens.test.osd = true;
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        wait(40);
+        const wifi = findChild(panel, "controlWifi");
+        mouseClick(wifi, wifi.width / 2, wifi.height / 2);
+        wait(30);
+        compare(panel.section, "network");
+        verify(NacrePanelState.screens.test.controlsPointerOwned);
+        panel.navigate("home", false);
+        wait(30);
+        verify(!NacrePanelState.screens.test.controlsPointerOwned);
+        const keyboardWifi = findChild(panel, "controlWifi");
+        findChild(keyboardWifi, "controlWifiToggle").forceActiveFocus(Qt.TabFocusReason);
+        keyClick(Qt.Key_Return);
+        wait(30);
+        compare(panel.section, "network");
+        verify(!NacrePanelState.screens.test.controlsPointerOwned);
     }
     function test_control_center_optional_tiles_and_detail_back_focus() {
         const scene = createTemporaryObject(center, this), panel = scene.panel;

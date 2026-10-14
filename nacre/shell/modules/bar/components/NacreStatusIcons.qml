@@ -18,7 +18,7 @@ Item {
     readonly property Item battery: batteryItem
     readonly property Item notificationsItem: notices
     readonly property var device: UPower.displayDevice
-    signal activated(string name, var item)
+    signal activated(string name, var item, bool pointerOwned)
     signal peekRequested(string name, var item, bool hovered)
     signal interactionStarted
     function quickToggle(name) {
@@ -188,7 +188,7 @@ Item {
                     root.forceActiveFocus(Qt.OtherFocusReason);
                     NacreMenu.workflows?.work("record-stop");
                 } else
-                    root.activated(cell.key, cell);
+                    root.activated(cell.key, cell, focusByPointer);
             }
         }
         HoverHandler {

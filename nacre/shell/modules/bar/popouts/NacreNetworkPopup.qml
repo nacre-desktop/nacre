@@ -36,10 +36,7 @@ Item {
     readonly property var groups: Groups.group(nearby, saved.ssids)
     readonly property var nearby: NacreNetwork.visibleNetworks
     property real maximumListHeight: 210
-    Component.onCompleted: {
-        NacreNetwork.refresh();
-        request("wifi-scan");
-    }
+    Component.onCompleted: NacreNetwork.refresh()
     implicitWidth: 352
     implicitHeight: body.implicitHeight
     function request(action, value) {

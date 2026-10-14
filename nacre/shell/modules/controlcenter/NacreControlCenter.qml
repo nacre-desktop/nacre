@@ -99,11 +99,11 @@ FocusScope {
             mic: NacreI18n.tr("controlcenter.overview.mic-mute", "Mic mute"),
             edit: NacreI18n.tr("controlcenter.edit.title", "Edit controls")
         })
-    function navigate(name) {
+    function navigate(name, pointerOwned = false) {
         if (!detailNames[name])
             return;
         if (!detached)
-            NacrePanelState.pinControls(screen?.name || "");
+            NacrePanelState.pinControls(screen?.name || "", pointerOwned);
         if (keyboardActive || detached)
             forceActiveFocus(Qt.OtherFocusReason);
         sectionRequested(name);

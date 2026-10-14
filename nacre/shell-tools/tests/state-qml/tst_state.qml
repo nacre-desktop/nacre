@@ -24,6 +24,7 @@ TestCase {
             property bool previewOnly: false
             property bool hoverDocked: false
             property bool osd: false
+            property bool controlsPointerOwned: false
             property bool session: false
             property bool launcher: false
             property bool left: false

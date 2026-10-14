@@ -10,6 +10,27 @@ Item {
     property var lips: null
     property bool leftWasHovered: false
     property bool ready: false
+    property bool controlsEntered: false
+    property bool controlsMovedOutside: false
+    readonly property bool pointerControls: visibilities.osd && visibilities.controlsPointerOwned === true
+    readonly property bool controlsHeaderHovered: hovered && inside(headerRect, pointer)
+    onPointerControlsChanged: {
+        controlsEntered = pointerControls && osdHovered;
+        controlsMovedOutside = false;
+        settleHover();
+    }
+    onControlsHeaderHoveredChanged: {
+        if (pointerControls && controlsHeaderHovered) {
+            controlsEntered = false;
+            controlsMovedOutside = false;
+        }
+        settleHover();
+    }
+    onHoveredChanged: {
+        if (pointerControls && controlsEntered && !hovered)
+            controlsMovedOutside = true;
+        settleHover();
+    }
     Component.onCompleted: {
         ready = true;
         settleHover();
@@ -81,7 +102,7 @@ Item {
     function settleHover() {
         if (!ready || !panels || !visibilities)
             return;
-        if (hidden || modal || dockedOpening || docking || NacrePearls.drag?.screen === screen.name) {
+        if (hidden || modal && !pointerControls || dockedOpening || docking || NacrePearls.drag?.screen === screen.name) {
             launcherExit.stop();
             leftExit.stop();
             dashboardExit.stop();
@@ -94,9 +115,11 @@ Item {
                 launcherExit.start();
         } else
             launcherExit.stop();
-        if (visibilities.osd && !osdHovered) {
-            if (!osdExit.running)
+        if (visibilities.osd && !osdHovered && (!pointerControls || !controlsHeaderHovered) && (!pointerControls || !controlsEntered || controlsMovedOutside)) {
+            if (!osdExit.running) {
+                osdExit.interval = pointerControls && !controlsEntered ? 600 : 130;
                 osdExit.start();
+            }
         } else
             osdExit.stop();
         if (visibilities.left && (leftWasHovered || dockedHover) && !visibilities.leftPinned && !leftHovered) {
@@ -115,8 +138,9 @@ Item {
         } else
             popoutExit.stop();
     }
-    onHoveredChanged: settleHover()
     onPointerChanged: {
+        if (pointerControls && controlsEntered && !inside(expand(osdRect), pointer) && !inside(headerRect, pointer))
+            controlsMovedOutside = true;
         if (ready) {
             NacreHoverIntent.observe(screen, pointer.x, pointer.y);
             settleHover();
@@ -135,7 +159,13 @@ Item {
     }
     onDashboardHoveredChanged: settleHover()
     onPopoutHoveredChanged: settleHover()
-    onOsdHoveredChanged: settleHover()
+    onOsdHoveredChanged: {
+        if (osdHovered) {
+            controlsEntered = true;
+            controlsMovedOutside = false;
+        }
+        settleHover();
+    }
     Connections {
         target: NacrePearls
         function onDragChanged() {
@@ -191,7 +221,7 @@ Item {
     Timer {
         id: osdExit
         interval: 130
-        onTriggered: if (!root.osdHovered && root.visibilities.edgeMenu !== "osd")
+        onTriggered: if (!root.osdHovered && (root.visibilities.edgeMenu !== "osd" || root.pointerControls) && (!root.pointerControls || !root.controlsHeaderHovered))
             root.visibilities.osd = false
     }
     function describe() {

@@ -16,6 +16,7 @@ NacreClip {
     property string explanation: ""
     property bool elideDetail: false
     property bool held: false
+    property bool pointerActivation: false
     readonly property color tileInk: !available ? NacreTokens.mutedInk : selected ? NacreColours.palette.m3onPrimaryContainer : NacreTokens.ink
     signal clicked
     signal detailsRequested
@@ -74,12 +75,14 @@ NacreClip {
             disabled: !root.available
             accessibleName: root.label + ": " + root.detail
             function onClicked() {
+                root.pointerActivation = toggleInput.focusByPointer;
                 if (!root.held)
                     root.clicked();
                 root.held = false;
             }
             Keys.onPressed: event => {
                 if (root.contextDetails && (event.key === Qt.Key_Menu || event.key === Qt.Key_F10 && event.modifiers & Qt.ShiftModifier)) {
+                    root.pointerActivation = false;
                     root.detailsRequested();
                     event.accepted = true;
                 }
@@ -118,6 +121,7 @@ NacreClip {
                 name: root.label
             })
             function onClicked() {
+                root.pointerActivation = detailInput.focusByPointer;
                 root.detailsRequested();
             }
         }
@@ -125,7 +129,10 @@ NacreClip {
     TapHandler {
         acceptedButtons: Qt.RightButton
         enabled: root.contextDetails
-        onTapped: root.detailsRequested()
+        onTapped: {
+            root.pointerActivation = true;
+            root.detailsRequested();
+        }
     }
     Connections {
         target: toggleInput
@@ -142,6 +149,7 @@ NacreClip {
         interval: 600
         onTriggered: {
             root.held = true;
+            root.pointerActivation = true;
             root.detailsRequested();
         }
     }
@@ -149,7 +157,10 @@ NacreClip {
         acceptedButtons: Qt.LeftButton
         enabled: root.contextDetails && !root.available
         longPressThreshold: .6
-        onLongPressed: root.detailsRequested()
+        onLongPressed: {
+            root.pointerActivation = true;
+            root.detailsRequested();
+        }
     }
     HoverHandler {
         id: explanationHover

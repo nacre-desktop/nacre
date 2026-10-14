@@ -6,7 +6,7 @@ NacreSurface {
     id: root
     required property var monitor
     property string kind: "volume"
-    signal detailsRequested(string section)
+    signal detailsRequested(string section, bool pointerOwned)
     readonly property bool sound: kind === "volume" || kind === "mic-volume"
     readonly property string controlId: ({
             volume: "Volume",
@@ -40,7 +40,7 @@ NacreSurface {
         else
             monitor.setBrightness(value);
     }
-    function pressIcon() {
+    function pressIcon(pointerOwned) {
         if (!usable)
             return;
         if (kind === "volume")
@@ -48,7 +48,7 @@ NacreSurface {
         else if (kind === "mic-volume")
             NacreAudio.toggleMic();
         else
-            detailsRequested("battery");
+            detailsRequested("battery", pointerOwned);
     }
     NacreText {
         x: 46
@@ -66,7 +66,7 @@ NacreSurface {
         label: root.iconActionName
         enabled: root.usable
         ink: NacreTokens.accent
-        onClicked: root.pressIcon()
+        onClicked: root.pressIcon(pointerActivation)
     }
     NacreControlSlider {
         objectName: "control" + root.controlId
@@ -93,6 +93,6 @@ NacreSurface {
         y: 22
         icon: "chevron_right"
         label: root.detailsLabel
-        onClicked: root.detailsRequested(root.sound ? "audio" : "battery")
+        onClicked: root.detailsRequested(root.sound ? "audio" : "battery", pointerActivation)
     }
 }

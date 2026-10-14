@@ -38,7 +38,7 @@ Item {
         peekCenter = item.mapToItem(root, item.width / 2, item.height / 2).x;
         peekDelay.restart();
     }
-    function openStatus(name, item) {
+    function openStatus(name, item, pointerOwned = true) {
         clearPeek();
         hoverHint = "";
         if (name === "recording") {
@@ -57,7 +57,7 @@ Item {
             pearl.window.bodyItem.item.navigate(name);
             pearl.window.activate();
         } else
-            NacrePanelState.openControls(name, screen.name, true);
+            NacrePanelState.openControls(name, screen.name, true, pointerOwned);
     }
     onVisibleChanged: if (!visible)
         clearPeek()
@@ -292,7 +292,7 @@ Item {
                 id: updatesInput
                 accessibleName: NacreI18n.tr("status.peek.updates", "Updates")
                 function onClicked() {
-                    root.openStatus("updates", updatesHolder);
+                    root.openStatus("updates", updatesHolder, focusByPointer);
                 }
             }
             HoverHandler {
@@ -313,7 +313,7 @@ Item {
                 screenName: root.screen.name
                 horizontal: true
                 rotation: -90
-                onActivated: (name, item) => root.openStatus(name, item)
+                onActivated: (name, item, pointerOwned) => root.openStatus(name, item, pointerOwned)
                 onPeekRequested: (name, item, hovered) => root.requestPeek(name, item, hovered)
                 onInteractionStarted: root.clearPeek()
             }

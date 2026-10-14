@@ -51,8 +51,10 @@ Singleton {
             view.leftPinned = false;
         view.previewOnly = false;
         view.edgeMenu = name;
-        if (name === "osd")
+        if (name === "osd") {
             view.controlSection = "home";
+            view.controlsPointerOwned = true;
+        }
         view[name] = true;
         hidden = false;
         return true;
@@ -114,14 +116,16 @@ Singleton {
         view.osd = name === "osd";
         if (!view.leftPinned)
             view.left = name === "left";
-        if (name === "osd")
+        if (name === "osd") {
             view.controlSection = "home";
+            view.controlsPointerOwned = true;
+        }
         view.edgeMenu = "";
         view.previewOnly = false;
         hidden = false;
         return true;
     }
-    function openControls(section = "home", screenName = "", forceOpen = false) {
+    function openControls(section = "home", screenName = "", forceOpen = false, pointerOwned = false) {
         const view = screenName ? screens[screenName] : getForActive();
         if (!view || !["home", "audio", "network", "bluetooth", "battery", "session", "updates"].includes(section))
             return false;
@@ -130,16 +134,18 @@ Singleton {
         closeTransient(view);
         view.previewOnly = false;
         view.controlSection = section;
+        view.controlsPointerOwned = pointerOwned === true;
         view.osd = forceOpen || !wasOpen;
         view.edgeMenu = view.osd ? "osd" : "";
         hidden = false;
         return true;
     }
-    function pinControls(screenName) {
+    function pinControls(screenName, pointerOwned = false) {
         const view = screens[screenName] || getForActive();
         if (!view || !view.osd)
             return false;
         view.edgeMenu = "osd";
+        view.controlsPointerOwned = pointerOwned === true;
         view.previewOnly = false;
         return true;
     }

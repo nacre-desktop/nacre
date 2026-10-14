@@ -9,6 +9,7 @@ NacreSurface {
     required property string label
     property color ink: NacreTokens.ink
     property bool selected: false
+    readonly property bool pointerActivation: input.focusByPointer
     signal clicked
     function focusControl() {
         input.forceActiveFocus(Qt.OtherFocusReason);

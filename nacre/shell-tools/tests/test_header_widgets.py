@@ -50,7 +50,7 @@ Item {
  id:root
  property bool horizontal:false
  property string screenName:""
- signal activated(string name,var item)
+ signal activated(string name,var item,bool pointerOwned)
  signal peekRequested(string name,var item,bool hovered)
  signal interactionStarted
  implicitWidth:24;implicitHeight:152
@@ -75,7 +75,7 @@ Item {
                 "Updates": 'property int count:3;property string message:""',
                 "NacrePearls": "property var entries:[]",
                 "AppLaunch": "property var calls:[];function run(command){calls=[...calls,command]}",
-                "NacrePanelState": 'property bool hidden:false;property var screens:({test:{session:false,launcher:false,dashboard:false,dashboardPinned:false,edgeMenu:""}});property var panels:({});property var calls:[];function openMode(mode,q,preview){calls=[...calls,mode]}function popout(name,center,screen){calls=[...calls,name]}function openDeviceSettings(name){calls=[...calls,name];return ["audio","network","bluetooth"].includes(name)}function openControls(name,screen){calls=[...calls,name]}function hoverEdge(name,screen){calls=[...calls,name]}function openEdge(name,screen){calls=[...calls,name]}',
+                "NacrePanelState": 'property bool hidden:false;property var screens:({test:{session:false,launcher:false,dashboard:false,dashboardPinned:false,edgeMenu:""}});property var panels:({});property var calls:[];property bool controlsPointerOwned:false;function openMode(mode,q,preview){calls=[...calls,mode]}function popout(name,center,screen){calls=[...calls,name]}function openDeviceSettings(name){calls=[...calls,name];return ["audio","network","bluetooth"].includes(name)}function openControls(name,screen,forceOpen,pointerOwned){controlsPointerOwned=pointerOwned===true;calls=[...calls,name]}function hoverEdge(name,screen){calls=[...calls,name]}function openEdge(name,screen){calls=[...calls,name]}',
             }
             with (fixtures / "qmldir").open("a") as manifest:
                 for name in (
