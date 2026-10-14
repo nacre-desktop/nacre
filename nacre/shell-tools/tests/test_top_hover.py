@@ -105,7 +105,7 @@ TestCase {
   view.controller.panels={dashboard:{height:240},leftDrawer:{width:320},osd:{width:424}};
   view.flags.dashboard=true;view.flags.left=true;view.flags.osd=true;
   compare(top.y,topY);compare(left.x,leftX);compare(right.x,rightX);
-  compare(top.height,NacreFrame.headerHeight);compare(left.width,NacreFrame.left);compare(left.height,52);
+  compare(top.height,NacreFrame.headerHeight);compare(left.width,NacreFrame.left);compare(left.height,144);
   const column=NacreHoverIntent.lipRegions.test.dashboard;
   compare(column.x,396);compare(column.y,0);compare(column.width,208);compare(column.height,50);
   verify(top.visible);verify(left.visible);verify(right.visible);
@@ -161,6 +161,15 @@ TestCase {
   mouseClick(tab,tab.width/2,tab.height/2);verify(!view.flags.osd);
   mouseMove(view,500,180);wait(30);
   tab.forceActiveFocus();keyClick(Qt.Key_Return);verify(view.flags.osd);verify(!view.flags.controlsPointerOwned);
+ }
+ function test_side_arrow_is_readable_and_target_reaches_above_and_below_it(){
+  DesktopSettings.data={animations:true};const view=createTemporaryObject(scene,this);mouseMove(view,500,180);wait(30);
+  const tab=findChild(view,"frameRightLip"),arrow=findChild(tab,"edgeTabArrow");
+  compare(arrow.height,22);verify(arrow.width>=6);verify(arrow.x>=0 && arrow.x+arrow.width<=tab.width);
+  mouseMove(view,view.width-3,view.height/2-60);wait(430);verify(view.flags.osd);
+  mouseClick(view,view.width-3,view.height/2-60);verify(!view.flags.osd);
+  mouseMove(view,500,180);wait(30);
+  mouseMove(view,3,view.height/2+60);wait(430);verify(view.flags.left);
  }
  function test_flat_targets_never_run_decorative_sheen(){
   mouseMove(this,800,500);

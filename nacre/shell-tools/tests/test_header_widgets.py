@@ -37,7 +37,7 @@ class HeaderWidgetTests(unittest.TestCase):
                 "import QtQuick\nItem {property bool compact:false;property bool ai:false;property bool brain:false;property bool colorsApp:false;property bool settings:false;implicitWidth:32;implicitHeight:30}"
             )
             (fixtures / "NacreActiveTitle.qml").write_text(
-                'import QtQuick\nItem {property color colour:"cyan";property bool horizontal:false;property var monitor:null}'
+                'import QtQuick\nItem {objectName:"fixtureActiveTitle";property color colour:"cyan";property bool horizontal:false;property var monitor:null}'
             )
             (fixtures / "NacrePowerButton.qml").write_text(
                 "import QtQuick\nItem {implicitWidth:30;implicitHeight:30}"

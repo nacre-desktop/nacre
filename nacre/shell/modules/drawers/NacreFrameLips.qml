@@ -12,8 +12,8 @@ Item {
     readonly property var rimHandles: []
     readonly property bool available: !NacrePanelState.hidden && !controller.modal && !visibilities.launcher && !visibilities.session && !visibilities.dashboardPinned && !NacreHoverIntent.fullscreenFor(screen.name)
     readonly property rect topRect: NacreFrame.headerHeight > 0 ? Qt.rect((width - 208) / 2, 0, 208, NacreFrame.headerHeight) : Qt.rect(0, 0, 0, 0)
-    readonly property rect leftRect: NacreFrame.left > 0 ? Qt.rect(0, (height - 52) / 2, NacreFrame.left, 52) : Qt.rect(0, 0, 0, 0)
-    readonly property rect rightRect: NacreFrame.right > 0 ? Qt.rect(width - NacreFrame.right, (height - 52) / 2, NacreFrame.right, 52) : Qt.rect(0, 0, 0, 0)
+    readonly property rect leftRect: NacreFrame.left > 0 ? Qt.rect(0, (height - 144) / 2, NacreFrame.left, 144) : Qt.rect(0, 0, 0, 0)
+    readonly property rect rightRect: NacreFrame.right > 0 ? Qt.rect(width - NacreFrame.right, (height - 144) / 2, NacreFrame.right, 144) : Qt.rect(0, 0, 0, 0)
     function publishRegions() {
         if (!screen?.name)
             return;
@@ -22,8 +22,8 @@ Item {
             left: leftRect,
             osd: rightRect,
             resting: {
-                left: Qt.rect(0, (height - 52) / 2, NacreFrame.left, 52),
-                osd: Qt.rect(width - NacreFrame.right, (height - 52) / 2, NacreFrame.right, 52)
+                left: leftRect,
+                osd: rightRect
             }
         };
     }

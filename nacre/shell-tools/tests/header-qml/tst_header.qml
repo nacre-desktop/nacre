@@ -33,6 +33,18 @@ TestCase {
                 })
         }
     }
+    Component {
+        id: dashboardFill
+        QtObject {
+            property real dashboardProgress: 0
+            function requestDashboard(buttons) {
+            }
+            function cancelDashboard() {
+            }
+            function settleDashboard() {
+            }
+        }
+    }
     function init() {
         NacreCompositor.requests = [];
         NacrePanelState.calls = [];
@@ -548,6 +560,58 @@ TestCase {
         mouseMove(test, 900, 300);
         wait(150);
         verify(!popup.hasCurrent);
+    }
+    function test_title_fill_keeps_its_width_when_dashboard_corridor_and_title_expand() {
+        const fill = createTemporaryObject(dashboardFill, test);
+        NacrePanelState.screens = {
+            test: {
+                dashboard: false,
+                session: false,
+                launcher: false
+            }
+        };
+        NacrePanelState.panels = {
+            test: {
+                dashboard: {
+                    width: 1000
+                },
+                input: {
+                    modal: false,
+                    lips: fill
+                }
+            }
+        };
+        const view = createTemporaryObject(header, test), cue = findChild(view, "nacreHeaderTitleCue"), band = findChild(view, "nacreHeaderCenterBand"), title = findChild(view, "fixtureActiveTitle");
+        title.implicitWidth = 500;
+        compare(band.width, 208);
+        compare(cue.width, 208);
+        fill.dashboardProgress = .6;
+        const trace = findChild(cue, "hoverRevealTrace"), partial = trace.width;
+        verify(partial > 0);
+        NacrePanelState.screens = {
+            test: {
+                dashboard: true,
+                session: false,
+                launcher: false
+            }
+        };
+        title.implicitWidth = 650;
+        compare(band.width, 1000);
+        compare(cue.width, 208);
+        compare(trace.width, partial);
+        fill.dashboardProgress = 1;
+        compare(cue.width, 208);
+        compare(trace.width, cue.width - cue.traceLeft - cue.traceRight);
+        fill.dashboardProgress = 0;
+        compare(cue.width, 674);
+        NacrePanelState.panels = ({});
+        NacrePanelState.screens = {
+            test: {
+                dashboard: false,
+                session: false,
+                launcher: false
+            }
+        };
     }
     function test_open_dashboard_keeps_its_full_header_width_without_widening_initial_target() {
         NacrePanelState.screens = {

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Shapes
 
 Item {
     id: root
@@ -10,25 +11,40 @@ Item {
     readonly property real amount: Math.max(active || keyboardFocused ? 1 : 0, Math.min(1, progress))
     clip: true
     Accessible.ignored: true
-    NacreIcon {
+    Shape {
+        id: arrow
         objectName: "edgeTabArrow"
-        text: root.edge === "left" ? root.active ? "chevron_left" : "chevron_right" : root.active ? "chevron_right" : "chevron_left"
-        width: Math.max(0, Math.min(12, parent.width - 2))
-        height: 20
-        clip: true
-        font.pointSize: Math.max(1, Math.min(10, root.width * .65))
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        x: (parent.width - width) / 2 + (root.edge === "left" ? .5 : -.5) * root.amount
+        readonly property bool pointsRight: root.edge === "left" ? !root.active : root.active
+        width: Math.max(0, Math.min(8, parent.width - 2))
+        height: 22
+        visible: width >= 4
+        x: (parent.width - width) / 2
         anchors.verticalCenter: parent.verticalCenter
-        color: Qt.tint(NacreTokens.mutedInk, Qt.alpha(NacreTokens.accent, .35 + .65 * root.amount))
+        preferredRendererType: Shape.CurveRenderer
+        ShapePath {
+            strokeWidth: 2
+            strokeColor: Qt.tint(NacreTokens.ink, Qt.alpha(NacreTokens.accent, .25 + .75 * root.amount))
+            fillColor: "transparent"
+            capStyle: ShapePath.RoundCap
+            joinStyle: ShapePath.RoundJoin
+            startX: arrow.pointsRight ? 1 : arrow.width - 1
+            startY: 1
+            PathLine {
+                x: arrow.pointsRight ? arrow.width - 1 : 1
+                y: arrow.height / 2
+            }
+            PathLine {
+                x: arrow.pointsRight ? 1 : arrow.width - 1
+                y: arrow.height - 1
+            }
+        }
     }
     Rectangle {
         objectName: "edgeTabTrace"
         x: root.edge === "left" ? 0 : parent.width - 2
         anchors.verticalCenter: parent.verticalCenter
         width: 2
-        height: Math.max(0, parent.height - 24) * root.amount
+        height: Math.min(36, Math.max(0, parent.height - 24)) * root.amount
         radius: 1
         opacity: .25 + .65 * root.amount
         gradient: Gradient {
