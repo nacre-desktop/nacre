@@ -1,12 +1,8 @@
 import QtQuick
-import QtQuick.Layouts
-import QtQuick.Controls.Basic
 import Quickshell.Services.UPower
 import qs.widgets
 import qs.services
 import qs.config
-import qs.modules.bar.popouts as Details
-import qs.modules.notifications
 
 FocusScope {
     id: root
@@ -31,8 +27,8 @@ FocusScope {
     property string section: "home"
     signal sectionRequested(string section)
     property real presentedWidth: visibility ? contentWidth : 0
-    readonly property real contentWidth: Math.max(240, Math.min(424, parent?.width ?? 424))
-    readonly property real contentHeight: Math.max(240, Math.min(860, parent?.height ?? 860))
+    readonly property real contentWidth: Math.max(240, Math.min(detached ? 560 : 424, parent?.width ?? 424))
+    readonly property real contentHeight: Math.max(240, Math.min(detached ? 860 : 650, parent?.height ?? 650))
     implicitWidth: Math.min(contentWidth, presentedWidth)
     implicitHeight: contentHeight
     visible: width > 0
@@ -42,7 +38,7 @@ FocusScope {
         presentedWidth = visibility ? contentWidth : 0;
     }
     function focusExplicit() {
-        if (visibility && keyboardActive)
+        if (visibility && (keyboardActive || detached))
             forceActiveFocus(Qt.OtherFocusReason);
     }
     onKeyboardActiveChanged: Qt.callLater(focusExplicit)
@@ -72,261 +68,66 @@ FocusScope {
             }
         }
     }
+    readonly property var detailNames: ({
+            home: NacreI18n.tr("controlcenter.control-center.text.controls", "Controls"),
+            network: NacreI18n.tr("controlcenter.control-center.label.wi-fi", "Wi-Fi"),
+            bluetooth: NacreI18n.tr("controlcenter.control-center.label.bluetooth", "Bluetooth"),
+            audio: NacreI18n.tr("popouts.sound-popup.text.sound", "Sound"),
+            battery: NacreI18n.tr("controlcenter.details.power-brightness", "Power & brightness"),
+            night: NacreI18n.tr("controlcenter.control-center.label.night-light", "Night light"),
+            dnd: NacreI18n.tr("controlcenter.overview.do-not-disturb", "Do Not Disturb"),
+            awake: NacreI18n.tr("controlcenter.overview.stay-awake", "Stay awake"),
+            theme: NacreI18n.tr("controlcenter.overview.appearance", "Appearance"),
+            airplane: NacreI18n.tr("controlcenter.overview.airplane", "Airplane mode"),
+            vpn: NacreI18n.tr("controlcenter.overview.vpn", "VPN"),
+            record: NacreI18n.tr("controlcenter.overview.recorder", "Screen recorder"),
+            mic: NacreI18n.tr("controlcenter.overview.mic-mute", "Mic mute"),
+            edit: NacreI18n.tr("controlcenter.edit.title", "Edit controls")
+        })
+    function navigate(name) {
+        if (!detailNames[name])
+            return;
+        if (keyboardActive || detached)
+            forceActiveFocus(Qt.OtherFocusReason);
+        sectionRequested(name);
+    }
+    Keys.onEscapePressed: event => {
+        if (section !== "home") {
+            navigate("home");
+            event.accepted = true;
+        } else
+            event.accepted = false;
+    }
     Loader {
+        id: bodyLoader
+        objectName: "controlBodyLoader"
         active: root.visibility || root.presentedWidth > 0
         width: root.contentWidth
         height: root.contentHeight
-        sourceComponent: Item {
-            id: content
-            readonly property real inset: 18
-            Flickable {
-                id: primaryScroll
-                objectName: "controlPrimaryScroll"
-                x: content.inset
-                y: 18
-                width: parent.width - content.inset * 2
-                height: Math.min(fixed.height, Math.max(160, parent.height - 170))
-                contentHeight: fixed.height
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: NacreScrollBar {}
-                FastScroll {
-                    view: primaryScroll
-                }
-                Column {
-                    id: fixed
-                    width: primaryScroll.width
-                    spacing: 12
-                    RowLayout {
-                        width: parent.width
-                        NacreText {
-                            text: NacreI18n.tr("controlcenter.control-center.text.controls", "Controls")
-                            font.pointSize: 18
-                            Layout.fillWidth: true
-                        }
-                        ActionButton {
-                            text: NacreI18n.tr("controlcenter.control-center.text.settings", "Settings")
-                            icon: "settings"
-                            compact: true
-                            onClicked: NacrePanelState.openSettings("")
-                        }
-                    }
-                    NacreControlLevels {
-                        width: parent.width
-                        monitor: NacreBrightness.getMonitorForScreen(root.screen)
-                    }
-                    GridLayout {
-                        width: parent.width
-                        columns: width < 310 ? 2 : 3
-                        columnSpacing: 8
-                        rowSpacing: 8
-                        NacreControlTile {
-                            objectName: "controlWifi"
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            label: NacreI18n.tr("controlcenter.control-center.label.wi-fi", "Wi-Fi")
-                            icon: "wifi"
-                            detail: NacreNetwork.active?.ssid || (NacreNetwork.wifiEnabled ? NacreI18n.tr("controlcenter.control-center.detail.not-connected", "Not connected") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off"))
-                            selected: root.section === "network"
-                            onClicked: root.sectionRequested(root.section === "network" ? "home" : "network")
-                        }
-                        NacreControlTile {
-                            objectName: "controlBluetooth"
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            label: NacreI18n.tr("controlcenter.control-center.label.bluetooth", "Bluetooth")
-                            icon: "bluetooth"
-                            detail: NacreBluetooth.powered ? NacreI18n.tr("controlcenter.control-center.detail.on", "On") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off")
-                            selected: root.section === "bluetooth"
-                            onClicked: root.sectionRequested(root.section === "bluetooth" ? "home" : "bluetooth")
-                        }
-                        NacreControlTile {
-                            objectName: "controlPower"
-                            visible: NacreControlTools.data.powerProfilesSupported === true
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            label: NacreI18n.tr("controlcenter.control-center.label.power", "Power")
-                            icon: "battery_full"
-                            detail: PowerProfiles.profile === PowerProfile.PowerSaver ? NacreI18n.tr("controlcenter.control-center.detail.saver", "Saver") : PowerProfiles.profile === PowerProfile.Performance ? NacreI18n.tr("controlcenter.control-center.detail.performance", "Performance") : NacreI18n.tr("controlcenter.control-center.detail.balanced", "Balanced")
-                            selected: root.section === "battery"
-                            onClicked: root.sectionRequested(root.section === "battery" ? "home" : "battery")
-                        }
-                        NacreControlTile {
-                            objectName: "controlDnd"
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            label: NacreI18n.tr("controlcenter.control-center.label.dnd", "DND")
-                            icon: "do_not_disturb_on"
-                            detail: NacreNotifs.dnd ? NacreI18n.tr("controlcenter.control-center.detail.on", "On") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off")
-                            selected: NacreNotifs.dnd
-                            onClicked: DesktopSettings.set("dnd", !NacreNotifs.dnd)
-                        }
-                        NacreControlTile {
-                            objectName: "controlNightLight"
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            label: NacreI18n.tr("controlcenter.control-center.label.night-light", "Night light")
-                            icon: "nightlight"
-                            detail: !NacreControlTools.data.nightLightSupported ? (NacreControlTools.data.nightLightReason || NacreI18n.tr("ui.compositor.unavailable", "Unavailable")) : NacreControlTools.data.nightLightExternal ? NacreI18n.tr("controlcenter.control-center.detail.external", "External") : NacreControlTools.data.nightLightEnabled ? NacreI18n.tr("controlcenter.control-center.detail.warm", "Warm") : NacreI18n.tr("controlcenter.control-center.detail.off", "Off")
-                            enabled: NacreControlTools.data.nightLightSupported === true && !NacreControlTools.busy && !NacreControlTools.data.nightLightExternal
-                            selected: NacreControlTools.data.nightLightEnabled === true
-                            onClicked: NacreControlTools.toggleNightLight()
-                        }
-                        NacreControlTile {
-                            objectName: "controlSound"
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            label: NacreI18n.tr("controlcenter.control-center.label.devices", "Devices")
-                            icon: "speaker"
-                            detail: NacreI18n.tr("controlcenter.control-center.detail.audio-output", "Audio output")
-                            selected: root.section === "audio"
-                            onClicked: root.sectionRequested(root.section === "audio" ? "home" : "audio")
-                        }
-                    }
-                    GridLayout {
-                        width: parent.width
-                        columns: width < 340 ? 2 : 4
-                        columnSpacing: 6
-                        rowSpacing: 6
-                        ActionButton {
-                            text: NacreI18n.tr("controlcenter.control-center.text.capture", "Capture")
-                            icon: "screenshot"
-                            compact: true
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            enabled: NacreControlTools.data.screenshot === true
-                            onClicked: NacreControlTools.capture("screenshot")
-                        }
-                        ActionButton {
-                            text: NacreI18n.tr("controlcenter.control-center.text.clipboard", "Clipboard")
-                            compact: true
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            onClicked: NacrePanelState.openMode("clipboard")
-                        }
-                        ActionButton {
-                            text: NacreI18n.tr("controlcenter.control-center.text.colors", "Colors")
-                            icon: "palette"
-                            compact: true
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            onClicked: NacrePanelState.openMode("palette")
-                        }
-                        ActionButton {
-                            text: NacreI18n.tr("controlcenter.control-center.text.picker", "Picker")
-                            icon: "colorize"
-                            compact: true
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            enabled: NacreControlTools.data.colorPicker === true
-                            onClicked: NacreControlTools.capture("color-picker")
-                        }
-                    }
-                    NacreText {
-                        width: parent.width
-                        text: NacreControlTools.error
-                        visible: text !== ""
-                        font.pointSize: 10
-                        maximumLineCount: 2
-                        wrapMode: Text.Wrap
-                        color: NacreColours.palette.m3error
-                    }
-                }
-            }
-            RowLayout {
-                id: detailsHeading
-                x: content.inset
-                y: primaryScroll.y + primaryScroll.height + 10
-                width: parent.width - content.inset * 2
-                NacreText {
-                    Layout.fillWidth: true
-                    text: root.section === "home" || root.section === "notifications" ? NacreI18n.tr("controlcenter.control-center.text.notifications", "Notifications") : NacreI18n.tr("controlcenter.control-center.text.connection-details", "Connection details")
-                    font.pointSize: 11
-                    color: NacreTokens.mutedInk
-                }
-                ActionButton {
-                    text: root.section === "home" || root.section === "notifications" ? NacreI18n.tr("controlcenter.control-center.text.clear", "Clear") : NacreI18n.tr("controlcenter.control-center.text.back", "Back")
-                    compact: true
-                    onClicked: {
-                        if (root.section === "home" || root.section === "notifications")
-                            NacreNotifs.clearHistory();
-                        else
-                            root.sectionRequested("home");
-                    }
-                }
-            }
-            Flickable {
-                id: detailsScroll
-                objectName: "controlDetailsScroll"
-                x: content.inset
-                y: detailsHeading.y + detailsHeading.height + 8
-                width: parent.width - content.inset * 2
-                height: Math.max(0, parent.height - y - 18)
-                contentHeight: detailsLoader.item?.implicitHeight ?? 0
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: NacreScrollBar {}
-                FastScroll {
-                    id: detailMotion
-                    view: detailsScroll
-                }
-                Loader {
-                    id: detailsLoader
-                    width: detailsScroll.width
-                    sourceComponent: root.section === "network" ? network : root.section === "bluetooth" ? bluetooth : root.section === "audio" ? audio : root.section === "battery" ? battery : history
-                    onLoaded: {
-                        detailMotion.cancel();
-                        detailsScroll.contentY = 0;
-                        if (root.section === "network")
-                            NacreNetwork.refresh();
-                    }
-                }
-            }
-            Component {
-                id: network
-                Details.NacreNetworkPopup {
-                    width: detailsScroll.width
-                }
-            }
-            Component {
-                id: bluetooth
-                Details.NacreBluetoothPopup {
-                    width: detailsScroll.width
-                }
-            }
-            Component {
-                id: audio
-                Details.NacreSoundPopup {
-                    width: detailsScroll.width
-                }
-            }
-            Component {
-                id: battery
-                Details.NacreBatteryPopup {
-                    profilesEnabled: NacreControlTools.data.powerProfilesSupported === true
-                    width: detailsScroll.width
-                }
-            }
-            Component {
-                id: history
-                Column {
-                    width: detailsScroll.width
-                    spacing: 8
-                    NacreText {
-                        width: parent.width
-                        text: NacreI18n.tr("controlcenter.control-center.text.no-notifications", "No notifications")
-                        visible: NacreNotifs.retained.length === 0
-                        color: NacreTokens.mutedInk
-                    }
-                    Repeater {
-                        model: NacreNotifs.retained
-                        delegate: NacreNotice {
-                            width: detailsScroll.width
-                            history: true
-                        }
-                    }
-                }
-            }
+        onActiveChanged: {
+            if (active)
+                setSource(Qt.resolvedUrl("NacreControlSurface.qml"), {
+                    panel: root
+                });
+            else
+                source = "";
         }
+        Component.onCompleted: if (active)
+            setSource(Qt.resolvedUrl("NacreControlSurface.qml"), {
+                panel: root
+            })
+    }
+    readonly property bool batteryAvailable: !!UPower.displayDevice && UPower.displayDevice.ready && UPower.displayDevice.isPresent !== false && UPower.displayDevice.isLaptopBattery && Number.isFinite(UPower.displayDevice.percentage) && UPower.displayDevice.percentage >= 0 && UPower.displayDevice.percentage <= 1
+    readonly property string batteryEstimate: {
+        if (!batteryAvailable)
+            return "";
+        const seconds = UPower.onBattery ? UPower.displayDevice.timeToEmpty : UPower.displayDevice.timeToFull;
+        if (!Number.isFinite(seconds) || seconds <= 0)
+            return UPower.onBattery ? NacreI18n.tr("battery.remaining-unavailable", "Remaining time unavailable") : NacreI18n.tr("battery.connected-power", "Connected to power");
+        const minutes = Math.ceil(seconds / 60);
+        return NacreI18n.tr(UPower.onBattery ? "battery.remaining-hours" : "battery.until-full-hours", UPower.onBattery ? "{hours}h {minutes}m remaining" : "{hours}h {minutes}m until full", {
+            hours: Math.floor(minutes / 60),
+            minutes: minutes % 60
+        });
     }
 }

@@ -7,6 +7,10 @@ QtObject {
     property bool stdinEnabled: false
     property QtObject stdout
     property QtObject stderr
+    property var signals: []
+    function signal(value) {
+        signals = [...signals, value];
+    }
     property var writes: []
     property int starts: 0
     signal started

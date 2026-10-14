@@ -7,6 +7,8 @@ QtObject {
             "m3onSurface": "white",
             "m3onSurfaceVariant": "gray",
             "m3primary": "cyan",
+            "m3primaryContainer": "#335577",
+            "m3onPrimaryContainer": "white",
             "m3secondary": "blue",
             "m3tertiary": "green",
             "m3surface": "black",

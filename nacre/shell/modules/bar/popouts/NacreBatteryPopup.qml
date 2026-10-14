@@ -8,6 +8,7 @@ Column {
     id: root
     property var device: UPower.displayDevice
     property bool profilesEnabled: true
+    property bool showSummary: true
     readonly property bool available: !!device && device.ready && device.isPresent !== false && device.isLaptopBattery && Number.isFinite(device.percentage) && device.percentage >= 0 && device.percentage <= 1
     readonly property int percent: available ? Math.round(device.percentage * 100) : -1
     readonly property string estimate: available ? formatSeconds(UPower.onBattery ? device.timeToEmpty : device.timeToFull, UPower.onBattery ? NacreI18n.tr("battery.remaining-unavailable", "Remaining time unavailable") : NacreI18n.tr("battery.connected-power", "Connected to power")) : NacreI18n.tr("battery.unavailable", "Battery unavailable")
@@ -36,6 +37,7 @@ Column {
         return true;
     }
     NacreText {
+        visible: root.showSummary
         objectName: "nacreBatteryPercent"
         width: root.width
         text: root.available ? NacreI18n.number(root.percent) + "%" : "—"
@@ -44,6 +46,7 @@ Column {
         font.pointSize: NacreAppearance.font.size.large
     }
     Rectangle {
+        visible: root.showSummary
         width: root.width
         height: 8
         radius: 4
@@ -56,6 +59,7 @@ Column {
         }
     }
     NacreText {
+        visible: root.showSummary
         objectName: "nacreBatteryEstimate"
         width: root.width
         text: root.estimate
@@ -66,6 +70,7 @@ Column {
     }
     NacreText {
         width: root.width
+        visible: root.showSummary
         text: root.profilesEnabled ? root.profileName : NacreI18n.tr("popouts.battery-popup.text.power-profiles-unavailable", "Power profiles unavailable")
         horizontalAlignment: Text.AlignHCenter
         font.pointSize: 11
@@ -104,15 +109,29 @@ Column {
         required property string label
         readonly property bool selected: profile === PowerProfiles.profile
         width: (root.width - 16) / 3
-        height: 38
+        height: 72
         radius: 19
         enabled: root.profilesEnabled && (profile !== PowerProfile.Performance || PowerProfiles.hasPerformanceProfile)
         opacity: enabled ? 1 : 0.45
-        color: selected ? NacreColours.palette.m3primary : NacreColours.palette.m3surfaceContainer
-        NacreIcon {
+        color: selected ? NacreColours.palette.m3primaryContainer : NacreColours.palette.m3surfaceContainer
+        Column {
             anchors.centerIn: parent
-            text: parent.icon
-            color: parent.selected ? NacreColours.palette.m3onPrimary : NacreColours.palette.m3onSurface
+            width: parent.width - 8
+            spacing: 6
+            NacreIcon {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: parent.parent.icon
+                font.pointSize: 18
+                color: parent.parent.selected ? NacreColours.palette.m3onPrimaryContainer : NacreTokens.mutedInk
+            }
+            NacreText {
+                width: parent.width
+                text: parent.parent.label
+                horizontalAlignment: Text.AlignHCenter
+                font.pointSize: 9
+                wrapMode: Text.Wrap
+                color: parent.parent.selected ? NacreColours.palette.m3onPrimaryContainer : NacreTokens.ink
+            }
         }
         NacreInteraction {
             accessibleName: parent.label

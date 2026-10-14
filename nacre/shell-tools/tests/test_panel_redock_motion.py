@@ -77,10 +77,14 @@ class RedockMotionTests(unittest.TestCase):
                 "Clipboard": "property var visibilities;property bool detached:false",
                 "Keybindings": "property var visibilities;property bool detached:false",
                 "ChatPane": "property var visibilities;property var chat;property bool active:false",
-                "NacreControlLevels": "property var monitor",
+                "NacreControlLevels": "property var monitor;signal detailsRequested(string section)",
+                "NacreControlOverview": "property var screen;property bool active:false;signal detailsRequested(string section)",
+                "NacreControlDisplays": "",
+                "NacreControlDetail": "property string section;property var screen",
+                "NacreControlVpn": "",
                 "NacreControlTile": 'property string label:"";property string detail:"";property string icon:"";property bool selected:false;signal clicked',
-                "NacreNetworkPopup": "",
-                "NacreBluetoothPopup": "",
+                "NacreNetworkPopup": "property bool showHeading:true;property real maximumListHeight:210",
+                "NacreBluetoothPopup": "property bool showHeading:true;property real maximumListHeight:210",
                 "NacreSoundPopup": "",
                 "NacreBatteryPopup": "property bool profilesEnabled:true",
                 "NacreHistoryPopup": "",
@@ -118,8 +122,7 @@ class RedockMotionTests(unittest.TestCase):
             button.write_text(
                 button.read_text().replace(
                     "property bool selected:",
-                    "property var accessibleLabel:"
-                    ";property bool compact:false;property bool selected:",
+                    "property bool compact:false;property bool selected:",
                 )
             )
             (target / "tst_motion.qml").write_text("""import QtQuick
@@ -140,6 +143,7 @@ TestCase {
   const args=data.tag==="controls"?{visibility:false,screen:screen}:{visibilities:view};
   if(data.tag==="sidebar")args.screen=screen;
   const panel=createTemporaryObject(data.factory,test,args);verify(panel);
+  if(data.tag==="controls")findChild(panel,"controlBodyLoader").active=false;
   panel.restoreImmediately=true;
   if(data.tag==="controls")panel.visibility=true;else view[data.field]=true;
   if(panel.restoreAttached)panel.restoreAttached();else panel.prepareLift();

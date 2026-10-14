@@ -103,6 +103,17 @@ class QuickControlsTests(unittest.TestCase):
                 "NacreControlCenter",
                 "NacreControlLevels",
                 "NacreControlTile",
+                "NacreControlOverview",
+                "NacreControlDetail",
+                "NacreControlDisplays",
+                "NacreControlVpn",
+                "NacreControlButton",
+                "NacreControlSlider",
+                "NacreControlSwitch",
+                "NacreControlAppearance",
+                "NacreControlMedia",
+                "NacreWifiSaved",
+                "NacreBluetoothPairing",
             ):
                 stage_qml(
                     ROOT.parent / "shell/modules/controlcenter" / (component + ".qml"),
@@ -117,7 +128,9 @@ class QuickControlsTests(unittest.TestCase):
                     ROOT.parent / "shell/widgets" / (name + ".qml"),
                     target / "fixtures" / (name + ".qml"),
                 )
-            (target / "fixtures/NacreIcon.qml").write_text("import QtQuick\nText {}")
+            (target / "fixtures/NacreIcon.qml").write_text(
+                "import QtQuick\nText {property real fill:0}"
+            )
             (target / "fixtures/PwObjectTracker.qml").write_text(
                 "import QtQuick\nQtObject {property var objects:[]}"
             )
@@ -131,11 +144,11 @@ class QuickControlsTests(unittest.TestCase):
             )
             (target / "fixtures/NacreColours.qml").write_text(colors)
             services = {
-                "NacreAudio": 'property var sink:({ready:true,description:"Speakers"});property real volume:.7;property real micVolume:.4;property bool muted:false;property bool micMuted:false;property bool available:true;property bool micAvailable:true;property int writes:0;function setVolume(v){writes++;volume=v} function setMicVolume(v){writes++;micVolume=v} function toggleMute(){muted=!muted} function toggleMic(){micMuted=!micMuted}',
-                "Pipewire": 'property var nodes:({values:[{ready:true,audio:({}),isStream:false,isSink:true,description:"Speakers",name:"speaker"}]});property var defaultAudioSink:nodes.values[0];property var preferredDefaultAudioSink:null',
+                "NacreAudio": 'property var source:({ready:true,description:"Desk microphone"});property var sink:({ready:true,description:"Speakers"});property real volume:.7;property real micVolume:.4;property bool muted:false;property bool micMuted:false;property bool available:true;property bool micAvailable:true;property int writes:0;function setVolume(v){writes++;volume=v} function setMicVolume(v){writes++;micVolume=v} function toggleMute(){muted=!muted} function toggleMic(){micMuted=!micMuted}',
+                "Pipewire": 'property var nodes:({values:[{ready:true,audio:({}),isStream:false,isSink:true,description:"Speakers",name:"speaker"}]});property var defaultAudioSink:nodes.values[0];property var preferredDefaultAudioSink:null;property var defaultAudioSource:null;property var preferredDefaultAudioSource:null',
                 "NacreNetwork": 'property string error:"";property string monitorError:"";property bool busy:false;function refresh(){} property bool wifiAvailable:true;property bool wifiEnabled:true;property string wifiInterface:"wlan0";property var active:({ssid:"ab"});property var networks:[{bssid:"AA:BB:CC:DD:EE:01",ssid:"ab",active:false,strength:90},{bssid:"AA:BB:CC:DD:EE:02",ssid:"Guest",active:false,strength:65},{bssid:"AA:BB:CC:DD:EE:03",ssid:"ab",active:true,strength:30}];readonly property var visibleNetworks:Wifi.group(networks)',
                 "NacreBluetooth": 'property bool available:true;property bool powered:true;property var devices:[{name:"Headphones",alias:"Headphones",address:"AA:BB:CC:DD:EE:FF",connected:true,paired:true,trusted:true},{name:"Unpaired",alias:"Unpaired",address:"00:11:22:33:44:55",connected:false,paired:false,trusted:false}]',
-                "DeviceActions": 'property bool busy:false;property string message:"";property string lastAction:"";property var lastRequest:[];function request(a){lastRequest=a;lastAction=a[0]} function connectWifi(ssid){lastRequest=["wifi-connect",ssid]}',
+                "DeviceActions": 'property bool busy:false;property string message:"";property string lastAction:"";property var lastRequest:[];function request(a){lastRequest=a;lastAction=a[0]} function connectWifi(ssid){lastRequest=["wifi-connect",ssid]} function connectWifiInline(point,password){lastRequest=["wifi-inline",point.ssid,password];return true}function cancelWifiInline(){}function setAirplane(on){lastRequest=["airplane",on]}',
                 "NacreCompositor": 'property var focusedMonitor:({name:"test"})',
                 "DesktopSettings": "property var data:({});property var writes:[];function set(key,value){writes=[...writes,[key,value]]}",
                 "NacreHoverIntent": "property int dismissed:0;function dismiss(screen){dismissed++}",
@@ -145,11 +158,17 @@ class QuickControlsTests(unittest.TestCase):
                 "UPower": "property bool onBattery:true;property var displayDevice:({ready:true,isLaptopBattery:true,percentage:.5,timeToEmpty:3600,timeToFull:0})",
                 "PowerProfiles": 'property int profile:1;property bool hasPerformanceProfile:true;property string degradationReason:""',
             }
+            services["NacreControlActions"] = services["DeviceActions"]
             services.update(
                 {
-                    "NacreBrightness": 'property QtObject device:QtObject {property bool available:true;property real brightness:.8;property string error:"";property var writes:[];function setBrightness(v){writes=[...writes,v];brightness=v}}function getMonitorForScreen(screen){return device}',
+                    "NacreBrightness": 'property var monitors:[device];property QtObject device:QtObject {property string name:"Display";property bool available:true;property real brightness:.8;property string error:"";property var writes:[];function setBrightness(v){writes=[...writes,v];brightness=v}}function getMonitorForScreen(screen){return device}',
                     "NacreKeyboardLight": 'property bool available:true;property real brightness:.5;property string error:"";property var writes:[];function setBrightness(v){writes=[...writes,v];brightness=v}',
                     "NacreControlTools": 'property var data:({screenshot:true,colorPicker:true,powerProfilesSupported:true,nightLightSupported:true,nightLightExternal:false,nightLightEnabled:false});property string error:"";property bool busy:false;property var captures:[];property int writes:0;function capture(kind){captures=[...captures,kind]}function toggleNightLight(){writes++}',
+                    "NacreVpn": 'property var profiles:[];property var connected:[];property bool busy:false;property string error:"";function refresh(){}function toggle(){}',
+                    "NacreMenu": 'property var snapshot:({stayAwake:false,recording:false,capabilities:({record:false})});property string message:"";function work(action,value){}',
+                    "NacreWallpapers": 'property var preferences:({paletteMode:"dark"})',
+                    "NacrePlayers": "property var active:null;function control(action){}",
+                    "NacreControlPreferences": 'property var optionalTiles:[];property string error:"";function toggle(id){optionalTiles=optionalTiles.includes(id)?optionalTiles.filter(value=>value!==id):[...optionalTiles,id]}',
                     "NacrePanelState": 'property var calls:[];function openMode(mode){calls=[...calls,mode]}function openSettings(page){calls=[...calls,"settings"]}',
                 }
             )

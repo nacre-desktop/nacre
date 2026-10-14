@@ -2,6 +2,7 @@ import QtQuick
 
 Rectangle {
     property string text: ""
+    property string accessibleLabel: ""
     property string icon: ""
     property bool selected: false
 

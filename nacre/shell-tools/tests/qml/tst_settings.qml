@@ -561,6 +561,10 @@ TestCase {
         compare(DeviceActions.connectedSSID, "");
         DeviceActions.busy = false;
         wifi.connect(Object.assign({}, network));
+        const controls = findChild(view, "settingsWifiControls");
+        compare(controls.pendingNetwork.ssid, "Fixture network");
+        controls.connectPending();
+        wait(30);
         compare(DeviceActions.connectedSSID, "Fixture network");
         NacreNetwork.visibleNetworks = [];
         DeviceActions.connectedSSID = "";
@@ -611,7 +615,9 @@ TestCase {
         NacreNetwork.active = connected;
         NacreNetwork.wifiInterface = "wlan0";
         DeviceActions.busy = false;
-        const view = createTemporaryObject(settings, test);
+        const view = createTemporaryObject(settings, test, {
+            height: 600
+        });
         view.open("network");
         wait(30);
         const wifi = findChild(view, "settingsWifiControls");
@@ -621,6 +627,11 @@ TestCase {
         DeviceActions.connectedSSID = "";
         const connect = findChild(wifi, "availableWifiAction");
         mouseClick(connect, connect.width / 2, connect.height / 2);
+        compare(wifi.pendingNetwork.ssid, "Guest");
+        wait(40);
+        const submit = findChild(wifi, "controlWifiConnect");
+        mouseClick(submit, submit.width / 2, submit.height / 2);
+        wait(40);
         compare(DeviceActions.connectedSSID, "Guest");
         const disconnect = findChild(wifi, "connectedWifiAction");
         verify(disconnect.enabled);
@@ -718,7 +729,7 @@ TestCase {
 
     name: "SettingsControlCenter"
     width: 1120
-    height: 300
+    height: 600
     visible: true
     when: windowShown
 

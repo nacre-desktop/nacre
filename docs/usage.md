@@ -28,6 +28,16 @@ space without changing configured gaps. Super+Q closes the current window;
 put-away/undo is a separate Hyprland profile opt-in. Super+L locks, and
 Super+Escape or Super+X opens the power menu.
 
+The control center groups volume, brightness and everyday toggles on one page.
+Click a tile to toggle it. Wi-Fi, Bluetooth and power have separate detail
+chevrons; right-click or long-press any tile for details (keyboard: Menu or
+Shift+F10). Back or Escape returns to the overview. Light, Dark and Auto share
+one appearance selector. The top battery row includes edit and session actions. Wi-Fi passwords, Bluetooth devices, audio inputs/outputs and the
+application mixer stay inside the panel. Power details include each controllable
+display and keyboard backlight. Edit adds optional tiles; unavailable controls
+explain their limits in their detail page. Tiles are saved separately from the
+main desktop settings. The same controls work in a detached pearl.
+
 Notifications can be reviewed in history; Do not disturb suppresses popups.
 Night light warms display colors, and Stay awake temporarily inhibits idle
 actions. On niri, night light needs wlsunset and output gamma control. Niri display

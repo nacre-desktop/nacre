@@ -31,7 +31,7 @@ TestCase {
                     }
                 }
             });
-        DeviceActions.busy = false;
+        NacreControlActions.busy = false;
         NacreAudio.writes = 0;
         DesktopSettings.writes = [];
     }
@@ -68,51 +68,174 @@ TestCase {
             }
         }
     }
-    function test_control_center_open_is_readonly_scrolls_are_separate_and_small_bounds() {
+    function test_control_center_readonly_lazy_navigation_and_small_bounds() {
         NacreAudio.writes = 0;
-        NacreKeyboardLight.writes = [];
-        NacreBrightness.device.writes = [];
-        NacreControlTools.writes = 0;
         const scene = createTemporaryObject(center, this), panel = scene.panel;
         wait(50);
         verify(!panel.activeFocus);
         panel.keyboardActive = true;
         tryCompare(panel, "activeFocus", true);
         compare(NacreAudio.writes, 0);
-        compare(NacreKeyboardLight.writes.length, 0);
-        compare(NacreBrightness.device.writes.length, 0);
         compare(NacreControlTools.writes, 0);
         const volume = findChild(panel, "controlVolume");
-        verify(!!volume);
-        verify(volume.width > 200);
+        verify(!!volume && volume.width > 200);
         volume.value = .8;
         volume.moved();
         compare(NacreAudio.writes, 1);
-        const notifications = findChild(panel, "controlDetailsScroll"), controls = findChild(panel, "controlPrimaryScroll");
-        verify(notifications.y >= controls.y + controls.height);
-        verify(notifications.height > 80);
-        controls.contentY = 10;
-        compare(notifications.contentY, 0);
-        findChild(panel, "controlWifi").clicked();
+        verify(!findChild(panel, "quickWifiPower"));
+        verify(!findChild(panel, "controlDetailsScroll"));
+        const scroll = findChild(panel, "controlPageScroll");
+        verify(scroll.contentHeight <= scroll.height);
+        const tile = findChild(panel, "controlWifi");
+        tile.clicked();
+        compare(NacreControlActions.lastRequest.join("|"), "wifi-radio|off");
+        compare(panel.section, "home");
+        tile.detailsRequested();
         compare(panel.section, "network");
-        scene.selectedSection = "bluetooth";
-        compare(panel.section, "bluetooth");
-        scene.selectedSection = "network";
         wait(30);
-        verify(findChild(panel, "quickWifiPower") !== null);
+        verify(!!findChild(panel, "quickWifiPower"));
+        verify(!findChild(panel, "controlVolume"));
+        scene.selectedSection = "bluetooth";
+        wait(30);
+        verify(!findChild(panel, "quickWifiPower"));
+        verify(!!findChild(panel, "quickBluetoothPower"));
+        scene.selectedSection = "home";
+        wait(30);
+        verify(!findChild(panel, "quickBluetoothPower"));
         scene.height = 480;
         scene.width = 280;
         wait(30);
         verify(panel.width <= 280 && panel.height <= 480);
-        verify(notifications.y + notifications.height <= panel.height);
-        verify(controls.height > 100 && notifications.height > 50);
+        verify(scroll.y + scroll.height <= panel.height);
         panel.visibility = false;
-        verify(!panel.enabled);
         wait(350);
         compare(panel.width, 0);
+        verify(!findChild(panel, "controlVolume"));
+        compare(findChild(panel, "controlBodyLoader").item, null);
+    }
+    function test_wifi_password_stays_in_panel_and_clears_on_submit() {
+        const popup = createTemporaryObject(network, test);
+        verify(popup.activate(popup.nearby.find(point => point.ssid === "Guest")));
+        wait(0);
+        const field = findChild(popup, "controlWifiPassword");
+        verify(!!popup.pendingNetwork);
+        field.text = "public-fixture-password";
+        verify(popup.connectPending());
+        compare(NacreControlActions.lastRequest[0], "wifi-inline");
+        compare(NacreControlActions.lastRequest[1], "Guest");
+        compare(field.text, "");
+        popup.cancelPending();
+        compare(popup.pendingNetwork, null);
+    }
+    function test_control_center_optional_tiles_and_detail_back_focus() {
+        const scene = createTemporaryObject(center, this), panel = scene.panel;
+        panel.keyboardActive = true;
+        scene.selectedSection = "edit";
+        wait(30);
+        NacreControlPreferences.toggle("mic");
+        scene.selectedSection = "home";
+        wait(30);
+        verify(!!findChild(panel, "controlMic"));
+        scene.selectedSection = "audio";
+        wait(30);
+        const back = findChild(panel, "controlBack");
+        verify(!!back);
+        back.clicked();
+        compare(panel.section, "home");
+        scene.selectedSection = "home";
+        wait(30);
+        for (const id of ["airplane", "vpn", "record", "mic"]) {
+            NacreControlPreferences.optionalTiles = [id];
+            wait(0);
+            NacreControlPreferences.optionalTiles = [];
+            wait(0);
+        }
+    }
+    Component {
+        id: pairing
+        NacreBluetoothPairing {
+            width: 352
+            address: "02:00:00:00:00:01"
+            deviceName: "Fixture headphones"
+        }
+    }
+    function test_bluetooth_pairing_prompts_stay_inline_and_clear_credentials() {
+        const prompt = createTemporaryObject(pairing, test);
+        const agent = findChild(prompt, "controlBluetoothAgent");
+        prompt.acceptOutput("Agent registered\n");
+        compare(agent.writes[0], "pair 02:00:00:00:00:01\n");
+        prompt.acceptOutput("Confirm passkey 123456 (yes/no): ");
+        compare(prompt.mode, "confirm");
+        prompt.respond("yes");
+        compare(agent.writes[1], "yes\n");
+        prompt.acceptOutput("Enter PIN code: ");
+        compare(prompt.mode, "pin");
+        const field = findChild(prompt, "controlBluetoothCode");
+        field.text = "1234";
+        prompt.respond(field.text);
+        compare(field.text, "");
+        compare(agent.writes[2], "1234\n");
+        prompt.acceptOutput("Failed to pair: org.bluez.Error.AuthenticationRejected");
+        compare(prompt.mode, "error");
+        verify(prompt.finished);
+        compare(prompt.buffer, "");
+        compare(agent.signals[0], 15);
+    }
+    function test_tile_context_routes_do_not_toggle_and_only_device_tiles_show_arrows() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        wait(60);
+        const dnd = findChild(panel, "controlDnd"), wifi = findChild(panel, "controlWifi");
+        verify(dnd && wifi);
+        compare(dnd.hasDetails, false);
+        compare(wifi.hasDetails, true);
+        const writes = DesktopSettings.writes.length;
+        mouseClick(dnd, 20, 20, Qt.RightButton);
+        compare(panel.section, "dnd");
+        compare(DesktopSettings.writes.length, writes);
+        scene.selectedSection = "home";
+        wait(30);
+        const awake = findChild(panel, "controlAwake");
+        mousePress(awake, 20, 20, Qt.LeftButton);
+        wait(650);
+        compare(panel.section, "awake");
+        mouseRelease(panel, 20, 20, Qt.LeftButton);
+        compare(DesktopSettings.writes.length, writes);
+    }
+    function test_input_peak_monitor_stops_when_sound_page_inactive() {
+        const popup = createTemporaryObject(sound, test);
+        const peak = findChild(popup, "controlInputPeak");
+        verify(peak.enabled);
+        popup.active = false;
+        compare(peak.enabled, false);
+        popup.active = true;
+        NacreAudio.micMuted = true;
+        compare(peak.enabled, false);
+        NacreAudio.micMuted = false;
+    }
+    Component {
+        id: savedProfiles
+        NacreWifiSaved {}
+    }
+    function test_saved_wifi_queries_ssids_without_helper_changes() {
+        const saved = createTemporaryObject(savedProfiles, test);
+        const worker = findChild(saved, "controlSavedWifiReader");
+        compare(worker.command.slice(-2).join("|"), "connection|show");
+        worker.running = false;
+        worker.stdout.text = "11111111-1111-4111-8111-111111111111:802-11-wireless\n22222222-2222-4222-8222-222222222222:ethernet";
+        worker.stdout.streamFinished();
+        worker.exited(0, 0);
+        wait(0);
+        verify(worker.running);
+        compare(worker.command.slice(-3).join("|"), "show|uuid|11111111-1111-4111-8111-111111111111");
+        worker.running = false;
+        worker.stdout.text = "Saved: Studio\n";
+        worker.stdout.streamFinished();
+        worker.exited(0, 0);
+        compare(saved.ssids.join("|"), "Saved: Studio");
+        compare(saved.ready, true);
     }
     function test_quick_list_wheel_speed_tail_clamp_and_reduce_motion() {
-        const actionsBefore = JSON.stringify(DeviceActions.lastRequest);
+        const actionsBefore = JSON.stringify(NacreControlActions.lastRequest);
         DesktopSettings.data = {
             animations: true
         };
@@ -142,7 +265,7 @@ TestCase {
         view.contentItem.children[0].implicitHeight = 120;
         wait(0);
         compare(view.contentY, 0);
-        compare(JSON.stringify(DeviceActions.lastRequest), actionsBefore);
+        compare(JSON.stringify(NacreControlActions.lastRequest), actionsBefore);
     }
     function test_sound_controls_and_settings_link() {
         const popup = createTemporaryObject(sound, test);
@@ -202,10 +325,10 @@ TestCase {
         const blue = createTemporaryObject(bluetooth, test);
         verify(!findChild(wifi, "quickWifiPower").enabled);
         verify(!findChild(blue, "quickBluetoothPower").enabled);
-        DeviceActions.lastRequest = [];
+        NacreControlActions.lastRequest = [];
         findChild(wifi, "quickWifiPower").clicked();
         findChild(blue, "quickBluetoothPower").clicked();
-        compare(DeviceActions.lastRequest.length, 0);
+        compare(NacreControlActions.lastRequest.length, 0);
         verify(!wifi.activate(wifi.nearby[0]));
         verify(!blue.activate(blue.known[0]));
         NacreNetwork.wifiAvailable = true;
@@ -223,14 +346,16 @@ TestCase {
         verify(disconnect);
         compare(disconnect.text, "Disconnect");
         disconnect.clicked();
-        compare(DeviceActions.lastRequest.join("|"), "wifi-disconnect|wlan0");
+        compare(NacreControlActions.lastRequest.join("|"), "wifi-disconnect|wlan0");
         findChild(popup, "availableWifiAction").clicked();
-        compare(DeviceActions.lastRequest.join("|"), "wifi-connect|Guest");
+        compare(popup.pendingNetwork.ssid, "Guest");
+        verify(popup.connectPending());
+        compare(NacreControlActions.lastRequest[0], "wifi-inline");
         findChild(popup, "quickWifiPower").clicked();
-        compare(DeviceActions.lastRequest.join("|"), "wifi-radio|off");
+        compare(NacreControlActions.lastRequest.join("|"), "wifi-radio|off");
         const scan = findChild(popup, "quickWifiScan");
         mouseClick(scan, scan.width / 2, scan.height / 2);
-        compare(DeviceActions.lastRequest[0], "wifi-scan");
+        compare(NacreControlActions.lastRequest[0], "wifi-scan");
         verify(!findChild(popup, "quickSettingsLink"));
         NacrePanelState.openDeviceSettings("network");
         compare(NacrePanelState.screens.test.controlSection, "network");
@@ -238,10 +363,10 @@ TestCase {
 
     function test_bluetooth_shows_known_devices_and_links_settings() {
         const popup = createTemporaryObject(bluetooth, test);
-        compare(popup.known.length, 1);
+        compare(popup.known.length, 2);
         compare(popup.known[0].name, "Headphones");
         findChild(popup, "quickBluetoothPower").clicked();
-        compare(DeviceActions.lastRequest.join("|"), "bluetooth-power|off");
+        compare(NacreControlActions.lastRequest.join("|"), "bluetooth-power|off");
         verify(!findChild(popup, "quickSettingsLink"));
         NacrePanelState.openDeviceSettings("bluetooth");
         compare(NacrePanelState.screens.test.controlSection, "bluetooth");
@@ -251,7 +376,7 @@ TestCase {
         const wifi = createTemporaryObject(network, test);
         const bt = createTemporaryObject(bluetooth, test);
         const audio = createTemporaryObject(sound, test);
-        const previous = DeviceActions.lastRequest.join("|");
+        const previous = NacreControlActions.lastRequest.join("|");
         verify(!wifi.activate({
             bssid: "AA:BB:CC:DD:EE:99",
             ssid: "Missing",
@@ -261,14 +386,14 @@ TestCase {
             address: "AA:BB:CC:DD:EE:99",
             connected: false
         }));
-        compare(DeviceActions.lastRequest.join("|"), previous);
-        DeviceActions.busy = true;
+        compare(NacreControlActions.lastRequest.join("|"), previous);
+        NacreControlActions.busy = true;
         verify(!wifi.activate(wifi.nearby[0]));
         verify(!bt.activate(bt.known[0]));
-        compare(DeviceActions.lastRequest.join("|"), previous);
-        DeviceActions.busy = false;
+        compare(NacreControlActions.lastRequest.join("|"), previous);
+        NacreControlActions.busy = false;
         verify(bt.activate(bt.known[0]));
-        compare(DeviceActions.lastRequest.join("|"), "bluetooth-disconnect|AA:BB:CC:DD:EE:FF");
+        compare(NacreControlActions.lastRequest.join("|"), "bluetooth-disconnect|AA:BB:CC:DD:EE:FF");
         verify(!audio.chooseOutput({
             ready: true,
             audio: {},
@@ -286,6 +411,50 @@ TestCase {
         slider.moved();
         compare(NacreAudio.writes, 1);
         compare(NacreAudio.volume, .6);
+    }
+    function test_mixer_and_input_selection_guard_removed_nodes() {
+        const previous = Pipewire.nodes;
+        const input = {
+            id: 20,
+            ready: true,
+            isSink: false,
+            isStream: false,
+            description: "Fixture microphone",
+            audio: {
+                volume: .5,
+                muted: false
+            }
+        };
+        const stream = {
+            id: 21,
+            ready: true,
+            isSink: false,
+            isStream: true,
+            description: "Fixture music",
+            audio: {
+                volume: .7,
+                muted: false
+            }
+        };
+        Pipewire.nodes = {
+            values: [input, stream]
+        };
+        const popup = createTemporaryObject(sound, test);
+        compare(popup.inputs.length, 1);
+        compare(popup.streams.length, 1);
+        verify(popup.chooseInput(input));
+        compare(Pipewire.preferredDefaultAudioSource, input);
+        verify(popup.setStream(stream, 1.4));
+        compare(stream.audio.volume, 1);
+        verify(popup.muteStream(stream));
+        compare(stream.audio.muted, true);
+        Pipewire.nodes = {
+            values: []
+        };
+        verify(!popup.setStream(stream, .2));
+        verify(!popup.chooseInput(input));
+        compare(stream.audio.volume, 1);
+        Pipewire.nodes = previous;
     }
     function test_every_route_and_closing_retention_unload_reversal() {
         DesktopSettings.data = {

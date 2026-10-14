@@ -1,5 +1,7 @@
 import QtQuick
+import QtQuick.Controls.Basic
 import qs.widgets
+import qs.services
 
 NacreSurface {
     id: root
@@ -7,46 +9,129 @@ NacreSurface {
     property string detail: ""
     property string icon: ""
     property bool selected: false
+    property bool available: true
+    property bool hasDetails: false
+    property bool contextDetails: false
+    property string explanation: ""
+    property bool held: false
+    readonly property color tileInk: !available ? NacreTokens.mutedInk : selected ? NacreColours.palette.m3onPrimaryContainer : NacreTokens.ink
     signal clicked
-    implicitHeight: Math.max(60, detailText.y + detailText.implicitHeight + 10)
-    implicitWidth: 120
-    radius: 14
-    topLeftRadius: 7
-    bottomRightRadius: 7
-    color: selected ? Qt.alpha(NacreTokens.accent, .13) : Qt.alpha(NacreTokens.raised, .6)
+    signal detailsRequested
+    implicitHeight: 66
+    implicitWidth: 184
+    radius: 24
+    color: !available ? Qt.alpha(NacreTokens.raised, .4) : selected ? NacreColours.palette.m3primaryContainer : NacreTokens.raised
     border.width: 1
-    border.color: Qt.alpha(NacreTokens.outline, selected ? .6 : .25)
-    opacity: enabled ? 1 : .45
-    NacreIcon {
-        x: 10
-        y: 8
-        text: root.icon
-        font.pointSize: 13
-        color: root.selected ? NacreTokens.accent : NacreTokens.mutedInk
-    }
-    NacreText {
-        id: labelText
-        x: 34
-        y: 8
-        width: parent.width - 44
-        text: root.label
-        font.pointSize: 10
-        wrapMode: Text.Wrap
-    }
-    NacreText {
-        id: detailText
-        x: 10
-        y: Math.max(33, labelText.y + labelText.implicitHeight + 6)
-        width: parent.width - 20
-        text: root.detail
-        font.pointSize: 9
-        color: NacreTokens.mutedInk
-        wrapMode: Text.Wrap
-    }
-    NacreInteraction {
-        accessibleName: root.label + " " + root.detail
-        function onClicked() {
-            root.clicked();
+    border.color: Qt.alpha(NacreTokens.outline, available ? .12 : .06)
+    Item {
+        width: parent.width - (root.hasDetails ? 34 : 0)
+        height: parent.height
+        NacreIcon {
+            x: 14
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.icon
+            font.pointSize: 17
+            color: root.tileInk
+            opacity: root.available ? 1 : .4
+        }
+        Column {
+            x: 44
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - x - 8
+            spacing: 3
+            NacreText {
+                width: parent.width
+                text: root.label
+                color: root.tileInk
+                opacity: root.available ? 1 : .55
+                font.pointSize: 10
+                font.weight: Font.Medium
+                elide: Text.ElideRight
+            }
+            NacreText {
+                width: parent.width
+                text: root.detail
+                font.pointSize: 9
+                color: root.selected && root.available ? root.tileInk : NacreTokens.mutedInk
+                opacity: root.available ? 1 : .55
+                elide: Text.ElideRight
+            }
+        }
+        NacreInteraction {
+            id: toggleInput
+            objectName: root.objectName + "Toggle"
+            disabled: !root.available
+            accessibleName: root.label + ": " + root.detail
+            function onClicked() {
+                if (!root.held)
+                    root.clicked();
+                root.held = false;
+            }
+            Keys.onPressed: event => {
+                if (root.contextDetails && (event.key === Qt.Key_Menu || event.key === Qt.Key_F10 && event.modifiers & Qt.ShiftModifier)) {
+                    root.detailsRequested();
+                    event.accepted = true;
+                }
+            }
         }
     }
+    NacreSurface {
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        width: 34
+        height: parent.height - 12
+        radius: 17
+        color: "transparent"
+        visible: root.hasDetails
+        NacreIcon {
+            anchors.centerIn: parent
+            text: "chevron_right"
+            font.pointSize: 17
+            color: root.tileInk
+        }
+        NacreInteraction {
+            objectName: root.objectName + "Details"
+            accessibleName: NacreI18n.tr("controlcenter.tile.details", "Open {name} details", {
+                name: root.label
+            })
+            function onClicked() {
+                root.detailsRequested();
+            }
+        }
+    }
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        enabled: root.contextDetails
+        onTapped: root.detailsRequested()
+    }
+    Connections {
+        target: toggleInput
+        function onPressedChanged() {
+            if (root.contextDetails && toggleInput.pressed && !toggleInput.keyboardPressed) {
+                root.held = false;
+                hold.restart();
+            } else
+                hold.stop();
+        }
+    }
+    Timer {
+        id: hold
+        interval: 600
+        onTriggered: {
+            root.held = true;
+            root.detailsRequested();
+        }
+    }
+    TapHandler {
+        acceptedButtons: Qt.LeftButton
+        enabled: root.contextDetails && !root.available
+        longPressThreshold: .6
+        onLongPressed: root.detailsRequested()
+    }
+    HoverHandler {
+        id: explanationHover
+    }
+    ToolTip.visible: explanationHover.hovered && root.explanation !== ""
+    ToolTip.delay: 400
+    ToolTip.text: root.explanation
 }

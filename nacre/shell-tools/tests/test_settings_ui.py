@@ -91,6 +91,9 @@ class SettingsUITests(unittest.TestCase):
                 "NacreNotifs": 'property var list:[]; readonly property var retained:list;property int clears:0;property string dismissed:"";function clearHistory(){clears++} function dismiss(entry){dismissed=entry.key}',
                 "Pipewire": "property var nodes:({values:[]});property var defaultAudioSink:null;property var defaultAudioSource:null;property var preferredDefaultAudioSink:null;property var preferredDefaultAudioSource:null",
             }
+            services["NacreControlActions"] = (
+                "readonly property bool busy:DeviceActions.busy;readonly property string message:DeviceActions.message;function request(a){DeviceActions.request(a)}function connectWifiInline(p,password){DeviceActions.connectedSSID=p.ssid;DeviceActions.busy=true;Qt.callLater(()=>DeviceActions.busy=false);return true}function cancelWifiInline(){}"
+            )
             for name, body in services.items():
                 (target / "fixtures" / (name + ".qml")).write_text(
                     "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
@@ -101,7 +104,9 @@ class SettingsUITests(unittest.TestCase):
             (target / "fixtures/BrandLogo.qml").write_text(
                 "import QtQuick\nItem {property bool settings:false;property bool notifications:false;property color background:Qt.rgba(0,0,0,1);implicitWidth:26;implicitHeight:26}"
             )
-            (target / "fixtures/NacreIcon.qml").write_text("import QtQuick\nText {}")
+            (target / "fixtures/NacreIcon.qml").write_text(
+                "import QtQuick\nText {property real fill:0}"
+            )
             with (target / "fixtures/qmldir").open("a") as manifest:
                 for name in services:
                     manifest.write("\nsingleton " + name + " 1.0 " + name + ".qml")
