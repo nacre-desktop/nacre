@@ -25,6 +25,7 @@ class ShellStateTests(unittest.TestCase):
             fixtures = target / "fixtures"
             fixtures.mkdir()
             definitions = {
+                "NacreDashboardState": "property var tabs:[];property bool extrasReady:true",
                 "NacrePearls": "property var views:[]",
                 "NacreCompositor": 'property var focusedMonitor:({name:"one"});property int activeWsId:2;property var windows:[];property var workspaces:({values:[{},{}]});function createShortcut(owner,params){return null}property var calls:[];function switchWorkspace(id){calls=[...calls,"workspace "+id]}function focusWindow(id){calls=[...calls,"focus "+id]}function logout(){calls=[...calls,"logout"]}function hideWindowCommand(id){return ["python3","/fixture/window-hide.py","hide","--window",id,"--quiet"]}',
                 "NacreHoverIntent": "property var dismissed:[];function dismiss(screen){dismissed=[...dismissed,screen.name]}",
@@ -57,6 +58,10 @@ class ShellStateTests(unittest.TestCase):
             )
             for name in ("NacreShellIpc", "NacreShellShortcuts"):
                 stage_qml(SHELL / "modules" / (name + ".qml"), target / (name + ".qml"))
+            stage_qml(
+                SHELL / "services/NacreDashboardRegistry.qml",
+                fixtures / "NacreDashboardRegistry.qml",
+            )
             shutil.copy2(
                 ROOT / "tests/state-qml/tst_state.qml", target / "tst_state.qml"
             )

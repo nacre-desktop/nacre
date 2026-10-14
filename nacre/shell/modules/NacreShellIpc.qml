@@ -5,6 +5,7 @@ import qs.services
 
 Scope {
     id: root
+    property var pendingDashboard: null
     function activePanel() {
         return NacrePanelState.panels[NacrePanelState.activeName()] || null;
     }
@@ -32,6 +33,34 @@ Scope {
             notificationsSuppressed: Object.values(NacrePanelState.panels).some(panel => panel.notifications?.suppressed === true)
         };
     }
+    function dashboardIndex(value) {
+        const names = NacreDashboardRegistry.names;
+        const index = Math.max(0, Math.min(names.length - 1, Math.trunc(Number(value)) || 0));
+        return NacreDashboardState.tabs.includes(names[index]) ? index : Math.max(0, names.indexOf(NacreDashboardState.tabs[0]));
+    }
+    function setDashboardTab(view, value) {
+        const index = Math.max(0, Math.min(NacreDashboardRegistry.names.length - 1, Math.trunc(Number(value)) || 0));
+        if (NacreDashboardState.extrasReady === false && index >= 4) {
+            pendingDashboard = {
+                view: view,
+                index: index
+            };
+            return;
+        }
+        pendingDashboard = null;
+        view.dashboardTab = dashboardIndex(index);
+    }
+    Connections {
+        target: NacreDashboardState
+        function onExtrasReadyChanged() {
+            if (NacreDashboardState.extrasReady && root.pendingDashboard) {
+                const pending = root.pendingDashboard;
+                root.pendingDashboard = null;
+                if (pending.view)
+                    pending.view.dashboardTab = root.dashboardIndex(pending.index);
+            }
+        }
+    }
     function previewPanel(name, index = 0) {
         const view = NacrePanelState.getForActive();
         if (!view)
@@ -40,7 +69,7 @@ Scope {
         NacrePanelState.closeTransient(view);
         view.previewOnly = true;
         if (name === "dashboard") {
-            view.dashboardTab = Math.max(0, Math.min(4, index));
+            root.setDashboardTab(view, index);
             view.dashboard = true;
         } else if (name === "osd")
             view.osd = true;
@@ -69,7 +98,7 @@ Scope {
             if (saved.launcher === true && NacrePanelState.modes.includes(saved.mode))
                 NacrePanelState.openMode(saved.mode, "", false);
             if (saved.dashboard === true) {
-                view.dashboardTab = Math.max(0, Math.min(4, Number(saved.tab) || 0));
+                root.setDashboardTab(view, saved.tab);
                 view.dashboard = true;
                 view.dashboardPinned = false;
             }
@@ -107,9 +136,9 @@ Scope {
     }
     function tab(index) {
         const view = NacrePanelState.getForActive();
-        if (!view || !Number.isInteger(index) || index < 0 || index > 4)
+        if (!view || !Number.isInteger(index))
             return;
-        view.dashboardTab = index;
+        root.setDashboardTab(view, index);
         view.dashboardPinned = false;
         view.dashboard = true;
         view.previewOnly = false;

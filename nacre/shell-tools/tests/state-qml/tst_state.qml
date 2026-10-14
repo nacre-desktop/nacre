@@ -61,6 +61,8 @@ TestCase {
         verify(!one.hoverDocked);
     }
     function init() {
+        NacreDashboardState.extrasReady = true;
+        NacreDashboardState.tabs = NacreDashboardRegistry.names;
         NacreSettingsApp.close();
         NacreSettingsApp.created = false;
         one = createTemporaryObject(flags, test);
@@ -219,6 +221,42 @@ TestCase {
         compare(NacreHoverIntent.dismissed[0], "one");
     }
 
+    function test_ipc_opens_and_restores_brain_and_disabled_fallback() {
+        const view = createTemporaryObject(bridge, test);
+        const brain = NacreDashboardRegistry.names.indexOf("brain");
+        NacreDashboardState.tabs = ["today", "media", "brain"];
+        view.tab(brain);
+        compare(one.dashboardTab, brain);
+        verify(one.dashboard);
+        NacrePanelState.close();
+        verify(view.restore(JSON.stringify({
+            dashboard: true,
+            tab: brain
+        })));
+        compare(one.dashboardTab, brain);
+        verify(one.dashboard);
+        NacreDashboardState.tabs = ["media", "weather"];
+        verify(view.restore(JSON.stringify({
+            dashboard: true,
+            tab: brain
+        })));
+        compare(one.dashboardTab, NacreDashboardRegistry.names.indexOf("media"));
+        view.tab(brain);
+        compare(one.dashboardTab, NacreDashboardRegistry.names.indexOf("media"));
+    }
+    function test_brain_restore_waits_for_extra_preferences() {
+        const view = createTemporaryObject(bridge, test);
+        const brain = NacreDashboardRegistry.names.indexOf("brain");
+        NacreDashboardState.tabs = ["today"];
+        NacreDashboardState.extrasReady = false;
+        verify(view.restore(JSON.stringify({
+            dashboard: true,
+            tab: brain
+        })));
+        NacreDashboardState.tabs = ["media", "brain"];
+        NacreDashboardState.extrasReady = true;
+        compare(one.dashboardTab, brain);
+    }
     function test_bridge_readonly_state_gallery_bounds_and_restore() {
         const view = createTemporaryObject(bridge, test);
         const state = view.stateData();
@@ -236,7 +274,7 @@ TestCase {
         verify(one.dashboard && !one.dashboardPinned);
         compare(one.dashboardTab, 4);
         view.tab(99);
-        compare(one.dashboardTab, 4);
+        compare(one.dashboardTab, NacreDashboardRegistry.names.length - 1);
         verify(!view.restore("{"));
         verify(!view.restore("[]"));
         verify(!view.restore('{"version":2}'));
