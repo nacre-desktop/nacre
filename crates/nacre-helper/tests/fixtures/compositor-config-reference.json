@@ -1,0 +1,2723 @@
+{
+  "reference_sources": {
+    "compositor_config.py": "901c35e64dd2a44d9162609c381efa2670ed18feb4d67e7f77c514c8f8b75710",
+    "compositor_backends/hyprland_config.py": "02d1fdb5ae8108cf979c268791d9a43641e34642b3e97a29072e7fa9d40920c4",
+    "compositor_backends/niri_config.py": "af80f5f76d34481f75b6f5e6ec3ec9c632f78223acff1327f3bf20f925315020",
+    "compositor_backends/hyprland.py": "e0c253121be18b66cbc6e149fefb00157ff6b6f6d427dde49135ef499d363859",
+    "compositor_backends/niri.py": "b1befdc9049d11f53a3fdbf11eab038c5bd5f719f085c06371daecede4889847",
+    "compositor-contract.json": "c075df8a6763f350a91f2910133cba1f5e00fdd8eeedc52e17dc40efade54c9b"
+  },
+  "contract": {
+    "version": 1,
+    "extensions": {
+      "panel.drag": {
+        "backend": "hyprland",
+        "source": "compositor_backends/hyprland/panel-drag.lua",
+        "function": "nacre_panel_drag",
+        "purpose": "Owned shell edges pass Super+drag through; ordinary windows keep native press/release movement; detached panels publish bounded native drag events."
+      },
+      "cursor.session": {
+        "backend": "hyprland",
+        "source": "compositor_backends/hyprland/session-cursor.lua",
+        "function": "apply_session_cursor",
+        "purpose": "Apply validated UWSM cursor environment once when the compositor session starts."
+      }
+    },
+    "outputs": {
+      "hypr/conf/keybinding.lua": [
+        {
+          "kind": "binding",
+          "keys": "XF86AudioMute",
+          "action": "application.launch",
+          "parameters": {
+            "command": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+          },
+          "options": {
+            "description": "Nacre:mute",
+            "locked": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "XF86AudioLowerVolume",
+          "action": "application.launch",
+          "parameters": {
+            "command": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+          },
+          "options": {
+            "description": "Nacre:volume-down",
+            "locked": true,
+            "repeating": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "XF86AudioRaiseVolume",
+          "action": "application.launch",
+          "parameters": {
+            "command": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"
+          },
+          "options": {
+            "description": "Nacre:volume-up",
+            "locked": true,
+            "repeating": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "XF86AudioMicMute",
+          "action": "application.launch",
+          "parameters": {
+            "command": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+          },
+          "options": {
+            "description": "Nacre:mic-mute"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "XF86PowerOff",
+          "action": "application.launch",
+          "parameters": {
+            "command": "loginctl lock-session"
+          },
+          "options": {
+            "description": "Nacre:lock",
+            "locked": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "XF86MonBrightnessDown",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell brightness down"
+          },
+          "options": {
+            "description": "Nacre:brightness-down"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "XF86MonBrightnessUp",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell brightness up"
+          },
+          "options": {
+            "description": "Nacre:brightness-up"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "XF86KbdBrightnessUp",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell keyboard-light up"
+          },
+          "options": {
+            "description": "Nacre:keyboard-up"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "XF86KbdBrightnessDown",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell keyboard-light down"
+          },
+          "options": {
+            "description": "Nacre:keyboard-down"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + period",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-menu actions.emoji"
+          },
+          "options": {
+            "description": "Nacre:emoji"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + E",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-menu actions.emoji"
+          },
+          "options": {
+            "description": "Nacre:emoji"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "Print",
+          "action": "application.launch",
+          "parameters": {
+            "command": "grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""
+          },
+          "options": {
+            "description": "Nacre:screenshot"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + S",
+          "action": "application.launch",
+          "parameters": {
+            "command": "grim -g \"$(slurp)\" - | wl-copy && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""
+          },
+          "options": {
+            "description": "Nacre:screenshot"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + Print",
+          "action": "application.launch",
+          "parameters": {
+            "command": "grim ~/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S).png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Saved to Pictures/Screenshots\""
+          },
+          "options": {
+            "description": "Nacre:save-screenshot"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + Q",
+          "action": "window.close",
+          "parameters": {},
+          "options": {
+            "description": "Nacre:close"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + H",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.config/hypr/scripts/window-minimize.sh hide"
+          },
+          "options": {
+            "description": "Nacre:hide"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + H",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.config/hypr/scripts/window-minimize.sh restore-last"
+          },
+          "options": {
+            "description": "Nacre:unhide"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + ALT + H",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.config/hypr/scripts/window-minimize.sh restore-current"
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + F",
+          "action": "window.fullscreen",
+          "parameters": {
+            "mode": "fullscreen"
+          },
+          "options": {
+            "description": "Nacre:fullscreen"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + M",
+          "action": "window.fullscreen",
+          "parameters": {
+            "mode": "maximized"
+          },
+          "options": {
+            "description": "Nacre:maximize"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + T",
+          "action": "window.floating",
+          "parameters": {
+            "action": "toggle"
+          },
+          "options": {
+            "description": "Nacre:float"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + P",
+          "action": "window.pin",
+          "parameters": {},
+          "options": {
+            "description": "Nacre:pin"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + P",
+          "action": "window.pseudo",
+          "parameters": {},
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + G",
+          "action": "group.toggle",
+          "parameters": {},
+          "options": {
+            "description": "Nacre:group"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + Page_Up",
+          "action": "group.previous",
+          "parameters": {},
+          "options": {
+            "description": "Nacre:group-cycle"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + Page_Down",
+          "action": "group.next",
+          "parameters": {},
+          "options": {
+            "description": "Nacre:group-cycle"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + J",
+          "action": "layout.toggle-split",
+          "parameters": {},
+          "options": {
+            "description": "Nacre:split"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + mouse:273",
+          "action": "window.resize",
+          "parameters": {},
+          "options": {
+            "mouse": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "ALT + TAB",
+          "action": "window.cycle",
+          "parameters": {
+            "next": true
+          },
+          "options": {
+            "description": "Nacre:cycle-window"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "ALT + SHIFT + TAB",
+          "action": "window.cycle",
+          "parameters": {
+            "next": false
+          },
+          "options": {
+            "description": "Nacre:cycle-window"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + 1",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 1
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + 1",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 1
+            }
+          },
+          "options": {
+            "description": "Nacre:move-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + 2",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 2
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + 2",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 2
+            }
+          },
+          "options": {
+            "description": "Nacre:move-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + 3",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 3
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + 3",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 3
+            }
+          },
+          "options": {
+            "description": "Nacre:move-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + 4",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 4
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + 4",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 4
+            }
+          },
+          "options": {
+            "description": "Nacre:move-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + 5",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 5
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + 5",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 5
+            }
+          },
+          "options": {
+            "description": "Nacre:move-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + 6",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 6
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + 6",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 6
+            }
+          },
+          "options": {
+            "description": "Nacre:move-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + 7",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 7
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + 7",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 7
+            }
+          },
+          "options": {
+            "description": "Nacre:move-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + 8",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 8
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + 8",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 8
+            }
+          },
+          "options": {
+            "description": "Nacre:move-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + 9",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 9
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + 9",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 9
+            }
+          },
+          "options": {
+            "description": "Nacre:move-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + 0",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 10
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + 0",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "number",
+              "number": 10
+            }
+          },
+          "options": {
+            "description": "Nacre:move-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + right",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "relative",
+              "offset": 1,
+              "scope": "monitor"
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:next-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + left",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "relative",
+              "offset": -1,
+              "scope": "monitor"
+            },
+            "current_monitor": true
+          },
+          "options": {
+            "description": "Nacre:previous-workspace"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + mouse_down",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "relative",
+              "offset": 1,
+              "scope": "existing"
+            },
+            "current_monitor": true
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + mouse_up",
+          "action": "workspace.switch",
+          "parameters": {
+            "workspace": {
+              "kind": "relative",
+              "offset": -1,
+              "scope": "existing"
+            },
+            "current_monitor": true
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + SHIFT + left",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "relative",
+              "offset": -1,
+              "scope": "global"
+            }
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + SHIFT + right",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "relative",
+              "offset": 1,
+              "scope": "global"
+            }
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + S",
+          "action": "workspace.scratchpad",
+          "parameters": {
+            "name": ""
+          },
+          "options": {
+            "description": "Nacre:scratchpad"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + S",
+          "action": "window.move",
+          "parameters": {
+            "workspace": {
+              "kind": "scratchpad",
+              "name": ""
+            }
+          },
+          "options": {
+            "description": "Nacre:move-scratchpad"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + left",
+          "action": "window.focus-direction",
+          "parameters": {
+            "direction": "left"
+          },
+          "options": {
+            "description": "Nacre:focus",
+            "repeating": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + left",
+          "action": "window.move",
+          "parameters": {
+            "direction": "left"
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + ALT + left",
+          "action": "window.resize",
+          "parameters": {
+            "relative": true,
+            "x": -30,
+            "y": 0
+          },
+          "options": {
+            "repeating": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + right",
+          "action": "window.focus-direction",
+          "parameters": {
+            "direction": "right"
+          },
+          "options": {
+            "description": "Nacre:focus",
+            "repeating": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + right",
+          "action": "window.move",
+          "parameters": {
+            "direction": "right"
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + ALT + right",
+          "action": "window.resize",
+          "parameters": {
+            "relative": true,
+            "x": 30,
+            "y": 0
+          },
+          "options": {
+            "repeating": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + up",
+          "action": "window.focus-direction",
+          "parameters": {
+            "direction": "up"
+          },
+          "options": {
+            "description": "Nacre:focus"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + up",
+          "action": "window.move",
+          "parameters": {
+            "direction": "up"
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + ALT + up",
+          "action": "window.resize",
+          "parameters": {
+            "relative": true,
+            "x": 0,
+            "y": -30
+          },
+          "options": {
+            "repeating": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + down",
+          "action": "window.focus-direction",
+          "parameters": {
+            "direction": "down"
+          },
+          "options": {
+            "description": "Nacre:focus"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + down",
+          "action": "window.move",
+          "parameters": {
+            "direction": "down"
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + ALT + down",
+          "action": "window.resize",
+          "parameters": {
+            "relative": true,
+            "x": 0,
+            "y": 30
+          },
+          "options": {
+            "repeating": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + R",
+          "action": "keymap.switch",
+          "parameters": {
+            "name": "resize"
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "left",
+          "action": "window.resize",
+          "parameters": {
+            "relative": true,
+            "x": -30,
+            "y": 0
+          },
+          "options": {
+            "repeating": true
+          },
+          "keymap": "resize"
+        },
+        {
+          "kind": "binding",
+          "keys": "right",
+          "action": "window.resize",
+          "parameters": {
+            "relative": true,
+            "x": 30,
+            "y": 0
+          },
+          "options": {
+            "repeating": true
+          },
+          "keymap": "resize"
+        },
+        {
+          "kind": "binding",
+          "keys": "up",
+          "action": "window.resize",
+          "parameters": {
+            "relative": true,
+            "x": 0,
+            "y": -30
+          },
+          "options": {
+            "repeating": true
+          },
+          "keymap": "resize"
+        },
+        {
+          "kind": "binding",
+          "keys": "down",
+          "action": "window.resize",
+          "parameters": {
+            "relative": true,
+            "x": 0,
+            "y": 30
+          },
+          "options": {
+            "repeating": true
+          },
+          "keymap": "resize"
+        },
+        {
+          "kind": "binding",
+          "keys": "escape",
+          "action": "keymap.switch",
+          "parameters": {
+            "name": "reset"
+          },
+          "options": {},
+          "keymap": "resize"
+        },
+        {
+          "kind": "binding",
+          "keys": "return",
+          "action": "keymap.switch",
+          "parameters": {
+            "name": "reset"
+          },
+          "options": {},
+          "keymap": "resize"
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + R",
+          "action": "keymap.switch",
+          "parameters": {
+            "name": "reset"
+          },
+          "options": {},
+          "keymap": "resize"
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SPACE",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell launcher"
+          },
+          "options": {
+            "description": "Nacre:launcher"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + TAB",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell overview"
+          },
+          "options": {
+            "description": "Nacre:overview"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + V",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell clipboard"
+          },
+          "options": {
+            "description": "Nacre:clipboard"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + W",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell wallpaper"
+          },
+          "options": {
+            "description": "Nacre:wallpaper"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + Z",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell hide"
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + O",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell toggle"
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + I",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-settings"
+          },
+          "options": {
+            "description": "Nacre:settings"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + C",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-menu actions.capture"
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + X",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-menu power"
+          },
+          "options": {
+            "description": "Nacre:power"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + ESCAPE",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-menu power"
+          },
+          "options": {
+            "description": "Nacre:power"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + L",
+          "action": "application.launch",
+          "parameters": {
+            "command": "loginctl lock-session"
+          },
+          "options": {
+            "description": "Nacre:lock"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + R",
+          "action": "compositor.reload",
+          "parameters": {},
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + RETURN",
+          "action": "application.launch",
+          "parameters": {
+            "command": "uwsm app -- ~/.local/bin/nacre-app terminal"
+          },
+          "options": {
+            "description": "Nacre:terminal"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + B",
+          "action": "application.launch",
+          "parameters": {
+            "command": "uwsm app -- ~/.local/bin/nacre-app browser"
+          },
+          "options": {
+            "description": "Nacre:browser"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + E",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-app files"
+          },
+          "options": {
+            "description": "Nacre:files"
+          }
+        }
+      ],
+      "hypr/conf/windowrule.lua": [
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^([Tt]hunar)$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true,
+            "size": "70% 75%"
+          },
+          "id": "nacre-thunar-files"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^(org[.]kde[.]dolphin|[Dd]olphin)$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true,
+            "size": [
+              "monitor_w*0.6",
+              "monitor_h*0.75"
+            ]
+          },
+          "id": "nacre-dolphin-files"
+        }
+      ],
+      "hypr/conf/nacre.lua": [
+        {
+          "kind": "layer-rule",
+          "selector": {
+            "namespace_regex": "^nacre-(drawers|topbar|lock-preview|left-menu-handle|right-menu-handle)$"
+          },
+          "effects": {},
+          "backend": {
+            "hyprland": {
+              "blur": true,
+              "ignore_alpha": 0.5,
+              "no_anim": true
+            },
+            "niri": {
+              "blur": true,
+              "namespace_regex": "^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$"
+            }
+          },
+          "id": "nacre-overlay-glass"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^org.quickshell$",
+            "title_regex": "^Nacre lock screen preview$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true,
+            "size": "70% 70%"
+          },
+          "id": "nacre-lock-preview"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^org\\.pulseaudio\\.pavucontrol$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true,
+            "pinned": true,
+            "size": "700 600"
+          },
+          "id": "nacre-audio-mixer"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^blueman-manager$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true,
+            "size": "800 600"
+          },
+          "id": "nacre-bluetooth-manager"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^nm-connection-editor$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true,
+            "size": "800 700"
+          },
+          "id": "nacre-network-editor"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^hyprland-share-picker$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true,
+            "pinned": true,
+            "size": "600 400"
+          },
+          "id": "nacre-share-picker"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "title_regex": "^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true,
+            "pinned": true
+          },
+          "id": "nacre-picture-in-picture"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^nacre-control$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true,
+            "size": "720 500"
+          },
+          "id": "nacre-native-controls"
+        },
+        {
+          "kind": "backend-config",
+          "backend": "hyprland",
+          "value": {
+            "xwayland": {
+              "force_zero_scaling": true
+            }
+          }
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^org[.]quickshell$",
+            "title_regex": "^Nacre Settings$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true
+          },
+          "id": "nacre-settings-app"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^org[.]quickshell$",
+            "title_regex": "^Nacre Colors$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true
+          },
+          "id": "nacre-colors-app"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^org[.]quickshell$",
+            "title_regex": "^Nacre Welcome$"
+          },
+          "effects": {
+            "centered": true,
+            "floating": true
+          },
+          "id": "nacre-welcome"
+        }
+      ],
+      "hypr/conf/brain.lua": [
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$"
+          },
+          "effects": {},
+          "backend": {
+            "hyprland": {
+              "fullscreen_state": "0 0",
+              "suppress_event": "fullscreen maximize"
+            }
+          },
+          "id": "nacre-brain"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^chrome-127[.]0[.]0[.]1__-Default$"
+          },
+          "effects": {},
+          "backend": {
+            "hyprland": {
+              "fullscreen_state": "0 0",
+              "suppress_event": "fullscreen maximize"
+            }
+          },
+          "id": "nacre-brain-chrome"
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^([Oo]bsidian)$"
+          },
+          "effects": {},
+          "id": "nacre-obsidian"
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + B",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-brain open"
+          },
+          "options": {}
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + N",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-brain capture"
+          },
+          "options": {}
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$"
+          },
+          "effects": {
+            "floating": true,
+            "size": "80 80"
+          },
+          "backend": {
+            "hyprland": {
+              "no_initial_focus": true
+            }
+          },
+          "id": "brain-auth-handoff"
+        }
+      ],
+      "nacre/shell-tools/shortcuts.lua": [
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + SPACE",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell palette"
+          },
+          "options": {
+            "description": "Nacre:palette"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + K",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-menu learn.shortcuts"
+          },
+          "options": {
+            "description": "Nacre:shortcuts"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + F1",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-menu learn.shortcuts"
+          },
+          "options": {
+            "description": "Nacre:shortcuts"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + A",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell left"
+          },
+          "options": {
+            "description": "Nacre:ai-sidebar"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "Escape",
+          "action": "shell.shortcut",
+          "parameters": {
+            "name": "nacre_shell:dismissHoverEdges"
+          },
+          "options": {
+            "non_consuming": true
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + D",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.local/bin/nacre-shell detach"
+          },
+          "options": {
+            "description": "Nacre:detach-panel"
+          }
+        },
+        {
+          "kind": "window-rule",
+          "selector": {
+            "app_id_regex": "^org[.]quickshell$",
+            "title_regex": "^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$"
+          },
+          "effects": {
+            "floating": true,
+            "corner_radius": 18,
+            "client_border": true
+          },
+          "backend": {
+            "hyprland": {
+              "no_anim": true
+            }
+          }
+        },
+        {
+          "kind": "unbind",
+          "keys": "SUPER + mouse:272"
+        },
+        {
+          "kind": "extension",
+          "id": "panel.drag"
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + mouse:272",
+          "action": "panel.drag",
+          "parameters": {},
+          "options": {
+            "description": "Nacre:move-panel-or-window"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "mouse:272",
+          "action": "panel.drag.finish",
+          "parameters": {},
+          "options": {
+            "release": true,
+            "ignore_mods": true,
+            "non_consuming": true,
+            "description": "Nacre:finish-panel-or-window-drag"
+          }
+        }
+      ],
+      "hypr/conf/cursor.lua": [
+        {
+          "kind": "extension",
+          "id": "cursor.session"
+        },
+        {
+          "kind": "event",
+          "event": "session.ready",
+          "callback": "cursor.session"
+        }
+      ]
+    },
+    "profileBindings": {
+      "windowTrashBindings": [
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + Q",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.config/hypr/scripts/window-trash.sh trash"
+          },
+          "options": {
+            "description": "Nacre:put-away"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + SHIFT + Q",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.config/hypr/scripts/window-trash.sh restore-last"
+          },
+          "options": {
+            "description": "Nacre:restore"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + ALT + Q",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.config/hypr/scripts/window-trash.sh restore-all"
+          },
+          "options": {
+            "description": "Nacre:restore-all"
+          }
+        },
+        {
+          "kind": "binding",
+          "keys": "SUPER + CTRL + SHIFT + Q",
+          "action": "application.launch",
+          "parameters": {
+            "command": "~/.config/hypr/scripts/window-close.sh force"
+          },
+          "options": {
+            "description": "Nacre:force-close"
+          }
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "request": {
+        "name": "backends",
+        "module": "neutral",
+        "operation": "supported_backends",
+        "args": [],
+        "kwargs": {}
+      },
+      "stdout": "[\"hyprland\", \"niri\"]\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "capabilities-hyprland",
+        "module": "neutral",
+        "operation": "backend_capabilities",
+        "args": [
+          "hyprland"
+        ],
+        "kwargs": {}
+      },
+      "stdout": "{\"backend\": \"hyprland\", \"backendReady\": true, \"setup_ready\": true, \"managedIncludes\": false, \"minimumVersion\": null, \"includeMinimumVersion\": null, \"testedVersion\": null, \"generatedFiles\": [\"hypr/conf/cursor.lua\", \"hypr/conf/keybinding.lua\", \"hypr/conf/windowrule.lua\", \"hypr/conf/nacre.lua\", \"hypr/conf/brain.lua\", \"nacre/shell-tools/shortcuts.lua\"]}\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "render-hyprland",
+        "module": "neutral",
+        "operation": "render",
+        "args": [
+          "$contract"
+        ],
+        "kwargs": {
+          "backend": "hyprland"
+        }
+      },
+      "stdout": "{\"hypr/conf/keybinding.lua\": \"-- Generated by tools/generate_compositor_config.py; edit compositor-contract.json.\\nhl.bind(\\\"XF86AudioMute\\\", hl.dsp.exec_cmd(\\\"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\\\"), {description=\\\"Nacre:mute\\\",locked=true})\\nhl.bind(\\\"XF86AudioLowerVolume\\\", hl.dsp.exec_cmd(\\\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-\\\"), {description=\\\"Nacre:volume-down\\\",locked=true,repeating=true})\\nhl.bind(\\\"XF86AudioRaiseVolume\\\", hl.dsp.exec_cmd(\\\"wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+\\\"), {description=\\\"Nacre:volume-up\\\",locked=true,repeating=true})\\nhl.bind(\\\"XF86AudioMicMute\\\", hl.dsp.exec_cmd(\\\"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\\\"), {description=\\\"Nacre:mic-mute\\\"})\\nhl.bind(\\\"XF86PowerOff\\\", hl.dsp.exec_cmd(\\\"loginctl lock-session\\\"), {description=\\\"Nacre:lock\\\",locked=true})\\nhl.bind(\\\"XF86MonBrightnessDown\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell brightness down\\\"), {description=\\\"Nacre:brightness-down\\\"})\\nhl.bind(\\\"XF86MonBrightnessUp\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell brightness up\\\"), {description=\\\"Nacre:brightness-up\\\"})\\nhl.bind(\\\"XF86KbdBrightnessUp\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell keyboard-light up\\\"), {description=\\\"Nacre:keyboard-up\\\"})\\nhl.bind(\\\"XF86KbdBrightnessDown\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell keyboard-light down\\\"), {description=\\\"Nacre:keyboard-down\\\"})\\nhl.bind(\\\"SUPER + period\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-menu actions.emoji\\\"), {description=\\\"Nacre:emoji\\\"})\\nhl.bind(\\\"SUPER + CTRL + E\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-menu actions.emoji\\\"), {description=\\\"Nacre:emoji\\\"})\\nhl.bind(\\\"Print\\\", hl.dsp.exec_cmd(\\\"grim -g \\\\\\\"$(slurp)\\\\\\\" - | wl-copy && notify-send -a \\\\\\\"Nacre Capture\\\\\\\" -i nacre-notifications \\\\\\\"Screenshot\\\\\\\" \\\\\\\"Copied to clipboard\\\\\\\"\\\"), {description=\\\"Nacre:screenshot\\\"})\\nhl.bind(\\\"SUPER + SHIFT + S\\\", hl.dsp.exec_cmd(\\\"grim -g \\\\\\\"$(slurp)\\\\\\\" - | wl-copy && notify-send -a \\\\\\\"Nacre Capture\\\\\\\" -i nacre-notifications \\\\\\\"Screenshot\\\\\\\" \\\\\\\"Copied to clipboard\\\\\\\"\\\"), {description=\\\"Nacre:screenshot\\\"})\\nhl.bind(\\\"SUPER + Print\\\", hl.dsp.exec_cmd(\\\"grim ~/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S).png && notify-send -a \\\\\\\"Nacre Capture\\\\\\\" -i nacre-notifications \\\\\\\"Screenshot\\\\\\\" \\\\\\\"Saved to Pictures/Screenshots\\\\\\\"\\\"), {description=\\\"Nacre:save-screenshot\\\"})\\nhl.bind(\\\"SUPER + Q\\\", hl.dsp.window.close(), {description=\\\"Nacre:close\\\"})\\nhl.bind(\\\"SUPER + H\\\", hl.dsp.exec_cmd(\\\"~/.config/hypr/scripts/window-minimize.sh hide\\\"), {description=\\\"Nacre:hide\\\"})\\nhl.bind(\\\"SUPER + SHIFT + H\\\", hl.dsp.exec_cmd(\\\"~/.config/hypr/scripts/window-minimize.sh restore-last\\\"), {description=\\\"Nacre:unhide\\\"})\\nhl.bind(\\\"SUPER + ALT + H\\\", hl.dsp.exec_cmd(\\\"~/.config/hypr/scripts/window-minimize.sh restore-current\\\"), {})\\nhl.bind(\\\"SUPER + F\\\", hl.dsp.window.fullscreen({mode=\\\"fullscreen\\\"}), {description=\\\"Nacre:fullscreen\\\"})\\nhl.bind(\\\"SUPER + M\\\", hl.dsp.window.fullscreen({mode=\\\"maximized\\\"}), {description=\\\"Nacre:maximize\\\"})\\nhl.bind(\\\"SUPER + T\\\", hl.dsp.window.float({action=\\\"toggle\\\"}), {description=\\\"Nacre:float\\\"})\\nhl.bind(\\\"SUPER + P\\\", hl.dsp.window.pin(), {description=\\\"Nacre:pin\\\"})\\nhl.bind(\\\"SUPER + SHIFT + P\\\", hl.dsp.window.pseudo(), {})\\nhl.bind(\\\"SUPER + G\\\", hl.dsp.group.toggle(), {description=\\\"Nacre:group\\\"})\\nhl.bind(\\\"SUPER + CTRL + Page_Up\\\", hl.dsp.group.prev(), {description=\\\"Nacre:group-cycle\\\"})\\nhl.bind(\\\"SUPER + CTRL + Page_Down\\\", hl.dsp.group.next(), {description=\\\"Nacre:group-cycle\\\"})\\nhl.bind(\\\"SUPER + J\\\", hl.dsp.layout(\\\"togglesplit\\\"), {description=\\\"Nacre:split\\\"})\\nhl.bind(\\\"SUPER + mouse:273\\\", hl.dsp.window.resize(), {mouse=true})\\nhl.bind(\\\"ALT + TAB\\\", hl.dsp.window.cycle_next({next=true}), {description=\\\"Nacre:cycle-window\\\"})\\nhl.bind(\\\"ALT + SHIFT + TAB\\\", hl.dsp.window.cycle_next({next=false}), {description=\\\"Nacre:cycle-window\\\"})\\nhl.bind(\\\"SUPER + 1\\\", hl.dsp.focus({workspace=1,on_current_monitor=true}), {description=\\\"Nacre:workspace\\\"})\\nhl.bind(\\\"SUPER + SHIFT + 1\\\", hl.dsp.window.move({workspace=1}), {description=\\\"Nacre:move-workspace\\\"})\\nhl.bind(\\\"SUPER + 2\\\", hl.dsp.focus({workspace=2,on_current_monitor=true}), {description=\\\"Nacre:workspace\\\"})\\nhl.bind(\\\"SUPER + SHIFT + 2\\\", hl.dsp.window.move({workspace=2}), {description=\\\"Nacre:move-workspace\\\"})\\nhl.bind(\\\"SUPER + 3\\\", hl.dsp.focus({workspace=3,on_current_monitor=true}), {description=\\\"Nacre:workspace\\\"})\\nhl.bind(\\\"SUPER + SHIFT + 3\\\", hl.dsp.window.move({workspace=3}), {description=\\\"Nacre:move-workspace\\\"})\\nhl.bind(\\\"SUPER + 4\\\", hl.dsp.focus({workspace=4,on_current_monitor=true}), {description=\\\"Nacre:workspace\\\"})\\nhl.bind(\\\"SUPER + SHIFT + 4\\\", hl.dsp.window.move({workspace=4}), {description=\\\"Nacre:move-workspace\\\"})\\nhl.bind(\\\"SUPER + 5\\\", hl.dsp.focus({workspace=5,on_current_monitor=true}), {description=\\\"Nacre:workspace\\\"})\\nhl.bind(\\\"SUPER + SHIFT + 5\\\", hl.dsp.window.move({workspace=5}), {description=\\\"Nacre:move-workspace\\\"})\\nhl.bind(\\\"SUPER + 6\\\", hl.dsp.focus({workspace=6,on_current_monitor=true}), {description=\\\"Nacre:workspace\\\"})\\nhl.bind(\\\"SUPER + SHIFT + 6\\\", hl.dsp.window.move({workspace=6}), {description=\\\"Nacre:move-workspace\\\"})\\nhl.bind(\\\"SUPER + 7\\\", hl.dsp.focus({workspace=7,on_current_monitor=true}), {description=\\\"Nacre:workspace\\\"})\\nhl.bind(\\\"SUPER + SHIFT + 7\\\", hl.dsp.window.move({workspace=7}), {description=\\\"Nacre:move-workspace\\\"})\\nhl.bind(\\\"SUPER + 8\\\", hl.dsp.focus({workspace=8,on_current_monitor=true}), {description=\\\"Nacre:workspace\\\"})\\nhl.bind(\\\"SUPER + SHIFT + 8\\\", hl.dsp.window.move({workspace=8}), {description=\\\"Nacre:move-workspace\\\"})\\nhl.bind(\\\"SUPER + 9\\\", hl.dsp.focus({workspace=9,on_current_monitor=true}), {description=\\\"Nacre:workspace\\\"})\\nhl.bind(\\\"SUPER + SHIFT + 9\\\", hl.dsp.window.move({workspace=9}), {description=\\\"Nacre:move-workspace\\\"})\\nhl.bind(\\\"SUPER + 0\\\", hl.dsp.focus({workspace=10,on_current_monitor=true}), {description=\\\"Nacre:workspace\\\"})\\nhl.bind(\\\"SUPER + SHIFT + 0\\\", hl.dsp.window.move({workspace=10}), {description=\\\"Nacre:move-workspace\\\"})\\nhl.bind(\\\"SUPER + CTRL + right\\\", hl.dsp.focus({workspace=\\\"m+1\\\",on_current_monitor=true}), {description=\\\"Nacre:next-workspace\\\"})\\nhl.bind(\\\"SUPER + CTRL + left\\\", hl.dsp.focus({workspace=\\\"m-1\\\",on_current_monitor=true}), {description=\\\"Nacre:previous-workspace\\\"})\\nhl.bind(\\\"SUPER + mouse_down\\\", hl.dsp.focus({workspace=\\\"e+1\\\",on_current_monitor=true}), {})\\nhl.bind(\\\"SUPER + mouse_up\\\", hl.dsp.focus({workspace=\\\"e-1\\\",on_current_monitor=true}), {})\\nhl.bind(\\\"SUPER + CTRL + SHIFT + left\\\", hl.dsp.window.move({workspace=\\\"r-1\\\"}), {})\\nhl.bind(\\\"SUPER + CTRL + SHIFT + right\\\", hl.dsp.window.move({workspace=\\\"r+1\\\"}), {})\\nhl.bind(\\\"SUPER + S\\\", hl.dsp.workspace.toggle_special(\\\"\\\"), {description=\\\"Nacre:scratchpad\\\"})\\nhl.bind(\\\"SUPER + CTRL + S\\\", hl.dsp.window.move({workspace=\\\"special\\\"}), {description=\\\"Nacre:move-scratchpad\\\"})\\nhl.bind(\\\"SUPER + left\\\", hl.dsp.focus({direction=\\\"left\\\"}), {description=\\\"Nacre:focus\\\",repeating=true})\\nhl.bind(\\\"SUPER + SHIFT + left\\\", hl.dsp.window.move({direction=\\\"left\\\"}), {})\\nhl.bind(\\\"SUPER + ALT + left\\\", hl.dsp.window.resize({relative=true,x=-30,y=0}), {repeating=true})\\nhl.bind(\\\"SUPER + right\\\", hl.dsp.focus({direction=\\\"right\\\"}), {description=\\\"Nacre:focus\\\",repeating=true})\\nhl.bind(\\\"SUPER + SHIFT + right\\\", hl.dsp.window.move({direction=\\\"right\\\"}), {})\\nhl.bind(\\\"SUPER + ALT + right\\\", hl.dsp.window.resize({relative=true,x=30,y=0}), {repeating=true})\\nhl.bind(\\\"SUPER + up\\\", hl.dsp.focus({direction=\\\"up\\\"}), {description=\\\"Nacre:focus\\\"})\\nhl.bind(\\\"SUPER + SHIFT + up\\\", hl.dsp.window.move({direction=\\\"up\\\"}), {})\\nhl.bind(\\\"SUPER + ALT + up\\\", hl.dsp.window.resize({relative=true,x=0,y=-30}), {repeating=true})\\nhl.bind(\\\"SUPER + down\\\", hl.dsp.focus({direction=\\\"down\\\"}), {description=\\\"Nacre:focus\\\"})\\nhl.bind(\\\"SUPER + SHIFT + down\\\", hl.dsp.window.move({direction=\\\"down\\\"}), {})\\nhl.bind(\\\"SUPER + ALT + down\\\", hl.dsp.window.resize({relative=true,x=0,y=30}), {repeating=true})\\nhl.bind(\\\"SUPER + R\\\", hl.dsp.submap(\\\"resize\\\"), {})\\nhl.define_submap(\\\"resize\\\", function()\\nhl.bind(\\\"left\\\", hl.dsp.window.resize({relative=true,x=-30,y=0}), {repeating=true})\\nhl.bind(\\\"right\\\", hl.dsp.window.resize({relative=true,x=30,y=0}), {repeating=true})\\nhl.bind(\\\"up\\\", hl.dsp.window.resize({relative=true,x=0,y=-30}), {repeating=true})\\nhl.bind(\\\"down\\\", hl.dsp.window.resize({relative=true,x=0,y=30}), {repeating=true})\\nhl.bind(\\\"escape\\\", hl.dsp.submap(\\\"reset\\\"), {})\\nhl.bind(\\\"return\\\", hl.dsp.submap(\\\"reset\\\"), {})\\nhl.bind(\\\"SUPER + R\\\", hl.dsp.submap(\\\"reset\\\"), {})\\nend)\\nhl.bind(\\\"SUPER + SPACE\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell launcher\\\"), {description=\\\"Nacre:launcher\\\"})\\nhl.bind(\\\"SUPER + TAB\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell overview\\\"), {description=\\\"Nacre:overview\\\"})\\nhl.bind(\\\"SUPER + V\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell clipboard\\\"), {description=\\\"Nacre:clipboard\\\"})\\nhl.bind(\\\"SUPER + W\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell wallpaper\\\"), {description=\\\"Nacre:wallpaper\\\"})\\nhl.bind(\\\"SUPER + Z\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell hide\\\"), {})\\nhl.bind(\\\"SUPER + O\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell toggle\\\"), {})\\nhl.bind(\\\"SUPER + I\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-settings\\\"), {description=\\\"Nacre:settings\\\"})\\nhl.bind(\\\"SUPER + CTRL + C\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-menu actions.capture\\\"), {})\\nhl.bind(\\\"SUPER + X\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-menu power\\\"), {description=\\\"Nacre:power\\\"})\\nhl.bind(\\\"SUPER + ESCAPE\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-menu power\\\"), {description=\\\"Nacre:power\\\"})\\nhl.bind(\\\"SUPER + L\\\", hl.dsp.exec_cmd(\\\"loginctl lock-session\\\"), {description=\\\"Nacre:lock\\\"})\\nhl.bind(\\\"SUPER + SHIFT + R\\\", hl.dsp.exec_cmd(\\\"hyprctl reload\\\"), {})\\nhl.bind(\\\"SUPER + RETURN\\\", hl.dsp.exec_cmd(\\\"uwsm app -- ~/.local/bin/nacre-app terminal\\\"), {description=\\\"Nacre:terminal\\\"})\\nhl.bind(\\\"SUPER + SHIFT + B\\\", hl.dsp.exec_cmd(\\\"uwsm app -- ~/.local/bin/nacre-app browser\\\"), {description=\\\"Nacre:browser\\\"})\\nhl.bind(\\\"SUPER + E\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-app files\\\"), {description=\\\"Nacre:files\\\"})\\n\", \"hypr/conf/windowrule.lua\": \"-- Generated by tools/generate_compositor_config.py; edit compositor-contract.json.\\nhl.window_rule({name=\\\"nacre-thunar-files\\\",match={class=\\\"^([Tt]hunar)$\\\"},center=true,float=true,size=\\\"70% 75%\\\"})\\nhl.window_rule({name=\\\"nacre-dolphin-files\\\",match={class=\\\"^(org[.]kde[.]dolphin|[Dd]olphin)$\\\"},center=true,float=true,size={\\\"monitor_w*0.6\\\",\\\"monitor_h*0.75\\\"}})\\n\", \"hypr/conf/nacre.lua\": \"-- Generated by tools/generate_compositor_config.py; edit compositor-contract.json.\\nhl.layer_rule({name=\\\"nacre-overlay-glass\\\",match={namespace=\\\"^nacre-(drawers|topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"},blur=true,ignore_alpha=0.5,no_anim=true})\\nhl.window_rule({name=\\\"nacre-lock-preview\\\",match={class=\\\"^org.quickshell$\\\",title=\\\"^Nacre lock screen preview$\\\"},center=true,float=true,size=\\\"70% 70%\\\"})\\nhl.window_rule({name=\\\"nacre-audio-mixer\\\",match={class=\\\"^org\\\\\\\\.pulseaudio\\\\\\\\.pavucontrol$\\\"},center=true,float=true,pin=true,size=\\\"700 600\\\"})\\nhl.window_rule({name=\\\"nacre-bluetooth-manager\\\",match={class=\\\"^blueman-manager$\\\"},center=true,float=true,size=\\\"800 600\\\"})\\nhl.window_rule({name=\\\"nacre-network-editor\\\",match={class=\\\"^nm-connection-editor$\\\"},center=true,float=true,size=\\\"800 700\\\"})\\nhl.window_rule({name=\\\"nacre-share-picker\\\",match={class=\\\"^hyprland-share-picker$\\\"},center=true,float=true,pin=true,size=\\\"600 400\\\"})\\nhl.window_rule({name=\\\"nacre-picture-in-picture\\\",match={title=\\\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\\\"},center=true,float=true,pin=true})\\nhl.window_rule({name=\\\"nacre-native-controls\\\",match={class=\\\"^nacre-control$\\\"},center=true,float=true,size=\\\"720 500\\\"})\\nhl.config({xwayland={force_zero_scaling=true}})\\nhl.window_rule({name=\\\"nacre-settings-app\\\",match={class=\\\"^org[.]quickshell$\\\",title=\\\"^Nacre Settings$\\\"},center=true,float=true})\\nhl.window_rule({name=\\\"nacre-colors-app\\\",match={class=\\\"^org[.]quickshell$\\\",title=\\\"^Nacre Colors$\\\"},center=true,float=true})\\nhl.window_rule({name=\\\"nacre-welcome\\\",match={class=\\\"^org[.]quickshell$\\\",title=\\\"^Nacre Welcome$\\\"},center=true,float=true})\\n\", \"hypr/conf/brain.lua\": \"-- Generated by tools/generate_compositor_config.py; edit compositor-contract.json.\\nhl.window_rule({name=\\\"nacre-brain\\\",match={class=\\\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\\\"},fullscreen_state=\\\"0 0\\\",suppress_event=\\\"fullscreen maximize\\\"})\\nhl.window_rule({name=\\\"nacre-brain-chrome\\\",match={class=\\\"^chrome-127[.]0[.]0[.]1__-Default$\\\"},fullscreen_state=\\\"0 0\\\",suppress_event=\\\"fullscreen maximize\\\"})\\nhl.window_rule({name=\\\"nacre-obsidian\\\",match={class=\\\"^([Oo]bsidian)$\\\"}})\\nhl.bind(\\\"SUPER + B\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-brain open\\\"), {})\\nhl.bind(\\\"SUPER + N\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-brain capture\\\"), {})\\nhl.window_rule({name=\\\"brain-auth-handoff\\\",match={class=\\\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\\\"},float=true,size=\\\"80 80\\\",no_initial_focus=true})\\n\", \"nacre/shell-tools/shortcuts.lua\": \"-- Generated by tools/generate_compositor_config.py; edit compositor-contract.json.\\nhl.bind(\\\"SUPER + CTRL + SPACE\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell palette\\\"), {description=\\\"Nacre:palette\\\"})\\nhl.bind(\\\"SUPER + K\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-menu learn.shortcuts\\\"), {description=\\\"Nacre:shortcuts\\\"})\\nhl.bind(\\\"SUPER + F1\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-menu learn.shortcuts\\\"), {description=\\\"Nacre:shortcuts\\\"})\\nhl.bind(\\\"SUPER + A\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell left\\\"), {description=\\\"Nacre:ai-sidebar\\\"})\\nhl.bind(\\\"Escape\\\", hl.dsp.global(\\\"nacre_shell:dismissHoverEdges\\\"), {non_consuming=true})\\nhl.bind(\\\"SUPER + CTRL + D\\\", hl.dsp.exec_cmd(\\\"~/.local/bin/nacre-shell detach\\\"), {description=\\\"Nacre:detach-panel\\\"})\\nhl.window_rule({match={class=\\\"^org[.]quickshell$\\\",title=\\\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\\\"},float=true,rounding=18,border_size=0,no_anim=true})\\nhl.unbind(\\\"SUPER + mouse:272\\\")\\nlocal drag_route = nil\\nlocal native_peer = nil\\nlocal native_timer = nil\\nlocal native_last_x, native_last_y = nil, nil\\nlocal native_ticks = 0\\nlocal pearl_kinds = { Launcher = true, Dashboard = true, AI = true, Controls = true, Media = true }\\nlocal function native_event(phase, cursor)\\n    if not native_peer then return end\\n    hl.dispatch(hl.dsp.event(\\\"nacre_pearl_drag,\\\" .. phase .. \\\",\\\" .. native_peer.title .. \\\",\\\" .. cursor.x .. \\\",\\\" .. cursor.y .. \\\",\\\" .. native_peer.x .. \\\",\\\" .. native_peer.y .. \\\",\\\" .. native_peer.w .. \\\",\\\" .. native_peer.h))\\nend\\nlocal function watch_native_drag()\\n    if not native_peer or native_peer.pid ~= nacre_panel_pid or native_ticks >= 3600 then\\n        native_timer:set_enabled(false)\\n        native_peer = nil\\n        return\\n    end\\n    native_ticks = native_ticks + 1\\n    local cursor = hl.get_cursor_pos()\\n    if cursor.x ~= native_last_x or cursor.y ~= native_last_y then\\n        native_last_x, native_last_y = cursor.x, cursor.y\\n        native_event(\\\"move\\\", cursor)\\n    end\\nend\\nlocal function start_native_drag()\\n    local result = hl.dispatch(hl.dsp.window.drag())\\n    local window = hl.get_active_window()\\n    local kind = window and window.title:match(\\\"^Nacre Pearl (%a+) %d+$\\\")\\n    if window and window.pid == nacre_panel_pid and pearl_kinds[kind] then\\n        local at, size = window.at, window.size\\n        native_peer = { title = window.title, pid = window.pid, x = at.x, y = at.y, w = size.x, h = size.y }\\n        native_ticks = 0\\n        native_last_x, native_last_y = nil, nil\\n        native_event(\\\"begin\\\", hl.get_cursor_pos())\\n        if not native_timer then\\n            native_timer = hl.timer(watch_native_drag, { timeout = 33, type = \\\"repeat\\\" })\\n        else\\n            native_timer:set_enabled(true)\\n        end\\n    end\\n    return result\\nend\\n-- A layer drag never calls window.drag(), so Hyprland 0.56 does not arm\\n-- its implicit release callback. Finish explicitly on every LMB release,\\n-- including a release after Super has already been let go. Native movement\\n-- itself ends in Hyprland's mouse handler before these callbacks run.\\nlocal function nacre_panel_drag_finish()\\n    local shell = drag_route\\n    drag_route = nil\\n    if native_peer then native_event(\\\"end\\\", hl.get_cursor_pos()) end\\n    native_peer = nil\\n    if native_timer then native_timer:set_enabled(false) end\\n    return { ok = true, pass_event = shell ~= false }\\nend\\nlocal function nacre_panel_drag()\\n    -- Native window.drag() also asks Hyprland to call this on release. The\\n    -- explicit release binding below is idempotent if both callbacks run.\\n    if drag_route ~= nil then return nacre_panel_drag_finish() end\\n    local cursor = hl.get_cursor_pos()\\n    local shell = false\\n    for _, layer in ipairs(hl.get_layers()) do\\n        if layer.namespace == \\\"nacre-drawers\\\" and layer.mapped and layer.pid == nacre_panel_pid then\\n            for _, rect in ipairs(nacre_panel_regions or {}) do\\n                if cursor.x >= rect.x and cursor.y >= rect.y and cursor.x < rect.x + rect.w and cursor.y < rect.y + rect.h then\\n                    shell = true\\n                    break\\n                end\\n            end\\n        end\\n        if shell then break end\\n    end\\n    drag_route = shell\\n    if shell then return { ok = true, pass_event = true } end\\n    return start_native_drag()\\nend\\nhl.bind(\\\"SUPER + mouse:272\\\", nacre_panel_drag, {description=\\\"Nacre:move-panel-or-window\\\"})\\nhl.bind(\\\"mouse:272\\\", nacre_panel_drag_finish, {release=true,ignore_mods=true,non_consuming=true,description=\\\"Nacre:finish-panel-or-window-drag\\\"})\\n\", \"hypr/conf/cursor.lua\": \"-- Generated by tools/generate_compositor_config.py; edit compositor-contract.json.\\n-- UWSM owns the cursor preference; apply its values once when Hyprland starts.\\nlocal function apply_session_cursor()\\n    local theme = os.getenv(\\\"XCURSOR_THEME\\\")\\n    local size = math.tointeger(tonumber(os.getenv(\\\"XCURSOR_SIZE\\\") or \\\"\\\"))\\n    if not theme or theme == \\\"\\\" or not size or size < 1 or size > 2147483647 then\\n        return\\n    end\\n\\n    local argument = \\\"'\\\" .. theme:gsub(\\\"'\\\", \\\"'\\\\\\\\''\\\") .. \\\"'\\\"\\n    hl.exec_cmd(\\\"hyprctl setcursor \\\" .. argument .. \\\" \\\" .. tostring(size))\\nend\\nhl.on(\\\"hyprland.start\\\", apply_session_cursor)\\n\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-hyprland-{}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {}
+        ],
+        "kwargs": {
+          "backend": "hyprland"
+        }
+      },
+      "stdout": "\"-- Your system keyboard choice. Edit here; Nacre updates preserve this file.\\nhl.config({\\n})\\n\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-hyprland-{'layout': 'us', 'options': 'caps:escape'}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {
+            "layout": "us",
+            "options": "caps:escape"
+          }
+        ],
+        "kwargs": {
+          "backend": "hyprland"
+        }
+      },
+      "stdout": "\"-- Your system keyboard choice. Edit here; Nacre updates preserve this file.\\nhl.config({\\n    [\\\"input.kb_layout\\\"] = \\\"us\\\",\\n    [\\\"input.kb_options\\\"] = \\\"caps:escape\\\",\\n})\\n\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-hyprland-{'unknown': 'x'}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {
+            "unknown": "x"
+          }
+        ],
+        "kwargs": {
+          "backend": "hyprland"
+        }
+      },
+      "stdout": "\"-- Your system keyboard choice. Edit here; Nacre updates preserve this file.\\nhl.config({\\n    [\\\"input.kb_unknown\\\"] = \\\"x\\\",\\n})\\n\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-hyprland-{'layout': 'us\\nexec bad'}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {
+            "layout": "us\nexec bad"
+          }
+        ],
+        "kwargs": {
+          "backend": "hyprland"
+        }
+      },
+      "stdout": "\"-- Your system keyboard choice. Edit here; Nacre updates preserve this file.\\nhl.config({\\n    [\\\"input.kb_layout\\\"] = \\\"us\\\\010exec bad\\\",\\n})\\n\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "capabilities-niri",
+        "module": "neutral",
+        "operation": "backend_capabilities",
+        "args": [
+          "niri"
+        ],
+        "kwargs": {}
+      },
+      "stdout": "{\"backend\": \"niri\", \"backendReady\": false, \"setup_ready\": false, \"managedIncludes\": true, \"minimumVersion\": \"26.04\", \"includeMinimumVersion\": \"25.11\", \"testedVersion\": \"26.04\", \"generatedFiles\": [\"niri/bindings.kdl\", \"niri/window-rules.kdl\", \"niri/unsupported.json\"]}\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "render-niri",
+        "module": "neutral",
+        "operation": "render",
+        "args": [
+          "$contract"
+        ],
+        "kwargs": {
+          "backend": "niri"
+        }
+      },
+      "stdout": "{\"niri/bindings.kdl\": \"// Generated from compositor-contract.json; edit the neutral source.\\n// Include before user bindings/rules so user-owned choices take precedence.\\nbinds {\\n    XF86AudioMute repeat=false allow-when-locked=true hotkey-overlay-title=\\\"Nacre:mute\\\" { spawn-sh \\\"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\\\"; }\\n    XF86AudioLowerVolume repeat=true allow-when-locked=true hotkey-overlay-title=\\\"Nacre:volume-down\\\" { spawn-sh \\\"wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-\\\"; }\\n    XF86AudioRaiseVolume repeat=true allow-when-locked=true hotkey-overlay-title=\\\"Nacre:volume-up\\\" { spawn-sh \\\"wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+\\\"; }\\n    XF86AudioMicMute repeat=false hotkey-overlay-title=\\\"Nacre:mic-mute\\\" { spawn-sh \\\"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\\\"; }\\n    XF86PowerOff repeat=false allow-when-locked=true hotkey-overlay-title=\\\"Nacre:lock\\\" { spawn-sh \\\"loginctl lock-session\\\"; }\\n    XF86MonBrightnessDown repeat=false hotkey-overlay-title=\\\"Nacre:brightness-down\\\" { spawn-sh \\\"~/.local/bin/nacre-shell brightness down\\\"; }\\n    XF86MonBrightnessUp repeat=false hotkey-overlay-title=\\\"Nacre:brightness-up\\\" { spawn-sh \\\"~/.local/bin/nacre-shell brightness up\\\"; }\\n    XF86KbdBrightnessUp repeat=false hotkey-overlay-title=\\\"Nacre:keyboard-up\\\" { spawn-sh \\\"~/.local/bin/nacre-shell keyboard-light up\\\"; }\\n    XF86KbdBrightnessDown repeat=false hotkey-overlay-title=\\\"Nacre:keyboard-down\\\" { spawn-sh \\\"~/.local/bin/nacre-shell keyboard-light down\\\"; }\\n    Super+period repeat=false hotkey-overlay-title=\\\"Nacre:emoji\\\" { spawn-sh \\\"~/.local/bin/nacre-menu actions.emoji\\\"; }\\n    Super+Ctrl+E repeat=false hotkey-overlay-title=\\\"Nacre:emoji\\\" { spawn-sh \\\"~/.local/bin/nacre-menu actions.emoji\\\"; }\\n    Print repeat=false hotkey-overlay-title=\\\"Nacre:screenshot\\\" { spawn-sh \\\"niri msg action screenshot\\\"; }\\n    Super+Shift+S repeat=false hotkey-overlay-title=\\\"Nacre:screenshot\\\" { spawn-sh \\\"niri msg action screenshot\\\"; }\\n    Super+Print repeat=false hotkey-overlay-title=\\\"Nacre:save-screenshot\\\" { spawn-sh \\\"mkdir -p \\\\\\\"$HOME/Pictures/Screenshots\\\\\\\" && niri msg action screenshot-screen --show-pointer false --path \\\\\\\"$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png\\\\\\\"\\\"; }\\n    Super+Q repeat=false hotkey-overlay-title=\\\"Nacre:close\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action close_window\\\"; }\\n    Super+F repeat=false hotkey-overlay-title=\\\"Nacre:fullscreen\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action fullscreen_window --mode fullscreen\\\"; }\\n    Super+M repeat=false hotkey-overlay-title=\\\"Nacre:maximize\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action fullscreen_window --mode maximized\\\"; }\\n    Super+T repeat=false hotkey-overlay-title=\\\"Nacre:float\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action float_window --action toggle\\\"; }\\n    Super+G repeat=false hotkey-overlay-title=\\\"Nacre:group\\\" { spawn-sh \\\"niri msg action toggle-column-tabbed-display\\\"; }\\n    Super+Ctrl+Page_Up repeat=false hotkey-overlay-title=\\\"Nacre:group-cycle\\\" { spawn-sh \\\"niri msg action focus-window-up-or-bottom\\\"; }\\n    Super+Ctrl+Page_Down repeat=false hotkey-overlay-title=\\\"Nacre:group-cycle\\\" { spawn-sh \\\"niri msg action focus-window-down-or-top\\\"; }\\n    Alt+TAB repeat=false hotkey-overlay-title=\\\"Nacre:cycle-window\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action cycle_window --direction next\\\"; }\\n    Alt+Shift+TAB repeat=false hotkey-overlay-title=\\\"Nacre:cycle-window\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action cycle_window --direction previous\\\"; }\\n    Super+1 repeat=false hotkey-overlay-title=\\\"Nacre:workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace 1\\\"; }\\n    Super+Shift+1 repeat=false hotkey-overlay-title=\\\"Nacre:move-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace 1\\\"; }\\n    Super+2 repeat=false hotkey-overlay-title=\\\"Nacre:workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace 2\\\"; }\\n    Super+Shift+2 repeat=false hotkey-overlay-title=\\\"Nacre:move-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace 2\\\"; }\\n    Super+3 repeat=false hotkey-overlay-title=\\\"Nacre:workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace 3\\\"; }\\n    Super+Shift+3 repeat=false hotkey-overlay-title=\\\"Nacre:move-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace 3\\\"; }\\n    Super+4 repeat=false hotkey-overlay-title=\\\"Nacre:workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace 4\\\"; }\\n    Super+Shift+4 repeat=false hotkey-overlay-title=\\\"Nacre:move-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace 4\\\"; }\\n    Super+5 repeat=false hotkey-overlay-title=\\\"Nacre:workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace 5\\\"; }\\n    Super+Shift+5 repeat=false hotkey-overlay-title=\\\"Nacre:move-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace 5\\\"; }\\n    Super+6 repeat=false hotkey-overlay-title=\\\"Nacre:workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace 6\\\"; }\\n    Super+Shift+6 repeat=false hotkey-overlay-title=\\\"Nacre:move-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace 6\\\"; }\\n    Super+7 repeat=false hotkey-overlay-title=\\\"Nacre:workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace 7\\\"; }\\n    Super+Shift+7 repeat=false hotkey-overlay-title=\\\"Nacre:move-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace 7\\\"; }\\n    Super+8 repeat=false hotkey-overlay-title=\\\"Nacre:workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace 8\\\"; }\\n    Super+Shift+8 repeat=false hotkey-overlay-title=\\\"Nacre:move-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace 8\\\"; }\\n    Super+9 repeat=false hotkey-overlay-title=\\\"Nacre:workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace 9\\\"; }\\n    Super+Shift+9 repeat=false hotkey-overlay-title=\\\"Nacre:move-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace 9\\\"; }\\n    Super+0 repeat=false hotkey-overlay-title=\\\"Nacre:workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace 10\\\"; }\\n    Super+Shift+0 repeat=false hotkey-overlay-title=\\\"Nacre:move-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace 10\\\"; }\\n    Super+Ctrl+Right repeat=false hotkey-overlay-title=\\\"Nacre:next-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace '{\\\\\\\"relative\\\\\\\": 1}'\\\"; }\\n    Super+Ctrl+Left repeat=false hotkey-overlay-title=\\\"Nacre:previous-workspace\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace '{\\\\\\\"relative\\\\\\\": -1}'\\\"; }\\n    Super+WheelScrollDown repeat=false { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace '{\\\\\\\"relative\\\\\\\": 1}'\\\"; }\\n    Super+WheelScrollUp repeat=false { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action switch_workspace --workspace '{\\\\\\\"relative\\\\\\\": -1}'\\\"; }\\n    Super+Ctrl+Shift+Left repeat=false { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace '{\\\\\\\"relative\\\\\\\": -1}'\\\"; }\\n    Super+Ctrl+Shift+Right repeat=false { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_window --workspace '{\\\\\\\"relative\\\\\\\": 1}'\\\"; }\\n    Super+Left repeat=true cooldown-ms=120 hotkey-overlay-title=\\\"Nacre:focus\\\" { focus-column-left; }\\n    Super+Shift+Left repeat=false { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_direction --direction left\\\"; }\\n    Super+Alt+Left repeat=true { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action resize_window --width -30 --height 0 --relative true\\\"; }\\n    Super+Right repeat=true cooldown-ms=120 hotkey-overlay-title=\\\"Nacre:focus\\\" { focus-column-right; }\\n    Super+Shift+Right repeat=false { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_direction --direction right\\\"; }\\n    Super+Alt+Right repeat=true { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action resize_window --width 30 --height 0 --relative true\\\"; }\\n    Super+Up repeat=false hotkey-overlay-title=\\\"Nacre:focus\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action focus_direction --direction up\\\"; }\\n    Super+Shift+Up repeat=false { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_direction --direction up\\\"; }\\n    Super+Alt+Up repeat=true { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action resize_window --width 0 --height -30 --relative true\\\"; }\\n    Super+Down repeat=false hotkey-overlay-title=\\\"Nacre:focus\\\" { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action focus_direction --direction down\\\"; }\\n    Super+Shift+Down repeat=false { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action move_direction --direction down\\\"; }\\n    Super+Alt+Down repeat=true { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action resize_window --width 0 --height 30 --relative true\\\"; }\\n    Super+SPACE repeat=false hotkey-overlay-title=\\\"Nacre:launcher\\\" { spawn-sh \\\"~/.local/bin/nacre-shell launcher\\\"; }\\n    Super+TAB repeat=false hotkey-overlay-title=\\\"Nacre:overview\\\" { spawn-sh \\\"niri msg action toggle-overview\\\"; }\\n    Super+V repeat=false hotkey-overlay-title=\\\"Nacre:clipboard\\\" { spawn-sh \\\"~/.local/bin/nacre-shell clipboard\\\"; }\\n    Super+W repeat=false hotkey-overlay-title=\\\"Nacre:wallpaper\\\" { spawn-sh \\\"~/.local/bin/nacre-shell wallpaper\\\"; }\\n    Super+Z repeat=false { spawn-sh \\\"~/.local/bin/nacre-shell hide\\\"; }\\n    Super+O repeat=false { spawn-sh \\\"~/.local/bin/nacre-shell toggle\\\"; }\\n    Super+I repeat=false hotkey-overlay-title=\\\"Nacre:settings\\\" { spawn-sh \\\"~/.local/bin/nacre-settings\\\"; }\\n    Super+Ctrl+C repeat=false { spawn-sh \\\"~/.local/bin/nacre-menu actions.capture\\\"; }\\n    Super+X repeat=false hotkey-overlay-title=\\\"Nacre:power\\\" { spawn-sh \\\"~/.local/bin/nacre-menu power\\\"; }\\n    Super+ESCAPE repeat=false hotkey-overlay-title=\\\"Nacre:power\\\" { spawn-sh \\\"~/.local/bin/nacre-menu power\\\"; }\\n    Super+L repeat=false hotkey-overlay-title=\\\"Nacre:lock\\\" { spawn-sh \\\"loginctl lock-session\\\"; }\\n    Super+Shift+R repeat=false { spawn-sh \\\"exec env NACRE_COMPOSITOR=niri python3 \\\\\\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/compositor.py\\\\\\\" action reload\\\"; }\\n    Super+RETURN repeat=false hotkey-overlay-title=\\\"Nacre:terminal\\\" { spawn-sh \\\"uwsm app -- ~/.local/bin/nacre-app terminal\\\"; }\\n    Super+Shift+B repeat=false hotkey-overlay-title=\\\"Nacre:browser\\\" { spawn-sh \\\"uwsm app -- ~/.local/bin/nacre-app browser\\\"; }\\n    Super+E repeat=false hotkey-overlay-title=\\\"Nacre:files\\\" { spawn-sh \\\"~/.local/bin/nacre-app files\\\"; }\\n    Super+B repeat=false { spawn-sh \\\"~/.local/bin/nacre-brain open\\\"; }\\n    Super+N repeat=false { spawn-sh \\\"~/.local/bin/nacre-brain capture\\\"; }\\n    Super+Ctrl+SPACE repeat=false hotkey-overlay-title=\\\"Nacre:palette\\\" { spawn-sh \\\"~/.local/bin/nacre-shell palette\\\"; }\\n    Super+K repeat=false hotkey-overlay-title=\\\"Nacre:shortcuts\\\" { spawn-sh \\\"~/.local/bin/nacre-menu learn.shortcuts\\\"; }\\n    Super+F1 repeat=false hotkey-overlay-title=\\\"Nacre:shortcuts\\\" { spawn-sh \\\"~/.local/bin/nacre-menu learn.shortcuts\\\"; }\\n    Super+A repeat=false hotkey-overlay-title=\\\"Nacre:ai-sidebar\\\" { spawn-sh \\\"~/.local/bin/nacre-shell left\\\"; }\\n    Super+Ctrl+D repeat=false hotkey-overlay-title=\\\"Nacre:detach-panel\\\" { spawn-sh \\\"~/.local/bin/nacre-shell detach\\\"; }\\n}\\n\", \"niri/window-rules.kdl\": \"// Generated from compositor-contract.json; edit the neutral source.\\n// Include before user bindings/rules so user-owned choices take precedence.\\nwindow-rule {\\n    match app-id=\\\"^([Tt]hunar)$\\\"\\n    open-floating true\\n    default-column-width { proportion 0.7; }\\n    default-window-height { proportion 0.75; }\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^(org[.]kde[.]dolphin|[Dd]olphin)$\\\"\\n    open-floating true\\n    default-column-width { proportion 0.6; }\\n    default-window-height { proportion 0.75; }\\n}\\n\\nlayer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur true; }\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^org.quickshell$\\\" title=\\\"^Nacre lock screen preview$\\\"\\n    open-floating true\\n    default-column-width { proportion 0.7; }\\n    default-window-height { proportion 0.7; }\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^org\\\\\\\\.pulseaudio\\\\\\\\.pavucontrol$\\\"\\n    open-floating true\\n    default-column-width { fixed 700; }\\n    default-window-height { fixed 600; }\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^blueman-manager$\\\"\\n    open-floating true\\n    default-column-width { fixed 800; }\\n    default-window-height { fixed 600; }\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^nm-connection-editor$\\\"\\n    open-floating true\\n    default-column-width { fixed 800; }\\n    default-window-height { fixed 700; }\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^hyprland-share-picker$\\\"\\n    open-floating true\\n    default-column-width { fixed 600; }\\n    default-window-height { fixed 400; }\\n}\\n\\nwindow-rule {\\n    match title=\\\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\\\"\\n    open-floating true\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^nacre-control$\\\"\\n    open-floating true\\n    default-column-width { fixed 720; }\\n    default-window-height { fixed 500; }\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Settings$\\\"\\n    open-floating true\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Colors$\\\"\\n    open-floating true\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Welcome$\\\"\\n    open-floating true\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\\\"\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^chrome-127[.]0[.]0[.]1__-Default$\\\"\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^([Oo]bsidian)$\\\"\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\\\"\\n    open-floating true\\n    default-column-width { fixed 80; }\\n    default-window-height { fixed 80; }\\n}\\n\\nwindow-rule {\\n    match app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\\\"\\n    open-floating true\\n    geometry-corner-radius 18\\n    clip-to-geometry true\\n    border { off; }\\n    focus-ring { off; }\\n    shadow { off; }\\n}\\n\", \"niri/unsupported.json\": \"{\\n  \\\"backend\\\": \\\"niri\\\",\\n  \\\"unsupported\\\": [\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + H\\\",\\n      \\\"reason\\\": \\\"Hyprland hide/trash/force-kill operation is not available\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + SHIFT + H\\\",\\n      \\\"reason\\\": \\\"Hyprland hide/trash/force-kill operation is not available\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + ALT + H\\\",\\n      \\\"reason\\\": \\\"Hyprland hide/trash/force-kill operation is not available\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + P\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for window.pin\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + SHIFT + P\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for window.pseudo\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + J\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for layout.toggle-split\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + mouse:273\\\",\\n      \\\"reason\\\": \\\"Keep niri's native move/resize gestures; no pointer-hook substitution\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + S\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for workspace.scratchpad\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + CTRL + S\\\",\\n      \\\"reason\\\": \\\"Niri has no Hyprland special/scratchpad workspaces\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + R\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for keymap.switch\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"left\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for window.resize\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"right\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for window.resize\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"up\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for window.resize\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"down\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for window.resize\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"escape\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for keymap.switch\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"return\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for keymap.switch\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/keybinding.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + R\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for keymap.switch\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/windowrule.lua\\\",\\n      \\\"kind\\\": \\\"window-rule\\\",\\n      \\\"id\\\": \\\"nacre-thunar-files\\\",\\n      \\\"reason\\\": \\\"Unmapped window effects: size proportions use niri's working area\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/windowrule.lua\\\",\\n      \\\"kind\\\": \\\"window-rule\\\",\\n      \\\"id\\\": \\\"nacre-dolphin-files\\\",\\n      \\\"reason\\\": \\\"Unmapped window effects: size proportions use niri's working area\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/nacre.lua\\\",\\n      \\\"kind\\\": \\\"window-rule\\\",\\n      \\\"id\\\": \\\"nacre-lock-preview\\\",\\n      \\\"reason\\\": \\\"Unmapped window effects: size proportions use niri's working area\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/nacre.lua\\\",\\n      \\\"kind\\\": \\\"window-rule\\\",\\n      \\\"id\\\": \\\"nacre-audio-mixer\\\",\\n      \\\"reason\\\": \\\"Unmapped window effects: pinned\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/nacre.lua\\\",\\n      \\\"kind\\\": \\\"window-rule\\\",\\n      \\\"id\\\": \\\"nacre-share-picker\\\",\\n      \\\"reason\\\": \\\"Unmapped window effects: pinned\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/nacre.lua\\\",\\n      \\\"kind\\\": \\\"window-rule\\\",\\n      \\\"id\\\": \\\"nacre-picture-in-picture\\\",\\n      \\\"reason\\\": \\\"Unmapped window effects: pinned\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/nacre.lua\\\",\\n      \\\"kind\\\": \\\"backend-config\\\",\\n      \\\"id\\\": \\\"\\\",\\n      \\\"reason\\\": \\\"Backend-specific backend-config is not emitted for niri\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"nacre/shell-tools/shortcuts.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"Escape\\\",\\n      \\\"reason\\\": \\\"Niri bindings consume input; non-consuming hooks are unsupported\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"nacre/shell-tools/shortcuts.lua\\\",\\n      \\\"kind\\\": \\\"unbind\\\",\\n      \\\"id\\\": \\\"SUPER + mouse:272\\\",\\n      \\\"reason\\\": \\\"Backend-specific unbind is not emitted for niri\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"nacre/shell-tools/shortcuts.lua\\\",\\n      \\\"kind\\\": \\\"extension\\\",\\n      \\\"id\\\": \\\"panel.drag\\\",\\n      \\\"reason\\\": \\\"Backend-specific extension is not emitted for niri\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"nacre/shell-tools/shortcuts.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"SUPER + mouse:272\\\",\\n      \\\"reason\\\": \\\"No equivalent niri action for panel.drag\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"nacre/shell-tools/shortcuts.lua\\\",\\n      \\\"kind\\\": \\\"binding\\\",\\n      \\\"id\\\": \\\"mouse:272\\\",\\n      \\\"reason\\\": \\\"No equivalent niri capability for panel.drag.finish\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/cursor.lua\\\",\\n      \\\"kind\\\": \\\"extension\\\",\\n      \\\"id\\\": \\\"cursor.session\\\",\\n      \\\"reason\\\": \\\"Backend-specific extension is not emitted for niri\\\"\\n    },\\n    {\\n      \\\"source\\\": \\\"hypr/conf/cursor.lua\\\",\\n      \\\"kind\\\": \\\"event\\\",\\n      \\\"id\\\": \\\"\\\",\\n      \\\"reason\\\": \\\"Backend-specific event is not emitted for niri\\\"\\n    }\\n  ]\\n}\\n\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-niri-{}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {}
+        ],
+        "kwargs": {
+          "backend": "niri"
+        }
+      },
+      "stdout": "\"input {\\n    keyboard {\\n        xkb {\\n        }\\n    }\\n}\\n\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-niri-{'layout': 'us', 'options': 'caps:escape'}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {
+            "layout": "us",
+            "options": "caps:escape"
+          }
+        ],
+        "kwargs": {
+          "backend": "niri"
+        }
+      },
+      "stdout": "\"input {\\n    keyboard {\\n        xkb {\\n            layout \\\"us\\\"\\n            options \\\"caps:escape\\\"\\n        }\\n    }\\n}\\n\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-niri-{'unknown': 'x'}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {
+            "unknown": "x"
+          }
+        ],
+        "kwargs": {
+          "backend": "niri"
+        }
+      },
+      "stdout": "{\"error\": \"Unknown keyboard option\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-niri-{'layout': 'us\\nexec bad'}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {
+            "layout": "us\nexec bad"
+          }
+        ],
+        "kwargs": {
+          "backend": "niri"
+        }
+      },
+      "stdout": "\"input {\\n    keyboard {\\n        xkb {\\n            layout \\\"us\\\\nexec bad\\\"\\n        }\\n    }\\n}\\n\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "capabilities-unknown",
+        "module": "neutral",
+        "operation": "backend_capabilities",
+        "args": [
+          "unknown"
+        ],
+        "kwargs": {}
+      },
+      "stdout": "{\"error\": \"Unknown compositor backend\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "render-unknown",
+        "module": "neutral",
+        "operation": "render",
+        "args": [
+          "$contract"
+        ],
+        "kwargs": {
+          "backend": "unknown"
+        }
+      },
+      "stdout": "{\"error\": \"Unsupported compositor backend: unknown\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-unknown-{}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {}
+        ],
+        "kwargs": {
+          "backend": "unknown"
+        }
+      },
+      "stdout": "{\"error\": \"Unknown compositor backend\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-unknown-{'layout': 'us', 'options': 'caps:escape'}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {
+            "layout": "us",
+            "options": "caps:escape"
+          }
+        ],
+        "kwargs": {
+          "backend": "unknown"
+        }
+      },
+      "stdout": "{\"error\": \"Unknown compositor backend\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-unknown-{'unknown': 'x'}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {
+            "unknown": "x"
+          }
+        ],
+        "kwargs": {
+          "backend": "unknown"
+        }
+      },
+      "stdout": "{\"error\": \"Unknown compositor backend\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-unknown-{'layout': 'us\\nexec bad'}",
+        "module": "neutral",
+        "operation": "render_keyboard",
+        "args": [
+          {
+            "layout": "us\nexec bad"
+          }
+        ],
+        "kwargs": {
+          "backend": "unknown"
+        }
+      },
+      "stdout": "{\"error\": \"Unknown compositor backend\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-value-0",
+        "module": "hyprland",
+        "operation": "lua_value",
+        "args": [
+          null
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"nil\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-value-1",
+        "module": "hyprland",
+        "operation": "lua_value",
+        "args": [
+          true
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"true\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-value-2",
+        "module": "hyprland",
+        "operation": "lua_value",
+        "args": [
+          false
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"false\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-value-3",
+        "module": "hyprland",
+        "operation": "lua_value",
+        "args": [
+          0
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"0\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-value-4",
+        "module": "hyprland",
+        "operation": "lua_value",
+        "args": [
+          -4
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"-4\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-value-5",
+        "module": "hyprland",
+        "operation": "lua_value",
+        "args": [
+          1.0
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"1.0\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-value-6",
+        "module": "hyprland",
+        "operation": "lua_value",
+        "args": [
+          1.25
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"1.25\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-value-7",
+        "module": "hyprland",
+        "operation": "lua_value",
+        "args": [
+          "quoted\"\\\n\u0001\u00e9"
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"\\\"quoted\\\\\\\"\\\\\\\\\\\\010\\\\001\\u00e9\\\"\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "kdl-quoted-7",
+        "module": "niri",
+        "operation": "quoted",
+        "args": [
+          "quoted\"\\\n\u0001\u00e9"
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"\\\"quoted\\\\\\\"\\\\\\\\\\\\n\\\\u{1}\\u00e9\\\"\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-value-8",
+        "module": "hyprland",
+        "operation": "lua_value",
+        "args": [
+          []
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"{}\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-value-9",
+        "module": "hyprland",
+        "operation": "lua_value",
+        "args": [
+          [
+            1,
+            "two",
+            false
+          ]
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"{1,\\\"two\\\",false}\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-value-10",
+        "module": "hyprland",
+        "operation": "lua_value",
+        "args": [
+          {
+            "field": 1,
+            "end": false,
+            "not-a-field": "x"
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"{field=1,[\\\"end\\\"]=false,[\\\"not-a-field\\\"]=\\\"x\\\"}\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-0",
+        "module": "neutral",
+        "operation": "workspace_target",
+        "args": [
+          {
+            "kind": "number",
+            "number": 2
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "2\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-1",
+        "module": "neutral",
+        "operation": "workspace_target",
+        "args": [
+          {
+            "kind": "number",
+            "number": true
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "{\"error\": \"Invalid workspace target\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-2",
+        "module": "neutral",
+        "operation": "workspace_target",
+        "args": [
+          {
+            "kind": "number",
+            "number": 0
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "{\"error\": \"Invalid workspace target\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-3",
+        "module": "neutral",
+        "operation": "workspace_target",
+        "args": [
+          {
+            "kind": "scratchpad",
+            "name": ""
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"special\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-4",
+        "module": "neutral",
+        "operation": "workspace_target",
+        "args": [
+          {
+            "kind": "scratchpad",
+            "name": "scratch"
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"special:scratch\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-5",
+        "module": "neutral",
+        "operation": "workspace_target",
+        "args": [
+          {
+            "kind": "relative",
+            "scope": "monitor",
+            "offset": -2
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"m-2\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-6",
+        "module": "neutral",
+        "operation": "workspace_target",
+        "args": [
+          {
+            "kind": "relative",
+            "scope": "existing",
+            "offset": 0
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"e+0\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-7",
+        "module": "neutral",
+        "operation": "workspace_target",
+        "args": [
+          {
+            "kind": "relative",
+            "scope": "global",
+            "offset": 3
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "\"r+3\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-8",
+        "module": "neutral",
+        "operation": "workspace_target",
+        "args": [
+          {
+            "kind": "relative",
+            "scope": "unknown",
+            "offset": 1
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "{\"error\": \"Invalid workspace target\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-9",
+        "module": "neutral",
+        "operation": "workspace_target",
+        "args": [
+          {
+            "kind": "number",
+            "number": 1,
+            "extra": true
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "{\"error\": \"Invalid compositor declaration fields\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-rules-0",
+        "module": "neutral",
+        "operation": "profile_rules",
+        "args": [
+          {
+            "routes": [],
+            "brainWorkspace": null
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "[]\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-0-hyprland",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [],
+            "brainWorkspace": null
+          }
+        ],
+        "kwargs": {
+          "backend": "hyprland"
+        }
+      },
+      "stdout": "\"\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-0-niri",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [],
+            "brainWorkspace": null
+          }
+        ],
+        "kwargs": {
+          "backend": "niri"
+        }
+      },
+      "stdout": "\"\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-0-unknown",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [],
+            "brainWorkspace": null
+          }
+        ],
+        "kwargs": {
+          "backend": "unknown"
+        }
+      },
+      "stdout": "{\"error\": \"Unknown compositor backend\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-named-0",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [],
+            "brainWorkspace": null
+          }
+        ],
+        "kwargs": {
+          "backend": "niri"
+        },
+        "workspace_names": [
+          [
+            2,
+            "work"
+          ],
+          [
+            3,
+            "notes"
+          ]
+        ]
+      },
+      "stdout": "\"\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-rules-1",
+        "module": "neutral",
+        "operation": "profile_rules",
+        "args": [
+          {
+            "routes": [
+              {
+                "name": "editor",
+                "match": "^Example$",
+                "workspace": 2
+              }
+            ],
+            "brainWorkspace": 3
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "[{\"kind\": \"window-rule\", \"id\": \"profile-editor\", \"selector\": {\"app_id_regex\": \"^Example$\"}, \"effects\": {\"workspace\": {\"target\": {\"kind\": \"number\", \"number\": 2}, \"activate\": false}}}, {\"kind\": \"window-rule\", \"id\": \"profile-brain\", \"selector\": {\"app_id_regex\": \"^(nacre-brain|chrome-127[.]0[.]0[.]1__-Default|[Oo]bsidian)$\"}, \"effects\": {\"workspace\": {\"target\": {\"kind\": \"number\", \"number\": 3}, \"activate\": false}}}]\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-1-hyprland",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [
+              {
+                "name": "editor",
+                "match": "^Example$",
+                "workspace": 2
+              }
+            ],
+            "brainWorkspace": 3
+          }
+        ],
+        "kwargs": {
+          "backend": "hyprland"
+        }
+      },
+      "stdout": "\"hl.window_rule({name=\\\"profile-editor\\\",match={class=\\\"^Example$\\\"},workspace=\\\"2 silent\\\"})\\nhl.window_rule({name=\\\"profile-brain\\\",match={class=\\\"^(nacre-brain|chrome-127[.]0[.]0[.]1__-Default|[Oo]bsidian)$\\\"},workspace=\\\"3 silent\\\"})\\n\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-1-niri",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [
+              {
+                "name": "editor",
+                "match": "^Example$",
+                "workspace": 2
+              }
+            ],
+            "brainWorkspace": 3
+          }
+        ],
+        "kwargs": {
+          "backend": "niri"
+        }
+      },
+      "stdout": "{\"error\": \"Niri profile routes require an explicit workspace number-to-name map\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-1-unknown",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [
+              {
+                "name": "editor",
+                "match": "^Example$",
+                "workspace": 2
+              }
+            ],
+            "brainWorkspace": 3
+          }
+        ],
+        "kwargs": {
+          "backend": "unknown"
+        }
+      },
+      "stdout": "{\"error\": \"Unknown compositor backend\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-named-1",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [
+              {
+                "name": "editor",
+                "match": "^Example$",
+                "workspace": 2
+              }
+            ],
+            "brainWorkspace": 3
+          }
+        ],
+        "kwargs": {
+          "backend": "niri"
+        },
+        "workspace_names": [
+          [
+            2,
+            "work"
+          ],
+          [
+            3,
+            "notes"
+          ]
+        ]
+      },
+      "stdout": "\"window-rule {\\n    match app-id=\\\"^Example$\\\"\\n    open-on-workspace \\\"work\\\"\\n}\\nwindow-rule {\\n    match app-id=\\\"^(nacre-brain|chrome-127[.]0[.]0[.]1__-Default|[Oo]bsidian)$\\\"\\n    open-on-workspace \\\"notes\\\"\\n}\\n\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-rules-2",
+        "module": "neutral",
+        "operation": "profile_rules",
+        "args": [
+          {
+            "routes": [],
+            "brainWorkspace": null,
+            "windowTrashBindings": true
+          }
+        ],
+        "kwargs": {}
+      },
+      "stdout": "[]\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-2-hyprland",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [],
+            "brainWorkspace": null,
+            "windowTrashBindings": true
+          }
+        ],
+        "kwargs": {
+          "backend": "hyprland"
+        }
+      },
+      "stdout": "\"-- Generated by tools/generate_compositor_config.py; edit compositor-contract.json.\\nhl.bind(\\\"SUPER + CTRL + Q\\\", hl.dsp.exec_cmd(\\\"~/.config/hypr/scripts/window-trash.sh trash\\\"), {description=\\\"Nacre:put-away\\\"})\\nhl.bind(\\\"SUPER + SHIFT + Q\\\", hl.dsp.exec_cmd(\\\"~/.config/hypr/scripts/window-trash.sh restore-last\\\"), {description=\\\"Nacre:restore\\\"})\\nhl.bind(\\\"SUPER + ALT + Q\\\", hl.dsp.exec_cmd(\\\"~/.config/hypr/scripts/window-trash.sh restore-all\\\"), {description=\\\"Nacre:restore-all\\\"})\\nhl.bind(\\\"SUPER + CTRL + SHIFT + Q\\\", hl.dsp.exec_cmd(\\\"~/.config/hypr/scripts/window-close.sh force\\\"), {description=\\\"Nacre:force-close\\\"})\\n\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-2-niri",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [],
+            "brainWorkspace": null,
+            "windowTrashBindings": true
+          }
+        ],
+        "kwargs": {
+          "backend": "niri"
+        }
+      },
+      "stdout": "\"\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-2-unknown",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [],
+            "brainWorkspace": null,
+            "windowTrashBindings": true
+          }
+        ],
+        "kwargs": {
+          "backend": "unknown"
+        }
+      },
+      "stdout": "{\"error\": \"Unknown compositor backend\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "profile-named-2",
+        "module": "neutral",
+        "operation": "render_profile",
+        "args": [
+          {
+            "routes": [],
+            "brainWorkspace": null,
+            "windowTrashBindings": true
+          }
+        ],
+        "kwargs": {
+          "backend": "niri"
+        },
+        "workspace_names": [
+          [
+            2,
+            "work"
+          ],
+          [
+            3,
+            "notes"
+          ]
+        ]
+      },
+      "stdout": "\"\"\n",
+      "stderr": "",
+      "exit": 0,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "invalid-unknown-root",
+        "module": "neutral",
+        "operation": "render",
+        "args": [
+          "$contract"
+        ],
+        "kwargs": {},
+        "mutation": "unknown-root"
+      },
+      "stdout": "{\"error\": \"Invalid compositor declaration fields\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "invalid-bad-version",
+        "module": "neutral",
+        "operation": "render",
+        "args": [
+          "$contract"
+        ],
+        "kwargs": {},
+        "mutation": "bad-version"
+      },
+      "stdout": "{\"error\": \"Unsupported compositor contract version\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "invalid-unknown-action",
+        "module": "neutral",
+        "operation": "render",
+        "args": [
+          "$contract"
+        ],
+        "kwargs": {},
+        "mutation": "unknown-action"
+      },
+      "stdout": "{\"error\": \"Invalid compositor declaration fields\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "invalid-unknown-output",
+        "module": "neutral",
+        "operation": "render",
+        "args": [
+          "$contract"
+        ],
+        "kwargs": {},
+        "mutation": "unknown-output"
+      },
+      "stdout": "{\"error\": \"Invalid compositor declaration fields\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "invalid-bad-selector",
+        "module": "neutral",
+        "operation": "render",
+        "args": [
+          "$contract"
+        ],
+        "kwargs": {},
+        "mutation": "bad-selector"
+      },
+      "stdout": "{\"error\": \"Rule selectors must be regex strings\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "invalid-bad-float",
+        "module": "neutral",
+        "operation": "render",
+        "args": [
+          "$contract"
+        ],
+        "kwargs": {},
+        "mutation": "bad-float"
+      },
+      "stdout": "{\"error\": \"Invalid rule boolean\", \"type\": \"ValueError\"}\n",
+      "stderr": "",
+      "exit": 1,
+      "files": {}
+    }
+  ]
+}

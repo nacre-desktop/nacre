@@ -3,7 +3,6 @@
 Installed runtime target: no Python processes or Python/Pillow dependencies.
 QML UI, command names, protocols and existing user state remain compatible.
 Developer-only Python tools and test harnesses remain permitted.
-
 | Wave | Status | Numbers / decisions |
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
@@ -57,9 +56,10 @@ Latest main `55c5a03b`: Source 38487998838 desktop and Niri fresh install pass;
 834 source tests, 12 original controls, 349 frozen cases. No new skips.
 Earlier `f3b42304` Source and performance both pass. CI workflow repair is retained; hardware checks are manual, correctness stays automatic.
 
-Next: freeze missing Wave 2 assertions before porting the neutral compositor contract.
+Next: port the neutral Lua/KDL compilers against 62 newly frozen Python cases.
 526 native cases / 51 controls / 81 Rust tests pass; empty-PATH report passes.
 Wave 1 main 3e155f5c CI 38528354524: source + fresh Niri install green; no skips.
+Wave 2: 62 compiler cases freeze stdout/exit/no writes; source/overwrite guards pass.
 Busy fresh CPU: 55.67/38.50/35.55/16.88 -> 1.95/1.16/1.11/0.89 ms; Python 404 -> 0.
 Capture: 11 frozen cases match; 0600/0700 security difference tracked; IPC/events pass.
 CLI: 62 menu + 39 hosted cases pass; seven exact retired-frame differences tracked.
@@ -74,7 +74,7 @@ replaces nvidia-smi; inventory CLI bridges the existing diagnostic module call.
 d920 fingerprint: native-image compares two declared IDs against lock/pin/build;
 17 controls and all 349 cases pass; frozen outputs/core/colors unchanged.
 Hyprland lab backend cannot start (headless/nested); native socket/capture fixtures pass.
-No live machine/config changes by this task; no tags or package uploads.
+No live machine/config changes; no tags or package uploads.
 Port security follow-ups: [security review](security-review.md#fix-during-port).
 Keep existing AI access/consent/retention policies; add explicit security cases
 and intended differences when implementing the reviewed port hardening.
