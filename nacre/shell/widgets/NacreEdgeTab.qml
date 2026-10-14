@@ -11,19 +11,28 @@ Item {
     readonly property real amount: Math.max(active || keyboardFocused ? 1 : 0, Math.min(1, progress))
     clip: true
     Accessible.ignored: true
+    Rectangle {
+        id: patch
+        objectName: "edgeTabPatch"
+        width: Math.max(0, parent.width - 2)
+        height: 38
+        anchors.centerIn: parent
+        radius: Math.min(3, width / 2)
+        color: Qt.tint(NacreTokens.frame, Qt.alpha(NacreTokens.accent, .18 + .12 * root.amount))
+    }
     Shape {
         id: arrow
         objectName: "edgeTabArrow"
         readonly property bool pointsRight: root.edge === "left" ? !root.active : root.active
         width: Math.max(0, Math.min(8, parent.width - 2))
-        height: 22
+        height: 16
         visible: width >= 4
         x: (parent.width - width) / 2
         anchors.verticalCenter: parent.verticalCenter
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
-            strokeWidth: 2
-            strokeColor: Qt.tint(NacreTokens.ink, Qt.alpha(NacreTokens.accent, .25 + .75 * root.amount))
+            strokeWidth: 1.25
+            strokeColor: Qt.tint(NacreTokens.focusInk(patch.color), Qt.alpha(NacreTokens.accent, .2 * root.amount))
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin

@@ -584,7 +584,7 @@ TestCase {
         const view = createTemporaryObject(header, test), cue = findChild(view, "nacreHeaderTitleCue"), band = findChild(view, "nacreHeaderCenterBand"), title = findChild(view, "fixtureActiveTitle");
         title.implicitWidth = 500;
         compare(band.width, 208);
-        compare(cue.width, 208);
+        compare(cue.width, 510);
         fill.dashboardProgress = .6;
         const trace = findChild(cue, "hoverRevealTrace"), partial = trace.width;
         verify(partial > 0);
@@ -597,13 +597,13 @@ TestCase {
         };
         title.implicitWidth = 650;
         compare(band.width, 1000);
-        compare(cue.width, 208);
+        compare(cue.width, 510);
         compare(trace.width, partial);
         fill.dashboardProgress = 1;
-        compare(cue.width, 208);
+        compare(cue.width, 510);
         compare(trace.width, cue.width - cue.traceLeft - cue.traceRight);
         fill.dashboardProgress = 0;
-        compare(cue.width, 674);
+        compare(cue.width, 660);
         NacrePanelState.panels = ({});
         NacrePanelState.screens = {
             test: {

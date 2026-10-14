@@ -17,12 +17,13 @@ Item {
     property string statusHoveredName: ""
     readonly property real peekProgress: peekDwell.progress
     readonly property real dashboardProgress: panel?.input?.lips?.dashboardProgress ?? 0
+    readonly property real titleCueExtent: Math.min(root.width, Math.max(0, Math.min(activeTitle.width, activeTitle.implicitWidth)) + 10)
     property real dashboardCueWidth: 0
     onDashboardProgressChanged: {
         if (dashboardProgress <= 0)
             dashboardCueWidth = 0;
         else if (dashboardCueWidth <= 0)
-            dashboardCueWidth = Math.min(centerBand.width, Math.max(120, activeTitle.implicitWidth + 24));
+            dashboardCueWidth = titleCueExtent;
     }
     property string peekName: ""
     property real peekCenter: 0
@@ -279,7 +280,7 @@ Item {
         objectName: "nacreHeaderTitleCue"
         anchors.centerIn: parent
         // The dashboard widens its pointer corridor when it opens, not its fill.
-        width: root.dashboardCueWidth > 0 ? root.dashboardCueWidth : Math.min(centerBand.width, Math.max(120, activeTitle.implicitWidth + 24))
+        width: root.dashboardCueWidth > 0 ? root.dashboardCueWidth : root.titleCueExtent
         height: 32
         progress: centerBand.activeFocus && !centerBand.containsMouse ? 1 : root.dashboardProgress
     }
