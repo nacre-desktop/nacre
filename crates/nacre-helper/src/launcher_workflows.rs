@@ -770,6 +770,18 @@ fn owned_audio_module(module: &Value, id: &Value, key: &str) -> bool {
                 .any(|part| part == sink || part == null)
         })
 }
+fn audio_modules(listing: &str) -> Vec<Value> {
+    listing
+        .lines()
+        .filter_map(|line| {
+            let mut fields = line.splitn(4, '\t');
+            let index = fields.next()?.parse::<u64>().ok()?;
+            let name = fields.next()?;
+            let argument = fields.next()?;
+            Some(json!({"index":index,"name":name,"argument":argument}))
+        })
+        .collect()
+}
 fn unload_audio(key: &str, ids: &[Value]) -> Result<()> {
     let valid = key
         .strip_prefix("nacre_record_")
@@ -777,17 +789,11 @@ fn unload_audio(key: &str, ids: &[Value]) -> Result<()> {
     if !valid {
         return Err("Invalid recording audio ownership".into());
     }
-    let modules: Value = serde_json::from_str(&pactl(&[
-        "-f".into(),
-        "json".into(),
-        "list".into(),
-        "modules".into(),
-    ])?)?;
+    // Some Pulse clients omit IDs from the verbose JSON module listing. The
+    // short listing supplies the real IDs; retain the type and exact sink guard.
+    let modules = audio_modules(&pactl(&["list".into(), "short".into(), "modules".into()])?);
     for id in ids.iter().rev() {
-        if modules
-            .as_array()
-            .is_some_and(|v| v.iter().any(|m| owned_audio_module(m, id, key)))
-        {
+        if modules.iter().any(|m| owned_audio_module(m, id, key)) {
             pactl(&["unload-module".into(), id.to_string()])?;
         }
     }
@@ -1048,6 +1054,17 @@ mod tests {
             &json!(7),
             key
         ));
+    }
+    #[test]
+    fn short_audio_module_listing_preserves_identifiers_and_argument_fields() {
+        let key = "nacre_record_00000000000000000000000000000000";
+        let modules = audio_modules(&format!(
+            "bad\tmodule-loopback\tsink={key}\n7\tmodule-loopback\tsource=default sink={key} latency_msec=20\tn/a\n8\tmodule-null-sink\tsink_name=other\tn/a\n"
+        ));
+        assert_eq!(modules.len(), 2);
+        assert!(owned_audio_module(&modules[0], &json!(7), key));
+        assert!(!owned_audio_module(&modules[0], &json!(8), key));
+        assert!(!owned_audio_module(&modules[1], &json!(8), key));
     }
     #[test]
     fn registered_projects_and_configured_roots_are_searched_without_escape() -> Result<()> {
