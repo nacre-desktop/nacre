@@ -1,0 +1,9 @@
+{
+  "helper": "light-devices",
+  "args": [
+    "discover",
+    "[]",
+    "999999999999999999999999999999999999"
+  ],
+  "stdout": "json"
+}

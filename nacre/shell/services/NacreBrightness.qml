@@ -52,7 +52,7 @@ Singleton {
             discoveryPending = true;
             return;
         }
-        discovery.command = ["python3", NacrePaths.tools + "/light-devices.py", "discover", JSON.stringify(Quickshell.screens.map(screen => screen.name))];
+        discovery.command = [NacrePaths.helperBinary, "light-devices", "discover", JSON.stringify(Quickshell.screens.map(screen => screen.name))];
         discovery.running = true;
     }
     property bool discoveryPending: false
