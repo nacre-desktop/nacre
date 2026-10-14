@@ -47,7 +47,7 @@ current frozen cases use defaults and remain unchanged.
 Main CI gate retained; 2753707f fixed isolation without changing goldens/skips.
 Wave 1 source/install CI passed; hardware checks remain manual.
 
-Next: finish compositor-compat, window-hide and widths/session runtimes; check CI38564916648.
+Next: finish compositor-compat full gate and publish; port window-hide and widths/session runtimes.
 Wave 1 main 3e155f5c CI 38528354524: source + fresh Niri install green; no skips.
 Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.
 Three compiler sources retired; 84 integrated Rust tests / 770 repo tests / 526 cases pass.

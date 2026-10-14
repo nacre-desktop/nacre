@@ -2,6 +2,7 @@
 #![deny(unsafe_code)]
 pub mod arguments;
 pub mod compositor;
+pub mod compositor_compat;
 pub mod compositor_config;
 pub mod dashboard_data;
 pub mod dashboard_media;

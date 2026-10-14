@@ -11,6 +11,9 @@ fn run() -> Result<i32> {
     let mut arguments = std::env::args().skip(1);
     let tool = arguments.next().ok_or("Expected a helper command")?;
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "compositor-compat" {
+        return nacre_helper::compositor_compat::run(&arguments);
+    }
     if tool == "compositor-render" {
         if arguments.len() != 3 {
             return Err("Expected backend, render operation and JSON values".into());

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 compositor() {
-    python3 "$(dirname "$(realpath "$0")")/compositor-compat.py" "$@"
+    "$(dirname "$(realpath "$0")")/hyprctl-lua.sh" "$@"
 }
 
 app="$HOME/.config/hypr/scripts/matrix-rest.py"

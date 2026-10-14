@@ -25,6 +25,7 @@ MIGRATED = frozenset(
         "pearl-state",
         "pearl-window",
         "compositor",
+        "compositor-compat",
         "compositor-backends-hyprland",
         "compositor-backends-niri",
         "resource-state",

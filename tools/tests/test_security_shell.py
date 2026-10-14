@@ -76,7 +76,7 @@ class WindowTrashSecurityTests(unittest.TestCase):
         self.tools = self.home / "tools"
         self.tools.mkdir()
         # Never contact the session compositor, D-Bus, notifications or timers.
-        fake = self.tools / "python3"
+        fake = self.tools / "nacre-helper"
         fake.write_text(
             "#!/usr/bin/python3\n"
             "import json, os, re, sys\n"
@@ -107,6 +107,7 @@ class WindowTrashSecurityTests(unittest.TestCase):
             PATH=str(self.tools) + os.pathsep + os.defpath,
             CALLS=str(self.calls),
             WORKSPACE_NAME="name with 'quotes'; $(touch unwanted)\nsecond line",
+            NACRE_HELPER_BINARY=str(fake),
         )
 
     def run_script(self, *args):

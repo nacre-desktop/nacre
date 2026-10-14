@@ -134,3 +134,8 @@ verified separately by native socket and real Quickshell roundtrip tests.
 Transitional Python caller cases receive their scripted tool replies over private
 Hyprland sockets; the harness records equivalent logical effects. Providers load
 inputs only and never replay expected helper outputs.
+
+Compositor-compat retains five original runtime parity cases, 27 frozen dispatch
+cases and eight original wrapper assertions. Existing script names keep working;
+the wrapper invokes the native helper and does not start Python. Managed upgrade
+pruning backs up the removed Python file; edited private files retain drift protection.

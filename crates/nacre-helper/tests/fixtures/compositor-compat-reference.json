@@ -1,0 +1,706 @@
+{
+  "source_sha256": "a0e30cb3ea620b5df7f369ab1bad5d977e90fcf8caec1326050b297a21b9dd4a",
+  "cases": [
+    {
+      "request": {
+        "name": "case-[]",
+        "argv": []
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "A desktop command is required\n",
+        "exit": 2,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['valid-window-id', '0xabc']",
+        "argv": [
+          "valid-window-id",
+          "0xabc"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "valid_window_id",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['valid-window-id', 'bad']",
+        "argv": [
+          "valid-window-id",
+          "bad"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 1,
+        "calls": [
+          {
+            "method": "valid_window_id",
+            "args": [
+              "bad"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['window-job-token', '0xabc']",
+        "argv": [
+          "window-job-token",
+          "0xabc"
+        ]
+      },
+      "observed": {
+        "stdout": "abc\n",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "window_job_token",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['query', 'windows']",
+        "argv": [
+          "query",
+          "windows"
+        ]
+      },
+      "observed": {
+        "stdout": "[]\n",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "query",
+            "args": [
+              "windows"
+            ],
+            "kwargs": {
+              "timeout": 5
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['focus-workspace', '2']",
+        "argv": [
+          "focus-workspace",
+          "2"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "switch_workspace",
+            "args": [
+              "2"
+            ],
+            "kwargs": {
+              "current_monitor": false
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['focus-workspace', '2', 'true']",
+        "argv": [
+          "focus-workspace",
+          "2",
+          "true"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "switch_workspace",
+            "args": [
+              "2"
+            ],
+            "kwargs": {
+              "current_monitor": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['focus-workspace', '2', 'bad']",
+        "argv": [
+          "focus-workspace",
+          "2",
+          "bad"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "Expected true or false\n",
+        "exit": 2,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['focus-window', '0xabc']",
+        "argv": [
+          "focus-window",
+          "0xabc"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "focus_window",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['move-window', '3', '0xabc']",
+        "argv": [
+          "move-window",
+          "3",
+          "0xabc"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "move_window",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {
+              "workspace": "3",
+              "follow": false
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['move-window', '3', '0xabc', 'true']",
+        "argv": [
+          "move-window",
+          "3",
+          "0xabc",
+          "true"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "move_window",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {
+              "workspace": "3",
+              "follow": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['move-workspace', '2', 'DP-1']",
+        "argv": [
+          "move-workspace",
+          "2",
+          "DP-1"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "move_workspace",
+            "args": [
+              "2",
+              "DP-1"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['close-window', '0xabc']",
+        "argv": [
+          "close-window",
+          "0xabc"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "close_window",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['kill-window', '0xabc']",
+        "argv": [
+          "kill-window",
+          "0xabc"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "kill_window",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['fullscreen']",
+        "argv": [
+          "fullscreen"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "fullscreen_window",
+            "args": [
+              "activewindow"
+            ],
+            "kwargs": {
+              "mode": "fullscreen"
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['fullscreen', 'maximized', '0xabc']",
+        "argv": [
+          "fullscreen",
+          "maximized",
+          "0xabc"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "fullscreen_window",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {
+              "mode": "maximized"
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['resize-window', '600', '400']",
+        "argv": [
+          "resize-window",
+          "600",
+          "400"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "resize_window",
+            "args": [
+              "activewindow",
+              600,
+              400
+            ],
+            "kwargs": {
+              "relative": false
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['resize-window', '600', '400', '0xabc']",
+        "argv": [
+          "resize-window",
+          "600",
+          "400",
+          "0xabc"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "resize_window",
+            "args": [
+              "0xabc",
+              600,
+              400
+            ],
+            "kwargs": {
+              "relative": false
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['dpms', 'off']",
+        "argv": [
+          "dpms",
+          "off"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "dpms",
+            "args": [
+              "off"
+            ],
+            "kwargs": {
+              "monitor": null
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['dpms', 'off', 'DP-1']",
+        "argv": [
+          "dpms",
+          "off",
+          "DP-1"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "dpms",
+            "args": [
+              "off"
+            ],
+            "kwargs": {
+              "monitor": "DP-1"
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['monitor', 'DP-1', 'disable']",
+        "argv": [
+          "monitor",
+          "DP-1",
+          "disable"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "configure_monitors",
+            "args": [
+              [
+                {
+                  "output": "DP-1",
+                  "disabled": true
+                }
+              ]
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['monitor', 'DP-1', '1920x1080@60', 'auto', '1.25', 'DP-2']",
+        "argv": [
+          "monitor",
+          "DP-1",
+          "1920x1080@60",
+          "auto",
+          "1.25",
+          "DP-2"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "configure_monitors",
+            "args": [
+              [
+                {
+                  "output": "DP-1",
+                  "disabled": false,
+                  "mode": "1920x1080@60",
+                  "position": "auto",
+                  "scale": 1.25,
+                  "mirror": "DP-2"
+                }
+              ]
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['animations', 'true']",
+        "argv": [
+          "animations",
+          "true"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "set_animations",
+            "args": [
+              true
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['performance', 'false']",
+        "argv": [
+          "performance",
+          "false"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "set_performance",
+            "args": [
+              false
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['toggle-all-float']",
+        "argv": [
+          "toggle-all-float"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "toggle_workspace_floating",
+            "args": [],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['exit']",
+        "argv": [
+          "exit"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "logout",
+            "args": [],
+            "kwargs": {
+              "graceful": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "case-['unknown']",
+        "argv": [
+          "unknown"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "Unknown desktop command: unknown\n",
+        "exit": 2,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

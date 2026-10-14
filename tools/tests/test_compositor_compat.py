@@ -1,7 +1,6 @@
 """Old script vocabulary delegates arguments and failures to the common facade."""
 
 import contextlib
-import importlib.util
 import io
 import json
 from pathlib import Path
@@ -9,11 +8,7 @@ import unittest
 from unittest.mock import Mock
 
 ROOT = Path(__file__).parents[2]
-SPEC = importlib.util.spec_from_file_location(
-    "compositor_compat", ROOT / "hypr/scripts/compositor-compat.py"
-)
-compat = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(compat)
+import native_compositor_compat as compat
 
 
 class CompositorCompatibilityTests(unittest.TestCase):
@@ -140,7 +135,8 @@ class CompositorCompatibilityTests(unittest.TestCase):
 
     def test_legacy_entrypoint_is_only_a_compatibility_wrapper(self):
         wrapper = (ROOT / "hypr/scripts/hyprctl-lua.sh").read_text()
-        self.assertIn('compositor-compat.py" "$@"', wrapper)
+        self.assertIn('compositor-compat "$@"', wrapper)
+        self.assertNotIn("python3", wrapper)
         self.assertNotIn("eval", wrapper)
         for filename in ("window-close.sh", "window-trash.sh", "matrix-rest.sh"):
             source = (ROOT / "hypr/scripts" / filename).read_text()
