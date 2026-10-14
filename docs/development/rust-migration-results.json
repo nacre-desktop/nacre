@@ -692,5 +692,31 @@
         "observer_rss_samples": 1
       }
     }
+  },
+  "wave2_preview_busy_machine": {
+    "measurement_condition": "busy machine",
+    "method": "benchmark-helpers.py RUSAGE_CHILDREN user+sys delta,100 fresh identical help calls; single per-PID smaps_rollup RSS after explicit fake compositor readiness; private HOME/runtime, excludes child; no wall/whole-shell memory evidence",
+    "scope": "argument parsing and preview parent while waiting for a controlled child, not compositor startup or actual full-shell memory",
+    "quiet_window_pending": true,
+    "results": {
+      "python": {
+        "calls": 100,
+        "cpu_ms_per_call": 52.58386,
+        "user_ms_per_call": 44.35264,
+        "sys_ms_per_call": 8.231219999999999,
+        "python3_starts_in_fresh_requests": 100,
+        "preview_helper_rss_mib": 21.5390625,
+        "rss_samples": 1
+      },
+      "rust": {
+        "calls": 100,
+        "cpu_ms_per_call": 1.2609599999999954,
+        "user_ms_per_call": 0.2780299999999958,
+        "sys_ms_per_call": 0.9829299999999996,
+        "python3_starts_in_fresh_requests": 0,
+        "preview_helper_rss_mib": 7.3046875,
+        "rss_samples": 1
+      }
+    }
   }
 }

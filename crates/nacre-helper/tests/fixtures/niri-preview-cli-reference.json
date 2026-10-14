@@ -1,0 +1,78 @@
+{
+  "cases": [
+    {
+      "args": [
+        "--help"
+      ],
+      "stdout": "usage: niri-preview.py [-h] {prepare,run} ...\n\nPrepare and run an isolated, windowed Nacre/niri preview without session\ntakeover.\n\npositional arguments:\n  {prepare,run}\n\noptions:\n  -h, --help     show this help message and exit\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "prepare",
+        "--help"
+      ],
+      "stdout": "usage: niri-preview.py prepare [-h] --backend BACKEND\n                               --destination DESTINATION\n\noptions:\n  -h, --help            show this help message and exit\n  --backend BACKEND\n  --destination DESTINATION\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "run",
+        "--help"
+      ],
+      "stdout": "usage: niri-preview.py run [-h] --destination DESTINATION\n\noptions:\n  -h, --help            show this help message and exit\n  --destination DESTINATION\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [],
+      "stdout": "",
+      "stderr": "usage: niri-preview.py [-h] {prepare,run} ...\nniri-preview.py: error: the following arguments are required: action\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "bad"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-preview.py [-h] {prepare,run} ...\nniri-preview.py: error: argument action: invalid choice: 'bad' (choose from 'prepare', 'run')\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "prepare"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-preview.py prepare [-h] --backend BACKEND\n                               --destination DESTINATION\nniri-preview.py prepare: error: the following arguments are required: --backend, --destination\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "run"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-preview.py run [-h] --destination DESTINATION\nniri-preview.py run: error: the following arguments are required: --destination\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "prepare",
+        "--backend"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-preview.py prepare [-h] --backend BACKEND\n                               --destination DESTINATION\nniri-preview.py prepare: error: argument --backend: expected one argument\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "run",
+        "--destination"
+      ],
+      "stdout": "",
+      "stderr": "usage: niri-preview.py run [-h] --destination DESTINATION\nniri-preview.py run: error: argument --destination: expected one argument\n",
+      "exit": 2
+    }
+  ]
+}

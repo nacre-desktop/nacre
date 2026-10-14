@@ -178,7 +178,7 @@ so a failed niri experiment cannot overwrite the working Hyprland source.
 ### Windowed Nacre preview (2026-10-13)
 
 The operator now requests full Nacre testing while preserving the active Hyprland
-desktop and parallel chats. `uwsm/tools/niri-preview.py` stages the merged shell,
+desktop and parallel chats. `nacre-helper niri-preview` stages the merged shell,
 backend, generated keyboard/profile/bindings/rules, private appearance and panel
 preferences, palette runtime and installed launch controllers in a separate tree.
 Original configuration remains untouched. The explicit personal AI access setting
@@ -187,9 +187,9 @@ is retained; the preview does not change the real profile or account policy.
 From this task worktree, choose a new empty private destination:
 
 ```sh
-python3 uwsm/tools/niri-preview.py prepare --backend "$PWD" \
+nacre-helper niri-preview prepare --backend "$PWD" \
   --destination "$HOME/.local/share/nacre/niri-on-pc/preview-test"
-python3 uwsm/tools/niri-preview.py run \
+nacre-helper niri-preview run \
   --destination "$HOME/.local/share/nacre/niri-on-pc/preview-test"
 ```
 

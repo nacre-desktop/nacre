@@ -1,0 +1,10 @@
+usage: niri-preview.py [-h] {prepare,run} ...
+
+Prepare and run an isolated, windowed Nacre/niri preview without session
+takeover.
+
+positional arguments:
+  {prepare,run}
+
+options:
+  -h, --help     show this help message and exit

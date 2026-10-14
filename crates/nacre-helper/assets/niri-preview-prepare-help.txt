@@ -1,0 +1,7 @@
+usage: niri-preview.py prepare [-h] --backend BACKEND
+                               --destination DESTINATION
+
+options:
+  -h, --help            show this help message and exit
+  --backend BACKEND
+  --destination DESTINATION

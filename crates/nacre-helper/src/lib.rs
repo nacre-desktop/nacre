@@ -26,6 +26,7 @@ pub mod niri_acceptance_systemd;
 pub mod niri_hover_install;
 mod niri_hover_pointer;
 pub mod niri_hover_probe;
+pub mod niri_preview;
 pub mod niri_session_gate;
 pub mod niri_session_runtime;
 pub mod niri_session_stage;

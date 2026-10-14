@@ -1,6 +1,5 @@
 """Windowed preview preserves the daily session and authentication files."""
 
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -10,11 +9,7 @@ import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location(
-    "niri_preview", ROOT / "uwsm/tools/niri-preview.py"
-)
-preview = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(preview)
+import native_niri_preview as preview
 
 
 class NiriPreviewTests(unittest.TestCase):

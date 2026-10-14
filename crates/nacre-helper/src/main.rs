@@ -29,6 +29,9 @@ fn run() -> Result<i32> {
     if tool == "niri-acceptance-monitor" {
         return nacre_helper::niri_acceptance_monitor::run(&arguments);
     }
+    if tool == "niri-preview" {
+        return nacre_helper::niri_preview::run(&arguments);
+    }
     if tool == "compositor-render" {
         if arguments.len() != 3 {
             return Err("Expected backend, render operation and JSON values".into());

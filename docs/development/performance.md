@@ -1027,3 +1027,22 @@ followed exec and exclude child processes; they are helper measurements only.
 
 Managed-session latency, whole-shell RSS/PSS, idle CPU and launches per minute
 remain unmeasured. The earlier quiet-window gate remains mandatory.
+
+### Wave 2 isolated preview (busy machine)
+
+The same child CPU method measured 100 fresh identical `--help` requests.
+Preview-parent RSS was sampled once per implementation after a controlled child
+signalled readiness, excluding that child. These are parser and helper-memory
+measurements, not nested compositor or full-shell startup timings.
+
+| Helper measurement; busy machine | Python reference | Rust release |
+| --- | ---: | ---: |
+| User + system CPU per fresh parser request (ms) | 52.584 | 1.261 |
+| Direct Python starts in 100 fresh requests | 100 | 0 |
+| Preview-parent RSS while waiting for child (MiB; one sample) | 21.54 | 7.30 |
+
+Actual Bubblewrap checks confined writes to the copied state and kept the
+original fixture read-only. A real nested Niri preview answered IPC, quit cleanly
+and removed its private runtime. Its system bus is explicitly private because
+native hardware helpers no longer pass through the blocked CLI wrappers.
+Whole-shell/idle comparisons remain pending the owner's quiet window.

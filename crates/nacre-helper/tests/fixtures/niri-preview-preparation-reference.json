@@ -1,0 +1,795 @@
+{
+  "source_sha256": "e535840f4a96a2878c977a64711f881270373d7ef729bbb6299065c22d79ee69",
+  "cases": [
+    {
+      "variant": "default",
+      "profile": {
+        "version": 1,
+        "id": "default",
+        "components": [
+          "configs",
+          "shell"
+        ],
+        "workspaceCount": 5,
+        "workspaceNames": [],
+        "workspaceIcons": [],
+        "startup": [],
+        "routes": [],
+        "brainWorkspace": null,
+        "aiWorkspace": null
+      },
+      "scheme": {
+        "colours": {
+          "primary": "#abcdef",
+          "secondary": "12345678",
+          "outlineVariant": "#ABCDEF",
+          "error": "123abc"
+        }
+      },
+      "keyboard": {
+        "layout": "us,de",
+        "model": "pc105",
+        "variant": ",nodeadkeys",
+        "options": "caps:escape"
+      },
+      "observed": {
+        "files": {
+          "bin/brightnessctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/ddcutil": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/hypridle": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/hyprlock": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/loginctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/pkexec": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/powerprofilesctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/sudo": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/systemctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/uwsm": {
+            "text": "#!/bin/sh\nif [ \"$1\" = app ]; then shift; [ \"${1:-}\" != -- ] || shift; exec \"$@\"; fi\necho \"Session management is unavailable in the windowed preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "cache/poster.png": {
+            "text": "image fixture\n",
+            "mode": 384
+          },
+          "cache/weather.json": {
+            "text": "weather fixture\n",
+            "mode": 384
+          },
+          "config/bindings.kdl": {
+            "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nbinds {\n    XF86AudioMute repeat=false allow-when-locked=true hotkey-overlay-title=\"Nacre:mute\" { spawn-sh \"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\"; }\n    XF86AudioLowerVolume repeat=true allow-when-locked=true hotkey-overlay-title=\"Nacre:volume-down\" { spawn-sh \"wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-\"; }\n    XF86AudioRaiseVolume repeat=true allow-when-locked=true hotkey-overlay-title=\"Nacre:volume-up\" { spawn-sh \"wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+\"; }\n    XF86AudioMicMute repeat=false hotkey-overlay-title=\"Nacre:mic-mute\" { spawn-sh \"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\"; }\n    XF86PowerOff repeat=false allow-when-locked=true hotkey-overlay-title=\"Nacre:lock\" { spawn-sh \"loginctl lock-session\"; }\n    XF86MonBrightnessDown repeat=false hotkey-overlay-title=\"Nacre:brightness-down\" { spawn-sh \"~/.local/bin/nacre-shell brightness down\"; }\n    XF86MonBrightnessUp repeat=false hotkey-overlay-title=\"Nacre:brightness-up\" { spawn-sh \"~/.local/bin/nacre-shell brightness up\"; }\n    XF86KbdBrightnessUp repeat=false hotkey-overlay-title=\"Nacre:keyboard-up\" { spawn-sh \"~/.local/bin/nacre-shell keyboard-light up\"; }\n    XF86KbdBrightnessDown repeat=false hotkey-overlay-title=\"Nacre:keyboard-down\" { spawn-sh \"~/.local/bin/nacre-shell keyboard-light down\"; }\n    Super+period repeat=false hotkey-overlay-title=\"Nacre:emoji\" { spawn-sh \"~/.local/bin/nacre-menu actions.emoji\"; }\n    Super+Ctrl+E repeat=false hotkey-overlay-title=\"Nacre:emoji\" { spawn-sh \"~/.local/bin/nacre-menu actions.emoji\"; }\n    Print repeat=false hotkey-overlay-title=\"Nacre:screenshot\" { spawn-sh \"niri msg action screenshot\"; }\n    Super+Shift+S repeat=false hotkey-overlay-title=\"Nacre:screenshot\" { spawn-sh \"niri msg action screenshot\"; }\n    Super+Print repeat=false hotkey-overlay-title=\"Nacre:save-screenshot\" { spawn-sh \"mkdir -p \\\"$HOME/Pictures/Screenshots\\\" && niri msg action screenshot-screen --show-pointer false --path \\\"$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png\\\"\"; }\n    Super+Q repeat=false hotkey-overlay-title=\"Nacre:close\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action close_window\"; }\n    Super+F repeat=false hotkey-overlay-title=\"Nacre:fullscreen\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action fullscreen_window --mode fullscreen\"; }\n    Super+M repeat=false hotkey-overlay-title=\"Nacre:maximize\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action fullscreen_window --mode maximized\"; }\n    Super+T repeat=false hotkey-overlay-title=\"Nacre:float\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action float_window --action toggle\"; }\n    Super+G repeat=false hotkey-overlay-title=\"Nacre:group\" { spawn-sh \"niri msg action toggle-column-tabbed-display\"; }\n    Super+Ctrl+Page_Up repeat=false hotkey-overlay-title=\"Nacre:group-cycle\" { spawn-sh \"niri msg action focus-window-up-or-bottom\"; }\n    Super+Ctrl+Page_Down repeat=false hotkey-overlay-title=\"Nacre:group-cycle\" { spawn-sh \"niri msg action focus-window-down-or-top\"; }\n    Alt+TAB repeat=false hotkey-overlay-title=\"Nacre:cycle-window\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action cycle_window --direction next\"; }\n    Alt+Shift+TAB repeat=false hotkey-overlay-title=\"Nacre:cycle-window\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action cycle_window --direction previous\"; }\n    Super+1 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 1\"; }\n    Super+Shift+1 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 1\"; }\n    Super+2 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 2\"; }\n    Super+Shift+2 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 2\"; }\n    Super+3 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 3\"; }\n    Super+Shift+3 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 3\"; }\n    Super+4 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 4\"; }\n    Super+Shift+4 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 4\"; }\n    Super+5 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 5\"; }\n    Super+Shift+5 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 5\"; }\n    Super+6 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 6\"; }\n    Super+Shift+6 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 6\"; }\n    Super+7 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 7\"; }\n    Super+Shift+7 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 7\"; }\n    Super+8 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 8\"; }\n    Super+Shift+8 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 8\"; }\n    Super+9 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 9\"; }\n    Super+Shift+9 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 9\"; }\n    Super+0 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 10\"; }\n    Super+Shift+0 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 10\"; }\n    Super+Ctrl+Right repeat=false hotkey-overlay-title=\"Nacre:next-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+Ctrl+Left repeat=false hotkey-overlay-title=\"Nacre:previous-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+WheelScrollDown repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+WheelScrollUp repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+Ctrl+Shift+Left repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+Ctrl+Shift+Right repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+Left repeat=true cooldown-ms=120 hotkey-overlay-title=\"Nacre:focus\" { focus-column-left; }\n    Super+Shift+Left repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction left\"; }\n    Super+Alt+Left repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width -30 --height 0 --relative true\"; }\n    Super+Right repeat=true cooldown-ms=120 hotkey-overlay-title=\"Nacre:focus\" { focus-column-right; }\n    Super+Shift+Right repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction right\"; }\n    Super+Alt+Right repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 30 --height 0 --relative true\"; }\n    Super+Up repeat=false hotkey-overlay-title=\"Nacre:focus\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action focus_direction --direction up\"; }\n    Super+Shift+Up repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction up\"; }\n    Super+Alt+Up repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 0 --height -30 --relative true\"; }\n    Super+Down repeat=false hotkey-overlay-title=\"Nacre:focus\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action focus_direction --direction down\"; }\n    Super+Shift+Down repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction down\"; }\n    Super+Alt+Down repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 0 --height 30 --relative true\"; }\n    Super+SPACE repeat=false hotkey-overlay-title=\"Nacre:launcher\" { spawn-sh \"~/.local/bin/nacre-shell launcher\"; }\n    Super+TAB repeat=false hotkey-overlay-title=\"Nacre:overview\" { spawn-sh \"niri msg action toggle-overview\"; }\n    Super+V repeat=false hotkey-overlay-title=\"Nacre:clipboard\" { spawn-sh \"~/.local/bin/nacre-shell clipboard\"; }\n    Super+W repeat=false hotkey-overlay-title=\"Nacre:wallpaper\" { spawn-sh \"~/.local/bin/nacre-shell wallpaper\"; }\n    Super+Z repeat=false { spawn-sh \"~/.local/bin/nacre-shell hide\"; }\n    Super+O repeat=false { spawn-sh \"~/.local/bin/nacre-shell toggle\"; }\n    Super+I repeat=false hotkey-overlay-title=\"Nacre:settings\" { spawn-sh \"~/.local/bin/nacre-settings\"; }\n    Super+Ctrl+C repeat=false { spawn-sh \"~/.local/bin/nacre-menu actions.capture\"; }\n    Super+X repeat=false hotkey-overlay-title=\"Nacre:power\" { spawn-sh \"~/.local/bin/nacre-menu power\"; }\n    Super+ESCAPE repeat=false hotkey-overlay-title=\"Nacre:power\" { spawn-sh \"~/.local/bin/nacre-menu power\"; }\n    Super+L repeat=false hotkey-overlay-title=\"Nacre:lock\" { spawn-sh \"loginctl lock-session\"; }\n    Super+Shift+R repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action reload\"; }\n    Super+RETURN repeat=false hotkey-overlay-title=\"Nacre:terminal\" { spawn-sh \"uwsm app -- ~/.local/bin/nacre-app terminal\"; }\n    Super+Shift+B repeat=false hotkey-overlay-title=\"Nacre:browser\" { spawn-sh \"uwsm app -- ~/.local/bin/nacre-app browser\"; }\n    Super+E repeat=false hotkey-overlay-title=\"Nacre:files\" { spawn-sh \"~/.local/bin/nacre-app files\"; }\n    Super+B repeat=false { spawn-sh \"~/.local/bin/nacre-brain open\"; }\n    Super+N repeat=false { spawn-sh \"~/.local/bin/nacre-brain capture\"; }\n    Super+Ctrl+SPACE repeat=false hotkey-overlay-title=\"Nacre:palette\" { spawn-sh \"~/.local/bin/nacre-shell palette\"; }\n    Super+K repeat=false hotkey-overlay-title=\"Nacre:shortcuts\" { spawn-sh \"~/.local/bin/nacre-menu learn.shortcuts\"; }\n    Super+F1 repeat=false hotkey-overlay-title=\"Nacre:shortcuts\" { spawn-sh \"~/.local/bin/nacre-menu learn.shortcuts\"; }\n    Super+A repeat=false hotkey-overlay-title=\"Nacre:ai-sidebar\" { spawn-sh \"~/.local/bin/nacre-shell left\"; }\n    Super+Ctrl+D repeat=false hotkey-overlay-title=\"Nacre:detach-panel\" { spawn-sh \"~/.local/bin/nacre-shell detach\"; }\n}\n",
+            "mode": 384
+          },
+          "config/colors.kdl": {
+            "text": "// Orient colors only: preserve user-owned ring/border enabled state and widths.\nlayout {\n    focus-ring {\n        active-color \"#abcdef\"\n        active-gradient from=\"#abcdef\" to=\"#12345678\" angle=45\n        inactive-color \"#ABCDEF\"\n        urgent-color \"#123abc\"\n    }\n    border {\n        active-color \"#abcdef\"\n        active-gradient from=\"#abcdef\" to=\"#12345678\" angle=45\n        inactive-color \"#ABCDEF\"\n        urgent-color \"#123abc\"\n    }\n}\n",
+            "mode": 420
+          },
+          "config/config.kdl": {
+            "text": "include \"$HOME/.config/nacre/niri-on-pc/preview/wallpaper.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/bindings.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/window-rules.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/keyboard.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/colors.kdl\"\nworkspace \"nacre-1\"\nworkspace \"nacre-2\"\nworkspace \"nacre-3\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nspawn-at-startup \"quickshell\" \"-n\" \"-p\" \"$HOME/.config/quickshell/nacre/shell.qml\"\nhotkey-overlay {\n    skip-at-startup\n}\nbinds {\n    Alt+Space { spawn \"$HOME/.local/bin/nacre-shell\" \"launcher\"; }\n    Alt+O { spawn \"$HOME/.local/bin/nacre-shell\" \"toggle\"; }\n    Alt+Return { spawn \"kitty\"; }\n    Alt+Shift+Escape { quit skip-confirmation=true; }\n    Alt+1 { focus-workspace \"nacre-1\"; }\n    Alt+2 { focus-workspace \"nacre-2\"; }\n    Alt+3 { focus-workspace \"nacre-3\"; }\n    Alt+4 { focus-workspace \"nacre-4\"; }\n    Alt+5 { focus-workspace \"nacre-5\"; }\n}\n",
+            "mode": 420
+          },
+          "config/keyboard.kdl": {
+            "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 420
+          },
+          "config/profile.kdl": {
+            "text": "",
+            "mode": 420
+          },
+          "config/unsupported.json": {
+            "text": "{\n  \"backend\": \"niri\",\n  \"unsupported\": [\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + SHIFT + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + ALT + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + P\",\n      \"reason\": \"No equivalent niri capability for window.pin\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + SHIFT + P\",\n      \"reason\": \"No equivalent niri capability for window.pseudo\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + J\",\n      \"reason\": \"No equivalent niri capability for layout.toggle-split\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + mouse:273\",\n      \"reason\": \"Keep niri's native move/resize gestures; no pointer-hook substitution\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + S\",\n      \"reason\": \"No equivalent niri capability for workspace.scratchpad\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + CTRL + S\",\n      \"reason\": \"Niri has no Hyprland special/scratchpad workspaces\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + R\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"left\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"right\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"up\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"down\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"escape\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"return\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + R\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/windowrule.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-thunar-files\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/windowrule.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-dolphin-files\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-lock-preview\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-audio-mixer\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-share-picker\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-picture-in-picture\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"backend-config\",\n      \"id\": \"\",\n      \"reason\": \"Backend-specific backend-config is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"Escape\",\n      \"reason\": \"Niri bindings consume input; non-consuming hooks are unsupported\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"unbind\",\n      \"id\": \"SUPER + mouse:272\",\n      \"reason\": \"Backend-specific unbind is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"extension\",\n      \"id\": \"panel.drag\",\n      \"reason\": \"Backend-specific extension is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + mouse:272\",\n      \"reason\": \"No equivalent niri action for panel.drag\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"mouse:272\",\n      \"reason\": \"No equivalent niri capability for panel.drag.finish\"\n    },\n    {\n      \"source\": \"hypr/conf/cursor.lua\",\n      \"kind\": \"extension\",\n      \"id\": \"cursor.session\",\n      \"reason\": \"Backend-specific extension is not emitted for niri\"\n    },\n    {\n      \"source\": \"hypr/conf/cursor.lua\",\n      \"kind\": \"event\",\n      \"id\": \"\",\n      \"reason\": \"Backend-specific event is not emitted for niri\"\n    }\n  ]\n}\n",
+            "mode": 384
+          },
+          "config/wallpaper.kdl": {
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "mode": 384
+          },
+          "config/window-rules.kdl": {
+            "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/desktop.json": {
+            "text": "{}\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/profile.json": {
+            "text": "{\"version\": 1, \"id\": \"default\", \"components\": [\"configs\", \"shell\"], \"workspaceCount\": 5, \"workspaceNames\": [], \"workspaceIcons\": [], \"startup\": [], \"routes\": [], \"brainWorkspace\": null, \"aiWorkspace\": null}",
+            "mode": 384
+          },
+          "home-view/.config/nacre/profile.lua": {
+            "text": "custom fixture\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/shortcuts.lua": {
+            "text": "custom shortcuts\n",
+            "mode": 384
+          },
+          "home-view/.config/quickshell/nacre": {
+            "symlink": "$HOME/.local/share/nacre/shell/source"
+          },
+          "home-view/.local/share/nacre/shell/bin/qs": {
+            "text": "qs fixture\n",
+            "mode": 420
+          },
+          "manifest.json": {
+            "text": "{\n  \"backendRevision\": \"fixture-revision\",\n  \"profileDigest\": \"9023d8ef1df273aba62a2ee56b30005640e164c3d31ecca1cd6e3b79da778572\",\n  \"workspaceCount\": 5,\n  \"customShortcutsCopied\": true,\n  \"customLuaShortcutsTranslated\": false,\n  \"mode\": \"windowed-preview\",\n  \"activated\": false\n}",
+            "mode": 420
+          },
+          "state/presentation.json": {
+            "text": "{\"poster\": \"$HOME/.cache/nacre/poster.png\"}",
+            "mode": 384
+          },
+          "state/scheme.json": {
+            "text": "{\"colours\": {\"primary\": \"#abcdef\", \"secondary\": \"12345678\", \"outlineVariant\": \"#ABCDEF\", \"error\": \"123abc\"}}",
+            "mode": 384
+          }
+        },
+        "directories": {
+          "bin": 448,
+          "cache": 448,
+          "config": 448,
+          "home-view": 493,
+          "home-view/.config": 493,
+          "home-view/.config/nacre": 493,
+          "home-view/.config/nacre/niri-on-pc": 493,
+          "home-view/.config/nacre/niri-on-pc/preview": 493,
+          "home-view/.config/quickshell": 493,
+          "home-view/.local": 493,
+          "home-view/.local/bin": 493,
+          "home-view/.local/share": 493,
+          "home-view/.local/share/nacre": 493,
+          "home-view/.local/share/nacre/ai": 493,
+          "home-view/.local/share/nacre/branding": 493,
+          "home-view/.local/share/nacre/control": 493,
+          "home-view/.local/share/nacre/palette-runtime": 493,
+          "home-view/.local/share/nacre/shell": 493,
+          "home-view/.local/share/nacre/shell/bin": 493,
+          "home-view/.local/share/nacre/shell/tools": 493,
+          "kitty-cache": 448,
+          "state": 448
+        },
+        "calls": [
+          {
+            "operation": "stage",
+            "profile": {
+              "version": 1,
+              "id": "default",
+              "components": [
+                "configs",
+                "shell"
+              ],
+              "workspaceCount": 5,
+              "workspaceNames": [],
+              "workspaceIcons": [],
+              "startup": [],
+              "routes": [],
+              "brainWorkspace": null,
+              "aiWorkspace": null
+            }
+          }
+        ],
+        "stdout": "fixture staging\nPrepared private Nacre/niri preview; original profile and runtime untouched.\n",
+        "stderr": "",
+        "error": null
+      }
+    },
+    {
+      "variant": "named",
+      "profile": {
+        "version": 1,
+        "id": "default",
+        "components": [
+          "configs",
+          "shell"
+        ],
+        "workspaceCount": 3,
+        "workspaceNames": [
+          "One",
+          "Quoted \"\u00f8",
+          ""
+        ],
+        "workspaceIcons": [],
+        "startup": [],
+        "routes": [],
+        "brainWorkspace": null,
+        "aiWorkspace": null
+      },
+      "scheme": {
+        "colours": {
+          "primary": "#abcdef",
+          "secondary": "12345678",
+          "outlineVariant": "#ABCDEF",
+          "error": "123abc"
+        }
+      },
+      "keyboard": {
+        "layout": "us,de",
+        "model": "pc105",
+        "variant": ",nodeadkeys",
+        "options": "caps:escape"
+      },
+      "observed": {
+        "files": {
+          "bin/brightnessctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/ddcutil": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/hypridle": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/hyprlock": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/loginctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/pkexec": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/powerprofilesctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/sudo": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/systemctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/uwsm": {
+            "text": "#!/bin/sh\nif [ \"$1\" = app ]; then shift; [ \"${1:-}\" != -- ] || shift; exec \"$@\"; fi\necho \"Session management is unavailable in the windowed preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "cache/poster.png": {
+            "text": "image fixture\n",
+            "mode": 384
+          },
+          "cache/weather.json": {
+            "text": "weather fixture\n",
+            "mode": 384
+          },
+          "config/bindings.kdl": {
+            "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nbinds {\n    XF86AudioMute repeat=false allow-when-locked=true hotkey-overlay-title=\"Nacre:mute\" { spawn-sh \"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\"; }\n    XF86AudioLowerVolume repeat=true allow-when-locked=true hotkey-overlay-title=\"Nacre:volume-down\" { spawn-sh \"wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-\"; }\n    XF86AudioRaiseVolume repeat=true allow-when-locked=true hotkey-overlay-title=\"Nacre:volume-up\" { spawn-sh \"wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+\"; }\n    XF86AudioMicMute repeat=false hotkey-overlay-title=\"Nacre:mic-mute\" { spawn-sh \"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\"; }\n    XF86PowerOff repeat=false allow-when-locked=true hotkey-overlay-title=\"Nacre:lock\" { spawn-sh \"loginctl lock-session\"; }\n    XF86MonBrightnessDown repeat=false hotkey-overlay-title=\"Nacre:brightness-down\" { spawn-sh \"~/.local/bin/nacre-shell brightness down\"; }\n    XF86MonBrightnessUp repeat=false hotkey-overlay-title=\"Nacre:brightness-up\" { spawn-sh \"~/.local/bin/nacre-shell brightness up\"; }\n    XF86KbdBrightnessUp repeat=false hotkey-overlay-title=\"Nacre:keyboard-up\" { spawn-sh \"~/.local/bin/nacre-shell keyboard-light up\"; }\n    XF86KbdBrightnessDown repeat=false hotkey-overlay-title=\"Nacre:keyboard-down\" { spawn-sh \"~/.local/bin/nacre-shell keyboard-light down\"; }\n    Super+period repeat=false hotkey-overlay-title=\"Nacre:emoji\" { spawn-sh \"~/.local/bin/nacre-menu actions.emoji\"; }\n    Super+Ctrl+E repeat=false hotkey-overlay-title=\"Nacre:emoji\" { spawn-sh \"~/.local/bin/nacre-menu actions.emoji\"; }\n    Print repeat=false hotkey-overlay-title=\"Nacre:screenshot\" { spawn-sh \"niri msg action screenshot\"; }\n    Super+Shift+S repeat=false hotkey-overlay-title=\"Nacre:screenshot\" { spawn-sh \"niri msg action screenshot\"; }\n    Super+Print repeat=false hotkey-overlay-title=\"Nacre:save-screenshot\" { spawn-sh \"mkdir -p \\\"$HOME/Pictures/Screenshots\\\" && niri msg action screenshot-screen --show-pointer false --path \\\"$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png\\\"\"; }\n    Super+Q repeat=false hotkey-overlay-title=\"Nacre:close\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action close_window\"; }\n    Super+F repeat=false hotkey-overlay-title=\"Nacre:fullscreen\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action fullscreen_window --mode fullscreen\"; }\n    Super+M repeat=false hotkey-overlay-title=\"Nacre:maximize\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action fullscreen_window --mode maximized\"; }\n    Super+T repeat=false hotkey-overlay-title=\"Nacre:float\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action float_window --action toggle\"; }\n    Super+G repeat=false hotkey-overlay-title=\"Nacre:group\" { spawn-sh \"niri msg action toggle-column-tabbed-display\"; }\n    Super+Ctrl+Page_Up repeat=false hotkey-overlay-title=\"Nacre:group-cycle\" { spawn-sh \"niri msg action focus-window-up-or-bottom\"; }\n    Super+Ctrl+Page_Down repeat=false hotkey-overlay-title=\"Nacre:group-cycle\" { spawn-sh \"niri msg action focus-window-down-or-top\"; }\n    Alt+TAB repeat=false hotkey-overlay-title=\"Nacre:cycle-window\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action cycle_window --direction next\"; }\n    Alt+Shift+TAB repeat=false hotkey-overlay-title=\"Nacre:cycle-window\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action cycle_window --direction previous\"; }\n    Super+1 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 1\"; }\n    Super+Shift+1 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 1\"; }\n    Super+2 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 2\"; }\n    Super+Shift+2 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 2\"; }\n    Super+3 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 3\"; }\n    Super+Shift+3 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 3\"; }\n    Super+4 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 4\"; }\n    Super+Shift+4 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 4\"; }\n    Super+5 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 5\"; }\n    Super+Shift+5 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 5\"; }\n    Super+6 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 6\"; }\n    Super+Shift+6 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 6\"; }\n    Super+7 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 7\"; }\n    Super+Shift+7 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 7\"; }\n    Super+8 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 8\"; }\n    Super+Shift+8 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 8\"; }\n    Super+9 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 9\"; }\n    Super+Shift+9 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 9\"; }\n    Super+0 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 10\"; }\n    Super+Shift+0 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 10\"; }\n    Super+Ctrl+Right repeat=false hotkey-overlay-title=\"Nacre:next-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+Ctrl+Left repeat=false hotkey-overlay-title=\"Nacre:previous-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+WheelScrollDown repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+WheelScrollUp repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+Ctrl+Shift+Left repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+Ctrl+Shift+Right repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+Left repeat=true cooldown-ms=120 hotkey-overlay-title=\"Nacre:focus\" { focus-column-left; }\n    Super+Shift+Left repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction left\"; }\n    Super+Alt+Left repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width -30 --height 0 --relative true\"; }\n    Super+Right repeat=true cooldown-ms=120 hotkey-overlay-title=\"Nacre:focus\" { focus-column-right; }\n    Super+Shift+Right repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction right\"; }\n    Super+Alt+Right repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 30 --height 0 --relative true\"; }\n    Super+Up repeat=false hotkey-overlay-title=\"Nacre:focus\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action focus_direction --direction up\"; }\n    Super+Shift+Up repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction up\"; }\n    Super+Alt+Up repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 0 --height -30 --relative true\"; }\n    Super+Down repeat=false hotkey-overlay-title=\"Nacre:focus\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action focus_direction --direction down\"; }\n    Super+Shift+Down repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction down\"; }\n    Super+Alt+Down repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 0 --height 30 --relative true\"; }\n    Super+SPACE repeat=false hotkey-overlay-title=\"Nacre:launcher\" { spawn-sh \"~/.local/bin/nacre-shell launcher\"; }\n    Super+TAB repeat=false hotkey-overlay-title=\"Nacre:overview\" { spawn-sh \"niri msg action toggle-overview\"; }\n    Super+V repeat=false hotkey-overlay-title=\"Nacre:clipboard\" { spawn-sh \"~/.local/bin/nacre-shell clipboard\"; }\n    Super+W repeat=false hotkey-overlay-title=\"Nacre:wallpaper\" { spawn-sh \"~/.local/bin/nacre-shell wallpaper\"; }\n    Super+Z repeat=false { spawn-sh \"~/.local/bin/nacre-shell hide\"; }\n    Super+O repeat=false { spawn-sh \"~/.local/bin/nacre-shell toggle\"; }\n    Super+I repeat=false hotkey-overlay-title=\"Nacre:settings\" { spawn-sh \"~/.local/bin/nacre-settings\"; }\n    Super+Ctrl+C repeat=false { spawn-sh \"~/.local/bin/nacre-menu actions.capture\"; }\n    Super+X repeat=false hotkey-overlay-title=\"Nacre:power\" { spawn-sh \"~/.local/bin/nacre-menu power\"; }\n    Super+ESCAPE repeat=false hotkey-overlay-title=\"Nacre:power\" { spawn-sh \"~/.local/bin/nacre-menu power\"; }\n    Super+L repeat=false hotkey-overlay-title=\"Nacre:lock\" { spawn-sh \"loginctl lock-session\"; }\n    Super+Shift+R repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action reload\"; }\n    Super+RETURN repeat=false hotkey-overlay-title=\"Nacre:terminal\" { spawn-sh \"uwsm app -- ~/.local/bin/nacre-app terminal\"; }\n    Super+Shift+B repeat=false hotkey-overlay-title=\"Nacre:browser\" { spawn-sh \"uwsm app -- ~/.local/bin/nacre-app browser\"; }\n    Super+E repeat=false hotkey-overlay-title=\"Nacre:files\" { spawn-sh \"~/.local/bin/nacre-app files\"; }\n    Super+B repeat=false { spawn-sh \"~/.local/bin/nacre-brain open\"; }\n    Super+N repeat=false { spawn-sh \"~/.local/bin/nacre-brain capture\"; }\n    Super+Ctrl+SPACE repeat=false hotkey-overlay-title=\"Nacre:palette\" { spawn-sh \"~/.local/bin/nacre-shell palette\"; }\n    Super+K repeat=false hotkey-overlay-title=\"Nacre:shortcuts\" { spawn-sh \"~/.local/bin/nacre-menu learn.shortcuts\"; }\n    Super+F1 repeat=false hotkey-overlay-title=\"Nacre:shortcuts\" { spawn-sh \"~/.local/bin/nacre-menu learn.shortcuts\"; }\n    Super+A repeat=false hotkey-overlay-title=\"Nacre:ai-sidebar\" { spawn-sh \"~/.local/bin/nacre-shell left\"; }\n    Super+Ctrl+D repeat=false hotkey-overlay-title=\"Nacre:detach-panel\" { spawn-sh \"~/.local/bin/nacre-shell detach\"; }\n}\n",
+            "mode": 384
+          },
+          "config/colors.kdl": {
+            "text": "// Orient colors only: preserve user-owned ring/border enabled state and widths.\nlayout {\n    focus-ring {\n        active-color \"#abcdef\"\n        active-gradient from=\"#abcdef\" to=\"#12345678\" angle=45\n        inactive-color \"#ABCDEF\"\n        urgent-color \"#123abc\"\n    }\n    border {\n        active-color \"#abcdef\"\n        active-gradient from=\"#abcdef\" to=\"#12345678\" angle=45\n        inactive-color \"#ABCDEF\"\n        urgent-color \"#123abc\"\n    }\n}\n",
+            "mode": 420
+          },
+          "config/config.kdl": {
+            "text": "include \"$HOME/.config/nacre/niri-on-pc/preview/wallpaper.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/bindings.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/window-rules.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/keyboard.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/colors.kdl\"\nworkspace \"One\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-3\"\nspawn-at-startup \"quickshell\" \"-n\" \"-p\" \"$HOME/.config/quickshell/nacre/shell.qml\"\nhotkey-overlay {\n    skip-at-startup\n}\nbinds {\n    Alt+Space { spawn \"$HOME/.local/bin/nacre-shell\" \"launcher\"; }\n    Alt+O { spawn \"$HOME/.local/bin/nacre-shell\" \"toggle\"; }\n    Alt+Return { spawn \"kitty\"; }\n    Alt+Shift+Escape { quit skip-confirmation=true; }\n    Alt+1 { focus-workspace \"One\"; }\n    Alt+2 { focus-workspace \"Quoted \\\"\\u00f8\"; }\n    Alt+3 { focus-workspace \"nacre-3\"; }\n}\n",
+            "mode": 420
+          },
+          "config/keyboard.kdl": {
+            "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 420
+          },
+          "config/profile.kdl": {
+            "text": "",
+            "mode": 420
+          },
+          "config/unsupported.json": {
+            "text": "{\n  \"backend\": \"niri\",\n  \"unsupported\": [\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + SHIFT + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + ALT + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + P\",\n      \"reason\": \"No equivalent niri capability for window.pin\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + SHIFT + P\",\n      \"reason\": \"No equivalent niri capability for window.pseudo\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + J\",\n      \"reason\": \"No equivalent niri capability for layout.toggle-split\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + mouse:273\",\n      \"reason\": \"Keep niri's native move/resize gestures; no pointer-hook substitution\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + S\",\n      \"reason\": \"No equivalent niri capability for workspace.scratchpad\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + CTRL + S\",\n      \"reason\": \"Niri has no Hyprland special/scratchpad workspaces\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + R\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"left\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"right\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"up\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"down\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"escape\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"return\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + R\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/windowrule.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-thunar-files\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/windowrule.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-dolphin-files\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-lock-preview\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-audio-mixer\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-share-picker\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-picture-in-picture\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"backend-config\",\n      \"id\": \"\",\n      \"reason\": \"Backend-specific backend-config is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"Escape\",\n      \"reason\": \"Niri bindings consume input; non-consuming hooks are unsupported\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"unbind\",\n      \"id\": \"SUPER + mouse:272\",\n      \"reason\": \"Backend-specific unbind is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"extension\",\n      \"id\": \"panel.drag\",\n      \"reason\": \"Backend-specific extension is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + mouse:272\",\n      \"reason\": \"No equivalent niri action for panel.drag\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"mouse:272\",\n      \"reason\": \"No equivalent niri capability for panel.drag.finish\"\n    },\n    {\n      \"source\": \"hypr/conf/cursor.lua\",\n      \"kind\": \"extension\",\n      \"id\": \"cursor.session\",\n      \"reason\": \"Backend-specific extension is not emitted for niri\"\n    },\n    {\n      \"source\": \"hypr/conf/cursor.lua\",\n      \"kind\": \"event\",\n      \"id\": \"\",\n      \"reason\": \"Backend-specific event is not emitted for niri\"\n    }\n  ]\n}\n",
+            "mode": 384
+          },
+          "config/wallpaper.kdl": {
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "mode": 384
+          },
+          "config/window-rules.kdl": {
+            "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/desktop.json": {
+            "text": "{}\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/profile.json": {
+            "text": "{\"version\": 1, \"id\": \"default\", \"components\": [\"configs\", \"shell\"], \"workspaceCount\": 3, \"workspaceNames\": [\"One\", \"Quoted \\\"\\u00f8\", \"\"], \"workspaceIcons\": [], \"startup\": [], \"routes\": [], \"brainWorkspace\": null, \"aiWorkspace\": null}",
+            "mode": 384
+          },
+          "home-view/.config/nacre/profile.lua": {
+            "text": "custom fixture\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/shortcuts.lua": {
+            "text": "custom shortcuts\n",
+            "mode": 384
+          },
+          "home-view/.config/quickshell/nacre": {
+            "symlink": "$HOME/.local/share/nacre/shell/source"
+          },
+          "home-view/.local/share/nacre/shell/bin/qs": {
+            "text": "qs fixture\n",
+            "mode": 420
+          },
+          "manifest.json": {
+            "text": "{\n  \"backendRevision\": \"fixture-revision\",\n  \"profileDigest\": \"591a878d245c31bfb6defc8bc5f4184388935390420a83839108cf113c8ad472\",\n  \"workspaceCount\": 3,\n  \"customShortcutsCopied\": true,\n  \"customLuaShortcutsTranslated\": false,\n  \"mode\": \"windowed-preview\",\n  \"activated\": false\n}",
+            "mode": 420
+          },
+          "state/presentation.json": {
+            "text": "{\"poster\": \"$HOME/.cache/nacre/poster.png\"}",
+            "mode": 384
+          },
+          "state/scheme.json": {
+            "text": "{\"colours\": {\"primary\": \"#abcdef\", \"secondary\": \"12345678\", \"outlineVariant\": \"#ABCDEF\", \"error\": \"123abc\"}}",
+            "mode": 384
+          }
+        },
+        "directories": {
+          "bin": 448,
+          "cache": 448,
+          "config": 448,
+          "home-view": 493,
+          "home-view/.config": 493,
+          "home-view/.config/nacre": 493,
+          "home-view/.config/nacre/niri-on-pc": 493,
+          "home-view/.config/nacre/niri-on-pc/preview": 493,
+          "home-view/.config/quickshell": 493,
+          "home-view/.local": 493,
+          "home-view/.local/bin": 493,
+          "home-view/.local/share": 493,
+          "home-view/.local/share/nacre": 493,
+          "home-view/.local/share/nacre/ai": 493,
+          "home-view/.local/share/nacre/branding": 493,
+          "home-view/.local/share/nacre/control": 493,
+          "home-view/.local/share/nacre/palette-runtime": 493,
+          "home-view/.local/share/nacre/shell": 493,
+          "home-view/.local/share/nacre/shell/bin": 493,
+          "home-view/.local/share/nacre/shell/tools": 493,
+          "kitty-cache": 448,
+          "state": 448
+        },
+        "calls": [
+          {
+            "operation": "stage",
+            "profile": {
+              "version": 1,
+              "id": "default",
+              "components": [
+                "configs",
+                "shell"
+              ],
+              "workspaceCount": 3,
+              "workspaceNames": [
+                "One",
+                "Quoted \"\u00f8",
+                ""
+              ],
+              "workspaceIcons": [],
+              "startup": [],
+              "routes": [],
+              "brainWorkspace": null,
+              "aiWorkspace": null
+            }
+          }
+        ],
+        "stdout": "fixture staging\nPrepared private Nacre/niri preview; original profile and runtime untouched.\n",
+        "stderr": "",
+        "error": null
+      }
+    },
+    {
+      "variant": "full-access",
+      "profile": {
+        "version": 1,
+        "id": "default",
+        "components": [
+          "configs",
+          "shell"
+        ],
+        "workspaceCount": 5,
+        "workspaceNames": [],
+        "workspaceIcons": [],
+        "startup": [],
+        "routes": [],
+        "brainWorkspace": null,
+        "aiWorkspace": null,
+        "aiFullAccess": true
+      },
+      "scheme": {
+        "colours": {
+          "primary": "#abcdef",
+          "secondary": "12345678",
+          "outlineVariant": "#ABCDEF",
+          "error": "123abc"
+        }
+      },
+      "keyboard": {
+        "layout": "us,de",
+        "model": "pc105",
+        "variant": ",nodeadkeys",
+        "options": "caps:escape"
+      },
+      "observed": {
+        "files": {
+          "bin/brightnessctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/ddcutil": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/hypridle": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/hyprlock": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/loginctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/pkexec": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/powerprofilesctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/sudo": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/systemctl": {
+            "text": "#!/bin/sh\necho \"System/session actions are disabled in the isolated preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "bin/uwsm": {
+            "text": "#!/bin/sh\nif [ \"$1\" = app ]; then shift; [ \"${1:-}\" != -- ] || shift; exec \"$@\"; fi\necho \"Session management is unavailable in the windowed preview\" >&2\nexit 1\n",
+            "mode": 448
+          },
+          "cache/poster.png": {
+            "text": "image fixture\n",
+            "mode": 384
+          },
+          "cache/weather.json": {
+            "text": "weather fixture\n",
+            "mode": 384
+          },
+          "config/bindings.kdl": {
+            "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nbinds {\n    XF86AudioMute repeat=false allow-when-locked=true hotkey-overlay-title=\"Nacre:mute\" { spawn-sh \"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\"; }\n    XF86AudioLowerVolume repeat=true allow-when-locked=true hotkey-overlay-title=\"Nacre:volume-down\" { spawn-sh \"wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-\"; }\n    XF86AudioRaiseVolume repeat=true allow-when-locked=true hotkey-overlay-title=\"Nacre:volume-up\" { spawn-sh \"wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+\"; }\n    XF86AudioMicMute repeat=false hotkey-overlay-title=\"Nacre:mic-mute\" { spawn-sh \"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\"; }\n    XF86PowerOff repeat=false allow-when-locked=true hotkey-overlay-title=\"Nacre:lock\" { spawn-sh \"loginctl lock-session\"; }\n    XF86MonBrightnessDown repeat=false hotkey-overlay-title=\"Nacre:brightness-down\" { spawn-sh \"~/.local/bin/nacre-shell brightness down\"; }\n    XF86MonBrightnessUp repeat=false hotkey-overlay-title=\"Nacre:brightness-up\" { spawn-sh \"~/.local/bin/nacre-shell brightness up\"; }\n    XF86KbdBrightnessUp repeat=false hotkey-overlay-title=\"Nacre:keyboard-up\" { spawn-sh \"~/.local/bin/nacre-shell keyboard-light up\"; }\n    XF86KbdBrightnessDown repeat=false hotkey-overlay-title=\"Nacre:keyboard-down\" { spawn-sh \"~/.local/bin/nacre-shell keyboard-light down\"; }\n    Super+period repeat=false hotkey-overlay-title=\"Nacre:emoji\" { spawn-sh \"~/.local/bin/nacre-menu actions.emoji\"; }\n    Super+Ctrl+E repeat=false hotkey-overlay-title=\"Nacre:emoji\" { spawn-sh \"~/.local/bin/nacre-menu actions.emoji\"; }\n    Print repeat=false hotkey-overlay-title=\"Nacre:screenshot\" { spawn-sh \"niri msg action screenshot\"; }\n    Super+Shift+S repeat=false hotkey-overlay-title=\"Nacre:screenshot\" { spawn-sh \"niri msg action screenshot\"; }\n    Super+Print repeat=false hotkey-overlay-title=\"Nacre:save-screenshot\" { spawn-sh \"mkdir -p \\\"$HOME/Pictures/Screenshots\\\" && niri msg action screenshot-screen --show-pointer false --path \\\"$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png\\\"\"; }\n    Super+Q repeat=false hotkey-overlay-title=\"Nacre:close\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action close_window\"; }\n    Super+F repeat=false hotkey-overlay-title=\"Nacre:fullscreen\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action fullscreen_window --mode fullscreen\"; }\n    Super+M repeat=false hotkey-overlay-title=\"Nacre:maximize\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action fullscreen_window --mode maximized\"; }\n    Super+T repeat=false hotkey-overlay-title=\"Nacre:float\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action float_window --action toggle\"; }\n    Super+G repeat=false hotkey-overlay-title=\"Nacre:group\" { spawn-sh \"niri msg action toggle-column-tabbed-display\"; }\n    Super+Ctrl+Page_Up repeat=false hotkey-overlay-title=\"Nacre:group-cycle\" { spawn-sh \"niri msg action focus-window-up-or-bottom\"; }\n    Super+Ctrl+Page_Down repeat=false hotkey-overlay-title=\"Nacre:group-cycle\" { spawn-sh \"niri msg action focus-window-down-or-top\"; }\n    Alt+TAB repeat=false hotkey-overlay-title=\"Nacre:cycle-window\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action cycle_window --direction next\"; }\n    Alt+Shift+TAB repeat=false hotkey-overlay-title=\"Nacre:cycle-window\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action cycle_window --direction previous\"; }\n    Super+1 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 1\"; }\n    Super+Shift+1 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 1\"; }\n    Super+2 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 2\"; }\n    Super+Shift+2 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 2\"; }\n    Super+3 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 3\"; }\n    Super+Shift+3 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 3\"; }\n    Super+4 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 4\"; }\n    Super+Shift+4 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 4\"; }\n    Super+5 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 5\"; }\n    Super+Shift+5 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 5\"; }\n    Super+6 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 6\"; }\n    Super+Shift+6 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 6\"; }\n    Super+7 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 7\"; }\n    Super+Shift+7 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 7\"; }\n    Super+8 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 8\"; }\n    Super+Shift+8 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 8\"; }\n    Super+9 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 9\"; }\n    Super+Shift+9 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 9\"; }\n    Super+0 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 10\"; }\n    Super+Shift+0 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 10\"; }\n    Super+Ctrl+Right repeat=false hotkey-overlay-title=\"Nacre:next-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+Ctrl+Left repeat=false hotkey-overlay-title=\"Nacre:previous-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+WheelScrollDown repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+WheelScrollUp repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+Ctrl+Shift+Left repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+Ctrl+Shift+Right repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+Left repeat=true cooldown-ms=120 hotkey-overlay-title=\"Nacre:focus\" { focus-column-left; }\n    Super+Shift+Left repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction left\"; }\n    Super+Alt+Left repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width -30 --height 0 --relative true\"; }\n    Super+Right repeat=true cooldown-ms=120 hotkey-overlay-title=\"Nacre:focus\" { focus-column-right; }\n    Super+Shift+Right repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction right\"; }\n    Super+Alt+Right repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 30 --height 0 --relative true\"; }\n    Super+Up repeat=false hotkey-overlay-title=\"Nacre:focus\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action focus_direction --direction up\"; }\n    Super+Shift+Up repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction up\"; }\n    Super+Alt+Up repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 0 --height -30 --relative true\"; }\n    Super+Down repeat=false hotkey-overlay-title=\"Nacre:focus\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action focus_direction --direction down\"; }\n    Super+Shift+Down repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction down\"; }\n    Super+Alt+Down repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 0 --height 30 --relative true\"; }\n    Super+SPACE repeat=false hotkey-overlay-title=\"Nacre:launcher\" { spawn-sh \"~/.local/bin/nacre-shell launcher\"; }\n    Super+TAB repeat=false hotkey-overlay-title=\"Nacre:overview\" { spawn-sh \"niri msg action toggle-overview\"; }\n    Super+V repeat=false hotkey-overlay-title=\"Nacre:clipboard\" { spawn-sh \"~/.local/bin/nacre-shell clipboard\"; }\n    Super+W repeat=false hotkey-overlay-title=\"Nacre:wallpaper\" { spawn-sh \"~/.local/bin/nacre-shell wallpaper\"; }\n    Super+Z repeat=false { spawn-sh \"~/.local/bin/nacre-shell hide\"; }\n    Super+O repeat=false { spawn-sh \"~/.local/bin/nacre-shell toggle\"; }\n    Super+I repeat=false hotkey-overlay-title=\"Nacre:settings\" { spawn-sh \"~/.local/bin/nacre-settings\"; }\n    Super+Ctrl+C repeat=false { spawn-sh \"~/.local/bin/nacre-menu actions.capture\"; }\n    Super+X repeat=false hotkey-overlay-title=\"Nacre:power\" { spawn-sh \"~/.local/bin/nacre-menu power\"; }\n    Super+ESCAPE repeat=false hotkey-overlay-title=\"Nacre:power\" { spawn-sh \"~/.local/bin/nacre-menu power\"; }\n    Super+L repeat=false hotkey-overlay-title=\"Nacre:lock\" { spawn-sh \"loginctl lock-session\"; }\n    Super+Shift+R repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action reload\"; }\n    Super+RETURN repeat=false hotkey-overlay-title=\"Nacre:terminal\" { spawn-sh \"uwsm app -- ~/.local/bin/nacre-app terminal\"; }\n    Super+Shift+B repeat=false hotkey-overlay-title=\"Nacre:browser\" { spawn-sh \"uwsm app -- ~/.local/bin/nacre-app browser\"; }\n    Super+E repeat=false hotkey-overlay-title=\"Nacre:files\" { spawn-sh \"~/.local/bin/nacre-app files\"; }\n    Super+B repeat=false { spawn-sh \"~/.local/bin/nacre-brain open\"; }\n    Super+N repeat=false { spawn-sh \"~/.local/bin/nacre-brain capture\"; }\n    Super+Ctrl+SPACE repeat=false hotkey-overlay-title=\"Nacre:palette\" { spawn-sh \"~/.local/bin/nacre-shell palette\"; }\n    Super+K repeat=false hotkey-overlay-title=\"Nacre:shortcuts\" { spawn-sh \"~/.local/bin/nacre-menu learn.shortcuts\"; }\n    Super+F1 repeat=false hotkey-overlay-title=\"Nacre:shortcuts\" { spawn-sh \"~/.local/bin/nacre-menu learn.shortcuts\"; }\n    Super+A repeat=false hotkey-overlay-title=\"Nacre:ai-sidebar\" { spawn-sh \"~/.local/bin/nacre-shell left\"; }\n    Super+Ctrl+D repeat=false hotkey-overlay-title=\"Nacre:detach-panel\" { spawn-sh \"~/.local/bin/nacre-shell detach\"; }\n}\n",
+            "mode": 384
+          },
+          "config/colors.kdl": {
+            "text": "// Orient colors only: preserve user-owned ring/border enabled state and widths.\nlayout {\n    focus-ring {\n        active-color \"#abcdef\"\n        active-gradient from=\"#abcdef\" to=\"#12345678\" angle=45\n        inactive-color \"#ABCDEF\"\n        urgent-color \"#123abc\"\n    }\n    border {\n        active-color \"#abcdef\"\n        active-gradient from=\"#abcdef\" to=\"#12345678\" angle=45\n        inactive-color \"#ABCDEF\"\n        urgent-color \"#123abc\"\n    }\n}\n",
+            "mode": 420
+          },
+          "config/config.kdl": {
+            "text": "include \"$HOME/.config/nacre/niri-on-pc/preview/wallpaper.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/bindings.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/window-rules.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/keyboard.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri-on-pc/preview/colors.kdl\"\nworkspace \"nacre-1\"\nworkspace \"nacre-2\"\nworkspace \"nacre-3\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nspawn-at-startup \"quickshell\" \"-n\" \"-p\" \"$HOME/.config/quickshell/nacre/shell.qml\"\nhotkey-overlay {\n    skip-at-startup\n}\nbinds {\n    Alt+Space { spawn \"$HOME/.local/bin/nacre-shell\" \"launcher\"; }\n    Alt+O { spawn \"$HOME/.local/bin/nacre-shell\" \"toggle\"; }\n    Alt+Return { spawn \"kitty\"; }\n    Alt+Shift+Escape { quit skip-confirmation=true; }\n    Alt+1 { focus-workspace \"nacre-1\"; }\n    Alt+2 { focus-workspace \"nacre-2\"; }\n    Alt+3 { focus-workspace \"nacre-3\"; }\n    Alt+4 { focus-workspace \"nacre-4\"; }\n    Alt+5 { focus-workspace \"nacre-5\"; }\n}\n",
+            "mode": 420
+          },
+          "config/keyboard.kdl": {
+            "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 420
+          },
+          "config/profile.kdl": {
+            "text": "",
+            "mode": 420
+          },
+          "config/unsupported.json": {
+            "text": "{\n  \"backend\": \"niri\",\n  \"unsupported\": [\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + SHIFT + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + ALT + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + P\",\n      \"reason\": \"No equivalent niri capability for window.pin\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + SHIFT + P\",\n      \"reason\": \"No equivalent niri capability for window.pseudo\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + J\",\n      \"reason\": \"No equivalent niri capability for layout.toggle-split\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + mouse:273\",\n      \"reason\": \"Keep niri's native move/resize gestures; no pointer-hook substitution\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + S\",\n      \"reason\": \"No equivalent niri capability for workspace.scratchpad\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + CTRL + S\",\n      \"reason\": \"Niri has no Hyprland special/scratchpad workspaces\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + R\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"left\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"right\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"up\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"down\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"escape\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"return\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + R\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/windowrule.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-thunar-files\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/windowrule.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-dolphin-files\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-lock-preview\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-audio-mixer\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-share-picker\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-picture-in-picture\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"backend-config\",\n      \"id\": \"\",\n      \"reason\": \"Backend-specific backend-config is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"Escape\",\n      \"reason\": \"Niri bindings consume input; non-consuming hooks are unsupported\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"unbind\",\n      \"id\": \"SUPER + mouse:272\",\n      \"reason\": \"Backend-specific unbind is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"extension\",\n      \"id\": \"panel.drag\",\n      \"reason\": \"Backend-specific extension is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + mouse:272\",\n      \"reason\": \"No equivalent niri action for panel.drag\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"mouse:272\",\n      \"reason\": \"No equivalent niri capability for panel.drag.finish\"\n    },\n    {\n      \"source\": \"hypr/conf/cursor.lua\",\n      \"kind\": \"extension\",\n      \"id\": \"cursor.session\",\n      \"reason\": \"Backend-specific extension is not emitted for niri\"\n    },\n    {\n      \"source\": \"hypr/conf/cursor.lua\",\n      \"kind\": \"event\",\n      \"id\": \"\",\n      \"reason\": \"Backend-specific event is not emitted for niri\"\n    }\n  ]\n}\n",
+            "mode": 384
+          },
+          "config/wallpaper.kdl": {
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "mode": 384
+          },
+          "config/window-rules.kdl": {
+            "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/desktop.json": {
+            "text": "{}\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/profile.json": {
+            "text": "{\"version\": 1, \"id\": \"default\", \"components\": [\"configs\", \"shell\"], \"workspaceCount\": 5, \"workspaceNames\": [], \"workspaceIcons\": [], \"startup\": [], \"routes\": [], \"brainWorkspace\": null, \"aiWorkspace\": null, \"aiFullAccess\": true}",
+            "mode": 384
+          },
+          "home-view/.config/nacre/profile.lua": {
+            "text": "custom fixture\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/shortcuts.lua": {
+            "text": "custom shortcuts\n",
+            "mode": 384
+          },
+          "home-view/.config/quickshell/nacre": {
+            "symlink": "$HOME/.local/share/nacre/shell/source"
+          },
+          "home-view/.local/share/nacre/shell/bin/qs": {
+            "text": "qs fixture\n",
+            "mode": 420
+          },
+          "manifest.json": {
+            "text": "{\n  \"backendRevision\": \"fixture-revision\",\n  \"profileDigest\": \"9b281edb8f5ad3d361aeba83ecc63733046aa83a3b348cdf898c85bdbe26c9c7\",\n  \"workspaceCount\": 5,\n  \"customShortcutsCopied\": true,\n  \"customLuaShortcutsTranslated\": false,\n  \"mode\": \"windowed-preview\",\n  \"activated\": false\n}",
+            "mode": 420
+          },
+          "state/presentation.json": {
+            "text": "{\"poster\": \"$HOME/.cache/nacre/poster.png\"}",
+            "mode": 384
+          },
+          "state/scheme.json": {
+            "text": "{\"colours\": {\"primary\": \"#abcdef\", \"secondary\": \"12345678\", \"outlineVariant\": \"#ABCDEF\", \"error\": \"123abc\"}}",
+            "mode": 384
+          }
+        },
+        "directories": {
+          "bin": 448,
+          "cache": 448,
+          "config": 448,
+          "home-view": 493,
+          "home-view/.config": 493,
+          "home-view/.config/nacre": 493,
+          "home-view/.config/nacre/niri-on-pc": 493,
+          "home-view/.config/nacre/niri-on-pc/preview": 493,
+          "home-view/.config/quickshell": 493,
+          "home-view/.local": 493,
+          "home-view/.local/bin": 493,
+          "home-view/.local/share": 493,
+          "home-view/.local/share/nacre": 493,
+          "home-view/.local/share/nacre/ai": 493,
+          "home-view/.local/share/nacre/branding": 493,
+          "home-view/.local/share/nacre/control": 493,
+          "home-view/.local/share/nacre/palette-runtime": 493,
+          "home-view/.local/share/nacre/shell": 493,
+          "home-view/.local/share/nacre/shell/bin": 493,
+          "home-view/.local/share/nacre/shell/tools": 493,
+          "kitty-cache": 448,
+          "state": 448
+        },
+        "calls": [
+          {
+            "operation": "stage",
+            "profile": {
+              "version": 1,
+              "id": "default",
+              "components": [
+                "configs",
+                "shell"
+              ],
+              "workspaceCount": 5,
+              "workspaceNames": [],
+              "workspaceIcons": [],
+              "startup": [],
+              "routes": [],
+              "brainWorkspace": null,
+              "aiWorkspace": null,
+              "aiFullAccess": true
+            }
+          }
+        ],
+        "stdout": "fixture staging\nPrepared private Nacre/niri preview; original profile and runtime untouched.\n",
+        "stderr": "",
+        "error": null
+      }
+    },
+    {
+      "variant": "invalid-palette",
+      "profile": {
+        "version": 1,
+        "id": "default",
+        "components": [
+          "configs",
+          "shell"
+        ],
+        "workspaceCount": 5,
+        "workspaceNames": [],
+        "workspaceIcons": [],
+        "startup": [],
+        "routes": [],
+        "brainWorkspace": null,
+        "aiWorkspace": null
+      },
+      "scheme": {
+        "colours": {
+          "primary": "#abcdef",
+          "secondary": "12345678",
+          "outlineVariant": "#ABCDEF",
+          "error": "invalid"
+        }
+      },
+      "keyboard": {
+        "layout": "us,de",
+        "model": "pc105",
+        "variant": ",nodeadkeys",
+        "options": "caps:escape"
+      },
+      "observed": {
+        "files": {
+          "cache/poster.png": {
+            "text": "image fixture\n",
+            "mode": 384
+          },
+          "cache/weather.json": {
+            "text": "weather fixture\n",
+            "mode": 384
+          },
+          "config/bindings.kdl": {
+            "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nbinds {\n    XF86AudioMute repeat=false allow-when-locked=true hotkey-overlay-title=\"Nacre:mute\" { spawn-sh \"wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle\"; }\n    XF86AudioLowerVolume repeat=true allow-when-locked=true hotkey-overlay-title=\"Nacre:volume-down\" { spawn-sh \"wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-\"; }\n    XF86AudioRaiseVolume repeat=true allow-when-locked=true hotkey-overlay-title=\"Nacre:volume-up\" { spawn-sh \"wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+\"; }\n    XF86AudioMicMute repeat=false hotkey-overlay-title=\"Nacre:mic-mute\" { spawn-sh \"wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle\"; }\n    XF86PowerOff repeat=false allow-when-locked=true hotkey-overlay-title=\"Nacre:lock\" { spawn-sh \"loginctl lock-session\"; }\n    XF86MonBrightnessDown repeat=false hotkey-overlay-title=\"Nacre:brightness-down\" { spawn-sh \"~/.local/bin/nacre-shell brightness down\"; }\n    XF86MonBrightnessUp repeat=false hotkey-overlay-title=\"Nacre:brightness-up\" { spawn-sh \"~/.local/bin/nacre-shell brightness up\"; }\n    XF86KbdBrightnessUp repeat=false hotkey-overlay-title=\"Nacre:keyboard-up\" { spawn-sh \"~/.local/bin/nacre-shell keyboard-light up\"; }\n    XF86KbdBrightnessDown repeat=false hotkey-overlay-title=\"Nacre:keyboard-down\" { spawn-sh \"~/.local/bin/nacre-shell keyboard-light down\"; }\n    Super+period repeat=false hotkey-overlay-title=\"Nacre:emoji\" { spawn-sh \"~/.local/bin/nacre-menu actions.emoji\"; }\n    Super+Ctrl+E repeat=false hotkey-overlay-title=\"Nacre:emoji\" { spawn-sh \"~/.local/bin/nacre-menu actions.emoji\"; }\n    Print repeat=false hotkey-overlay-title=\"Nacre:screenshot\" { spawn-sh \"niri msg action screenshot\"; }\n    Super+Shift+S repeat=false hotkey-overlay-title=\"Nacre:screenshot\" { spawn-sh \"niri msg action screenshot\"; }\n    Super+Print repeat=false hotkey-overlay-title=\"Nacre:save-screenshot\" { spawn-sh \"mkdir -p \\\"$HOME/Pictures/Screenshots\\\" && niri msg action screenshot-screen --show-pointer false --path \\\"$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png\\\"\"; }\n    Super+Q repeat=false hotkey-overlay-title=\"Nacre:close\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action close_window\"; }\n    Super+F repeat=false hotkey-overlay-title=\"Nacre:fullscreen\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action fullscreen_window --mode fullscreen\"; }\n    Super+M repeat=false hotkey-overlay-title=\"Nacre:maximize\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action fullscreen_window --mode maximized\"; }\n    Super+T repeat=false hotkey-overlay-title=\"Nacre:float\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action float_window --action toggle\"; }\n    Super+G repeat=false hotkey-overlay-title=\"Nacre:group\" { spawn-sh \"niri msg action toggle-column-tabbed-display\"; }\n    Super+Ctrl+Page_Up repeat=false hotkey-overlay-title=\"Nacre:group-cycle\" { spawn-sh \"niri msg action focus-window-up-or-bottom\"; }\n    Super+Ctrl+Page_Down repeat=false hotkey-overlay-title=\"Nacre:group-cycle\" { spawn-sh \"niri msg action focus-window-down-or-top\"; }\n    Alt+TAB repeat=false hotkey-overlay-title=\"Nacre:cycle-window\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action cycle_window --direction next\"; }\n    Alt+Shift+TAB repeat=false hotkey-overlay-title=\"Nacre:cycle-window\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action cycle_window --direction previous\"; }\n    Super+1 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 1\"; }\n    Super+Shift+1 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 1\"; }\n    Super+2 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 2\"; }\n    Super+Shift+2 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 2\"; }\n    Super+3 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 3\"; }\n    Super+Shift+3 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 3\"; }\n    Super+4 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 4\"; }\n    Super+Shift+4 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 4\"; }\n    Super+5 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 5\"; }\n    Super+Shift+5 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 5\"; }\n    Super+6 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 6\"; }\n    Super+Shift+6 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 6\"; }\n    Super+7 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 7\"; }\n    Super+Shift+7 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 7\"; }\n    Super+8 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 8\"; }\n    Super+Shift+8 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 8\"; }\n    Super+9 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 9\"; }\n    Super+Shift+9 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 9\"; }\n    Super+0 repeat=false hotkey-overlay-title=\"Nacre:workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace 10\"; }\n    Super+Shift+0 repeat=false hotkey-overlay-title=\"Nacre:move-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace 10\"; }\n    Super+Ctrl+Right repeat=false hotkey-overlay-title=\"Nacre:next-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+Ctrl+Left repeat=false hotkey-overlay-title=\"Nacre:previous-workspace\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+WheelScrollDown repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+WheelScrollUp repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action switch_workspace --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+Ctrl+Shift+Left repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace '{\\\"relative\\\": -1}'\"; }\n    Super+Ctrl+Shift+Right repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_window --workspace '{\\\"relative\\\": 1}'\"; }\n    Super+Left repeat=true cooldown-ms=120 hotkey-overlay-title=\"Nacre:focus\" { focus-column-left; }\n    Super+Shift+Left repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction left\"; }\n    Super+Alt+Left repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width -30 --height 0 --relative true\"; }\n    Super+Right repeat=true cooldown-ms=120 hotkey-overlay-title=\"Nacre:focus\" { focus-column-right; }\n    Super+Shift+Right repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction right\"; }\n    Super+Alt+Right repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 30 --height 0 --relative true\"; }\n    Super+Up repeat=false hotkey-overlay-title=\"Nacre:focus\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action focus_direction --direction up\"; }\n    Super+Shift+Up repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction up\"; }\n    Super+Alt+Up repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 0 --height -30 --relative true\"; }\n    Super+Down repeat=false hotkey-overlay-title=\"Nacre:focus\" { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action focus_direction --direction down\"; }\n    Super+Shift+Down repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action move_direction --direction down\"; }\n    Super+Alt+Down repeat=true { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action resize_window --width 0 --height 30 --relative true\"; }\n    Super+SPACE repeat=false hotkey-overlay-title=\"Nacre:launcher\" { spawn-sh \"~/.local/bin/nacre-shell launcher\"; }\n    Super+TAB repeat=false hotkey-overlay-title=\"Nacre:overview\" { spawn-sh \"niri msg action toggle-overview\"; }\n    Super+V repeat=false hotkey-overlay-title=\"Nacre:clipboard\" { spawn-sh \"~/.local/bin/nacre-shell clipboard\"; }\n    Super+W repeat=false hotkey-overlay-title=\"Nacre:wallpaper\" { spawn-sh \"~/.local/bin/nacre-shell wallpaper\"; }\n    Super+Z repeat=false { spawn-sh \"~/.local/bin/nacre-shell hide\"; }\n    Super+O repeat=false { spawn-sh \"~/.local/bin/nacre-shell toggle\"; }\n    Super+I repeat=false hotkey-overlay-title=\"Nacre:settings\" { spawn-sh \"~/.local/bin/nacre-settings\"; }\n    Super+Ctrl+C repeat=false { spawn-sh \"~/.local/bin/nacre-menu actions.capture\"; }\n    Super+X repeat=false hotkey-overlay-title=\"Nacre:power\" { spawn-sh \"~/.local/bin/nacre-menu power\"; }\n    Super+ESCAPE repeat=false hotkey-overlay-title=\"Nacre:power\" { spawn-sh \"~/.local/bin/nacre-menu power\"; }\n    Super+L repeat=false hotkey-overlay-title=\"Nacre:lock\" { spawn-sh \"loginctl lock-session\"; }\n    Super+Shift+R repeat=false { spawn-sh \"exec env NACRE_COMPOSITOR=niri \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" compositor action reload\"; }\n    Super+RETURN repeat=false hotkey-overlay-title=\"Nacre:terminal\" { spawn-sh \"uwsm app -- ~/.local/bin/nacre-app terminal\"; }\n    Super+Shift+B repeat=false hotkey-overlay-title=\"Nacre:browser\" { spawn-sh \"uwsm app -- ~/.local/bin/nacre-app browser\"; }\n    Super+E repeat=false hotkey-overlay-title=\"Nacre:files\" { spawn-sh \"~/.local/bin/nacre-app files\"; }\n    Super+B repeat=false { spawn-sh \"~/.local/bin/nacre-brain open\"; }\n    Super+N repeat=false { spawn-sh \"~/.local/bin/nacre-brain capture\"; }\n    Super+Ctrl+SPACE repeat=false hotkey-overlay-title=\"Nacre:palette\" { spawn-sh \"~/.local/bin/nacre-shell palette\"; }\n    Super+K repeat=false hotkey-overlay-title=\"Nacre:shortcuts\" { spawn-sh \"~/.local/bin/nacre-menu learn.shortcuts\"; }\n    Super+F1 repeat=false hotkey-overlay-title=\"Nacre:shortcuts\" { spawn-sh \"~/.local/bin/nacre-menu learn.shortcuts\"; }\n    Super+A repeat=false hotkey-overlay-title=\"Nacre:ai-sidebar\" { spawn-sh \"~/.local/bin/nacre-shell left\"; }\n    Super+Ctrl+D repeat=false hotkey-overlay-title=\"Nacre:detach-panel\" { spawn-sh \"~/.local/bin/nacre-shell detach\"; }\n}\n",
+            "mode": 384
+          },
+          "config/keyboard.kdl": {
+            "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 420
+          },
+          "config/profile.kdl": {
+            "text": "",
+            "mode": 420
+          },
+          "config/unsupported.json": {
+            "text": "{\n  \"backend\": \"niri\",\n  \"unsupported\": [\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + SHIFT + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + ALT + H\",\n      \"reason\": \"Hyprland hide/trash/force-kill operation is not available\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + P\",\n      \"reason\": \"No equivalent niri capability for window.pin\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + SHIFT + P\",\n      \"reason\": \"No equivalent niri capability for window.pseudo\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + J\",\n      \"reason\": \"No equivalent niri capability for layout.toggle-split\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + mouse:273\",\n      \"reason\": \"Keep niri's native move/resize gestures; no pointer-hook substitution\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + S\",\n      \"reason\": \"No equivalent niri capability for workspace.scratchpad\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + CTRL + S\",\n      \"reason\": \"Niri has no Hyprland special/scratchpad workspaces\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + R\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"left\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"right\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"up\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"down\",\n      \"reason\": \"No equivalent niri capability for window.resize\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"escape\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"return\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/keybinding.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + R\",\n      \"reason\": \"No equivalent niri capability for keymap.switch\"\n    },\n    {\n      \"source\": \"hypr/conf/windowrule.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-thunar-files\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/windowrule.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-dolphin-files\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-lock-preview\",\n      \"reason\": \"Unmapped window effects: size proportions use niri's working area\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-audio-mixer\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-share-picker\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"window-rule\",\n      \"id\": \"nacre-picture-in-picture\",\n      \"reason\": \"Unmapped window effects: pinned\"\n    },\n    {\n      \"source\": \"hypr/conf/nacre.lua\",\n      \"kind\": \"backend-config\",\n      \"id\": \"\",\n      \"reason\": \"Backend-specific backend-config is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"Escape\",\n      \"reason\": \"Niri bindings consume input; non-consuming hooks are unsupported\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"unbind\",\n      \"id\": \"SUPER + mouse:272\",\n      \"reason\": \"Backend-specific unbind is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"extension\",\n      \"id\": \"panel.drag\",\n      \"reason\": \"Backend-specific extension is not emitted for niri\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"SUPER + mouse:272\",\n      \"reason\": \"No equivalent niri action for panel.drag\"\n    },\n    {\n      \"source\": \"nacre/shell-tools/shortcuts.lua\",\n      \"kind\": \"binding\",\n      \"id\": \"mouse:272\",\n      \"reason\": \"No equivalent niri capability for panel.drag.finish\"\n    },\n    {\n      \"source\": \"hypr/conf/cursor.lua\",\n      \"kind\": \"extension\",\n      \"id\": \"cursor.session\",\n      \"reason\": \"Backend-specific extension is not emitted for niri\"\n    },\n    {\n      \"source\": \"hypr/conf/cursor.lua\",\n      \"kind\": \"event\",\n      \"id\": \"\",\n      \"reason\": \"Backend-specific event is not emitted for niri\"\n    }\n  ]\n}\n",
+            "mode": 384
+          },
+          "config/wallpaper.kdl": {
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "mode": 384
+          },
+          "config/window-rules.kdl": {
+            "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/desktop.json": {
+            "text": "{}\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/profile.json": {
+            "text": "{\"version\": 1, \"id\": \"default\", \"components\": [\"configs\", \"shell\"], \"workspaceCount\": 5, \"workspaceNames\": [], \"workspaceIcons\": [], \"startup\": [], \"routes\": [], \"brainWorkspace\": null, \"aiWorkspace\": null}",
+            "mode": 384
+          },
+          "home-view/.config/nacre/profile.lua": {
+            "text": "custom fixture\n",
+            "mode": 384
+          },
+          "home-view/.config/nacre/shortcuts.lua": {
+            "text": "custom shortcuts\n",
+            "mode": 384
+          },
+          "home-view/.local/share/nacre/shell/bin/qs": {
+            "text": "qs fixture\n",
+            "mode": 420
+          },
+          "state/presentation.json": {
+            "text": "{\"poster\": \"$HOME/.cache/nacre/poster.png\"}",
+            "mode": 384
+          },
+          "state/scheme.json": {
+            "text": "{\"colours\": {\"primary\": \"#abcdef\", \"secondary\": \"12345678\", \"outlineVariant\": \"#ABCDEF\", \"error\": \"invalid\"}}",
+            "mode": 384
+          }
+        },
+        "directories": {
+          "cache": 448,
+          "config": 448,
+          "home-view": 493,
+          "home-view/.config": 493,
+          "home-view/.config/nacre": 493,
+          "home-view/.local": 493,
+          "home-view/.local/bin": 493,
+          "home-view/.local/share": 493,
+          "home-view/.local/share/nacre": 493,
+          "home-view/.local/share/nacre/shell": 493,
+          "home-view/.local/share/nacre/shell/bin": 493,
+          "home-view/.local/share/nacre/shell/tools": 493,
+          "kitty-cache": 448,
+          "state": 448
+        },
+        "calls": [
+          {
+            "operation": "stage",
+            "profile": {
+              "version": 1,
+              "id": "default",
+              "components": [
+                "configs",
+                "shell"
+              ],
+              "workspaceCount": 5,
+              "workspaceNames": [],
+              "workspaceIcons": [],
+              "startup": [],
+              "routes": [],
+              "brainWorkspace": null,
+              "aiWorkspace": null
+            }
+          }
+        ],
+        "stdout": "fixture staging\n",
+        "stderr": "",
+        "error": {
+          "type": "ValueError",
+          "message": "Invalid palette role"
+        }
+      }
+    },
+    {
+      "variant": "nonempty",
+      "profile": {
+        "version": 1,
+        "id": "default",
+        "components": [
+          "configs",
+          "shell"
+        ],
+        "workspaceCount": 5,
+        "workspaceNames": [],
+        "workspaceIcons": [],
+        "startup": [],
+        "routes": [],
+        "brainWorkspace": null,
+        "aiWorkspace": null
+      },
+      "scheme": {
+        "colours": {
+          "primary": "#abcdef",
+          "secondary": "12345678",
+          "outlineVariant": "#ABCDEF",
+          "error": "123abc"
+        }
+      },
+      "keyboard": {
+        "layout": "us,de",
+        "model": "pc105",
+        "variant": ",nodeadkeys",
+        "options": "caps:escape"
+      },
+      "observed": {
+        "files": {
+          "existing": {
+            "text": "keep existing\n",
+            "mode": 420
+          }
+        },
+        "directories": {},
+        "calls": [],
+        "stdout": "",
+        "stderr": "",
+        "error": {
+          "type": "ValueError",
+          "message": "Preview destination must be empty"
+        }
+      }
+    }
+  ]
+}
