@@ -374,7 +374,10 @@ def main():
                 watch,
             )
             ipc("nacre", "close")
-            ipc("nacre", "tab", "0")
+            # The normal unpinned dashboard intentionally closes after 140 ms
+            # outside hover. It is exercised above; screenshots need the same
+            # persistent preview API as the gallery, independent of CI timing.
+            ipc("nacre", "previewDashboard", "0")
             wait_for(
                 "dashboard screenshot state",
                 lambda: matches(
