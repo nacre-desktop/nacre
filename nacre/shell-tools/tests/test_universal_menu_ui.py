@@ -94,6 +94,59 @@ def stage(target):
 
 
 class UniversalMenuUITests(unittest.TestCase):
+    def test_app_icon_fallback_never_renders_desktop_image_identifiers(self):
+        runner = Path("/usr/lib/qt6/bin/qmltestrunner")
+        if not runner.exists():
+            self.skipTest("Qt Quick Test unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder)
+            stage(target)
+            (target / "tst_menu.qml").unlink()
+            # Exercise the production symbol font component, too.
+            stage_qml(
+                SHELL / "widgets/NacreIcon.qml", target / "fixtures/NacreIcon.qml"
+            )
+            stage_qml(
+                SHELL / "widgets/NacreText.qml", target / "fixtures/NacreText.qml"
+            )
+            (target / "icon.svg").write_text(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="blue"/></svg>'
+            )
+            (target / "tst_icon.qml").write_text("""import QtQuick
+import QtTest
+TestCase {
+ name:"LauncherIconFallback"
+ width:100;height:100;visible:true;when:windowShown
+ Component {id:icon;NacreMenuIcon {width:44;height:44;size:44;entry:({kind:"app",icon:"io.missioncenter.MissionCenter"})}}
+ function test_pending_ready_and_missing_app_icon(){
+  const item=createTemporaryObject(icon,this);
+  const image=item.children.find(child=>child.source!==undefined);
+  const symbol=item.children.find(child=>child.fill!==undefined);
+  verify(symbol.visible);compare(symbol.text,"apps");
+  compare(symbol.font.pointSize,22);
+  image.source=Qt.resolvedUrl("icon.svg");
+  // Inspect immediately, before the asynchronous image can replace fallback.
+  compare(symbol.text,"apps");
+  tryCompare(image,"status",Image.Ready);
+  tryCompare(symbol,"visible",false);
+  item.entry=({kind:"app",icon:"discord"});
+  image.source="";
+  tryCompare(symbol,"visible",true);compare(symbol.text,"apps");
+  item.entry=({kind:"action",icon:"download"});
+  compare(symbol.text,"download");
+ }
+}""")
+            install_i18n(target / "fixtures")
+            result = run_qml(
+                [str(runner), "-input", str(target), "-o", "-,txt"],
+                capture_output=True,
+                text=True,
+                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+                timeout=30,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("QWARN", result.stdout + result.stderr)
+
     def test_routes_search_keyboard_favorites_and_guards(self):
         runner = Path("/usr/lib/qt6/bin/qmltestrunner")
         if not runner.exists():

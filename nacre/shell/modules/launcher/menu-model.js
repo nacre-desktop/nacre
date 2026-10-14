@@ -209,10 +209,11 @@ function matchScore(row, term) {
     const haystack = normalized([name, row.description, row.breadcrumb, row.id, ...alternate].join(" "));
     if (name === term)
         return 120;
-    if (alternate.includes(term))
-        return 115;
     if (name.startsWith(term))
         return 100;
+    if (alternate.includes(term))
+        // Leave more than the maximum ten-point usage boost below a name prefix.
+        return 89;
     if (words.every(word => name.includes(word)))
         return 85;
     const initials = name.split(/[^a-z0-9]+/).filter(Boolean).map(word => word[0]).join("");

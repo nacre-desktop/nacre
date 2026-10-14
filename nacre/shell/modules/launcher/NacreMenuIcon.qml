@@ -38,7 +38,8 @@ Item {
     NacreIcon {
         anchors.centerIn: parent
         visible: !root.entry.brand && !root.entry.emoji && !image.visible
-        text: root.entry.icon || "chevron_right"
+        // Desktop icon names are image identifiers, not symbol-font ligatures.
+        text: root.entry.kind === "app" ? "apps" : root.entry.icon || "chevron_right"
         font.pointSize: root.size * .5
         color: NacreColours.palette.m3onSurface
     }

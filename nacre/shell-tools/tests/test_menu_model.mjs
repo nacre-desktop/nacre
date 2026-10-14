@@ -41,3 +41,16 @@ assert.equal(context.ranked(apps,"editor",{"edit-two":{count:20,last:100}},[],10
 assert.equal(context.ranked(apps,"Editor One",{"edit-two":{count:100000,last:100}},[],100)[0].id,"edit-one");
 assert.equal(context.ranked(apps,"unrelated").length,0);
 assert.equal(context.scope(": report").kind,"files");
+
+// An exact desktop keyword must not displace the app name being typed, even
+// when that keyword's app is heavily used and recently launched.
+const desktopApps = [
+    context.application({id:'io.missioncenter.MissionCenter',name:'Mission Center',keywords:['Disc','CPU','Memory']}),
+    context.application({id:'discord',name:'Discord',keywords:[]})
+];
+const missionUsage = {'io.missioncenter.MissionCenter':{count:100000,last:100}};
+for (const query of ['d','di','dis','disc','disco','discord']) {
+    assert.equal(context.ranked(desktopApps,query,missionUsage,['io.missioncenter.MissionCenter'],100)[0].id,'discord');
+}
+assert.equal(context.ranked(desktopApps,'cpu')[0].id,'io.missioncenter.MissionCenter');
+assert.equal(context.ranked(desktopApps,'disc')[1].id,'io.missioncenter.MissionCenter');
