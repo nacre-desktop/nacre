@@ -1,0 +1,2828 @@
+{
+  "source_sha256": "e0c253121be18b66cbc6e149fefb00157ff6b6f6d427dde49135ef499d363859",
+  "cases": [
+    {
+      "request": {
+        "name": "workspace-1",
+        "method": "switch_workspace",
+        "args": [
+          1
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({workspace=1,on_current_monitor=true}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-name:code",
+        "method": "switch_workspace",
+        "args": [
+          "name:code"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({workspace=\"name:code\",on_current_monitor=true}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-{'id': 3}",
+        "method": "switch_workspace",
+        "args": [
+          {
+            "id": 3
+          }
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({workspace=3,on_current_monitor=true}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-{'name': 'code'}",
+        "method": "switch_workspace",
+        "args": [
+          {
+            "name": "code"
+          }
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({workspace=\"code\",on_current_monitor=true}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-{'output': 'DP-1', 'index': 1}",
+        "method": "switch_workspace",
+        "args": [
+          {
+            "output": "DP-1",
+            "index": 1
+          }
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output-relative workspace indices are not supported by this backend\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-True",
+        "method": "switch_workspace",
+        "args": [
+          true
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid workspace reference\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-None",
+        "method": "switch_workspace",
+        "args": [
+          null
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid workspace reference\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_direction-left",
+        "method": "focus_direction",
+        "args": [
+          "left"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({direction=\"left\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_direction-right",
+        "method": "focus_direction",
+        "args": [
+          "right"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({direction=\"right\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_direction-up",
+        "method": "focus_direction",
+        "args": [
+          "up"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({direction=\"up\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_direction-down",
+        "method": "focus_direction",
+        "args": [
+          "down"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({direction=\"down\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_direction-next",
+        "method": "focus_direction",
+        "args": [
+          "next"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid focus direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_direction-previous",
+        "method": "focus_direction",
+        "args": [
+          "previous"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid focus direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_direction-bad",
+        "method": "focus_direction",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid focus direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move_direction-left",
+        "method": "move_direction",
+        "args": [
+          "left"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.move({direction=\"left\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move_direction-right",
+        "method": "move_direction",
+        "args": [
+          "right"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.move({direction=\"right\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move_direction-up",
+        "method": "move_direction",
+        "args": [
+          "up"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.move({direction=\"up\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move_direction-down",
+        "method": "move_direction",
+        "args": [
+          "down"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.move({direction=\"down\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move_direction-next",
+        "method": "move_direction",
+        "args": [
+          "next"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid move direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move_direction-previous",
+        "method": "move_direction",
+        "args": [
+          "previous"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid move direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move_direction-bad",
+        "method": "move_direction",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid move direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "cycle_window-left",
+        "method": "cycle_window",
+        "args": [
+          "left"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid cycle direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "cycle_window-right",
+        "method": "cycle_window",
+        "args": [
+          "right"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid cycle direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "cycle_window-up",
+        "method": "cycle_window",
+        "args": [
+          "up"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid cycle direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "cycle_window-down",
+        "method": "cycle_window",
+        "args": [
+          "down"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid cycle direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "cycle_window-next",
+        "method": "cycle_window",
+        "args": [
+          "next"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.cycle({next=true}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "cycle_window-previous",
+        "method": "cycle_window",
+        "args": [
+          "previous"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.cycle({next=false}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "cycle_window-bad",
+        "method": "cycle_window",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid cycle direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-",
+        "method": "focus_window",
+        "args": [
+          ""
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({window=\"\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-0xabc",
+        "method": "focus_window",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({window=\"address:0xabc\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-class:Example",
+        "method": "focus_window",
+        "args": [
+          "class:Example"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({window=\"class:Example\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-title:Title",
+        "method": "focus_window",
+        "args": [
+          "title:Title"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({window=\"title:Title\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-pid:123",
+        "method": "focus_window",
+        "args": [
+          "pid:123"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({window=\"pid:123\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-active",
+        "method": "focus_window",
+        "args": [
+          "active"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.focus({window=\"active\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-bad",
+        "method": "focus_window",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-0xabc;exit",
+        "method": "focus_window",
+        "args": [
+          "0xabc;exit"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-",
+        "method": "close_window",
+        "args": [
+          ""
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.close({window=\"\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-0xabc",
+        "method": "close_window",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.close({window=\"address:0xabc\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-class:Example",
+        "method": "close_window",
+        "args": [
+          "class:Example"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.close({window=\"class:Example\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-title:Title",
+        "method": "close_window",
+        "args": [
+          "title:Title"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.close({window=\"title:Title\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-pid:123",
+        "method": "close_window",
+        "args": [
+          "pid:123"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.close({window=\"pid:123\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-active",
+        "method": "close_window",
+        "args": [
+          "active"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.close({window=\"active\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-bad",
+        "method": "close_window",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-0xabc;exit",
+        "method": "close_window",
+        "args": [
+          "0xabc;exit"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "kill_window-",
+        "method": "kill_window",
+        "args": [
+          ""
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.kill({window=\"\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "kill_window-0xabc",
+        "method": "kill_window",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.kill({window=\"address:0xabc\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "kill_window-class:Example",
+        "method": "kill_window",
+        "args": [
+          "class:Example"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.kill({window=\"class:Example\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "kill_window-title:Title",
+        "method": "kill_window",
+        "args": [
+          "title:Title"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.kill({window=\"title:Title\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "kill_window-pid:123",
+        "method": "kill_window",
+        "args": [
+          "pid:123"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.kill({window=\"pid:123\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "kill_window-active",
+        "method": "kill_window",
+        "args": [
+          "active"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.kill({window=\"active\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "kill_window-bad",
+        "method": "kill_window",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "kill_window-0xabc;exit",
+        "method": "kill_window",
+        "args": [
+          "0xabc;exit"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float_window-",
+        "method": "float_window",
+        "args": [
+          ""
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.float({window=\"\",action=\"toggle\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float_window-0xabc",
+        "method": "float_window",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.float({window=\"address:0xabc\",action=\"toggle\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float_window-class:Example",
+        "method": "float_window",
+        "args": [
+          "class:Example"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.float({window=\"class:Example\",action=\"toggle\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float_window-title:Title",
+        "method": "float_window",
+        "args": [
+          "title:Title"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.float({window=\"title:Title\",action=\"toggle\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float_window-pid:123",
+        "method": "float_window",
+        "args": [
+          "pid:123"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.float({window=\"pid:123\",action=\"toggle\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float_window-active",
+        "method": "float_window",
+        "args": [
+          "active"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.float({window=\"active\",action=\"toggle\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float_window-bad",
+        "method": "float_window",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float_window-0xabc;exit",
+        "method": "float_window",
+        "args": [
+          "0xabc;exit"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "pin_window-",
+        "method": "pin_window",
+        "args": [
+          ""
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.pin({window=\"\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "pin_window-0xabc",
+        "method": "pin_window",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.pin({window=\"address:0xabc\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "pin_window-class:Example",
+        "method": "pin_window",
+        "args": [
+          "class:Example"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.pin({window=\"class:Example\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "pin_window-title:Title",
+        "method": "pin_window",
+        "args": [
+          "title:Title"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.pin({window=\"title:Title\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "pin_window-pid:123",
+        "method": "pin_window",
+        "args": [
+          "pid:123"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.pin({window=\"pid:123\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "pin_window-active",
+        "method": "pin_window",
+        "args": [
+          "active"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.pin({window=\"active\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "pin_window-bad",
+        "method": "pin_window",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "pin_window-0xabc;exit",
+        "method": "pin_window",
+        "args": [
+          "0xabc;exit"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen_window-",
+        "method": "fullscreen_window",
+        "args": [
+          ""
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.fullscreen({mode=\"fullscreen\",window=\"\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen_window-0xabc",
+        "method": "fullscreen_window",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.fullscreen({mode=\"fullscreen\",window=\"address:0xabc\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen_window-class:Example",
+        "method": "fullscreen_window",
+        "args": [
+          "class:Example"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.fullscreen({mode=\"fullscreen\",window=\"class:Example\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen_window-title:Title",
+        "method": "fullscreen_window",
+        "args": [
+          "title:Title"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.fullscreen({mode=\"fullscreen\",window=\"title:Title\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen_window-pid:123",
+        "method": "fullscreen_window",
+        "args": [
+          "pid:123"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.fullscreen({mode=\"fullscreen\",window=\"pid:123\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen_window-active",
+        "method": "fullscreen_window",
+        "args": [
+          "active"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.fullscreen({mode=\"fullscreen\",window=\"active\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen_window-bad",
+        "method": "fullscreen_window",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen_window-0xabc;exit",
+        "method": "fullscreen_window",
+        "args": [
+          "0xabc;exit"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid Hyprland window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-workspace",
+        "method": "move_window",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {
+          "workspace": 2,
+          "follow": false
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.move({window=\"address:0xabc\",workspace=2,follow=false}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-geometry",
+        "method": "move_window",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {
+          "x": -30,
+          "y": 40,
+          "relative": true
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.move({window=\"address:0xabc\",x=-30,y=40,relative=true}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-workspace-monitor",
+        "method": "move_workspace",
+        "args": [
+          3,
+          "DP-2"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.workspace.move({workspace=3,monitor=\"DP-2\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "resize",
+        "method": "resize_window",
+        "args": [
+          "0xabc",
+          600,
+          400
+        ],
+        "kwargs": {
+          "relative": true
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.resize({x=600,y=400,relative=true,window=\"address:0xabc\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "place",
+        "method": "place_window",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {
+          "x": -30,
+          "y": 40,
+          "width": 600,
+          "height": 400,
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.float({window=\"address:0xabc\",action=\"enable\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          },
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.resize({x=600,y=400,relative=false,window=\"address:0xabc\"}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          },
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.move({window=\"address:0xabc\",x=-30,y=40,relative=false}))"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dpms-on",
+        "method": "dpms",
+        "args": [
+          "on"
+        ],
+        "kwargs": {
+          "monitor": "DP-2"
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.dpms({action=\"on\",monitor=\"DP-2\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dpms-off",
+        "method": "dpms",
+        "args": [
+          "off"
+        ],
+        "kwargs": {
+          "monitor": "DP-2"
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.dpms({action=\"off\",monitor=\"DP-2\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dpms-toggle",
+        "method": "dpms",
+        "args": [
+          "toggle"
+        ],
+        "kwargs": {
+          "monitor": "DP-2"
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.dpms({action=\"toggle\",monitor=\"DP-2\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen-state",
+        "method": "fullscreen_state",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {
+          "internal": 2,
+          "client": 1,
+          "action": "set"
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.window.fullscreen_state({internal=2,client=1,action=\"set\",window=\"address:0xabc\"}))"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "cursor",
+        "method": "set_cursor",
+        "args": [
+          "Example",
+          24
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "setcursor",
+              "Example",
+              "24"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "notify",
+        "method": "notify",
+        "args": [
+          1,
+          5000,
+          "0xff00ff",
+          "Message"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "notify",
+              "1",
+              "5000",
+              "0xff00ff",
+              "Message"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard",
+        "method": "render_keyboard",
+        "args": [
+          {
+            "layout": "us,tr",
+            "options": "caps:escape"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"-- Your system keyboard choice. Edit here; Nacre updates preserve this file.\\nhl.config({\\n    [\\\"input.kb_layout\\\"] = \\\"us,tr\\\",\\n    [\\\"input.kb_options\\\"] = \\\"caps:escape\\\",\\n})\\n\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "options",
+        "method": "render_options",
+        "args": [
+          {
+            "general": {
+              "gaps_in": 6
+            },
+            "quoted-key": "quote\"\n"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"hl.config({[\\\"general\\\"]={[\\\"gaps_in\\\"]=6},[\\\"quoted-key\\\"]=\\\"quote\\\\\\\"\\\\010\\\"})\\n\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "animations": false,
+            "blur": true,
+            "followMouse": true,
+            "gapsIn": 6,
+            "rounding": 12
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"hl.config({[\\\"animations.enabled\\\"]=false,[\\\"decoration.blur.enabled\\\"]=true,[\\\"input.follow_mouse\\\"]=1,[\\\"general.gaps_in\\\"]=6,[\\\"decoration.rounding\\\"]=12})\\n\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitors-empty",
+        "method": "render_monitors",
+        "args": [
+          []
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-record",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "refreshRate": 59.95,
+              "scale": 1.25,
+              "x": -1920,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"hl.monitor({output=\\\"DP-1\\\",mode=\\\"1920x1080@59.950\\\",scale=1.25,position=\\\"-1920x0\\\",transform=0,mirror=\\\"\\\"})\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-native",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "output": "DP-1",
+              "mode": "preferred",
+              "scale": 1.0,
+              "position": "auto"
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"hl.monitor({output=\\\"DP-1\\\",mode=\\\"preferred\\\",scale=1.0,position=\\\"auto\\\"})\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "performance-True",
+        "method": "set_performance",
+        "args": [
+          true
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.config({[\"animations\"]={[\"enabled\"]=false},[\"decoration\"]={[\"shadow\"]={[\"enabled\"]=false},[\"blur\"]={[\"enabled\"]=false},[\"active_opacity\"]=1,[\"inactive_opacity\"]=1,[\"fullscreen_opacity\"]=1,[\"rounding\"]=0},[\"general\"]={[\"gaps_in\"]=0,[\"gaps_out\"]=0,[\"border_size\"]=1}})\n"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "animations-True",
+        "method": "set_animations",
+        "args": [
+          true
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.config({[\"animations\"]={[\"enabled\"]=true}})\n"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "performance-False",
+        "method": "set_performance",
+        "args": [
+          false
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "reload"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "animations-False",
+        "method": "set_animations",
+        "args": [
+          false
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.config({[\"animations\"]={[\"enabled\"]=false}})\n"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "reload",
+        "method": "reload",
+        "args": [],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "reload"
+            ],
+            "kwargs": {
+              "timeout": 10
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "toggle-floating",
+        "method": "toggle_workspace_floating",
+        "args": [],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "local ws = hl.get_active_workspace(); local windows = hl.get_workspace_windows(ws); local make_float = false; for _, window in ipairs(windows) do if not window.floating then make_float = true; break end end; for _, window in ipairs(windows) do hl.dispatch(hl.dsp.window.float({ action = make_float and \"set\" or \"unset\", window = window })) end"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "event-activewindowv2>>abc",
+        "method": "parse_event",
+        "args": [
+          "activewindowv2>>abc"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"type\": \"window-focus\", \"windowId\": \"0xabc\"}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "event-openwindow>>abc,1,Class,Title",
+        "method": "parse_event",
+        "args": [
+          "openwindow>>abc,1,Class,Title"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"type\": \"window-open\", \"windowId\": \"0xabc\"}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "event-closewindow>>0xabc",
+        "method": "parse_event",
+        "args": [
+          "closewindow>>0xabc"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"type\": \"window-close\", \"windowId\": \"0xabc\"}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "event-windowtitlev2>>abc,Title",
+        "method": "parse_event",
+        "args": [
+          "windowtitlev2>>abc,Title"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"type\": \"window-title\", \"windowId\": \"0xabc\"}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "event-fullscreen>>1",
+        "method": "parse_event",
+        "args": [
+          "fullscreen>>1"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"type\": \"window-fullscreen\"}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "event-monitoraddedv2>>DP-1",
+        "method": "parse_event",
+        "args": [
+          "monitoraddedv2>>DP-1"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"type\": \"outputs-changed\"}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "event-workspacev2>>1,code",
+        "method": "parse_event",
+        "args": [
+          "workspacev2>>1,code"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"type\": \"workspace-monitor-change\"}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "event-future>>data",
+        "method": "parse_event",
+        "args": [
+          "future>>data"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"type\": \"other\"}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "event-urgent>>bad;id",
+        "method": "parse_event",
+        "args": [
+          "urgent>>bad;id"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"type\": \"window-urgent\"}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "event-configreloaded>>",
+        "method": "parse_event",
+        "args": [
+          "configreloaded>>"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"type\": \"configuration-reloaded\"}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "path-palette",
+        "method": "config_path",
+        "args": [
+          "/case/home",
+          "palette"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"/case/home/.config/nacre/palette.lua\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "path-desktop",
+        "method": "config_path",
+        "args": [
+          "/case/home",
+          "desktop"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"/case/home/.config/nacre/desktop.lua\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "path-monitor",
+        "method": "config_path",
+        "args": [
+          "/case/home",
+          "monitor"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"/case/home/.config/nacre/monitor.lua\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "path-profile",
+        "method": "config_path",
+        "args": [
+          "/case/home",
+          "profile"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"/case/home/.config/nacre/profile.lua\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "path-bad",
+        "method": "config_path",
+        "args": [
+          "/case/home",
+          "bad"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Unknown compositor configuration\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "capabilities",
+        "method": "capabilities",
+        "args": [],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"stableWorkspaceIndices\": true, \"globalWorkspaces\": true, \"perOutputWorkspaces\": false, \"scrollingLayout\": false, \"floatingPlacement\": true, \"pinWindow\": true, \"windowCapture\": true, \"windowHide\": true, \"windowTrash\": true, \"scratchpad\": true, \"windowGroups\": true, \"windowForceKill\": true, \"pseudoTiling\": true, \"layoutSplit\": true, \"keymaps\": true, \"nonConsumingShortcuts\": true, \"bindingIntrospection\": true, \"monitorMirroring\": true, \"fullscreenState\": true}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

@@ -6,18 +6,18 @@ import json
 import os
 from pathlib import Path
 import socket
+import subprocess
 import threading
 import unittest
 from unittest.mock import patch
 
-import compositor
+import nacre_native_compositor as compositor
+from native_niri_state import NativeState
+from native_niri_actions import NativeBackend as ActionBackend
+from native_niri_transport import NativeBackend as TransportBackend
+from types import SimpleNamespace
 
-spec = importlib.util.spec_from_file_location(
-    "niri_backend_test",
-    Path(compositor.__file__).with_name("compositor_backends") / "niri.py",
-)
-niri = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(niri)
+niri = SimpleNamespace(State=NativeState, Backend=ActionBackend, subprocess=subprocess)
 FIXTURE = json.loads(
     (Path(__file__).parent / "fixtures/niri-event-stream.json").read_text()
 )
@@ -376,6 +376,10 @@ class NiriActionTests(unittest.TestCase):
 
 
 class NiriTransportTests(unittest.TestCase):
+    def run(self, result=None):
+        with patch.object(niri, "Backend", TransportBackend):
+            return super().run(result)
+
     def test_optional_hover_stream_falls_back_to_stock_without_consuming_events(self):
         clients = []
         servers = []

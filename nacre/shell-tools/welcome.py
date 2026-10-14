@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 import uuid
 
-import compositor
+import nacre_native_compositor as compositor
 
 
 def paths(home):
@@ -361,7 +361,7 @@ def live_shortcuts():
             if rows
             else "No described Nacre shortcuts are registered. Reload your managed Hyprland configuration.",
         )
-    except (OSError, ValueError, subprocess.SubprocessError):
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
         return [], "Shortcuts are available when running inside your Hyprland session."
 
 

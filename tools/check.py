@@ -221,6 +221,36 @@ def main():
             if line.startswith(("Ran ", "OK ", "OK"))
         )
         print(suite + ": " + summary.replace("\n", "; "), flush=True)
+    for specification in ("state", "actions", "transport"):
+        run(
+            [
+                sys.executable,
+                f"tests/parity/helpers/verify_niri_{specification}_native.py",
+            ],
+            env=environment,
+        )
+    run(
+        [
+            sys.executable,
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "tests/parity/helpers",
+            "-p",
+            "test_niri*reference*.py",
+        ],
+        env=environment,
+    )
+    print(
+        "Native Niri legacy assertions and frozen reference integrity passed.",
+        flush=True,
+    )
+    run(
+        [sys.executable, "tests/parity/helpers/verify_hyprland_native.py"],
+        env=environment,
+    )
+    print("Native Hyprland legacy assertions passed.", flush=True)
     output = run(
         [
             sys.executable,

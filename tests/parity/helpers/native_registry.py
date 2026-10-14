@@ -23,6 +23,9 @@ MIGRATED = frozenset(
         "network-state",
         "notification-history",
         "pearl-state",
+        "compositor",
+        "compositor-backends-hyprland",
+        "compositor-backends-niri",
         "resource-state",
         "window-chat-title",
         "compositor_config",
@@ -72,6 +75,30 @@ def command(case, override=None, *, root=ROOT, environ=None):
     if helper not in MIGRATED:
         return None
     original = shlex.split(case.get("command", ""))
+    if (
+        helper
+        in {"compositor", "compositor-backends-hyprland", "compositor-backends-niri"}
+        and "args" in case
+    ):
+        environment = os.environ if environ is None else environ
+        override = environment.get("NACRE_COMPOSITOR_REFERENCE")
+        candidates = (
+            [Path(override)]
+            if override
+            else [
+                root / "target/debug/examples/compositor-reference",
+                root / "target/release/examples/compositor-reference",
+            ]
+        )
+        available = [
+            path for path in candidates if path.is_file() and os.access(path, os.X_OK)
+        ]
+        if not available:
+            raise ValueError("Build the developer compositor-reference provider")
+        args = [str(available[0].resolve())]
+        if helper != "compositor":
+            args.extend(["module", helper.removeprefix("compositor-backends-")])
+        return shlex.join(args)
     compiler_sources = {
         "compositor_config": "compositor_config.py",
         "compositor-backends-hyprland-config": "compositor_backends/hyprland_config.py",

@@ -1,0 +1,222 @@
+{
+  "source_sha256": "b1befdc9049d11f53a3fdbf11eab038c5bd5f719f085c06371daecede4889847",
+  "fixture_sha256": "29ecb0b0a011aeb0562be71fe3793b6ab542c7d9e62e9351dbdb94113edbf0f0",
+  "cases": [
+    {
+      "request": {
+        "name": "session_id-False",
+        "method": "session_id",
+        "args": [],
+        "kwargs": {},
+        "environment": {}
+      },
+      "observed": {
+        "stdout": "\"\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "session_id-True",
+        "method": "session_id",
+        "args": [],
+        "kwargs": {},
+        "environment": {
+          "NIRI_SOCKET": "/case/niri.sock",
+          "WAYLAND_DISPLAY": "fixture-0",
+          "XDG_RUNTIME_DIR": "/case/runtime",
+          "NACRE_COMPOSITOR": "niri",
+          "OTHER": "ignored"
+        }
+      },
+      "observed": {
+        "stdout": "\"/case/niri.sock\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "version_command-False",
+        "method": "version_command",
+        "args": [],
+        "kwargs": {},
+        "environment": {}
+      },
+      "observed": {
+        "stdout": "[\"niri\", \"--version\"]\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "version_command-True",
+        "method": "version_command",
+        "args": [],
+        "kwargs": {},
+        "environment": {
+          "NIRI_SOCKET": "/case/niri.sock",
+          "WAYLAND_DISPLAY": "fixture-0",
+          "XDG_RUNTIME_DIR": "/case/runtime",
+          "NACRE_COMPOSITOR": "niri",
+          "OTHER": "ignored"
+        }
+      },
+      "observed": {
+        "stdout": "[\"niri\", \"--version\"]\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "required_commands-False",
+        "method": "required_commands",
+        "args": [],
+        "kwargs": {},
+        "environment": {}
+      },
+      "observed": {
+        "stdout": "[\"niri\"]\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "required_commands-True",
+        "method": "required_commands",
+        "args": [],
+        "kwargs": {},
+        "environment": {
+          "NIRI_SOCKET": "/case/niri.sock",
+          "WAYLAND_DISPLAY": "fixture-0",
+          "XDG_RUNTIME_DIR": "/case/runtime",
+          "NACRE_COMPOSITOR": "niri",
+          "OTHER": "ignored"
+        }
+      },
+      "observed": {
+        "stdout": "[\"niri\"]\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "diagnostic_commands-False",
+        "method": "diagnostic_commands",
+        "args": [],
+        "kwargs": {},
+        "environment": {}
+      },
+      "observed": {
+        "stdout": "{\"runningVersion\": [\"niri\", \"msg\", \"--json\", \"version\"], \"installedVersion\": [\"niri\", \"--version\"], \"allMonitors\": [\"niri\", \"msg\", \"--json\", \"outputs\"], \"configErrors\": [\"niri\", \"validate\"]}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "diagnostic_commands-True",
+        "method": "diagnostic_commands",
+        "args": [],
+        "kwargs": {},
+        "environment": {
+          "NIRI_SOCKET": "/case/niri.sock",
+          "WAYLAND_DISPLAY": "fixture-0",
+          "XDG_RUNTIME_DIR": "/case/runtime",
+          "NACRE_COMPOSITOR": "niri",
+          "OTHER": "ignored"
+        }
+      },
+      "observed": {
+        "stdout": "{\"runningVersion\": [\"niri\", \"msg\", \"--json\", \"version\"], \"installedVersion\": [\"niri\", \"--version\"], \"allMonitors\": [\"niri\", \"msg\", \"--json\", \"outputs\"], \"configErrors\": [\"niri\", \"validate\"]}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "environment_updates-False",
+        "method": "environment_updates",
+        "args": [],
+        "kwargs": {},
+        "environment": {}
+      },
+      "observed": {
+        "stdout": "{}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "environment_updates-True",
+        "method": "environment_updates",
+        "args": [],
+        "kwargs": {},
+        "environment": {
+          "NIRI_SOCKET": "/case/niri.sock",
+          "WAYLAND_DISPLAY": "fixture-0",
+          "XDG_RUNTIME_DIR": "/case/runtime",
+          "NACRE_COMPOSITOR": "niri",
+          "OTHER": "ignored"
+        }
+      },
+      "observed": {
+        "stdout": "{\"NIRI_SOCKET\": \"/case/niri.sock\", \"WAYLAND_DISPLAY\": \"fixture-0\", \"XDG_RUNTIME_DIR\": \"/case/runtime\", \"NACRE_COMPOSITOR\": \"niri\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "capabilities",
+        "method": "capabilities",
+        "args": [],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"stableWorkspaceIndices\": false, \"globalWorkspaces\": false, \"perOutputWorkspaces\": true, \"scrollingLayout\": true, \"floatingPlacement\": true, \"pinWindow\": false, \"windowCapture\": false, \"nativeWindowScreenshot\": true, \"shapedBackgroundBlur\": false, \"cursorPosition\": false, \"nativePanelDrag\": false, \"windowHide\": false, \"windowTrash\": false, \"scratchpad\": false, \"windowGroups\": true, \"windowForceKill\": false, \"pseudoTiling\": false, \"layoutSplit\": false, \"keymaps\": false, \"nonConsumingShortcuts\": false, \"bindingIntrospection\": false, \"fullscreenState\": false, \"shortcutRelease\": false, \"desktopOptions\": [\"animations\", \"blur\", \"shadow\", \"followMouse\", \"naturalScroll\", \"gapsIn\", \"borderSize\", \"rounding\"], \"monitorConfiguration\": true, \"monitorMirroring\": false, \"nightLightController\": true}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

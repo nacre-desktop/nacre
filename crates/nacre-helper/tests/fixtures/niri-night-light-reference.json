@@ -1,0 +1,432 @@
+{
+  "source_sha256": "b1befdc9049d11f53a3fdbf11eab038c5bd5f719f085c06371daecede4889847",
+  "fixture_sha256": "29ecb0b0a011aeb0562be71fe3793b6ab542c7d9e62e9351dbdb94113edbf0f0",
+  "cases": [
+    {
+      "request": {
+        "name": "night_light_command-True",
+        "method": "night_light_command",
+        "args": [
+          true
+        ],
+        "available": true
+      },
+      "observed": {
+        "stdout": "[\"systemd-run\", \"--user\", \"--collect\", \"--unit=nacre-night-light.service\", \"--property=PartOf=graphical-session.target\", \"--setenv=WAYLAND_DISPLAY=fixture-0\", \"--setenv=XDG_RUNTIME_DIR=/case/runtime\", \"wlsunset\", \"-t\", \"4500\", \"-T\", \"4501\", \"-S\", \"00:00\", \"-s\", \"23:59\", \"-d\", \"0\"]\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "night_light_command-False",
+        "method": "night_light_command",
+        "args": [
+          false
+        ],
+        "available": true
+      },
+      "observed": {
+        "stdout": "[\"systemctl\", \"--user\", \"stop\", \"nacre-night-light.service\"]\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "set_night_light_temperature-True",
+        "method": "set_night_light_temperature",
+        "args": [
+          true
+        ],
+        "available": true
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "set_night_light_temperature-False",
+        "method": "set_night_light_temperature",
+        "args": [
+          false
+        ],
+        "available": true
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "command": [
+              "systemctl",
+              "--user",
+              "stop",
+              "nacre-night-light.service"
+            ],
+            "kwargs": {
+              "check": true,
+              "capture_output": true,
+              "timeout": 1
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "temperature-unavailable",
+        "method": "set_night_light_temperature",
+        "args": [
+          true
+        ],
+        "available": false
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Night light requires gamma control on a physical output\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "available",
+        "method": "night_light_available",
+        "args": [],
+        "tools": true,
+        "probe_stdout": "zwlr_gamma_control_manager_v1",
+        "probe_code": 0,
+        "probe_raises": false
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": [
+          {
+            "command": [
+              "wayland-info"
+            ],
+            "kwargs": {
+              "capture_output": true,
+              "text": true,
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "no-tools",
+        "method": "night_light_available",
+        "args": [],
+        "tools": false,
+        "probe_stdout": "",
+        "probe_code": 0,
+        "probe_raises": false
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "no-gamma",
+        "method": "night_light_available",
+        "args": [],
+        "tools": true,
+        "probe_stdout": "wl_compositor",
+        "probe_code": 0,
+        "probe_raises": false
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": [
+          {
+            "command": [
+              "wayland-info"
+            ],
+            "kwargs": {
+              "capture_output": true,
+              "text": true,
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "probe-error",
+        "method": "night_light_available",
+        "args": [],
+        "tools": true,
+        "probe_stdout": "",
+        "probe_code": 1,
+        "probe_raises": false
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": [
+          {
+            "command": [
+              "wayland-info"
+            ],
+            "kwargs": {
+              "capture_output": true,
+              "text": true,
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "probe-exception",
+        "method": "night_light_available",
+        "args": [],
+        "tools": true,
+        "probe_stdout": "",
+        "probe_code": 0,
+        "probe_raises": true
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": [
+          {
+            "command": [
+              "wayland-info"
+            ],
+            "kwargs": {
+              "capture_output": true,
+              "text": true,
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "config-",
+        "method": "night_light_configured_elsewhere",
+        "args": [],
+        "config": ""
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "config-gammastep/config.ini",
+        "method": "night_light_configured_elsewhere",
+        "args": [],
+        "config": "gammastep/config.ini"
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "config-wlsunset/config",
+        "method": "night_light_configured_elsewhere",
+        "args": [],
+        "config": "wlsunset/config"
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "no-controller",
+        "method": "night_light_external_socket",
+        "args": [
+          false
+        ],
+        "own": "",
+        "processes": []
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "owned-controller",
+        "method": "night_light_external_socket",
+        "args": [
+          true
+        ],
+        "own": "123",
+        "processes": [
+          {
+            "pid": "123",
+            "command": "wlsunset",
+            "display": "fixture-0"
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": [
+          {
+            "command": [
+              "systemctl",
+              "--user",
+              "show",
+              "nacre-night-light.service",
+              "-p",
+              "MainPID",
+              "--value"
+            ],
+            "kwargs": {
+              "capture_output": true,
+              "text": true,
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "external-controller",
+        "method": "night_light_external_socket",
+        "args": [
+          true
+        ],
+        "own": "123",
+        "processes": [
+          {
+            "pid": "456",
+            "command": "gammastep",
+            "display": "fixture-0"
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": [
+          {
+            "command": [
+              "systemctl",
+              "--user",
+              "show",
+              "nacre-night-light.service",
+              "-p",
+              "MainPID",
+              "--value"
+            ],
+            "kwargs": {
+              "capture_output": true,
+              "text": true,
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "other-display",
+        "method": "night_light_external_socket",
+        "args": [
+          false
+        ],
+        "own": "",
+        "processes": [
+          {
+            "pid": "456",
+            "command": "wlsunset",
+            "display": "other"
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "other-command",
+        "method": "night_light_external_socket",
+        "args": [
+          false
+        ],
+        "own": "",
+        "processes": [
+          {
+            "pid": "456",
+            "command": "unrelated",
+            "display": "fixture-0"
+          }
+        ]
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

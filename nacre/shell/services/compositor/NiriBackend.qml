@@ -64,6 +64,8 @@ Singleton {
     property int reconnectAttempt: 0
     property var registrations: []
     property var pendingActions: []
+    property int actionSequence: 0
+    property var activeAction: null
     property var movingWindows: ({})
     signal event(var value)
     signal configurationReloaded
@@ -191,7 +193,7 @@ Singleton {
         environment: ({
                 NACRE_COMPOSITOR: "niri"
             })
-        command: ["python3", root.toolsPath + "/compositor.py", "events"]
+        command: [NacrePaths.helperBinary, "compositor", "events"]
         stdout: SplitParser {
             onRead: data => {
                 try {
@@ -210,6 +212,8 @@ Singleton {
                 phase: "cancel"
             });
             root.pendingActions = [];
+            root.activeAction = null;
+            worker.running = false;
             root.error = NacreI18n.tr("ui.niri.error.ipc-disconnected", "Niri IPC disconnected; reconnecting.");
             root.activeWindowId = "";
             root.overviewOpen = false;
@@ -231,31 +235,68 @@ Singleton {
             error = connected ? NacreI18n.tr("ui.niri.error.action-queue-full", "Compositor action queue is full.") : NacreI18n.tr("ui.niri.error.ipc-unavailable", "Niri IPC is unavailable.");
             return false;
         }
-        pendingActions = [...pendingActions, ["python3", toolsPath + "/compositor.py", "action", name, ...args]];
+        pendingActions = [...pendingActions,
+            {
+                id: ++actionSequence,
+                argv: ["action", name, ...args]
+            }
+        ];
         runNext();
         return true;
     }
     function runNext() {
-        if (!connected || worker.running || !pendingActions.length)
+        if (!connected || activeAction || !pendingActions.length)
             return;
-        worker.command = pendingActions[0];
+        if (!worker.running) {
+            worker.running = true;
+            return;
+        }
+        activeAction = pendingActions[0];
         pendingActions = pendingActions.slice(1);
-        worker.running = true;
+        worker.write(JSON.stringify(activeAction) + "\n");
     }
     Process {
         id: worker
         objectName: "niriActionWorker"
+        stdinEnabled: true
+        command: [NacrePaths.helperBinary, "compositor", "serve-actions"]
         environment: ({
                 NACRE_COMPOSITOR: "niri"
             })
         stderr: StdioCollector {}
+        onStarted: root.runNext()
+        stdout: SplitParser {
+            onRead: data => {
+                try {
+                    const response = JSON.parse(data);
+                    if (!root.activeAction || response.id !== root.activeAction.id)
+                        throw new Error("Unexpected compositor action response");
+                    root.activeAction = null;
+                    if (!response.ok) {
+                        root.pendingActions = [];
+                        root.error = NacreI18n.tr("ui.niri.error.action-failed", "Niri action failed: {detail}", {
+                            detail: response.error || "Invalid action response"
+                        });
+                    }
+                } catch (failure) {
+                    root.activeAction = null;
+                    root.pendingActions = [];
+                    root.error = NacreI18n.tr("ui.niri.error.action-failed", "Niri action failed: {detail}", {
+                        detail: failure.toString()
+                    });
+                    worker.running = false;
+                }
+                Qt.callLater(root.runNext);
+            }
+        }
         onExited: (exitCode, exitStatus) => {
-            if (exitCode !== 0) {
+            if (exitCode !== 0 || root.activeAction) {
                 root.error = NacreI18n.tr("ui.niri.error.action-failed", "Niri action failed: {detail}", {
                     detail: stderr.text.trim().split("\n").slice(-1)[0]
                 });
                 root.pendingActions = [];
             }
+            root.activeAction = null;
             Qt.callLater(root.runNext);
         }
     }

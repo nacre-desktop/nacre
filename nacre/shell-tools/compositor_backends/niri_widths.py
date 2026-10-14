@@ -370,7 +370,7 @@ class Policy:
 
 def check_session():
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from compositor import select_backend
+    from nacre_native_compositor import select_backend
 
     return (
         select_backend() == "niri"
@@ -380,20 +380,21 @@ def check_session():
 
 
 def run(opening_width):
-    from compositor_backends.niri import Backend
-
-    backend = Backend()
+    import nacre_native_compositor as backend
 
     def resize(identifier):
         try:
-            backend._action(
+            backend.native_niri_action(
                 "SetWindowWidth",
                 {"id": identifier, "change": {"SetProportion": opening_width}},
                 timeout=2,
             )
-        except (OSError, RuntimeError, ValueError):
+        except (OSError, RuntimeError, ValueError) as error:
             # A window can close after its event was received.
-            pass
+            print(
+                "nacre-helper: opening-width action failed: " + str(error),
+                file=sys.stderr,
+            )
 
     x11 = X11()
     policy = Policy(x11)

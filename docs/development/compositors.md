@@ -81,7 +81,7 @@ pretend that a tiled column position is an absolute floating coordinate.
 
 Placement retains its sequence: verify ownership where applicable, enable floating,
 resize when requested, then move. Existing bounded retries and timeout budgets
-remain in the caller. `pearl-window.py` still requires the owned title and PID;
+remain in the caller. `nacre-helper pearl-window` still requires the owned title and PID;
 only native selection and action encoding moved into the interface.
 
 ## One editable configuration source

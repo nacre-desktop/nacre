@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Readiness and non-disruptive login/resume/hotplug evidence; no secret values."""
 
-import compositor
+import nacre_native_compositor as compositor
 
 import argparse
 from nacre_i18n import tr

@@ -21,7 +21,8 @@ def load(name, path):
     return module
 
 
-niri = load("daily_niri", "compositor_backends/niri.py")
+import native_niri_daily as niri
+
 controls = load("daily_controls", "control-tools.py")
 desktop = load("daily_desktop", "desktop-settings.py")
 

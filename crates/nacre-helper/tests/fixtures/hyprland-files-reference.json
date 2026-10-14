@@ -1,0 +1,108 @@
+{
+  "source_sha256": "e0c253121be18b66cbc6e149fefb00157ff6b6f6d427dde49135ef499d363859",
+  "cases": [
+    {
+      "request": {
+        "name": "valid",
+        "method": "ensure_desktop_loader",
+        "files": {
+          ".config/hypr/hyprland.lua": "-- Nacre desktop settings\nload_private(\"desktop\")\n"
+        }
+      },
+      "observed": {
+        "stdout": "null\n",
+        "exit": 0
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "missing-marker",
+        "method": "ensure_desktop_loader",
+        "files": {
+          ".config/hypr/hyprland.lua": "load_private(\"desktop\")\n"
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Managed desktop loader missing; run ./install.sh --apply from the repository\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "missing-loader",
+        "method": "ensure_desktop_loader",
+        "files": {
+          ".config/hypr/hyprland.lua": "-- Nacre desktop settings\n"
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Managed desktop loader missing; run ./install.sh --apply from the repository\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "binding-files",
+        "method": "binding_source_files",
+        "files": {
+          ".config/hypr/conf/a.lua": "hl.bind(\"Q\")",
+          ".config/hypr/conf/b.lua": "-- no binding",
+          ".config/nacre/shortcuts.lua": "hl.bind (\"G\")"
+        }
+      },
+      "observed": {
+        "stdout": "[\".config/hypr/conf/a.lua\", \".config/nacre/shortcuts.lua\"]\n",
+        "exit": 0
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "night-config-True",
+        "method": "night_light_configured_elsewhere",
+        "files": {
+          ".config/hypr/hyprsunset.conf": "fixture"
+        }
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "night-config-False",
+        "method": "night_light_configured_elsewhere",
+        "files": {}
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "legacy-power",
+        "method": "legacy_power_binding",
+        "files": {}
+      },
+      "observed": {
+        "stdout": "\"-- Run after release/input processing so this key does not immediately wake DPMS.\\nhl.bind(\\\"XF86PowerOff\\\", hl.dsp.exec_cmd(\\\"sleep 0.2; ~/.config/hypr/scripts/hyprctl-lua.sh dpms disable\\\"), {\\n    release = true,\\n    locked = true,\\n})\\n\"\n",
+        "exit": 0
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

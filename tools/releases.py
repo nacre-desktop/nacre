@@ -27,10 +27,10 @@ def compositor():
         Path(__file__).resolve().parents[1] / "nacre/shell-tools",
         Path.home() / ".local/share/nacre/shell/tools",
     ):
-        if (directory / "compositor.py").is_file():
+        if (directory / "nacre_native_compositor.py").is_file():
             if str(directory) not in sys.path:
                 sys.path.insert(0, str(directory))
-            return importlib.import_module("compositor")
+            return importlib.import_module("nacre_native_compositor")
     raise RuntimeError("The Nacre compositor service is not installed")
 
 

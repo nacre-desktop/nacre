@@ -1,6 +1,5 @@
 """Execute the real QML niri backend against a non-spawning process fixture."""
 
-import importlib.util
 import json
 from pathlib import Path
 import tempfile
@@ -17,15 +16,12 @@ class NiriQmlTests(unittest.TestCase):
         runner = Path("/usr/lib/qt6/bin/qmltestrunner")
         if not runner.exists():
             self.skipTest("Native Qt Quick Test unavailable")
-        spec = importlib.util.spec_from_file_location(
-            "niri_fixture_state", ROOT / "compositor_backends/niri.py"
-        )
-        niri = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(niri)
+        from native_niri_state import NativeState
+
         fixture = json.loads(
             (ROOT / "tests/fixtures/niri-event-stream.json").read_text()
         )
-        state = niri.State(fixture["outputs"])
+        state = NativeState(fixture["outputs"])
         for event in fixture["events"][:2]:
             state.apply(event)
         with tempfile.TemporaryDirectory() as directory:
@@ -36,7 +32,7 @@ class NiriQmlTests(unittest.TestCase):
                 "Process 1.0 Process.qml\nSplitParser 1.0 SplitParser.qml\nStdioCollector 1.0 StdioCollector.qml\nIpcHandler 1.0 IpcHandler.qml\n"
             )
             (fixtures / "Process.qml").write_text(
-                "import QtQuick\nQtObject {property var command:[];property var environment:({});property bool running:false;property QtObject stdout;property QtObject stderr;signal exited(int exitCode,int exitStatus)}"
+                "import QtQuick\nQtObject {property var command:[];property var environment:({});property bool running:false;property bool stdinEnabled:false;property var writes:[];property QtObject stdout;property QtObject stderr;signal started();signal exited(int exitCode,int exitStatus);function write(data){writes=[...writes,data]}onRunningChanged:if(running)Qt.callLater(started)}"
             )
             (fixtures / "SplitParser.qml").write_text(
                 "import QtQuick\nQtObject {signal read(string data)}"
@@ -151,12 +147,32 @@ Item {
    verify(!backend.focusWindow("niri-window:404"))
    const worker=findChild(backend,"niriActionWorker");verify(worker)
    verify(backend.focusWindow("niri-window:1"));verify(worker.running)
-   compare(worker.command.slice(-3),["focus_window","--window","niri-window:1"])
+   tryVerify(()=>worker.writes.length===1)
+   compare(worker.command,["/fixture/.local/share/nacre/shell/tools/nacre-helper","compositor","serve-actions"])
+   compare(JSON.parse(worker.writes[0]).argv.slice(-3),["focus_window","--window","niri-window:1"])
    verify(backend.closeWindow("niri-window:1"));compare(backend.pendingActions.length,1)
-   worker.running=false;worker.exited(0,0);tryCompare(worker,"running",true)
-   compare(worker.command.slice(-3),["close_window","--window","niri-window:1"])
+   worker.stdout.read(JSON.stringify({id:JSON.parse(worker.writes[0]).id,ok:true}));tryVerify(()=>worker.writes.length===2)
+   compare(JSON.parse(worker.writes[1]).argv.slice(-3),["close_window","--window","niri-window:1"])
    verify(!backend.pinWindow("niri-window:1"));verify(!backend.capabilities.pinWindow)
    verify(!backend.placeWindow("niri-window:1",{x:0,y:0,width:-1,height:10}))
+  }
+  function test_persistent_worker_failure_and_invalid_response_clear_queue(){
+   const worker=findChild(backend,"niriActionWorker");verify(worker);
+   verify(backend.focusWindow("niri-window:1"));tryVerify(()=>worker.writes.length===1);
+   verify(backend.closeWindow("niri-window:1"));compare(backend.pendingActions.length,1);
+   const id=JSON.parse(worker.writes[0]).id;
+   worker.stdout.read(JSON.stringify({id:id,ok:false,error:"fixture action failure"}));wait(1);
+   compare(backend.pendingActions.length,0);compare(backend.activeAction,null);verify(backend.error.includes("fixture action failure"));
+   verify(backend.focusWindow("niri-window:1"));tryVerify(()=>worker.writes.length===2);
+   worker.stdout.read(JSON.stringify({id:"unexpected",ok:true}));wait(1);
+   compare(backend.activeAction,null);compare(backend.pendingActions.length,0);verify(!worker.running);verify(backend.error.includes("Unexpected compositor action response"));
+  }
+  function test_persistent_worker_queue_remains_bounded(){
+   const worker=findChild(backend,"niriActionWorker");verify(worker);
+   verify(backend.focusWindow("niri-window:1"));tryVerify(()=>worker.writes.length===1);
+   for(let index=0;index<64;index++)verify(backend.closeWindow("niri-window:1"));
+   compare(backend.pendingActions.length,64);verify(!backend.closeWindow("niri-window:1"));
+   worker.running=false;worker.exited(1,0);wait(1);compare(backend.activeAction,null);compare(backend.pendingActions.length,0);
   }
   function test_errors_use_actual_catalog_and_pseudo_keeps_machine_state(){
    verify(!backend.pinWindow("niri-window:1"))

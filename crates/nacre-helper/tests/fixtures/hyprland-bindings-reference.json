@@ -1,0 +1,85 @@
+{
+  "source_sha256": "e0c253121be18b66cbc6e149fefb00157ff6b6f6d427dde49135ef499d363859",
+  "lua_sha256": "a9b7f893aee4b4f9fd1744851cdecd43b6aec2ff0066cfd714a8787ed87f133d",
+  "cases": [
+    {
+      "request": {
+        "name": "bindings",
+        "kind": "bindings",
+        "text": "hl.bind(\"SUPER+Q\", hl.dsp.window.close(), {description=\"Close\"})\nhl.define_submap(\"test\", function() hl.bind(\"A\", hl.dsp.exec_cmd(\"printf hello\")) end)\nhl.window_rule({match={class=\"Example\"},floating=true})\n"
+      },
+      "observed": {
+        "stdout": "[{\"action\": {\"args\": {}, \"method\": \"window.close\"}, \"flags\": {\"description\": \"Close\"}, \"keys\": \"SUPER+Q\", \"submap\": \"\"}, {\"action\": {\"args\": [\"printf hello\"], \"method\": \"exec_cmd\"}, \"flags\": {}, \"keys\": \"A\", \"submap\": \"test\"}]\n",
+        "exit": 0
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "rules",
+        "kind": "rules",
+        "text": "hl.bind(\"SUPER+Q\", hl.dsp.window.close(), {description=\"Close\"})\nhl.define_submap(\"test\", function() hl.bind(\"A\", hl.dsp.exec_cmd(\"printf hello\")) end)\nhl.window_rule({match={class=\"Example\"},floating=true})\n"
+      },
+      "observed": {
+        "stdout": "[{\"floating\": true, \"match\": {\"class\": \"Example\"}}]\n",
+        "exit": 0
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "declarations",
+        "kind": "declarations",
+        "text": "hl.bind(\"SUPER+Q\", hl.dsp.window.close(), {description=\"Close\"})\nhl.define_submap(\"test\", function() hl.bind(\"A\", hl.dsp.exec_cmd(\"printf hello\")) end)\nhl.window_rule({match={class=\"Example\"},floating=true})\n"
+      },
+      "observed": {
+        "stdout": "[{\"kind\": \"binding\", \"value\": {\"action\": {\"args\": {}, \"method\": \"window.close\"}, \"flags\": {\"description\": \"Close\"}, \"keys\": \"SUPER+Q\", \"submap\": \"\"}}, {\"kind\": \"binding\", \"value\": {\"action\": {\"args\": [\"printf hello\"], \"method\": \"exec_cmd\"}, \"flags\": {}, \"keys\": \"A\", \"submap\": \"test\"}}, {\"kind\": \"window_rule\", \"value\": {\"floating\": true, \"match\": {\"class\": \"Example\"}}}]\n",
+        "exit": 0
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "bad",
+        "kind": "bad",
+        "text": "hl.bind(\"SUPER+Q\", hl.dsp.window.close(), {description=\"Close\"})\nhl.define_submap(\"test\", function() hl.bind(\"A\", hl.dsp.exec_cmd(\"printf hello\")) end)\nhl.window_rule({match={class=\"Example\"},floating=true})\n"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Unsupported declaration kind\", \"type\": \"ValueError\"}\n",
+        "exit": 1
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "empty",
+        "kind": "bindings",
+        "text": "-- empty\n"
+      },
+      "observed": {
+        "stdout": "[]\n",
+        "exit": 0
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "lua-missing",
+        "kind": "bindings",
+        "text": "hl.bind(\"SUPER+Q\", hl.dsp.window.close(), {description=\"Close\"})\nhl.define_submap(\"test\", function() hl.bind(\"A\", hl.dsp.exec_cmd(\"printf hello\")) end)\nhl.window_rule({match={class=\"Example\"},floating=true})\n",
+        "missing": true
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Lua required for declarative binding checks\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

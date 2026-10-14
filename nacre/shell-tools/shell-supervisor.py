@@ -11,7 +11,7 @@ import subprocess
 import time
 from pathlib import Path
 
-import compositor
+import nacre_native_compositor as compositor
 
 HOME = Path.home()
 ROOT = HOME / ".local/share/nacre/shell"

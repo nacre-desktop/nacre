@@ -1,0 +1,2633 @@
+{
+  "source_sha256": "b1befdc9049d11f53a3fdbf11eab038c5bd5f719f085c06371daecede4889847",
+  "fixture_sha256": "29ecb0b0a011aeb0562be71fe3793b6ab542c7d9e62e9351dbdb94113edbf0f0",
+  "cases": [
+    {
+      "request": {
+        "name": "empty",
+        "method": "configure_monitors",
+        "args": [
+          []
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "single",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "Normal"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "pair",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            },
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.25,
+              "refreshRate": 144.0,
+              "x": -1920,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "Normal"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-1",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 1920,
+                        "height": 1080,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-1",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.25
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-1",
+                "action": {
+                  "Transform": {
+                    "transform": "Normal"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-1",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": -1920,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "no-refresh",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "Normal"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "disconnected",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "absent",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Selected display is disconnected\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "invalid-first",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid output geometry\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-1-unexpected",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 1,
+        "failure": "unexpected"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output configuration was not applied\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-1-OutputWasMissing",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 1,
+        "failure": "OutputWasMissing"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output configuration was not applied\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-1-error",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 1,
+        "failure": "error"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"fixture IPC failure\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-2-unexpected",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 2,
+        "failure": "unexpected"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output configuration was not applied\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-2-OutputWasMissing",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 2,
+        "failure": "OutputWasMissing"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output configuration was not applied\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-2-error",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 2,
+        "failure": "error"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"fixture IPC failure\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-3-unexpected",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 3,
+        "failure": "unexpected"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output configuration was not applied\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "Normal"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-3-OutputWasMissing",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 3,
+        "failure": "OutputWasMissing"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output configuration was not applied\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "Normal"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-3-error",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 3,
+        "failure": "error"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"fixture IPC failure\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "Normal"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-4-unexpected",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 4,
+        "failure": "unexpected"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output configuration was not applied\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "Normal"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-4-OutputWasMissing",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 4,
+        "failure": "OutputWasMissing"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output configuration was not applied\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "Normal"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "failure-4-error",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 4,
+        "failure": "error"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"fixture IPC failure\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "Normal"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "rollback-OutputWasMissing",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 2,
+        "failure": "unexpected",
+        "rollback": "OutputWasMissing"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output configuration was not applied\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.5
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Transform": {
+                    "transform": "90"
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Position": {
+                    "position": {
+                      "Specific": {
+                        "x": 0,
+                        "y": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "rollback-unexpected",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 2,
+        "failure": "unexpected",
+        "rollback": "unexpected"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output change failed and rollback was not accepted\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "rollback-error",
+        "method": "configure_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-2",
+              "width": 2560,
+              "height": 1440,
+              "scale": 1.0,
+              "refreshRate": 144.0,
+              "x": 0,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "failure_at": 2,
+        "failure": "unexpected",
+        "rollback": "error"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"fixture IPC failure\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 144.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Scale": {
+                    "scale": {
+                      "Specific": 1.0
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Output": {
+                "output": "DP-2",
+                "action": {
+                  "Mode": {
+                    "mode": {
+                      "Specific": {
+                        "width": 2560,
+                        "height": 1440,
+                        "refresh": 120.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

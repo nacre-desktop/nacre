@@ -32,6 +32,7 @@ nvml-wrapper = "0.13"
 rustix = { version = "1.1", features = ["fs", "param", "process", "event", "system"] }
 niri-ipc = "26.4.0"
 fancy-regex = "0.16"
+wayland-client = "0.31"
 
 [dev-dependencies]
 flate2 = "1"

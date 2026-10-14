@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Commit one wallpaper palette to the shell, window frame and native choosers."""
 
-import compositor
+import nacre_native_compositor as compositor
 
 import fcntl
 from nacre_i18n import tr

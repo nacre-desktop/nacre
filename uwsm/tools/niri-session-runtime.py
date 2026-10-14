@@ -172,7 +172,7 @@ def command(action, environment=None, home=None):
         raise ValueError("Niri runtime requires an explicit niri session")
     root = home / ".local/share/nacre/niri-on-pc/session"
     shell = root / "home-view/.local/share/nacre/shell"
-    for name in ("source/shell.qml", "tools/compositor_backends/niri.py", "bin/qs"):
+    for name in ("source/shell.qml", "tools/nacre_native_compositor.py", "bin/qs"):
         if not (shell / name).is_file():
             raise ValueError("Prepare the separate niri source before logging in")
     # The same virtual paths serve QML hard-coded helpers and generated bindings.
@@ -280,12 +280,16 @@ def prepare(backend, destination, home, *, stock_niri=False):
     desktop = json.loads(desktop_path.read_text()) if desktop_path.exists() else {}
     (config / "host.kdl").write_text(host_preferences({**desktop, "displays": []}))
     compositor_backend = module(
-        backend / "nacre/shell-tools/compositor_backends/niri.py", "session_compositor"
+        backend / "nacre/shell-tools/nacre_native_compositor.py", "session_compositor"
     )
-    preferences = compositor_backend.Backend().render_desktop_options(desktop)
+    preferences = compositor_backend.render_for_backend(
+        "niri", "render_desktop_options", desktop
+    )
     saved_outputs = desktop.get("compositorDisplays", {}).get("niri")
     if saved_outputs is not None:
-        preferences += compositor_backend.Backend().render_monitors(saved_outputs)
+        preferences += compositor_backend.render_for_backend(
+            "niri", "render_monitors", saved_outputs
+        )
     else:
         # First niri preparation carries across physical scale, not another
         # compositor's layout or unsupported mirroring.

@@ -1,0 +1,2397 @@
+{
+  "source_sha256": "b1befdc9049d11f53a3fdbf11eab038c5bd5f719f085c06371daecede4889847",
+  "fixture_sha256": "29ecb0b0a011aeb0562be71fe3793b6ab542c7d9e62e9351dbdb94113edbf0f0",
+  "cases": [
+    {
+      "request": {
+        "name": "query-monitors",
+        "method": "query",
+        "args": [
+          "monitors"
+        ],
+        "kwargs": {
+          "timeout": 3,
+          "max_bytes": 8192
+        }
+      },
+      "observed": {
+        "stdout": "[{\"id\": \"DP-1\", \"name\": \"DP-1\", \"outputId\": \"DP-1\", \"x\": -1920, \"y\": 0, \"width\": 1920, \"height\": 1080, \"logicalWidth\": 1920, \"logicalHeight\": 1080, \"scale\": 1, \"transform\": 0, \"refreshRate\": 120.0, \"reserved\": [0, 0, 0, 0], \"reservedKnown\": false, \"focused\": false, \"activeWorkspace\": {\"id\": \"niri-workspace:101\", \"workspaceId\": \"niri-workspace:101\", \"index\": 1, \"name\": \"1\", \"outputId\": \"DP-1\", \"monitor\": \"DP-1\", \"active\": true, \"focused\": false, \"urgent\": false, \"activeWindowId\": \"niri-window:1\"}, \"availableModes\": [\"1920x1080@120.000Hz\"]}, {\"id\": \"DP-2\", \"name\": \"DP-2\", \"outputId\": \"DP-2\", \"x\": 0, \"y\": 0, \"width\": 2560, \"height\": 1440, \"logicalWidth\": 960, \"logicalHeight\": 1706, \"scale\": 1.5, \"transform\": 1, \"refreshRate\": 120.0, \"reserved\": [0, 0, 0, 0], \"reservedKnown\": false, \"focused\": true, \"activeWorkspace\": {\"id\": \"niri-workspace:9007199254740993\", \"workspaceId\": \"niri-workspace:9007199254740993\", \"index\": 1, \"name\": \"coding\", \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"active\": true, \"focused\": true, \"urgent\": false, \"activeWindowId\": \"niri-window:9007199254740995\"}, \"availableModes\": [\"2560x1440@120.000Hz\"]}]\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 8192
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-all_monitors",
+        "method": "query",
+        "args": [
+          "all_monitors"
+        ],
+        "kwargs": {
+          "timeout": 3,
+          "max_bytes": 8192
+        }
+      },
+      "observed": {
+        "stdout": "[{\"id\": \"DP-1\", \"name\": \"DP-1\", \"outputId\": \"DP-1\", \"x\": -1920, \"y\": 0, \"width\": 1920, \"height\": 1080, \"logicalWidth\": 1920, \"logicalHeight\": 1080, \"scale\": 1, \"transform\": 0, \"refreshRate\": 120.0, \"reserved\": [0, 0, 0, 0], \"reservedKnown\": false, \"focused\": false, \"activeWorkspace\": {\"id\": \"niri-workspace:101\", \"workspaceId\": \"niri-workspace:101\", \"index\": 1, \"name\": \"1\", \"outputId\": \"DP-1\", \"monitor\": \"DP-1\", \"active\": true, \"focused\": false, \"urgent\": false, \"activeWindowId\": \"niri-window:1\"}, \"availableModes\": [\"1920x1080@120.000Hz\"]}, {\"id\": \"DP-2\", \"name\": \"DP-2\", \"outputId\": \"DP-2\", \"x\": 0, \"y\": 0, \"width\": 2560, \"height\": 1440, \"logicalWidth\": 960, \"logicalHeight\": 1706, \"scale\": 1.5, \"transform\": 1, \"refreshRate\": 120.0, \"reserved\": [0, 0, 0, 0], \"reservedKnown\": false, \"focused\": true, \"activeWorkspace\": {\"id\": \"niri-workspace:9007199254740993\", \"workspaceId\": \"niri-workspace:9007199254740993\", \"index\": 1, \"name\": \"coding\", \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"active\": true, \"focused\": true, \"urgent\": false, \"activeWindowId\": \"niri-window:9007199254740995\"}, \"availableModes\": [\"2560x1440@120.000Hz\"]}]\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 8192
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-workspaces",
+        "method": "query",
+        "args": [
+          "workspaces"
+        ],
+        "kwargs": {
+          "timeout": 3,
+          "max_bytes": 8192
+        }
+      },
+      "observed": {
+        "stdout": "[{\"id\": \"niri-workspace:101\", \"workspaceId\": \"niri-workspace:101\", \"index\": 1, \"name\": \"1\", \"outputId\": \"DP-1\", \"monitor\": \"DP-1\", \"active\": true, \"focused\": false, \"urgent\": false, \"activeWindowId\": \"niri-window:1\"}, {\"id\": \"niri-workspace:102\", \"workspaceId\": \"niri-workspace:102\", \"index\": 2, \"name\": \"2\", \"outputId\": \"DP-1\", \"monitor\": \"DP-1\", \"active\": false, \"focused\": false, \"urgent\": false, \"activeWindowId\": null}, {\"id\": \"niri-workspace:9007199254740993\", \"workspaceId\": \"niri-workspace:9007199254740993\", \"index\": 1, \"name\": \"coding\", \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"active\": true, \"focused\": true, \"urgent\": false, \"activeWindowId\": \"niri-window:9007199254740995\"}, {\"id\": \"niri-workspace:202\", \"workspaceId\": \"niri-workspace:202\", \"index\": 2, \"name\": \"2\", \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"active\": false, \"focused\": false, \"urgent\": true, \"activeWindowId\": \"niri-window:3\"}, {\"id\": \"niri-workspace:203\", \"workspaceId\": \"niri-workspace:203\", \"index\": 3, \"name\": \"3\", \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"active\": false, \"focused\": false, \"urgent\": false, \"activeWindowId\": null}]\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 8192
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-windows",
+        "method": "query",
+        "args": [
+          "windows"
+        ],
+        "kwargs": {
+          "timeout": 3,
+          "max_bytes": 8192
+        }
+      },
+      "observed": {
+        "stdout": "[{\"id\": \"niri-window:1\", \"windowId\": \"niri-window:1\", \"address\": \"niri-window:1\", \"appId\": \"org.example.Test\", \"class\": \"org.example.Test\", \"title\": \"Test 1\", \"pid\": 123, \"workspaceId\": \"niri-workspace:101\", \"workspace\": {\"id\": \"niri-workspace:101\", \"workspaceId\": \"niri-workspace:101\", \"index\": 1, \"name\": \"1\", \"outputId\": \"DP-1\", \"monitor\": \"DP-1\", \"active\": true, \"focused\": false, \"urgent\": false, \"activeWindowId\": \"niri-window:1\"}, \"outputId\": \"DP-1\", \"monitor\": \"DP-1\", \"geometry\": {\"x\": -1892, \"y\": 44, \"width\": 500, \"height\": 400}, \"geometryKnown\": true, \"moving\": false, \"at\": [-1892, 44], \"size\": [500, 400], \"floating\": false, \"focused\": false, \"urgent\": true, \"hidden\": false, \"pinned\": false, \"fullscreen\": 0, \"fullscreenMode\": 0, \"fullscreenKnown\": false}, {\"id\": \"niri-window:9007199254740995\", \"windowId\": \"niri-window:9007199254740995\", \"address\": \"niri-window:9007199254740995\", \"appId\": \"org.example.Test\", \"class\": \"org.example.Test\", \"title\": \"Test 9007199254740995\", \"pid\": 123, \"workspaceId\": \"niri-workspace:9007199254740993\", \"workspace\": {\"id\": \"niri-workspace:9007199254740993\", \"workspaceId\": \"niri-workspace:9007199254740993\", \"index\": 1, \"name\": \"coding\", \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"active\": true, \"focused\": true, \"urgent\": false, \"activeWindowId\": \"niri-window:9007199254740995\"}, \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"geometry\": {\"x\": 28, \"y\": 44, \"width\": 500, \"height\": 400}, \"geometryKnown\": true, \"moving\": false, \"at\": [28, 44], \"size\": [500, 400], \"floating\": true, \"focused\": true, \"urgent\": false, \"hidden\": false, \"pinned\": false, \"fullscreen\": 0, \"fullscreenMode\": 0, \"fullscreenKnown\": false}, {\"id\": \"niri-window:3\", \"windowId\": \"niri-window:3\", \"address\": \"niri-window:3\", \"appId\": \"org.example.Test\", \"class\": \"org.example.Test\", \"title\": \"Test 3\", \"pid\": 123, \"workspaceId\": \"niri-workspace:202\", \"workspace\": {\"id\": \"niri-workspace:202\", \"workspaceId\": \"niri-workspace:202\", \"index\": 2, \"name\": \"2\", \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"active\": false, \"focused\": false, \"urgent\": true, \"activeWindowId\": \"niri-window:3\"}, \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"geometry\": {\"x\": 28, \"y\": 44, \"width\": 500, \"height\": 400}, \"geometryKnown\": true, \"moving\": false, \"at\": [28, 44], \"size\": [500, 400], \"floating\": false, \"focused\": false, \"urgent\": true, \"hidden\": false, \"pinned\": false, \"fullscreen\": 0, \"fullscreenMode\": 0, \"fullscreenKnown\": false}]\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 8192
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-active_window",
+        "method": "query",
+        "args": [
+          "active_window"
+        ],
+        "kwargs": {
+          "timeout": 3,
+          "max_bytes": 8192
+        }
+      },
+      "observed": {
+        "stdout": "{\"id\": \"niri-window:9007199254740995\", \"windowId\": \"niri-window:9007199254740995\", \"address\": \"niri-window:9007199254740995\", \"appId\": \"org.example.Test\", \"class\": \"org.example.Test\", \"title\": \"Test 9007199254740995\", \"pid\": 123, \"workspaceId\": \"niri-workspace:9007199254740993\", \"workspace\": {\"id\": \"niri-workspace:9007199254740993\", \"workspaceId\": \"niri-workspace:9007199254740993\", \"index\": 1, \"name\": \"coding\", \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"active\": true, \"focused\": true, \"urgent\": false, \"activeWindowId\": \"niri-window:9007199254740995\"}, \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"geometry\": {\"x\": 28, \"y\": 44, \"width\": 500, \"height\": 400}, \"geometryKnown\": true, \"moving\": false, \"at\": [28, 44], \"size\": [500, 400], \"floating\": true, \"focused\": true, \"urgent\": false, \"hidden\": false, \"pinned\": false, \"fullscreen\": 0, \"fullscreenMode\": 0, \"fullscreenKnown\": false}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 8192
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-active_workspace",
+        "method": "query",
+        "args": [
+          "active_workspace"
+        ],
+        "kwargs": {
+          "timeout": 3,
+          "max_bytes": 8192
+        }
+      },
+      "observed": {
+        "stdout": "{\"id\": \"niri-workspace:9007199254740993\", \"workspaceId\": \"niri-workspace:9007199254740993\", \"index\": 1, \"name\": \"coding\", \"outputId\": \"DP-2\", \"monitor\": \"DP-2\", \"active\": true, \"focused\": true, \"urgent\": false, \"activeWindowId\": \"niri-window:9007199254740995\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 8192
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-cursor",
+        "method": "query",
+        "args": [
+          "cursor"
+        ],
+        "kwargs": {
+          "timeout": 3,
+          "max_bytes": 8192
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"niri does not expose cursor through this interface\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-instances",
+        "method": "query",
+        "args": [
+          "instances"
+        ],
+        "kwargs": {
+          "timeout": 3,
+          "max_bytes": 8192
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"niri does not expose instances through this interface\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-unknown",
+        "method": "query",
+        "args": [
+          "unknown"
+        ],
+        "kwargs": {
+          "timeout": 3,
+          "max_bytes": 8192
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Unknown compositor query\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-result-active_window-True",
+        "method": "query_result",
+        "args": [
+          "active_window"
+        ],
+        "kwargs": {
+          "check": true
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"{\\\"id\\\": \\\"niri-window:9007199254740995\\\", \\\"windowId\\\": \\\"niri-window:9007199254740995\\\", \\\"address\\\": \\\"niri-window:9007199254740995\\\", \\\"appId\\\": \\\"org.example.Test\\\", \\\"class\\\": \\\"org.example.Test\\\", \\\"title\\\": \\\"Test 9007199254740995\\\", \\\"pid\\\": 123, \\\"workspaceId\\\": \\\"niri-workspace:9007199254740993\\\", \\\"workspace\\\": {\\\"id\\\": \\\"niri-workspace:9007199254740993\\\", \\\"workspaceId\\\": \\\"niri-workspace:9007199254740993\\\", \\\"index\\\": 1, \\\"name\\\": \\\"coding\\\", \\\"outputId\\\": \\\"DP-2\\\", \\\"monitor\\\": \\\"DP-2\\\", \\\"active\\\": true, \\\"focused\\\": true, \\\"urgent\\\": false, \\\"activeWindowId\\\": \\\"niri-window:9007199254740995\\\"}, \\\"outputId\\\": \\\"DP-2\\\", \\\"monitor\\\": \\\"DP-2\\\", \\\"geometry\\\": {\\\"x\\\": 28, \\\"y\\\": 44, \\\"width\\\": 500, \\\"height\\\": 400}, \\\"geometryKnown\\\": true, \\\"moving\\\": false, \\\"at\\\": [28, 44], \\\"size\\\": [500, 400], \\\"floating\\\": true, \\\"focused\\\": true, \\\"urgent\\\": false, \\\"hidden\\\": false, \\\"pinned\\\": false, \\\"fullscreen\\\": 0, \\\"fullscreenMode\\\": 0, \\\"fullscreenKnown\\\": false}\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-result-active_window-False",
+        "method": "query_result",
+        "args": [
+          "active_window"
+        ],
+        "kwargs": {
+          "check": false
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"{\\\"id\\\": \\\"niri-window:9007199254740995\\\", \\\"windowId\\\": \\\"niri-window:9007199254740995\\\", \\\"address\\\": \\\"niri-window:9007199254740995\\\", \\\"appId\\\": \\\"org.example.Test\\\", \\\"class\\\": \\\"org.example.Test\\\", \\\"title\\\": \\\"Test 9007199254740995\\\", \\\"pid\\\": 123, \\\"workspaceId\\\": \\\"niri-workspace:9007199254740993\\\", \\\"workspace\\\": {\\\"id\\\": \\\"niri-workspace:9007199254740993\\\", \\\"workspaceId\\\": \\\"niri-workspace:9007199254740993\\\", \\\"index\\\": 1, \\\"name\\\": \\\"coding\\\", \\\"outputId\\\": \\\"DP-2\\\", \\\"monitor\\\": \\\"DP-2\\\", \\\"active\\\": true, \\\"focused\\\": true, \\\"urgent\\\": false, \\\"activeWindowId\\\": \\\"niri-window:9007199254740995\\\"}, \\\"outputId\\\": \\\"DP-2\\\", \\\"monitor\\\": \\\"DP-2\\\", \\\"geometry\\\": {\\\"x\\\": 28, \\\"y\\\": 44, \\\"width\\\": 500, \\\"height\\\": 400}, \\\"geometryKnown\\\": true, \\\"moving\\\": false, \\\"at\\\": [28, 44], \\\"size\\\": [500, 400], \\\"floating\\\": true, \\\"focused\\\": true, \\\"urgent\\\": false, \\\"hidden\\\": false, \\\"pinned\\\": false, \\\"fullscreen\\\": 0, \\\"fullscreenMode\\\": 0, \\\"fullscreenKnown\\\": false}\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-result-cursor-True",
+        "method": "query_result",
+        "args": [
+          "cursor"
+        ],
+        "kwargs": {
+          "check": true
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"niri does not expose cursor through this interface\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-result-cursor-False",
+        "method": "query_result",
+        "args": [
+          "cursor"
+        ],
+        "kwargs": {
+          "check": false
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 1, \"stdout\": \"\", \"stderr\": \"niri does not expose cursor through this interface\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-result-unknown-True",
+        "method": "query_result",
+        "args": [
+          "unknown"
+        ],
+        "kwargs": {
+          "check": true
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Unknown compositor query\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-result-unknown-False",
+        "method": "query_result",
+        "args": [
+          "unknown"
+        ],
+        "kwargs": {
+          "check": false
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 1, \"stdout\": \"\", \"stderr\": \"Unknown compositor query\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-empty",
+        "method": "render_keyboard",
+        "args": [
+          {}
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"input {\\n    keyboard {\\n        xkb {\\n        }\\n    }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-fields",
+        "method": "render_keyboard",
+        "args": [
+          {
+            "layout": "us,tr",
+            "model": "pc105",
+            "variant": "",
+            "options": "caps:escape",
+            "rules": "evdev"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"input {\\n    keyboard {\\n        xkb {\\n            layout \\\"us,tr\\\"\\n            model \\\"pc105\\\"\\n            variant \\\"\\\"\\n            options \\\"caps:escape\\\"\\n            rules \\\"evdev\\\"\\n        }\\n    }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-unicode",
+        "method": "render_keyboard",
+        "args": [
+          {
+            "layout": "tr",
+            "options": "quote\"\\\n"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"input {\\n    keyboard {\\n        xkb {\\n            layout \\\"tr\\\"\\n            options \\\"quote\\\\\\\"\\\\\\\\\\\\n\\\"\\n        }\\n    }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "keyboard-invalid",
+        "method": "render_keyboard",
+        "args": [
+          {
+            "invalid": "us"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Unknown keyboard option\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-empty",
+        "method": "render_desktop_options",
+        "args": [
+          {}
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-all-True",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "animations": true,
+            "blur": true,
+            "shadow": true,
+            "followMouse": true,
+            "naturalScroll": true,
+            "gapsIn": 6,
+            "borderSize": 2,
+            "rounding": 12
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"animations {  }\\nlayout {\\n    gaps 6\\n    border { width 2; }\\n    focus-ring { width 2; }\\n}\\nwindow-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 12\\n    clip-to-geometry true\\n}\\nlayer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur true; }\\n}\\nwindow-rule {\\n    shadow { on; }\\n    background-effect { blur true; }\\n}\\ninput {\\n    focus-follows-mouse\\n    touchpad { natural-scroll; scroll-factor 0.25; }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-all-False",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "animations": false,
+            "blur": false,
+            "shadow": false,
+            "followMouse": false,
+            "naturalScroll": false,
+            "gapsIn": 6,
+            "borderSize": 2,
+            "rounding": 12
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"animations { off; }\\nlayout {\\n    gaps 6\\n    border { width 2; }\\n    focus-ring { width 2; }\\n}\\nwindow-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 12\\n    clip-to-geometry true\\n}\\nlayer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur false; }\\n}\\nwindow-rule {\\n    shadow { off; }\\n    background-effect { blur false; }\\n}\\ninput {\\n    touchpad { scroll-factor 0.25; }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-animations-True",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "animations": true
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"animations {  }\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-animations-False",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "animations": false
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"animations { off; }\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-animations-true",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "animations": "true"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-animations-1",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "animations": 1
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-animations-None",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "animations": null
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-blur-True",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "blur": true
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"layer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur true; }\\n}\\nwindow-rule {\\n    background-effect { blur true; }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-blur-False",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "blur": false
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"layer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur false; }\\n}\\nwindow-rule {\\n    background-effect { blur false; }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-blur-true",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "blur": "true"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-blur-1",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "blur": 1
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-blur-None",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "blur": null
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-shadow-True",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "shadow": true
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"window-rule {\\n    shadow { on; }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-shadow-False",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "shadow": false
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"window-rule {\\n    shadow { off; }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-shadow-true",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "shadow": "true"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-shadow-1",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "shadow": 1
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-shadow-None",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "shadow": null
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-followMouse-True",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "followMouse": true
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"input {\\n    focus-follows-mouse\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-followMouse-False",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "followMouse": false
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"input {\\n    \\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-followMouse-true",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "followMouse": "true"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-followMouse-1",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "followMouse": 1
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-followMouse-None",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "followMouse": null
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-naturalScroll-True",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "naturalScroll": true
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"input {\\n    touchpad { natural-scroll; scroll-factor 0.25; }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-naturalScroll-False",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "naturalScroll": false
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"input {\\n    touchpad { scroll-factor 0.25; }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-naturalScroll-true",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "naturalScroll": "true"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-naturalScroll-1",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "naturalScroll": 1
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-naturalScroll-None",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "naturalScroll": null
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor toggle\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-gapsIn-0",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "gapsIn": 0
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"layout {\\n    gaps 0\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-gapsIn-100",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "gapsIn": 100
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"layout {\\n    gaps 100\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-gapsIn-1.5",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "gapsIn": 1.5
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"layout {\\n    gaps 1.5\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-gapsIn--1",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "gapsIn": -1
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-gapsIn-101",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "gapsIn": 101
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-gapsIn-True",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "gapsIn": true
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-gapsIn-1; off",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "gapsIn": "1; off"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-gapsIn-None",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "gapsIn": null
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-borderSize-0",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "borderSize": 0
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"layout {\\n    border { width 0; }\\n    focus-ring { width 0; }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-borderSize-100",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "borderSize": 100
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"layout {\\n    border { width 100; }\\n    focus-ring { width 100; }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-borderSize-1.5",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "borderSize": 1.5
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"layout {\\n    border { width 1.5; }\\n    focus-ring { width 1.5; }\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-borderSize--1",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "borderSize": -1
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-borderSize-101",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "borderSize": 101
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-borderSize-True",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "borderSize": true
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-borderSize-1; off",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "borderSize": "1; off"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-borderSize-None",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "borderSize": null
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-rounding-0",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "rounding": 0
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"window-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 0\\n    clip-to-geometry true\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-rounding-100",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "rounding": 100
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"window-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 100\\n    clip-to-geometry true\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-rounding-1.5",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "rounding": 1.5
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"window-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 1.5\\n    clip-to-geometry true\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-rounding--1",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "rounding": -1
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-rounding-101",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "rounding": 101
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-rounding-True",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "rounding": true
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-rounding-1; off",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "rounding": "1; off"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dimension-rounding-None",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "rounding": null
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid compositor dimension\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "desktop-unknown-ignored",
+        "method": "render_desktop_options",
+        "args": [
+          {
+            "unknown": "value"
+          }
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitors-empty",
+        "method": "render_monitors",
+        "args": [
+          []
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-transform-0",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0,
+              "transform": 0
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"output \\\"DP-1\\\" {\\n    mode \\\"1920x1080@60.000\\\"\\n    scale 1.0\\n    position x=-1920 y=0\\n    transform \\\"normal\\\"\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-transform-1",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0,
+              "transform": 1
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"output \\\"DP-1\\\" {\\n    mode \\\"1920x1080@60.000\\\"\\n    scale 1.0\\n    position x=-1920 y=0\\n    transform \\\"90\\\"\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-transform-2",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0,
+              "transform": 2
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"output \\\"DP-1\\\" {\\n    mode \\\"1920x1080@60.000\\\"\\n    scale 1.0\\n    position x=-1920 y=0\\n    transform \\\"180\\\"\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-transform-3",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0,
+              "transform": 3
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"output \\\"DP-1\\\" {\\n    mode \\\"1920x1080@60.000\\\"\\n    scale 1.0\\n    position x=-1920 y=0\\n    transform \\\"270\\\"\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-transform-4",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0,
+              "transform": 4
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"output \\\"DP-1\\\" {\\n    mode \\\"1920x1080@60.000\\\"\\n    scale 1.0\\n    position x=-1920 y=0\\n    transform \\\"flipped\\\"\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-transform-5",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0,
+              "transform": 5
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"output \\\"DP-1\\\" {\\n    mode \\\"1920x1080@60.000\\\"\\n    scale 1.0\\n    position x=-1920 y=0\\n    transform \\\"flipped-90\\\"\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-transform-6",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0,
+              "transform": 6
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"output \\\"DP-1\\\" {\\n    mode \\\"1920x1080@60.000\\\"\\n    scale 1.0\\n    position x=-1920 y=0\\n    transform \\\"flipped-180\\\"\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-transform-7",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0,
+              "transform": 7
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"output \\\"DP-1\\\" {\\n    mode \\\"1920x1080@60.000\\\"\\n    scale 1.0\\n    position x=-1920 y=0\\n    transform \\\"flipped-270\\\"\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-invalid-name-",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid output name\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-invalid-name-bad\n",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "bad\n",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid output name\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-invalid-mirrorOf-DP-2",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0,
+              "mirrorOf": "DP-2"
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Output mirroring is unavailable on niri\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-invalid-disabled-True",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0,
+              "disabled": true
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Disabling outputs is unavailable in this display transaction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-invalid-scale-0",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid output geometry\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-invalid-scale-True",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": true,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid output geometry\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-invalid-width-32769",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 32769,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid output geometry\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-invalid-refreshRate-1001",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 1001,
+              "x": -1920,
+              "y": 0
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid output geometry\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitor-invalid-transform-8",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0,
+              "transform": 8
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid output geometry\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "monitors-pair",
+        "method": "render_monitors",
+        "args": [
+          [
+            {
+              "name": "DP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.0,
+              "refreshRate": 60.0,
+              "x": -1920,
+              "y": 0
+            },
+            {
+              "name": "eDP-1",
+              "width": 1920,
+              "height": 1080,
+              "scale": 1.25,
+              "refreshRate": 59.95,
+              "x": 0,
+              "y": 0
+            }
+          ]
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"output \\\"DP-1\\\" {\\n    mode \\\"1920x1080@60.000\\\"\\n    scale 1.0\\n    position x=-1920 y=0\\n    transform \\\"normal\\\"\\n}\\noutput \\\"eDP-1\\\" {\\n    mode \\\"1920x1080@59.950\\\"\\n    scale 1.25\\n    position x=0 y=0\\n    transform \\\"normal\\\"\\n}\\n\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-niri-window:0",
+        "method": "valid_window_id",
+        "args": [
+          "niri-window:0"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-niri-window:0",
+        "method": "window_job_token",
+        "args": [
+          "niri-window:0"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"0\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-niri-window:18446744073709551615",
+        "method": "valid_window_id",
+        "args": [
+          "niri-window:18446744073709551615"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-niri-window:18446744073709551615",
+        "method": "window_job_token",
+        "args": [
+          "niri-window:18446744073709551615"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"18446744073709551615\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-niri-window:01",
+        "method": "valid_window_id",
+        "args": [
+          "niri-window:01"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-niri-window:01",
+        "method": "window_job_token",
+        "args": [
+          "niri-window:01"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid opaque window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-bad",
+        "method": "valid_window_id",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-bad",
+        "method": "window_job_token",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid opaque window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-True",
+        "method": "valid_window_id",
+        "args": [
+          true
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-True",
+        "method": "window_job_token",
+        "args": [
+          true
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid opaque window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-None",
+        "method": "valid_window_id",
+        "args": [
+          null
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-None",
+        "method": "window_job_token",
+        "args": [
+          null
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid opaque window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "path-palette",
+        "method": "config_path",
+        "args": [
+          "/case/home",
+          "palette"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"/case/home/.config/nacre/niri/palette.kdl\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "path-desktop",
+        "method": "config_path",
+        "args": [
+          "/case/home",
+          "desktop"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"/case/home/.config/nacre/niri/desktop.kdl\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "path-monitor",
+        "method": "config_path",
+        "args": [
+          "/case/home",
+          "monitor"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"/case/home/.config/nacre/niri/monitor.kdl\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "path-profile",
+        "method": "config_path",
+        "args": [
+          "/case/home",
+          "profile"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"/case/home/.config/nacre/niri/profile.kdl\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "path-bad",
+        "method": "config_path",
+        "args": [
+          "/case/home",
+          "bad"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Unknown compositor configuration\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "legacy-power",
+        "method": "legacy_power_binding",
+        "args": [],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "\"\"\n",
+        "exit": 0,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unavailable-option",
+        "method": "get_desktop_option",
+        "args": [
+          "blur"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Niri does not expose resolved configuration options\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

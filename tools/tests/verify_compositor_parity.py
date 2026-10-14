@@ -76,9 +76,7 @@ def probe(repo, backend, output):
             )
 
         def facade(*args):
-            return run(
-                ["python3", str(repo / "nacre/shell-tools/compositor.py"), *args]
-            )
+            return run([str(repo / "target/release/nacre-helper"), "compositor", *args])
 
         def query(name):
             return json.loads(facade("query", name).stdout)

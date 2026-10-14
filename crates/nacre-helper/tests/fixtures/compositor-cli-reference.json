@@ -1,0 +1,900 @@
+{
+  "source_sha256": "b7fa8634e202599af946fd828fc8579b9c9db84b0836538747ac0800e8d555fc",
+  "cases": [
+    {
+      "request": {
+        "name": "action-0",
+        "argv": [
+          "action",
+          "reload"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "reload",
+            "args": [],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-1",
+        "argv": [
+          "action",
+          "logout"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "logout",
+            "args": [],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-2",
+        "argv": [
+          "action",
+          "toggle_workspace_floating"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "toggle_workspace_floating",
+            "args": [],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-3",
+        "argv": [
+          "action",
+          "switch_workspace",
+          "--workspace",
+          "2"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "switch_workspace",
+            "args": [
+              "2"
+            ],
+            "kwargs": {
+              "current_monitor": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-4",
+        "argv": [
+          "action",
+          "switch_workspace",
+          "--workspace",
+          "{\"output\":\"DP-1\",\"index\":2}",
+          "--current-monitor",
+          "false"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "switch_workspace",
+            "args": [
+              {
+                "output": "DP-1",
+                "index": 2
+              }
+            ],
+            "kwargs": {
+              "current_monitor": false
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-5",
+        "argv": [
+          "action",
+          "move_workspace",
+          "--workspace",
+          "2",
+          "--monitor",
+          "DP-1"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "move_workspace",
+            "args": [
+              "2",
+              "DP-1"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-6",
+        "argv": [
+          "action",
+          "move_window",
+          "--window",
+          "0xabc",
+          "--workspace",
+          "3",
+          "--follow",
+          "true"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "move_window",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {
+              "workspace": "3",
+              "follow": true,
+              "x": null,
+              "y": null
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-7",
+        "argv": [
+          "action",
+          "move_window",
+          "--window",
+          "0xabc",
+          "--x",
+          "-30",
+          "--y",
+          "40"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "move_window",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {
+              "workspace": null,
+              "follow": false,
+              "x": -30,
+              "y": 40
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-8",
+        "argv": [
+          "action",
+          "fullscreen_window"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "fullscreen_window",
+            "args": [
+              ""
+            ],
+            "kwargs": {
+              "mode": "fullscreen"
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-9",
+        "argv": [
+          "action",
+          "resize_window",
+          "--width",
+          "600",
+          "--height",
+          "400",
+          "--relative",
+          "true"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "resize_window",
+            "args": [
+              "",
+              600,
+              400
+            ],
+            "kwargs": {
+              "relative": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-10",
+        "argv": [
+          "action",
+          "focus_direction",
+          "--direction",
+          "left"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "focus_direction",
+            "args": [
+              "left"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-11",
+        "argv": [
+          "action",
+          "move_direction",
+          "--direction",
+          "down"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "move_direction",
+            "args": [
+              "down"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-12",
+        "argv": [
+          "action",
+          "cycle_window"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "cycle_window",
+            "args": [
+              null
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-13",
+        "argv": [
+          "action",
+          "place_window",
+          "--window",
+          "0xabc",
+          "--x",
+          "-30",
+          "--y",
+          "40",
+          "--width",
+          "600",
+          "--height",
+          "400"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "place_window",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {
+              "x": -30,
+              "y": 40,
+              "width": 600,
+              "height": 400
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-14",
+        "argv": [
+          "action",
+          "focus_window",
+          "--window",
+          "0xabc"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "focus_window",
+            "args": [
+              "0xabc"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-15",
+        "argv": [
+          "action",
+          "close_window"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "close_window",
+            "args": [
+              ""
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-16",
+        "argv": [
+          "action",
+          "kill_window"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "kill_window",
+            "args": [
+              ""
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-17",
+        "argv": [
+          "action",
+          "float_window"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "float_window",
+            "args": [
+              ""
+            ],
+            "kwargs": {
+              "action": "toggle"
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-18",
+        "argv": [
+          "action",
+          "pin_window",
+          "--action",
+          "enable"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "pin_window",
+            "args": [
+              ""
+            ],
+            "kwargs": {
+              "action": "enable"
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-19",
+        "argv": [
+          "action",
+          "dpms",
+          "--action",
+          "off",
+          "--monitor",
+          "DP-1"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "dpms",
+            "args": [
+              "off",
+              "DP-1"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-20",
+        "argv": [
+          "action",
+          "set_cursor",
+          "--theme",
+          "Example",
+          "--size",
+          "24"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "set_cursor",
+            "args": [
+              "Example",
+              24
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-21",
+        "argv": [
+          "action",
+          "set_options",
+          "--options",
+          "{\"general\":{\"gaps_in\":6}}"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "set_options",
+            "args": [
+              {
+                "general": {
+                  "gaps_in": 6
+                }
+              }
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-22",
+        "argv": [
+          "action",
+          "configure_monitors",
+          "--records",
+          "[]"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "configure_monitors",
+            "args": [
+              []
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "action-23",
+        "argv": [
+          "action",
+          "notify",
+          "--icon",
+          "1",
+          "--timeout-ms",
+          "5000",
+          "--message",
+          "Hello"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "notify",
+            "args": [
+              1,
+              5000,
+              "0",
+              "Hello"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-windows",
+        "argv": [
+          "query",
+          "windows"
+        ]
+      },
+      "observed": {
+        "stdout": "[]\n",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "query",
+            "args": [
+              "windows"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-active_window",
+        "argv": [
+          "query",
+          "active_window"
+        ]
+      },
+      "observed": {
+        "stdout": "[]\n",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "query",
+            "args": [
+              "active_window"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "query-monitors",
+        "argv": [
+          "query",
+          "monitors"
+        ]
+      },
+      "observed": {
+        "stdout": "[]\n",
+        "stderr": "",
+        "exit": 0,
+        "calls": [
+          {
+            "method": "query",
+            "args": [
+              "monitors"
+            ],
+            "kwargs": {}
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "capabilities",
+        "argv": [
+          "capabilities"
+        ]
+      },
+      "observed": {
+        "stdout": "{\"backend\": \"hyprland\", \"capabilities\": {\"stableWorkspaceIndices\": true, \"globalWorkspaces\": true, \"perOutputWorkspaces\": false, \"scrollingLayout\": false, \"floatingPlacement\": true, \"pinWindow\": true, \"windowCapture\": true, \"windowHide\": true, \"windowTrash\": true, \"scratchpad\": true, \"windowGroups\": true, \"windowForceKill\": true, \"pseudoTiling\": true, \"layoutSplit\": true, \"keymaps\": true, \"nonConsumingShortcuts\": true, \"bindingIntrospection\": true, \"monitorMirroring\": true, \"fullscreenState\": true}}\n",
+        "stderr": "",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "missing",
+        "argv": []
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: compositor.py [-h] {events,capabilities,query,action} ...\ncompositor.py: error: the following arguments are required: command\n",
+        "exit": 2,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "bad-query",
+        "argv": [
+          "query",
+          "bad"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: compositor.py query [-h]\n                           {monitors,all_monitors,workspaces,windows,active_window,active_workspace,cursor,instances,bindings}\ncompositor.py query: error: argument name: invalid choice: 'bad' (choose from 'monitors', 'all_monitors', 'workspaces', 'windows', 'active_window', 'active_workspace', 'cursor', 'instances', 'bindings')\n",
+        "exit": 2,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "bad-action",
+        "argv": [
+          "action",
+          "bad"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: compositor.py action [-h] [--direction DIRECTION] [--window WINDOW]\n                            [--workspace WORKSPACE] [--monitor MONITOR]\n                            [--mode MODE] [--action ACTION] [--theme THEME]\n                            [--message MESSAGE] [--color COLOR]\n                            [--records RECORDS] [--options OPTIONS]\n                            [--width WIDTH] [--height HEIGHT] [--x X] [--y Y]\n                            [--size SIZE] [--icon ICON]\n                            [--timeout-ms TIMEOUT_MS]\n                            [--relative {true,false}] [--follow {true,false}]\n                            [--current-monitor {true,false}]\n                            {reload,logout,switch_workspace,focus_window,focus_direction,cycle_window,move_direction,close_window,kill_window,move_window,place_window,move_workspace,fullscreen_window,resize_window,float_window,pin_window,dpms,set_cursor,set_options,configure_monitors,toggle_workspace_floating,notify}\ncompositor.py action: error: argument name: invalid choice: 'bad' (choose from 'reload', 'logout', 'switch_workspace', 'focus_window', 'focus_direction', 'cycle_window', 'move_direction', 'close_window', 'kill_window', 'move_window', 'place_window', 'move_workspace', 'fullscreen_window', 'resize_window', 'float_window', 'pin_window', 'dpms', 'set_cursor', 'set_options', 'configure_monitors', 'toggle_workspace_floating', 'notify')\n",
+        "exit": 2,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "bad-integer",
+        "argv": [
+          "action",
+          "resize_window",
+          "--width",
+          "oops"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: compositor.py action [-h] [--direction DIRECTION] [--window WINDOW]\n                            [--workspace WORKSPACE] [--monitor MONITOR]\n                            [--mode MODE] [--action ACTION] [--theme THEME]\n                            [--message MESSAGE] [--color COLOR]\n                            [--records RECORDS] [--options OPTIONS]\n                            [--width WIDTH] [--height HEIGHT] [--x X] [--y Y]\n                            [--size SIZE] [--icon ICON]\n                            [--timeout-ms TIMEOUT_MS]\n                            [--relative {true,false}] [--follow {true,false}]\n                            [--current-monitor {true,false}]\n                            {reload,logout,switch_workspace,focus_window,focus_direction,cycle_window,move_direction,close_window,kill_window,move_window,place_window,move_workspace,fullscreen_window,resize_window,float_window,pin_window,dpms,set_cursor,set_options,configure_monitors,toggle_workspace_floating,notify}\ncompositor.py action: error: argument --width: invalid int value: 'oops'\n",
+        "exit": 2,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "bad-bool",
+        "argv": [
+          "action",
+          "move_window",
+          "--follow",
+          "yes"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: compositor.py action [-h] [--direction DIRECTION] [--window WINDOW]\n                            [--workspace WORKSPACE] [--monitor MONITOR]\n                            [--mode MODE] [--action ACTION] [--theme THEME]\n                            [--message MESSAGE] [--color COLOR]\n                            [--records RECORDS] [--options OPTIONS]\n                            [--width WIDTH] [--height HEIGHT] [--x X] [--y Y]\n                            [--size SIZE] [--icon ICON]\n                            [--timeout-ms TIMEOUT_MS]\n                            [--relative {true,false}] [--follow {true,false}]\n                            [--current-monitor {true,false}]\n                            {reload,logout,switch_workspace,focus_window,focus_direction,cycle_window,move_direction,close_window,kill_window,move_window,place_window,move_workspace,fullscreen_window,resize_window,float_window,pin_window,dpms,set_cursor,set_options,configure_monitors,toggle_workspace_floating,notify}\ncompositor.py action: error: argument --follow: invalid choice: 'yes' (choose from 'true', 'false')\n",
+        "exit": 2,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unknown-option",
+        "argv": [
+          "action",
+          "reload",
+          "--bad"
+        ]
+      },
+      "observed": {
+        "stdout": "",
+        "stderr": "usage: compositor.py [-h] {events,capabilities,query,action} ...\ncompositor.py: error: unrecognized arguments: --bad\n",
+        "exit": 2,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validated desktop preferences and reversible connected-display arrangement."""
 
-import compositor
+import nacre_native_compositor as compositor
 
 import argparse
 import fcntl

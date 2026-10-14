@@ -1,4 +1,4 @@
-"""Real Quickshell/Python event and action roundtrip on a private fake socket.
+"""Real Quickshell/native event and action roundtrip on a private fake socket.
 
 No compositor, notification server or session is started. The only IPC endpoint
 is the temporary fixture socket; the QPA offscreen platform creates no windows.
@@ -38,51 +38,56 @@ def run_fixture_smoke(repo, binary):
     def handle(connection):
         try:
             with connection.makefile("rb") as reader:
-                request = json.loads(reader.readline())
-                with lock:
-                    requests.append(request)
+                while line := reader.readline():
+                    request = json.loads(line)
+                    with lock:
+                        requests.append(request)
+                        if request == "EventStream":
+                            connection.sendall(b'{"Ok":"Handled"}\n')
+                            for event in fixture["events"][:2]:
+                                connection.sendall((json.dumps(event) + "\n").encode())
+                            streams.append(connection)
+                        elif request == "NacreOverviewHoverStream":
+                            connection.sendall(b'{"Err":"unknown request"}\n')
+                        elif request == "Outputs":
+                            connection.sendall(
+                                (
+                                    json.dumps({"Ok": {"Outputs": fixture["outputs"]}})
+                                    + "\n"
+                                ).encode()
+                            )
+                        elif request == "Workspaces":
+                            connection.sendall(
+                                (
+                                    json.dumps({"Ok": {"Workspaces": workspaces}})
+                                    + "\n"
+                                ).encode()
+                            )
+                        elif request == "Windows":
+                            connection.sendall(
+                                (
+                                    json.dumps({"Ok": {"Windows": windows}}) + "\n"
+                                ).encode()
+                            )
+                        elif isinstance(request, dict) and "Action" in request:
+                            name, values = next(iter(request["Action"].items()))
+                            if name == "FocusWindow":
+                                for window in windows:
+                                    window["is_focused"] = window["id"] == values["id"]
+                                emit({"WindowFocusChanged": {"id": values["id"]}})
+                            elif name == "CloseWindow":
+                                windows[:] = [
+                                    window
+                                    for window in windows
+                                    if window["id"] != values["id"]
+                                ]
+                                emit({"WindowClosed": {"id": values["id"]}})
+                            connection.sendall(b'{"Ok":"Handled"}\n')
+                        else:
+                            raise RuntimeError("unexpected request")
                     if request == "EventStream":
-                        connection.sendall(b'{"Ok":"Handled"}\n')
-                        for event in fixture["events"][:2]:
-                            connection.sendall((json.dumps(event) + "\n").encode())
-                        streams.append(connection)
-                    elif request == "NacreOverviewHoverStream":
-                        connection.sendall(b'{"Err":"unknown request"}\n')
-                    elif request == "Outputs":
-                        connection.sendall(
-                            (
-                                json.dumps({"Ok": {"Outputs": fixture["outputs"]}})
-                                + "\n"
-                            ).encode()
-                        )
-                    elif request == "Workspaces":
-                        connection.sendall(
-                            (
-                                json.dumps({"Ok": {"Workspaces": workspaces}}) + "\n"
-                            ).encode()
-                        )
-                    elif request == "Windows":
-                        connection.sendall(
-                            (json.dumps({"Ok": {"Windows": windows}}) + "\n").encode()
-                        )
-                    elif isinstance(request, dict) and "Action" in request:
-                        name, values = next(iter(request["Action"].items()))
-                        if name == "FocusWindow":
-                            for window in windows:
-                                window["is_focused"] = window["id"] == values["id"]
-                            emit({"WindowFocusChanged": {"id": values["id"]}})
-                        elif name == "CloseWindow":
-                            windows[:] = [
-                                window
-                                for window in windows
-                                if window["id"] != values["id"]
-                            ]
-                            emit({"WindowClosed": {"id": values["id"]}})
-                        connection.sendall(b'{"Ok":"Handled"}\n')
-                    else:
-                        raise RuntimeError("unexpected request")
-                if request == "EventStream":
-                    stop.wait(20)
+                        stop.wait(20)
+                        break
         finally:
             connection.close()
 
@@ -145,9 +150,20 @@ def run_fixture_smoke(repo, binary):
 
         server = threading.Thread(target=serve, daemon=True)
         server.start()
+        helper = Path(
+            os.environ.get("NACRE_HELPER_BINARY") or repo / "target/debug/nacre-helper"
+        )
+        staged_home = root / "home"
+        staged_tools = staged_home / ".local/share/nacre/shell/tools"
+        staged_tools.mkdir(parents=True)
+        shutil.copy2(helper, staged_tools / "nacre-helper")
         environment = {
             **os.environ,
             "QT_QPA_PLATFORM": "offscreen",
+            "HOME": str(staged_home),
+            "XDG_CONFIG_HOME": str(staged_home / ".config"),
+            "XDG_STATE_HOME": str(staged_home / ".local/state"),
+            "XDG_CACHE_HOME": str(staged_home / ".cache"),
             "QT_LOGGING_RULES": "qml.debug=true",
             "NACRE_COMPOSITOR": "niri",
             "NIRI_SOCKET": str(path),

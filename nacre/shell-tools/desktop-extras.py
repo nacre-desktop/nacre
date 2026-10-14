@@ -16,7 +16,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import compositor
+import nacre_native_compositor as compositor
 import welcome
 
 HOME = Path.home()

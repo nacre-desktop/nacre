@@ -1,0 +1,184 @@
+{
+  "source_sha256": "e0c253121be18b66cbc6e149fefb00157ff6b6f6d427dde49135ef499d363859",
+  "cases": [
+    {
+      "request": {
+        "name": "empty",
+        "snapshot": {
+          "monitors": [
+            {
+              "name": "DP-1"
+            }
+          ],
+          "workspaces": [
+            {
+              "id": 1
+            }
+          ],
+          "windows": [
+            {
+              "windowId": "0xabc"
+            }
+          ],
+          "active_window": {
+            "windowId": "0xabc"
+          }
+        },
+        "lines": [],
+        "trailing_newline": true
+      },
+      "observed": {
+        "emitted": [
+          "{\"type\": \"snapshot\", \"monitors\": [{\"name\": \"DP-1\"}], \"workspaces\": [{\"id\": 1}], \"windows\": [{\"windowId\": \"0xabc\"}], \"activeWindow\": {\"windowId\": \"0xabc\"}}\n"
+        ],
+        "queries": [
+          "monitors",
+          "workspaces",
+          "windows",
+          "active_window"
+        ],
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "events",
+        "snapshot": {
+          "monitors": [
+            {
+              "name": "DP-1"
+            }
+          ],
+          "workspaces": [
+            {
+              "id": 1
+            }
+          ],
+          "windows": [
+            {
+              "windowId": "0xabc"
+            }
+          ],
+          "active_window": {
+            "windowId": "0xabc"
+          }
+        },
+        "lines": [
+          "activewindowv2>>abc",
+          "windowtitlev2>>abc,Title",
+          "monitoradded>>DP-2",
+          "configreloaded>>"
+        ],
+        "trailing_newline": true
+      },
+      "observed": {
+        "emitted": [
+          "{\"type\": \"snapshot\", \"monitors\": [{\"name\": \"DP-1\"}], \"workspaces\": [{\"id\": 1}], \"windows\": [{\"windowId\": \"0xabc\"}], \"activeWindow\": {\"windowId\": \"0xabc\"}}\n",
+          "{\"type\": \"window-focus\", \"windowId\": \"0xabc\"}\n",
+          "{\"type\": \"window-title\", \"windowId\": \"0xabc\"}\n",
+          "{\"type\": \"outputs-changed\"}\n",
+          "{\"type\": \"configuration-reloaded\"}\n"
+        ],
+        "queries": [
+          "monitors",
+          "workspaces",
+          "windows",
+          "active_window"
+        ],
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unknown",
+        "snapshot": {
+          "monitors": [
+            {
+              "name": "DP-1"
+            }
+          ],
+          "workspaces": [
+            {
+              "id": 1
+            }
+          ],
+          "windows": [
+            {
+              "windowId": "0xabc"
+            }
+          ],
+          "active_window": {
+            "windowId": "0xabc"
+          }
+        },
+        "lines": [
+          "future>>data"
+        ],
+        "trailing_newline": true
+      },
+      "observed": {
+        "emitted": [
+          "{\"type\": \"snapshot\", \"monitors\": [{\"name\": \"DP-1\"}], \"workspaces\": [{\"id\": 1}], \"windows\": [{\"windowId\": \"0xabc\"}], \"activeWindow\": {\"windowId\": \"0xabc\"}}\n",
+          "{\"type\": \"other\"}\n"
+        ],
+        "queries": [
+          "monitors",
+          "workspaces",
+          "windows",
+          "active_window"
+        ],
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "no-final-newline",
+        "snapshot": {
+          "monitors": [
+            {
+              "name": "DP-1"
+            }
+          ],
+          "workspaces": [
+            {
+              "id": 1
+            }
+          ],
+          "windows": [
+            {
+              "windowId": "0xabc"
+            }
+          ],
+          "active_window": {
+            "windowId": "0xabc"
+          }
+        },
+        "lines": [
+          "closewindow>>abc"
+        ],
+        "trailing_newline": false
+      },
+      "observed": {
+        "emitted": [
+          "{\"type\": \"snapshot\", \"monitors\": [{\"name\": \"DP-1\"}], \"workspaces\": [{\"id\": 1}], \"windows\": [{\"windowId\": \"0xabc\"}], \"activeWindow\": {\"windowId\": \"0xabc\"}}\n",
+          "{\"type\": \"window-close\", \"windowId\": \"0xabc\"}\n"
+        ],
+        "queries": [
+          "monitors",
+          "workspaces",
+          "windows",
+          "active_window"
+        ],
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

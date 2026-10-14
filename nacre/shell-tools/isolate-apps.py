@@ -6,7 +6,7 @@ import subprocess
 import time
 from pathlib import Path
 
-import compositor
+import nacre_native_compositor as compositor
 
 
 def in_shell(pid):

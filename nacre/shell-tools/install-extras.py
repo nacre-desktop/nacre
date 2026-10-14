@@ -6,7 +6,7 @@ from nacre_i18n import tr
 import datetime as dt
 import subprocess
 
-import compositor
+import nacre_native_compositor as compositor
 
 ROOT = Path(__file__).resolve().parent
 HOME = Path.home()

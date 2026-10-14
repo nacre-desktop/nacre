@@ -14,7 +14,7 @@ import tempfile
 import time
 from pathlib import Path
 
-import compositor
+import nacre_native_compositor as compositor
 
 HOME = Path.home()
 ROOT = Path(__file__).resolve().parent
@@ -129,6 +129,9 @@ def retire_native_helpers(directory):
         "light-devices",
         "menu-cli",
         "pearl-state",
+        "compositor",
+        "compositor_backends/hyprland",
+        "compositor_backends/niri",
         "compositor_config",
         "compositor_backends/hyprland_config",
         "compositor_backends/niri_config",

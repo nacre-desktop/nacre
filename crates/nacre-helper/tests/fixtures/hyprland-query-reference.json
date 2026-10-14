@@ -1,0 +1,646 @@
+{
+  "source_sha256": "e0c253121be18b66cbc6e149fefb00157ff6b6f6d427dde49135ef499d363859",
+  "cases": [
+    {
+      "request": {
+        "name": "valid-monitors",
+        "query": "monitors",
+        "reply": "[{\"name\": \"DP-1\"}]",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "[{\"name\": \"DP-1\"}]\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "monitors",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "wrong-shape-monitors",
+        "query": "monitors",
+        "reply": "null",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed compositor query response\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "monitors",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-all_monitors",
+        "query": "all_monitors",
+        "reply": "[]",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "[]\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "monitors",
+              "all",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "wrong-shape-all_monitors",
+        "query": "all_monitors",
+        "reply": "null",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed compositor query response\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "monitors",
+              "all",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-workspaces",
+        "query": "workspaces",
+        "reply": "[{\"id\": 7}]",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "[{\"id\": 7}]\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "workspaces",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "wrong-shape-workspaces",
+        "query": "workspaces",
+        "reply": "null",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed compositor query response\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "workspaces",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-windows",
+        "query": "windows",
+        "reply": "[{\"address\": \"0xabc\", \"class\": \"Example\", \"title\": \"Title\", \"workspace\": {\"id\": 7}, \"monitor\": 2, \"at\": [-30, 40], \"size\": [800, 600], \"futureField\": \"retained\", \"hidden\": false, \"pinned\": true, \"fullscreen\": 2}]",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "[{\"address\": \"0xabc\", \"class\": \"Example\", \"title\": \"Title\", \"workspace\": {\"id\": 7}, \"monitor\": 2, \"at\": [-30, 40], \"size\": [800, 600], \"futureField\": \"retained\", \"hidden\": false, \"pinned\": true, \"fullscreen\": 2, \"windowId\": \"0xabc\", \"id\": \"0xabc\", \"appId\": \"Example\", \"workspaceId\": 7, \"fullscreenMode\": 2, \"outputId\": 2, \"geometry\": {\"x\": -30, \"y\": 40, \"width\": 800, \"height\": 600}}]\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "clients",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "wrong-shape-windows",
+        "query": "windows",
+        "reply": "null",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed compositor query response\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "clients",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-active_window",
+        "query": "active_window",
+        "reply": "{\"address\": \"0xabc\", \"class\": \"Example\", \"title\": \"Title\", \"workspace\": {\"id\": 7}, \"monitor\": 2, \"at\": [-30, 40], \"size\": [800, 600], \"futureField\": \"retained\", \"hidden\": false, \"pinned\": true, \"fullscreen\": 2}",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"address\": \"0xabc\", \"class\": \"Example\", \"title\": \"Title\", \"workspace\": {\"id\": 7}, \"monitor\": 2, \"at\": [-30, 40], \"size\": [800, 600], \"futureField\": \"retained\", \"hidden\": false, \"pinned\": true, \"fullscreen\": 2, \"windowId\": \"0xabc\", \"id\": \"0xabc\", \"appId\": \"Example\", \"workspaceId\": 7, \"fullscreenMode\": 2, \"outputId\": 2, \"geometry\": {\"x\": -30, \"y\": 40, \"width\": 800, \"height\": 600}}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "activewindow",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "wrong-shape-active_window",
+        "query": "active_window",
+        "reply": "null",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed compositor query response\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "activewindow",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-active_workspace",
+        "query": "active_workspace",
+        "reply": "{\"id\": 7}",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"id\": 7}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "activeworkspace",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "wrong-shape-active_workspace",
+        "query": "active_workspace",
+        "reply": "null",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed compositor query response\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "activeworkspace",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-cursor",
+        "query": "cursor",
+        "reply": "{\"x\": -30, \"y\": 40}",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"x\": -30, \"y\": 40}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "cursorpos",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "wrong-shape-cursor",
+        "query": "cursor",
+        "reply": "null",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed compositor query response\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "cursorpos",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-instances",
+        "query": "instances",
+        "reply": "[{\"instance\": \"fixture\"}]",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "[{\"instance\": \"fixture\"}]\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "instances",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "wrong-shape-instances",
+        "query": "instances",
+        "reply": "null",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed compositor query response\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "instances",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-bindings",
+        "query": "bindings",
+        "reply": "[{\"key\": \"G\", \"modmask\": 64}]",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "[{\"key\": \"G\", \"modmask\": 64}]\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "binds",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "wrong-shape-bindings",
+        "query": "bindings",
+        "reply": "null",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed compositor query response\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "binds",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "no-active-window",
+        "query": "active_window",
+        "reply": "{}",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "activewindow",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unknown",
+        "query": "unknown",
+        "reply": "[]",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Unknown compositor query\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "bad-json",
+        "query": "windows",
+        "reply": "invalid",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Expecting value: line 1 column 1 (char 0)\", \"type\": \"JSONDecodeError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "clients",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "bad-record",
+        "query": "windows",
+        "reply": "[1]",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed compositor query record\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "clients",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "size-bound",
+        "query": "windows",
+        "reply": "[{\"address\": \"0xabc\", \"class\": \"Example\", \"title\": \"Title\", \"workspace\": {\"id\": 7}, \"monitor\": 2, \"at\": [-30, 40], \"size\": [800, 600], \"futureField\": \"retained\", \"hidden\": false, \"pinned\": true, \"fullscreen\": 2}]",
+        "max_bytes": 8
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Compositor response exceeded its size limit\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "clients",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "missing-geometry-defaults",
+        "query": "windows",
+        "reply": "[{\"address\": \"0x1\"}]",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "[{\"address\": \"0x1\", \"windowId\": \"0x1\", \"id\": \"0x1\", \"appId\": \"\", \"workspaceId\": null, \"hidden\": false, \"pinned\": false, \"fullscreenMode\": 0, \"outputId\": null, \"geometry\": {\"x\": 0, \"y\": 0, \"width\": 0, \"height\": 0}}]\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "clients",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "bad-geometry",
+        "query": "windows",
+        "reply": "[{\"address\": \"0xabc\", \"class\": \"Example\", \"title\": \"Title\", \"workspace\": {\"id\": 7}, \"monitor\": 2, \"at\": [], \"size\": [800, 600], \"futureField\": \"retained\", \"hidden\": false, \"pinned\": true, \"fullscreen\": 2}]",
+        "max_bytes": null
+      },
+      "observed": {
+        "stdout": "{\"error\": \"list index out of range\", \"type\": \"IndexError\"}\n",
+        "exit": 1,
+        "calls": [
+          {
+            "args": [
+              "clients",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": true
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

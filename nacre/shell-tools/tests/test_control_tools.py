@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 spec = importlib.util.spec_from_file_location(
     "control_tools", Path(__file__).resolve().parents[1] / "control-tools.py"
@@ -18,6 +19,74 @@ original_socket_probe = tools.unmanaged_socket
 
 
 class ControlToolsTests(unittest.TestCase):
+    def run(self, result=None):
+        callbacks = {
+            "test_new_owned_service_retries_initial_ipc_readiness",
+            "test_night_light_claims_only_service_it_started_then_can_disable",
+            "test_failed_temperature_request_never_publishes_enabled",
+        }
+        if self._testMethodName not in callbacks:
+            return super().run(result)
+        from native_hyprland import Backend
+
+        backend = Backend()
+
+        def transport(args, *, timeout=10, check=True):
+            value = tools.subprocess.run(
+                ["hyprctl", *args], check=check, capture_output=True, timeout=timeout
+            )
+            return (
+                value
+                if isinstance(value, subprocess.CompletedProcess)
+                else SimpleNamespace(returncode=0, stdout="", stderr="")
+            )
+
+        with (
+            patch.object(backend, "_run", side_effect=transport),
+            patch.object(
+                tools.compositor,
+                "set_night_light_temperature",
+                side_effect=lambda enabled, **kwargs: backend.invoke(
+                    "set_night_light_temperature", [enabled], kwargs
+                ),
+            ),
+        ):
+            return super().run(result)
+
+    def test_native_temperature_failure_rolls_back_only_started_owner(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            with (
+                patch.object(
+                    tools.compositor, "night_light_available", return_value=True
+                ),
+                patch.object(tools, "configured_elsewhere", return_value=False),
+                patch.object(tools, "unmanaged_socket", return_value=False),
+                patch.object(
+                    tools,
+                    "service",
+                    side_effect=[(False, ""), (True, "owned"), (True, "owned")],
+                ),
+                patch.object(
+                    tools,
+                    "apply_temperature",
+                    side_effect=RuntimeError("native socket failure"),
+                ),
+                patch.object(tools.subprocess, "run") as run,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "native socket failure"):
+                    tools.night_light(True, home)
+                self.assertFalse(tools.load(home)["enabled"])
+                self.assertEqual(
+                    run.call_args_list[-1].args[0],
+                    [
+                        "systemctl",
+                        "--user",
+                        "stop",
+                        tools.compositor.night_light_service,
+                    ],
+                )
+
     def test_unsupported_night_light_does_not_break_other_controls(self):
         with (
             patch.dict(tools.compositor.capabilities, {"nightLightController": False}),

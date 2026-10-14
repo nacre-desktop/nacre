@@ -1,0 +1,269 @@
+{
+  "source_sha256": "b1befdc9049d11f53a3fdbf11eab038c5bd5f719f085c06371daecede4889847",
+  "cases": [
+    {
+      "request": {
+        "name": "handled",
+        "reply": "{\"Ok\":\"Handled\"}\n",
+        "max_bytes": 64,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "\"Handled\"\n",
+        "exit": 0,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "u64",
+        "reply": "{\"Ok\":{\"FocusedWindow\":{\"id\":18446744073709551615}}}\n",
+        "max_bytes": 128,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "{\"FocusedWindow\": {\"id\": 18446744073709551615}}\n",
+        "exit": 0,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "ipc-error",
+        "reply": "{\"Err\":\"window no longer exists\"}\n",
+        "max_bytes": 64,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"niri IPC: window no longer exists\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "empty",
+        "reply": "",
+        "max_bytes": 64,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Truncated or oversized niri reply\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "truncated",
+        "reply": "{\"Ok\":\"Handled\"}",
+        "max_bytes": 64,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Truncated or oversized niri reply\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "oversized",
+        "reply": "{\"Ok\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}\n",
+        "max_bytes": 32,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Truncated or oversized niri reply\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "non-object",
+        "reply": "[]\n",
+        "max_bytes": 64,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed niri reply\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "two-statuses",
+        "reply": "{\"Ok\":\"Handled\",\"Err\":\"bad\"}\n",
+        "max_bytes": 64,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Malformed niri reply\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "missing-status",
+        "reply": "{\"Unknown\":\"Handled\"}\n",
+        "max_bytes": 64,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Missing niri reply status\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "null-result",
+        "reply": "{\"Ok\":null}\n",
+        "max_bytes": 64,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "null\n",
+        "exit": 0,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "malformed-json",
+        "reply": "invalid\n",
+        "max_bytes": 64,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Expecting value: line 1 column 1 (char 0)\", \"type\": \"JSONDecodeError\"}\n",
+        "exit": 1,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "event-after-reply",
+        "reply": "{\"Ok\":\"Handled\"}\n{\"FutureEvent\":null}\n",
+        "max_bytes": 128,
+        "request": {
+          "Action": {
+            "CloseWindow": {
+              "id": 9007199254740995
+            }
+          }
+        }
+      },
+      "observed": {
+        "stdout": "\"Handled\"\n",
+        "exit": 0,
+        "wire_hex": "7b22416374696f6e223a207b22436c6f736557696e646f77223a207b226964223a20393030373139393235343734303939357d7d7d0a",
+        "connection_closed": true
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

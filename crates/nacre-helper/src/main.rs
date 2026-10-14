@@ -11,8 +11,48 @@ fn run() -> Result<i32> {
     let mut arguments = std::env::args().skip(1);
     let tool = arguments.next().ok_or("Expected a helper command")?;
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "compositor-render" {
+        if arguments.len() != 3 {
+            return Err("Expected backend, render operation and JSON values".into());
+        }
+        let value: Value = serde_json::from_str(&arguments[2])?;
+        let result = match (arguments[0].as_str(), arguments[1].as_str()) {
+            ("niri", "render_keyboard") => nacre_helper::compositor::niri_config::keyboard(&value),
+            ("niri", "render_desktop_options") => {
+                nacre_helper::compositor::niri_config::desktop(&value)
+            }
+            ("niri", "render_monitors") => nacre_helper::compositor::niri_config::monitors(&value),
+            ("hyprland", "render_keyboard") => {
+                nacre_helper::compositor::hyprland::render_keyboard(&value)
+            }
+            ("hyprland", "render_desktop_options") => {
+                nacre_helper::compositor::hyprland::render_desktop(&value)
+            }
+            ("hyprland", "render_monitors") => {
+                nacre_helper::compositor::hyprland::render_monitors(&value)
+            }
+            _ => return Err("Unknown compositor rendering operation".into()),
+        };
+        match result {
+            Ok(value) => {
+                println!("{}", json::encode(&value)?);
+                return Ok(0);
+            }
+            Err(error) => {
+                println!(
+                    "{}",
+                    json::encode(&serde_json::json!({"error":error.message,"type":error.kind}))?
+                );
+                return Ok(1);
+            }
+        }
+    }
     if tool == "pearl-state" {
         return nacre_helper::pearl_state::run(&arguments);
+    }
+
+    if tool == "compositor" {
+        return nacre_helper::compositor::cli::run(&arguments);
     }
     if let Some(module) = match tool.as_str() {
         "compositor_config" => Some("neutral"),

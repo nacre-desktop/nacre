@@ -1,0 +1,2380 @@
+{
+  "source_sha256": "b1befdc9049d11f53a3fdbf11eab038c5bd5f719f085c06371daecede4889847",
+  "fixture_sha256": "29ecb0b0a011aeb0562be71fe3793b6ab542c7d9e62e9351dbdb94113edbf0f0",
+  "cases": [
+    {
+      "request": {
+        "name": "workspace-0",
+        "method": "switch_workspace",
+        "args": [
+          1
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWorkspace": {
+                  "reference": {
+                    "Id": 9007199254740993
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-1",
+        "method": "switch_workspace",
+        "args": [
+          "1"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWorkspace": {
+                  "reference": {
+                    "Id": 9007199254740993
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-2",
+        "method": "switch_workspace",
+        "args": [
+          {
+            "output": "DP-1",
+            "index": 1
+          }
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWorkspace": {
+                  "reference": {
+                    "Id": 101
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-3",
+        "method": "switch_workspace",
+        "args": [
+          {
+            "id": "niri-workspace:202"
+          }
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWorkspace": {
+                  "reference": {
+                    "Id": 202
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-4",
+        "method": "switch_workspace",
+        "args": [
+          {
+            "name": "coding"
+          }
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWorkspace": {
+                  "reference": {
+                    "Id": 9007199254740993
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-5",
+        "method": "switch_workspace",
+        "args": [
+          {
+            "relative": 1
+          }
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWorkspace": {
+                  "reference": {
+                    "Id": 202
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-6",
+        "method": "switch_workspace",
+        "args": [
+          {
+            "relative": -1
+          }
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Workspace does not exist on the requested output\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-7",
+        "method": "switch_workspace",
+        "args": [
+          {
+            "relative": true
+          }
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid relative workspace reference\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-8",
+        "method": "switch_workspace",
+        "args": [
+          true
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid workspace reference\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-9",
+        "method": "switch_workspace",
+        "args": [
+          0
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Workspace does not exist on the requested output\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-10",
+        "method": "switch_workspace",
+        "args": [
+          "missing"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Workspace does not exist on the requested output\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "workspace-11",
+        "method": "switch_workspace",
+        "args": [
+          "niri-workspace:01"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid opaque workspace ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus-left",
+        "method": "focus_direction",
+        "args": [
+          "left"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusColumnLeft": {}
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-left",
+        "method": "move_direction",
+        "args": [
+          "left"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveColumnLeft": {}
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus-right",
+        "method": "focus_direction",
+        "args": [
+          "right"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusColumnRight": {}
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-right",
+        "method": "move_direction",
+        "args": [
+          "right"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveColumnRight": {}
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus-up",
+        "method": "focus_direction",
+        "args": [
+          "up"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWindowUp": {}
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-up",
+        "method": "move_direction",
+        "args": [
+          "up"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveWindowUp": {}
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus-down",
+        "method": "focus_direction",
+        "args": [
+          "down"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWindowDown": {}
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-down",
+        "method": "move_direction",
+        "args": [
+          "down"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveWindowDown": {}
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus-unknown",
+        "method": "focus_direction",
+        "args": [
+          "unknown"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid focus direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-unknown",
+        "method": "move_direction",
+        "args": [
+          "unknown"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid move direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "cycle-next",
+        "method": "cycle_window",
+        "args": [
+          "next"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWindow": {
+                  "id": 9007199254740995
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "cycle-previous",
+        "method": "cycle_window",
+        "args": [
+          "previous"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWindow": {
+                  "id": 9007199254740995
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "cycle-unknown",
+        "method": "cycle_window",
+        "args": [
+          "unknown"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid cycle direction\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-",
+        "method": "focus_window",
+        "args": [
+          ""
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWindow": {
+                  "id": 9007199254740995
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-niri-window:1",
+        "method": "focus_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWindow": {
+                  "id": 1
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-niri-window:9007199254740995",
+        "method": "focus_window",
+        "args": [
+          "niri-window:9007199254740995"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FocusWindow": {
+                  "id": 9007199254740995
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "focus_window-bad",
+        "method": "focus_window",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid opaque window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-",
+        "method": "close_window",
+        "args": [
+          ""
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "CloseWindow": {
+                  "id": 9007199254740995
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-niri-window:1",
+        "method": "close_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "CloseWindow": {
+                  "id": 1
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-niri-window:9007199254740995",
+        "method": "close_window",
+        "args": [
+          "niri-window:9007199254740995"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "CloseWindow": {
+                  "id": 9007199254740995
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "close_window-bad",
+        "method": "close_window",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid opaque window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float-toggle",
+        "method": "float_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "action": "toggle"
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "ToggleWindowFloating": {
+                  "id": 1
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float-enable",
+        "method": "float_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "action": "enable"
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveWindowToFloating": {
+                  "id": 1
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float-disable",
+        "method": "float_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "action": "disable"
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveWindowToTiling": {
+                  "id": 1
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float-set",
+        "method": "float_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "action": "set"
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveWindowToFloating": {
+                  "id": 1
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float-unset",
+        "method": "float_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "action": "unset"
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveWindowToTiling": {
+                  "id": 1
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "float-bad",
+        "method": "float_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "action": "bad"
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid floating action\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen-fullscreen",
+        "method": "fullscreen_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "mode": "fullscreen"
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "FullscreenWindow": {
+                  "id": 1
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen-maximized",
+        "method": "fullscreen_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "mode": "maximized"
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MaximizeWindowToEdges": {
+                  "id": 1
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "fullscreen-bad",
+        "method": "fullscreen_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "mode": "bad"
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid fullscreen mode\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "resize-0",
+        "method": "resize_window",
+        "args": [
+          "niri-window:1",
+          600,
+          400
+        ],
+        "kwargs": {
+          "relative": false,
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "SetWindowWidth": {
+                  "id": 1,
+                  "change": {
+                    "SetFixed": 600
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Action": {
+                "SetWindowHeight": {
+                  "id": 1,
+                  "change": {
+                    "SetFixed": 400
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "resize-1",
+        "method": "resize_window",
+        "args": [
+          "niri-window:1",
+          600.5,
+          401.5
+        ],
+        "kwargs": {
+          "relative": false,
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "SetWindowWidth": {
+                  "id": 1,
+                  "change": {
+                    "SetFixed": 600
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Action": {
+                "SetWindowHeight": {
+                  "id": 1,
+                  "change": {
+                    "SetFixed": 402
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "resize-2",
+        "method": "resize_window",
+        "args": [
+          "niri-window:1",
+          -5.5,
+          2.5
+        ],
+        "kwargs": {
+          "relative": true,
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "SetWindowWidth": {
+                  "id": 1,
+                  "change": {
+                    "AdjustFixed": -6
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Action": {
+                "SetWindowHeight": {
+                  "id": 1,
+                  "change": {
+                    "AdjustFixed": 2
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "resize-3",
+        "method": "resize_window",
+        "args": [
+          "niri-window:1",
+          0,
+          400
+        ],
+        "kwargs": {
+          "relative": false,
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid window size\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "resize-4",
+        "method": "resize_window",
+        "args": [
+          "niri-window:1",
+          true,
+          400
+        ],
+        "kwargs": {
+          "relative": false,
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid geometry value\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "screenshot-absolute",
+        "method": "screenshot_window",
+        "args": [
+          "/case/home/Pictures/window.png",
+          "niri-window:1"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "ScreenshotWindow": {
+                  "id": 1,
+                  "path": "/case/home/Pictures/window.png",
+                  "write_to_disk": true,
+                  "show_pointer": false
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "screenshot-relative",
+        "method": "screenshot_window",
+        "args": [
+          "window.png",
+          "niri-window:1"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Screenshot path must be absolute\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-workspace",
+        "method": "move_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "workspace": 2,
+          "follow": false
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveWindowToWorkspace": {
+                  "window_id": 1,
+                  "reference": {
+                    "Id": 202
+                  },
+                  "focus": false
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-workspace-geometry-conflict",
+        "method": "move_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "workspace": 2,
+          "x": 10,
+          "y": 20
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Specify a workspace or geometry, not both\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-relative",
+        "method": "move_window",
+        "args": [
+          "niri-window:9007199254740995"
+        ],
+        "kwargs": {
+          "x": 10,
+          "y": -20,
+          "relative": true
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveFloatingWindow": {
+                  "id": 9007199254740995,
+                  "x": {
+                    "AdjustFixed": 10
+                  },
+                  "y": {
+                    "AdjustFixed": -20
+                  }
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-absolute",
+        "method": "move_window",
+        "args": [
+          "niri-window:9007199254740995"
+        ],
+        "kwargs": {
+          "x": 100,
+          "y": 200
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          },
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveFloatingWindow": {
+                  "id": 9007199254740995,
+                  "x": {
+                    "AdjustFixed": 72
+                  },
+                  "y": {
+                    "AdjustFixed": 156
+                  }
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-cross-output-requery",
+        "method": "move_window",
+        "args": [
+          "niri-window:9007199254740995"
+        ],
+        "kwargs": {
+          "x": -1800,
+          "y": 100
+        },
+        "move_output": "DP-1"
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          },
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          },
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveWindowToMonitor": {
+                  "id": 9007199254740995,
+                  "output": "DP-1"
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Action": {
+                "MoveFloatingWindow": {
+                  "id": 9007199254740995,
+                  "x": {
+                    "AdjustFixed": 92
+                  },
+                  "y": {
+                    "AdjustFixed": 56
+                  }
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-tiled-rejected",
+        "method": "move_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "x": 10,
+          "y": 20
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Absolute placement requires a floating window\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "place",
+        "method": "place_window",
+        "args": [
+          "niri-window:9007199254740995"
+        ],
+        "kwargs": {
+          "x": 100,
+          "y": 200,
+          "width": 500,
+          "height": 400,
+          "timeout": 3
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveWindowToFloating": {
+                  "id": 9007199254740995
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Action": {
+                "SetWindowWidth": {
+                  "id": 9007199254740995,
+                  "change": {
+                    "SetFixed": 500
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Action": {
+                "SetWindowHeight": {
+                  "id": 9007199254740995,
+                  "change": {
+                    "SetFixed": 400
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          },
+          {
+            "request": {
+              "Action": {
+                "MoveFloatingWindow": {
+                  "id": 9007199254740995,
+                  "x": {
+                    "AdjustFixed": 72
+                  },
+                  "y": {
+                    "AdjustFixed": 156
+                  }
+                }
+              }
+            },
+            "timeout": 3,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "place-missing-height",
+        "method": "place_window",
+        "args": [
+          "niri-window:1"
+        ],
+        "kwargs": {
+          "x": 100,
+          "y": 200,
+          "width": 500
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Specify both size dimensions\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-workspace-to-monitor",
+        "method": "move_workspace",
+        "args": [
+          1,
+          "DP-1"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          },
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveWorkspaceToMonitor": {
+                  "reference": {
+                    "Id": 9007199254740993
+                  },
+                  "output": "DP-1"
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "move-workspace-missing-monitor",
+        "method": "move_workspace",
+        "args": [
+          1,
+          "missing"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Unknown output\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dpms-enable",
+        "method": "dpms",
+        "args": [
+          "enable"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "PowerOnMonitors": {}
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dpms-disable",
+        "method": "dpms",
+        "args": [
+          "disable"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "PowerOffMonitors": {}
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dpms-on",
+        "method": "dpms",
+        "args": [
+          "on"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "PowerOnMonitors": {}
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dpms-off",
+        "method": "dpms",
+        "args": [
+          "off"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "PowerOffMonitors": {}
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dpms-bad",
+        "method": "dpms",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid DPMS action\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "dpms-per-monitor-rejected",
+        "method": "dpms",
+        "args": [
+          "off"
+        ],
+        "kwargs": {
+          "monitor": "DP-1"
+        }
+      },
+      "observed": {
+        "stdout": "{\"error\": \"niri DPMS controls all outputs together\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "logout",
+        "method": "logout",
+        "args": [],
+        "kwargs": {
+          "graceful": true
+        }
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "Quit": {
+                  "skip_confirmation": true
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "reload",
+        "method": "reload",
+        "args": [],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"Handled\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "probes": [],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "LoadConfigFile": {
+                  "path": null
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "toggle-workspace-floating",
+        "method": "toggle_workspace_floating",
+        "args": [],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "null\n",
+        "exit": 0,
+        "probes": [
+          {
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ],
+        "requests": [
+          {
+            "request": {
+              "Action": {
+                "MoveWindowToTiling": {
+                  "id": 9007199254740995
+                }
+              }
+            },
+            "timeout": 10,
+            "max_bytes": 4194304
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unsupported-pin_window",
+        "method": "pin_window",
+        "args": [
+          "fixture"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Operation is not supported by the niri backend; check compositor capabilities\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unsupported-kill_window",
+        "method": "kill_window",
+        "args": [
+          "fixture"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Operation is not supported by the niri backend; check compositor capabilities\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unsupported-set_cursor",
+        "method": "set_cursor",
+        "args": [
+          "fixture"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Operation is not supported by the niri backend; check compositor capabilities\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unsupported-notify",
+        "method": "notify",
+        "args": [
+          "fixture"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Operation is not supported by the niri backend; check compositor capabilities\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unsupported-fullscreen_state",
+        "method": "fullscreen_state",
+        "args": [
+          "fixture"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Operation is not supported by the niri backend; check compositor capabilities\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unsupported-set_animations",
+        "method": "set_animations",
+        "args": [
+          "fixture"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Operation is not supported by the niri backend; check compositor capabilities\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unsupported-set_performance",
+        "method": "set_performance",
+        "args": [
+          "fixture"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Operation is not supported by the niri backend; check compositor capabilities\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unsupported-set_options",
+        "method": "set_options",
+        "args": [
+          "fixture"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Operation is not supported by the niri backend; check compositor capabilities\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unsupported-render_options",
+        "method": "render_options",
+        "args": [
+          "fixture"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Operation is not supported by the niri backend; check compositor capabilities\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unsupported-apply_config",
+        "method": "apply_config",
+        "args": [
+          "fixture"
+        ],
+        "kwargs": {}
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Operation is not supported by the niri backend; check compositor capabilities\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "probes": [],
+        "requests": []
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

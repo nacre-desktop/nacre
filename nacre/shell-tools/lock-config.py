@@ -7,7 +7,7 @@ import shlex
 import subprocess
 from pathlib import Path
 
-import compositor
+import nacre_native_compositor as compositor
 
 
 def block(widget, monitor="", **options):
@@ -233,7 +233,7 @@ def monitor_layout(home=None):
         temporary.chmod(0o600)
         temporary.replace(cache)
         return monitors
-    except (OSError, ValueError, subprocess.SubprocessError):
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
         try:
             return json.loads(cache.read_text())
         except (OSError, ValueError):

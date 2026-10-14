@@ -71,7 +71,7 @@ fn action_command(name: &str, arguments: &[String]) -> String {
         .chain(arguments.iter().map(|s| shell_quote(s)))
         .collect::<Vec<_>>()
         .join(" ");
-    format!("exec env NACRE_COMPOSITOR=niri python3 \"${{NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}}/compositor.py\" action {args}")
+    format!("exec env NACRE_COMPOSITOR=niri \"${{NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}}/nacre-helper\" compositor action {args}")
 }
 pub(super) fn workspace_args(value: &Value) -> Result<Vec<String>> {
     match value["kind"].as_str() {

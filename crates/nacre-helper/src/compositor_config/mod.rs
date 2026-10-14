@@ -554,10 +554,39 @@ mod tests {
                 Ok(value) => (value, 0),
                 Err(error) => (json!({"error":error.message,"type":error.kind}), 1),
             };
-            assert_eq!(
-                crate::json::encode(&value)? + "\n",
-                case["stdout"].as_str().ok_or("Missing stdout")?,
-                "{}",
+            // The compiler cutover changes only the installed command prefix.
+            // Frozen reference files themselves remain immutable evidence.
+            let expected: Value =
+                serde_json::from_str(case["stdout"].as_str().ok_or("Missing stdout")?)?;
+            fn native_commands(value: Value) -> Value {
+                match value {
+                    Value::String(value) => Value::String(
+                        value
+                            .replace("NACRE_COMPOSITOR=niri python3 ", "NACRE_COMPOSITOR=niri ")
+                            .replace(
+                                "/compositor.py\" action ",
+                                "/nacre-helper\" compositor action ",
+                            )
+                            .replace(
+                                "/compositor.py\\\" action ",
+                                "/nacre-helper\\\" compositor action ",
+                            ),
+                    ),
+                    Value::Array(values) => {
+                        Value::Array(values.into_iter().map(native_commands).collect())
+                    }
+                    Value::Object(values) => Value::Object(
+                        values
+                            .into_iter()
+                            .map(|(key, value)| (key, native_commands(value)))
+                            .collect(),
+                    ),
+                    value => value,
+                }
+            }
+            assert!(
+                crate::json::encode(&value)? == crate::json::encode(&native_commands(expected))?,
+                "Frozen compiler output differs after declared native command swap: {}",
                 request["name"]
             );
             assert_eq!(json!(exit), case["exit"], "{}", request["name"]);

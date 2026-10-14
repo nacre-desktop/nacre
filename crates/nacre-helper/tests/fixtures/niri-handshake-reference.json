@@ -1,0 +1,215 @@
+{
+  "source_sha256": "b1befdc9049d11f53a3fdbf11eab038c5bd5f719f085c06371daecede4889847",
+  "cases": [
+    {
+      "request": {
+        "name": "hover-accepted",
+        "replies": [
+          "{\"Ok\":\"Handled\"}\n{\"OverviewOpenedOrClosed\":{\"is_open\":true}}\n"
+        ],
+        "hover": true,
+        "max_bytes": 256
+      },
+      "observed": {
+        "selected": 0,
+        "error": null,
+        "remaining_hex": "7b224f766572766965774f70656e65644f72436c6f736564223a7b2269735f6f70656e223a747275657d7d0a",
+        "blocking": false,
+        "wire_hex": [
+          "224e616372654f76657276696577486f76657253747265616d220a"
+        ],
+        "closed": [
+          false
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "stock-fallback",
+        "replies": [
+          "{\"Err\":\"unknown request\"}\n",
+          "{\"Ok\":\"Handled\"}\n{\"OverviewOpenedOrClosed\":{\"is_open\":true}}\n"
+        ],
+        "hover": true,
+        "max_bytes": 256
+      },
+      "observed": {
+        "selected": 1,
+        "error": null,
+        "remaining_hex": "7b224f766572766965774f70656e65644f72436c6f736564223a7b2269735f6f70656e223a747275657d7d0a",
+        "blocking": false,
+        "wire_hex": [
+          "224e616372654f76657276696577486f76657253747265616d220a",
+          "224576656e7453747265616d220a"
+        ],
+        "closed": [
+          true,
+          false
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "hover-disabled",
+        "replies": [
+          "{\"Ok\":\"Handled\"}\n{\"OverviewOpenedOrClosed\":{\"is_open\":true}}\n"
+        ],
+        "hover": false,
+        "max_bytes": 256
+      },
+      "observed": {
+        "selected": 0,
+        "error": null,
+        "remaining_hex": "7b224f766572766965774f70656e65644f72436c6f736564223a7b2269735f6f70656e223a747275657d7d0a",
+        "blocking": false,
+        "wire_hex": [
+          "224576656e7453747265616d220a"
+        ],
+        "closed": [
+          false
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "unexpected-ok-fallback",
+        "replies": [
+          "{\"Ok\":\"Unexpected\"}\n",
+          "{\"Ok\":\"Handled\"}\n{\"OverviewOpenedOrClosed\":{\"is_open\":true}}\n"
+        ],
+        "hover": true,
+        "max_bytes": 256
+      },
+      "observed": {
+        "selected": 1,
+        "error": null,
+        "remaining_hex": "7b224f766572766965774f70656e65644f72436c6f736564223a7b2269735f6f70656e223a747275657d7d0a",
+        "blocking": false,
+        "wire_hex": [
+          "224e616372654f76657276696577486f76657253747265616d220a",
+          "224576656e7453747265616d220a"
+        ],
+        "closed": [
+          true,
+          false
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "stock-rejected",
+        "replies": [
+          "{\"Err\":\"unsupported\"}\n"
+        ],
+        "hover": false,
+        "max_bytes": 256
+      },
+      "observed": {
+        "selected": null,
+        "error": {
+          "type": "RuntimeError",
+          "error": "niri event stream was rejected"
+        },
+        "remaining_hex": "",
+        "blocking": null,
+        "wire_hex": [
+          "224576656e7453747265616d220a"
+        ],
+        "closed": [
+          true
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "bad-json",
+        "replies": [
+          "invalid\n"
+        ],
+        "hover": true,
+        "max_bytes": 256
+      },
+      "observed": {
+        "selected": null,
+        "error": {
+          "type": "JSONDecodeError",
+          "error": "Expecting value: line 1 column 1 (char 0)"
+        },
+        "remaining_hex": "",
+        "blocking": null,
+        "wire_hex": [
+          "224e616372654f76657276696577486f76657253747265616d220a"
+        ],
+        "closed": [
+          true
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "truncated",
+        "replies": [
+          "{\"Ok\":"
+        ],
+        "hover": true,
+        "max_bytes": 256
+      },
+      "observed": {
+        "selected": null,
+        "error": {
+          "type": "ValueError",
+          "error": "Invalid event stream acknowledgement"
+        },
+        "remaining_hex": "",
+        "blocking": null,
+        "wire_hex": [
+          "224e616372654f76657276696577486f76657253747265616d220a"
+        ],
+        "closed": [
+          true
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "oversized",
+        "replies": [
+          "{\"Ok\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}\n"
+        ],
+        "hover": true,
+        "max_bytes": 32
+      },
+      "observed": {
+        "selected": null,
+        "error": {
+          "type": "ValueError",
+          "error": "Invalid event stream acknowledgement"
+        },
+        "remaining_hex": "",
+        "blocking": null,
+        "wire_hex": [
+          "224e616372654f76657276696577486f76657253747265616d220a"
+        ],
+        "closed": [
+          true
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

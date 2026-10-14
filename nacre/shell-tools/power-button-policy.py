@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import tempfile
 
-import compositor
+import nacre_native_compositor as compositor
 
 LEGACY = compositor.legacy_power_binding()
 

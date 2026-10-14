@@ -423,7 +423,7 @@ class PublicationBoundaryTests(unittest.TestCase):
     def probe(self):
         return (
             "import importlib.util,sys; from pathlib import Path; "
-            "s=importlib.util.spec_from_file_location('publisher',sys.argv[1]); "
+            "sys.path.insert(0,str(Path(sys.argv[1]).parent)); s=importlib.util.spec_from_file_location('publisher',sys.argv[1]); "
             "p=importlib.util.module_from_spec(s); s.loader.exec_module(p); "
             "print('ready',flush=True); p.apply_palette(Path(sys.argv[2]),'/tmp/isolated-poster.png',live=False)"
         )
@@ -474,7 +474,7 @@ class PublicationBoundaryTests(unittest.TestCase):
             thumbnail.write_bytes(b"fixture")
             script = (
                 "import importlib.util,json,sys; from pathlib import Path; "
-                "s=importlib.util.spec_from_file_location('publisher',sys.argv[1]); "
+                "sys.path.insert(0,str(Path(sys.argv[1]).parent)); s=importlib.util.spec_from_file_location('publisher',sys.argv[1]); "
                 "p=importlib.util.module_from_spec(s); s.loader.exec_module(p); "
                 "h=Path(sys.argv[2]); data=json.loads((h/'.local/state/nacre/scheme.json').read_text()); "
                 "assert p.commit_prepared(h,h/'wall.png',data,h/'.cache/nacre/wallpapers/probe/thumbnail.jpg',live=False)"

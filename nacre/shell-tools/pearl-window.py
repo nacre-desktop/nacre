@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Finite compositor operations scoped to a Nacre-owned pearl window."""
 
-import compositor
+import nacre_native_compositor as compositor
 
 import argparse
 import json

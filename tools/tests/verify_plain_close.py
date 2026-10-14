@@ -129,7 +129,9 @@ def verify(backend, output, parent_binary, parent_libraries):
 
             def query(name):
                 return json.loads(
-                    run(["python3", str(tools / "compositor.py"), "query", name]).stdout
+                    run(
+                        [str(tools / "nacre-helper"), "compositor", "query", name]
+                    ).stdout
                 )
 
             def wait_for(callback):
@@ -275,8 +277,8 @@ def verify(backend, output, parent_binary, parent_libraries):
                 identifier = window["windowId"]
                 run(
                     [
-                        "python3",
-                        str(tools / "compositor.py"),
+                        str(tools / "nacre-helper"),
+                        "compositor",
                         "action",
                         "focus_window",
                         "--window",

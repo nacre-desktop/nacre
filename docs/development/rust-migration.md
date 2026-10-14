@@ -7,7 +7,7 @@ Developer-only Python tools and test harnesses remain permitted.
 | --- | --- | --- |
 | 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
 | 1 Service / frequent helpers | Complete; quiet timings deferred | 13 ports; RSS 26.95 -> 10.21 MiB (busy); Source/install CI green. |
-| 2 Compositor / pearls | Compilers public; pearl-state ready | 11 + 4 cases exact; busy CPU load/save 88.63/92.91 -> 2.82/3.85 ms. |
+| 2 Compositor / pearls | Compilers + pearl-state public; backends local | Pearl CPU load/save 88.63/92.91 -> 2.82/3.85 ms (busy). |
 | 3 Wallpaper / colors | Pending | Direct Orient crates; preserve paired publication. |
 | 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
 | 5 AI | Pending | Claude CLI stream-json; retain existing permissions/history. |
@@ -44,29 +44,19 @@ Frozen helper corpus: `tests/parity/helpers` (separate parity task; do not regen
 Follow-up: Rust Paths accepts absolute config/state/cache XDG roots, otherwise
 HOME defaults, matching QML. Custom-XDG behavior is an intended parity difference;
 current frozen cases use defaults and remain unchanged.
-Paths fix is public (`ae6a9f86`); Rust gates and default-XDG parity pass.
-Main CI must be green before further wave 1 ports land. Repair complete:
-`2753707f` uses Ubuntu 22.04 with the same Arch container/isolation; workspace
-trust is scoped, test cache timestamps explicit, mock sockets UID1000/0600 and
-reported interpreter version controlled at input. All original goldens remain.
-Latest main `55c5a03b`: Source 38487998838 desktop and Niri fresh install pass;
-834 source tests, 12 original controls, 349 frozen cases. No new skips.
-Earlier `f3b42304` Source and performance both pass. CI workflow repair is retained; hardware checks are manual, correctness stays automatic.
+Main CI gate retained; 2753707f fixed isolation without changing goldens/skips.
+Wave 1 source/install CI passed; hardware checks remain manual.
 
-Next: publish pearl-state (85 Rust / 784 repo / 526 cases pass), check CI, then backend cutover.
-526 native cases / 51 controls / 81 Rust tests pass; empty-PATH report passes.
+Next: final integrated gate (526 parity pass), rebase latest green main, publish compositor + pearl-window.
 Wave 1 main 3e155f5c CI 38528354524: source + fresh Niri install green; no skips.
 Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.
 Three compiler sources retired; 84 integrated Rust tests / 770 repo tests / 526 cases pass.
 Temporary native-only compiler client is removed as its Python callers are ported.
-Niri reducer: 22 current-Python sequences / 79 snapshots frozen; 3 integrity controls pass.
+Compositor busy fresh CPU 46.07 -> 1.35 ms; persistent RSS 7.90 MiB, one connection. Niri exact: 79 snapshots / 78 actions / 12 frames / 45 emissions / 8 handshakes / 110 config/query / 7 bindings / 21 display / 13 file / 18 night-light / 11 metadata; Hyprland 195 cases; CLI 34 dispatch cases.
 Busy fresh CPU: 55.67/38.50/35.55/16.88 -> 1.95/1.16/1.11/0.89 ms; Python 404 -> 0.
 Capture: 11 frozen cases match; 0600/0700 security difference tracked; IPC/events pass.
-CLI: 62 menu + 39 hosted cases pass; seven exact retired-frame differences tracked.
 Disposable release install/empty-PATH commands and atomic replacement tests pass.
 QML kill/malformed/timeout recovery passes with a native fixture; service Python retired.
-Two retired nmcli error IDs retain exact catalog/context; finite compatibility checks pass.
-Final Qt/D-Bus/software-GL gate: 769 tests / 51 controls / 526 cases, zero failures.
 Media API: 64 frozen artwork cases pass (63 PNG files plus Pillow I;16 error);
 128px frames / 160 palettes unchanged; Orient `40c1a75` public, all 7 CI jobs green.
 Intended differences: unexpected telemetry/cache failures reach stderr; NVML

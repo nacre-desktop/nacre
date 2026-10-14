@@ -29,7 +29,7 @@ class NiriRuntimeTests(unittest.TestCase):
             )
             for name in (
                 "source/shell.qml",
-                "tools/compositor_backends/niri.py",
+                "tools/nacre_native_compositor.py",
                 "bin/qs",
             ):
                 path = shell / name
@@ -231,7 +231,7 @@ class NiriRuntimeTests(unittest.TestCase):
             )
             for name in (
                 "source/shell.qml",
-                "tools/compositor_backends/niri.py",
+                "tools/nacre_native_compositor.py",
                 "bin/qs",
             ):
                 path = shell / name

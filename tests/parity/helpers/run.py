@@ -30,6 +30,33 @@ _registry_spec = importlib.util.spec_from_file_location(
 )
 native_registry = importlib.util.module_from_spec(_registry_spec)
 _registry_spec.loader.exec_module(native_registry)
+from native_compositor_peer import Peer as NativeCompositorPeer
+
+NATIVE_CLIENT_CALLERS = {
+    "pearl-window",
+    "compositor",
+    "compositor-backends-hyprland",
+    "compositor-backends-niri",
+    "binding-contracts",
+    "classic-state",
+    "control-tools",
+    "desktop-actions",
+    "desktop-extras",
+    "desktop-settings",
+    "install-extras",
+    "isolate-apps",
+    "lock-config",
+    "maintenance",
+    "power-button-policy",
+    "profile-policy",
+    "session-watch",
+    "shell-supervisor",
+    "startup-apps",
+    "welcome",
+    "workflow-profiles",
+    "window-hide",
+    "compositor-compat",
+}
 
 
 def expand(value):
@@ -248,6 +275,13 @@ def execute(case, command, trace=None):
         observed = ("home", "tmp", "sys", "runtime", "local")
         for peer_spec in case.get("sockets", []):
             (root / peer_spec["path"]).parent.mkdir(parents=True, exist_ok=True)
+        native_peer = None
+        if case["helper"] in NATIVE_CLIENT_CALLERS and case.get("commands", {}).get(
+            "hyprctl"
+        ):
+            native_peer = NativeCompositorPeer(
+                root, expand(case["commands"]["hyprctl"])
+            )
         before = {
             f"{folder}/{name}": value
             for folder in observed
@@ -272,6 +306,8 @@ def execute(case, command, trace=None):
             "NACRE_PARITY_ROOT": "/case",
             **expand(case.get("env", {})),
         }
+        if native_peer:
+            env["HYPRLAND_INSTANCE_SIGNATURE"] = "fixture"
         template = command or case.get("command", "python3 nacre/shell-tools/{name}.py")
         argv = [
             part.replace("{name}", case["helper"]) for part in shlex.split(template)
@@ -381,6 +417,17 @@ def execute(case, command, trace=None):
             sandbox += ["--ro-bind", str(HERE / "fake.py"), "/usr/bin/" + name]
         for key, value in env.items():
             sandbox += ["--setenv", key, value]
+        if case["helper"] in NATIVE_CLIENT_CALLERS:
+            helper = native_registry.native_binary()
+            (root / "native-compositor").touch()
+            sandbox += [
+                "--ro-bind",
+                str(helper),
+                "/case/native-compositor",
+                "--setenv",
+                "NACRE_HELPER_BINARY",
+                "/case/native-compositor",
+            ]
         identity = {}
         if os.getuid() == 0:
             # CI is root; fixture ownership is input, not an output normalization.
@@ -516,6 +563,8 @@ def execute(case, command, trace=None):
                     )
         finally:
             ipc.close()
+            if native_peer:
+                native_peer.close()
             for child in (peer, daemon):
                 if child:
                     child.terminate()

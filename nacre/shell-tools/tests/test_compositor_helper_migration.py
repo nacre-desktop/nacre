@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-import compositor
+import native_hyprland as compositor
 
 ROOT = Path(__file__).parents[1]
 
@@ -88,6 +88,7 @@ class HelperCompositorMigrationTests(unittest.TestCase):
             tempfile.TemporaryDirectory() as folder,
             patch.dict(os.environ, {"XDG_RUNTIME_DIR": folder}),
             patch.object(startup.POLICY, "load", return_value=profile),
+            patch.dict(startup.compositor.capabilities, {"perOutputWorkspaces": False}),
             patch.object(
                 startup.importlib.util, "spec_from_file_location", return_value=spec
             ),

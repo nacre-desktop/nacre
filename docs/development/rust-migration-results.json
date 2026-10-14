@@ -526,5 +526,36 @@
         }
       }
     }
+  },
+  "wave2_compositor_busy_machine": {
+    "measurement_condition": "busy machine",
+    "method": "benchmark-helpers.cpu_times and performance.memory; private Niri socket, identical CloseWindow",
+    "results": {
+      "Python": {
+        "calls": 100,
+        "cpu_mean_ms": 46.069790000000005,
+        "python_starts": 100,
+        "ipc_accepts": 100
+      },
+      "Rust release": {
+        "calls": 100,
+        "cpu_mean_ms": 1.350100000000004,
+        "python_starts": 0,
+        "ipc_accepts": 100
+      },
+      "Rust persistent": {
+        "calls": 1000,
+        "cpu_mean_ms": null,
+        "python_starts": 0,
+        "helper_rss_bytes": 8282112,
+        "ipc_accepts": 1,
+        "cpu_resolution_ms": 10.0,
+        "cpu_mean_upper_bound_ms": 0.01,
+        "cpu_note": "No observed increment at 10 ms process tick resolution over 1000 measured requests; not zero CPU."
+      }
+    },
+    "quiet_window_pending": true,
+    "shell_action_timings": null,
+    "aggregate_memory": null
   }
 }

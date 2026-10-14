@@ -8,7 +8,7 @@ import subprocess
 import unittest
 from unittest.mock import patch
 
-import compositor
+import native_hyprland as compositor
 
 
 class CompositorBackendTests(unittest.TestCase):

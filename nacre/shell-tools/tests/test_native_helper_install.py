@@ -24,14 +24,25 @@ class NativeHelperInstallTests(unittest.TestCase):
             tools = Path(directory)
             for name in (
                 "pearl-state.py",
-                "pearl-window.py",
+                "compositor.py",
+                "compositor_backends/hyprland.py",
+                "compositor_backends/niri.py",
+                "weather.py",
                 "nacre-helper",
                 "private.json",
             ):
-                (tools / name).write_text("existing")
+                path = tools / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("existing")
             installer.retire_native_helpers(tools)
             self.assertFalse((tools / "pearl-state.py").exists())
-            for name in ("pearl-window.py", "nacre-helper", "private.json"):
+            for name in (
+                "compositor.py",
+                "compositor_backends/hyprland.py",
+                "compositor_backends/niri.py",
+            ):
+                self.assertFalse((tools / name).exists())
+            for name in ("weather.py", "nacre-helper", "private.json"):
                 self.assertEqual((tools / name).read_text(), "existing")
             installer.retire_native_helpers(tools)
 

@@ -87,7 +87,7 @@ Detached layouts use actual viewport dimensions. The Dashboard page bounds its
 content width and summary/card height, allocating spare space to the wallpaper hero.
 Launcher row sizing is clamped to 72–100 logical pixels rather than growing
 with viewport height. Gallery switching can grow an undersized owned window via
-`pearl-window.py fit`, with scaled/rotated monitor and reserved-area bounds; maximized
+`nacre-helper pearl-window fit`, with scaled/rotated monitor and reserved-area bounds; maximized
 windows are left alone. Full handoff positions are aligned to compositor logical
 pixels, and geometry helpers read their resulting state after writes.
 

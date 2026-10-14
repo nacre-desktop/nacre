@@ -924,3 +924,23 @@ These are loaded-machine observations, not shell latency evidence. A preceding
 run recorded 32.74/32.79 ms Python CPU, showing substantial machine variability;
 quiet-window A/B/A/B remains required. Helper RSS, shell action timings, aggregate
 RSS/PSS, idle CPU and Python launches per minute are unmeasured for this helper.
+
+### Wave 2 compositor boundary (busy machine)
+
+The existing `benchmark-helpers.py` child CPU accounting and `performance.py`
+memory sampler measured identical `CloseWindow` requests on a disposable Niri
+socket. No real compositor or shell session was contacted.
+
+| Fresh call; 100 requests, busy machine | Python reference | Rust release |
+| --- | ---: | ---: |
+| Helper user + system CPU, mean (ms) | 46.070 | 1.350 |
+| Direct Python starts | 100 | 0 |
+| IPC connections | 100 | 100 |
+
+The persistent Rust action worker used one connection for 1,001 requests
+(one warm-up plus 1,000 measured), zero Python starts, and 7.90 MiB helper RSS.
+Its CPU increment was below the `/proc` 10 ms tick resolution: under 0.01 ms
+per measured action at that resolution, not proof of zero CPU. A preceding
+fresh run recorded 45.265/1.285 ms CPU; loaded-machine variability remains.
+Whole-shell action timings, aggregate RSS/PSS, idle CPU and launches per minute
+remain deferred to the owner's interleaved quiet-window comparison.

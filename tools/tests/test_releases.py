@@ -74,7 +74,7 @@ class ReleaseTests(unittest.TestCase):
                 patch.object(m, "compositor") as service,
             ):
                 release, record = m.capture(repo, "new")
-                facade = shell / "tools/compositor.py"
+                facade = shell / "tools/nacre_native_compositor.py"
                 facade.parent.mkdir()
                 facade.write_text("new facade")
                 desktop = service.return_value

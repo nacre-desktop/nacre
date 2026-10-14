@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 import subprocess
 
-import compositor
+import nacre_native_compositor as compositor
 
 HOME = Path.home()
 PROFILE_SPEC = importlib.util.spec_from_file_location(

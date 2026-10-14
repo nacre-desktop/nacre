@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-import compositor
+import nacre_native_compositor as compositor
 
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre"
@@ -32,14 +32,18 @@ def run(args, default="", timeout=5):
         return subprocess.check_output(
             args, text=True, stderr=subprocess.DEVNULL, timeout=timeout
         ).strip()
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, RuntimeError, subprocess.SubprocessError):
         return default
 
 
 def configuration_errors():
     try:
         return compositor.config_errors(timeout=5)
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+        print(
+            "nacre-helper: compositor configuration unavailable: " + str(error),
+            file=sys.stderr,
+        )
         return ""
 
 

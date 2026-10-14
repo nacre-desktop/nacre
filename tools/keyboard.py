@@ -41,7 +41,8 @@ def seed(home, settings=None):
     values = system_keyboard() if settings is None else settings
     spec = importlib.util.spec_from_file_location(
         "nacre_keyboard_compositor",
-        Path(__file__).resolve().parents[1] / "nacre/shell-tools/compositor.py",
+        Path(__file__).resolve().parents[1]
+        / "nacre/shell-tools/nacre_native_compositor.py",
     )
     compositor = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(compositor)

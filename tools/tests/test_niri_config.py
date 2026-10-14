@@ -50,7 +50,8 @@ class NiriConfigTests(unittest.TestCase):
         generated = config.render(config.load(), backend="niri")
         text = generated["niri/bindings.kdl"]
         self.assertIn("NACRE_COMPOSITOR=niri", text)
-        self.assertIn("compositor.py", text)
+        self.assertIn("nacre-helper", text)
+        self.assertNotIn("python3", text)
         self.assertIn("NACRE_COMPOSITOR_TOOLS", text)
         self.assertIn("switch_workspace --workspace 2", text)
         self.assertIn("move_window --workspace 2", text)

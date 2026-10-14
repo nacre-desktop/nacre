@@ -82,3 +82,55 @@ supplied Unicode 17 emoji-test data and CLDR 48 English annotations. Source URLs
 and input SHA-256 digests are embedded in `emoji-catalog.json`. The data uses the
 [Unicode License v3](../../nacre/shell-tools/emoji-LICENSE.txt); the license travels
 with the catalog. Generation performs no download, and runtime search is local.
+
+Niri transport intended differences: successful request connections stay open;
+invalid frames/IPC failures close the connection and are surfaced without action
+replay. Each request has a total read/write deadline, preventing a slow peer from
+extending a timeout indefinitely. Frozen request bytes, results and tested error
+messages remain exact; other malformed JSON/UTF-8 errors use native diagnostics.
+
+The Niri candidate retains all 10 reducer, eight action and five transport test
+bodies through developer-only native adapters. Socket descriptors cross the test
+boundary into Rust; fixtures are never replayed by installed code. Hover fallback
+preserves the first buffered event, and event reads block until a compositor
+signal or disconnection rather than polling while idle.
+
+Niri night-light intended differences: gamma support comes from the Wayland
+registry directly rather than `wayland-info`; stopping the owned controller uses
+systemd D-Bus rather than `systemctl`. Probe errors still yield unavailable but
+also reach stderr. Missing or inaccessible foreign process records are expected
+discovery races; other process-inspection failures propagate.
+The bounded registry probe follows the [wayland-client API](https://docs.rs/wayland-client/0.31.15/wayland_client/)
+and is tested with private sockets for gamma presence, absence and timeout.
+Desktop configuration publication retains 13 frozen file/rollback transactions;
+external Niri validator failures use native diagnostics containing its output.
+
+Hyprland intended difference: native control uses its documented
+[Unix socket protocol](https://wiki.hypr.land/IPC/) rather than starting `hyprctl`.
+Capture and backend actions share bounded framing with a total request deadline.
+Queries preserve unknown fields and legacy geometry fields. Native socket errors
+include the actual cause; compositor `error:` replies propagate on checked calls.
+Hyprland stream EOF remains a clean end; Niri disconnection remains an error.
+Instance discovery reads runtime lock files directly. Lua declaration capture
+retains the existing Lua tool. Compositor CLI parse failures retain exit 2 with
+native help/error wording rather than Python argparse text. Native action serving
+keeps one backend connection for a JSON-lines session, with IDs and bounded input.
+
+Pearl-window candidate retains 10 frozen ownership/geometry cases and both
+original ownership/gallery assertions. Intended difference: mapping waits use
+compositor events within the same deadline instead of 25 ms polling. Invalid
+window IDs are rejected before dispatch; maximized fit leaves geometry unchanged.
+
+Niri generated binding intended difference: the exact command prefix changes
+from `python3 …/compositor.py action` to `…/nacre-helper compositor action`.
+Frozen compiler references remain unchanged; parity applies only this declared
+prefix substitution, including its KDL quoting. Binding keys, actions and
+arguments remain exact.
+
+The frozen compositor entrypoint cases use the uninstalled `compositor-reference`
+provider to retain their original connection lifecycle while calling the same
+Rust actions, reducer, rendering and event code. Production connection reuse is
+verified separately by native socket and real Quickshell roundtrip tests.
+Transitional Python caller cases receive their scripted tool replies over private
+Hyprland sockets; the harness records equivalent logical effects. Providers load
+inputs only and never replay expected helper outputs.

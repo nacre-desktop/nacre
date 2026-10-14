@@ -1,0 +1,909 @@
+{
+  "source_sha256": "e0c253121be18b66cbc6e149fefb00157ff6b6f6d427dde49135ef499d363859",
+  "cases": [
+    {
+      "request": {
+        "name": "apply",
+        "method": "apply_config",
+        "args": [
+          "hl.config({})\n"
+        ],
+        "kwargs": {
+          "timeout": 3,
+          "check": false
+        },
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.config({})\n"
+            ],
+            "kwargs": {
+              "timeout": 3,
+              "check": false
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "set-options",
+        "method": "set_options",
+        "args": [
+          {
+            "general": {
+              "gaps_in": 6
+            }
+          }
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.config({[\"general\"]={[\"gaps_in\"]=6}})\n"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "set-desktop",
+        "method": "set_desktop_options",
+        "args": [
+          {
+            "blur": true,
+            "followMouse": false
+          }
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.config({[\"decoration.blur.enabled\"]=true,[\"input.follow_mouse\"]=0})\n"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "configure-empty",
+        "method": "configure_monitors",
+        "args": [
+          []
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              ""
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "config-errors",
+        "method": "config_errors",
+        "args": [],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "  Invalid option\n"
+      },
+      "observed": {
+        "stdout": "\"Invalid option\"\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "configerrors"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "logout",
+        "method": "logout",
+        "args": [],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "eval",
+              "hl.dispatch(hl.dsp.exit())"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "option-blur-{'bool': True}",
+        "method": "get_desktop_option",
+        "args": [
+          "blur"
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "{\"bool\": true}"
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "getoption",
+              "decoration.blur.enabled",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "option-blur-{'int': 2}",
+        "method": "get_desktop_option",
+        "args": [
+          "blur"
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "{\"int\": 2}"
+      },
+      "observed": {
+        "stdout": "2\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "getoption",
+              "decoration.blur.enabled",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "option-blur-{'css': '6 12 6 12'}",
+        "method": "get_desktop_option",
+        "args": [
+          "blur"
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "{\"css\": \"6 12 6 12\"}"
+      },
+      "observed": {
+        "stdout": "6\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "getoption",
+              "decoration.blur.enabled",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "option-followMouse-{'bool': True}",
+        "method": "get_desktop_option",
+        "args": [
+          "followMouse"
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "{\"bool\": true}"
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "getoption",
+              "input.follow_mouse",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "option-followMouse-{'int': 2}",
+        "method": "get_desktop_option",
+        "args": [
+          "followMouse"
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "{\"int\": 2}"
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "getoption",
+              "input.follow_mouse",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "option-followMouse-{'css': '6 12 6 12'}",
+        "method": "get_desktop_option",
+        "args": [
+          "followMouse"
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "{\"css\": \"6 12 6 12\"}"
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "getoption",
+              "input.follow_mouse",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "option-gapsIn-{'bool': True}",
+        "method": "get_desktop_option",
+        "args": [
+          "gapsIn"
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "{\"bool\": true}"
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "getoption",
+              "general.gaps_in",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "option-gapsIn-{'int': 2}",
+        "method": "get_desktop_option",
+        "args": [
+          "gapsIn"
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "{\"int\": 2}"
+      },
+      "observed": {
+        "stdout": "2\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "getoption",
+              "general.gaps_in",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "option-gapsIn-{'css': '6 12 6 12'}",
+        "method": "get_desktop_option",
+        "args": [
+          "gapsIn"
+        ],
+        "kwargs": {
+          "timeout": 3
+        },
+        "reply": "{\"css\": \"6 12 6 12\"}"
+      },
+      "observed": {
+        "stdout": "6\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "getoption",
+              "general.gaps_in",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": 3
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "option-unknown",
+        "method": "get_desktop_option",
+        "args": [
+          "unknown"
+        ],
+        "kwargs": {},
+        "reply": "{}"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"'unknown'\", \"type\": \"KeyError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "night-command-True",
+        "method": "night_light_command",
+        "args": [
+          true
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "[\"hyprctl\", \"hyprsunset\", \"temperature\", \"4500\"]\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "night-temperature-True",
+        "method": "set_night_light_temperature",
+        "args": [
+          true
+        ],
+        "kwargs": {
+          "timeout": 1
+        },
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "hyprsunset",
+              "temperature",
+              "4500"
+            ],
+            "kwargs": {
+              "timeout": 1
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "night-command-False",
+        "method": "night_light_command",
+        "args": [
+          false
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "[\"hyprctl\", \"hyprsunset\", \"identity\"]\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "night-temperature-False",
+        "method": "set_night_light_temperature",
+        "args": [
+          false
+        ],
+        "kwargs": {
+          "timeout": 1
+        },
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"code\": 0, \"stdout\": \"ok\\n\", \"stderr\": \"\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "hyprsunset",
+              "identity"
+            ],
+            "kwargs": {
+              "timeout": 1
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-0x0",
+        "method": "valid_window_id",
+        "args": [
+          "0x0"
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-0x0",
+        "method": "window_job_token",
+        "args": [
+          "0x0"
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "\"0\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-0xabc",
+        "method": "valid_window_id",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-0xabc",
+        "method": "window_job_token",
+        "args": [
+          "0xabc"
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "\"abc\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-0xABC",
+        "method": "valid_window_id",
+        "args": [
+          "0xABC"
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "true\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-0xABC",
+        "method": "window_job_token",
+        "args": [
+          "0xABC"
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "\"ABC\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-bad",
+        "method": "valid_window_id",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-bad",
+        "method": "window_job_token",
+        "args": [
+          "bad"
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-True",
+        "method": "valid_window_id",
+        "args": [
+          true
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-True",
+        "method": "window_job_token",
+        "args": [
+          true
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "valid-id-None",
+        "method": "valid_window_id",
+        "args": [
+          null
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "false\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "job-token-None",
+        "method": "window_job_token",
+        "args": [
+          null
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Invalid window ID\", \"type\": \"ValueError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "session_id",
+        "method": "session_id",
+        "args": [],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "\"fixture\"\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "version_command",
+        "method": "version_command",
+        "args": [],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "[\"Hyprland\", \"--version\"]\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "required_commands",
+        "method": "required_commands",
+        "args": [],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "[\"Hyprland\", \"hyprctl\"]\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "diagnostic_commands",
+        "method": "diagnostic_commands",
+        "args": [],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"runningVersion\": [\"hyprctl\", \"version\"], \"installedVersion\": [\"Hyprland\", \"--version\"], \"allMonitors\": [\"hyprctl\", \"-j\", \"monitors\", \"all\"], \"configErrors\": [\"hyprctl\", \"configerrors\"]}\n",
+        "exit": 0,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "environment_updates",
+        "method": "environment_updates",
+        "args": [],
+        "kwargs": {},
+        "reply": "[{\"instance\":\"fixture\"}]"
+      },
+      "observed": {
+        "stdout": "{\"HYPRLAND_INSTANCE_SIGNATURE\": \"fixture\", \"XDG_CURRENT_DESKTOP\": \"Hyprland\"}\n",
+        "exit": 0,
+        "calls": [
+          {
+            "args": [
+              "instances",
+              "-j"
+            ],
+            "kwargs": {
+              "timeout": null,
+              "check": false
+            }
+          }
+        ]
+      },
+      "stderr": "",
+      "files": {}
+    },
+    {
+      "request": {
+        "name": "screenshot-unsupported",
+        "method": "screenshot_window",
+        "args": [
+          "/case/window.png",
+          "0xabc"
+        ],
+        "kwargs": {},
+        "reply": "ok\n"
+      },
+      "observed": {
+        "stdout": "{\"error\": \"Use the geometry-based capture helper on Hyprland\", \"type\": \"RuntimeError\"}\n",
+        "exit": 1,
+        "calls": []
+      },
+      "stderr": "",
+      "files": {}
+    }
+  ]
+}

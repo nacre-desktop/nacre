@@ -102,14 +102,18 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         desktop = ""
         if preferences.is_file():
             backend = module(
-                root / "nacre/shell-tools/compositor_backends/niri.py",
+                root / "nacre/shell-tools/nacre_native_compositor.py",
                 "package_niri_preferences",
-            ).Backend()
+            )
             values = json.loads(preferences.read_text())
-            desktop = backend.render_desktop_options(values)
+            desktop = backend.render_for_backend(
+                "niri", "render_desktop_options", values
+            )
             monitors = values.get("compositorDisplays", {}).get("niri")
             if monitors is not None:
-                desktop += backend.render_monitors(monitors)
+                desktop += backend.render_for_backend(
+                    "niri", "render_monitors", monitors
+                )
     add(config / "desktop.kdl", desktop)
     includes.append("desktop.kdl")
     # Orient owns later palette updates. Seed this only if the user has none yet.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Explicit capture/night-light actions and read-only optional tool discovery."""
 
-import compositor
+import nacre_native_compositor as compositor
 
 import argparse
 from nacre_i18n import tr
@@ -177,7 +177,7 @@ def night_light(enabled, home=None):
     if active:
         try:
             apply_temperature(enabled, owner, started)
-        except subprocess.SubprocessError:
+        except (RuntimeError, subprocess.SubprocessError):
             # Undo a partial startup, but only while the invocation still belongs to us.
             if started and service()[1] == owner:
                 subprocess.run(

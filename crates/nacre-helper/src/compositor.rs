@@ -1,11 +1,24 @@
-//! Small native boundary required by menu capture; compositor IDs stay opaque.
+//! Native compositor boundaries; compositor IDs stay opaque.
+pub mod backend;
+pub mod cli;
+pub mod hyprland;
+pub mod hyprland_events;
+pub mod hyprland_runtime;
+pub mod hyprland_transport;
+pub mod niri;
+pub mod niri_actions;
+pub mod niri_config;
+pub mod niri_desktop;
+pub mod niri_events;
+pub mod niri_night_light;
+pub mod niri_state;
+pub mod niri_transport;
+mod wayland_registry;
 use crate::Result;
 use niri_ipc::{Action, Request};
 use serde_json::Value;
 use std::{
     env,
-    io::{BufRead, BufReader, Read, Write},
-    net::Shutdown,
     os::unix::net::UnixStream,
     path::{Path, PathBuf},
     time::Duration,
@@ -18,42 +31,20 @@ pub enum CaptureWindow {
 
 enum Connection {
     Hyprland(PathBuf),
-    Niri(BufReader<UnixStream>),
+    Niri(niri_transport::Connection),
 }
 
 pub struct Compositor(Connection);
 impl Compositor {
     pub fn connect() -> Result<Self> {
-        let explicit = env::var("NACRE_COMPOSITOR")
-            .unwrap_or_default()
-            .to_lowercase();
-        let backend = if !explicit.is_empty() {
-            if !["hyprland", "niri"].contains(&explicit.as_str()) {
-                return Err("Unknown NACRE_COMPOSITOR backend".into());
-            }
-            explicit.as_str()
-        } else if env::var("XDG_CURRENT_DESKTOP")
-            .unwrap_or_default()
-            .to_lowercase()
-            .split(':')
-            .any(|desktop| desktop == "niri")
-        {
-            "niri"
-        } else if env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some_and(|v| !v.is_empty()) {
-            "hyprland"
-        } else if env::var_os("NIRI_SOCKET").is_some_and(|v| !v.is_empty()) {
-            "niri"
-        } else {
-            "hyprland"
-        };
+        let environment = env::vars().collect();
+        let backend = backend::select(&environment)?;
         let connection = if backend == "niri" {
             let path = env::var_os("NIRI_SOCKET")
                 .filter(|v| !v.is_empty())
                 .ok_or("NIRI_SOCKET is unavailable")?;
             let stream = UnixStream::connect(path)?;
-            stream.set_read_timeout(Some(Duration::from_secs(5)))?;
-            stream.set_write_timeout(Some(Duration::from_secs(5)))?;
-            Connection::Niri(BufReader::new(stream))
+            Connection::Niri(niri_transport::Connection::from_stream(stream))
         } else {
             let runtime = env::var_os("XDG_RUNTIME_DIR").ok_or("XDG_RUNTIME_DIR is unavailable")?;
             let signature = env::var("HYPRLAND_INSTANCE_SIGNATURE")?;
@@ -145,14 +136,12 @@ impl Compositor {
                 )?)?)
             }
             Connection::Niri(stream) => {
-                stream.get_mut().set_read_timeout(Some(timeout))?;
-                stream.get_mut().set_write_timeout(Some(timeout))?;
                 let (request, field) = match name {
                     "runningVersion" => (Request::Version, "Version"),
                     "allMonitors" => (Request::Outputs, "Outputs"),
                     _ => return Err("Unknown compositor diagnostic".into()),
                 };
-                let result = niri_request(stream, request)?;
+                let result = niri_request_with_timeout(stream, request, timeout)?;
                 crate::json::pretty(
                     result
                         .get(field)
@@ -190,38 +179,40 @@ impl Compositor {
 }
 
 fn hyprland_request(path: &Path, command: &[u8], timeout: Duration) -> Result<Vec<u8>> {
-    let mut stream = UnixStream::connect(path)?;
-    stream.set_read_timeout(Some(timeout))?;
-    stream.set_write_timeout(Some(timeout))?;
-    stream.write_all(command)?;
-    stream.shutdown(Shutdown::Write)?;
-    let mut bytes = Vec::new();
-    stream.take(2_097_153).read_to_end(&mut bytes)?;
-    if bytes.len() > 2_097_152 {
-        return Err("Compositor response exceeded its size limit".into());
-    }
-    Ok(bytes)
+    hyprland_transport::exchange(path, command, timeout, 2_097_152)
 }
 
-fn niri_request(stream: &mut BufReader<UnixStream>, request: Request) -> Result<Value> {
-    serde_json::to_writer(stream.get_mut(), &request)?;
-    stream.get_mut().write_all(b"\n")?;
-    stream.get_mut().flush()?;
-    let mut bytes = Vec::new();
-    stream.take(2_097_153).read_until(b'\n', &mut bytes)?;
-    if bytes.is_empty() || bytes.len() > 2_097_152 || bytes.last() != Some(&b'\n') {
-        return Err("Truncated or oversized niri reply".into());
-    }
-    // Consume the operation's stable fields; newer metadata must not make an
-    // older supported compositor's capture reply unreadable.
-    let reply: std::result::Result<Value, String> = serde_json::from_slice(&bytes)?;
-    reply.map_err(Into::into)
+fn niri_request(stream: &mut niri_transport::Connection, request: Request) -> Result<Value> {
+    niri_request_with_timeout(stream, request, Duration::from_secs(5))
+}
+fn niri_request_with_timeout(
+    stream: &mut niri_transport::Connection,
+    request: Request,
+    timeout: Duration,
+) -> Result<Value> {
+    stream
+        .request(&request, timeout, 2_097_152)
+        .map_err(|error| {
+            // Capture's established stderr predates the neutral backend's prefix.
+            // Keep that public contract while sharing framing and connection limits.
+            if error.kind == "RuntimeError" {
+                if let Some(message) = error.message.strip_prefix("niri IPC: ") {
+                    return message.to_owned().into();
+                }
+            }
+            error.into()
+        })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{os::unix::net::UnixListener, thread};
+    use std::{
+        io::{BufRead, BufReader, Read, Write},
+        net::Shutdown,
+        os::unix::net::UnixListener,
+        thread,
+    };
     #[test]
     fn private_hyprland_diagnostics_use_exact_socket_commands() -> Result<()> {
         let home = tempfile::tempdir()?;
@@ -279,7 +270,9 @@ mod tests {
             }
             Ok(())
         });
-        let mut compositor = Compositor(Connection::Niri(BufReader::new(client)));
+        let mut compositor = Compositor(Connection::Niri(niri_transport::Connection::from_stream(
+            client,
+        )));
         assert_eq!(
             compositor.diagnostic("runningVersion", Duration::from_secs(1))?,
             "\"fixture version\""
@@ -332,7 +325,9 @@ mod tests {
                 .write_all(b"{\"Err\":\"capture rejected\"}\n")?;
             Ok(())
         });
-        let mut compositor = Compositor(Connection::Niri(BufReader::new(client)));
+        let mut compositor = Compositor(Connection::Niri(niri_transport::Connection::from_stream(
+            client,
+        )));
         assert!(matches!(
             compositor.active_window()?,
             CaptureWindow::Niri(Some(42))
@@ -366,7 +361,9 @@ mod tests {
             }
             Ok(())
         });
-        let mut compositor = Compositor(Connection::Niri(BufReader::new(client)));
+        let mut compositor = Compositor(Connection::Niri(niri_transport::Connection::from_stream(
+            client,
+        )));
         assert_eq!(compositor.focused_output_name()?, "eDP-1");
         assert!(compositor.focused_output_name().is_err());
         server.join().map_err(|_| "IPC fixture panicked")??;
@@ -440,8 +437,11 @@ mod tests {
                 server.shutdown(Shutdown::Write)?;
                 Ok(())
             });
-            let error = niri_request(&mut BufReader::new(client), Request::FocusedWindow)
-                .expect_err("Invalid reply accepted");
+            let error = niri_request(
+                &mut niri_transport::Connection::from_stream(client),
+                Request::FocusedWindow,
+            )
+            .expect_err("Invalid reply accepted");
             assert_eq!(error.to_string(), "Truncated or oversized niri reply");
             task.join().map_err(|_| "IPC fixture panicked")??;
         }
