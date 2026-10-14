@@ -170,7 +170,7 @@ Column {
                 icon: tile.icon
                 detail: modelData === "night" && NacreCompositor.backendName === "niri" && !tile.available ? NacreI18n.tr("controlcenter.night.niri", "Unavailable on niri") : tile.status
                 selected: tile.on
-                implicitHeight: 68
+                Layout.minimumHeight: 68
                 available: tile.available
                 hasDetails: ["network", "bluetooth", "battery"].includes(modelData)
                 contextDetails: true

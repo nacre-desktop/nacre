@@ -17,7 +17,7 @@ NacreClip {
     readonly property color tileInk: !available ? NacreTokens.mutedInk : selected ? NacreColours.palette.m3onPrimaryContainer : NacreTokens.ink
     signal clicked
     signal detailsRequested
-    implicitHeight: 66
+    implicitHeight: Math.max(66, labels.implicitHeight + 16)
     implicitWidth: 184
     radius: 24
     color: !available ? Qt.alpha(NacreTokens.raised, .4) : selected ? NacreColours.palette.m3primaryContainer : NacreTokens.raised
@@ -35,6 +35,7 @@ NacreClip {
             opacity: root.available ? 1 : .4
         }
         Column {
+            id: labels
             x: 44
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width - x - 8
@@ -46,7 +47,7 @@ NacreClip {
                 opacity: root.available ? 1 : .55
                 font.pointSize: 10
                 font.weight: Font.Medium
-                elide: Text.ElideRight
+                wrapMode: Text.Wrap
             }
             NacreText {
                 width: parent.width
@@ -55,6 +56,8 @@ NacreClip {
                 font.pointSize: 9
                 color: root.selected && root.available ? root.tileInk : NacreTokens.mutedInk
                 opacity: root.available ? 1 : .55
+                wrapMode: Text.Wrap
+                maximumLineCount: 2
                 elide: Text.ElideRight
             }
         }

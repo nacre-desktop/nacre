@@ -73,7 +73,7 @@ Item {
         x: content.inset
         y: status.y + status.height + 12
         width: parent.width - content.inset * 2
-        height: 36
+        height: Math.max(36, heading.implicitHeight)
         visible: panel.section !== "home"
         NacreControlButton {
             id: back
@@ -83,11 +83,13 @@ Item {
             onClicked: panel.navigate("home")
         }
         NacreText {
+            id: heading
             Layout.fillWidth: true
+            Layout.minimumWidth: 0
             text: panel.detailNames[panel.section] || ""
             font.pointSize: 18
             font.weight: Font.Medium
-            elide: Text.ElideRight
+            wrapMode: Text.Wrap
         }
     }
     Connections {
