@@ -13,6 +13,7 @@ Singleton {
     property var previousProcesses: ({})
     property var cpuByPid: ({})
     property real processSampleTime: 0
+    property bool processCpuReady: false
     readonly property var filesystems: {
         const seen = new Set();
         return disks.filter(disk => {
@@ -97,15 +98,34 @@ Singleton {
             sent: sent
         };
     }
+    function sampleProcesses(rows, now = Date.now() / 1000) {
+        const next = {}, usage = {};
+        for (const row of rows) {
+            if (!Number.isFinite(row.cpuSeconds))
+                continue;
+            const key = row.pid + ":" + row.start, before = previousProcesses[key];
+            if (Number.isFinite(before) && now > processSampleTime)
+                usage[key] = Math.max(0, (row.cpuSeconds - before) * 100 / (now - processSampleTime));
+            next[key] = row.cpuSeconds;
+        }
+        processCpuReady = processSampleTime > 0;
+        cpuByPid = usage;
+        previousProcesses = next;
+        processSampleTime = now;
+        processes = rows;
+    }
     onShownChanged: if (shown) {
         previous = null;
         previousProcesses = ({});
         cpuByPid = ({});
         processSampleTime = 0;
+        processCpuReady = false;
         refresh();
     }
     Timer {
-        interval: 10000
+        objectName: "dashboardProcessSampler"
+        // Warm up quickly: a cumulative counter needs two reads before a rate.
+        interval: root.processCpuReady ? 2000 : 750
         repeat: true
         running: root.shown
         onTriggered: root.refresh()
@@ -131,17 +151,7 @@ Singleton {
                     const data = JSON.parse(text);
                     root.message = data.error || "";
                     if (!data.error) {
-                        const now = Date.now() / 1000, next = {}, usage = {};
-                        for (const row of data.processes || []) {
-                            const key = row.pid + ":" + row.start, before = root.previousProcesses[key];
-                            if (before !== undefined && now > root.processSampleTime)
-                                usage[key] = Math.max(0, (row.cpuSeconds - before) * 100 / (now - root.processSampleTime));
-                            next[key] = row.cpuSeconds;
-                        }
-                        root.cpuByPid = usage;
-                        root.previousProcesses = next;
-                        root.processSampleTime = now;
-                        root.processes = data.processes || [];
+                        root.sampleProcesses(data.processes || []);
                         root.disks = data.disks || [];
                     }
                 } catch (error) {
