@@ -204,6 +204,17 @@ class RepositoryTests(unittest.TestCase):
                 )
                 previous = first / "arch/dev/x86_64"
                 self.assertFalse(any(path.is_symlink() for path in first.rglob("*")))
+                self.assertEqual(
+                    (previous / "SRCINFO").read_bytes(),
+                    (self.artifacts / "nacre/.SRCINFO").read_bytes(),
+                )
+                self.assertFalse((previous / ".SRCINFO").exists())
+                subprocess.run(
+                    ["sha256sum", "--check", "PACKAGE-SHA256SUMS"],
+                    cwd=previous,
+                    check=True,
+                    capture_output=True,
+                )
                 repository.run(
                     "gpg",
                     "--verify",

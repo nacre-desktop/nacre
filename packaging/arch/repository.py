@@ -273,13 +273,14 @@ def build(root, artifacts, output, fingerprint, revision, run_id, previous=None)
         retained=retained,
     )
     shutil.copy2(artifacts / "nacre/PKGBUILD", destination / "PKGBUILD")
-    shutil.copy2(artifacts / "nacre/.SRCINFO", destination / ".SRCINFO")
+    # Pages does not serve dot-prefixed paths. Keep recipe metadata downloadable.
+    shutil.copy2(artifacts / "nacre/.SRCINFO", destination / "SRCINFO")
     manifest = destination / "release.json"
     manifest.write_text(json.dumps(release, indent=2, sort_keys=True) + "\n")
     sign(manifest, fingerprint)
     package_checksums = destination / "PACKAGE-SHA256SUMS"
     assets = [destination / item["filename"] for item in records.values()]
-    assets += [destination / "PKGBUILD", destination / ".SRCINFO", manifest]
+    assets += [destination / "PKGBUILD", destination / "SRCINFO", manifest]
     package_checksums.write_text(
         "".join(digest(path) + "  " + path.name + "\n" for path in assets)
     )

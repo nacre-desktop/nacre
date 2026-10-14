@@ -103,7 +103,7 @@ jobs:
           else:
               files = [folder/record['filename'] for record in receipt['packages'].values()]
               files += [pathlib.Path(str(path)+'.sig') for path in files]
-              files += [folder/'release.json',folder/'release.json.sig',folder/'PACKAGE-SHA256SUMS',folder/'PACKAGE-SHA256SUMS.sig',folder/'PKGBUILD',folder/'.SRCINFO',pathlib.Path('site/nacre-repo.asc'),pathlib.Path('site/install-arch.sh'),pathlib.Path('site/install-arch.sh.sig')]
+              files += [folder/'release.json',folder/'release.json.sig',folder/'PACKAGE-SHA256SUMS',folder/'PACKAGE-SHA256SUMS.sig',folder/'PKGBUILD',folder/'SRCINFO',pathlib.Path('site/nacre-repo.asc'),pathlib.Path('site/install-arch.sh'),pathlib.Path('site/install-arch.sh.sig')]
               # This tag records publication on main, including its packaging
               # controls. The signed receipt records the exact compiled source.
               # GITHUB_TOKEN cannot tag an older workflow-changing commit.

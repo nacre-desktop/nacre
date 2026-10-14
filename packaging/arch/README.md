@@ -111,8 +111,10 @@ still separate from this headless proof.
 Passing snapshots publish immutable GitHub preview assets and an atomic Pages
 repository. The database selects the current versions; previous package files
 are retained to allow downloads already in progress to finish. The immutable
-assets include exact PKGBUILD/`.SRCINFO` bytes (GitHub names the latter
-`default.SRCINFO`), package checksums/signatures and source receipt. Release tags
+assets include exact PKGBUILD/`.SRCINFO` bytes (the latter is served as
+`SRCINFO`), package checksums/signatures and source receipt. For the first
+`2ef96744` release only, rename GitHub's `default.SRCINFO` download to `.SRCINFO`
+before checking its `PACKAGE-SHA256SUMS`. Release tags
 record publication state on `main`; signed `release.json` identifies the exact
 compiled source and successful build. This lets the standard workflow token
 publish a tested older source snapshot without permission to modify workflows.
