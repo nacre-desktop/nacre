@@ -282,6 +282,38 @@ TestCase {
         value.run(value.entries[0]);
         compare(SidebarChat.commands.length, 0);
     }
+    function test_record_screen_routes_after_closing_and_obeys_recording_state() {
+        const value = view();
+        value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
+            capabilities: Object.assign({}, value.menu.snapshot.capabilities, {
+                record: true
+            }),
+            recording: false
+        });
+        value.navigate("actions.capture");
+        const screen = value.entries.find(row => row.value === "record-screen");
+        verify(screen !== undefined);
+        verify(!screen.disabled);
+        compare(screen.name, "Record screen");
+        value.run(screen);
+        compare(value.visibilities.launcher, false);
+        compare(AppLaunch.commands.length, 0);
+        tryVerify(() => AppLaunch.commands.length === 1);
+        compare(AppLaunch.commands[0].slice(-3).join("|"), "menu-backend|tool|record-screen");
+        value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
+            recording: true
+        });
+        verify(value.menu.node("actions.capture.record-screen").disabled);
+        verify(value.menu.node("actions.capture.record").disabled);
+        verify(!value.menu.node("actions.capture.stop").disabled);
+        value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
+            recording: false,
+            capabilities: Object.assign({}, value.menu.snapshot.capabilities, {
+                record: false
+            })
+        });
+        verify(value.menu.node("actions.capture.record-screen").disabled);
+    }
 
     function calculatorClick(value, name) {
         const button = findChild(value, "calculatorKey_" + name);

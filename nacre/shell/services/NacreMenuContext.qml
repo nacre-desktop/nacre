@@ -173,7 +173,7 @@ Scope {
             result.disabled = !snapshot.recording;
             result.reason = result.disabled ? NacreI18n.tr("launcher.disabled.no-recording-is-running", "No recording is running") : "";
         }
-        if (row.value === "record-start" && snapshot.recording) {
+        if (["record-start", "record-screen"].includes(row.value) && snapshot.recording) {
             result.disabled = true;
             result.reason = NacreI18n.tr("launcher.disabled.a-recording-is-already-running", "A recording is already running");
         }
@@ -761,7 +761,7 @@ Scope {
             return true;
         }
         if (operation === "tool") {
-            if (value.startsWith("capture-") || ["record-start", "color-picker"].includes(value)) {
+            if (value.startsWith("capture-") || ["record-start", "record-screen", "color-picker"].includes(value)) {
                 captureDelay.value = value;
                 captureDelay.restart();
             } else if (["updates", "logs"].includes(value))

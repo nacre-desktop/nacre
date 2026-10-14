@@ -894,6 +894,8 @@
   "launcher.catalog.actions.capture.label": "Capture",
   "launcher.catalog.actions.capture.qr.description": "Copy the result",
   "launcher.catalog.actions.capture.qr.label": "Read a QR code",
+  "launcher.catalog.actions.capture.record-screen.description": "Record the entire focused screen to Videos/Recordings",
+  "launcher.catalog.actions.capture.record-screen.label": "Record screen",
   "launcher.catalog.actions.capture.record.description": "Record to Videos/Recordings",
   "launcher.catalog.actions.capture.record.label": "Record an area",
   "launcher.catalog.actions.capture.screen.description": "Save in Pictures/Screenshots",

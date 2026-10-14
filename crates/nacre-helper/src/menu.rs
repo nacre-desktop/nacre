@@ -510,6 +510,7 @@ pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Valu
         [action, name] if action == "tool" => {
             if [
                 "record-start",
+                "record-screen",
                 "record-stop",
                 "stay-awake",
                 "focus-timer",
@@ -519,6 +520,7 @@ pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Valu
             {
                 let message = match name.as_str() {
                     "record-start" => crate::menu_actions::record_start()?,
+                    "record-screen" => crate::menu_actions::record_screen()?,
                     "record-stop" => crate::menu_actions::record_stop()?,
                     "stay-awake" => crate::menu_actions::stay_awake()?,
                     "support-report" => crate::menu_actions::support_report()?,

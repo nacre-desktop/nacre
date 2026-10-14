@@ -103,6 +103,34 @@ impl Compositor {
             }
         }
     }
+    pub fn focused_output_name(&mut self) -> Result<String> {
+        let output = match &mut self.0 {
+            Connection::Niri(stream) => {
+                let reply = niri_request(stream, Request::FocusedOutput)?;
+                reply
+                    .get("FocusedOutput")
+                    .cloned()
+                    .ok_or("Malformed compositor query response")?
+            }
+            Connection::Hyprland(path) => {
+                let bytes = hyprland_request(path, b"j/monitors", Duration::from_secs(5))?;
+                let monitors: Value = serde_json::from_slice(&bytes)?;
+                monitors
+                    .as_array()
+                    .ok_or("Malformed compositor query response")?
+                    .iter()
+                    .find(|monitor| monitor["focused"] == true)
+                    .cloned()
+                    .unwrap_or(Value::Null)
+            }
+        };
+        output
+            .get("name")
+            .and_then(Value::as_str)
+            .filter(|name| !name.is_empty())
+            .map(String::from)
+            .ok_or_else(|| "No focused output available".into())
+    }
     pub fn diagnostic(&mut self, name: &str, timeout: Duration) -> Result<String> {
         match &mut self.0 {
             Connection::Hyprland(path) => {
@@ -316,6 +344,52 @@ mod tests {
                 .to_string(),
             "capture rejected"
         );
+        server.join().map_err(|_| "IPC fixture panicked")??;
+        Ok(())
+    }
+    #[test]
+    fn focused_output_names_use_native_queries_and_reject_missing_outputs() -> Result<()> {
+        let (client, server) = UnixStream::pair()?;
+        let server = thread::spawn(move || -> Result<()> {
+            let mut stream = BufReader::new(server);
+            for reply in [
+                r#"{"Ok":{"FocusedOutput":{"name":"eDP-1"}}}"#,
+                r#"{"Ok":{"FocusedOutput":null}}"#,
+            ] {
+                let mut line = String::new();
+                stream.read_line(&mut line)?;
+                assert!(matches!(
+                    serde_json::from_str::<Request>(&line)?,
+                    Request::FocusedOutput
+                ));
+                writeln!(stream.get_mut(), "{reply}")?;
+            }
+            Ok(())
+        });
+        let mut compositor = Compositor(Connection::Niri(BufReader::new(client)));
+        assert_eq!(compositor.focused_output_name()?, "eDP-1");
+        assert!(compositor.focused_output_name().is_err());
+        server.join().map_err(|_| "IPC fixture panicked")??;
+
+        let home = tempfile::tempdir()?;
+        let path = home.path().join("monitors.sock");
+        let listener = UnixListener::bind(&path)?;
+        let server = thread::spawn(move || -> Result<()> {
+            for reply in [
+                r#"[{"name":"eDP-1","focused":false},{"name":"DP-2","focused":true}]"#,
+                "[]",
+            ] {
+                let (mut socket, _) = listener.accept()?;
+                let mut command = String::new();
+                socket.read_to_string(&mut command)?;
+                assert_eq!(command, "j/monitors");
+                socket.write_all(reply.as_bytes())?;
+            }
+            Ok(())
+        });
+        let mut compositor = Compositor(Connection::Hyprland(path));
+        assert_eq!(compositor.focused_output_name()?, "DP-2");
+        assert!(compositor.focused_output_name().is_err());
         server.join().map_err(|_| "IPC fixture panicked")??;
         Ok(())
     }

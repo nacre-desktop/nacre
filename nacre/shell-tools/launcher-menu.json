@@ -141,6 +141,18 @@
       "descriptionId": "launcher.catalog.actions.capture.record.description"
     },
     {
+      "id": "actions.capture.record-screen",
+      "kind": "action",
+      "label": "Record screen",
+      "icon": "screen_share",
+      "operation": "tool",
+      "value": "record-screen",
+      "description": "Record the entire focused screen to Videos/Recordings",
+      "capability": "record",
+      "labelId": "launcher.catalog.actions.capture.record-screen.label",
+      "descriptionId": "launcher.catalog.actions.capture.record-screen.description"
+    },
+    {
       "id": "actions.capture.stop",
       "kind": "action",
       "label": "Stop recording",

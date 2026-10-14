@@ -882,6 +882,8 @@
   "launcher.catalog.actions.capture.label": "Launcher label for actions.capture.",
   "launcher.catalog.actions.capture.qr.description": "Launcher description for actions.capture.qr.",
   "launcher.catalog.actions.capture.qr.label": "Launcher label for actions.capture.qr.",
+  "launcher.catalog.actions.capture.record-screen.description": "Capture menu action: records the whole focused monitor, not a selected rectangle. Videos/Recordings is the destination folder.",
+  "launcher.catalog.actions.capture.record-screen.label": "Capture menu action: records the whole focused monitor, not a selected rectangle. Videos/Recordings is the destination folder.",
   "launcher.catalog.actions.capture.record.description": "Launcher description for actions.capture.record.",
   "launcher.catalog.actions.capture.record.label": "Launcher label for actions.capture.record.",
   "launcher.catalog.actions.capture.screen.description": "Launcher description for actions.capture.screen.",

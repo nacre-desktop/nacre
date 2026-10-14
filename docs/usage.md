@@ -5,6 +5,10 @@ Enter to open the selected result. `>` scopes actions, `=` opens the calculator,
 `#` searches optional Brain notes and `?` opens optional AI. Manage favorites on
 hover or with Ctrl+D. Super+I opens Settings; Super+K opens the shortcut list.
 
+Actions → Capture offers Record an area and Record screen. Record screen captures
+the entire focused monitor. Both save to `Videos/Recordings`; use Stop recording
+to finish and save the video.
+
 Type `=` or choose Calculator for a keypad with arithmetic, parentheses, sign
 change, square and square root. Type expressions directly or use the buttons;
 the result updates as you work. The `=` button keeps the answer ready for the

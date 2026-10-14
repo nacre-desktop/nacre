@@ -713,6 +713,17 @@ pub fn record_start() -> Result<String> {
         &mut NativeUnits,
         &mut process::run_bytes,
         || chrono::Local::now().format("%Y%m%d_%H%M%S_%6f").to_string(),
+        None,
+    )
+}
+pub fn record_screen() -> Result<String> {
+    let output = Compositor::connect()?.focused_output_name()?;
+    record_start_with(
+        &Paths::environment()?,
+        &mut NativeUnits,
+        &mut process::run_bytes,
+        || chrono::Local::now().format("%Y%m%d_%H%M%S_%6f").to_string(),
+        Some(&output),
     )
 }
 fn record_start_with(
@@ -720,6 +731,7 @@ fn record_start_with(
     units: &mut impl Units,
     run: &mut impl FnMut(&str, &[String], Option<&[u8]>, Duration) -> Result<Output>,
     stamp: impl FnOnce() -> String,
+    output: Option<&str>,
 ) -> Result<String> {
     let _guard = crate::menu_registry::registry_lock(paths, "recording")?;
     if units.active("nacre-screen-recording.service")? {
@@ -729,26 +741,28 @@ fn record_start_with(
         )
         .into());
     }
-    let selected = run("slurp", &[], None, Duration::from_secs(180))?;
-    let geometry = String::from_utf8(selected.stdout)?
-        .trim_matches(|c: char| c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c))
-        .to_string();
-    if !selected.status.success() || geometry.is_empty() {
-        return Ok(String::new());
-    }
+    let selector = if let Some(output) = output {
+        vec!["-o".to_string(), output.to_string()]
+    } else {
+        let selected = run("slurp", &[], None, Duration::from_secs(180))?;
+        let geometry = String::from_utf8(selected.stdout)?
+            .trim_matches(|c: char| c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c))
+            .to_string();
+        if !selected.status.success() || geometry.is_empty() {
+            return Ok(String::new());
+        }
+        vec!["-g".to_string(), geometry]
+    };
     let folder = paths.recordings();
     fs::create_dir_all(&folder)?;
     let path = folder.join(format!("recording_{}.mp4", stamp()));
-    units.start(
-        "nacre-screen-recording.service",
-        &[
-            "wf-recorder".into(),
-            "-g".into(),
-            geometry,
-            "-f".into(),
-            path.to_str().ok_or("Recording path is not UTF-8")?.into(),
-        ],
-    )?;
+    let mut command = vec!["wf-recorder".to_string()];
+    command.extend(selector);
+    command.extend([
+        "-f".into(),
+        path.to_str().ok_or("Recording path is not UTF-8")?.into(),
+    ]);
+    units.start("nacre-screen-recording.service", &command)?;
     let owner = units.wait_owner("nacre-screen-recording.service")?;
     if owner.is_empty() {
         return Err(tr(
@@ -934,6 +948,91 @@ mod tests {
     use super::*;
     use serde_json::Value;
     #[test]
+    fn whole_screen_recording_skips_selection_and_shares_owned_stop() -> Result<()> {
+        struct Fake {
+            busy: bool,
+            ready: bool,
+            owner: String,
+            args: Vec<String>,
+        }
+        impl Units for Fake {
+            fn active(&mut self, _: &str) -> Result<bool> {
+                Ok(self.busy)
+            }
+            fn owner(&mut self, _: &str) -> Result<String> {
+                Ok(self.owner.clone())
+            }
+            fn start(&mut self, name: &str, args: &[String]) -> Result<()> {
+                assert_eq!(name, "nacre-screen-recording.service");
+                self.args = args.to_vec();
+                if self.ready {
+                    self.owner = "7:invocation".into();
+                }
+                Ok(())
+            }
+            fn stop(&mut self, _: &str, _: &str) -> Result<()> {
+                unreachable!()
+            }
+            fn finish_recording(&mut self, name: &str, owner: &str) -> Result<()> {
+                assert_eq!(name, "nacre-screen-recording.service");
+                assert_eq!(owner, self.owner);
+                self.owner.clear();
+                Ok(())
+            }
+        }
+        for (busy, ready) in [(true, false), (false, false), (false, true)] {
+            let home = tempfile::tempdir()?;
+            let paths = Paths::new(home.path());
+            let mut units = Fake {
+                busy,
+                ready,
+                owner: String::new(),
+                args: vec![],
+            };
+            let result = record_start_with(
+                &paths,
+                &mut units,
+                &mut |_, _, _, _| -> Result<Output> {
+                    panic!("Whole screen must not invoke slurp")
+                },
+                || "test".into(),
+                Some("DP-2"),
+            );
+            let state = paths.state.join("menu/recording.json");
+            if busy {
+                assert!(result.is_err());
+                assert!(units.args.is_empty());
+                assert!(!state.exists());
+            } else {
+                assert_eq!(
+                    units.args,
+                    vec![
+                        "wf-recorder".into(),
+                        "-o".into(),
+                        "DP-2".into(),
+                        "-f".into(),
+                        paths
+                            .recordings()
+                            .join("recording_test.mp4")
+                            .to_string_lossy()
+                            .into_owned()
+                    ]
+                );
+                if ready {
+                    assert!(result.is_ok());
+                    assert_eq!(record(&paths, "recording")?["owner"], "7:invocation");
+                    assert_eq!(fs::metadata(&state)?.permissions().mode() & 0o777, 0o600);
+                    assert!(record_stop_with(&paths, &mut units)?.contains("Recording saved"));
+                    assert!(units.owner.is_empty());
+                } else {
+                    assert!(result.is_err());
+                    assert!(!state.exists());
+                }
+            }
+        }
+        Ok(())
+    }
+    #[test]
     fn current_python_record_start_waits_before_publishing_owned_state() -> Result<()> {
         use std::cell::RefCell;
         struct Fake<'a> {
@@ -1012,6 +1111,7 @@ mod tests {
                     })
                 },
                 || "20240102_030405_678901".into(),
+                None,
             );
             let outcome = match result {
                 Ok(value) => json!({"value":value}),
