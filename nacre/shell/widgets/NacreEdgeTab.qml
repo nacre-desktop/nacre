@@ -11,6 +11,29 @@ Item {
     readonly property real amount: Math.max(active || keyboardFocused ? 1 : 0, Math.min(1, progress))
     clip: true
     Accessible.ignored: true
+    Item {
+        id: cue
+        objectName: "edgeTabHoverCue"
+        x: root.edge === "left" ? 0 : root.width - width
+        width: 1
+        height: 36
+        anchors.verticalCenter: parent.verticalCenter
+        Rectangle {
+            objectName: "edgeTabHoverFill"
+            width: parent.width
+            height: parent.height * root.amount
+            gradient: Gradient {
+                GradientStop {
+                    position: 0
+                    color: NacreTokens.accent
+                }
+                GradientStop {
+                    position: 1
+                    color: NacreTokens.orientSecondary
+                }
+            }
+        }
+    }
     Shape {
         id: arrow
         objectName: "edgeTabArrow"
@@ -23,21 +46,9 @@ Item {
         opacity: .75 + .25 * root.amount
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
+            objectName: "edgeTabStroke"
             strokeWidth: 1.25
-            strokeGradient: LinearGradient {
-                x1: 0
-                y1: 0
-                x2: 0
-                y2: arrow.height
-                GradientStop {
-                    position: 0
-                    color: NacreTokens.accent
-                }
-                GradientStop {
-                    position: 1
-                    color: NacreTokens.orientSecondary
-                }
-            }
+            strokeColor: NacreTokens.accent
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin

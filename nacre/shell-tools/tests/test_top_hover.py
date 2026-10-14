@@ -153,10 +153,14 @@ TestCase {
  function test_side_tab_transit_cancels_and_click_closes_current_detail(){
   DesktopSettings.data={animations:true};const view=createTemporaryObject(scene,this);mouseMove(view,500,180);wait(30);
   const tab=findChild(view,"frameRightLip");
-  const cue=findChild(view,"nacreRightDwell");
+  const cue=findChild(view,"nacreRightDwell"),line=findChild(tab,"edgeTabHoverFill"),track=findChild(tab,"edgeTabHoverCue");
+  compare(findChild(tab,"edgeTabStroke").strokeColor,NacreTokens.accent);compare(line.height,0);
+  verify(track.x>=0 && track.x+track.width<=tab.width);
   mouseMove(tab,tab.width/2,tab.height/2);wait(170);verify(!view.flags.osd);verify(cue.progress>0 && cue.progress<1);
-  mouseMove(view,500,180);wait(250);verify(!view.flags.osd);compare(cue.progress,0);
-  mouseMove(tab,tab.width/2,tab.height/2);wait(430);verify(view.flags.osd);
+  verify(line.height>0 && line.height<track.height);
+  mouseMove(view,500,180);wait(250);verify(!view.flags.osd);compare(cue.progress,0);compare(line.height,0);
+  mouseMove(tab,tab.width/2,tab.height/2);wait(430);verify(view.flags.osd);compare(line.height,track.height);
+  compare(findChild(tab,"edgeTabStroke").strokeColor,NacreTokens.accent);
   view.flags.controlSection="audio";
   mouseClick(tab,tab.width/2,tab.height/2);verify(!view.flags.osd);
   mouseMove(view,500,180);wait(30);
