@@ -50,7 +50,7 @@ Flickable {
             }
             GradientStop {
                 position: .45
-                color: NacreColours.palette.m3tertiary ?? NacreTokens.accent
+                color: NacreTokens.accent
             }
             GradientStop {
                 position: 1
