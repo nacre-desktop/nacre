@@ -52,10 +52,12 @@ NacreSettingsPage {
         }
     }
     NacreSettingsSection {
-        title: NacreI18n.tr("dashboard.settings.extras", "Dashboard extras")
+        objectName: "dashboardSettingsSection"
+        title: NacreI18n.tr("dashboard.settings.pages", "Dashboard pages")
         description: NacreI18n.tr("dashboard.settings.extras-detail", "Enable the optional pages you use and arrange their order. These choices also appear in the dashboard customizer.")
         Dashboard.NacreDashboardExtrasOptions {
             width: parent.width
+            includeCore: true
         }
     }
     NacreSettingsSection {

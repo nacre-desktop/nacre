@@ -62,6 +62,7 @@ TestCase {
         }
     }
     function test_dashboard_extras_share_toggle_and_order_state() {
+        NacreDashboardState.coreTabs = ["today", "media", "weather", "system"];
         NacreDashboardState.enabledExtras = [];
         NacreDashboardState.extraOrder = ["focus", "notifications", "clipboard", "devices", "network", "ai-usage", "screenshots", "brain"];
         const first = createTemporaryObject(extraOptions, test);
@@ -71,12 +72,39 @@ TestCase {
         wait(30);
         mouseClick(findChild(first, "dashboardExtraToggle-focus"), 30, 18);
         verify(NacreDashboardState.enabledExtras.includes("focus"));
-        verify(findChild(second, "dashboardExtraToggle-focus").selected);
-        mouseClick(findChild(second, "dashboardExtraLater-focus"), 30, 18);
-        compare(NacreDashboardState.extraOrder[1], "focus");
+        compare(findChild(second, "dashboardExtraToggle-focus").icon, "close");
+        mouseClick(findChild(first, "dashboardExtraToggle-brain"), 30, 18);
+        wait(30);
+        compare(findChild(first, "dashboardPreviewNavigation").order, ["today", "media", "weather", "system", "focus", "brain"]);
+        mouseClick(findChild(second, "dashboardExtraLater-focus"), 16, 18);
+        compare(NacreDashboardState.extraOrder.filter(id => NacreDashboardState.enabledExtras.includes(id)), ["brain", "focus"]);
         wait(30);
         mouseClick(findChild(first, "dashboardExtraToggle-focus"), 30, 18);
         compare(findChild(second, "dashboardExtraToggle-focus").selected, false);
+        mouseClick(findChild(first, "dashboardTab11"), 20, 15);
+        compare(first.previewPage, "brain");
+        mouseClick(findChild(first, "dashboardExtraToggle-brain"), 30, 18);
+        compare(first.previewPage, "today");
+        compare(findChild(first, "dashboardPreviewNavigation").order.length, 4);
+    }
+    function test_dashboard_core_order_and_add_remove_follow_preview() {
+        NacreDashboardState.coreTabs = ["today", "media", "weather", "system"];
+        NacreDashboardState.enabledExtras = [];
+        const view = createTemporaryObject(extraOptions, test, {
+            includeCore: true
+        });
+        wait(30);
+        mouseClick(findChild(view, "dashboardExtraEarlier-system"), 16, 18);
+        compare(findChild(view, "dashboardPreviewNavigation").order, ["today", "media", "system", "weather"]);
+        wait(30);
+        mouseClick(findChild(view, "dashboardExtraToggle-media"), 30, 18);
+        wait(30);
+        compare(findChild(view, "dashboardExtraToggle-media").selected, false);
+        compare(findChild(view, "dashboardPreviewNavigation").order.length, 3);
+        mouseClick(findChild(view, "dashboardExtraToggle-media"), 30, 18);
+        wait(30);
+        compare(findChild(view, "dashboardPreviewNavigation").order, ["today", "system", "weather", "media"]);
+        NacreDashboardState.coreTabs = ["today", "media", "weather", "system"];
     }
     function test_shared_section_bounds_collapse_and_user_only_toggle() {
         const section = createTemporaryObject(sharedSection, test);

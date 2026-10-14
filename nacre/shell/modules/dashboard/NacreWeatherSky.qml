@@ -38,11 +38,11 @@ Item {
         gradient: Gradient {
             GradientStop {
                 position: 0
-                color: Qt.alpha(NacreTokens.body, root.photoReady || localPhoto.status === Image.Ready ? .46 : 1)
+                color: Qt.alpha(NacreTokens.body, root.photoReady || localPhoto.status === Image.Ready ? .6 : 1)
             }
             GradientStop {
                 position: .58
-                color: Qt.alpha(NacreTokens.body, root.photoReady || localPhoto.status === Image.Ready ? .55 : 1)
+                color: Qt.alpha(NacreTokens.body, root.photoReady || localPhoto.status === Image.Ready ? .7 : 1)
             }
             GradientStop {
                 position: 1
@@ -56,11 +56,15 @@ Item {
             orientation: Gradient.Horizontal
             GradientStop {
                 position: 0
-                color: Qt.alpha(NacreTokens.body, .24)
+                color: Qt.alpha(NacreTokens.body, .65)
+            }
+            GradientStop {
+                position: .52
+                color: Qt.alpha(NacreTokens.body, .35)
             }
             GradientStop {
                 position: 1
-                color: Qt.alpha(NacreTokens.orientSecondary, .08)
+                color: Qt.alpha(NacreTokens.body, .1)
             }
         }
     }

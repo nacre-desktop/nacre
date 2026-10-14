@@ -210,9 +210,11 @@ deadline, a window that resists closing can be forcibly terminated; save work fi
 ### Optional dashboard pages
 
 The default dashboard tabs are Dashboard, Media, Weather and System. Press
-**Ctrl+,** in the dashboard or open Settings → Workflows → Dashboard extras to enable
+**Ctrl+,** in the dashboard or open Settings → Workflows → Dashboard pages to enable
 Focus, Notifications, Clipboard, Devices, Network, AI usage, Screenshots or Brain.
-Extras start off and load only while selected. Both places share the same order.
+Extras start off and load only while selected. Settings shows a live preview of
+the tab strip: add a page, remove one, or move enabled pages with the up/down
+buttons. Core pages can be arranged there too. Both places share the same order.
 Number keys 1–9 and 0 select the first ten visible tabs; Ctrl+Tab cycles through
 all enabled pages. Tabs share the full header width. Compact tabs show their names
 on hover or keyboard focus; the strip scrolls horizontally when necessary.

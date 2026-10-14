@@ -337,6 +337,19 @@ TestCase {
         compare(sky.photoReady, false);
         compare(findChild(sky, "weatherCityPhoto").source.toString(), "");
     }
+    function test_focus_dial_and_controls_fit_small_and_large_windows() {
+        const view = createTemporaryObject(focusPage, test);
+        for (const size of [[940, 562], [516, 472], [356, 312], [1400, 800]]) {
+            view.width = size[0];
+            view.height = size[1];
+            wait(20);
+            for (const name of ["focusDial", "focusTimer", "focusDuration15", "focusDuration50", "focusStart"]) {
+                const item = findChild(view, name), point = item.mapToItem(view, 0, 0);
+                verify(point.x >= 20 && point.y >= 88, name + " fits inside the timer area");
+                verify(point.x + item.width <= view.width - 20 + .01 && point.y + item.height <= view.height - 20 + .01, name + " stays inside the page");
+            }
+        }
+    }
     function test_focus_presets_select_then_explicit_start_and_pause_stop() {
         const view = createTemporaryObject(focusPage, test);
         mouseClick(findChild(view, "focusDuration50"), 20, 15);

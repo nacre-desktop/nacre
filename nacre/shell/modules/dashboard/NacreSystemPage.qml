@@ -24,7 +24,7 @@ Item {
         onExited: code => root.profilesAvailable = code === 0
     }
     readonly property var processes: [...NacreDashboardSystem.processes].sort((a, b) => sortCpu ? (NacreDashboardSystem.cpuByPid[b.pid + ":" + b.start] || 0) - (NacreDashboardSystem.cpuByPid[a.pid + ":" + a.start] || 0) : b.memory - a.memory).slice(0, 5)
-    readonly property real metricsHeight: compact ? Math.min(230, height * .43) : Math.min(150, height * .28)
+    readonly property real metricsHeight: compact ? Math.min(230, height * .43) : Math.min(300, height * .46)
     readonly property real updateHeight: laptop ? 88 : 64
     readonly property real bottomY: metricsHeight + 16
     readonly property real bottomHeight: height - bottomY - updateHeight - 12
@@ -182,15 +182,15 @@ Item {
         }
         Column {
             x: 16
-            y: root.compact ? 44 : 54
+            y: 44
             width: parent.width - 32
-            spacing: root.compact ? 3 : 5
+            spacing: root.compact ? 3 : 4
             Repeater {
                 model: root.processes
                 Item {
                     required property var modelData
                     width: parent.width
-                    height: root.compact ? 17 : 25
+                    height: root.compact ? 17 : 21
                     NacreText {
                         width: parent.width * .65
                         text: modelData.name

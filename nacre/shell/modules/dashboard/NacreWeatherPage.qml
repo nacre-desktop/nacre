@@ -75,7 +75,7 @@ Item {
             NacreText {
                 width: parent.width
                 text: NacreWeather.location || NacreI18n.tr("dashboard.weather-page.text.weather", "Weather")
-                color: NacreTokens.mutedInk
+                color: Qt.alpha(NacreTokens.ink, .85)
                 font.pointSize: 11
                 elide: Text.ElideRight
             }
@@ -97,7 +97,7 @@ Item {
                 text: NacreWeather.detail + (Number.isFinite(root.weather.direction) ? " · " + NacreI18n.tr("weather.wind-direction", "{direction}° direction", {
                         direction: Math.round(root.weather.direction)
                     }) : "")
-                color: NacreTokens.mutedInk
+                color: Qt.alpha(NacreTokens.ink, .85)
                 font.pointSize: 9
                 elide: Text.ElideRight
             }
@@ -139,10 +139,14 @@ Item {
             x: sunArc.x
             y: sunArc.y + sunArc.height + 4
             width: sunArc.width
-            text: root.days.length ? root.days[0].sunrise.slice(11, 16) + "  /  " + root.days[0].sunset.slice(11, 16) : "—"
+            text: root.days.length ? NacreI18n.tr("dashboard.weather-page.sun-times", "Sunrise {rise} · Sunset {set}", {
+                rise: root.days[0].sunrise.slice(11, 16),
+                set: root.days[0].sunset.slice(11, 16)
+            }) : "—"
             horizontalAlignment: Text.AlignHCenter
-            font.pointSize: 9
-            color: NacreTokens.mutedInk
+            font.pointSize: root.compact ? 7 : 8
+            wrapMode: Text.Wrap
+            color: Qt.alpha(NacreTokens.ink, .85)
         }
         Grid {
             x: 20
@@ -184,7 +188,7 @@ Item {
                     NacreText {
                         text: parent.modelData.label
                         font.pointSize: root.compact ? 8 : 9
-                        color: NacreTokens.mutedInk
+                        color: Qt.alpha(NacreTokens.ink, .85)
                     }
                     NacreText {
                         text: parent.modelData.value
@@ -208,7 +212,7 @@ Item {
             }) : ""
             textFormat: Text.PlainText
             font.pointSize: 7
-            color: NacreTokens.mutedInk
+            color: Qt.alpha(NacreTokens.ink, .85)
             elide: Text.ElideRight
             NacreInteraction {
                 accessibleName: credit.text
@@ -289,7 +293,7 @@ Item {
             visible: !root.hours.length
             text: NacreI18n.tr("dashboard.weather-page.text.forecast-unavailable", "Forecast unavailable")
             font.pointSize: 10
-            color: NacreTokens.mutedInk
+            color: Qt.alpha(NacreTokens.ink, .85)
         }
     }
     NacreSurface {
@@ -335,7 +339,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: NacreWeather.degrees(parent.modelData.low)
                         font.pointSize: 9
-                        color: NacreTokens.mutedInk
+                        color: Qt.alpha(NacreTokens.ink, .85)
                     }
                     Rectangle {
                         x: parent.width * .47
@@ -363,7 +367,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: root.value(parent.modelData.rain, "%")
                         font.pointSize: 9
-                        color: NacreTokens.mutedInk
+                        color: Qt.alpha(NacreTokens.ink, .85)
                     }
                 }
             }

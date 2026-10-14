@@ -4,6 +4,7 @@ import qs.services
 
 NacreSurface {
     id: root
+    readonly property bool dense: height < 230
     readonly property var samples: NacreDashboardSystem.network || []
     readonly property real down: samples.length ? samples[samples.length - 1].down : 0
     readonly property real up: samples.length ? samples[samples.length - 1].up : 0
@@ -21,12 +22,12 @@ NacreSurface {
         x: 16
         y: 14
         text: NacreI18n.tr("dashboard.network-card.title", "Network")
-        font.pointSize: 13
+        font.pointSize: root.dense ? 11 : 13
         font.weight: Font.DemiBold
     }
     NacreText {
         x: 16
-        y: 40
+        y: root.dense ? 36 : 40
         width: parent.width - 32
         text: (NacreDashboardSystem.interfaceName === NacreNetwork.wifiInterface ? NacreNetwork.active?.ssid : "") || NacreDashboardSystem.interfaceName || NacreI18n.tr("dashboard.network-card.interfaces", "All active interfaces")
         color: NacreTokens.mutedInk
@@ -35,26 +36,26 @@ NacreSurface {
     }
     Row {
         x: 16
-        y: 68
+        y: root.dense ? 58 : 68
         spacing: 16
         NacreText {
             text: NacreI18n.tr("dashboard.network-card.down", "Down {rate}", {
                 rate: root.rate(root.down)
             })
             color: NacreTokens.accent
-            font.pointSize: 11
+            font.pointSize: root.dense ? 9 : 11
         }
         NacreText {
             text: NacreI18n.tr("dashboard.network-card.up", "Up {rate}", {
                 rate: root.rate(root.up)
             })
             color: NacreTokens.orientSecondary
-            font.pointSize: 11
+            font.pointSize: root.dense ? 9 : 11
         }
     }
     NacreDashboardSparkline {
         x: 16
-        y: 98
+        y: root.dense ? 82 : 98
         width: parent.width - 32
         height: Math.max(20, parent.height - y - 35)
         values: root.samples.map(p => p.down)
