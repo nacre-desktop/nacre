@@ -146,3 +146,20 @@ Administrator actions follow the same visible command/authentication boundary.
 Native/launcher tests use synthetic capabilities and verify that no single-output
 off, unsupported mirror or unconfigured hibernate action is offered. No hardware
 mode is changed during validation.
+
+## Network and disk speed tests
+
+Health → Speed tests offers LibreSpeed download/upload/latency testing when its
+CLI is installed, with result telemetry disabled. The bounded alternative fetches
+10 MB over HTTPS and reports bytes, elapsed time including connection/TLS setup,
+and average bytes per second. It is an endpoint transfer measurement, not a
+promise of link capacity. Both consume Internet traffic only after confirmation.
+
+The fio test uses one owned 256 MiB file under a disposable cache directory,
+with direct sequential read/write I/O for ten seconds. Total transferred bytes
+may exceed file size. It never targets raw block devices or existing user files.
+Normal completion/error cleans the temporary directory; an abruptly killed
+process can leave its uniquely named disposable directory. Unsupported direct
+I/O reports an error rather than weakening filesystem or sandbox policy.
+Private fake-tool/PTTY checks verify confirmation, bounded arguments, cleanup
+and preservation of unrelated cache files; no real speed benchmark is run.

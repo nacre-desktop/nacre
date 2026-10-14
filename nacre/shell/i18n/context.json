@@ -3342,5 +3342,13 @@
   "software.hardware.gpu": "Supported hardware action",
   "software.hardware.hibernate": "Supported hardware action",
   "launcher.catalog.setup.hardware.label": "Hardware controls catalog label",
-  "launcher.catalog.setup.hardware.description": "Hardware controls catalog description"
+  "launcher.catalog.setup.hardware.description": "Hardware controls catalog description",
+  "software.speed.network": "Opt-in bounded speed test",
+  "software.speed.network-detail": "Opt-in bounded speed test",
+  "software.speed.download": "Opt-in bounded speed test",
+  "software.speed.download-detail": "Opt-in bounded speed test",
+  "software.speed.disk": "Opt-in bounded speed test",
+  "software.speed.disk-detail": "Opt-in bounded speed test",
+  "launcher.catalog.health.speed.label": "Speed-test catalog label",
+  "launcher.catalog.health.speed.description": "Speed-test catalog description"
 }

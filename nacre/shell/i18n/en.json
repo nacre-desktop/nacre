@@ -3288,5 +3288,13 @@
   "software.hardware.gpu": "GPU mode: {mode}",
   "software.hardware.hibernate": "Hibernate",
   "launcher.catalog.setup.hardware.label": "Hardware controls",
-  "launcher.catalog.setup.hardware.description": "Supported input, display and power controls"
+  "launcher.catalog.setup.hardware.description": "Supported input, display and power controls",
+  "software.speed.network": "Network speed test",
+  "software.speed.network-detail": "Download, upload and latency; uses Internet traffic",
+  "software.speed.download": "Quick download speed test",
+  "software.speed.download-detail": "A bounded 10 MB HTTPS download; not a line-rate guarantee",
+  "software.speed.disk": "Disk speed test",
+  "software.speed.disk-detail": "Use an owned 256 MiB temporary file; no raw device writes",
+  "launcher.catalog.health.speed.label": "Speed tests",
+  "launcher.catalog.health.speed.description": "Check network and disk throughput"
 }

@@ -427,6 +427,30 @@ TestCase {
         value.cancelForm();
     }
 
+    function test_speed_tests_are_explicit_confirmed_and_searchable() {
+        const value = view();
+        value.menu.library.data = Object.assign({}, value.menu.library.data, {
+            system: {
+                speed: [
+                    {
+                        id: "disk-speed",
+                        name: "Disk speed test",
+                        description: "Owned temporary file",
+                        section: "health.speed",
+                        root: false
+                    }
+                ]
+            }
+        });
+        value.navigate("health.speed");
+        compare(value.entries.length, 1);
+        verify(!!value.entries[0].confirm);
+        verify(!value.menu.execute(value.entries[0]));
+        value.navigate("software.development");
+        findChild(value, "launcherSearch").text = "disk speed";
+        verify(value.entries.some(row => row.value === "disk-speed"));
+    }
+
     function test_hardware_actions_are_filtered_and_globally_searchable() {
         const value = view();
         value.menu.library.data = Object.assign({}, value.menu.library.data, {

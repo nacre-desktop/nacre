@@ -186,7 +186,7 @@ pub fn snapshot() -> Value {
         let hardware = Paths::environment()
             .map(|paths| crate::software_hardware::facts(&paths))
             .unwrap_or(Value::Null);
-        json!({"health":health_rows(&facts),"setup":crate::software_setup::rows(&setup),"hardware":crate::software_hardware::rows(&hardware),"hardwareFacts":hardware,"facts":facts,"setupFacts":setup})
+        json!({"health":health_rows(&facts),"setup":crate::software_setup::rows(&setup),"hardware":crate::software_hardware::rows(&hardware),"speed":crate::software_speed::rows(&crate::software_speed::snapshot()),"hardwareFacts":hardware,"facts":facts,"setupFacts":setup})
     }
 }
 
@@ -252,7 +252,13 @@ pub fn run_health(id: &str) -> Result<i32> {
     let paths = Paths::environment()?;
     let setup = crate::software_setup::facts(&paths);
     let hardware = crate::software_hardware::facts(&paths);
-    let mut plan = if crate::software_hardware::rows(&hardware)
+    let speed = crate::software_speed::snapshot();
+    let mut plan = if crate::software_speed::rows(&speed)
+        .iter()
+        .any(|r| r["id"] == id)
+    {
+        crate::software_speed::plan(id, &speed)?
+    } else if crate::software_hardware::rows(&hardware)
         .iter()
         .any(|r| r["id"] == id)
     {
@@ -348,6 +354,13 @@ pub fn run_health(id: &str) -> Result<i32> {
     }
     let mut code = 0;
     for step in plan["steps"].as_array().unwrap() {
+        if step["disk"] == true {
+            code = crate::software_speed::disk_test(&paths)?;
+            if code != 0 {
+                break;
+            }
+            continue;
+        }
         if let Some(enabled) = step["touchpad"].as_bool() {
             let devices = step["devices"]
                 .as_array()
@@ -475,6 +488,7 @@ pub fn open(paths: &Paths, id: &str) -> Result<Value> {
         .iter()
         .chain(setup.iter())
         .chain(hardware.iter())
+        .chain(crate::software_speed::rows(&crate::software_speed::snapshot()).iter())
         .any(|r| r["id"] == id)
     {
         return Err("Action is not available".into());

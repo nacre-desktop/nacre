@@ -46,6 +46,7 @@ pub mod software_hardware;
 pub mod software_input;
 pub mod software_library;
 pub mod software_setup;
+pub mod software_speed;
 pub mod software_tui;
 pub mod state;
 pub mod systemd;

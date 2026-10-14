@@ -152,6 +152,15 @@ fn run() -> Result<i32> {
                 let paths = nacre_helper::paths::Paths::environment()?;
                 let setup = nacre_helper::software_setup::facts(&paths);
                 let hardware = nacre_helper::software_hardware::facts(&paths);
+                let speed = nacre_helper::software_speed::snapshot();
+                if nacre_helper::software_speed::rows(&speed)
+                    .iter()
+                    .any(|r| r["id"] == id)
+                {
+                    let value = nacre_helper::software_speed::plan(id, &speed)?;
+                    println!("{}", json::encode(&value)?);
+                    return Ok(0);
+                }
                 if nacre_helper::software_hardware::rows(&hardware)
                     .iter()
                     .any(|r| r["id"] == id)

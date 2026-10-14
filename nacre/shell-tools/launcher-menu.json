@@ -1624,6 +1624,16 @@
       "provider": "system-hardware",
       "labelId": "launcher.catalog.setup.hardware.label",
       "descriptionId": "launcher.catalog.setup.hardware.description"
+    },
+    {
+      "id": "health.speed",
+      "kind": "group",
+      "label": "Speed tests",
+      "icon": "speed",
+      "description": "Check network and disk throughput",
+      "provider": "system-speed",
+      "labelId": "launcher.catalog.health.speed.label",
+      "descriptionId": "launcher.catalog.health.speed.description"
     }
   ],
   "software": [
