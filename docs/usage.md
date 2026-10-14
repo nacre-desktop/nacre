@@ -102,7 +102,7 @@ summaries are read-only; the calendar keeps its month controls. Clicking the
 clock pins its calendar for keyboard use until Escape or dismissal. Status hover
 highlights fill their segment of the shared pill, following its rounded ends.
 A palette-colored
-highlight and filling underline show the wait. The left and right frame edges have thin arrows on small Orient gradient patches inside the existing border, with a taller hover target and the same delayed
+highlight and filling underline show the wait. The left and right frame edges have thin arrows on quiet neutral surfaces inside the existing border, with a taller hover target and the same delayed
 fill; clicks open or close their panels immediately. The middle title and top lip wait
 350 ms before opening the dashboard; leaving cancels it, while a click opens
 immediately. The fill follows display frames and stays complete briefly before the panel

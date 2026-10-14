@@ -18,20 +18,7 @@ Item {
         height: 46
         anchors.centerIn: parent
         radius: Math.min(3, width / 2)
-        opacity: .72 + .23 * root.amount
-        // Foreground contrast uses the painted gradient's midpoint over the wall.
-        readonly property color midpoint: Qt.tint(NacreTokens.accent, Qt.alpha(NacreTokens.orientSecondary, .5))
-        color: Qt.tint(NacreTokens.frame, Qt.alpha(midpoint, opacity))
-        gradient: Gradient {
-            GradientStop {
-                position: 0
-                color: NacreTokens.accent
-            }
-            GradientStop {
-                position: 1
-                color: NacreTokens.orientSecondary
-            }
-        }
+        color: Qt.tint(NacreTokens.raised, Qt.alpha(NacreTokens.ink, .035 + .055 * root.amount))
     }
     Shape {
         id: arrow
@@ -45,7 +32,7 @@ Item {
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
             strokeWidth: 1.25
-            strokeColor: Qt.tint(NacreTokens.focusInk(patch.color), Qt.alpha(NacreTokens.accent, .2 * root.amount))
+            strokeColor: Qt.tint(NacreTokens.mutedInk, Qt.alpha(NacreTokens.ink, .3 * root.amount))
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin
@@ -69,15 +56,6 @@ Item {
         height: Math.min(36, Math.max(0, parent.height - 24)) * root.amount
         radius: 1
         opacity: .25 + .65 * root.amount
-        gradient: Gradient {
-            GradientStop {
-                position: 0
-                color: NacreTokens.accent
-            }
-            GradientStop {
-                position: 1
-                color: NacreTokens.orientSecondary
-            }
-        }
+        color: NacreTokens.mutedInk
     }
 }
