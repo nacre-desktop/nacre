@@ -53,12 +53,13 @@ Latest main `55c5a03b`: Source 38487998838 desktop and Niri fresh install pass;
 834 source tests, 12 original controls, 349 frozen cases. No new skips.
 Earlier `f3b42304` Source and performance both pass. CI workflow repair is retained; hardware checks are manual, correctness stays automatic.
 
-Next: check compiler publication CI 38539606904, then port compositor state/events.
+Next: port Niri state/events against 22 frozen sequences / 79 snapshot observations.
 526 native cases / 51 controls / 81 Rust tests pass; empty-PATH report passes.
 Wave 1 main 3e155f5c CI 38528354524: source + fresh Niri install green; no skips.
-Wave 2: three compilers public at 314a2603; 62 fixtures / 22 compiler tests exact.
+Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.
 Three compiler sources retired; 84 integrated Rust tests / 770 repo tests / 526 cases pass.
 Temporary native-only compiler client is removed as its Python callers are ported.
+Niri reducer: 22 current-Python sequences / 79 snapshots frozen; 3 integrity controls pass.
 Busy fresh CPU: 55.67/38.50/35.55/16.88 -> 1.95/1.16/1.11/0.89 ms; Python 404 -> 0.
 Capture: 11 frozen cases match; 0600/0700 security difference tracked; IPC/events pass.
 CLI: 62 menu + 39 hosted cases pass; seven exact retired-frame differences tracked.
