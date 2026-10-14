@@ -50,6 +50,21 @@ class PublicNamesTests(unittest.TestCase):
                 text = text.replace(
                     "https://github.com/" + "siver" + "teh/siver" + "teh-os", ""
                 )
+            if name in (
+                "CONTRIBUTING.md",
+                "packaging/arch/PKGBUILD",
+                "packaging/arch/recipe.py",
+                "packaging/arch/niri/PKGBUILD",
+                "packaging/arch/niri/recipe.py",
+            ):
+                # Owner-approved public commit/maintainer attribution is metadata,
+                # not a private runtime alias. Keep this exception exact and scoped.
+                text = text.replace(
+                    "siver" + "teh <92440237+siver" + "teh@users.noreply.github.com>",
+                    "",
+                )
+                if name == "CONTRIBUTING.md":
+                    text = text.replace("`user.name` to `siver" + "teh`", "")
             self.assertFalse(any(word in text for word in forbidden), name)
 
     def test_fresh_home_controller_roots_and_provider_profiles_are_canonical(self):

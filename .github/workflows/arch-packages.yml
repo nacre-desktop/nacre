@@ -1,0 +1,68 @@
+name: Pinned Arch packages
+on:
+  workflow_dispatch:
+    inputs:
+      orient_recipe_revision:
+        description: Exact Orient commit containing the package recipe to verify
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  packages:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: nacre-desktop/orient
+          ref: ${{ inputs.orient_recipe_revision }}
+          path: orient-recipe
+      - name: Build the committed VCS recipes in clean Arch chroots
+        shell: bash
+        env:
+          ORIENT_RECIPE_REVISION: ${{ inputs.orient_recipe_revision }}
+        run: |
+          set -euo pipefail
+          [[ "$ORIENT_RECIPE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          work="$RUNNER_TEMP/pinned-arch"
+          mkdir -p "$work"/{orient,nacre,niri}
+          cp orient-recipe/packaging/arch/PKGBUILD "$work/orient/"
+          cp packaging/arch/PKGBUILD "$work/nacre/"
+          cp packaging/arch/niri/PKGBUILD "$work/niri/"
+          # As in Orient's distribution checks, devtools needs systemd as PID1.
+          container=$(docker run --detach --privileged --cgroupns=host --tmpfs /run --tmpfs /tmp \
+            -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v "$work:/work" \
+            archlinux:base-devel /usr/lib/systemd/systemd)
+          trap 'docker rm --force "$container"' EXIT
+          docker exec "$container" bash -euxo pipefail -c '
+            pacman-key --init
+            pacman-key --populate archlinux
+            pacman -Syu --noconfirm devtools sudo
+            useradd -m builder
+            printf "builder ALL=(ALL) NOPASSWD: ALL\n" > /etc/sudoers.d/builder
+            printf "\nMAKEFLAGS=-j2\nexport CARGO_BUILD_JOBS=2\n" >> /etc/makepkg.conf
+            chown -R builder:builder /work
+            cd /work/orient
+            sudo -u builder extra-x86_64-build 2>&1 | tee /work/orient.log
+            # Each invocation cleans its working chroot; inject only the tested engine.
+            cd /work/nacre
+            sudo -u builder extra-x86_64-build -- -I /work/orient/orient-[0-9]*.pkg.tar.zst \
+              2>&1 | tee /work/nacre.log
+            cd /work/niri
+            sudo -u builder extra-x86_64-build 2>&1 | tee /work/niri.log
+            sha256sum /work/{orient,nacre,niri}/*.pkg.tar.zst > /work/package-sha256.txt
+          '
+      - name: Package archives, recipes and build logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pinned-arch-packages
+          path: |
+            ${{ runner.temp }}/pinned-arch/**/*.pkg.tar.zst
+            ${{ runner.temp }}/pinned-arch/**/PKGBUILD
+            ${{ runner.temp }}/pinned-arch/*.log
+            ${{ runner.temp }}/pinned-arch/package-sha256.txt
+          if-no-files-found: error
+          retention-days: 7

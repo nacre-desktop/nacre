@@ -90,7 +90,9 @@
       "xorg-xauth",
       "mesa",
       "dbus",
-      "ttf-dejavu"
+      "ttf-dejavu",
+      "python-dbus-next",
+      "bubblewrap"
     ],
     "core_optional": [
       "nacre-niri: Niri companion with native overview hover titles",

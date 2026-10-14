@@ -69,6 +69,19 @@ again before a normal fast-forward push. Never force-push or overwrite another
 task's work. Check CI after publishing and fix failures caused by the change.
 This policy remains in effect until the maintainer changes it.
 
+Maintainer automation commits as `siverteh <92440237+Siverteh@users.noreply.github.com>`
+for both author and committer. Set the task repository's `user.name` to `siverteh`
+and `user.email` to that GitHub noreply address; do not use the retired generic
+identity or a work email. Outside contributors retain their own identity.
+
+After the 2026-10-14 attribution rewrite, an old-history task must transplant only
+its own commits with `git rebase --onto origin/main <old-base> <task-branch>` or
+individual cherry-picks. Never merge the old roots into rewritten `main`. Replaying
+commits retains their authors: correct any retired generic author identity too.
+Before every push, inspect `git log --oneline origin/main..HEAD`: it must contain
+only this task's new commits. Stop and ask the owner if it includes unrelated
+commits or hundreds of historical commits.
+
 Outside contributors still submit PRs. When a PR is explicitly requested,
 complete the [PR template](.github/PULL_REQUEST_TEMPLATE.md). All changes should
 use the [review checklist](docs/development/review-checklist.md). Sensitive paths

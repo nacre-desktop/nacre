@@ -1,7 +1,7 @@
 # Menu CLI reference capture
 
 The 62 `menu-backend/cli-*` cases were captured from the unchanged Python
-`menu-backend.py` at Nacre `55c5a03b`, before its removal. SHA-256:
+`menu-backend.py` at Nacre `488fa6d1`, before its removal. SHA-256:
 `d74ca0b2a6d6d41a173b399fa5fbf876472d9ef8b18572d604ea8b20108eb958`.
 
 Each of the 16 actions has an omitted-value and supplied-value case. Additional

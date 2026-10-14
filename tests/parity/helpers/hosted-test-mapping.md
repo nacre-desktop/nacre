@@ -1,6 +1,6 @@
 # Hosted helper assertion mapping
 
-Reference: the Python helpers and tests at Nacre `55c5a03b` (before deletion).
+Reference: the Python helpers and tests at Nacre `488fa6d1` (before deletion).
 New `api-*` references were captured from those Python sources in the existing
 isolated harness; each case records the source SHA-256. Existing golden files
 were not regenerated. `examples/parity-api.rs` calls the native library directly

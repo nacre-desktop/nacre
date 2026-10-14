@@ -75,6 +75,11 @@ or credential directories. Test the terminal wizard through a real TTY too;
 confirm cancellation creates no configuration, then confirm apply. Cold-login graphical validation needs a VM/Wayland session and is a
 separate gate; headless configuration success is not proof of desktop rendering.
 
+The manual `Pinned Arch packages` GitHub workflow builds the committed Orient,
+Nacre and Niri companion VCS recipes in clean stock-Arch chroots. Supply the exact
+Orient recipe commit when dispatching it. It preserves the Git source pins and
+uploads the recipes, package archives, checksums and build logs as run artifacts.
+
 ## AUR publishing — maintainer action only
 
 No AUR repository is created or pushed by this task. After clean-chroot and

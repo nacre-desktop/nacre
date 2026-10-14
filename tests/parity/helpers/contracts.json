@@ -1,7 +1,7 @@
 {
-  "reference_revision": "3917893e49d37906cc3e43dfa743c819e7a7d39a",
-  "orient_integration_commit": "db420276",
-  "orient_revision": "7f1b0b14289d80dcc3611b76a3847ee4c078f607",
+  "reference_revision": "c23c68bfb41129f5845865b7123d2b6e8d4b72cf",
+  "orient_integration_commit": "50f12ad6",
+  "orient_revision": "cb2fb14cdc534b3cd0e3a5a4f86ad9e417c44251",
   "engine_pin": {
     "version": "0.1.0.dev6",
     "engine": "orient-0.1.0.dev6-55b192008cc8-c8a5bd24dad2",
