@@ -11,7 +11,7 @@ Singleton {
     property var queued: []
     readonly property bool active: !!request
     readonly property var ownerView: request ? NacrePanelState.screens[request.screenName] || null : null
-    readonly property string cli: NacrePaths.tools + "/menu-cli.py"
+    readonly property string cli: "menu-cli"
     function open(ident) {
         if (!/^[0-9a-f]{32}$/.test(ident))
             return;
@@ -62,7 +62,7 @@ Singleton {
         property string ident: ""
         property bool blocked: false
         onExited: followup.restart()
-        command: ["python3", root.cli, "read-request", ident]
+        command: [NacrePaths.helperBinary, root.cli, "read-request", ident]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -95,7 +95,7 @@ Singleton {
         property var response: ({})
         onExited: followup.restart()
         stdinEnabled: true
-        command: ["python3", root.cli, "respond", ident]
+        command: [NacrePaths.helperBinary, root.cli, "respond", ident]
         onStarted: write(JSON.stringify(response) + "\n")
         stderr: StdioCollector {
             onStreamFinished: if (text.trim())

@@ -1,0 +1,9 @@
+{
+  "helper": "menu-cli",
+  "args": [
+    "read-request",
+    "bad",
+    "extra"
+  ],
+  "stdout": "json"
+}

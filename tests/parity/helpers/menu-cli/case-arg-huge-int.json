@@ -1,0 +1,10 @@
+{
+  "helper": "menu-cli",
+  "args": [
+    "read-request",
+    "bad",
+    "--timeout",
+    "999999999999999999999999999999999999"
+  ],
+  "stdout": "json"
+}

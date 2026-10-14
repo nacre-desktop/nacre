@@ -1,0 +1,7 @@
+{
+  "helper": "menu-cli",
+  "args": [
+    "-h"
+  ],
+  "stdout": "text"
+}

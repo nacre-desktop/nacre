@@ -1,0 +1,9 @@
+{
+  "helper": "menu-cli",
+  "args": [
+    "read-request",
+    "bad",
+    "--tit=Fixture"
+  ],
+  "stdout": "json"
+}

@@ -1,0 +1,8 @@
+{
+  "stdout": "usage: menu-cli.py [-h] [--title TITLE] [--json] [--initial INITIAL]\n                   [--timeout TIMEOUT]\n                   [route] [value]\n\nOpen a Nacre menu route, or ask its shared window for a selection/text value.\n\npositional arguments:\n  route\n  value\n\noptions:\n  -h, --help         show this help message and exit\n  --title TITLE\n  --json\n  --initial INITIAL\n  --timeout TIMEOUT\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}
