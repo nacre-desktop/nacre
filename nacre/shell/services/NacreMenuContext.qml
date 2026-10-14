@@ -402,6 +402,8 @@ Scope {
                 }));
         if (node.provider === "software")
             return softwareRows(route);
+        if (node.provider === "environments")
+            return environmentRows();
         if (node.provider === "software-themes")
             return themeRows();
         if (node.provider === "software-extensions")
@@ -871,8 +873,29 @@ Scope {
         }
         return result;
     }
+    function environmentRows() {
+        const result = [];
+        for (const profile of library.data.environments?.profiles || []) {
+            for (const operation of ["install", "remove"]) {
+                const installed = profile.installed === true;
+                const name = operation === "install" ? NacreI18n.tr("software.development.install", "Install {name}", {
+                    name: profile.name
+                }) : NacreI18n.tr("software.development.remove", "Remove {name}", {
+                    name: profile.name
+                });
+                result.push(valueRow("software.development", profile.id + "-" + operation, name, "environment", profile.id, profile.kind === "database" ? "database" : "code", profile.kind === "database" ? NacreI18n.tr("software.development.database-description", "Local Docker database; removal retains its data") : NacreI18n.tr("software.development.mise-description", "Managed by mise; runs in a visible terminal"), {
+                    environmentOperation: operation,
+                    disabled: !profile.available || operation === "remove" && !installed,
+                    reason: profile.reason || (operation === "remove" && !installed ? NacreI18n.tr("software.development.not-installed", "Not installed") : ""),
+                    aliases: [profile.name, profile.id, "development runtime mise"],
+                    confirm: NacreI18n.tr("software.development.open-terminal", "Open a terminal to review and confirm this change?")
+                }));
+            }
+        }
+        return result;
+    }
     function globalRows(query) {
-        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), captureRows());
+        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), captureRows());
     }
     function itemActions(entry) {
         if (!entry)
@@ -1187,6 +1210,12 @@ Scope {
             PowerProfiles.profile = profileValue(value);
             return true;
         }
+        if (operation === "environment") {
+            if (!library.data.environments?.profiles?.some(item => item.id === value && item.available))
+                return false;
+            AppLaunch.run(["kitty", "--class", "nacre-control", "--title", row.name, "--", NacrePaths.helperBinary, "software-environments", "run", row.environmentOperation, value]);
+            return true;
+        }
         if (operation === "font") {
             DesktopSettings.set("interfaceFont", value);
             return true;
@@ -1239,6 +1268,12 @@ Scope {
             return true;
         }
         if (operation === "tool") {
+            if (value === "install-mise") {
+                if (!snapshot.capabilities.packages)
+                    return false;
+                terminal("install", "mise", NacreI18n.tr("launcher.catalog.software.development.mise.label", "Install mise"));
+                return true;
+            }
             if (value.startsWith("capture-") || ["record-start", "record-screen", "color-picker"].includes(value)) {
                 captureDelay.value = value;
                 captureDelay.restart();

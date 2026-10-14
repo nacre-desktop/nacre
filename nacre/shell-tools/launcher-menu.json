@@ -990,6 +990,30 @@
       "descriptionId": "launcher.catalog.software.installed.description"
     },
     {
+      "id": "software.development",
+      "kind": "group",
+      "label": "Developer environments",
+      "icon": "code",
+      "description": "Runtimes and local databases",
+      "provider": "environments",
+      "labelId": "launcher.catalog.software.development.label",
+      "descriptionId": "launcher.catalog.software.development.description"
+    },
+    {
+      "id": "software.development.mise",
+      "kind": "action",
+      "label": "Install mise",
+      "icon": "download",
+      "operation": "tool",
+      "value": "install-mise",
+      "capability": "packages",
+      "description": "Development tool manager",
+      "labelId": "launcher.catalog.software.development.mise.label",
+      "descriptionId": "launcher.catalog.software.development.mise.description",
+      "confirm": "Open a terminal to install mise? The package manager may ask for administrator permission.",
+      "confirmId": "launcher.catalog.software.development.mise.confirm"
+    },
+    {
       "id": "software.webapps",
       "kind": "group",
       "label": "Web apps",

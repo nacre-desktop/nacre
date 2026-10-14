@@ -602,7 +602,9 @@ fn list(paths: &Paths) -> Result<Value> {
             }
         }
     }
-    Ok(json!({"ready":true,"extensions":entries,"themes":themes}))
+    Ok(
+        json!({"ready":true,"extensions":entries,"themes":themes,"environments":crate::software_environments::snapshot(paths)}),
+    )
 }
 fn import(paths: &Paths, source: &str, update: Option<&str>) -> Result<Value> {
     url(source)?;

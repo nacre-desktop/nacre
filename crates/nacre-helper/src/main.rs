@@ -112,6 +112,31 @@ fn run() -> Result<i32> {
         println!("{}", json::encode(&value)?);
         return Ok(code);
     }
+    if tool == "software-environments" {
+        let paths = nacre_helper::paths::Paths::environment()?;
+        let operation = arguments.first().map(String::as_str).unwrap_or("load");
+        if operation == "run" {
+            if arguments.len() != 3 {
+                return Err("Expected run install/remove environment ID".into());
+            }
+            return nacre_helper::software_environments::run(&paths, &arguments[1], &arguments[2]);
+        }
+        let result = match operation {
+            "load" if arguments.len() <= 1 => {
+                Ok(nacre_helper::software_environments::snapshot(&paths))
+            }
+            "plan" if arguments.len() == 3 => {
+                nacre_helper::software_environments::plan(&paths, &arguments[1], &arguments[2])
+            }
+            _ => Err("Unknown development command".into()),
+        };
+        let (value, code) = match result {
+            Ok(value) => (value, 0),
+            Err(error) => (serde_json::json!({"error":error.to_string()}), 1),
+        };
+        println!("{}", json::encode(&value)?);
+        return Ok(code);
+    }
     if tool == "software-library" {
         use std::io::Read;
         let input = if arguments.first().is_some_and(|a| {

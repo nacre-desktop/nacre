@@ -1358,6 +1358,26 @@
   "launcher.catalog.slack-desktop.description": "Description of a common application available to install",
   "launcher.catalog.slack-desktop.label": "Common application name in launcher install search",
   "launcher.catalog.software.description": "Launcher description for software.",
+  "launcher.catalog.software.development.description": {
+    "description": "Software development catalog description",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.software.development.label": {
+    "description": "Software development catalog label",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.software.development.mise.confirm": {
+    "description": "Confirm system package installation in a visible terminal",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.software.development.mise.description": {
+    "description": "Software development catalog description",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
+  "launcher.catalog.software.development.mise.label": {
+    "description": "Software development catalog label",
+    "source": "nacre/shell-tools/launcher-menu.json"
+  },
   "launcher.catalog.software.discover.description": "Launcher description for software.discover.",
   "launcher.catalog.software.discover.label": "Launcher label for software.discover.",
   "launcher.catalog.software.installed.description": "Launcher description for software.installed.",
@@ -2309,6 +2329,62 @@
   "software.category.network": "Software library launcher label or message.",
   "software.category.office": "Software library launcher label or message.",
   "software.category.utilities": "Software library launcher label or message.",
+  "software.development.confirm": {
+    "description": "Software developer environment action or status",
+    "source": "crates/nacre-helper/src/software_environments.rs"
+  },
+  "software.development.database-description": {
+    "description": "Software developer environment action or status",
+    "source": "nacre/shell/services/NacreMenuContext.qml"
+  },
+  "software.development.discovery-error": {
+    "description": "Software developer environment action or status",
+    "source": "crates/nacre-helper/src/software_environments.rs"
+  },
+  "software.development.finished": {
+    "description": "Software developer environment action or status",
+    "source": "crates/nacre-helper/src/software_environments.rs"
+  },
+  "software.development.install": {
+    "description": "Software developer environment action or status",
+    "source": "nacre/shell/services/NacreMenuContext.qml"
+  },
+  "software.development.mise-description": {
+    "description": "Software developer environment action or status",
+    "source": "nacre/shell/services/NacreMenuContext.qml"
+  },
+  "software.development.not-installed": {
+    "description": "Software developer environment action or status",
+    "source": "nacre/shell/services/NacreMenuContext.qml"
+  },
+  "software.development.open-terminal": {
+    "description": "Software developer environment action or status",
+    "source": "nacre/shell/services/NacreMenuContext.qml"
+  },
+  "software.development.remove": {
+    "description": "Software developer environment action or status",
+    "source": "nacre/shell/services/NacreMenuContext.qml"
+  },
+  "software.development.requires-docker": {
+    "description": "Software developer environment action or status",
+    "source": "crates/nacre-helper/src/software_environments.rs"
+  },
+  "software.development.requires-mise": {
+    "description": "Software developer environment action or status",
+    "source": "crates/nacre-helper/src/software_environments.rs"
+  },
+  "software.development.requires-password": {
+    "description": "Software developer environment action or status",
+    "source": "crates/nacre-helper/src/software_environments.rs"
+  },
+  "software.development.requires-terminal": {
+    "description": "Software developer environment action or status",
+    "source": "crates/nacre-helper/src/software_environments.rs"
+  },
+  "software.development.volume-retained": {
+    "description": "Software developer environment action or status",
+    "source": "crates/nacre-helper/src/software_environments.rs"
+  },
   "software.extension.available": "Software library launcher label or message.",
   "software.extension.disabled": "Software library launcher label or message.",
   "software.extension.enabled": "Software library launcher label or message.",

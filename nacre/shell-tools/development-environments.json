@@ -1,0 +1,160 @@
+[
+  {
+    "id": "node",
+    "name": "Node.js",
+    "kind": "runtime",
+    "tools": [
+      "node@lts"
+    ]
+  },
+  {
+    "id": "bun",
+    "name": "Bun",
+    "kind": "runtime",
+    "tools": [
+      "bun@latest"
+    ]
+  },
+  {
+    "id": "deno",
+    "name": "Deno",
+    "kind": "runtime",
+    "tools": [
+      "deno@latest"
+    ]
+  },
+  {
+    "id": "python",
+    "name": "Python",
+    "kind": "runtime",
+    "tools": [
+      "python@latest"
+    ]
+  },
+  {
+    "id": "go",
+    "name": "Go",
+    "kind": "runtime",
+    "tools": [
+      "go@latest"
+    ]
+  },
+  {
+    "id": "rust",
+    "name": "Rust",
+    "kind": "runtime",
+    "tools": [
+      "rust@stable"
+    ]
+  },
+  {
+    "id": "java",
+    "name": "Java",
+    "kind": "runtime",
+    "tools": [
+      "java@latest"
+    ]
+  },
+  {
+    "id": "dotnet",
+    "name": ".NET",
+    "kind": "runtime",
+    "tools": [
+      "dotnet@latest"
+    ]
+  },
+  {
+    "id": "zig",
+    "name": "Zig",
+    "kind": "runtime",
+    "tools": [
+      "zig@latest"
+    ]
+  },
+  {
+    "id": "elixir",
+    "name": "Elixir",
+    "kind": "runtime",
+    "tools": [
+      "erlang@29",
+      "elixir@1.20.4-otp-29"
+    ]
+  },
+  {
+    "id": "php",
+    "name": "PHP",
+    "kind": "runtime",
+    "tools": [
+      "github:nunomaduro/static-php-builds@latest"
+    ]
+  },
+  {
+    "id": "ruby",
+    "name": "Ruby",
+    "kind": "runtime",
+    "tools": [
+      "ruby@latest"
+    ]
+  },
+  {
+    "id": "phoenix",
+    "name": "Phoenix",
+    "kind": "framework",
+    "framework": "phoenix",
+    "tools": [
+      "erlang@29",
+      "elixir@1.20.4-otp-29"
+    ]
+  },
+  {
+    "id": "laravel",
+    "name": "Laravel",
+    "kind": "framework",
+    "framework": "laravel",
+    "tools": [
+      "github:nunomaduro/static-php-builds@latest",
+      "node@lts"
+    ]
+  },
+  {
+    "id": "rails",
+    "name": "Ruby on Rails",
+    "kind": "framework",
+    "framework": "rails",
+    "tools": [
+      "ruby@latest"
+    ]
+  },
+  {
+    "id": "postgres",
+    "name": "PostgreSQL",
+    "kind": "database",
+    "image": "postgres:18",
+    "port": 5432,
+    "mount": "/var/lib/postgresql",
+    "passwordEnv": "POSTGRES_PASSWORD"
+  },
+  {
+    "id": "mysql",
+    "name": "MySQL",
+    "kind": "database",
+    "image": "mysql:8.4",
+    "port": 3306,
+    "mount": "/var/lib/mysql",
+    "passwordEnv": "MYSQL_ROOT_PASSWORD"
+  },
+  {
+    "id": "redis",
+    "name": "Redis",
+    "kind": "database",
+    "image": "redis:8",
+    "port": 6379,
+    "mount": "/data",
+    "passwordEnv": "REDIS_PASSWORD",
+    "startup": [
+      "sh",
+      "-c",
+      "exec redis-server --requirepass \"$REDIS_PASSWORD\""
+    ]
+  }
+]

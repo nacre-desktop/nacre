@@ -427,6 +427,43 @@ TestCase {
         value.cancelForm();
     }
 
+    function test_development_actions_are_searchable_gated_and_terminal_visible() {
+        const value = view();
+        value.menu.library.data = Object.assign({}, value.menu.library.data, {
+            environments: {
+                profiles: [
+                    {
+                        id: "node",
+                        name: "Node.js",
+                        kind: "runtime",
+                        available: true,
+                        installed: true
+                    },
+                    {
+                        id: "postgres",
+                        name: "PostgreSQL",
+                        kind: "database",
+                        available: false,
+                        installed: false,
+                        reason: "Docker is unavailable"
+                    }
+                ]
+            }
+        });
+        value.navigate("software.development");
+        compare(value.entries.filter(row => row.operation === "environment").length, 4);
+        const remove = value.entries.find(row => row.value === "node" && row.environmentOperation === "remove");
+        verify(!remove.disabled);
+        verify(!!remove.confirm);
+        verify(value.entries.filter(row => row.value === "postgres").every(row => row.disabled));
+        const field = findChild(value, "launcherSearch");
+        field.text = "node";
+        verify(value.entries.some(row => row.operation === "environment"));
+        verify(!value.menu.execute(remove));
+        value.menu.execute(remove, true);
+        verify(AppLaunch.commands.some(call => call[0] === "kitty" && call.includes("software-environments") && call.includes("remove")));
+    }
+
     function test_owner_source_switches_and_web_engine_are_live_reader_values() {
         const value = view(), field = findChild(value, "launcherSearch");
         value.menu.localSourceOptions = {
