@@ -27,7 +27,7 @@ cat > "$work/nacre-dev.conf" <<'CONF'
 SigLevel = Required DatabaseRequired TrustedOnly
 Server = https://nacre-desktop.github.io/nacre/arch/dev/$arch
 CONF
-if [[ -e /etc/pacman.d/nacre-dev.conf ]] && ! cmp -s "$work/nacre-dev.conf" /etc/pacman.d/nacre-dev.conf; then
+if [[ -e /etc/pacman.d/nacre-dev.conf ]] && [[ $(sha256sum "$work/nacre-dev.conf" | cut -d " " -f 1) != $(sha256sum /etc/pacman.d/nacre-dev.conf | cut -d " " -f 1) ]]; then
   echo 'Existing /etc/pacman.d/nacre-dev.conf differs; review it before continuing.' >&2
   exit 1
 fi
