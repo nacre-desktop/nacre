@@ -39,6 +39,7 @@ jobs:
             archlinux:base-devel /usr/lib/systemd/systemd)
           trap 'docker rm --force "$container"' EXIT
           docker exec "$container" bash -euxo pipefail -c '
+            export USER=root
             pacman-key --init
             pacman-key --populate archlinux
             pacman -Syu --noconfirm devtools sudo
