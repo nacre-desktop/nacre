@@ -122,7 +122,9 @@ for command in (
     ("nacre_shell", "scheme", "list", "--names"),
 ):
     run(*command)
-    assert shutil.which(command[0]).startswith("/usr/bin/"), command
+    located = Path(shutil.which(command[0]))
+    installed = Path("/usr/bin") / command[0]
+    assert located.samefile(installed), (command, str(located), str(installed))
 assert account.read_text() == "fresh fixture, not credentials"
 assert not (home / "Documents/Nacre-Brain").exists()
 print(

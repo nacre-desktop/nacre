@@ -1,0 +1,64 @@
+name: Validate built Arch archives
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Owner/main package run containing built Core archives (diagnostic only)
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Download the owner-built archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PACKAGE_RUN: ${{ inputs.run_id }}
+        run: |
+          python - <<'PY'
+          import json, os, subprocess
+          run_id = os.environ['PACKAGE_RUN']
+          assert run_id.isdecimal()
+          repo = os.environ['GH_REPO']
+          run = json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{run_id}'],text=True))
+          workflow = json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/workflows/arch-packages.yml'],text=True))
+          assert run['workflow_id'] == workflow['id'] and run['head_branch'] == 'main' and run['head_repository']['full_name'] == repo
+          subprocess.run(['gh','run','download',run_id,'--repo',repo,'--name','pinned-arch-packages','--dir',os.environ['RUNNER_TEMP']+'/archives'],check=True)
+          PY
+      - name: Test installed runtime without compilers or source checkout
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/archives"
+          cp packaging/arch/test-installed.py "$work/test-installed.py"
+          cp packaging/keys/nacre-repo.asc "$work/"
+          cp packaging/keys/nacre-repo.fingerprint "$work/"
+          runtime=$(docker run --detach -v "$work:/work:ro" archlinux:base sleep infinity)
+          trap 'docker rm --force "$runtime"' EXIT
+          docker exec "$runtime" bash -euxo pipefail -c '
+            pacman-key --init
+            pacman-key --populate archlinux
+            pacman -Syu --noconfirm
+            pacman-key --add /work/nacre-repo.asc
+            pacman-key --lsign-key "$(cat /work/nacre-repo.fingerprint)"
+            pacman -U --noconfirm /work/orient/orient-[0-9]*.pkg.tar.zst \
+              /work/nacre/nacre-[0-9]*.pkg.tar.zst /work/nacre/nacre-ai-[0-9]*.pkg.tar.zst \
+              /work/nacre/nacre-brain-[0-9]*.pkg.tar.zst /work/nacre/nacre-session-{niri,hyprland}-[0-9]*.pkg.tar.zst
+            for backend in niri hyprland both; do
+              useradd -m "nacre-package-test-$backend"
+              runuser -u "nacre-package-test-$backend" -- python /work/test-installed.py --compositor "$backend"
+            done
+          ' 2>&1 | tee "$RUNNER_TEMP/runtime.log"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: diagnostic-runtime-proof
+          path: ${{ runner.temp }}/runtime.log
+          if-no-files-found: warn
