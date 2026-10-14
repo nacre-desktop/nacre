@@ -9,6 +9,7 @@ Item {
     property real size: 38
     implicitWidth: size
     implicitHeight: size
+    clip: true
     Image {
         id: image
         anchors.fill: parent
@@ -38,6 +39,7 @@ Item {
     NacreIcon {
         anchors.centerIn: parent
         visible: !root.entry.brand && !root.entry.emoji && !image.visible
+        textFormat: Text.PlainText
         // Desktop icon names are image identifiers, not symbol-font ligatures.
         text: root.entry.kind === "app" ? "apps" : root.entry.icon || "chevron_right"
         font.pointSize: root.size * .5

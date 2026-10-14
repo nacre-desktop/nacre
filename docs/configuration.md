@@ -82,3 +82,23 @@ are separate user data. Do not delete the whole Nacre directory to reset a
 preference; use the [safe reset steps](recovery.md#how-do-i-reset-settings-safely).
 Run only one full Nacre shell per session so notifications and palette changes
 have one owner.
+
+## Saved launcher items and file search
+
+Use **Actions → Saved launcher items** to add actions, snippets, bookmarks,
+search engines, workspace recipes and extra file search folders. These forms
+write `~/.config/nacre/launcher-workflows.json` (or the corresponding absolute
+XDG configuration directory). They do not replace existing launcher menu
+extensions or change the project registry. The file stays private.
+
+Each command has an executable and literal arguments, entered one per line;
+spaces within a line remain part of that argument. Actions can specify a working
+directory. Workspace command lines use `{project}` for the chosen folder.
+Named searches use an HTTP/HTTPS URL containing `{query}`; activation encodes
+the query before opening the browser. Searching alone does not open a website.
+
+File search includes local registered project paths outside `~/Projects`.
+Additional roots must be existing absolute directories; filesystem root is not
+a search folder. Previews read at most a small text excerpt or a bounded image,
+and resolve symbolic links before checking folder ownership. Saved items can be
+removed through their item actions without editing the JSON file.

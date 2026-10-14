@@ -189,17 +189,27 @@ def brain_search(query):
     vault = Path(
         os.environ.get("NACRE_BRAIN", str(HOME / "Documents/Nacre-Brain"))
     ).resolve()
-    words = [w.casefold() for w in query.split() if w]
+    if len(query) > 160:
+        return []
+    words = [w.casefold() for w in query.split() if w][:8]
     if not words:
         return []
     found = []
-    for path in vault.rglob("*.md"):
+    started = time.monotonic()
+    for index, path in enumerate(vault.rglob("*.md")):
+        if index >= 10000 or time.monotonic() - started > 1.5:
+            break
         if (
             any(p.startswith(".") for p in path.relative_to(vault).parts)
             or path.is_symlink()
         ):
             continue
-        text = path.read_text(errors="replace")
+        try:
+            if path.stat().st_size > 512 * 1024:
+                continue
+            text = path.read_text(errors="replace")
+        except OSError:
+            continue
         fold = text.casefold()
         if not all(w in fold for w in words):
             continue

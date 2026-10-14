@@ -204,9 +204,23 @@ function distance(a, b, limit) {
     }
     return prior[b.length];
 }
+function searchIndex(row) {
+    const name = normalized(row.name || row.label), alternate = (row.aliases || []).map(normalized);
+    return {
+        name: name,
+        alternate: alternate,
+        haystack: normalized([name, row.description, row.breadcrumb, row.id, row.matchedQuery, ...alternate].join(" ")),
+        initials: name.split(/[^a-z0-9]+/).filter(Boolean).map(word => word[0]).join(""),
+        tokens: [name, ...alternate].join(" ").split(/[^a-z0-9]+/).filter(Boolean)
+    };
+}
 function matchScore(row, term) {
-    const words = term.split(" ").filter(Boolean), name = normalized(row.name || row.label), alternate = (row.aliases || []).map(normalized);
-    const haystack = normalized([name, row.description, row.breadcrumb, row.id, ...alternate].join(" "));
+    const words = term.split(" ").filter(Boolean), prepared = row.searchIndex || searchIndex(row);
+    const name = prepared.name, alternate = prepared.alternate, haystack = prepared.haystack;
+    // Clipboard titles are excerpts of copied content, rather than item names.
+    // Body matches should not displace an application name such as Discord.
+    if (row.clipboard)
+        return words.every(word => haystack.includes(word)) ? 55 : -1;
     if (name === term)
         return 120;
     if (name.startsWith(term))
@@ -216,12 +230,12 @@ function matchScore(row, term) {
         return 89;
     if (words.every(word => name.includes(word)))
         return 85;
-    const initials = name.split(/[^a-z0-9]+/).filter(Boolean).map(word => word[0]).join("");
+    const initials = prepared.initials;
     if (term.length >= 2 && initials.startsWith(term))
         return 80;
     if (words.every(word => haystack.includes(word)))
         return 55;
-    const tokens = [name, ...alternate].join(" ").split(/[^a-z0-9]+/).filter(Boolean);
+    const tokens = prepared.tokens;
     if (words.every(word => tokens.some(token => token.includes(word) || word.length >= 4 && distance(word, token, word.length >= 7 ? 2 : 1) <= (word.length >= 7 ? 2 : 1))))
         return 48;
     return -1;

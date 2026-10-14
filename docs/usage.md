@@ -1,13 +1,50 @@
 # Using Nacre
 
-Open the launcher with Super+Space. Search apps or desktop actions, then press
-Enter to open the selected result. `>` scopes actions, `=` opens the calculator,
-`#` searches optional Brain notes and `?` opens optional AI. Manage favorites on
+Open the launcher with Super+Space and type what you want. Normal search includes
+apps, desktop actions, open windows, clipboard history, emoji, saved launcher
+items, files and optional Brain notes. Files and notes start searching after two
+characters; apps and commands appear immediately. The Everything filter is the
+default each time you open the launcher. Its other choices narrow results when
+useful, and also work from deep menu sections.
+
+Enter opens the selected result. Tab opens item actions: switch to an app's
+existing window, pin or delete a clipboard item, or open a file's folder, copy
+its path or file, share it, annotate an image or convert media. Image and small
+text files have local previews. Web searches and AI questions run only when you
+select them. `>` scopes actions, `=` opens the calculator, `#` scopes optional
+Brain notes, `:` scopes files and `?` opens optional AI. These shortcuts are
+optional; normal typing already searches local content. Manage favorites on
 hover or with Ctrl+D. Super+I opens Settings; Super+K opens the shortcut list.
 
+Actions → Saved launcher items provides guided forms for actions, text snippets,
+bookmarks, named web searches, workspace recipes and extra search folders.
+Arguments are entered one per line and passed literally. Search finds saved
+items automatically. Registered local projects also appear as workspace choices.
+A recipe opens its editor, terminal and optional documentation; running recipe
+units prevent duplicate editor/terminal launches. Default project choices use
+Code and Kitty; save a recipe to use different programs.
+
+File search includes Documents, Downloads, Pictures, Desktop, Projects and local
+folders in the project registry. Extra folders are private preferences. Search
+uses `fd`, respects its normal hidden-file and ignore rules, and limits results
+and run time. File previews stay inside configured folders and avoid hidden
+credential files. Emoji search uses Unicode 17 names and CLDR keywords; recent and favorite
+emoji appear first in the emoji section.
+
 Actions → Capture offers Record an area and Record screen. Record screen captures
-the entire focused monitor. Both save to `Videos/Recordings`; use Stop recording
-to finish and save the video.
+the entire focused monitor. Choose No sound, System audio, or System audio and
+microphone, then Start recording. Sound modes need PulseAudio compatibility
+(`pactl`); devices retain their current mute settings. The launcher and bar show
+elapsed time and Stop. Both modes save to `Videos/Recordings`. Finished captures
+have notification actions and appear in Capture for opening, revealing, copying,
+annotation and conversion. Stop remains available during a conversion. Media
+conversion writes a new file alongside the original.
+
+Sharing uses optional LocalSend; annotation uses Satty; compression and image/GIF
+conversion use FFmpeg. The optional Voice typing actions use your configured
+Voxtype daemon. Configure its model and service before recording dictation.
+Optional tools are available through Recommended software; adding launcher
+features does not install them or download voice models automatically.
 
 Type `=` or choose Calculator for a keypad with arithmetic, parentheses, sign
 change, square and square root. Type expressions directly or use the buttons;

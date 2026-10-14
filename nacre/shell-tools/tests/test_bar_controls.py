@@ -34,6 +34,7 @@ class BarControlsTests(unittest.TestCase):
                 (SHELL / "config/NacreAppearance.qml").read_text()
             )
             definitions = {
+                "NacreMenu": 'property QtObject workflows:QtObject {property var data:({recording:false});property string elapsed:"1:23";property var calls:[];function work(action){calls=[...calls,action]}}',
                 "NacreBar": "property var sizes:({batteryWidth:200})",
                 "NacreCompositor": 'property var activeWindow:null;property var overviewHoverWindow:null;property var windows:[];property var activeWorkspaceId:null;property string backendName:"hyprland"',
                 "ChatWindowTitle": "property var titles:({})",

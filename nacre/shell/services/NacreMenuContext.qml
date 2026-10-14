@@ -9,6 +9,15 @@ import "../modules/launcher/app-browser.js" as Legacy
 Scope {
     id: root
     property var shared: null
+    readonly property NacreLauncherWorkflows workflowOwner: NacreLauncherWorkflows {
+        active: !root.shared
+    }
+    readonly property var workflows: shared ? shared.workflows : workflowOwner
+    readonly property NacreLauncherPreview previews: NacreLauncherPreview {
+        helper: root.workflows.helper
+    }
+    property var localEmojiCatalog: []
+    readonly property var emojiCatalog: shared ? shared.emojiCatalog : localEmojiCatalog
     property string brainWanted: ""
     property string brainQuery: ""
     property var notes: []
@@ -84,6 +93,8 @@ Scope {
     }
     function refreshOnOpen() {
         refresh();
+        workflows.refresh();
+        DesktopExtras.request("clips", {});
         DesktopExtras.request("keys", {});
         NacreControlTools.refresh();
     }
@@ -100,7 +111,8 @@ Scope {
         if (route.startsWith("health"))
             Maintenance.refresh();
         const scope = Model.scope(query);
-        if (scope.kind === "files") {
+        const universal = scope.kind === "all" && scope.text.length >= 2;
+        if (scope.kind === "files" || universal) {
             fileWanted = scope.text;
             fileDelay.restart();
         }
@@ -108,10 +120,14 @@ Scope {
             conversionWanted = scope.text;
             conversionDelay.restart();
         }
-        if (scope.kind === "brain") {
+        if (scope.kind === "brain" || universal) {
             brainWanted = scope.text;
             brainDelay.restart();
         }
+        if (!universal && scope.kind !== "files")
+            fileWanted = "";
+        if (!universal && scope.kind !== "brain")
+            brainWanted = "";
         if (node?.provider === "packages") {
             packageWanted = scope.text;
             packageDelay.restart();
@@ -124,6 +140,7 @@ Scope {
                 performance: PowerProfile.Performance
             })[value];
     }
+    readonly property bool recordingActive: workflows.data.ready === true ? workflows.data.recording === true : snapshot.recording === true
     function stateFor(row) {
         if (row.state === "power-profile")
             return PowerProfiles.profile === profileValue(row.value);
@@ -157,7 +174,7 @@ Scope {
             }, {
                 count: Updates.count
             }) : NacreI18n.tr("ui.menu-context.status.up-to-date", "Up to date")) : typeof checked === "boolean" ? (["setting", "dnd", "night-light", "stay-awake", "mute", "mic-mute", "wifi", "bluetooth"].includes(row.state) ? (checked ? NacreI18n.tr("ui.menu-context.status.on", "On") : NacreI18n.tr("ui.menu-context.status.off", "Off")) : checked ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : "") : "";
-        result.disabled = !!row.capability && snapshot.capabilities[row.capability] !== true;
+        result.disabled = !!row.capability && snapshot.capabilities[row.capability] !== true && workflows.data.capabilities?.[row.capability] !== true;
         result.reason = result.disabled ? NacreI18n.tr("launcher.disabled.optional-tool-is-not-installed", "Optional tool is not installed") : "";
         if (row.operation === "media") {
             const player = NacrePlayers.active;
@@ -170,10 +187,10 @@ Scope {
             result.reason = !player ? NacreI18n.tr("launcher.disabled.no-active-media-player", "No active media player") : result.disabled ? NacreI18n.tr("launcher.disabled.this-player-does-not-support-that-action", "This player does not support that action") : "";
         }
         if (row.value === "record-stop") {
-            result.disabled = !snapshot.recording;
+            result.disabled = !recordingActive;
             result.reason = result.disabled ? NacreI18n.tr("launcher.disabled.no-recording-is-running", "No recording is running") : "";
         }
-        if (["record-start", "record-screen"].includes(row.value) && snapshot.recording) {
+        if (["record-start", "record-screen"].includes(row.value) && recordingActive) {
             result.disabled = true;
             result.reason = NacreI18n.tr("launcher.disabled.a-recording-is-already-running", "A recording is already running");
         }
@@ -273,18 +290,29 @@ Scope {
                     status: device.connected ? NacreI18n.tr("ui.menu-context.status.connected", "Connected") : ""
                 }));
         if (node.provider === "clipboard")
-            return DesktopExtras.clips.map(entry => valueRow(route, String(entry.id), entry.label || NacreI18n.tr("launcher.provider.clipboard-item", "Clipboard item"), "copy-clip", entry.id, "content_paste", entry.kind || NacreI18n.tr("launcher.provider.copied-item", "Copied item"), {
-                    preview: entry.preview || ""
+            return DesktopExtras.clips.map(entry => valueRow(route, String(entry.id), entry.title || NacreI18n.tr("launcher.provider.clipboard-item", "Clipboard item"), "copy-clip", entry.id, "content_paste", NacreI18n.tr("launcher.provider.copied-item", "Copied item"), {
+                    preview: entry.image ? entry.thumbnail || "" : "",
+                    previewText: entry.image ? "" : entry.title || "",
+                    clipboard: true,
+                    pinned: entry.pinned === true,
+                    checked: entry.pinned === true,
+                    status: entry.pinned ? NacreI18n.tr("launcher.workflows.pinned", "Pinned") : ""
                 }));
         if (node.provider === "keys")
             return DesktopExtras.keys.map((entry, index) => valueRow(route, "binding-" + index, entry.description || entry.key, "info", "shortcut", "keyboard", entry.key, {
                     shortcut: entry.key,
                     disabled: false
                 }));
-        if (node.provider === "emoji")
-            return NacreI18n.localize(emojiData).map((entry, index) => valueRow(route, Qt.md5(entry.value), entry.name, "copy", entry.value, "mood", NacreI18n.tr("launcher.provider.copy-this-emoji", "Copy this emoji"), {
-                    emoji: entry.value
-                }));
+        if (node.provider === "emoji") {
+            if (query)
+                return emojiRows;
+            const recent = LauncherPreferences.recent || [];
+            return emojiRows.slice().sort((a, b) => {
+                const favorite = Number(LauncherPreferences.favorites.includes(Model.stable(b))) - Number(LauncherPreferences.favorites.includes(Model.stable(a)));
+                const ai = recent.indexOf(Model.stable(a)), bi = recent.indexOf(Model.stable(b));
+                return favorite || (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
+            });
+        }
         if (node.provider === "timers")
             return (snapshot.reminders || []).map(entry => valueRow(route, entry.unit.slice(0, -6), entry.label, "timer-cancel", entry.unit, "timer", NacreI18n.tr("launcher.provider.cancel-this-reminder", "Cancel this reminder"), {
                     status: NacreI18n.tr("ui.menu-context.status.until-value0", "Until {value0}", {
@@ -317,6 +345,14 @@ Scope {
                 })) : [];
         return [];
     }
+    readonly property var emojiRows: shared ? shared.emojiRows : (emojiCatalog.length ? emojiCatalog : NacreI18n.localize(emojiData)).map(entry => {
+        const row = valueRow("actions.emoji", Qt.md5(entry.value), entry.name, "copy", entry.value, "mood", entry.category || NacreI18n.tr("launcher.provider.copy-this-emoji", "Copy this emoji"), {
+            emoji: entry.value,
+            aliases: [entry.value, ...(entry.aliases || [])]
+        });
+        row.searchIndex = Model.searchIndex(row);
+        return row;
+    })
     readonly property var emojiData: [
         {
             value: "😀",
@@ -521,11 +557,11 @@ Scope {
     ]
     function favorites() {
         const needed = rows.filter(row => row.provider && LauncherPreferences.favorites.some(id => id.startsWith("nacre-menu:" + row.id + ".")));
-        const candidates = allStatic().concat(...needed.map(row => provider(row.id)));
+        const candidates = allStatic().concat(workflowRows(), ...needed.map(row => provider(row.id)));
         return Model.alphabetical(LauncherPreferences.favorites.map(id => Model.favorite(id, apps, candidates, legacy)).filter(Boolean));
     }
     function recent() {
-        const candidates = allStatic();
+        const candidates = allStatic().concat(workflowRows());
         return LauncherPreferences.recent.map(id => Model.favorite(id, apps, candidates, legacy)).filter(row => row && !keepOpen(row)).slice(0, 5);
     }
     function brainRows(query) {
@@ -533,19 +569,188 @@ Scope {
             return [];
         return notes.map(entry => valueRow("actions.assistant.search", Qt.md5(entry.path), entry.title, "note", entry.path, "description", entry.preview, {
                 breadcrumb: "Nacre Brain",
-                note: true
+                note: true,
+                matchedQuery: query,
+                filePath: (workflows.data.brainRoot || "") + "/" + entry.path,
+                previewText: entry.preview
             }));
     }
-    function globalRows() {
-        return apps.concat(allStatic(), provider("style.wallpapers"), provider("software.discover"));
+    readonly property var searchFilters: [
+        {
+            value: "all",
+            label: NacreI18n.tr("launcher.filters.all", "Everything")
+        },
+        {
+            value: "apps",
+            label: NacreI18n.tr("launcher.filters.apps", "Apps")
+        },
+        {
+            value: "files",
+            label: NacreI18n.tr("launcher.filters.files", "Files")
+        },
+        {
+            value: "windows",
+            label: NacreI18n.tr("launcher.filters.windows", "Windows")
+        },
+        {
+            value: "clipboard",
+            label: NacreI18n.tr("launcher.filters.clipboard", "Clipboard")
+        },
+        {
+            value: "notes",
+            label: NacreI18n.tr("launcher.filters.notes", "Notes")
+        },
+        {
+            value: "emoji",
+            label: NacreI18n.tr("launcher.filters.emoji", "Emoji")
+        },
+        {
+            value: "saved",
+            label: NacreI18n.tr("launcher.filters.saved", "Saved items")
+        }
+    ]
+    function resultCategory(entry) {
+        if (entry.kind === "app")
+            return "apps";
+        if (entry.emoji)
+            return "emoji";
+        if (entry.note)
+            return "notes";
+        if (entry.clipboard)
+            return "clipboard";
+        if (entry.file)
+            return "files";
+        if (entry.operation === "focus")
+            return "windows";
+        if (entry.operation === "workflow")
+            return "saved";
+        return "actions";
+    }
+    function fileResults(query) {
+        return fileQuery === query ? fileRows.map(item => valueRow("actions.files", item.id, item.name, "open-file", item.path, "description", item.path, {
+                file: true
+            })) : [];
+    }
+    function workflowRows(query = "") {
+        const saved = (workflows.data.entries || []).map(item => valueRow("actions.saved", item.id, item.label, "workflow", item.id, item.icon || ({
+                    action: "terminal",
+                    snippet: "content_paste",
+                    search: "public",
+                    bookmark: "bookmark",
+                    workspace: "workspaces"
+                })[item.type], item.type === "snippet" ? item.text : item.directory || item.url || "", {
+                workflow: item,
+                searchQuery: query,
+                previewText: item.type === "snippet" ? item.text : ""
+            }));
+        const projects = (workflows.data.projects || []).map(item => valueRow("actions.saved", "project-" + item.id, item.label || item.id, "workflow", "project:" + item.id, "workspaces", item.path, {
+                searchQuery: query
+            }));
+        return saved.concat(projects);
+    }
+    function captureRows() {
+        return (workflows.data.captures || []).map(item => valueRow("actions.capture", Qt.md5(item.path), item.name, "open-file", item.path, "perm_media", item.path, {
+                file: true,
+                capture: true
+            }));
+    }
+    function webSearchRows(query) {
+        return (workflows.data.entries || []).filter(item => item.type === "search").map(item => valueRow("actions.saved", item.id, NacreI18n.tr("launcher.workflows.search-engine", "Search {engine} for “{query}”", {
+                engine: item.label,
+                query: query.slice(0, 100)
+            }), "workflow", item.id, "public", NacreI18n.tr("ui.menu-context.description.opens-your-browser-only-when-selected", "Opens your browser only when selected"), {
+                workflow: item,
+                searchQuery: query
+            }));
+    }
+    function globalRows(query) {
+        return apps.concat(allStatic(), provider("actions.windows"), provider("actions.clipboard"), fileResults(query), brainRows(query), workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), provider("software.discover"), captureRows());
+    }
+    function itemActions(entry) {
+        if (!entry)
+            return [];
+        const result = [];
+        const add = function (name, operation, value, extra) {
+            const row = Object.assign({
+                id: entry.id + "." + operation,
+                kind: "action",
+                name: name,
+                operation: operation,
+                value: value === undefined ? entry.filePath || entry.value : value,
+                transient: true
+            }, extra || {});
+            if (operation === "file-action") {
+                row.capability = ({
+                        share: "share",
+                        annotate: "annotate",
+                        compress: "convert",
+                        gif: "convert",
+                        "image-png": "convert",
+                        "image-jpeg": "convert"
+                    })[row.action] || "";
+                if (row.capability && workflows.data.capabilities && workflows.data.capabilities[row.capability] !== true) {
+                    row.disabled = true;
+                    row.reason = NacreI18n.tr("launcher.workflows.install-tool", "Install the optional tool to use this action");
+                }
+            }
+            result.push(row);
+        };
+        if (entry.kind === "app") {
+            const key = String(entry.id).replace(/\.desktop$/, "").toLowerCase();
+            const keys = [key, key.split(".").pop()];
+            for (const client of NacreCompositor.windows || []) {
+                if (keys.includes(String(client.wmClass || "").toLowerCase()))
+                    add(NacreI18n.tr("launcher.workflows.switch-window", "Switch to {title}", {
+                        title: client.title || entry.name
+                    }), "focus", client.windowId);
+            }
+        }
+        if (entry.clipboard) {
+            add(entry.pinned ? NacreI18n.tr("launcher.workflows.unpin", "Unpin clipboard item") : NacreI18n.tr("launcher.workflows.pin", "Pin clipboard item"), "clip-pin");
+            add(NacreI18n.tr("launcher.workflows.delete-clip", "Delete clipboard item"), "clip-delete");
+        }
+        if (entry.file || entry.note) {
+            add(NacreI18n.tr("launcher.workflows.reveal", "Show folder"), "file-action", entry.filePath || entry.value, {
+                action: "reveal"
+            });
+            add(NacreI18n.tr("launcher.workflows.copy-path", "Copy path"), "copy");
+            add(NacreI18n.tr("launcher.workflows.copy-file", "Copy file"), "file-action", entry.filePath || entry.value, {
+                action: "copy-file"
+            });
+            add(NacreI18n.tr("launcher.workflows.share-file", "Share with LocalSend"), "file-action", entry.filePath || entry.value, {
+                action: "share"
+            });
+            if (/\.(png|jpe?g|webp|bmp)$/i.test(entry.value)) {
+                add(NacreI18n.tr("launcher.workflows.annotate", "Annotate image"), "file-action", entry.filePath || entry.value, {
+                    action: "annotate"
+                });
+                add(NacreI18n.tr("launcher.workflows.png", "Convert to PNG"), "file-action", entry.filePath || entry.value, {
+                    action: "image-png"
+                });
+                add(NacreI18n.tr("launcher.workflows.jpeg", "Convert to JPEG"), "file-action", entry.filePath || entry.value, {
+                    action: "image-jpeg"
+                });
+            }
+            if (/\.(mp4|mkv|webm|mov)$/i.test(entry.value)) {
+                add(NacreI18n.tr("launcher.workflows.compress", "Compress video"), "file-action", entry.filePath || entry.value, {
+                    action: "compress"
+                });
+                add(NacreI18n.tr("launcher.workflows.gif", "Create GIF"), "file-action", entry.filePath || entry.value, {
+                    action: "gif"
+                });
+            }
+        }
+        if (entry.workflow)
+            add(NacreI18n.tr("launcher.workflows.remove", "Remove saved item"), "workflow-remove");
+        return result;
     }
     function ranked(items, query) {
         return Model.ranked(items, query, LauncherPreferences.usage || {}, LauncherPreferences.recent);
     }
-    function content(route, query) {
+    function content(route, query, filter = "all") {
         const scope = Model.scope(query);
         if (scope.kind === "files")
-            return fileQuery === scope.text ? fileRows.map(item => valueRow("actions.files", item.id, item.name, "open-file", item.path, "description", item.path)) : [];
+            return fileResults(scope.text);
         if (scope.kind === "calculator")
             return [];
         if (scope.kind === "brain")
@@ -611,17 +816,10 @@ Scope {
             ];
         if (scope.kind === "actions")
             return ranked(allStatic().filter(row => row.kind !== "group"), scope.text);
-        if (route === "software.packages")
-            return provider(route, scope.text);
         if (scope.text) {
-            if (!["home", "apps", "hidden"].includes(route)) {
-                const local = allStatic().filter(row => row.id.startsWith(route + "."));
-                const groups = rows.filter(row => row.provider && (row.id === route || row.id.startsWith(route + ".")));
-                return ranked(local.concat(...groups.map(row => provider(row.id, scope.text))), scope.text);
-            }
-            return ranked(globalRows(), scope.text).concat([valueRow("actions", "search-web", NacreI18n.tr("ui.menu-context.label.search-the-web-for-value0", "Search the web for “{value0}”", {
+            return ranked(globalRows(scope.text).concat(route === "software.packages" ? provider(route, scope.text) : []).filter(row => filter === "all" || resultCategory(row) === filter), scope.text).concat(filter === "all" ? webSearchRows(scope.text) : [], filter === "all" ? [valueRow("actions", "search-web", NacreI18n.tr("ui.menu-context.label.search-the-web-for-value0", "Search the web for “{value0}”", {
                     value0: scope.text.slice(0, 100)
-                }), "search-web", scope.text, "public", NacreI18n.tr("ui.menu-context.description.opens-your-browser-only-when-selected", "Opens your browser only when selected"))]);
+                }), "search-web", scope.text, "public", NacreI18n.tr("ui.menu-context.description.opens-your-browser-only-when-selected", "Opens your browser only when selected"))] : []);
         }
         if (route === "home")
             return favorites();
@@ -631,14 +829,18 @@ Scope {
             return NacreApps.all.filter(entry => LauncherPreferences.hidden.includes(entry.id)).map(entry => Object.assign(Model.application(entry), {
                     hidden: true
                 }));
+        if (route === "actions.saved")
+            return Model.children(route, rows).map(decorate).concat(workflowRows());
+        if (route === "actions.capture")
+            return Model.children(route, rows).map(decorate).concat(captureRows());
         return Model.children(route, rows).map(decorate).concat(provider(route));
     }
     function record(row) {
-        if (!keepOpen(row) && row.operation !== "ask" && row.kind !== "calculation" && row.operation !== "scope" && row.operation !== "info")
+        if (!row.transient && !keepOpen(row) && row.operation !== "ask" && row.kind !== "calculation" && row.operation !== "scope" && row.operation !== "info")
             LauncherPreferences.update("record", Model.stable(row), true);
     }
     function keepOpen(row) {
-        return ["toggle", "setting-toggle", "personality", "background", "palette-mode", "accent", "wallpaper", "next-wallpaper", "font", "info", "scope", "form", "timer-cancel", "webapp-remove", "power-profile", "media", "audio-output"].includes(row.operation);
+        return ["toggle", "setting-toggle", "personality", "background", "palette-mode", "accent", "wallpaper", "next-wallpaper", "font", "info", "scope", "form", "timer-cancel", "webapp-remove", "power-profile", "media", "audio-output", "clip-pin", "clip-delete", "file-action", "workflow-remove"].includes(row.operation);
     }
     function execute(row, confirmed = false) {
         if (shared)
@@ -647,6 +849,22 @@ Scope {
             return false;
         if ((row.confirm || row.operation === "power" && row.value !== "lock" || row.operation === "maintenance" && row.value === "restart") && !confirmed)
             return false;
+        if (row.operation === "tool" && row.value === "record-stop")
+            return workflows.work("record-stop");
+        if (row.operation === "workflow")
+            return workflows.work("activate", row.value, {
+                query: row.searchQuery || ""
+            });
+        if (row.operation === "workflow-remove")
+            return workflows.work("remove", row.value);
+        if (row.operation === "file-action")
+            return workflows.work(row.action, row.value);
+        if (["clip-pin", "clip-delete"].includes(row.operation)) {
+            DesktopExtras.request(row.operation === "clip-pin" ? "pin" : "delete", {
+                id: row.value
+            });
+            return true;
+        }
         if (row.operation === "media")
             return NacrePlayers.control(row.value);
         if (row.operation === "audio-output")
@@ -757,7 +975,7 @@ Scope {
             return true;
         }
         if (operation === "command" && Array.isArray(row.arguments) && row.arguments.length) {
-            AppLaunch.run(row.arguments);
+            AppLaunch.run(row.arguments, row.directory);
             return true;
         }
         if (operation === "tool") {
@@ -843,6 +1061,7 @@ Scope {
         return true;
     }
     function inspectApp(entry) {
+        previews.inspect(entry?.file || entry?.note ? entry.filePath || entry.value : "");
         if (entry?.kind !== "app")
             return;
         ownershipWanted = entry.id;
@@ -853,6 +1072,10 @@ Scope {
     }
     function supportPackage(entry) {
         return ({
+                dictation: "voxtype-bin",
+                annotate: "satty",
+                convert: "ffmpeg",
+                share: "localsend",
                 record: "wf-recorder",
                 ocr: "tesseract",
                 qr: "zbar",
@@ -1033,7 +1256,24 @@ Scope {
         id: captureDelay
         property string value: ""
         interval: 320
-        onTriggered: AppLaunch.run([NacrePaths.helperBinary, "menu-backend", "tool", value])
+        onTriggered: if (value === "capture-qr")
+            root.workflows.work("qr")
+        else if (["capture-area", "capture-screen", "capture-window"].includes(value))
+            root.workflows.work("capture", value)
+        else
+            AppLaunch.run([NacrePaths.helperBinary, "menu-backend", "tool", value])
+    }
+    FileView {
+        path: root.shared ? "" : root.tools + "/emoji-catalog.json"
+        preload: true
+        printErrors: false
+        onLoaded: {
+            try {
+                root.localEmojiCatalog = JSON.parse(text()).entries || [];
+            } catch (failure) {
+                root.localEmojiCatalog = [];
+            }
+        }
     }
     Component.onCompleted: if (!shared)
         refresh()

@@ -298,6 +298,34 @@ pub fn capture(action: &str) -> Result<String> {
     }
 }
 
+/// Return the exact saved capture for annotation and sharing follow-up actions.
+pub fn capture_saved(action: &str) -> Result<(String, Option<PathBuf>)> {
+    let paths = Paths::environment()?;
+    let date = chrono::Local::now().format("%Y%m%d_%H%M%S_%6f").to_string();
+    let expected = paths.screenshots().join(format!("screenshot_{date}.png"));
+    let message = if action == "capture-window" {
+        let mut compositor = Compositor::connect()?;
+        let window = compositor.active_window()?;
+        window_with(
+            &paths,
+            &date,
+            window,
+            &mut process::run_bytes,
+            |path, id| {
+                await_capture(
+                    path,
+                    || compositor.screenshot_window(path, id),
+                    Duration::from_secs(5),
+                )
+            },
+        )?
+    } else {
+        screenshot_with(&paths, action, &date, &mut process::run_bytes)?
+    };
+    let saved = (!message.is_empty() && expected.is_file()).then_some(expected);
+    Ok((message, saved))
+}
+
 pub fn support_report() -> Result<String> {
     let report = crate::diagnostics_native::report(false)?;
     copy_report(&report, &mut process::run_bytes)
@@ -726,12 +754,56 @@ pub fn record_screen() -> Result<String> {
         Some(&output),
     )
 }
+pub fn record_configured(screen: bool, extra: &[String]) -> Result<String> {
+    let output = if screen {
+        Some(Compositor::connect()?.focused_output_name()?)
+    } else {
+        None
+    };
+    record_start_options_with(
+        &Paths::environment()?,
+        &mut NativeUnits,
+        &mut process::run_bytes,
+        || chrono::Local::now().format("%Y%m%d_%H%M%S_%6f").to_string(),
+        output.as_deref(),
+        extra,
+    )
+}
+pub fn read_qr_sensitive() -> Result<String> {
+    screen_with(
+        &Paths::environment()?,
+        "qr",
+        &mut |program, args, input, timeout| {
+            let mut args = args.to_vec();
+            if program == "wl-copy" {
+                args.push("--sensitive".into());
+            }
+            process::run_bytes(program, &args, input, timeout)
+        },
+        |cache| {
+            let temporary = tempfile::Builder::new().suffix(".png").tempfile_in(cache)?;
+            let (file, path) = temporary.keep()?;
+            drop(file);
+            Ok(path)
+        },
+    )
+}
 fn record_start_with(
     paths: &Paths,
     units: &mut impl Units,
     run: &mut impl FnMut(&str, &[String], Option<&[u8]>, Duration) -> Result<Output>,
     stamp: impl FnOnce() -> String,
     output: Option<&str>,
+) -> Result<String> {
+    record_start_options_with(paths, units, run, stamp, output, &[])
+}
+fn record_start_options_with(
+    paths: &Paths,
+    units: &mut impl Units,
+    run: &mut impl FnMut(&str, &[String], Option<&[u8]>, Duration) -> Result<Output>,
+    stamp: impl FnOnce() -> String,
+    output: Option<&str>,
+    extra: &[String],
 ) -> Result<String> {
     let _guard = crate::menu_registry::registry_lock(paths, "recording")?;
     if units.active("nacre-screen-recording.service")? {
@@ -758,6 +830,7 @@ fn record_start_with(
     let path = folder.join(format!("recording_{}.mp4", stamp()));
     let mut command = vec!["wf-recorder".to_string()];
     command.extend(selector);
+    command.extend(extra.iter().cloned());
     command.extend([
         "-f".into(),
         path.to_str().ok_or("Recording path is not UTF-8")?.into(),

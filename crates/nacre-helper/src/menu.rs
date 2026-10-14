@@ -6,7 +6,7 @@ use std::{
     collections::{BTreeSet, HashSet},
     fs,
     os::unix::fs::{MetadataExt, PermissionsExt},
-    path::{Path, PathBuf},
+    path::Path,
     sync::OnceLock,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -201,11 +201,7 @@ pub fn search_files(query: &str) -> Result<Value> {
         );
     }
     let paths = Paths::environment()?;
-    let roots: Vec<PathBuf> = ["Documents", "Downloads", "Pictures", "Desktop", "Projects"]
-        .iter()
-        .map(|name| paths.home.join(name))
-        .filter(|root| root.is_dir())
-        .collect();
+    let roots = crate::launcher_workflows::roots(&paths)?;
     if roots.is_empty() {
         return Ok(json!({"rows":[]}));
     }

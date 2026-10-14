@@ -1370,6 +1370,119 @@
       "value": ": ",
       "labelId": "launcher.catalog.actions.find-files.label",
       "descriptionId": "launcher.catalog.actions.find-files.description"
+    },
+    {
+      "id": "actions.saved",
+      "kind": "group",
+      "label": "Saved launcher items",
+      "labelId": "launcher.catalog.saved",
+      "icon": "bookmark",
+      "description": "Actions, snippets, searches and project workspaces",
+      "descriptionId": "launcher.catalog.saved-description"
+    },
+    {
+      "id": "actions.saved.add-action",
+      "kind": "action",
+      "label": "Add launcher action",
+      "labelId": "launcher.catalog.add-action",
+      "icon": "terminal",
+      "operation": "form",
+      "value": "action"
+    },
+    {
+      "id": "actions.saved.add-snippet",
+      "kind": "action",
+      "label": "Save text snippet",
+      "labelId": "launcher.catalog.add-snippet",
+      "icon": "content_paste",
+      "operation": "form",
+      "value": "snippet"
+    },
+    {
+      "id": "actions.saved.add-search",
+      "kind": "action",
+      "label": "Add named web search",
+      "labelId": "launcher.catalog.add-search",
+      "icon": "public",
+      "operation": "form",
+      "value": "search"
+    },
+    {
+      "id": "actions.saved.add-bookmark",
+      "kind": "action",
+      "label": "Save bookmark",
+      "labelId": "launcher.catalog.add-bookmark",
+      "icon": "bookmark",
+      "operation": "form",
+      "value": "bookmark"
+    },
+    {
+      "id": "actions.saved.add-workspace",
+      "kind": "action",
+      "label": "Save workspace recipe",
+      "labelId": "launcher.catalog.add-workspace",
+      "icon": "workspaces",
+      "operation": "form",
+      "value": "workspace"
+    },
+    {
+      "id": "actions.saved.add-roots",
+      "kind": "action",
+      "label": "Choose file search folders",
+      "labelId": "launcher.catalog.add-roots",
+      "icon": "folder",
+      "operation": "form",
+      "value": "roots"
+    },
+    {
+      "id": "actions.dictation",
+      "kind": "group",
+      "label": "Voice typing",
+      "labelId": "launcher.catalog.dictation",
+      "icon": "mic",
+      "description": "Optional dictation with your configured Voxtype service",
+      "descriptionId": "launcher.catalog.dictation-description"
+    },
+    {
+      "id": "actions.dictation.toggle",
+      "kind": "action",
+      "label": "Start or stop voice typing",
+      "labelId": "launcher.catalog.dictation-toggle",
+      "icon": "mic",
+      "operation": "command",
+      "arguments": [
+        "voxtype",
+        "record",
+        "toggle"
+      ],
+      "capability": "dictation"
+    },
+    {
+      "id": "actions.dictation.setup",
+      "kind": "action",
+      "label": "Configure voice typing",
+      "labelId": "launcher.catalog.dictation-setup",
+      "icon": "settings_voice",
+      "operation": "command",
+      "arguments": [
+        "kitty",
+        "--",
+        "voxtype",
+        "configure"
+      ],
+      "capability": "dictation"
+    },
+    {
+      "id": "actions.share",
+      "kind": "action",
+      "label": "Send or receive with LocalSend",
+      "labelId": "launcher.catalog.share",
+      "icon": "share",
+      "operation": "command",
+      "arguments": [
+        "localsend"
+      ],
+      "capability": "share"
     }
   ],
   "software": [
@@ -1568,6 +1681,27 @@
       "description": "Copy a color from the screen",
       "labelId": "launcher.catalog.hyprpicker.label",
       "descriptionId": "launcher.catalog.hyprpicker.description"
+    },
+    {
+      "package": "satty",
+      "label": "Screenshot annotation",
+      "description": "Draw and write on screenshots",
+      "labelId": "launcher.catalog.optional-satty",
+      "descriptionId": "launcher.catalog.optional-satty-description"
+    },
+    {
+      "package": "ffmpeg",
+      "label": "Media conversion",
+      "description": "Compress videos and convert media files",
+      "labelId": "launcher.catalog.optional-ffmpeg",
+      "descriptionId": "launcher.catalog.optional-ffmpeg-description"
+    },
+    {
+      "package": "voxtype-bin",
+      "label": "Voice typing",
+      "description": "Optional dictation; configure your model and service before use",
+      "labelId": "launcher.catalog.optional-voxtype-bin",
+      "descriptionId": "launcher.catalog.optional-voxtype-bin-description"
     }
   ]
 }

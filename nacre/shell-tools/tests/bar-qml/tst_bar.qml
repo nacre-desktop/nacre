@@ -259,6 +259,23 @@ TestCase {
         verify(view.implicitHeight > 100 && view.implicitHeight < 350);
         compare(findChild(view.audioItem, "nacreStatusGlyph").width, 24);
     }
+    function test_recording_indicator_exposes_elapsed_and_owned_stop() {
+        const view = createTemporaryObject(status, test);
+        verify(!view.recordingItem.visible);
+        const previous = view.implicitHeight;
+        NacreMenu.workflows.data = {
+            recording: true
+        };
+        wait(40);
+        verify(view.recordingItem.visible);
+        compare(view.recordingItem.detail, "1:23");
+        verify(view.implicitHeight > previous);
+        mouseClick(view.recordingItem, view.recordingItem.width / 2, view.recordingItem.height / 2);
+        compare(NacreMenu.workflows.calls[0], "record-stop");
+        NacreMenu.workflows.data = {
+            recording: false
+        };
+    }
     function test_battery_validity_estimates_and_explicit_profile_guards() {
         const view = createTemporaryObject(battery, test);
         compare(view.percent, 53);

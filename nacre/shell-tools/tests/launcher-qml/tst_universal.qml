@@ -30,6 +30,14 @@ TestCase {
             "webapps": []
         };
         NacreMenu.message = "";
+        NacreMenu.workflows.data = {
+            entries: [],
+            projects: [],
+            captures: [],
+            recording: false
+        };
+        DesktopExtras.clips = [];
+        NacreCompositor.windows = [];
         NacrePanelState.calls = [];
     }
 
@@ -55,6 +63,182 @@ TestCase {
         value.enabled = true;
         value.focusExplicit();
         compare(search.focus, true);
+    }
+
+    function test_ordinary_typing_federates_providers_and_filters_are_optional() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        value.navigate("power");
+        NacreMenu.fileQuery = "report";
+        NacreMenu.fileRows = [
+            {
+                id: "file",
+                name: "Report.txt",
+                path: "/fixture/Report.txt"
+            }
+        ];
+        NacreMenu.brainQuery = "report";
+        NacreMenu.notes = [
+            {
+                path: "report.md",
+                title: "Report notes",
+                preview: "Report context"
+            }
+        ];
+        DesktopExtras.clips = [
+            {
+                id: "41",
+                title: "Report copied text",
+                image: false,
+                pinned: true
+            }
+        ];
+        NacreCompositor.windows = [
+            {
+                windowId: "9",
+                title: "Report window",
+                wmClass: "editor",
+                workspace: {
+                    name: "1"
+                }
+            }
+        ];
+        NacreMenu.workflows.data = {
+            entries: [
+                {
+                    id: "saved",
+                    label: "Report template",
+                    type: "snippet",
+                    text: "Report body"
+                }
+            ],
+            projects: [],
+            captures: []
+        };
+        field.text = "report";
+        wait(40);
+        compare(value.resultFilter, "all");
+        for (const operation of ["open-file", "note", "copy-clip", "focus", "workflow"])
+            verify(value.entries.some(row => row.operation === operation), operation);
+        verify(value.entries.find(row => row.operation === "copy-clip").pinned);
+        compare(value.entries.find(row => row.operation === "copy-clip").previewText, "Report copied text");
+        value.resultFilter = "files";
+        compare(value.entries.length, 1);
+        compare(value.entries[0].operation, "open-file");
+        value.reset();
+        compare(value.resultFilter, "all");
+        field.text = "report";
+        value.menu.prepare(value.route, value.query);
+        compare(value.menu.fileWanted, "report");
+        compare(value.menu.brainWanted, "report");
+        field.text = "r";
+        value.menu.prepare(value.route, value.query);
+        compare(value.menu.fileWanted, "");
+        compare(value.menu.brainWanted, "");
+    }
+    function test_clipboard_images_and_contextual_actions_keep_producer_fields() {
+        DesktopExtras.clips = [
+            {
+                id: "42",
+                title: "Copied image",
+                image: true,
+                thumbnail: "/fixture/clip.png",
+                pinned: false
+            }
+        ];
+        const row = NacreMenu.provider("actions.clipboard")[0];
+        compare(row.name, "Copied image");
+        compare(row.preview, "/fixture/clip.png");
+        verify(NacreMenu.itemActions(row).some(action => action.operation === "clip-pin"));
+        NacreMenu.execute(NacreMenu.itemActions(row).find(action => action.operation === "clip-pin"));
+        const latest = DesktopExtras.requests[DesktopExtras.requests.length - 1];
+        compare(latest[0], "pin");
+        compare(latest[1].id, "42");
+        NacreCompositor.windows = [
+            {
+                windowId: "9",
+                title: "Working document",
+                wmClass: "editor"
+            }
+        ];
+        const switchAction = NacreMenu.itemActions(NacreMenu.apps.find(row => row.id === "editor")).find(row => row.operation === "focus");
+        verify(switchAction !== undefined);
+        compare(switchAction.value, "9");
+    }
+    function test_async_results_preserve_keyboard_selection() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        field.text = "editor";
+        value.focusResults();
+        const id = value.selectedEntry.id;
+        NacreMenu.fileQuery = "editor";
+        NacreMenu.fileRows = [
+            {
+                id: "late",
+                name: "Editor notes.md",
+                path: "/fixture/editor.md"
+            }
+        ];
+        compare(value.selectedEntry.id, id);
+    }
+    function test_private_workflow_forms_scroll_at_short_height() {
+        const value = view();
+        value.height = 400;
+        value.run(NacreMenu.node("actions.saved.add-workspace"));
+        compare(value.form.kind, "workspace");
+        const last = findChild(value, "menuFormField_url");
+        verify(last !== null);
+        const flick = last.parent.parent.parent.parent;
+        wait(40);
+        verify(flick.contentHeight > flick.height);
+        value.cancelForm();
+        value.run(NacreMenu.node("actions.saved.add-snippet"));
+        verify(value.form.fields.some(row => row.multiline));
+    }
+    function test_filter_applies_before_global_result_limit() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        NacreCompositor.windows = Array.from({
+            length: 130
+        }, (_, index) => ({
+                    windowId: String(index),
+                    title: "Report window " + index,
+                    wmClass: "editor"
+                }));
+        NacreMenu.fileQuery = "report";
+        NacreMenu.fileRows = [
+            {
+                id: "doc",
+                name: "Design report.md",
+                path: "/fixture/report.md"
+            }
+        ];
+        field.text = "report";
+        verify(!value.entries.some(row => row.file));
+        value.resultFilter = "files";
+        compare(value.entries.length, 1);
+        verify(value.entries[0].file);
+        compare(value.captureState().resultFilter, "files");
+    }
+    function test_screenshot_uses_saved_capture_follow_up_after_closing() {
+        const value = view();
+        const worker = findChild(NacreMenu.workflows, "launcherWorkflowAction");
+        worker.running = false;
+        value.run(NacreMenu.node("actions.capture.screen"));
+        verify(!value.visibilities.launcher);
+        compare(AppLaunch.commands.length, 0);
+        tryVerify(() => worker.running);
+        compare(worker.command.slice(-3).join("|"), "launcher-workflows|capture|capture-screen");
+        worker.running = false;
+    }
+    function test_full_emoji_catalog_and_stop_are_available_during_other_work() {
+        tryVerify(() => NacreMenu.emojiCatalog.length === 3944);
+        const emoji = NacreMenu.provider("actions.emoji", "penguin").find(row => row.name === "penguin");
+        verify(emoji !== undefined);
+        compare(emoji.emoji, "🐧");
+        const worker = findChild(NacreMenu.workflows, "launcherWorkflowAction");
+        worker.running = true;
+        verify(NacreMenu.workflows.work("record-stop"));
+        verify(findChild(NacreMenu.workflows, "launcherRecordingStop").running);
+        worker.running = false;
+        findChild(NacreMenu.workflows, "launcherRecordingStop").running = false;
     }
     function test_toggle_keeps_english_geometry_and_expands_wrapped_translations() {
         const previousLanguage = NacreI18n.language;
@@ -313,10 +497,23 @@ TestCase {
         verify(!screen.disabled);
         compare(screen.name, "Record screen");
         value.run(screen);
-        compare(value.visibilities.launcher, false);
+        verify(value.visibilities.launcher);
+        compare(value.form.kind, "recording");
         compare(AppLaunch.commands.length, 0);
-        tryVerify(() => AppLaunch.commands.length === 1);
-        compare(AppLaunch.commands[0].slice(-3).join("|"), "menu-backend|tool|record-screen");
+        const sound = findChild(value, "menuFormChoice_system");
+        verify(sound !== null);
+        wait(40);
+        mouseClick(sound, sound.width / 2, sound.height / 2);
+        verify(sound.selected);
+        const submit = findChild(value, "menuFormSubmit");
+        mouseClick(submit, submit.width / 2, submit.height / 2);
+        compare(value.visibilities.launcher, false);
+        compare(value.menu.workflows.recordingOptions.audio, "system");
+        verify(value.menu.workflows.recordingOptions.screen);
+        compare(AppLaunch.commands.length, 0);
+        const action = findChild(value.menu.workflows, "launcherWorkflowAction");
+        tryVerify(() => action.running);
+        compare(action.command.slice(-3).join("|"), "launcher-workflows|record|screen");
         value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
             recording: true
         });
@@ -496,7 +693,7 @@ TestCase {
         compare(value.visibilities.launcher, true);
     }
 
-    function test_font_and_wallpaper_scoped_search() {
+    function test_global_search_includes_font_and_wallpaper_providers() {
         const value = view(), field = findChild(value, "launcherSearch");
         value.navigate("style.fonts");
         field.text = "Plex";
@@ -507,7 +704,7 @@ TestCase {
         value.navigate("style.wallpapers");
         field.text = "garden";
         wait(20);
-        compare(value.entries[0].name, "Blue garden");
+        verify(value.entries.some(row => row.name === "Blue garden" && row.operation === "wallpaper"));
     }
 
     function test_escape_without_mouse_and_small_layout() {

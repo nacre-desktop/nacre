@@ -73,6 +73,11 @@ Item {
     function showPopup(name, item, clicked) {
         if (!panel || !visibility || visibility.session || visibility.launcher || (visibility.dashboard && visibility.dashboardPinned))
             return;
+        if (name === "recording") {
+            hoverHint = status.recordingItem.label;
+            hoverHintCenter = status.recordingItem.mapToItem(root, status.recordingItem.width / 2, status.recordingItem.height / 2).x;
+            return;
+        }
         rememberRegion(item);
         const pointer = item.mapToItem(root, item.mouseX ?? item.width / 2, item.mouseY ?? 0);
         NacreHoverIntent.observe(screen, pointer.x, pointer.y);
@@ -116,6 +121,10 @@ Item {
     function statusName(x) {
         const targets = [status.audioItem, status.network, status.bluetoothItem, status.battery, status.notificationsItem];
         const names = ["audio", "network", "bluetooth", "battery", "notifications"];
+        if (status.recordingItem?.visible) {
+            targets.push(status.recordingItem);
+            names.push("recording");
+        }
         let nearest = 0, distance = Infinity;
         for (let i = 0; i < targets.length; i++) {
             const p = targets[i].mapToItem(statusMouse, targets[i].width / 2, targets[i].height / 2);
@@ -243,7 +252,10 @@ Item {
                 onClicked: {
                     const name = root.statusName(mouseX);
                     root.hoverHint = "";
-                    NacrePanelState.openControls(name, root.screen.name);
+                    if (name === "recording")
+                        NacreMenu.workflows.work("record-stop");
+                    else
+                        NacrePanelState.openControls(name, root.screen.name);
                 }
             }
         }

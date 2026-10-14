@@ -11,6 +11,7 @@ Item {
     property string screenName: "unknown"
     property bool horizontal: false
     property color colour: NacreColours.palette.m3secondary
+    readonly property Item recordingItem: recording
     readonly property Item audioItem: speaker
     readonly property Item network: wifi
     readonly property Item bluetoothItem: bluetooth
@@ -19,11 +20,29 @@ Item {
     readonly property var device: UPower.displayDevice
     readonly property bool batteryAvailable: !!device && device.ready && device.isPresent !== false && device.isLaptopBattery && Number.isFinite(device.percentage) && device.percentage >= 0 && device.percentage <= 1
     readonly property int batteryPercent: batteryAvailable ? Math.round(device.percentage * 100) : -1
-    implicitWidth: Math.max(speaker.implicitWidth, wifi.implicitWidth, bluetooth.implicitWidth, batteryItem.implicitWidth, notices.implicitWidth)
-    implicitHeight: speaker.implicitHeight + wifi.implicitHeight + bluetooth.implicitHeight + batteryItem.implicitHeight + notices.implicitHeight + NacreAppearance.spacing.small * 4
+    implicitWidth: Math.max(recording.visible ? recording.implicitWidth : 0, speaker.implicitWidth, wifi.implicitWidth, bluetooth.implicitWidth, batteryItem.implicitWidth, notices.implicitWidth)
+    implicitHeight: (recording.visible ? recording.implicitHeight + NacreAppearance.spacing.small : 0) + speaker.implicitHeight + wifi.implicitHeight + bluetooth.implicitHeight + batteryItem.implicitHeight + notices.implicitHeight + NacreAppearance.spacing.small * 4
     Column {
         anchors.centerIn: parent
         spacing: NacreAppearance.spacing.small
+        StatusTarget {
+            id: recording
+            objectName: "nacreStatusRecording"
+            visible: NacreMenu.workflows.data.recording === true
+            icon: "stop_circle"
+            label: NacreI18n.tr("launcher.capture.stop-elapsed", "Stop recording {time}", {
+                time: NacreMenu.workflows.elapsed
+            })
+            detail: NacreMenu.workflows.elapsed
+            ink: NacreColours.palette.m3error
+            Accessible.role: Accessible.Button
+            NacreInteraction {
+                function onClicked() {
+                    root.forceActiveFocus();
+                    NacreMenu.workflows.work("record-stop");
+                }
+            }
+        }
         StatusTarget {
             id: speaker
             objectName: "nacreStatusAudio"
@@ -71,6 +90,10 @@ Item {
         function state(): string {
             const items = [root.audioItem, root.network, root.bluetoothItem, root.battery, root.notificationsItem];
             const names = ["audio", "network", "bluetooth", "battery", "notifications"];
+            if (recording.visible) {
+                items.push(recording);
+                names.push("recording");
+            }
             return JSON.stringify({
                 batteryAvailable: root.batteryAvailable,
                 batteryPercent: root.batteryPercent,

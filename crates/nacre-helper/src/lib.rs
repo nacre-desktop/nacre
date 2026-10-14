@@ -12,6 +12,7 @@ pub mod files;
 pub mod i18n;
 pub mod json;
 pub mod launcher_preferences;
+pub mod launcher_workflows;
 pub mod light_devices;
 pub mod menu;
 pub mod menu_actions;

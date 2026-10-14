@@ -67,3 +67,18 @@ Custom absolute XDG_STATE_HOME follows NacrePaths.qml as an intended difference;
 the explicit NACRE_PEARL_STATE override keeps precedence.
 Disposable release checks cover absolute XDG state, relative-XDG fallback and
 the explicit state-file override; no existing state file is migrated.
+
+## Launcher workflow additions
+
+`launcher-workflows` is a separate native command for private saved items, file
+previews, capture options and follow-up actions. It does not change the frozen
+`menu-backend` argument grammar. Search helpers continue to receive data rather
+than shell expressions. Interactive capture and long media conversions use
+standalone processes, and Stop has an independent request path. File previews
+belong to each launcher context; workflow settings and recording state are shared.
+
+The emoji catalog is generated with `tools/update_emoji_catalog.py` from explicitly
+supplied Unicode 17 emoji-test data and CLDR 48 English annotations. Source URLs
+and input SHA-256 digests are embedded in `emoji-catalog.json`. The data uses the
+[Unicode License v3](../../nacre/shell-tools/emoji-LICENSE.txt); the license travels
+with the catalog. Generation performs no download, and runtime search is local.

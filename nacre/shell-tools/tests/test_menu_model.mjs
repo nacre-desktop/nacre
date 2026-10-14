@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const context=vm.createContext({});
 vm.runInContext(fs.readFileSync(process.argv[2],'utf8').replace('.pragma library',''),context);
 const source=fs.readFileSync(process.argv[3],'utf8'), menu=context.merge(source,'');
-assert.equal(menu.rows.length,120);
+assert.equal(menu.rows.length,131);
 assert.equal(menu.rows.find(row=>row.id==='actions.capture.record-screen').value,'record-screen');
 assert.equal(context.rail(menu.rows).length,9);
 const support = menu.rows.find(row => row.id === 'health.support-report');
@@ -55,3 +55,8 @@ for (const query of ['d','di','dis','disc','disco','discord']) {
 }
 assert.equal(context.ranked(desktopApps,'cpu')[0].id,'io.missioncenter.MissionCenter');
 assert.equal(context.ranked(desktopApps,'disc')[1].id,'io.missioncenter.MissionCenter');
+
+// Copied search text must not jump above the app it refers to.
+const copiedText={id:"copied-disc",kind:"action",name:"disc",clipboard:true};
+const appDiscord={id:"discord",kind:"app",name:"Discord"};
+assert.equal(context.ranked([copiedText,appDiscord],"disc",{"nacre-menu:copied-disc":{count:1e9,last:Date.now()/1000}},["nacre-menu:copied-disc"])[0].id,"discord");

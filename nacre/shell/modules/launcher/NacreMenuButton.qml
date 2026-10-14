@@ -13,6 +13,9 @@ NacreSurface {
     property string description: ""
     property string stateText: ""
 
+    function focusControl() {
+        interaction.forceActiveFocus();
+    }
     signal clicked
 
     implicitHeight: toggle && description ? Math.max(50, descriptionText.y + descriptionText.implicitHeight + 6) : compact ? 32 : 38
@@ -93,6 +96,7 @@ NacreSurface {
         }
     }
     NacreInteraction {
+        id: interaction
         function onClicked() {
             root.clicked();
         }

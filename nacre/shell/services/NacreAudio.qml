@@ -5,7 +5,7 @@ import Quickshell.Services.Pipewire
 Singleton {
     id: root
     readonly property var sink: Pipewire.defaultAudioSink
-    readonly property var outputs: Pipewire.nodes.values.filter(node => node.isSink && !node.isStream && !!node.audio)
+    readonly property var outputs: Pipewire.nodes.values.filter(node => node.isSink && !node.isStream && !!node.audio && !/^nacre_record_[0-9a-f]{32}$/.test(node.name || ""))
     readonly property var source: Pipewire.defaultAudioSource
     readonly property bool available: usable(sink)
     readonly property bool micAvailable: usable(source)

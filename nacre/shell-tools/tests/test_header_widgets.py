@@ -50,6 +50,8 @@ Item {
  property bool horizontal:false
  property string screenName:""
  implicitWidth:24;implicitHeight:152
+ readonly property Item recordingItem:r
+ Item{id:r;visible:false;property string label:"Stop recording 1:23"}
  readonly property Item audioItem:a
  readonly property Item network:n
  readonly property Item bluetoothItem:b
@@ -58,6 +60,7 @@ Item {
  Column {Item{id:a;width:24;height:24}Item{id:n;width:24;height:24}Item{id:b;width:24;height:24}Item{id:c;width:24;height:36}Item{id:d;width:24;height:36}}
 }""")
             definitions = {
+                "NacreMenu": "property QtObject workflows:QtObject {property var calls:[];function work(action){calls=[...calls,action]}}",
                 "ChatWindowTitle": "property var titles:({})",
                 "NacrePresentation": "property var active:({workspaceColors:false})",
                 "NacreIcons": 'function getDesktopEntry(name){return {categories:name==="kitty"?["System","TerminalEmulator"]:name==="firefox"?["Network","WebBrowser"]:name==="discord"?["Network","InstantMessaging"]:[]}}function getAppCategoryIcon(name,fallback){return name==="editor"?"code":fallback}',

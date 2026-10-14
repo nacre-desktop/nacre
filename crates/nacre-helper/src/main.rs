@@ -43,6 +43,28 @@ fn run() -> Result<i32> {
         println!("{}", json::encode(&value)?);
         return Ok(code);
     }
+    if tool == "launcher-workflows" {
+        use std::io::Read;
+        let input = if arguments
+            .first()
+            .is_some_and(|a| a == "save" || a == "activate" || a == "record")
+        {
+            let mut line = String::new();
+            io::stdin().take(2_097_153).read_to_string(&mut line)?;
+            if line.len() > 2_097_152 {
+                return Err("Launcher input is too large".into());
+            }
+            Some(serde_json::from_str(&line)?)
+        } else {
+            None
+        };
+        let (value, code) = match nacre_helper::launcher_workflows::execute(&arguments, input) {
+            Ok(value) => (value, 0),
+            Err(error) => (serde_json::json!({"error":error.to_string()}), 1),
+        };
+        println!("{}", json::encode(&value)?);
+        return Ok(code);
+    }
     if tool == "diagnostics" && (arguments == ["report"] || arguments == ["report", "--json"]) {
         print!(
             "{}",

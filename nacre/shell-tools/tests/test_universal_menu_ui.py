@@ -36,10 +36,19 @@ def stage(target):
     stage_qml(
         SHELL / "services/NacreMenuContext.qml", fixtures / "NacreMenuContext.qml"
     )
+    stage_qml(
+        SHELL / "services/NacreLauncherWorkflows.qml",
+        fixtures / "NacreLauncherWorkflows.qml",
+    )
+    with (fixtures / "qmldir").open("a") as manifest:
+        manifest.write("\nNacreLauncherWorkflows 1.0 NacreLauncherWorkflows.qml\n")
     menu_data = json.dumps((TOOLS / "launcher-menu.json").read_text())
+    emoji_data = json.dumps((TOOLS / "emoji-catalog.json").read_text())
     (fixtures / "FileView.qml").write_text(
         'import QtQuick\nQtObject {property string path: "";property bool preload:false;property bool printErrors:false;property bool watchChanges:false;signal loaded();signal fileChanged();function reload(){loaded()}function text(){return path.includes("/shell/tools/launcher-menu.json") ? '
         + menu_data
+        + ' : path.endsWith("/emoji-catalog.json") ? '
+        + emoji_data
         + ' : ""}Component.onCompleted:Qt.callLater(reload)}'
     )
     with (fixtures / "qmldir").open("a") as manifest:
@@ -192,6 +201,8 @@ TestCase {
   first.fileQuery="one";first.fileRows=[{name:"First"}];
   second.fileQuery="two";second.fileRows=[{name:"Second"}];
   compare(first.fileQuery,"one");compare(second.fileQuery,"two");
+  first.previews.inspect("/first.md");second.previews.inspect("/second.md");
+  compare(first.previews.previewWanted,"/first.md");compare(second.previews.previewWanted,"/second.md");
   first.brainQuery="alpha";first.notes=[{title:"Alpha"}];
   second.brainQuery="beta";second.notes=[{title:"Beta"}];
   compare(first.brainRows("beta").length,0);

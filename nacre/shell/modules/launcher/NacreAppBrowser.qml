@@ -16,6 +16,7 @@ NacreSurface {
     signal closeRequested
     property real viewportWidth: Quickshell.screens[0].width
     property real viewportHeight: Quickshell.screens[0].height
+    property string resultFilter: "all"
     property string route: "home"
     property var history: []
     property bool keyboardSelection: false
@@ -26,6 +27,7 @@ NacreSurface {
     property rect contextAnchor: Qt.rect(20, 84, 0, 0)
     property var confirmation: null
     property var form: null
+    property bool formPending: false
     property var activePrompt: null
     readonly property string query: search?.text || ""
     readonly property var scope: Menu.scope(query)
@@ -70,11 +72,12 @@ NacreSurface {
                     value: calculationResult.value
                 }
             ] : [];
-        return root.menu.content(route, query);
+        return root.menu.content(route, query, resultFilter);
     }
     readonly property bool hasSelection: keyboardSelection || !!scope.text || picker
     readonly property var selectedEntry: hasSelection && selection >= 0 ? entries[selection] || null : null
     readonly property var previewEntry: controlsPinned ? null : selectedEntry || hoveredEntry
+    onPreviewEntryChanged: root.menu.previews.inspect(previewEntry?.file || previewEntry?.note ? previewEntry.filePath || previewEntry.value : "")
     readonly property var breadcrumb: Menu.trail(route, root.menu.rows)
     readonly property real contentX: picker ? 20 : 182
     readonly property real contentWidth: width - contentX - (showDetails ? 270 : 20)
@@ -144,6 +147,7 @@ NacreSurface {
     function captureState() {
         return {
             route: route,
+            resultFilter: resultFilter,
             query: query,
             calculatorAnswerReady: calculation && calculatorAnswerReady,
             history: history,
@@ -158,6 +162,7 @@ NacreSurface {
     }
     function restoreState(data) {
         route = data.route || "home";
+        resultFilter = root.menu.searchFilters.some(row => row.value === data.resultFilter) ? data.resultFilter : "all";
         history = data.history || [];
         search.text = data.query || "";
         calculatorAnswerReady = data.calculatorAnswerReady === true && calculation;
@@ -179,6 +184,7 @@ NacreSurface {
         const node = root.menu.node(resolved);
         if (remember && route !== resolved)
             history = [...history, route];
+        resultFilter = "all";
         route = node?.kind === "action" ? Menu.parentOf(resolved) || "home" : resolved;
         search.text = "";
         keyboardSelection = false;
@@ -209,6 +215,7 @@ NacreSurface {
     }
     function reset() {
         calculatorAnswerReady = false;
+        resultFilter = "all";
         activePrompt = NacreMenuPrompt.active && NacreMenuPrompt.ownerView === visibilities ? NacreMenuPrompt.request : null;
         history = [];
         route = visibilities.launcherRoute || "home";
@@ -260,6 +267,66 @@ NacreSurface {
             LauncherPreferences.update("favorite", ident, !LauncherPreferences.favorites.includes(ident));
         }
     }
+    function primaryAction(entry) {
+        if (entry?.kind === "app")
+            return NacreI18n.tr("launcher.app-browser.text.open-app", "Open app");
+        if (entry?.file)
+            return NacreI18n.tr("launcher.workflows.open-file", "Open file");
+        if (entry?.note)
+            return NacreI18n.tr("launcher.workflows.open-note", "Open note");
+        if (entry?.clipboard || entry?.emoji || entry?.workflow?.type === "snippet")
+            return NacreI18n.tr("launcher.workflows.copy-item", "Copy to clipboard");
+        if (entry?.operation === "focus")
+            return NacreI18n.tr("launcher.workflows.focus", "Switch to window");
+        if (entry?.operation === "workflow")
+            return NacreI18n.tr("launcher.workflows.open-saved", "Open saved item");
+        return NacreI18n.tr("launcher.app-browser.text.run", "Run");
+    }
+    function workflowForm(kind) {
+        const field = function (id, label, initial, multiline) {
+            return {
+                id: id,
+                label: label,
+                initial: initial || "",
+                multiline: multiline === true
+            };
+        };
+        const label = field("label", NacreI18n.tr("launcher.forms.name", "Name"));
+        const icon = field("icon", NacreI18n.tr("launcher.forms.icon", "Icon"), "terminal");
+        const folder = field("directory", NacreI18n.tr("launcher.forms.folder", "Working directory"));
+        const definitions = {
+            action: {
+                title: NacreI18n.tr("launcher.forms.action", "Add launcher action"),
+                fields: [label, icon, field("executable", NacreI18n.tr("launcher.forms.executable", "Executable")), field("arguments", NacreI18n.tr("launcher.forms.arguments", "Arguments (one per line)"), "", true), folder]
+            },
+            snippet: {
+                title: NacreI18n.tr("launcher.forms.snippet", "Save a text snippet"),
+                fields: [label, field("text", NacreI18n.tr("launcher.forms.text", "Text"), "", true)]
+            },
+            search: {
+                title: NacreI18n.tr("launcher.forms.search", "Add a named web search"),
+                fields: [label, field("url", NacreI18n.tr("launcher.forms.search-url", "Search URL with {query}"), "https://www.google.com/search?q={query}")]
+            },
+            bookmark: {
+                title: NacreI18n.tr("launcher.forms.bookmark", "Save a bookmark"),
+                fields: [label, field("url", NacreI18n.tr("launcher.forms.url", "Website URL"), "https://")]
+            },
+            workspace: {
+                title: NacreI18n.tr("launcher.forms.workspace", "Save a workspace recipe"),
+                fields: [label, folder, field("editor", NacreI18n.tr("launcher.forms.editor", "Editor command (one argument per line)"), "code\n--new-window\n--wait\n{project}", true), field("terminal", NacreI18n.tr("launcher.forms.terminal", "Terminal command (one argument per line)"), "kitty\n--directory\n{project}", true), field("url", NacreI18n.tr("launcher.forms.docs", "Documentation URL (optional)"))]
+            },
+            roots: {
+                title: NacreI18n.tr("launcher.forms.roots", "Choose file search folders"),
+                fields: [field("roots", NacreI18n.tr("launcher.forms.roots-list", "Extra folders (one per line)"), (root.menu.workflows.data.roots || []).join("\n"), true)]
+            }
+        };
+        return Object.assign({
+            kind: kind,
+            workflow: true,
+            description: NacreI18n.tr("launcher.forms.private", "Saved privately. Normal launcher search finds these items automatically."),
+            button: NacreI18n.tr("launcher.forms.save", "Save")
+        }, definitions[kind]);
+    }
     function run(entry, confirmed = false) {
         if (!entry)
             return;
@@ -297,7 +364,42 @@ NacreSurface {
             navigate(entry.value);
             return;
         }
+        if (entry.operation === "tool" && ["record-start", "record-screen"].includes(entry.value)) {
+            form = {
+                kind: "recording",
+                screen: entry.value === "record-screen",
+                title: entry.name,
+                description: NacreI18n.tr("launcher.capture.devices", "Uses your current audio output and microphone. Muted devices stay muted."),
+                fields: [
+                    {
+                        id: "audio",
+                        label: NacreI18n.tr("launcher.capture.sound", "Recording sound"),
+                        initial: "none",
+                        choices: [
+                            {
+                                value: "none",
+                                label: NacreI18n.tr("launcher.capture.no-sound", "No sound")
+                            },
+                            {
+                                value: "system",
+                                label: NacreI18n.tr("launcher.capture.system", "System audio")
+                            },
+                            {
+                                value: "mixed",
+                                label: NacreI18n.tr("launcher.capture.mixed", "System audio and microphone")
+                            }
+                        ]
+                    }
+                ],
+                button: NacreI18n.tr("launcher.capture.start", "Start recording")
+            };
+            return;
+        }
         if (entry.operation === "form") {
+            if (["action", "snippet", "search", "bookmark", "workspace", "roots"].includes(entry.value)) {
+                form = workflowForm(entry.value);
+                return;
+            }
             form = entry.value === "webapp" ? {
                 kind: "webapp",
                 title: NacreI18n.tr("launcher.app-browser.title.create-a-web-app", "Create a web app"),
@@ -498,9 +600,21 @@ NacreSurface {
         root.focusExplicit();
     }
     function submitForm(values) {
+        if (formPending)
+            return;
         if (inputPicker)
             NacreMenuPrompt.finish(values.value || "", false);
-        else
+        else if (form.kind === "recording") {
+            const options = Object.assign({}, values, {
+                screen: form.screen
+            });
+            if (!detached || closeAfterLaunch)
+                visibilities.launcher = false;
+            root.menu.workflows.startRecording(options);
+        } else if (form.workflow) {
+            formPending = root.menu.workflows.work("save", form.kind, values);
+            return;
+        } else
             root.menu.work(form.kind === "webapp" ? "webapp-create" : "reminder", "", values);
         form = null;
         root.focusExplicit();
@@ -513,8 +627,16 @@ NacreSurface {
         selection = scope.text || picker ? Menu.firstEnabled(entries) : -1;
         queryDelay.restart();
     }
+    property string selectedStableId: ""
+    onKeyboardSelectionChanged: if (keyboardSelection && entries[selection])
+        selectedStableId = Menu.stable(entries[selection])
+    onSelectionChanged: if (keyboardSelection && entries[selection])
+        selectedStableId = Menu.stable(entries[selection])
     onEntriesChanged: {
-        if (scope.text || picker)
+        const previous = keyboardSelection ? entries.findIndex(entry => Menu.stable(entry) === selectedStableId) : -1;
+        if (previous >= 0)
+            selection = previous;
+        else if (scope.text || picker)
             selection = Menu.firstEnabled(entries);
         else if (!keyboardSelection)
             selection = -1;
@@ -533,6 +655,16 @@ NacreSurface {
         function onLauncherRequestChanged() {
             if (root.visibilities.launcher)
                 Qt.callLater(root.reset);
+        }
+    }
+    Connections {
+        target: root.menu.workflows
+        function onCompleted(success) {
+            if (root.formPending) {
+                root.formPending = false;
+                if (success)
+                    root.cancelForm();
+            }
         }
     }
     Connections {
@@ -705,6 +837,62 @@ NacreSurface {
                 }
             }
         }
+    }
+    NacreMenuButton {
+        id: filterButton
+        objectName: "launcherSearchFilter"
+        x: root.contentX + root.contentWidth - width
+        y: 48
+        width: 135
+        height: 28
+        compact: true
+        visible: root.scope.kind === "all" && !!root.scope.text && !root.picker && !root.form
+        text: root.menu.searchFilters.find(item => item.value === root.resultFilter)?.label || ""
+        icon: "filter_list"
+        onClicked: filters.open()
+        Popup {
+            id: filters
+            y: filterButton.height + 4
+            width: filterButton.width + 20
+            padding: 6
+            background: NacreSurface {
+                color: NacreColours.palette.m3surfaceContainer
+                radius: 10
+            }
+            contentItem: Column {
+                spacing: 3
+                Repeater {
+                    model: root.menu.searchFilters
+                    delegate: NacreMenuButton {
+                        required property var modelData
+                        width: parent.width
+                        compact: true
+                        text: modelData.label
+                        selected: root.resultFilter === modelData.value
+                        onClicked: {
+                            root.resultFilter = modelData.value;
+                            root.keyboardSelection = false;
+                            root.selection = Menu.firstEnabled(root.entries);
+                            filters.close();
+                            search.forceActiveFocus();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    NacreMenuButton {
+        objectName: "launcherStopRecording"
+        anchors.right: parent.right
+        anchors.rightMargin: 20
+        y: 16
+        visible: root.menu.workflows.data.recording === true && !root.picker
+        compact: true
+        icon: "stop_circle"
+        text: NacreI18n.tr("launcher.capture.stop-elapsed", "Stop recording {time}", {
+            time: root.menu.workflows.elapsed
+        })
+        onClicked: root.menu.workflows.work("record-stop")
     }
     NacreText {
         x: root.contentX
@@ -990,8 +1178,8 @@ NacreSurface {
                 Image {
                     width: parent.width
                     height: width * 9 / 16
-                    visible: !!root.previewEntry?.preview && root.previewEntry?.operation === "wallpaper"
-                    source: visible ? root.previewEntry.preview : ""
+                    visible: !!root.previewEntry?.preview || !!root.menu.previews.preview.image && root.menu.previews.previewPath === (root.previewEntry?.filePath || root.previewEntry?.value)
+                    source: visible ? root.previewEntry?.preview || root.menu.previews.preview.image : ""
                     sourceSize.width: 512
                     sourceSize.height: 288
                     asynchronous: true
@@ -1030,7 +1218,7 @@ NacreSurface {
                 NacreMenuButton {
                     width: parent.width
                     visible: !!root.previewEntry && root.previewEntry.kind !== "group" && !root.previewEntry.disabled && root.previewEntry.operation !== "info"
-                    text: root.previewEntry?.operation === "wallpaper" ? NacreI18n.tr("launcher.app-browser.text.use-wallpaper", "Use wallpaper") : root.previewEntry?.operation === "font" ? NacreI18n.tr("launcher.app-browser.text.use-font", "Use font") : root.previewEntry?.operation === "install-package" ? NacreI18n.tr("launcher.app-browser.text.install", "Install") : root.previewEntry?.kind === "app" ? NacreI18n.tr("launcher.app-browser.text.open-app", "Open app") : NacreI18n.tr("launcher.app-browser.text.run", "Run")
+                    text: root.previewEntry?.operation === "wallpaper" ? NacreI18n.tr("launcher.app-browser.text.use-wallpaper", "Use wallpaper") : root.previewEntry?.operation === "font" ? NacreI18n.tr("launcher.app-browser.text.use-font", "Use font") : root.previewEntry?.operation === "install-package" ? NacreI18n.tr("launcher.app-browser.text.install", "Install") : root.primaryAction(root.previewEntry)
                     onClicked: root.run(root.previewEntry)
                 }
                 NacreMenuButton {
@@ -1104,12 +1292,12 @@ NacreSurface {
         x: 20
         y: parent.height - 88
         width: parent.width - 40
-        text: root.menu.catalog.error || root.menu.message || (root.calculation ? NacreI18n.tr("launcher.app-browser.text.enter-copies-the-result", "Enter copies the result") : root.picker ? NacreI18n.tr("launcher.app-browser.text.enter-chooses-escape-cancels", "Enter chooses · Escape cancels") : NacreI18n.tr("launcher.app-browser.text.enter-opens-tab-item-actions-ctrl-d-favorite", "Enter opens · Tab item actions · Ctrl+D favorite"))
+        text: root.menu.catalog.error || root.menu.workflows.message || root.menu.message || (root.calculation ? NacreI18n.tr("launcher.app-browser.text.enter-copies-the-result", "Enter copies the result") : root.picker ? NacreI18n.tr("launcher.app-browser.text.enter-chooses-escape-cancels", "Enter chooses · Escape cancels") : NacreI18n.tr("launcher.app-browser.text.enter-opens-tab-item-actions-ctrl-d-favorite", "Enter opens · Tab item actions · Ctrl+D favorite"))
         textFormat: Text.PlainText
         font.pointSize: 9
         color: NacreColours.palette.m3onSurfaceVariant
         elide: Text.ElideRight
-        visible: !root.form && !root.confirmation && (!!root.selectedEntry || root.calculation || root.picker || !!root.menu.catalog.error || !!root.menu.message)
+        visible: !root.form && !root.confirmation && (!!root.selectedEntry || root.calculation || root.picker || !!root.menu.catalog.error || !!root.menu.message || !!root.menu.workflows.message)
     }
     NacreTextField {
         id: search
@@ -1175,6 +1363,8 @@ NacreSurface {
         anchors.bottomMargin: 30
         active: !!root.form
         sourceComponent: NacreMenuForm {
+            error: root.form?.workflow ? root.menu.workflows.message : ""
+            enabled: !root.formPending
             form: root.form || {}
             onSubmitted: values => root.submitForm(values)
             onCancelled: root.cancelForm()
@@ -1282,7 +1472,7 @@ NacreSurface {
                 NacreMenuButton {
                     width: parent.width
                     compact: true
-                    visible: !!root.contextEntry && !["open-file", "search-web"].includes(root.contextEntry.operation)
+                    visible: !!root.contextEntry && !root.contextEntry.transient && !["open-file", "search-web"].includes(root.contextEntry.operation)
                     text: root.contextEntry && LauncherPreferences.favorites.includes(Menu.stable(root.contextEntry)) ? NacreI18n.tr("launcher.app-browser.text.remove-favorite", "Remove favorite") : NacreI18n.tr("launcher.app-browser.text.add-favorite", "Add favorite")
                     onClicked: {
                         root.favorite(root.contextEntry);
@@ -1341,6 +1531,18 @@ NacreSurface {
                             operation: "install-package",
                             value: pkg
                         });
+                    }
+                }
+                Repeater {
+                    model: root.menu.itemActions(root.contextEntry)
+                    delegate: NacreMenuButton {
+                        required property var modelData
+                        width: parent.width
+                        text: modelData.name
+                        onClicked: {
+                            root.run(modelData);
+                            context.close();
+                        }
                     }
                 }
                 NacreText {
