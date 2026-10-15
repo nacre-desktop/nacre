@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import signal
 import shutil
 import struct
 import sys
@@ -140,6 +141,10 @@ def main():
                 if server.poll() is not None or time.monotonic() >= deadline:
                     raise RuntimeError("Private X server did not start")
                 time.sleep(0.05)
+            wrapper = root / "inspect-wrapper.py"
+            wrapper.write_text(
+                "import subprocess,sys\nfrom pathlib import Path\nroot=Path(sys.argv[1])\nwith (root/'inspect-error.txt').open('wb') as error:\n child=subprocess.Popen(sys.argv[2:],stderr=error)\n (root/'inspect-started').write_text('started')\n status=child.wait()\n (root/'inspect-exited').write_text(str(status))\n"
+            )
             for changed in [False, True]:
                 if changed:
                     record = root / "state/nacre/aur-review/recipes/sample-editor.json"
@@ -153,8 +158,16 @@ def main():
                             }
                         )
                     )
+                for marker in [
+                    "inspect-started",
+                    "inspect-exited",
+                    "inspect-error.txt",
+                ]:
+                    (root / marker).unlink(missing_ok=True)
                 terminal = subprocess.Popen(
                     [
+                        "dbus-run-session",
+                        "--",
                         "nice",
                         "-n",
                         "10",
@@ -178,6 +191,9 @@ def main():
                         "-o",
                         "window_padding_width=12",
                         "--",
+                        sys.executable,
+                        str(wrapper),
+                        str(root),
                         str(args.helper.resolve()),
                         "aur-review",
                         "inspect",
@@ -186,9 +202,29 @@ def main():
                     env=env,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.PIPE,
+                    start_new_session=True,
                 )
                 try:
-                    time.sleep(1.5)
+                    deadline = time.monotonic() + 10
+                    while (
+                        not (root / "inspect-started").exists()
+                        and terminal.poll() is None
+                        and time.monotonic() < deadline
+                    ):
+                        time.sleep(0.05)
+                    time.sleep(0.5)
+                    if (root / "inspect-exited").exists():
+                        raise RuntimeError(
+                            "Read-only inspector exited before the pager capture: "
+                            + (root / "inspect-error.txt").read_text()[-4000:]
+                        )
+                    if (
+                        not (root / "inspect-started").exists()
+                        and terminal.poll() is None
+                    ):
+                        raise RuntimeError(
+                            "Private terminal did not start the inspector"
+                        )
                     if terminal.poll() is not None:
                         raise RuntimeError(
                             "Private terminal exited: "
@@ -209,7 +245,10 @@ def main():
                     )
 
                 finally:
-                    terminal.terminate()
+                    try:
+                        os.killpg(terminal.pid, signal.SIGTERM)
+                    except ProcessLookupError:
+                        pass
                     terminal.wait(timeout=10)
             if (recipe / "should-never-exist").exists():
                 raise RuntimeError("The fixture recipe was executed")
