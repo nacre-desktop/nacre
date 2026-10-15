@@ -702,3 +702,9 @@ defines pointer speed, acceleration, repeat and touchpad options. The
 exposes current profiles and hardware performance support. These mechanisms avoid
 unbounded menus, manual identifier entry and controls that advertise an absent
 backend. Cursor shake enlargement remains outside the supported Niri controls.
+
+The widget `qmldir` exports the complete shared kit. A running Quickshell engine
+can retain its previous implicit-directory type list after new files appear; the
+explicit manifest and an existing-file reload make the new controls available
+without restarting the desktop. Update the manifest when adding a widget; the
+registry tests check that it covers every shared QML component.

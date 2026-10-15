@@ -17,6 +17,18 @@ def catalog():
 
 
 class SettingsRegistryTests(unittest.TestCase):
+    def test_widget_module_exports_new_controls_for_live_reload(self):
+        folder = ROOT / "nacre/shell/widgets"
+        declarations = (folder / "qmldir").read_text().splitlines()
+        exported = {line.split()[-1] for line in declarations if line.strip()}
+        self.assertEqual(exported, {path.name for path in folder.glob("*.qml")})
+        for name in [
+            "NacreSelect.qml",
+            "NacreToggleSwitch.qml",
+            "NacreFolderEntry.qml",
+        ]:
+            self.assertIn(name, exported)
+
     @unittest.skipUnless(
         importlib.util.find_spec("jsonschema"),
         "Install developer-only jsonschema==4.26.0",
