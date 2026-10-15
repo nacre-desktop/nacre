@@ -1,6 +1,6 @@
 pkgbase = nacre
 	pkgdesc = Desktop shell and guided per-user setup
-	pkgver = 0.1.0dev2.r391.gf812e3ef6a13
+	pkgver = 0.1.0dev2.r459.g380715856f94
 	pkgrel = 1
 	url = https://github.com/nacre-desktop/nacre
 	arch = x86_64
@@ -14,11 +14,9 @@ pkgbase = nacre
 	checkdepends = dbus
 	checkdepends = ttf-dejavu
 	checkdepends = python-dbus-next
+	checkdepends = python-jsonschema
 	checkdepends = bubblewrap
 	makedepends = git
-	makedepends = python-build
-	makedepends = python-installer
-	makedepends = python-hatchling
 	makedepends = nodejs
 	makedepends = rust
 	makedepends = cargo
@@ -48,6 +46,10 @@ pkgbase = nacre
 	depends = brightnessctl
 	depends = ffmpeg
 	depends = fontconfig
+	depends = freetype2
+	depends = libraqm
+	depends = libjpeg-turbo
+	depends = lcms2
 	depends = librsvg
 	depends = qt6-imageformats
 	depends = qt6-multimedia
@@ -86,8 +88,8 @@ pkgbase = nacre
 	depends = xwayland-satellite
 	depends = xdg-desktop-portal-gnome
 	options = !lto
-	source = nacre::git+https://github.com/nacre-desktop/nacre.git#commit=f812e3ef6a131727ab264d5cc07939cb987347fc
-	source = orient::git+https://github.com/nacre-desktop/orient.git#commit=17bf36efc7f6e85c2ded2ce4b7bd4cda4ea659b5
+	source = nacre::git+https://github.com/nacre-desktop/nacre.git#commit=380715856f94071e63df725ff5ebbbfde95c6578
+	source = orient::git+https://github.com/nacre-desktop/orient.git#commit=3efe8d1e7fb50200d74a3e0193ad63699cb8ebe8
 	source = IBMPlexSans.ttf::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf
 	source = IBMPlexSans-OFL.txt::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/OFL.txt
 	source = MaterialSymbolsRounded.ttf::https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf
@@ -101,6 +103,11 @@ pkgbase = nacre
 
 pkgname = nacre
 	license = GPL-3.0-only
+	license = MIT
+	license = MIT-CMU
+	license = BSD-3-Clause
+	license = IJG
+	license = Zlib
 	license = OFL-1.1
 	license = Apache-2.0
 	license = Unicode-3.0
@@ -129,6 +136,10 @@ pkgname = nacre
 	depends = brightnessctl
 	depends = ffmpeg
 	depends = fontconfig
+	depends = freetype2
+	depends = libraqm
+	depends = libjpeg-turbo
+	depends = lcms2
 	depends = librsvg
 	depends = qt6-imageformats
 	depends = qt6-multimedia
@@ -165,7 +176,7 @@ pkgname = nacre
 pkgname = nacre-ai
 	pkgdesc = Optional assistant workspace (no bundled providers or accounts)
 	arch = any
-	depends = nacre=0.1.0dev2.r391.gf812e3ef6a13
+	depends = nacre=0.1.0dev2.r459.g380715856f94
 	depends = python
 	depends = python-gobject
 	depends = python-dbus
@@ -179,7 +190,7 @@ pkgname = nacre-ai
 pkgname = nacre-brain
 	pkgdesc = Optional private Markdown knowledge library
 	arch = any
-	depends = nacre=0.1.0dev2.r391.gf812e3ef6a13
+	depends = nacre=0.1.0dev2.r459.g380715856f94
 	depends = python
 	depends = python-pillow
 	depends = python-yaml
@@ -193,14 +204,14 @@ pkgname = nacre-brain
 pkgname = nacre-session-hyprland
 	pkgdesc = Nacre session integration for Hyprland
 	arch = any
-	depends = nacre=0.1.0dev2.r391.gf812e3ef6a13
+	depends = nacre=0.1.0dev2.r459.g380715856f94
 	depends = hyprland>=0.56.2
 	depends = xdg-desktop-portal-hyprland
 
 pkgname = nacre-session-niri
 	pkgdesc = Nacre session integration for Niri
 	arch = any
-	depends = nacre=0.1.0dev2.r391.gf812e3ef6a13
+	depends = nacre=0.1.0dev2.r459.g380715856f94
 	depends = niri>=26.04
 	depends = xwayland-satellite
 	depends = xdg-desktop-portal-gnome
