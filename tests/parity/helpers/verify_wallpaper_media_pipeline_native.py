@@ -54,6 +54,17 @@ def main():
             (ROOT / "tests/parity/helpers/svg_fixture.py").read_bytes()
         )
         renderer.chmod(0o700)
+        # Availability is a fixture input, not the CI host's package inventory.
+        targets = json.loads(
+            reference["outputs"][".local/state/nacre/theme-targets.json"]["text"]
+        )["targets"]
+        for target in targets:
+            if target.get("tool") and target["available"]:
+                tool = binary / target["tool"]
+                tool.write_text(
+                    "#!/bin/sh\necho invoked >> \"$NACRE_FIXTURE_TOOL_LOG\"\necho 'Unexpected desktop tool action' >&2\nexit 99\n"
+                )
+                tool.chmod(0o700)
         responses = base / "svg.json"
         responses.write_text(json.dumps(reference["svg"]))
         env = {
@@ -69,6 +80,7 @@ def main():
             "NACRE_HELPER_TOOLS": historical_assets(home.parent),
             "NACRE_LANGUAGE": "en",
             "NACRE_SVG_REFERENCE": str(responses),
+            "NACRE_FIXTURE_TOOL_LOG": str(base / "unexpected-tools.log"),
             "PATH": str(binary) + ":/usr/bin",
         }
         for key in (
@@ -143,6 +155,9 @@ def main():
             raise AssertionError(
                 "Native media workflow failed; /tmp/nacre-media-native-pipeline-worker.log"
             )
+        assert not (base / "unexpected-tools.log").exists(), (
+            "Unexpected desktop tool invocation"
+        )
         values = json.loads(result.stdout)
         files = Files(home, [])
         files.discover(values)
