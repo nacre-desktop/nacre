@@ -1397,3 +1397,25 @@ A busy-host smoke recorded 274 host swap-in pages at 4,096 bytes/page
 had SwapPss zero. It supplies functional evidence only. The required desktop-PC
 A/B/A/B comparison still awaits the owner's next announced quiet window; keep
 its results separate from these laptop checks and discard invalid captures.
+
+### Media response cleanup before Wave 4 (busy machine)
+
+A matched check of the pre-Wave4 source and the same source with response cleanup
+moved ahead of `malloc_trim` used `benchmark-wallpaper-media.py`: 10 fresh
+startup/preferences calls and 30 seconds resident after the same private scene
+publication. Builds completed first. This is helper RSS/CPU, not shell wall time.
+
+| After-publication helper RSS | Before cleanup | After cleanup |
+| --- | ---: | ---: |
+| Native media server | 29.19 MiB | 27.80 MiB |
+| Python control | 25.95 MiB | 26.24 MiB |
+
+Startup/preferences CPU was 29.66→29.76 ms/call (10 samples); this is no
+measured CPU improvement. Native Python launches remained zero.
+The native server releases 1.38 MiB more in this check; it still uses 1.57 MiB
+more RSS than the second Python control. Media and CLI state retain no decoded
+frames. The old trim ran before the result/serialized response allocations were
+released; trimming now follows response destruction. There is no allocator or
+cache redesign. Both idle samples used zero CPU ticks over 30 seconds; this is
+not evidence of a battery improvement. The original 26.18→27.35 MiB observation
+remains above, and this busy-host check does not replace the quiet comparison.

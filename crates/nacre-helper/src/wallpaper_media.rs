@@ -1611,10 +1611,17 @@ fn serve(media: &Media, cli: &mut crate::palette_cli::Cli) -> Result<i32> {
                 .into()),
             }
         })();
+        let response = match result {
+            Ok(value) => json!({"done":true,"code":0,"result":value}),
+            Err(error) => json!({"done":true,"code":1,"result":{"error":error_text(&error)}}),
+        };
+        writeln!(output, "{}", json::dumps(&response, false)?)?;
+        output.flush()?;
+        drop(response);
         if rendered {
-            // Freed full-size raster buffers otherwise remain in the resident
-            // server's GNU allocator arenas. Release unused pages once per
-            // palette request, without changing allocator or process policy.
+            // Release raster and response/serialization allocations after all
+            // request temporaries are dropped, before blocking for another
+            // request. Trimming before response construction misses its pages.
             #[cfg(target_env = "gnu")]
             #[allow(unsafe_code)]
             // SAFETY: malloc_trim takes no pointers and is thread-safe. A zero
@@ -1623,12 +1630,6 @@ fn serve(media: &Media, cli: &mut crate::palette_cli::Cli) -> Result<i32> {
                 nix::libc::malloc_trim(0);
             }
         }
-        let response = match result {
-            Ok(value) => json!({"done":true,"code":0,"result":value}),
-            Err(error) => json!({"done":true,"code":1,"result":{"error":error_text(&error)}}),
-        };
-        writeln!(output, "{}", json::dumps(&response, false)?)?;
-        output.flush()?;
     }
 }
 pub fn run(args: &[String]) -> Result<i32> {
