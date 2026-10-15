@@ -62,7 +62,7 @@ jobs:
           python - <<'PY'
           import json, subprocess
           pins = json.load(open("dependencies.lock.json"))["python"]
-          subprocess.run(["/tmp/check-env/bin/pip", "install", "./nacre/shell-cli", "ruff==0.16.10", *[name + "==" + version for name, version in pins.items()]], check=True)
+          subprocess.run(["/tmp/check-env/bin/pip", "install", "./nacre/shell-cli", "ruff==0.16.10", "dbus-next==0.2.3", *[name + "==" + version for name, version in pins.items()]], check=True)
           PY
       - name: Candidate engine for fresh-install tests
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

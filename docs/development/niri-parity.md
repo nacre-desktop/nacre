@@ -593,3 +593,7 @@ stable window workspace identities, six persistent slots, rollback after invalid
 configuration and saved assignments after restarting its own compositor. It never
 selects the running desktop socket or imports an activation environment. The
 headless proof does not claim physical key delivery or physical hotplug behavior.
+
+The frozen private D-Bus compatibility peers require the test-only
+`dbus-next==0.2.3` package. CI installs it in its isolated check environment;
+it is not an installed desktop dependency.
