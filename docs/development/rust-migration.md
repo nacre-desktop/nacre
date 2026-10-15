@@ -1,7 +1,6 @@
 # Rust runtime migration
 
 Installed Nacre must run no Python processes and require no Python/Pillow runtime.
-Keep QML, public commands, protocols and existing user data; no UI/design work.
 
 | Wave | Status | Numbers / decisions |
 | --- | --- | --- |
@@ -23,7 +22,7 @@ Do not use whole-shell wall time or aggregate RSS/PSS while paging.
 Quiet gate: measured processes SwapPss 0; host swap-in UNDER 1 MiB.
 Record page counts/page size; discard runs above that or with measured-process swap.
 At the next owner-announced desktop window, compare built baseline/native A/B/A/B.
-No new window announced. Include it before Wave 3 final status.
+No new window announced; mandatory before Wave 3 final status.
 
 Wave 3 public receipts (desktop + fresh-install Source CI green):
 - KDE 10b1d328 / receipt 720525e6: CI 38631961373 + 38635667735; 14+3 cases.
@@ -34,8 +33,8 @@ Busy CPU ms/call: KDE 25.39 → 1.25; terminal 29.02 → 1.07;
 login cache hit 50.74 → 0.95; demo verified 59.06 → 10.39, fast 43.49 → 0.91.
 Each 100-call run reduced Python launches from 100 to zero.
 
-Palette pipeline candidate: task/zero-python-palette-pipeline, rebased onto e910ffd7.
 Direct pinned Orient core/decoder calls; paired publication holds one shared lock.
+Unused palette_engine.py bridge retired; two frozen renderer cases remain exact.
 Required branding, file-icons and lock preparation code moves with this unit.
 16 immutable publication/transaction cases match bytes, modes, symlinks and stamps.
 Six Colors workflows and 13 original shared engine-cache files match exactly.
@@ -44,8 +43,7 @@ Four complete lock PNGs, 56 font masks/metrics and 36 geometry masks match.
 Integration preserves automatic wallpaper mode and border-gradient controls from main.
 Integrated: six gradient refs, 22 media tests, 221 Rust tests and 889 repo tests pass.
 Busy cached preview CPU 65.82 → 9.98 ms; Colors RSS 34.02 → 16.85 MiB (2 → 1 processes).
-Reference producers refuse replacement; existing frozen outputs are immutable.
-State write_text preserves legacy bytes; existing write/update APIs are unchanged.
+Reference producers refuse replacement; existing frozen outputs/state bytes immutable.
 
 Intended differences: custom absolute XDG roots follow QML; dconf and compositor
 socket operations replace equivalent processes; terminal reloads target the same HOME.
@@ -61,8 +59,8 @@ Watcher: 13 CLI / 6 module / 15 events, all files and SIGTERM status exact.
 Busy watcher RSS 16.75 → 10.20 MiB; startup+change CPU 31.36 → 3.13 ms.
 
 Media 330f250e public; exact fixture fixes e0297dc9 / dcfa8297 / b9523e2c.
-CI 38713957659: media parity and fresh-install pass; unrelated AUR gallery fails.
-AUR owner is fixing its private D-Bus environment; hold lock push until main green.
+CI 38713957659: media parity/fresh-install pass; shared gallery fixture failed.
+Gallery 261730d4 / Colors fixture 7a239361 fixed by owners; CI 38718767282 pending.
 Local gates: 222 Rust / 892 repo / 526 parity and all immutable workflow cases pass.
 Fully private busy CPU 86.21 → 11.58 ms; ready RSS 25.84 → 16.73 MiB.
 After publication RSS 26.18 → 27.35 MiB; 30 s idle CPU 0/1 ticks (10 ms resolution).
@@ -75,7 +73,9 @@ Native QML/install/generated callbacks replace Python; frozen workflows all pass
 Frozen preparation inputs explicitly include private XDG_DATA_HOME/public fonts.
 An initial uncontrolled-font capture is preserved privately; no expected file rewritten.
 Busy cached lock CPU 78.29 → 2.57 ms/call; 100 Python launches → zero.
-Next: publish the validated lock unit once main CI is green, then check its CI.
+Next: finish integrated checks, publish the lock unit, then check/fix its CI.
 Baseline/native nested shell frame + pixel smokes pass; no latency claim on busy host.
-GTK/Qt/Kitty/actual-lock pixel attribution and quiet A/B/A/B remain incomplete.
+Nested baseline/native: Qt/Kitty and actual Hyprland lock new-color pixels verified.
+GTK pixel witness does not converge; Niri software lock lacks DMA buffers.
+Full desktop time remains unavailable; owner-announced quiet A/B/A/B is mandatory.
 No live deployment, tags, package publication or session takeover in this task.

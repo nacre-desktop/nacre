@@ -129,6 +129,7 @@ def retire_native_helpers(directory):
         "lock-info",
         "lock-prepare",
         "provision",
+        "palette_engine",
         "wallpaper-watch",
         "wallpaper-media",
         "demo-wallpapers",

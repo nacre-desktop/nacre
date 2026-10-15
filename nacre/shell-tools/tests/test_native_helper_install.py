@@ -23,6 +23,7 @@ class NativeHelperInstallTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             tools = Path(directory)
             for name in (
+                "palette_engine.py",
                 "pearl-state.py",
                 "pearl-window.py",
                 "compositor.py",
@@ -37,6 +38,7 @@ class NativeHelperInstallTests(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("existing")
             installer.retire_native_helpers(tools)
+            self.assertFalse((tools / "palette_engine.py").exists())
             self.assertFalse((tools / "pearl-state.py").exists())
             for name in (
                 "pearl-window.py",
