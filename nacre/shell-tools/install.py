@@ -127,6 +127,7 @@ def retire_native_helpers(directory):
         "lock-config",
         "lock-dashboard",
         "provision",
+        "wallpaper-watch",
         "demo-wallpapers",
         "helper-service",
         "diagnostics",

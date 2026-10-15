@@ -8,7 +8,7 @@ Keep QML, public commands, protocols and existing user data; no UI/design work.
 | 0 Orient decoder | Complete | 49 inputs / 55 frames and 160 palettes exact, including JPEG; notices retained. |
 | 1 Service / frequent helpers | Complete; CI green | 13 ports; busy helper RSS 26.95 → 10.21 MiB. Absolute XDG roots match QML. |
 | 2 Compositor / pearls | Complete; CI green | Preview busy CPU 52.58 → 1.26 ms; RSS 21.54 → 7.30 MiB. Native IPC/session runtime. |
-| 3 Wallpaper / colors | Active | Four small helpers public; native palette pipeline validating as one unit. |
+| 3 Wallpaper / colors | Active | Palette pipeline public; native wallpaper watcher passes local gates. |
 | 4 Remaining shell tools | Pending | Preserve session/privilege policy; bring palette dependencies forward only as needed. |
 | 5 AI | Pending | Claude stream-json CLI; retain existing permissions/history. |
 | 6 Brain | Pending | Same bge-small model; cosine ≥ 0.9999 or backed-up automatic reindex. |
@@ -62,12 +62,14 @@ Orient 3efe8d1 supplies exact image APIs: all seven CI 38664017062 jobs green.
 Core colors are unchanged; only submodule/lock/SDK/bootstrap engine-label pins change.
 Shared Arch recipes/Core maps remain with the packaging owner; handoff coordinated.
 
-Palette 8185a87f is on main; fresh-install CI 38675727457 passed. Desktop CI
-passed Rust/repo suites but eight CLI cases could not locate the debug adapter
-beside a release helper. Fixing adapter discovery; no cases or gates skipped.
+Palette 8185a87f is public. Fresh-install CI 38675727457 passed; desktop's eight
+CLI adapter lookup failures fixed in 39323a43; retry CI 38678765683 running.
+Watcher: 13 CLI / 6 module / 15 event cases and all files match; repo 892 / parity 526 pass.
+Busy watcher RSS 16.75 → 10.20 MiB; startup+change CPU 31.36 → 3.13 ms.
+Both show zero idle CPU ticks over 30 s (10 ms resolution); no lower idle-CPU claim.
 
-Next: restore green Source CI and finish the exact packaging handoff;
-push and check CI. Then wallpaper-watch,
-wallpaper-media, their RSS/idle CPU, visible-consumer timings and quiet A/B/A/B.
+Next: green palette CI, integrate/push watcher and check CI; then wallpaper-media.
+Its prepared cache must identify pinned Orient/native helper, not the retired venv.
+Finish media RSS/idle CPU, visible-consumer timings and quiet A/B/A/B.
 Preserve concurrent Settings changes; rebase only own commits, owner identity.
 No live deployment, tags, package publication or session takeover in this task.

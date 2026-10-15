@@ -1,0 +1,99 @@
+{
+  "source_sha256": "8ef51a4fa93e9252dfe74816d3f3ea737f8b8d4d932aecdc78f1be1043fc4f6c",
+  "cases": [
+    {
+      "args": [
+        "--h"
+      ],
+      "stdout": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\n\noptions:\n  -h, --help       show this help message and exit\n  --root ROOT\n  --scheme SCHEME\n  --engine ENGINE\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--r",
+        "folder",
+        "--h"
+      ],
+      "stdout": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\n\noptions:\n  -h, --help       show this help message and exit\n  --root ROOT\n  --scheme SCHEME\n  --engine ENGINE\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--help=x"
+      ],
+      "stdout": "",
+      "stderr": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\nwallpaper-watch.py: error: argument -h/--help: ignored explicit argument 'x'\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--root",
+        "--scheme",
+        "x"
+      ],
+      "stdout": "",
+      "stderr": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\nwallpaper-watch.py: error: argument --root: expected one argument\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--root",
+        "-1",
+        "--help"
+      ],
+      "stdout": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\n\noptions:\n  -h, --help       show this help message and exit\n  --root ROOT\n  --scheme SCHEME\n  --engine ENGINE\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--scheme",
+        "-.5",
+        "--help"
+      ],
+      "stdout": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\n\noptions:\n  -h, --help       show this help message and exit\n  --root ROOT\n  --scheme SCHEME\n  --engine ENGINE\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--root",
+        "-1e2",
+        "--help"
+      ],
+      "stdout": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\n\noptions:\n  -h, --help       show this help message and exit\n  --root ROOT\n  --scheme SCHEME\n  --engine ENGINE\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--engine=-x",
+        "--help"
+      ],
+      "stdout": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\n\noptions:\n  -h, --help       show this help message and exit\n  --root ROOT\n  --scheme SCHEME\n  --engine ENGINE\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--bad",
+        "ignored",
+        "--help"
+      ],
+      "stdout": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\n\noptions:\n  -h, --help       show this help message and exit\n  --root ROOT\n  --scheme SCHEME\n  --engine ENGINE\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--",
+        "--help"
+      ],
+      "stdout": "",
+      "stderr": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\nwallpaper-watch.py: error: unrecognized arguments: -- --help\n",
+      "exit": 2
+    }
+  ]
+}

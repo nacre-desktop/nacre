@@ -1643,5 +1643,73 @@
         "helper_processes": 1
       }
     }
+  },
+  "wave3_wallpaper_watch_initial_busy_machine": {
+    "condition": "busy machine",
+    "baseline_commit": "8185a87f4f84f8b951bb753b2a9f886e0a51fe29",
+    "source_sha256": "8ef51a4fa93e9252dfe74816d3f3ea737f8b8d4d932aecdc78f1be1043fc4f6c",
+    "native_sha256": "09a825b747d350b78b3031e68b7ced9b65edcd035a22d0b9c30ff9ae7bfd0ec9",
+    "method": "benchmark-helpers.py child CPU; performance.py helper-only RSS; strace execve; one small private library",
+    "clock_ticks_per_second": 100,
+    "results": {
+      "python": {
+        "calls": 20,
+        "startup_event_cpu_ms_per_call": 31.449400000000008,
+        "helper_rss_mib": 16.78125,
+        "helper_processes": 1,
+        "idle_user_ms": 0.0,
+        "idle_sys_ms": 0.0,
+        "idle_seconds": 30.000614129006863,
+        "one_call_execs": {
+          "python": 1
+        }
+      },
+      "rust": {
+        "calls": 20,
+        "startup_event_cpu_ms_per_call": 3.0579499999999853,
+        "helper_rss_mib": 9.81640625,
+        "helper_processes": 1,
+        "idle_user_ms": 0.0,
+        "idle_sys_ms": 0.0,
+        "idle_seconds": 30.000302598025883,
+        "one_call_execs": {
+          "nacre-helper": 1
+        }
+      }
+    }
+  },
+  "wave3_wallpaper_watch_busy_machine": {
+    "condition": "busy machine",
+    "baseline_commit": "8185a87f4f84f8b951bb753b2a9f886e0a51fe29",
+    "source_sha256": "8ef51a4fa93e9252dfe74816d3f3ea737f8b8d4d932aecdc78f1be1043fc4f6c",
+    "native_sha256": "277c1e344f84ac974f6faacacf1ec761c4bf4dfc4faef872732cf8005fe60078",
+    "method": "benchmark-helpers.py child CPU; performance.py helper-only RSS; strace execve; one small private library",
+    "clock_ticks_per_second": 100,
+    "results": {
+      "python": {
+        "calls": 20,
+        "startup_event_cpu_ms_per_call": 31.359449999999992,
+        "helper_rss_mib": 16.75,
+        "helper_processes": 1,
+        "idle_user_ms": 0.0,
+        "idle_sys_ms": 0.0,
+        "idle_seconds": 30.000590690993704,
+        "one_call_execs": {
+          "python": 1
+        }
+      },
+      "rust": {
+        "calls": 20,
+        "startup_event_cpu_ms_per_call": 3.1294000000000057,
+        "helper_rss_mib": 10.1953125,
+        "helper_processes": 1,
+        "idle_user_ms": 0.0,
+        "idle_sys_ms": 0.0,
+        "idle_seconds": 30.00062990101287,
+        "one_call_execs": {
+          "nacre-helper": 1
+        }
+      }
+    }
   }
 }

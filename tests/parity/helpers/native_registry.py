@@ -20,6 +20,7 @@ MIGRATED = frozenset(
         "terminal-branding",
         "login-appearance",
         "demo-wallpapers",
+        "wallpaper-watch",
         "colors",
         "classic-state",
         "branding",

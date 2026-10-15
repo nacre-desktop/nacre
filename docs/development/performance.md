@@ -1186,3 +1186,29 @@ Six separate original-main gradient references preserve that behavior. Existing
 frozen outputs are unchanged; only the documented additive `paletteAutoMode:false`
 picker default is compatible with the older Colors snapshot. Every other byte,
 file mode, link and cache entry remains checked.
+
+### Wave 3 wallpaper watcher (busy machine)
+
+The watcher keeps its recursive inotify subscriptions and 500 ms debounce.
+Twenty interleaved fresh starts included one observed change, then shutdown;
+CPU is child user + system time, excluding waits and the benchmark driver.
+Each persistent helper was sampled for a separate 30-second idle interval.
+
+| Measure | Python | Native |
+| --- | ---: | ---: |
+| Startup + one change CPU, ms/call | 31.359 | 3.129 |
+| Idle helper RSS, MiB | 16.750 | 10.195 |
+| Idle user + system CPU in 30 seconds, ms | 0 | 0 |
+| Python execs in a separate traced start | 1 | 0 |
+
+Neither version accumulated an idle CPU tick at the 10 ms accounting resolution;
+this is a memory saving, not evidence of lower steady idle CPU. One process
+replaces one process. RSS fell by 6.555 MiB in this small private library.
+These are laptop busy-machine helper numbers, not desktop-PC or whole-shell data.
+The repeatable `tools/benchmark-wallpaper-watch.py` uses the existing helper CPU
+and process-memory readers; raw results and binary/source hashes are tracked.
+
+Frozen cases preserve thirteen CLI outputs/errors, six module calls, fifteen serial
+event steps, directory/file bytes and modes, symlinks and SIGTERM exit status.
+Absolute XDG roots follow QML; unexpected watch/scan failures are surfaced rather
+than ignored. QML explicitly watches the native helper as the engine dependency.

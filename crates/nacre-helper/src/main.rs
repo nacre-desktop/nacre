@@ -11,6 +11,9 @@ fn run() -> Result<i32> {
     let mut arguments = std::env::args().skip(1);
     let tool = arguments.next().ok_or("Expected a helper command")?;
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "wallpaper-watch" {
+        return nacre_helper::wallpaper_watch::run(&arguments);
+    }
     if tool == "nacre-colors" {
         return nacre_helper::colors_launch::run(&arguments);
     }

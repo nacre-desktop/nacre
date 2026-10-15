@@ -512,7 +512,7 @@ Singleton {
     Process {
         id: watcher
         objectName: "wallpaperWatcher"
-        command: ["python3", NacrePaths.tools + "/wallpaper-watch.py"]
+        command: [NacrePaths.helperBinary, "wallpaper-watch", "--engine", NacrePaths.helperBinary]
         running: true
         stdout: SplitParser {
             onRead: {

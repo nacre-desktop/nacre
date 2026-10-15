@@ -1,0 +1,189 @@
+{
+  "source_sha256": "8ef51a4fa93e9252dfe74816d3f3ea737f8b8d4d932aecdc78f1be1043fc4f6c",
+  "cli": [
+    {
+      "args": [
+        "--help"
+      ],
+      "stdout": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\n\noptions:\n  -h, --help       show this help message and exit\n  --root ROOT\n  --scheme SCHEME\n  --engine ENGINE\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--root"
+      ],
+      "stdout": "",
+      "stderr": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\nwallpaper-watch.py: error: argument --root: expected one argument\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--unknown",
+        "value"
+      ],
+      "stdout": "",
+      "stderr": "usage: wallpaper-watch.py [-h] [--root ROOT] [--scheme SCHEME]\n                          [--engine ENGINE]\nwallpaper-watch.py: error: unrecognized arguments: --unknown value\n",
+      "exit": 2
+    }
+  ],
+  "dialogue": {
+    "steps": [
+      {
+        "name": "ignored-extension",
+        "stdout": ""
+      },
+      {
+        "name": "same-scheme",
+        "stdout": ""
+      },
+      {
+        "name": "changed-mode",
+        "stdout": "{\"changed\": true}\n"
+      },
+      {
+        "name": "changed-flavour",
+        "stdout": "{\"changed\": true}\n"
+      },
+      {
+        "name": "unchanged-tuple",
+        "stdout": ""
+      },
+      {
+        "name": "picker-preference",
+        "stdout": "{\"changed\": true}\n"
+      },
+      {
+        "name": "cli-preference",
+        "stdout": "{\"changed\": true}\n"
+      },
+      {
+        "name": "unrelated-config",
+        "stdout": ""
+      },
+      {
+        "name": "engine-replacement",
+        "stdout": "{\"changed\": true}\n"
+      },
+      {
+        "name": "nested-burst",
+        "stdout": "{\"changed\": true}\n"
+      },
+      {
+        "name": "symlink-not-followed",
+        "stdout": ""
+      },
+      {
+        "name": "video-extension",
+        "stdout": "{\"changed\": true}\n"
+      },
+      {
+        "name": "atomic-move",
+        "stdout": "{\"changed\": true}\n"
+      },
+      {
+        "name": "image-removed",
+        "stdout": "{\"changed\": true}\n"
+      },
+      {
+        "name": "library-renamed",
+        "stdout": "{\"changed\": true}\n"
+      }
+    ],
+    "exit": -15,
+    "stderr": "",
+    "files": {
+      ".config": {
+        "directory": true,
+        "mode": 493
+      },
+      ".config/nacre": {
+        "directory": true,
+        "mode": 493
+      },
+      ".config/nacre/cli.json": {
+        "text": "{}",
+        "mode": 420
+      },
+      ".config/nacre/colors.json": {
+        "text": "{}",
+        "mode": 420
+      },
+      ".config/nacre/wallpaper-picker.json": {
+        "text": "{}",
+        "mode": 420
+      },
+      ".local": {
+        "directory": true,
+        "mode": 493
+      },
+      ".local/share": {
+        "directory": true,
+        "mode": 493
+      },
+      ".local/share/nacre": {
+        "directory": true,
+        "mode": 493
+      },
+      ".local/share/nacre/shell": {
+        "directory": true,
+        "mode": 493
+      },
+      ".local/share/nacre/shell/bin": {
+        "directory": true,
+        "mode": 493
+      },
+      ".local/share/nacre/shell/bin/nacre_shell": {
+        "text": "native wrapper",
+        "mode": 420
+      },
+      ".local/state": {
+        "directory": true,
+        "mode": 493
+      },
+      ".local/state/nacre": {
+        "directory": true,
+        "mode": 493
+      },
+      ".local/state/nacre/scheme.json": {
+        "text": "{\"mode\":\"light\",\"flavour\":\"hard\",\"colours\":{}}",
+        "mode": 420
+      },
+      "Pictures": {
+        "directory": true,
+        "mode": 493
+      },
+      "Pictures/Archived": {
+        "directory": true,
+        "mode": 493
+      },
+      "Pictures/Archived/alias": {
+        "link": "/fixture/home/unwatched"
+      },
+      "Pictures/Archived/collection": {
+        "directory": true,
+        "mode": 493
+      },
+      "Pictures/Archived/collection/scene.PNG": {
+        "text": "final",
+        "mode": 420
+      },
+      "Pictures/Archived/readme.txt": {
+        "text": "ignored",
+        "mode": 420
+      },
+      "Pictures/Archived/scene.MP4": {
+        "text": "video",
+        "mode": 420
+      },
+      "unwatched": {
+        "directory": true,
+        "mode": 493
+      },
+      "unwatched/scene.jpg": {
+        "text": "outside",
+        "mode": 420
+      }
+    }
+  }
+}

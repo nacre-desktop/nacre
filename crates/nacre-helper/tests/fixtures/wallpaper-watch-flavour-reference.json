@@ -1,0 +1,41 @@
+{
+  "source_sha256": "8ef51a4fa93e9252dfe74816d3f3ea737f8b8d4d932aecdc78f1be1043fc4f6c",
+  "cases": [
+    {
+      "name": "default",
+      "input": "{}",
+      "stdout": "[\"default\", \"dark\", \"tonalspot\"]\n",
+      "exit": 0
+    },
+    {
+      "name": "all-fields",
+      "input": "{\"flavour\":\"hard\",\"mode\":\"light\",\"variant\":\"vibrant\"}",
+      "stdout": "[\"hard\", \"light\", \"vibrant\"]\n",
+      "exit": 0
+    },
+    {
+      "name": "typed-fields",
+      "input": "{\"flavour\":null,\"mode\":3,\"variant\":true}",
+      "stdout": "[null, 3, true]\n",
+      "exit": 0
+    },
+    {
+      "name": "malformed",
+      "input": "broken JSON",
+      "stdout": "[\"default\", \"dark\", \"tonalspot\"]\n",
+      "exit": 0
+    },
+    {
+      "name": "missing",
+      "input": null,
+      "stdout": "[\"default\", \"dark\", \"tonalspot\"]\n",
+      "exit": 0
+    },
+    {
+      "name": "array",
+      "input": "[]",
+      "stdout": "",
+      "exit": 1
+    }
+  ]
+}

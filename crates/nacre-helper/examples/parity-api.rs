@@ -84,6 +84,21 @@ fn call(helper: &str, operation: &str, request: &Request) -> Result<Value> {
         );
     }
     match (helper, operation) {
+        ("wallpaper-watch", "flavour") => {
+            match nacre_helper::wallpaper_watch::flavour(&request.path(
+                0,
+                "path",
+                PathBuf::new(),
+            )?) {
+                Ok(values) => Ok(value!(values)),
+                Err(error) if error.is::<nacre_helper::wallpaper_watch::FlavourType>() => {
+                    eprintln!("AttributeError: {error}");
+                    std::process::exit(1);
+                }
+                Err(error) => Err(error),
+            }
+        }
+
         ("demo-wallpapers", "collection") => {
             nacre_helper::demo_wallpapers::collection(&paths.assets().join("demo-wallpapers"))
         }
