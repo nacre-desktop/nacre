@@ -42,7 +42,6 @@ Six Colors workflows and 13 original shared engine-cache files match exactly.
 Integration preserves automatic wallpaper mode and border-gradient controls from main.
 Integrated: six gradient refs, 22 media tests, 221 Rust tests and 889 repo tests pass.
 Busy cached preview CPU 65.82 → 9.98 ms; Colors RSS 34.02 → 16.85 MiB (2 → 1 processes).
-Reference producers refuse replacement; existing frozen outputs are immutable.
 State write_text preserves legacy bytes; existing write/update APIs are unchanged.
 
 Intended differences: custom absolute XDG roots follow QML; dconf and compositor
@@ -73,7 +72,9 @@ Native serial event ordering fixed; busy idle CPU 0/0 ticks ready, 0/1 after pub
 Fully private busy media RSS: 25.84 → 16.73 MiB ready; 26.18 → 27.35 after publication.
 Integration preserves terminal fonts and bundled palettes from concurrent main.
 Historical replays stage their original asset set; real bundle catalog checked separately.
-Next: publish/check integrated Media CI, then finish the lock dependency unit.
+Media 330f250e published; CI fresh-install passes, two Welcome fixture timeouts fixed.
+Mocks now supply asset IO to native demo snapshots; no full-poster generation in fixtures.
+Next: push/check fixture fix CI, then finish the lock dependency unit.
 Lock-prepare/lock-info remain: 141 label/eight artwork/three prep refs; no Rust port.
 Then visible-consumer timing harness and owner-announced quiet A/B/A/B.
 Preserve concurrent Settings changes; rebase only own commits, owner identity.

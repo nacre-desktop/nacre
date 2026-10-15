@@ -23,7 +23,12 @@ def invoke(operation, **request):
     process = subprocess.Popen(
         [binary], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True
     )
-    stdout, _ = process.communicate(input=json.dumps(request), timeout=60)
+    try:
+        stdout, _ = process.communicate(input=json.dumps(request), timeout=60)
+    except BaseException:
+        process.kill()
+        process.communicate()
+        raise
     reply = json.loads(stdout)
     if process.returncode:
         raise ValueError(reply["error"])

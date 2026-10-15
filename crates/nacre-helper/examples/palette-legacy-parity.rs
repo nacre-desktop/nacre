@@ -86,7 +86,16 @@ fn main() {
                     path(0)?,
                     args.get(1).and_then(Value::as_bool).unwrap_or(true)
                 )?)),
-                "demo_start" => media.demo_start(),
+                "demo_start" => {
+                    if let Some(scenes) = request.get("demo_scenes") {
+                        media.demo_start_with_scenes(
+                            &uuid::Uuid::new_v4().simple().to_string(),
+                            || Ok(scenes.clone()),
+                        )
+                    } else {
+                        media.demo_start()
+                    }
+                }
                 "demo_restore" => {
                     let token = args.first().and_then(Value::as_str);
                     if let Some(log) = request["publication_log"].as_str() {

@@ -268,7 +268,7 @@ class WelcomeDemoTests(unittest.TestCase):
                     CACHE=home / ".cache/media",
                     PREFS=home / ".config/nacre/wallpaper-picker.json",
                 ),
-                patch.object(art, "ensure", return_value=[]),
+                patch.object(art, "ensure", return_value=[]) as ensure,
                 patch.object(
                     media,
                     "demo_module",
@@ -283,6 +283,8 @@ class WelcomeDemoTests(unittest.TestCase):
                 patch.object(publisher, "apply_palette") as publish,
             ):
                 result = media.demo_start()
+                ensure.assert_called_once_with(home, fast=True)
+                self.assertEqual(result["demoEntries"], [])
                 snapshot = json.loads(
                     (
                         home

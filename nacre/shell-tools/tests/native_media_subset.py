@@ -49,6 +49,12 @@ def call(media, method, *args, **kwargs):
         prefs=str(media.PREFS),
         now_ms=int(time.time() * 1000),
     )
+    if method == "demo_start" and isinstance(media.demo_module, Mock):
+        # Preserve the original asset IO injection; do not generate the full
+        # immutable collection when that dependency is explicitly mocked.
+        artwork = media.demo_module("demo-wallpapers")
+        if isinstance(artwork.ensure, Mock):
+            request["demo_scenes"] = artwork.ensure(media.HOME, fast=True)
     spy = getattr(getattr(media, "subprocess", None), "run", None)
     with tempfile.TemporaryDirectory(prefix="nacre-media-command-fixture-") as folder:
         log = Path(folder) / "commands.jsonl"

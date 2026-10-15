@@ -1220,6 +1220,13 @@ impl Media {
         self.demo_start_with_token(&uuid::Uuid::new_v4().simple().to_string())
     }
     pub fn demo_start_with_token(&self, token: &str) -> Result<Value> {
+        self.demo_start_with_scenes(token, || self.demo_scenes())
+    }
+    /// The caller supplies only the asset provider; snapshot/publication rules stay here.
+    pub fn demo_start_with_scenes<F>(&self, token: &str, load: F) -> Result<Value>
+    where
+        F: FnOnce() -> Result<Value>,
+    {
         let folder = self.paths.state.join("welcome/demo");
         fs::create_dir_all(&folder)?;
         let scenes;
@@ -1290,7 +1297,7 @@ impl Media {
             for (_, old) in entries.into_iter().skip(10) {
                 fs::remove_file(old)?;
             }
-            scenes = self.demo_scenes()?;
+            scenes = load()?;
         }
         let entries = scenes
             .as_array()
