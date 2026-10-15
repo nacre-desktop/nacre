@@ -250,6 +250,14 @@ def read_packet(process, timeout=8):
     return json.loads(line)
 
 
+def historical_catalog_mounts(case):
+    # This exact immutable input predates optional theme-bundle assets. Keep its
+    # asset availability unchanged; explicitly configured/new cases use current assets.
+    if case == {"helper": "wallpaper-media", "args": ["catalog"]}:
+        return ["--tmpfs", "/repo/nacre/shell-tools/theme-bundles"]
+    return []
+
+
 def execute(case, command, trace=None):
     if case["helper"] == "wallpaper-media" and case.get("args") == ["session"]:
         # Replace only the transport: strict logind calls retain the frozen
@@ -595,6 +603,7 @@ def execute(case, command, trace=None):
                 'else\n    exec -a /usr/bin/python3 /case/python-real "$@"\nfi\n'
             )
             (root / "python-proxy").chmod(0o755)
+        sandbox += historical_catalog_mounts(case)
         for name in ("python3", "bash", "env"):
             executable = (
                 root / "python-proxy"

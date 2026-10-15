@@ -19,6 +19,38 @@ spec.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
+    def test_historical_catalog_assets_do_not_mask_current_bundle_inputs(self):
+        case = {"helper": "wallpaper-media", "args": ["catalog"]}
+        self.assertEqual(
+            runner.historical_catalog_mounts(case),
+            ["--tmpfs", "/repo/nacre/shell-tools/theme-bundles"],
+        )
+        self.assertEqual(
+            runner.historical_catalog_mounts(
+                {**case, "env": {"EXPLICIT_BUNDLE_INPUT": "1"}}
+            ),
+            [],
+        )
+        self.assertEqual(
+            runner.historical_catalog_mounts({"helper": "other", "args": ["catalog"]}),
+            [],
+        )
+        frozen = runner.execute(case, runner.native_registry.command(case, None))
+        self.assertEqual(frozen["exit"], 0)
+        self.assertFalse(
+            any(row["id"].startswith("bundle:") for row in frozen["stdout"]["palettes"])
+        )
+        current_case = {**case, "env": {"EXPLICIT_BUNDLE_INPUT": "1"}}
+        current = runner.execute(
+            current_case, runner.native_registry.command(current_case, None)
+        )
+        self.assertEqual(current["exit"], 0)
+        self.assertTrue(
+            any(
+                row["id"].startswith("bundle:") for row in current["stdout"]["palettes"]
+            )
+        )
+
     def test_automatic_wallpaper_default_never_erases_enabled_difference(self):
         old = {
             "stdout": {

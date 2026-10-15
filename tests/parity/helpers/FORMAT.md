@@ -152,3 +152,8 @@ to its unchanged original capture hash. Directory entries and canonical source
 identities are inputs; the overlay never reads SVG bytes. Replay stages that
 provider privately and maps only its root to `/usr/share/icons`; every generated
 link, filename, mode and other file remains checked against the frozen outputs.
+
+The original empty `wallpaper-media/catalog` input predates optional theme bundles.
+Its sandbox supplies an empty bundle-asset directory, preserving the recorded
+input without filtering output or regenerating expected files. Explicitly
+configured catalog cases retain current bundle assets; the harness checks both.
