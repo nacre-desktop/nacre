@@ -28,7 +28,7 @@ COMPONENTS = {"configs", "apps", "shell", "brain", "ai"}
 
 
 def validate(value):
-    if not isinstance(value, dict) or set(value) - set(DEFAULT):
+    if not isinstance(value, dict) or set(value) - (set(DEFAULT) | {"aurReview"}):
         raise ValueError(
             tr("helper.profile-policy.unknown-profile-fields", "Unknown profile fields")
         )
@@ -42,6 +42,8 @@ def validate(value):
                 "Unsupported profile identity/version",
             )
         )
+    if "aurReview" in result and result["aurReview"] not in ("required", "native"):
+        raise ValueError("Invalid registered AUR review policy")
     count = result["workspaceCount"]
     if type(count) is not int or not 1 <= count <= 10:
         raise ValueError(

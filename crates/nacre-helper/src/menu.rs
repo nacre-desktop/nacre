@@ -141,7 +141,7 @@ pub fn snapshot(force: bool) -> Result<Value> {
         .unwrap_or(0);
     snapshot_with(&paths, force, stamp, json!(now()), || {
         let capture = which("grim") && which("slurp");
-        let caps = json!({"capture":capture,"record":which("wf-recorder")&&which("slurp"),"ocr":which("tesseract")&&capture,"qr":which("zbarimg")&&capture,"color-picker":which("hyprpicker"),"packages":which("pacman"),"aur":which("paru")||which("yay"),"ai":which("nacre-ai"),"brain":paths.share.join("brain/control.py").is_file(),"fonts":which("fc-list")});
+        let caps = json!({"capture":capture,"record":which("wf-recorder")&&which("slurp"),"ocr":which("tesseract")&&capture,"qr":which("zbarimg")&&capture,"color-picker":which("hyprpicker"),"packages":which("pacman"),"aur":which("paru")||which("yay")||(crate::aur_review::available() && crate::aur_review::policy(&paths).is_ok_and(|p|p["mode"]=="required")),"ai":which("nacre-ai"),"brain":paths.share.join("brain/control.py").is_file(),"fonts":which("fc-list")});
         Ok(
             json!({"capabilities":caps,"packages":installed()?,"fonts":fonts()?,"stayAwake":active("nacre-stay-awake.service")?,"recording":active("nacre-screen-recording.service")?,"reminders":reminders()?,"webapps":webapps()?}),
         )
@@ -351,7 +351,13 @@ pub fn search_packages(query: &str) -> Result<Value> {
         }
     }
     let mut message = String::new();
-    if which("paru") || which("yay") {
+    if which("paru")
+        || which("yay")
+        || (crate::aur_review::available()
+            && Paths::environment()
+                .and_then(|paths| crate::aur_review::policy(&paths))
+                .is_ok_and(|value| value["mode"] == "required"))
+    {
         let fetch = || -> Result<Value> {
             let quoted = query
                 .as_bytes()

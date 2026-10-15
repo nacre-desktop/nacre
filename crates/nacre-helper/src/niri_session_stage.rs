@@ -71,7 +71,10 @@ pub fn validate_profile(input: &Value) -> Result<Value> {
 fn validate_profile_value(input: &Value) -> Result<Value> {
     let mut profile = value!({"version":1,"id":"default","components":["configs","shell"],"workspaceCount":5,"workspaceNames":[],"workspaceIcons":[],"startup":[],"routes":[],"brainWorkspace":null,"aiWorkspace":null,"aiFullAccess":false,"windowTrashBindings":false});
     let fields = input.as_object().ok_or("Unknown profile fields")?;
-    if fields.keys().any(|key| profile.get(key).is_none()) {
+    if fields
+        .keys()
+        .any(|key| profile.get(key).is_none() && key != "aurReview")
+    {
         return Err("Unknown profile fields".into());
     }
     for (key, item) in fields {
@@ -95,6 +98,12 @@ fn validate_profile_value(input: &Value) -> Result<Value> {
             .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
     {
         return Err("Unsupported profile identity/version".into());
+    }
+    if profile
+        .get("aurReview")
+        .is_some_and(|v| !matches!(v.as_str(), Some("required" | "native")))
+    {
+        return Err("Invalid registered AUR review policy".into());
     }
     let count = profile["workspaceCount"]
         .as_u64()

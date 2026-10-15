@@ -1510,7 +1510,7 @@
   "launcher.forms.text": "Text",
   "launcher.forms.url": "Website URL",
   "launcher.forms.workspace": "Save a workspace recipe",
-  "launcher.install-offer.aur": "Requires paru or yay for AUR installation",
+  "launcher.install-offer.aur": "Requires git, less and makepkg for AUR review, or paru/yay for the native flow",
   "launcher.install-offer.description": "Install {app} · {purpose}",
   "launcher.menu-button.accessibleName.off": "Off",
   "launcher.menu-button.accessibleName.on": "On",
@@ -3339,5 +3339,14 @@
   "settings.registry.colors.palette.failed": "Desktop colors could not be updated.",
   "settings.registry.colors.target.failed": "Application colors could not be updated.",
   "settings.registry.colors.target.paused": "Current colors retained",
-  "settings.registry.ui.enable-first": "Enable “{label}” above to use these options."
+  "settings.registry.ui.enable-first": "Enable “{label}” above to use these options.",
+  "software.aur.section": "Package review",
+  "software.aur.setting": "AUR recipe review",
+  "software.aur.description": "The general profile reviews every recipe and dependency in a terminal pager before builds or installs. Existing custom profiles retain their native manager flow unless changed here.",
+  "software.aur.required": "Review every recipe",
+  "software.aur.native": "Native package-manager flow",
+  "software.aur.provenance": "AUR review policy provenance",
+  "software.aur.provenance-description": "Show the effective policy, registered key and source in a terminal.",
+  "software.aur.launcher": "AUR package review policy",
+  "software.aur.launcher-description": "Choose recipe review and inspect its profile provenance"
 }

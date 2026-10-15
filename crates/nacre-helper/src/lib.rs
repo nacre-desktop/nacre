@@ -1,6 +1,7 @@
 //! Native desktop helper boundaries. Orient remains an independent MIT dependency.
 #![deny(unsafe_code)]
 pub mod arguments;
+pub mod aur_review;
 pub mod branding;
 pub mod classic_state;
 pub mod colors;

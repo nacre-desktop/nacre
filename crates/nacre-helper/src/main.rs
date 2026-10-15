@@ -14,6 +14,33 @@ fn run() -> Result<i32> {
     if tool == "wallpaper-media" {
         return nacre_helper::wallpaper_media::run(&arguments);
     }
+    if tool == "software-package" {
+        let [action, package] = arguments.as_slice() else {
+            return Err("Expected software-package install PACKAGE".into());
+        };
+        if action != "install" {
+            return Err("Expected software-package install PACKAGE".into());
+        }
+        return nacre_helper::aur_review::package_install(package);
+    }
+    if tool == "aur-review" {
+        return match arguments.as_slice() {
+            [action] if action == "policy" => {
+                println!(
+                    "{}",
+                    json::encode(&nacre_helper::aur_review::policy(
+                        &nacre_helper::paths::Paths::environment()?
+                    )?)?
+                );
+                Ok(0)
+            }
+            [action, package] if action == "install" => nacre_helper::aur_review::install(package),
+            [action, directory] if action == "inspect" => {
+                nacre_helper::aur_review::inspect(std::path::Path::new(directory))
+            }
+            _ => Err("Expected aur-review policy or install PACKAGE".into()),
+        };
+    }
     if tool == "wallpaper-watch" {
         return nacre_helper::wallpaper_watch::run(&arguments);
     }

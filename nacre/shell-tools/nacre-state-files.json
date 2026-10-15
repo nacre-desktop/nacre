@@ -919,6 +919,17 @@
         "root": "config",
         "access": "write"
       }
+    },
+    {
+      "id": "aur-review-recipe",
+      "paths": [
+        "nacre/aur-review/recipes/*.json"
+      ],
+      "owner": "aur-review",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {}
     }
   ]
 }

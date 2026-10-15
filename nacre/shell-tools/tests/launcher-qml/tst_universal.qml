@@ -623,6 +623,16 @@ TestCase {
         verify(value.entries.some(row => row.name === "Meslo Nerd"));
     }
 
+    function test_aur_policy_is_searchable_from_other_sections() {
+        const value = view();
+        value.navigate("apps");
+        findChild(value, "launcherSearch").text = "aur review";
+        const row = value.entries.find(row => row.id === "software.packages.review-policy");
+        verify(row);
+        value.run(row);
+        compare(NacrePanelState.calls[NacrePanelState.calls.length - 1], ["settings", "system"]);
+    }
+
     function test_monospace_font_is_globally_searchable_and_independent() {
         const value = view();
         value.menu.snapshot = Object.assign({}, value.menu.snapshot, {

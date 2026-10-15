@@ -527,6 +527,12 @@
       "page": "launcher",
       "labelId": "settings.registry.launcher.sidebar.label",
       "order": 30
+    },
+    {
+      "id": "system.packages",
+      "page": "system",
+      "labelId": "software.aur.section",
+      "order": 2
     }
   ],
   "settings": [
@@ -3875,6 +3881,44 @@
         "capability": "cursorShake"
       },
       "unavailableId": "settings.registry.keyboard-mouse.shake-planned"
+    },
+    {
+      "id": "system.packages.aurReview",
+      "page": "system",
+      "section": "system.packages",
+      "key": "aurReview",
+      "labelId": "software.aur.setting",
+      "descriptionId": "software.aur.description",
+      "type": "enum",
+      "store": {
+        "id": "profile",
+        "key": [
+          "aurReview"
+        ]
+      },
+      "default": "required",
+      "apply": "confirm",
+      "synonyms": [
+        "AUR",
+        "PKGBUILD",
+        "package recipes",
+        "review",
+        "dependencies"
+      ],
+      "advanced": false,
+      "visibleWhen": {
+        "capability": "packages"
+      },
+      "options": [
+        {
+          "value": "required",
+          "labelId": "software.aur.required"
+        },
+        {
+          "value": "native",
+          "labelId": "software.aur.native"
+        }
+      ]
     }
   ],
   "actions": [
@@ -4147,6 +4191,17 @@
       "descriptionId": "settings.registry.appearance.fonts.installed.description",
       "adapter": "fonts",
       "order": 30
+    },
+    {
+      "id": "system.packages.aurProvenance",
+      "page": "system",
+      "section": "system.packages",
+      "labelId": "software.aur.provenance",
+      "descriptionId": "software.aur.provenance-description",
+      "adapter": "aur-review-policy",
+      "visibleWhen": {
+        "capability": "packages"
+      }
     }
   ]
 }

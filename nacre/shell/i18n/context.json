@@ -3393,5 +3393,14 @@
   "settings.registry.colors.palette.failed": "Settings contrast/variant publisher process failed.",
   "settings.registry.colors.target.failed": "Settings application palette followers and dependent control guidance.",
   "settings.registry.colors.target.paused": "App theming target is paused; later palette changes leave existing colors alone.",
-  "settings.registry.ui.enable-first": "Settings application palette followers and dependent control guidance."
+  "settings.registry.ui.enable-first": "Settings application palette followers and dependent control guidance.",
+  "software.aur.section": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
+  "software.aur.setting": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
+  "software.aur.description": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
+  "software.aur.required": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
+  "software.aur.native": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
+  "software.aur.provenance": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
+  "software.aur.provenance-description": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
+  "software.aur.launcher": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
+  "software.aur.launcher-description": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings."
 }

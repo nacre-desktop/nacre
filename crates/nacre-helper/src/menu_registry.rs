@@ -24,7 +24,7 @@ impl std::fmt::Display for ReminderTypeError {
 }
 impl std::error::Error for ReminderTypeError {}
 
-fn which(name: &str) -> Option<PathBuf> {
+pub(crate) fn which(name: &str) -> Option<PathBuf> {
     std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
         .map(|root| root.join(name))
         .find(|path| {

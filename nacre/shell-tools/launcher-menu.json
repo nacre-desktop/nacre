@@ -1644,6 +1644,17 @@
       "provider": "system-speed",
       "labelId": "launcher.catalog.health.speed.label",
       "descriptionId": "launcher.catalog.health.speed.description"
+    },
+    {
+      "id": "software.packages.review-policy",
+      "kind": "action",
+      "label": "AUR package review policy",
+      "description": "Choose recipe review and inspect its profile provenance",
+      "icon": "policy",
+      "operation": "settings",
+      "value": "system",
+      "labelId": "software.aur.launcher",
+      "descriptionId": "software.aur.launcher-description"
     }
   ],
   "software": [

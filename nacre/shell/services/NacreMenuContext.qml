@@ -876,7 +876,7 @@ Scope {
                 checked: installed,
                 status: installed ? NacreI18n.tr("ui.menu-context.status.installed", "Installed") : NacreI18n.tr("ui.menu-context.status.install", "Install"),
                 disabled: installed && entry.terminalCommand ? library.data.ai?.terminal !== true : !installed && (!snapshot.capabilities.packages || aurMissing),
-                reason: installed && !desktopId ? NacreI18n.tr("launcher.disabled.installed-use-item-actions-to-remove-it", "Installed; use item actions to remove it") : !installed && aurMissing ? NacreI18n.tr("launcher.install-offer.aur", "Requires paru or yay for AUR installation") : !installed && !snapshot.capabilities.packages ? NacreI18n.tr("launcher.disabled.requires-an-arch-compatible-package-manager", "Requires an Arch-compatible package manager") : ""
+                reason: installed && !desktopId ? NacreI18n.tr("launcher.disabled.installed-use-item-actions-to-remove-it", "Installed; use item actions to remove it") : !installed && aurMissing ? NacreI18n.tr("launcher.install-offer.aur", "Requires git, less and makepkg for AUR review, or paru/yay for the native flow") : !installed && !snapshot.capabilities.packages ? NacreI18n.tr("launcher.disabled.requires-an-arch-compatible-package-manager", "Requires an Arch-compatible package manager") : ""
             });
         });
     }
@@ -990,7 +990,7 @@ Scope {
                 aliases: [item.package, ...item.families, mono ? "terminal monospace font typeface nerd" : "interface font typeface nerd"],
                 disabled: disabled,
                 status: family ? NacreI18n.tr("ui.menu-context.status.installed", "Installed") : item.repository,
-                reason: aur ? NacreI18n.tr("launcher.install-offer.aur", "Requires paru or yay for AUR installation") : disabled ? NacreI18n.tr("launcher.disabled.requires-an-arch-compatible-package-manager", "Requires an Arch-compatible package manager") : "",
+                reason: aur ? NacreI18n.tr("launcher.install-offer.aur", "Requires git, less and makepkg for AUR review, or paru/yay for the native flow") : disabled ? NacreI18n.tr("launcher.disabled.requires-an-arch-compatible-package-manager", "Requires an Arch-compatible package manager") : "",
                 confirm: family ? "" : NacreI18n.tr("software.fonts.confirm", "Open the package manager to install {font}? Administrator permission may be required.", {
                     font: item.name
                 })
@@ -1543,7 +1543,7 @@ Scope {
         return false;
     }
     function terminal(action, value, title) {
-        AppLaunch.run(["kitty", "--class", "nacre-control", "--title", title, "--", NacrePaths.helperBinary, "menu-backend", action, value]);
+        AppLaunch.run(["kitty", "--class", "nacre-control", "--title", title, "--", NacrePaths.helperBinary, action === "install" ? "software-package" : "menu-backend", action, value]);
     }
     function work(action, value = "", payload = {}) {
         if (shared)
@@ -1707,7 +1707,7 @@ Scope {
         property string value: ""
         property var payload: ({})
         stdinEnabled: true
-        command: [NacrePaths.helperBinary, "menu-backend", action, value]
+        command: [NacrePaths.helperBinary, action === "install" ? "software-package" : "menu-backend", action, value]
         onStarted: write(JSON.stringify(payload) + "\n")
         stdout: StdioCollector {
             onStreamFinished: {

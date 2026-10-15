@@ -189,6 +189,9 @@ SettingsStore {
         })
     capabilities: NacreSettingsCapabilities.snapshot
     files: Object.assign({}, NacreSettingsStorage.documents, {
+        profile: Object.assign({}, NacreSettingsStorage.documents.profile || {}, {
+            aurReview: NacreSettingsStorage.documents.profile?.aurReview || (NacreSettingsStorage.documents.profile?.id && NacreSettingsStorage.documents.profile.id !== "default" ? "native" : "required")
+        }),
         "software-input": Object.assign({}, NacreSettingsStorage.documents["software-input"] || {}, (() => {
                 const values = {};
                 for (const key of Object.keys(inputDesired))
@@ -290,7 +293,9 @@ SettingsStore {
                 AppLaunch.run(["pkexec", "systemctl", "start", "power-profiles-daemon"]);
             else
                 NacrePanelState.openMenu("software.packages", "power-profiles-daemon");
-        } else if (action === "fonts")
+        } else if (action === "aur-review-policy")
+            AppLaunch.run(["kitty", "--hold", "--title", NacreI18n.tr("software.aur.provenance", "AUR review policy provenance"), "--", NacrePaths.helperBinary, "aur-review", "policy"]);
+        else if (action === "fonts")
             NacrePanelState.openMenu("style.fonts");
         else if (action === "colors-studio")
             NacreColorsApp.open();

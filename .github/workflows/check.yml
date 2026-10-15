@@ -26,7 +26,7 @@ jobs:
           key: arch-pacman-${{ runner.arch }}-${{ steps.cache_epoch.outputs.week }}
           restore-keys: arch-pacman-${{ runner.arch }}-
       - name: Install target-platform checks
-        run: pacman -Syu --noconfirm --needed git python python-pip python-pillow ruff lua fish qt6-declarative qt6-wayland quickshell qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats gcc pkgconf rust lcms2 cmake make gtk3 librsvg kconfig kcolorscheme breeze nodejs npm jq xorg-server-xvfb xorg-xauth mesa dbus ttf-dejavu niri fastfetch ffmpeg
+        run: pacman -Syu --noconfirm --needed git python python-pip python-pillow ruff lua fish qt6-declarative qt6-wayland quickshell qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats gcc pkgconf rust lcms2 cmake make gtk3 librsvg kconfig kcolorscheme breeze nodejs npm jq xorg-server-xvfb xorg-xauth kitty mesa dbus ttf-dejavu niri fastfetch ffmpeg
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           submodules: recursive
@@ -105,6 +105,7 @@ jobs:
         run: |
           export NACRE_ORIENT_BINARY="$PWD/deps/orient/target/release/orient"
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --download-fonts --output /tmp/nacre-pseudo-audit
+          NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper" /tmp/check-env/bin/python tools/capture-aur-review.py --output /tmp/nacre-pseudo-audit/aur-review
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --font-directory /tmp/nacre-pseudo-audit/fonts --text-family "DejaVu Sans" --output /tmp/nacre-pseudo-wide-font colors controls launcher chat summary
       - name: Native gallery evidence
         if: always()
