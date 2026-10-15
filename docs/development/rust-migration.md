@@ -69,5 +69,6 @@ cases exact; private bus/socket, linked-state/XDG and both nested compositors pa
 259 Rust/fmt/clippy;917 full repo +15 incoming Niri checks/534 parity pass.
 Python watch currently fails at removed event_socket bridge; no valid idle baseline.
 Session check CPU125.79→29.50ms;20Pythonstarts→0; nativeRSS18.09MiB/idle0ticks30s.
-Next: validate/publish F0, wait for green CI, then F1 daemon/link.
+F0 67674e85 public; Bead ADR311a2f09 CI green. Workspace fixture repair:3 tests/fmt/clippy pass.
+Next: wait for green published preparation-fixture CI, then F1 daemon/link.
 No live desktop/config/network changes, tags, releases or package publication.

@@ -111,10 +111,12 @@ fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> 
     fs::create_dir_all(repo.join("nacre/shell"))?;
     fs::write(repo.join("nacre/shell/shell.qml"), "shell fixture\n")?;
     fs::create_dir_all(repo.join("niri"))?;
-    fs::copy(
-        original.join("niri/wallpaper.kdl"),
-        repo.join("niri/wallpaper.kdl"),
-    )?;
+    for name in ["wallpaper.kdl", "workspace-visitors.kdl"] {
+        fs::copy(
+            original.join("niri").join(name),
+            repo.join("niri").join(name),
+        )?;
+    }
     fs::write(repo.join("VERSION"), "0.0.fixture\n")?;
     fs::create_dir_all(home.path().join(".config/nacre"))?;
     fs::copy(
@@ -175,6 +177,10 @@ fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> 
     let destination = home.path().join(".local/share/nacre/niri-on-pc/session");
     assert!(destination.join("source-revision").is_file());
     assert!(destination.join("stock-niri").is_file());
+    assert_eq!(
+        fs::read(destination.join("config/workspace-visitors.kdl"))?,
+        fs::read(repo.join("niri/workspace-visitors.kdl"))?
+    );
     assert!(destination
         .join("home-view/.local/share/nacre/shell/tools/nacre-helper")
         .is_file());
