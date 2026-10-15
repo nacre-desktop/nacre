@@ -8,7 +8,7 @@ import math
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from soak import slope
+from soak import MAX_PEARLS, slope
 
 
 def combined(row):
@@ -34,6 +34,24 @@ def correlation(pairs):
 
 def summarize(directory):
     report = json.loads((directory / "report.json").read_text())
+    saved_pearls = directory / "home/.local/state/nacre/shell/pearls.json"
+    saved_count = None
+    if saved_pearls.exists():
+        saved_count = len(json.loads(saved_pearls.read_text()).get("windows", []))
+    limit = report.get("pearl_limit", MAX_PEARLS)
+    issues = []
+    bound_exceeded = saved_count is not None and saved_count > limit
+    if bound_exceeded:
+        issues.append(
+            f"saved live pearls exceed workload limit: {saved_count} > {limit}"
+        )
+    rejected_docks = sum(
+        row["count"]
+        for row in report.get("warnings", [])
+        if "Nacre dock destination did not present" in row["message"]
+    )
+    if rejected_docks:
+        issues.append(f"dock handoffs rejected: {rejected_docks}")
     with (directory / "samples.csv").open() as stream:
         rows = list(csv.DictReader(stream))
     events = [
@@ -108,7 +126,18 @@ def summarize(directory):
         backend=report["backend"],
         revision=report["source_revision"],
         elapsed_seconds=report["elapsed_seconds"],
-        healthy=report["workload_healthy"],
+        healthy=report["workload_healthy"] and not issues,
+        reported_healthy=report["workload_healthy"],
+        memory_healthy=False
+        if bound_exceeded
+        else report.get("memory_workload_healthy"),
+        workload_issues=issues,
+        pearls=dict(
+            limit=limit,
+            peak=report.get("pearl_peak"),
+            saved_at_end=saved_count,
+            recoveries=report.get("pearl_recoveries"),
+        ),
         trends=trends,
         short_lifetimes=dict(brief),
         actions=action_summary,
@@ -135,8 +164,12 @@ def main():
     results = [summarize(path) for path in args.directories]
     for result in results:
         print(
-            f"{result['backend']}: {result['elapsed_seconds'] / 60:.1f} elapsed min; healthy={result['healthy']}"
+            f"{result['backend']}: {result['elapsed_seconds'] / 60:.1f} elapsed min; "
+            f"healthy={result['healthy']}; memory_healthy={result['memory_healthy']}"
         )
+        for issue in result["workload_issues"]:
+            print(f"  workload: {issue}")
+        print(f"  pearls: {json.dumps(result['pearls'], sort_keys=True)}")
         for trend in result["trends"]:
             fit, tail = trend["combined"], trend["last_hour"]
             tail_text = (

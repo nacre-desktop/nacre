@@ -2,6 +2,8 @@
 
 import importlib.util
 import io
+import csv
+import json
 from pathlib import Path
 import sys
 import subprocess
@@ -14,6 +16,120 @@ sys.path.insert(0, str(TOOLS))
 SPEC = importlib.util.spec_from_file_location("soak", TOOLS / "soak.py")
 soak = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(soak)
+import soak_analyze
+
+
+class PearlWorkloadTests(unittest.TestCase):
+    def fixture(self, count):
+        entries = [{"key": str(i)} for i in range(count)]
+        calls = []
+
+        def ipc(*words):
+            calls.append(words)
+            if words == ("pearls", "state"):
+                return json.dumps(entries)
+            if words[:2] == ("pearls", "close"):
+                entries[:] = [entry for entry in entries if entry["key"] != words[2]]
+            if words == ("pearls", "detach"):
+                entries.append({"key": "new"})
+            return ""
+
+        return entries, calls, ipc
+
+    def test_capacity_waits_for_async_docking_before_detaching(self):
+        entries, calls, ipc = self.fixture(4)
+        completed = []
+
+        def wait_for(predicate, description, **options):
+            self.assertFalse(predicate())
+            self.assertNotIn(("pearls", "detach"), calls)
+            docks = [call for call in calls if call[:2] == ("pearls", "dock")]
+            self.assertEqual(len(docks), len(completed) + 1)
+            key = docks[-1][2]
+            entries[:] = [entry for entry in entries if entry["key"] != key]
+            completed.append(key)
+            self.assertTrue(predicate())
+
+        self.assertEqual(soak.detach_pearl(ipc, wait_for), 0)
+        self.assertEqual(len(entries), 1)
+
+    def test_failed_docking_cannot_accumulate_another_window(self):
+        entries, calls, ipc = self.fixture(4)
+
+        def wait_for(*args, **kwargs):
+            raise RuntimeError("timed out")
+
+        with self.assertRaisesRegex(soak.PearlWorkloadError, "Docking did not finish"):
+            soak.detach_pearl(ipc, wait_for)
+        self.assertEqual(len(entries), 4)
+        self.assertNotIn(("pearls", "detach"), calls)
+
+    def test_explicit_memory_control_records_closed_windows(self):
+        entries, calls, ipc = self.fixture(4)
+
+        def wait_for(predicate, description, **options):
+            if description == "pearl docking":
+                raise RuntimeError("timed out")
+            self.assertEqual(description, "pearl cleanup")
+            self.assertTrue(predicate())
+
+        self.assertEqual(soak.detach_pearl(ipc, wait_for, recover=True), 4)
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(sum(call[:2] == ("pearls", "close") for call in calls), 4)
+
+    def test_excess_windows_fail_before_new_detach(self):
+        entries, calls, ipc = self.fixture(5)
+        with self.assertRaisesRegex(soak.PearlWorkloadError, "5 > 4"):
+            soak.detach_pearl(ipc, lambda *args, **kwargs: None)
+        self.assertEqual(len(entries), 5)
+        self.assertNotIn(("pearls", "detach"), calls)
+
+    def test_legacy_bad_workload_cannot_claim_healthy(self):
+        for count, rejected in [(5, 0), (0, 1)]:
+            with (
+                self.subTest(count=count, rejected=rejected),
+                tempfile.TemporaryDirectory() as folder,
+            ):
+                root = Path(folder)
+                report = {
+                    "backend": "hyprland",
+                    "source_revision": "capture",
+                    "elapsed_seconds": 300,
+                    "workload_healthy": True,
+                    "actions": {},
+                    "warnings": [
+                        {
+                            "message": "Nacre dock destination did not present",
+                            "count": rejected,
+                        }
+                    ],
+                }
+                (root / "report.json").write_text(json.dumps(report))
+                (root / "events.jsonl").write_text("")
+                with (root / "samples.csv").open("w", newline="") as stream:
+                    row = dict(
+                        phase="measured",
+                        role="shell",
+                        pid=10,
+                        start=100,
+                        seconds=0,
+                        pss_mib=100,
+                        swap_pss_mib=0,
+                        fds=30,
+                        threads=4,
+                        children=2,
+                    )
+                    writer = csv.DictWriter(stream, fieldnames=list(row))
+                    writer.writeheader()
+                    writer.writerow(row)
+                state = root / "home/.local/state/nacre/shell/pearls.json"
+                state.parent.mkdir(parents=True)
+                state.write_text(json.dumps({"windows": [{}] * count}))
+                result = soak_analyze.summarize(root)
+                self.assertTrue(result["reported_healthy"])
+                self.assertFalse(result["healthy"])
+                self.assertTrue(result["workload_issues"])
+                self.assertEqual(result["pearls"]["saved_at_end"], count)
 
 
 def series(values, *, phase="measured", pid=10, start=100):

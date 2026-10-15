@@ -476,6 +476,74 @@ def environment(directory, backend):
     return env
 
 
+MAX_PEARLS = 4
+
+
+class PearlWorkloadError(RuntimeError):
+    """A failed handoff must not turn a bounded soak into window accumulation."""
+
+
+def read_pearls(ipc):
+    entries = json.loads(ipc("pearls", "state"))
+    if not isinstance(entries, list) or any(
+        not isinstance(entry, dict) or not isinstance(entry.get("key"), str)
+        for entry in entries
+    ):
+        raise PearlWorkloadError("Invalid pearl state")
+    return entries
+
+
+def check_pearl_bound(entries):
+    if len(entries) > MAX_PEARLS:
+        raise PearlWorkloadError(
+            f"Pearl workload exceeded its limit: {len(entries)} > {MAX_PEARLS}"
+        )
+
+
+def dock_pearls(ipc, wait_for, recover=False):
+    entries = read_pearls(ipc)
+    recovered = 0
+    for entry in entries:
+        key = entry["key"]
+
+        def removed(key=key):
+            return all(value["key"] != key for value in read_pearls(ipc))
+
+        # These handoffs share one destination panel. Await each transaction
+        # before restoring another state or detaching the destination again.
+        ipc("pearls", "dock", key)
+        try:
+            wait_for(removed, "pearl docking", timeout=2)
+        except RuntimeError as error:
+            if removed():
+                continue
+            if not recover:
+                raise PearlWorkloadError(
+                    "Docking did not finish; pearl remains"
+                ) from error
+            ipc("pearls", "close", key)
+            try:
+                wait_for(removed, "pearl cleanup", timeout=2)
+            except RuntimeError as cleanup_error:
+                raise PearlWorkloadError(
+                    "Pearl cleanup did not finish"
+                ) from cleanup_error
+            recovered += 1
+    return recovered
+
+
+def detach_pearl(ipc, wait_for, recover=False):
+    entries = read_pearls(ipc)
+    check_pearl_bound(entries)
+    recovered = 0
+    if len(entries) >= MAX_PEARLS:
+        recovered = dock_pearls(ipc, wait_for, recover)
+    ipc("nacre", "launcher", "Demo")
+    ipc("pearls", "detach")
+    check_pearl_bound(read_pearls(ipc))
+    return recovered
+
+
 def renderer_command(directory):
     """Use the real renderer launcher so allocator/toolkit policy cannot drift."""
     return [
@@ -547,6 +615,8 @@ def worker(args, directory):
     exits = 0
     actions = Counter()
     failures = Counter()
+    pearl_peak = 0
+    pearl_recoveries = 0
     windows = []
     traces = []
     last_ipc_success = started
@@ -600,6 +670,7 @@ def worker(args, directory):
             stream.write(json.dumps(item) + "\n")
 
     def sample(writer, stream):
+        nonlocal pearl_peak
         elapsed = time.monotonic() - started
         phase = "warmup" if elapsed < args.warmup else "measured"
         tree = performance.snapshot(pid, detached=False)
@@ -678,6 +749,10 @@ def worker(args, directory):
             event("notification_counts", **counts)
         except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired) as error:
             event("probe_failure", error=str(error)[-500:])
+        pearls = read_pearls(ipc)
+        pearl_peak = max(pearl_peak, len(pearls))
+        event("pearl_counts", count=len(pearls))
+        check_pearl_bound(pearls)
         shell_sample = next((row for row in sampled if row["role"] == "shell"), {})
         progress = {
             "backend": args.backend,
@@ -690,6 +765,9 @@ def worker(args, directory):
             "warnings": warning_count,
             "actions": sum(actions.values()),
             "failures": sum(failures.values()),
+            "pearl_count": len(pearls),
+            "pearl_peak": pearl_peak,
+            "pearl_recoveries": pearl_recoveries,
         }
         (directory / "progress.json").write_text(json.dumps(progress) + "\n")
         print(
@@ -698,6 +776,7 @@ def worker(args, directory):
         )
 
     def action(name):
+        nonlocal pearl_peak, pearl_recoveries
         if name == "launcher":
             ipc(
                 "nacre",
@@ -712,15 +791,17 @@ def worker(args, directory):
         elif name == "settings":
             ipc("settingsApp", "open", rng.choice(SETTINGS))
         elif name == "detach":
-            entries = json.loads(ipc("pearls", "state"))
-            if len(entries) >= 4:
-                for entry in entries:
-                    ipc("pearls", "dock", entry["key"])
-            ipc("nacre", "launcher", "Demo")
-            ipc("pearls", "detach")
+            recovered = detach_pearl(ipc, session.wait_for, args.recover_docks)
+            pearl_peak = max(pearl_peak, len(read_pearls(ipc)))
+            pearl_recoveries += recovered
+            if recovered:
+                event("pearl_dock_recovery", closed=recovered)
         elif name == "dock":
-            for entry in json.loads(ipc("pearls", "state")):
-                ipc("pearls", "dock", entry["key"])
+            pearl_peak = max(pearl_peak, len(read_pearls(ipc)))
+            recovered = dock_pearls(ipc, session.wait_for, args.recover_docks)
+            pearl_recoveries += recovered
+            if recovered:
+                event("pearl_dock_recovery", closed=recovered)
         elif name == "wallpaper":
             choices = sorted((directory / "home/Pictures/Wallpapers").glob("demo-*"))
             movie = directory / "home/Pictures/Wallpapers/video.mp4"
@@ -926,6 +1007,8 @@ def worker(args, directory):
                     ) as error:
                         failures[name] += 1
                         event("action_failure", action=name, error=str(error)[-500:])
+                        if isinstance(error, PearlWorkloadError):
+                            raise
                     processes[:] = [p for p in processes if p.poll() is None]
                     next_action = now + args.action_interval
                 time.sleep(min(0.5, max(0.01, next_sample - time.monotonic())))
@@ -957,12 +1040,14 @@ def worker(args, directory):
             for row in rows
         )
         probe_failures = sum(e["kind"] == "probe_failure" for e in events)
-        workload_healthy = (
+        memory_workload_healthy = (
             duration_complete
             and failure is None
             and not failures
             and not probe_failures
+            and pearl_peak <= MAX_PEARLS
         )
+        workload_healthy = memory_workload_healthy and not pearl_recoveries
         report = {
             "backend": args.backend,
             "seed": args.seed,
@@ -973,6 +1058,11 @@ def worker(args, directory):
             "busy_host": True,
             "duration_complete": duration_complete,
             "workload_healthy": workload_healthy,
+            "memory_workload_healthy": memory_workload_healthy,
+            "pearl_limit": MAX_PEARLS,
+            "pearl_peak": pearl_peak,
+            "pearl_recoveries": pearl_recoveries,
+            "recover_docks": args.recover_docks,
             "probe_failures": probe_failures,
             "runtime_policy": {
                 name: env.get(name, "auto")
@@ -1016,6 +1106,12 @@ def main():
     parser.add_argument("--interval", type=float, default=60)
     parser.add_argument("--action-interval", type=float, default=5)
     parser.add_argument("--seed", type=int, default=20261013)
+    parser.add_argument(
+        "--recover-docks",
+        action="store_true",
+        help="bounded memory control: close fixture pearls after a dock timeout; "
+        "record recovery and mark the full workload degraded",
+    )
     parser.add_argument(
         "--actions",
         nargs="+",
@@ -1113,6 +1209,8 @@ def main():
             words.append("--hyprland-headless")
         if args.notification_images:
             words.append("--notification-images")
+        if args.recover_docks:
+            words.append("--recover-docks")
         if args.actions:
             words.extend(["--actions", *args.actions])
         # No inherited accounts, injected Qt paths or session activation variables.
