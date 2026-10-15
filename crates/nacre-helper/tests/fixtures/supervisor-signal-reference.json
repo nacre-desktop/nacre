@@ -1,0 +1,35 @@
+{
+  "source_sha256": "03b7f59128be64efc45191edb6eb8d26df31cfcd4be754f3f06e2adad2d9b091",
+  "cases": [
+    {
+      "name": "terminate-child",
+      "stdout": "",
+      "stderr": "",
+      "exit": 0,
+      "launches": [
+        "start healthy"
+      ],
+      "files": {
+        "bin": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "preferences.json": {
+          "mode": "0o644",
+          "text": "{\"untouched\":true}"
+        },
+        "source": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source/shell.qml": {
+          "mode": "0o644",
+          "text": "healthy"
+        }
+      },
+      "forwarded": [
+        "stopped-TERM"
+      ]
+    }
+  ]
+}

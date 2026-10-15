@@ -170,3 +170,11 @@ network triggers. No runtime Python or parity fixture changed in that review.
   and font checksums, Git revisions and npm/Cargo locks must remain enforced.
   Player-provided artwork needs a shared renderer/helper URL policy; document
   automatic weather/lyrics/update calls before changing consent semantics.
+
+### Supervisor environment export during the Rust port
+
+The native measurement caller receives only changed display/session variables,
+then merges them with its own environment locally. The helper does not dump
+inherited provider credentials. A synthetic API-key negative control checks its
+stdout. Child environment inheritance and the existing session-user trust and
+last-known-good recovery policies are preserved; no privilege is added.

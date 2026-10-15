@@ -1419,3 +1419,26 @@ released; trimming now follows response destruction. There is no allocator or
 cache redesign. Both idle samples used zero CPU ticks over 30 seconds; this is
 not evidence of a battery improvement. The original 26.18→27.35 MiB observation
 remains above, and this busy-host check does not replace the quiet comparison.
+
+### Wave 4 supervisor (busy machine)
+
+The original Python supervisor and native replacement each launched the same
+private inert QS stand-in, reached the same health response and handled SIGTERM.
+Twenty fresh runs were interleaved before two 30-second resident samples. Release
+builds completed first. Child user+system CPU includes identical stand-in work;
+helper-group RSS includes Python's native compositor bridge and excludes QS/sleep.
+
+| Supervisor measurement | Python | Native |
+| --- | ---: | ---: |
+| Startup/health/stop CPU per call | 98.58 ms | 22.38 ms |
+| Resident helper-group RSS | 24.64 MiB | 10.77 MiB |
+| Helper processes | 2 | 1 |
+| Python launches in 20 runs | 20 | 0 |
+| Helper CPU during 30 s idle | 0 ticks | 0 ticks |
+
+This is not a shell startup latency or battery measurement. Seventeen frozen
+startup/recovery/environment contracts, the retained recovery assertions and
+actual supervised private niri/Hyprland sessions pass. Startup still allows one
+last-known-good restore; runtime failure still returns to systemd. Rejected code,
+preferences and file permissions/timestamps are preserved. The native environment
+query emits only changed display/session variables, with a credential-canary test.

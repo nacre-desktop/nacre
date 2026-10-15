@@ -1,0 +1,66 @@
+{
+  "source_sha256": "03b7f59128be64efc45191edb6eb8d26df31cfcd4be754f3f06e2adad2d9b091",
+  "clock": "20261001T120000",
+  "api": [
+    {
+      "name": "env-explicit",
+      "stdout": "{\"WAYLAND_DISPLAY\": \"wayland-0\", \"XDG_SESSION_TYPE\": \"wayland\", \"KEEP_ME\": \"preserved\", \"NACRE_COMPOSITOR\": \"niri\"}\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "name": "env-absolute",
+      "stdout": "{\"WAYLAND_DISPLAY\": \"/fixture/home/runtime/wayland-0\", \"XDG_SESSION_TYPE\": \"wayland\", \"KEEP_ME\": \"preserved\", \"NACRE_COMPOSITOR\": \"niri\"}\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "name": "env-auto",
+      "stdout": "{\"WAYLAND_DISPLAY\": \"wayland-0\", \"XDG_SESSION_TYPE\": \"wayland\", \"KEEP_ME\": \"preserved\", \"NACRE_COMPOSITOR\": \"niri\"}\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "name": "env-ambiguous",
+      "stdout": "{\"error\": \"Wayland display is not ready\", \"type\": \"RuntimeError\"}\n",
+      "stderr": "",
+      "exit": 1
+    },
+    {
+      "name": "env-existing-type",
+      "stdout": "{\"WAYLAND_DISPLAY\": \"wayland-0\", \"XDG_SESSION_TYPE\": \"x11\", \"KEEP_ME\": \"preserved\", \"NACRE_COMPOSITOR\": \"niri\"}\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "name": "health-ready",
+      "stdout": "true\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "name": "health-missing-field",
+      "stdout": "false\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "name": "health-malformed",
+      "stdout": "false\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "name": "health-error",
+      "stdout": "false\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "name": "health-missing-tool",
+      "stdout": "false\n",
+      "stderr": "",
+      "exit": 0
+    }
+  ]
+}

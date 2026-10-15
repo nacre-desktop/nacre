@@ -134,6 +134,7 @@ def retire_native_helpers(directory):
         "wallpaper-media",
         "demo-wallpapers",
         "helper-service",
+        "shell-supervisor",
         "diagnostics",
         "menu-backend",
         "dashboard-data",

@@ -19,7 +19,8 @@ Frozen sources for the deferred desktop-PC comparison (never substitute latest m
 - Baseline Orient: 820e199714d9d3a1233db80705e39838e86c49fc.
 - Wave 3: 81d9e520d6f6d0a915018f93e3b6279b716ddc91.
 - Wave 3 Orient: 3efe8d1e7fb50200d74a3e0193ad63699cb8ebe8.
-- Matching measurement harness: Wave 3 revision above; builds precede measurement.
+- Wave3-only harness: Wave3 revision above; build before measuring.
+- If Wave4 is included, use its pinned backward-compatible harness for both pairs.
 If Wave 4 lands first, measure both waves in the same desktop session:
 baseline/Wave3 A/B/A/B, then Wave3/Wave4 A/B/A/B; record the exact Wave4 endpoint.
 Record any pre-Wave4 media fix separately; retain the frozen Wave3 source above.
@@ -56,5 +57,10 @@ Apply docs/development/security-review.md cases where relevant, preserving privi
 Never alter deliberate AI permissions or paru -Syu --skipreview.
 Media response trim moved after cleanup: matched native RSS29.19→27.80MiB;
 Python controls25.95/26.24MiB; no retained decoded frames or battery claim.
-Next: validate/publish this fix, then port frozen supervisor startup/recovery contracts.
+Media fix 16ea1b94 published; CI pending. Supervisor caller switch validating:
+Supervisor: 17 contracts + security canary + nested niri/Hyprland pass;
+249 Rust / repo checks / 534 original parity pass; caller switch retires Python.
+Supervisor busy CPU98.58→22.38ms; helper-groupRSS24.64→10.77MiB;2→1 processes.
+Next: check supervisor CI, then port session-watch; 4 records, 3 readiness,
+4 display policies, 12 ordered event effects and 7 CLI cases frozen.
 No live desktop/config/network changes, tags, releases or package publication.

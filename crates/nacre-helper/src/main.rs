@@ -11,6 +11,23 @@ fn run() -> Result<i32> {
     let mut arguments = std::env::args().skip(1);
     let tool = arguments.next().ok_or("Expected a helper command")?;
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "shell-supervisor" {
+        return nacre_helper::shell_supervisor::run(None);
+    }
+    if tool == "shell-environment" {
+        let initial: nacre_helper::shell_supervisor::Environment = std::env::vars().collect();
+        let environment = nacre_helper::shell_supervisor::environment(
+            initial.clone(),
+            std::time::Duration::from_secs(20),
+            None,
+        )?;
+        let updates: std::collections::BTreeMap<_, _> = environment
+            .into_iter()
+            .filter(|(key, value)| initial.get(key) != Some(value))
+            .collect();
+        println!("{}", serde_json::to_string(&updates)?);
+        return Ok(0);
+    }
     if tool == "lock-info" {
         return nacre_helper::lock_info::run(&arguments);
     }

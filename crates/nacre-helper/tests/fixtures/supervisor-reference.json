@@ -1,0 +1,248 @@
+{
+  "source_sha256": "03b7f59128be64efc45191edb6eb8d26df31cfcd4be754f3f06e2adad2d9b091",
+  "clock": "20261001T120000",
+  "cases": [
+    {
+      "name": "clean",
+      "stdout": "",
+      "stderr": "",
+      "exit": 0,
+      "launches": [
+        "start healthy"
+      ],
+      "files": {
+        "bin": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "preferences.json": {
+          "mode": "0o644",
+          "text": "{\"untouched\":true}"
+        },
+        "source": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source/shell.qml": {
+          "mode": "0o644",
+          "text": "healthy"
+        }
+      }
+    },
+    {
+      "name": "startup-no-good",
+      "stdout": "",
+      "stderr": "",
+      "exit": 1,
+      "launches": [
+        "start bad"
+      ],
+      "files": {
+        "bin": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "preferences.json": {
+          "mode": "0o644",
+          "text": "{\"untouched\":true}"
+        },
+        "source": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source/shell.qml": {
+          "mode": "0o644",
+          "text": "bad"
+        }
+      }
+    },
+    {
+      "name": "recover",
+      "stdout": "Recovered the last validated Nacre desktop source.\n",
+      "stderr": "",
+      "exit": 0,
+      "launches": [
+        "start bad",
+        "start healthy"
+      ],
+      "files": {
+        "bin": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "preferences.json": {
+          "mode": "0o644",
+          "text": "{\"untouched\":true}"
+        },
+        "source": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source/nested": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source/nested/asset": {
+          "mode": "0o640",
+          "text": "validated asset"
+        },
+        "source/shell.qml": {
+          "mode": "0o644",
+          "text": "healthy"
+        },
+        "source.failed-20261001T120000": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source.failed-20261001T120000/shell.qml": {
+          "mode": "0o644",
+          "text": "bad"
+        },
+        "source.good": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source.good/nested": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source.good/nested/asset": {
+          "mode": "0o640",
+          "text": "validated asset"
+        },
+        "source.good/shell.qml": {
+          "mode": "0o644",
+          "text": "healthy"
+        }
+      }
+    },
+    {
+      "name": "recovery-fails",
+      "stdout": "Recovered the last validated Nacre desktop source.\n",
+      "stderr": "",
+      "exit": 1,
+      "launches": [
+        "start bad",
+        "start bad"
+      ],
+      "files": {
+        "bin": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "preferences.json": {
+          "mode": "0o644",
+          "text": "{\"untouched\":true}"
+        },
+        "source": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source/nested": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source/nested/asset": {
+          "mode": "0o640",
+          "text": "validated asset"
+        },
+        "source/shell.qml": {
+          "mode": "0o644",
+          "text": "bad"
+        },
+        "source.failed-20261001T120000": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source.failed-20261001T120000/shell.qml": {
+          "mode": "0o644",
+          "text": "bad"
+        },
+        "source.good": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source.good/nested": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source.good/nested/asset": {
+          "mode": "0o640",
+          "text": "validated asset"
+        },
+        "source.good/shell.qml": {
+          "mode": "0o644",
+          "text": "bad"
+        }
+      }
+    },
+    {
+      "name": "runtime-failure",
+      "stdout": "",
+      "stderr": "",
+      "exit": 7,
+      "launches": [
+        "start healthy"
+      ],
+      "files": {
+        "bin": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "preferences.json": {
+          "mode": "0o644",
+          "text": "{\"untouched\":true}"
+        },
+        "source": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source/shell.qml": {
+          "mode": "0o644",
+          "text": "healthy"
+        },
+        "source.good": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source.good/nested": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source.good/nested/asset": {
+          "mode": "0o640",
+          "text": "validated asset"
+        },
+        "source.good/shell.qml": {
+          "mode": "0o644",
+          "text": "healthy"
+        }
+      }
+    },
+    {
+      "name": "terminate",
+      "stdout": "",
+      "stderr": "",
+      "exit": 0,
+      "launches": [],
+      "files": {
+        "bin": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "preferences.json": {
+          "mode": "0o644",
+          "text": "{\"untouched\":true}"
+        },
+        "source": {
+          "mode": "0o755",
+          "directory": true
+        },
+        "source/shell.qml": {
+          "mode": "0o644",
+          "text": "healthy"
+        }
+      }
+    }
+  ]
+}

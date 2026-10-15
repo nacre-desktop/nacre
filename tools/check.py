@@ -261,6 +261,7 @@ def main():
         "wallpaper_warm",
         "wallpaper_pick",
         "lock_prepare",
+        "supervisor",
     ):
         run(
             [sys.executable, f"tests/parity/helpers/verify_{contract}_native.py"],

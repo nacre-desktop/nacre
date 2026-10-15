@@ -8,7 +8,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load(name):
-    spec = importlib.util.spec_from_file_location(name, ROOT / (name + ".py"))
+    source = (
+        ROOT / (name + ".py")
+        if name != "shell-supervisor"
+        else ROOT / "tests/native_shell_supervisor.py"
+    )
+    spec = importlib.util.spec_from_file_location(name, source)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

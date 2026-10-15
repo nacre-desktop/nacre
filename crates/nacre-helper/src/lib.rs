@@ -53,6 +53,7 @@ pub mod pearl_window;
 pub mod process;
 pub mod resource_state;
 pub mod service;
+pub mod shell_supervisor;
 pub mod signals;
 pub mod software_actions;
 pub mod software_ai;

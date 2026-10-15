@@ -173,3 +173,10 @@ Intended lock transport change: exactly six media-button `onclick` lines in
 `hyprlock.conf` replace the legacy Python script with `nacre-helper lock-info`,
 keeping each action. The immutable reference is unchanged; verification requires
 all six native commands, unchanged mode and every remaining config byte.
+
+Supervisor reference manifests freeze the original Python helper SHA, a fixed
+recovery timestamp, stdout/exit status, and all helper-written bytes/modes.
+The original pre-exec termination case also records a diagnostic fake-QS launch
+trace; only that trace is scheduler-dependent and excluded from equality.
+The separate `terminate-child` reference fixes the input synchronization and
+checks the full launch/SIGTERM trace. No frozen expected file is rewritten.

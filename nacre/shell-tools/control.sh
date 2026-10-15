@@ -10,7 +10,7 @@ case "${1:-start}" in
   exec "$HOME/.local/share/nacre/shell/bin/qs" -c nacre ipc call "$target" step "${2:-up}" ;;
  dolphin) exec python3 "$HOME/.local/share/nacre/shell/tools/dolphin-files.py" "${@:2}" ;;
  thunar) exec python3 "$HOME/.local/share/nacre/shell/tools/thunar-files.py" "${@:2}" ;;
- start) exec python3 "$HOME/.local/share/nacre/shell/tools/shell-supervisor.py" ;;
+ start) exec "$HOME/.local/share/nacre/shell/tools/nacre-helper" shell-supervisor ;;
  close) exec "$HOME/.local/share/nacre/shell/bin/qs" -c nacre ipc call nacre close ;;
  scheme-mode) exec "$HOME/.local/share/nacre/shell/bin/nacre_shell" scheme set -m "${2:-light}" ;;
  wallpaper-image) exec "$HOME/.local/share/nacre/shell/bin/nacre_shell" wallpaper -f "$2" ;;

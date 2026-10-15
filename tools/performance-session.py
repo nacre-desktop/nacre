@@ -572,6 +572,21 @@ def prepare(directory, revision=None, control=False, helper_binary=None):
 
 def shell_environment(tools, environment):
     """Use the production supervisor's child policy without running its main loop."""
+    if not (tools / "shell-supervisor.py").is_file():
+        result = subprocess.run(
+            [str(tools / "nacre-helper"), "shell-environment"],
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=25,
+        )
+        value = json.loads(result.stdout)
+        if not isinstance(value, dict) or any(
+            not isinstance(v, str) for v in value.values()
+        ):
+            raise ValueError("Invalid native shell environment")
+        return {**environment, **value}
     previous = dict(os.environ)
     sys.path.insert(0, str(tools))
     try:
@@ -726,20 +741,32 @@ def run(args, directory):
             shell_env.pop("MALLOC_MMAP_THRESHOLD_", None)
         if args.allocator_mmap_threshold:
             shell_env["MALLOC_MMAP_THRESHOLD_"] = str(args.allocator_mmap_threshold)
-        process = start(
-            ["dbus-run-session", "--", "quickshell", "-p", str(shell), "-n"],
-            "shell",
-            shell_env,
-        )
+        launch = ["quickshell", "-p", str(shell), "-n"]
+        if args.supervised_shell:
+            private_config = home / ".config/quickshell/nacre"
+            private_config.parent.mkdir(parents=True, exist_ok=True)
+            private_config.symlink_to(shell, target_is_directory=True)
+            qs = home / ".local/share/nacre/shell/bin/qs"
+            qs.parent.mkdir(parents=True, exist_ok=True)
+            qs.write_text(
+                "#!/bin/sh\nexec " + shlex.quote(shutil.which("quickshell")) + ' "$@"\n'
+            )
+            qs.chmod(0o700)
+            supervisor = home / ".local/share/nacre/shell/tools/shell-supervisor.py"
+            launch = (
+                [sys.executable, str(supervisor)]
+                if supervisor.is_file()
+                else [str(supervisor.with_name("nacre-helper")), "shell-supervisor"]
+            )
+        process = start(["dbus-run-session", "--", *launch], "shell", shell_env)
         pid = wait_for(
             lambda: next(
                 (
                     row["pid"]
-                    for path in Path("/proc").iterdir()
-                    if path.name.isdigit()
-                    and (row := performance.process(path.name))
-                    and row["ppid"] == process.pid
-                    and row["name"] in ("qs", "quickshell")
+                    for row in performance.snapshot(
+                        process.pid, detached=False
+                    ).values()
+                    if row["name"] in ("qs", "quickshell")
                 ),
                 None,
             ),
@@ -1664,6 +1691,11 @@ def main():
         help="Start actual Hyprlock only inside the disposable nested compositor",
     )
     parser.add_argument("--no-latency", action="store_true")
+    parser.add_argument(
+        "--supervised-shell",
+        action="store_true",
+        help="Exercise the selected revision's real supervisor in the disposable session",
+    )
     parser.add_argument(
         "--revision", help="Immutable git revision for the before capture"
     )

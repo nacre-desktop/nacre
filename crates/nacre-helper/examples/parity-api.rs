@@ -49,6 +49,28 @@ fn call(helper: &str, operation: &str, request: &Request) -> Result<Value> {
         std::process::exit(1);
     }
     let paths = Paths::environment()?;
+    if helper == "shell-supervisor" {
+        let root = paths.share.join("shell");
+        return match operation {
+            "restore" => Ok(value!(nacre_helper::shell_supervisor::restore(
+                &root,
+                &chrono::Local::now().format("%Y%m%dT%H%M%S").to_string()
+            )?)),
+            "health" => {
+                let environment = request
+                    .args
+                    .first()
+                    .or_else(|| request.kwargs.get("env"))
+                    .cloned()
+                    .unwrap_or(value!({}));
+                Ok(value!(nacre_helper::shell_supervisor::health(
+                    &root,
+                    &serde_json::from_value(environment)?
+                )?))
+            }
+            _ => Err("Unknown supervisor operation".into()),
+        };
+    }
     if helper == "nacre_shell" && operation == "from_image" {
         let mut options = request.kwargs.clone();
         if let Some(path) = options
