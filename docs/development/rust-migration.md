@@ -62,7 +62,11 @@ Orient 3efe8d1 supplies exact image APIs: all seven CI 38664017062 jobs green.
 Core colors are unchanged; only submodule/lock/SDK/bootstrap engine-label pins change.
 Shared Arch recipes/Core maps remain with the packaging owner; handoff coordinated.
 
-Next: finish integration gates and the exact candidate handoff to packaging;
+Palette 8185a87f is on main; fresh-install CI 38675727457 passed. Desktop CI
+passed Rust/repo suites but eight CLI cases could not locate the debug adapter
+beside a release helper. Fixing adapter discovery; no cases or gates skipped.
+
+Next: restore green Source CI and finish the exact packaging handoff;
 push and check CI. Then wallpaper-watch,
 wallpaper-media, their RSS/idle CPU, visible-consumer timings and quiet A/B/A/B.
 Preserve concurrent Settings changes; rebase only own commits, owner identity.

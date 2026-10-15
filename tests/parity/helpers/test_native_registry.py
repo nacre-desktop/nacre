@@ -49,6 +49,25 @@ class NativeRegistryTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Unsupported native compiler"):
                     registry.command(case, environ=environment)
 
+    def test_release_helper_uses_separately_built_debug_cli_provider(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary = self.executable(root / "target/release/nacre-helper")
+            provider = self.executable(
+                root / "target/debug/examples/palette-cli-parity"
+            )
+            case = {"helper": "nacre_shell", "command": "python3 -m nacre_shell"}
+            environment = {"NACRE_HELPER_BINARY": str(binary)}
+            self.assertEqual(
+                shlex.split(registry.command(case, root=root, environ=environment)),
+                [str(provider.resolve()), "python3 -m nacre_shell"],
+            )
+            environment["NACRE_PALETTE_CLI_PARITY"] = str(
+                root / "missing-explicit-provider"
+            )
+            with self.assertRaisesRegex(ValueError, "Build the developer palette-cli"):
+                registry.command(case, root=root, environ=environment)
+
     def executable(self, path):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("#!/bin/sh\nexit 0\n")

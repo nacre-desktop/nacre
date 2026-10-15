@@ -104,10 +104,30 @@ def command(case, override=None, *, root=ROOT, environ=None):
     if helper == "nacre_shell" and original:
         if original == ["python3", "-m", "nacre_shell"]:
             binary = native_binary(root, environ)
-            provider = binary.parent / "examples/palette-cli-parity"
-            if not provider.is_file():
+            environment = os.environ if environ is None else environ
+            override = environment.get("NACRE_PALETTE_CLI_PARITY")
+            candidates = (
+                [Path(override)]
+                if override
+                else [
+                    binary.parent / "examples/palette-cli-parity",
+                    root / "target/debug/examples/palette-cli-parity",
+                    root / "target/release/examples/palette-cli-parity",
+                ]
+            )
+            available = [
+                path
+                for path in candidates
+                if path.is_file() and os.access(path, os.X_OK)
+            ]
+            if not available:
                 raise ValueError("Build the developer palette-cli-parity provider")
-            return shlex.join([str(provider), "python3 -m nacre_shell"])
+            provider = (
+                available[0]
+                if override
+                else max(available, key=lambda path: path.stat().st_mtime_ns)
+            )
+            return shlex.join([str(provider.resolve()), "python3 -m nacre_shell"])
         if original == ["python3", "tests/parity/helpers/api.py", "nacre_shell.engine"]:
             return shlex.join(
                 [str(native_binary(root, environ, module_api=True)), "nacre_shell"]
