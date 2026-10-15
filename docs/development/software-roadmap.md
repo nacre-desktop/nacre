@@ -47,28 +47,22 @@ claims of pixel-identical upstream rendering when Orient derives additional role
 
 ## Curated, read-only extension catalog
 
-Ship a small catalog as reviewed data, not arbitrary remote code loaded into the
-main shell. Each record should identify its publisher, repository, immutable
-revision, Nacre manifest/schema compatibility, supported kinds, hardware/tools,
-license, screenshots and review date. Catalog updates should follow the normal
-source/package review path. Browsing and searching the catalog should work
-offline and must not fetch repositories, resolve mutable branches or execute
-anything.
+**Decision: deferred, 2026-10-15.** Phase 2 adds no catalog implementation,
+feed, schema or catalog browser. Existing manual extension import and the
+first-party starter packs remain separate features.
 
-The initial UI should provide descriptions, source/manifest links and supported
-capabilities. An explicit Install action should delegate to the existing staged
-extension importer; it should preserve the importer’s size/path checks and its
-disabled-by-default behavior. Enabling remains a separate decision. The first
-catalog should prioritize a few independently reviewed launcher packs and palette
-themes. Standalone panel entries must explain that they run as the user's normal
-applications; a separate process is not a filesystem sandbox. Embedded bar or
-dashboard widgets need a separate architecture proposal.
+**Trigger:** at least one real, independently maintained third-party Nacre
+extension exists with a compatible manifest, reviewable immutable source and
+clear licensing. At that point, return to the owner with a concrete catalog
+proposal for separate implementation approval. Nacre's own starter packs and
+the two theme pilots do not satisfy this trigger.
 
-Acceptance requires immutable provenance, malformed-record handling, duplicate-ID
-rejection, missing-capability explanations, no browsing-side network/code
-execution, offline fixtures and a nested test demonstrating that catalog changes
-cannot silently replace an enabled checkout. Define a removal/revocation policy
-that disables a problematic recommendation without deleting user edits.
+If approved later, the catalog should be reviewed, read-only data. Records should
+identify publisher, repository, immutable revision, compatibility, capabilities,
+license, screenshots and review date. Browsing and search must work offline and
+must not fetch or execute code. Installation should reuse the existing staged
+importer and remain disabled until separately enabled. Preserve user edits and
+define a removal/revocation policy before shipping recommendations.
 
 ## General-profile AUR review
 
@@ -91,17 +85,22 @@ personal skip-review flag or use `--noconfirm` to cross the review boundary.
 Preserve the existing personal path and its tests while adding general-profile
 coverage. Do not change shared packaging pins as part of this policy work.
 
-Before implementation, decide the review UI (terminal pager first is sufficient),
-dependency-recipe policy, recipe-change comparison and failure/cancel behavior.
+Approved decisions: terminal pager first; AUR dependency recipes reviewed one by
+one in the same flow; diffs for changed recipes; cancellation before the final
+build/install approval has no build or install effects.
 Tests should prove cancel has no build/install effects, the reviewed revision is
 the built revision, updated recipes are re-reviewed, missing AUR tooling remains
 actionable, and personal/general profiles keep distinct declared behavior.
 
-## Implementation gates
+## Implementation and validation gates
 
-Implement these proposals as separate changes after approval: bundle schema and
-two pilots; catalog data model and offline browser; general-profile AUR review.
-Use the existing settings/state registry for new preferences and retain global
-launcher search. Validate in nested sessions with normal protections, immutable
-fixtures, `nice -n 10` and bounded build parallelism. Source commits and CI do not
-authorize live installation, package publication or a release.
+The registered monospace font choice, two theme pilots and general-profile AUR
+review are implemented as separate source changes. The extension catalog remains
+deferred until its trigger and a new approval. No other theme candidates are
+promised by this phase.
+
+Source commits receive separate CI checks. Tests stay nested with private state,
+normal protections, `nice -n 10` and build parallelism of two. Source pushes do not
+authorize a deployment, package publication or release. The final laptop checks
+are supervised, reversible Phase 1 actions; ask before each action and restore
+its changes. Do not test DNS, SSH, firmware or the bootloader in that checklist.
