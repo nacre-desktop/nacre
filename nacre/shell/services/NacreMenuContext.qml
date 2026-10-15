@@ -976,7 +976,9 @@ Scope {
                 used.add(family);
             const aur = item.repository === "AUR" && !snapshot.capabilities.aur;
             const disabled = family ? false : !snapshot.capabilities.packages || aur;
-            rows.push(valueRow(route, Qt.md5(family || item.package), (mono ? NacreI18n.tr("software.fonts.mono-choice", "Terminal font: {font}", {font: item.name}) : item.name), family ? operation : "install-package", family || item.package, "text_fields", family && mono ? NacreI18n.tr("software.fonts.mono-preview", "Use for Kitty and Nacre monospace text") : family ? NacreI18n.tr("software.fonts.choose", "Preview and select this interface font") : NacreI18n.tr("software.fonts.install", "Install this font package in a visible terminal"), {
+            rows.push(valueRow(route, Qt.md5(family || item.package), (mono ? NacreI18n.tr("software.fonts.mono-choice", "Terminal font: {font}", {
+                    font: item.name
+                }) : item.name), family ? operation : "install-package", family || item.package, "text_fields", family && mono ? NacreI18n.tr("software.fonts.mono-preview", "Use for Kitty and Nacre monospace text") : family ? NacreI18n.tr("software.fonts.choose", "Preview and select this interface font") : NacreI18n.tr("software.fonts.install", "Install this font package in a visible terminal"), {
                 previewFont: family || "",
                 checked: !!family && DesktopSettings.data[key] === family,
                 aliases: [item.package, ...item.families, mono ? "terminal monospace font typeface nerd" : "interface font typeface nerd"],

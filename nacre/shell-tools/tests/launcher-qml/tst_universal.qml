@@ -603,7 +603,10 @@ TestCase {
         const value = view();
         value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
             fonts: ["JetBrains Mono", "FiraCode Nerd Font"],
-            capabilities: {packages: true, aur: false}
+            capabilities: {
+                packages: true,
+                aur: false
+            }
         });
         DesktopSettings.set("interfaceFont", "IBM Plex Sans");
         value.navigate("style.mono-fonts");

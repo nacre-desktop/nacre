@@ -1,15 +1,14 @@
+pragma Singleton
 import QtQuick
 import Quickshell.Io as Io
 import qs.services
-pragma Singleton
 
 QtObject {
     id: root
 
     property string textFamily: DesktopSettings.data.interfaceFont || "IBM Plex Sans"
     property string monoFamily: DesktopSettings.data.monoFont || "JetBrainsMono Nerd Font"
-    readonly property Io.FileView
-    sizeFile: Io.FileView {
+    readonly property Io.FileView sizeFile: Io.FileView {
         path: Qt.resolvedUrl("size-scale.json")
         blockLoading: true
     }
@@ -19,9 +18,9 @@ QtObject {
     readonly property var radii: sizeScale.radii
     readonly property var textSize: {
         const offset = (DesktopSettings.data.textSize || sizeScale.text.body) - sizeScale.text.body;
-        const values = {
-        };
-        for (const key of Object.keys(sizeScale.text)) values[key] = sizeScale.text[key] + offset
+        const values = {};
+        for (const key of Object.keys(sizeScale.text))
+            values[key] = sizeScale.text[key] + offset;
         return values;
     }
     readonly property var iconSize: sizeScale.icons
@@ -48,11 +47,11 @@ QtObject {
     property bool paletteSwitch: false
     readonly property bool colorMotionAllowed: motionEnabled && !paletteSwitch && NacreColours.publishing !== true
 
-    function gradientColour(base, shaded) : color {
+    function gradientColour(base, shaded): color {
         return gradientsEnabled ? shaded : base;
     }
 
-    function focusInk(background) : color {
+    function focusInk(background): color {
         function linear(channel) {
             return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
         }
