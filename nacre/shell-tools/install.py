@@ -115,6 +115,21 @@ def install_native_helper(helper, target):
         temporary.unlink(missing_ok=True)
 
 
+def install_daemon_links(target):
+    """Native aliases in the owned runtime; no user unit activation."""
+    directory = target.parent.parent / "bin"
+    directory.mkdir(parents=True, exist_ok=True)
+    aliases = [directory / name for name in ("nacrectl", "nacre-daemon")]
+    for alias in aliases:
+        if alias.is_symlink() and os.readlink(alias) == "../tools/nacre-helper":
+            continue
+        if alias.exists() or alias.is_symlink():
+            raise RuntimeError("Refusing to replace an unmanaged daemon command")
+    for alias in aliases:
+        if not alias.is_symlink():
+            alias.symlink_to("../tools/nacre-helper")
+
+
 def retire_native_helpers(directory):
     for retired in (
         "kde-palette",
@@ -234,6 +249,7 @@ def deploy(code_only=False):
     )
     target = DEST / "tools/nacre-helper"
     install_native_helper(helper, target)
+    install_daemon_links(target)
     # The release transaction already backed up this owned runtime tree.
     retire_native_helpers(DEST / "tools")
     # Retire the superseded procedural-image dedication from owned helper code.
@@ -399,6 +415,11 @@ def deploy(code_only=False):
     )
     write(DEST / "bin/qs", (ROOT / "launch.sh").read_text(), mode=0o755)
     write(DEST / "bin/nacre_shell", (ROOT / "cli-bridge.sh").read_text(), mode=0o755)
+    for name in ("nacrectl", "nacre-daemon"):
+        write(HOME / ".local/bin" / name, link=DEST / "bin" / name)
+    # Files are staged only. Enabling or starting the daemon requires its owner's decision.
+    for name in ("nacre-daemon.socket", "nacre-daemon.service"):
+        write(HOME / ".config/systemd/user" / name, (ROOT / name).read_text())
     write(HOME / ".config/nacre/rofi.rasi", (ROOT / "rofi.rasi").read_text())
     write(
         HOME / ".config/rofi/config.rasi",

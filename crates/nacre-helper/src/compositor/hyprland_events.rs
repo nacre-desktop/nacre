@@ -37,6 +37,10 @@ pub struct Events {
     ended: bool,
 }
 impl Events {
+    /// Transfer the already connected stream to an async owner after its initial snapshot.
+    pub fn into_stream(self) -> BufReader<UnixStream> {
+        self.stream
+    }
     /// A duplicate descriptor lets an owning observer interrupt a blocked read.
     pub(crate) fn control(&self) -> Result<UnixStream> {
         self.stream.get_ref().try_clone().map_err(io_error)

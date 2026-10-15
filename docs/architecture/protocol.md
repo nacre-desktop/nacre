@@ -1,8 +1,8 @@
 # Nacre private protocol v1
 
-F0 contract for nacre-protocol and all Nacre clients. See
-[foundation.md](foundation.md). F1 will commit generated schemas, Luau definitions
-and golden transcripts; this document does not claim an implemented server.
+Contract for nacre-protocol and all Nacre clients. See
+[foundation.md](foundation.md). Committed schemas, Luau definitions and transcripts
+live under `protocol/`; the daemon and native client share the Rust wire types.
 
 ## Transport and bounds
 
@@ -125,6 +125,11 @@ payloads. Structured operation errors may identify a registered store and line.
 | internal | Sanitized unexpected service failure | false |
 
 `retry` is always explicit; clients decide whether retrying an action is safe.
+Optional `err.dispatched` is false only when the daemon proves that no UI provider
+received the call. Provider replies, lost providers and UI deadlines are marked
+true. Its absence means unknown. The one-release `qs ipc` fallback is allowed for
+a missing default socket or unavailable UI with dispatched=false, never an
+uncertain result. An explicit private socket override disables that fallback.
 Malformed/oversized frames, failed handshakes and UID mismatches close the link.
 An ordinary failed call leaves the link usable.
 
@@ -169,3 +174,30 @@ Clients replay the same committed transcripts. Property tests cover patch
 round trips and recovery after gaps; fuzz targets cover framing and merge patch.
 Nested niri and Hyprland tests subscribe, kill -9, restart and verify resync.
 Nightly jobs and the full three-hour soak remain deferred to the later rails step.
+
+## First services and native commands
+
+`compositor` v1 is read-only. Its root has `backend`, `available`, `error`,
+`outputs`/`outputOrder`, `workspaces`/`workspaceOrder`, `windows`/`windowOrder`,
+`focus {windowId,workspaceId,outputId}`, `keyboard {names,currentIndex,activeName}`,
+`capabilities`, and overview/configuration status. Collections use string keys;
+Hyprland numeric IDs are normalized, with native IDs retained as metadata.
+Unresolved references are held out until a consistent projection is possible.
+Keyboard names are scalar lists. Title-only updates are limited to 10 Hz.
+Niri requires one shared event socket and one persistent request socket;
+Hyprland has one event socket and closes each request socket by protocol.
+
+`daemon.status` returns boot, safe-mode, client and service status.
+`daemon.ping` returns null without outside work. `daemon` is the service-health
+topic; safe mode also exposes one stable record on `daemon.notice`.
+Settings and other desktop services arrive in F2–F4; notification hosting and
+`menu.query` remain deferred. Wire schemas cover structural shapes/ranges;
+the decoder also enforces UTF-8 byte bounds and cross-field constraints.
+
+The same ELF dispatches `nacre-helper daemon` / `nacre-daemon`, and
+`nacre-helper ctl` / `nacrectl`. Native commands are `status`, `call [--timeout MS]
+METHOD [JSON]`, `call --list`, `watch TOPIC`, and `ui TARGET METHOD [ARGS...]`.
+Watch reconnects and resubscribes; it exits when its output pipe closes.
+`NACRE_DAEMON_FRAME_MS` configures the advertised coalescing interval (default 16).
+Standalone tests set an absolute `NACRE_DAEMON_SOCKET` and private HOME/XDG/buses.
+User units are staged; enabling/starting them requires the owner's decision.

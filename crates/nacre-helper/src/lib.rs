@@ -9,6 +9,7 @@ pub mod colors_launch;
 pub mod compositor;
 pub mod compositor_compat;
 pub mod compositor_config;
+pub mod daemon;
 pub mod dashboard_data;
 pub mod dashboard_media;
 pub mod dashboard_system;

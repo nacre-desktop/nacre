@@ -1,0 +1,772 @@
+//! One owner for topic state and bounded per-client delivery. No timer polls.
+use nacre_protocol::{
+    patch::{self, Diff},
+    ErrorCode, Failure, Id, Message, Method, Reply, MAX_CALLS, MAX_CLIENTS, MAX_EVENTS,
+    MAX_SAFE_INTEGER, MAX_SUBSCRIPTIONS,
+};
+use serde_json::{json, Value};
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    rc::Rc,
+    time::{Duration, Instant},
+};
+use tokio::sync::{oneshot, Notify};
+
+const QUEUE_BYTES: usize = 2 * 1024 * 1024;
+const BASELINE_BYTES: usize = 8 * 1024 * 1024;
+const TOPIC_BYTES: usize = 32 * 1024 * 1024;
+pub type Shared = Rc<std::cell::RefCell<Hub>>;
+pub fn failure(code: ErrorCode, message: &str, retry: bool) -> Failure {
+    Failure::new(code, message, retry)
+}
+struct Topic {
+    seq: u64,
+    data: Value,
+    bytes: usize,
+}
+struct Subscription {
+    delivered: Option<Rc<Topic>>,
+    considered: Option<u64>,
+    generation: u64,
+    force: bool,
+    next: Instant,
+}
+struct Client {
+    pub wake: Rc<Notify>,
+    topics: BTreeMap<String, Subscription>,
+    generation: u64,
+    events: VecDeque<(Message, usize)>,
+    event_bytes: usize,
+    lost: BTreeMap<String, (u64, u64)>,
+    replies: VecDeque<(Message, usize)>,
+    reply_bytes: usize,
+    inflight: BTreeSet<Id>,
+}
+pub struct Packet {
+    pub message: Message,
+    commit: Option<(String, Rc<Topic>, u64)>,
+}
+pub struct Hub {
+    pub boot: String,
+    pub safe: bool,
+    pub frame: Duration,
+    topics: BTreeMap<String, Rc<Topic>>,
+    clients: BTreeMap<u64, Client>,
+    next_client: u64,
+    event_seq: BTreeMap<String, u64>,
+    pub services: BTreeMap<String, Value>,
+    provider: Option<(u64, BTreeMap<String, u16>)>,
+    routes: BTreeMap<Id, (u64, oneshot::Sender<Reply>)>,
+    next_route: u64,
+}
+impl Hub {
+    pub fn new(boot: String, safe: bool, frame: Duration) -> Self {
+        Self {
+            boot,
+            safe,
+            frame,
+            topics: BTreeMap::new(),
+            clients: BTreeMap::new(),
+            next_client: 0,
+            event_seq: BTreeMap::new(),
+            services: BTreeMap::new(),
+            provider: None,
+            routes: BTreeMap::new(),
+            next_route: 0,
+        }
+    }
+    pub fn shared(self) -> Shared {
+        Rc::new(std::cell::RefCell::new(self))
+    }
+    pub fn snapshot(&self, name: &str) -> Option<Value> {
+        self.topics.get(name).map(|topic| topic.data.clone())
+    }
+    pub fn publish(&mut self, topic: &str, data: Value) -> Result<(), Failure> {
+        if !self.topics.contains_key(topic) && self.topics.len() >= MAX_SUBSCRIPTIONS {
+            return Err(failure(ErrorCode::Busy, "Topic limit reached", true));
+        }
+        let bytes = serde_json::to_vec(&data)
+            .map_err(|_| failure(ErrorCode::Internal, "Topic encoding failed", false))?
+            .len();
+        let old = self.topics.get(topic);
+        if old.is_some_and(|old| old.data == data) {
+            return Ok(());
+        }
+        let seq = old.map_or(Ok(0), |old| {
+            old.seq
+                .checked_add(1)
+                .filter(|s| *s <= MAX_SAFE_INTEGER)
+                .ok_or_else(|| failure(ErrorCode::Internal, "Topic sequence exhausted", false))
+        })?;
+        nacre_protocol::framing::encode(&Message::Snap {
+            topic: topic.into(),
+            seq,
+            data: data.clone(),
+        })?;
+        if self.topics.values().map(|t| t.bytes).sum::<usize>() - old.map_or(0, |t| t.bytes) + bytes
+            > TOPIC_BYTES
+        {
+            return Err(failure(
+                ErrorCode::TooLarge,
+                "Topic memory limit reached",
+                false,
+            ));
+        }
+        self.topics
+            .insert(topic.into(), Rc::new(Topic { seq, data, bytes }));
+        let over: Vec<_> = self
+            .clients
+            .iter()
+            .filter(|(_, client)| {
+                client
+                    .topics
+                    .iter()
+                    .map(|(name, subscription)| {
+                        let current = self.topics.get(name).map_or(0, |topic| topic.bytes);
+                        current.max(
+                            subscription
+                                .delivered
+                                .as_ref()
+                                .map_or(0, |topic| topic.bytes),
+                        )
+                    })
+                    .sum::<usize>()
+                    > BASELINE_BYTES
+            })
+            .map(|(id, _)| *id)
+            .collect();
+        for id in over {
+            tracing::warn!("Client exceeded snapshot memory limit");
+            self.remove_client(id);
+        }
+        for client in self.clients.values() {
+            if client.topics.contains_key(topic) {
+                client.wake.notify_one();
+            }
+        }
+        Ok(())
+    }
+    pub fn add_client(&mut self) -> Result<(u64, Rc<Notify>), Failure> {
+        if self.clients.len() >= MAX_CLIENTS {
+            return Err(failure(ErrorCode::Busy, "Client limit reached", true));
+        }
+        self.next_client = self
+            .next_client
+            .checked_add(1)
+            .ok_or_else(|| failure(ErrorCode::Internal, "Client sequence exhausted", false))?;
+        let wake = Rc::new(Notify::new());
+        self.clients.insert(
+            self.next_client,
+            Client {
+                wake: wake.clone(),
+                topics: BTreeMap::new(),
+                generation: 0,
+                events: VecDeque::new(),
+                event_bytes: 0,
+                lost: BTreeMap::new(),
+                replies: VecDeque::new(),
+                reply_bytes: 0,
+                inflight: BTreeSet::new(),
+            },
+        );
+        Ok((self.next_client, wake))
+    }
+    pub fn remove_client(&mut self, id: u64) {
+        if let Some(client) = self.clients.remove(&id) {
+            client.wake.notify_one();
+        }
+        if self.provider.as_ref().is_some_and(|p| p.0 == id) {
+            self.provider = None;
+        }
+        self.routes.retain(|_, (provider, _)| *provider != id);
+    }
+    pub fn has_client(&self, id: u64) -> bool {
+        self.clients.contains_key(&id)
+    }
+    pub fn methods(&self) -> BTreeMap<String, Method> {
+        use nacre_protocol::Capability;
+        let mut methods = nacre_protocol::core_methods();
+        if let Some((_, provider)) = &self.provider {
+            for (name, version) in provider {
+                methods.insert(
+                    name.clone(),
+                    Method {
+                        v: *version,
+                        class: Capability::Ui,
+                        timeout: 1000,
+                        params: json!({"type":"object"}),
+                        result: json!({}),
+                    },
+                );
+            }
+        }
+        methods
+    }
+    pub fn welcome(&self) -> Message {
+        Message::Welcome {
+            proto: nacre_protocol::VERSION,
+            min: nacre_protocol::MIN_VERSION,
+            boot: self.boot.clone(),
+            topics: self.topics.keys().map(|key| (key.clone(), 1)).collect(),
+            methods: self.methods(),
+            frame_ms: Some(self.frame.as_millis() as u32),
+        }
+    }
+    pub fn status(&self) -> Value {
+        json!({"boot":self.boot,"safe":self.safe,"clients":self.clients.len(),"services":self.services,"topics":self.topics.keys().cloned().collect::<Vec<_>>()})
+    }
+    pub fn service(&mut self, name: &str, status: &str, failures: usize) -> Result<(), Failure> {
+        self.services
+            .insert(name.into(), json!({"status":status,"failures":failures}));
+        self.publish("daemon", self.status())
+    }
+    pub fn subscribe(&mut self, id: u64, topics: &[String], resync: bool) -> Result<(), Failure> {
+        if topics.iter().any(|topic| !self.topics.contains_key(topic)) {
+            return Err(failure(ErrorCode::UnknownTopic, "Unknown topic", false));
+        }
+        let client = self
+            .clients
+            .get_mut(&id)
+            .ok_or_else(|| failure(ErrorCode::Unavailable, "Client disconnected", true))?;
+        if resync
+            && topics
+                .iter()
+                .any(|topic| !client.topics.contains_key(topic))
+        {
+            return Err(failure(
+                ErrorCode::InvalidRequest,
+                "Resync requires a subscription",
+                false,
+            ));
+        }
+        let count = client
+            .topics
+            .keys()
+            .chain(topics)
+            .collect::<BTreeSet<_>>()
+            .len();
+        if count > MAX_SUBSCRIPTIONS {
+            return Err(failure(ErrorCode::Busy, "Subscription limit reached", true));
+        }
+        if topics
+            .iter()
+            .filter_map(|name| self.topics.get(name))
+            .map(|t| t.bytes)
+            .sum::<usize>()
+            + client
+                .topics
+                .iter()
+                .filter(|(name, _)| !topics.contains(name))
+                .filter_map(|(name, _)| self.topics.get(name))
+                .map(|t| t.bytes)
+                .sum::<usize>()
+            > BASELINE_BYTES
+        {
+            return Err(failure(
+                ErrorCode::Busy,
+                "Subscription memory limit reached",
+                true,
+            ));
+        }
+        for topic in topics {
+            client.generation += 1;
+            client.topics.insert(
+                topic.clone(),
+                Subscription {
+                    delivered: None,
+                    considered: None,
+                    generation: client.generation,
+                    force: true,
+                    next: Instant::now(),
+                },
+            );
+        }
+        client.wake.notify_one();
+        Ok(())
+    }
+    pub fn unsubscribe(&mut self, id: u64, topics: &[String]) {
+        if let Some(client) = self.clients.get_mut(&id) {
+            for topic in topics {
+                client.topics.remove(topic);
+                client.lost.remove(topic);
+            }
+            client.events.retain(
+                |(event, _)| !matches!(event,Message::Ev {topic,..} if topics.contains(topic)),
+            );
+            client.event_bytes = client.events.iter().map(|(_, bytes)| bytes).sum();
+        }
+    }
+    pub fn enqueue(&mut self, id: u64, message: Message) -> Result<(), Failure> {
+        let bytes = nacre_protocol::framing::encode(&message)?.len();
+        let client = self
+            .clients
+            .get_mut(&id)
+            .ok_or_else(|| failure(ErrorCode::Unavailable, "Client disconnected", true))?;
+        if client.replies.len() >= MAX_CALLS || client.reply_bytes + bytes > QUEUE_BYTES {
+            return Err(failure(ErrorCode::Busy, "Reply queue limit reached", true));
+        }
+        client.reply_bytes += bytes;
+        client.replies.push_back((message, bytes));
+        client.wake.notify_one();
+        Ok(())
+    }
+    pub fn begin_call(&mut self, id: u64, call: &Id) -> Result<(), Failure> {
+        let client = self
+            .clients
+            .get_mut(&id)
+            .ok_or_else(|| failure(ErrorCode::Unavailable, "Client disconnected", true))?;
+        if client.inflight.contains(call) {
+            return Err(failure(
+                ErrorCode::InvalidRequest,
+                "Duplicate in-flight call ID",
+                false,
+            ));
+        }
+        if client.inflight.len() >= MAX_CALLS {
+            return Err(failure(ErrorCode::Busy, "Call limit reached", true));
+        }
+        client.inflight.insert(call.clone());
+        Ok(())
+    }
+    pub fn finish_call(&mut self, id: u64, call: Id, reply: Reply) -> Result<(), Failure> {
+        if let Some(client) = self.clients.get_mut(&id) {
+            client.inflight.remove(&call);
+        }
+        let message = Message::Ret {
+            id: call.clone(),
+            reply,
+        };
+        if let Err(error) = nacre_protocol::framing::encode(&message) {
+            return self.enqueue(
+                id,
+                Message::Ret {
+                    id: call,
+                    reply: Reply::Err { err: error },
+                },
+            );
+        }
+        self.enqueue(id, message)
+    }
+    pub fn event(&mut self, topic: &str, name: &str, data: Value) -> Result<(), Failure> {
+        let seq = self
+            .event_seq
+            .get(topic)
+            .copied()
+            .unwrap_or(0)
+            .checked_add(1)
+            .filter(|n| *n <= MAX_SAFE_INTEGER)
+            .ok_or_else(|| failure(ErrorCode::Internal, "Event sequence exhausted", false))?;
+        let message = Message::Ev {
+            topic: topic.into(),
+            name: name.into(),
+            seq,
+            data,
+        };
+        let bytes = nacre_protocol::framing::encode(&message)?.len();
+        self.event_seq.insert(topic.into(), seq);
+        for client in self
+            .clients
+            .values_mut()
+            .filter(|client| client.topics.contains_key(topic))
+        {
+            client.events.push_back((message.clone(), bytes));
+            client.event_bytes += bytes;
+            while client.events.len() > MAX_EVENTS || client.event_bytes > QUEUE_BYTES {
+                if let Some((Message::Ev { topic, seq, .. }, bytes)) = client.events.pop_front() {
+                    client.event_bytes -= bytes;
+                    client
+                        .lost
+                        .entry(topic)
+                        .and_modify(|range| range.1 = seq)
+                        .or_insert((seq, seq));
+                }
+            }
+            client.wake.notify_one();
+        }
+        Ok(())
+    }
+    pub fn next(&mut self, id: u64, now: Instant) -> (Option<Packet>, Option<Instant>) {
+        let Some(client) = self.clients.get_mut(&id) else {
+            return (None, None);
+        };
+        if let Some((message, bytes)) = client.replies.pop_front() {
+            client.reply_bytes -= bytes;
+            return (
+                Some(Packet {
+                    message,
+                    commit: None,
+                }),
+                None,
+            );
+        }
+        if let Some((topic, (from, to))) = client.lost.pop_first() {
+            return (
+                Some(Packet {
+                    message: Message::Lost { topic, from, to },
+                    commit: None,
+                }),
+                None,
+            );
+        }
+        if let Some((message, bytes)) = client.events.pop_front() {
+            client.event_bytes -= bytes;
+            return (
+                Some(Packet {
+                    message,
+                    commit: None,
+                }),
+                None,
+            );
+        }
+        let mut deadline = None;
+        for (name, subscription) in &mut client.topics {
+            let Some(topic) = self.topics.get(name) else {
+                continue;
+            };
+            if !subscription.force && subscription.considered == Some(topic.seq) {
+                continue;
+            }
+            if now < subscription.next {
+                deadline =
+                    Some(deadline.map_or(subscription.next, |d: Instant| d.min(subscription.next)));
+                continue;
+            }
+            let message = match &subscription.delivered {
+                Some(delivered) if !subscription.force => {
+                    match patch::diff(&delivered.data, &topic.data) {
+                        Diff::Unchanged => {
+                            subscription.considered = Some(topic.seq);
+                            continue;
+                        }
+                        Diff::Patch(data) => Message::Patch {
+                            topic: name.clone(),
+                            base: delivered.seq,
+                            seq: topic.seq,
+                            data,
+                        },
+                        Diff::Snapshot(data) => Message::Snap {
+                            topic: name.clone(),
+                            seq: topic.seq,
+                            data,
+                        },
+                    }
+                }
+                _ => Message::Snap {
+                    topic: name.clone(),
+                    seq: topic.seq,
+                    data: topic.data.clone(),
+                },
+            };
+            subscription.force = false;
+            return (
+                Some(Packet {
+                    message,
+                    commit: Some((name.clone(), topic.clone(), subscription.generation)),
+                }),
+                deadline,
+            );
+        }
+        (None, deadline)
+    }
+    pub fn sent(&mut self, id: u64, packet: &Packet, now: Instant) {
+        if let Some((name, topic, generation)) = &packet.commit {
+            if let Some(subscription) = self
+                .clients
+                .get_mut(&id)
+                .and_then(|client| client.topics.get_mut(name))
+            {
+                if subscription.generation == *generation {
+                    subscription.delivered = Some(topic.clone());
+                    subscription.considered = Some(topic.seq);
+                    subscription.next = now + self.frame;
+                }
+            }
+        }
+    }
+    pub fn register(&mut self, id: u64, methods: BTreeMap<String, u16>) -> Result<(), Failure> {
+        Message::Register {
+            provider: "ui".into(),
+            methods: methods.clone(),
+        }
+        .validate()?;
+        if nacre_protocol::core_methods()
+            .keys()
+            .chain(methods.keys())
+            .collect::<BTreeSet<_>>()
+            .len()
+            > 512
+        {
+            return Err(failure(
+                ErrorCode::Busy,
+                "Method registry limit reached",
+                true,
+            ));
+        }
+        if self
+            .provider
+            .as_ref()
+            .is_some_and(|provider| provider.0 != id)
+        {
+            return Err(failure(
+                ErrorCode::Busy,
+                "UI provider is already registered",
+                true,
+            ));
+        }
+        self.provider = Some((id, methods));
+        Ok(())
+    }
+    pub fn forward(
+        &mut self,
+        method: &str,
+        params: Value,
+        timeout: Option<u32>,
+    ) -> Result<(Id, oneshot::Receiver<Reply>), Failure> {
+        let provider = self
+            .provider
+            .as_ref()
+            .filter(|(_, methods)| methods.contains_key(method))
+            .map(|p| p.0)
+            .ok_or_else(|| {
+                failure(ErrorCode::Unavailable, "UI provider is unavailable", true)
+                    .dispatch_state(false)
+            })?;
+        if self.routes.len() >= MAX_CALLS {
+            return Err(failure(ErrorCode::Busy, "UI call limit reached", true));
+        }
+        self.next_route = self
+            .next_route
+            .checked_add(1)
+            .ok_or_else(|| failure(ErrorCode::Internal, "UI call sequence exhausted", false))?;
+        let id = Id::Text(format!("provider-{}", self.next_route));
+        let (sender, receiver) = oneshot::channel();
+        self.enqueue(
+            provider,
+            Message::Call {
+                id: id.clone(),
+                m: method.into(),
+                p: params,
+                timeout,
+            },
+        )?;
+        self.routes.insert(id.clone(), (provider, sender));
+        Ok((id, receiver))
+    }
+    pub fn answer(&mut self, provider: u64, id: &Id, reply: Reply) -> Result<(), Failure> {
+        if !self.routes.get(id).is_some_and(|route| route.0 == provider) {
+            return Err(failure(
+                ErrorCode::InvalidRequest,
+                "Unknown provider reply",
+                false,
+            ));
+        }
+        if let Some((_, sender)) = self.routes.remove(id) {
+            if sender.send(reply).is_err() {
+                tracing::debug!("UI result arrived after caller deadline");
+            }
+        }
+        Ok(())
+    }
+    pub fn cancel_route(&mut self, id: &Id) {
+        self.routes.remove(id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn fixture() -> (Hub, u64, Instant) {
+        let mut hub = Hub::new("fixture".into(), false, Duration::from_millis(16));
+        hub.publish("x", json!({"v":0})).unwrap();
+        let (id, _) = hub.add_client().unwrap();
+        hub.subscribe(id, &["x".into()], false).unwrap();
+        (hub, id, Instant::now())
+    }
+    fn send(hub: &mut Hub, id: u64, at: Instant) -> Message {
+        let packet = hub.next(id, at).0.expect("packet");
+        hub.sent(id, &packet, at);
+        packet.message
+    }
+    #[test]
+    fn coalescing_uses_only_the_last_successfully_written_client_baseline() {
+        let (mut hub, id, now) = fixture();
+        assert!(matches!(
+            send(&mut hub, id, now),
+            Message::Snap { seq: 0, .. }
+        ));
+        hub.publish("x", json!({"v":1})).unwrap();
+        hub.publish("x", json!({"v":2})).unwrap();
+        assert!(hub.next(id, now).0.is_none());
+        assert!(matches!(
+            send(&mut hub, id, now + Duration::from_millis(16)),
+            Message::Patch {
+                base: 0,
+                seq: 2,
+                ..
+            }
+        ));
+    }
+    #[test]
+    fn change_back_before_delivery_does_not_advance_the_clients_wire_sequence() {
+        let (mut hub, id, now) = fixture();
+        send(&mut hub, id, now);
+        hub.publish("x", json!({"v":1})).unwrap();
+        hub.publish("x", json!({"v":0})).unwrap();
+        assert!(hub.next(id, now + Duration::from_millis(16)).0.is_none());
+        assert!(hub.next(id, now + Duration::from_millis(16)).1.is_none());
+        hub.publish("x", json!({"v":3})).unwrap();
+        assert!(matches!(
+            send(&mut hub, id, now + Duration::from_millis(16)),
+            Message::Patch {
+                base: 0,
+                seq: 3,
+                ..
+            }
+        ));
+    }
+    #[test]
+    fn resubscribe_inflight_does_not_commit_an_obsolete_subscription_generation() {
+        let (mut hub, id, now) = fixture();
+        let packet = hub.next(id, now).0.unwrap();
+        hub.unsubscribe(id, &["x".into()]);
+        hub.subscribe(id, &["x".into()], false).unwrap();
+        hub.sent(id, &packet, now);
+        assert!(matches!(
+            send(&mut hub, id, Instant::now()),
+            Message::Snap { .. }
+        ));
+        assert_eq!(
+            hub.subscribe(id, &["missing".into()], true)
+                .unwrap_err()
+                .code,
+            ErrorCode::UnknownTopic
+        );
+    }
+    #[test]
+    fn two_clients_get_independent_patches_and_explicit_resync_gets_snapshot() {
+        let (mut hub, first, now) = fixture();
+        send(&mut hub, first, now);
+        hub.publish("x", json!({"v":1})).unwrap();
+        let (second, _) = hub.add_client().unwrap();
+        hub.subscribe(second, &["x".into()], false).unwrap();
+        let later = Instant::now();
+        send(&mut hub, second, later);
+        hub.publish("x", json!({"v":2})).unwrap();
+        assert!(matches!(
+            send(&mut hub, first, later + Duration::from_millis(16)),
+            Message::Patch {
+                base: 0,
+                seq: 2,
+                ..
+            }
+        ));
+        assert!(matches!(
+            send(&mut hub, second, later + Duration::from_millis(16)),
+            Message::Patch {
+                base: 1,
+                seq: 2,
+                ..
+            }
+        ));
+        hub.subscribe(first, &["x".into()], true).unwrap();
+        assert!(matches!(
+            send(&mut hub, first, later + Duration::from_millis(16)),
+            Message::Snap { seq: 2, .. }
+        ));
+    }
+    #[test]
+    fn events_overflow_with_lost_before_the_surviving_events_and_keep_latest() {
+        let (mut hub, id, now) = fixture();
+        send(&mut hub, id, now);
+        for n in 1..=300 {
+            hub.event("x", "example", json!({"id":n})).unwrap();
+        }
+        assert_eq!(hub.clients[&id].events.len(), 256);
+        assert!(matches!(
+            send(&mut hub, id, now),
+            Message::Lost {
+                from: 1,
+                to: 44,
+                ..
+            }
+        ));
+        assert!(matches!(
+            send(&mut hub, id, now),
+            Message::Ev { seq: 45, .. }
+        ));
+        hub.unsubscribe(id, &["x".into()]);
+        assert_eq!(hub.clients[&id].event_bytes, 0);
+    }
+    #[test]
+    fn oversized_state_and_duplicate_calls_and_second_ui_provider_are_rejected() {
+        let (mut hub, id, _) = fixture();
+        assert_eq!(
+            hub.publish("x", json!({"v":"x".repeat(nacre_protocol::MAX_FRAME)}))
+                .unwrap_err()
+                .code,
+            ErrorCode::TooLarge
+        );
+        hub.begin_call(id, &Id::Integer(1)).unwrap();
+        assert_eq!(
+            hub.begin_call(id, &Id::Integer(1)).unwrap_err().code,
+            ErrorCode::InvalidRequest
+        );
+        hub.register(id, BTreeMap::from([("ui.dispatch".into(), 1)]))
+            .unwrap();
+        let (other, _) = hub.add_client().unwrap();
+        assert_eq!(
+            hub.register(other, BTreeMap::new()).unwrap_err().code,
+            ErrorCode::Busy
+        );
+        assert_eq!(hub.provider.as_ref().unwrap().0, id);
+    }
+    #[test]
+    fn ui_routes_use_independent_ids_and_disconnect_drops_waiters() {
+        let (mut hub, id, now) = fixture();
+        hub.register(id, BTreeMap::from([("ui.dispatch".into(), 1)]))
+            .unwrap();
+        let (route, mut receiver) = hub.forward("ui.dispatch", json!({}), Some(100)).unwrap();
+        assert!(matches!(send(&mut hub, id, now), Message::Call { .. }));
+        hub.answer(id, &route, Reply::Ok { ok: Value::Null })
+            .unwrap();
+        assert_eq!(receiver.try_recv().unwrap(), Reply::Ok { ok: Value::Null });
+        let (_, mut receiver) = hub.forward("ui.dispatch", json!({}), Some(100)).unwrap();
+        hub.remove_client(id);
+        assert!(receiver.try_recv().is_err());
+    }
+    #[test]
+    fn registry_and_topic_caps_keep_welcome_encodable_and_large_calls_get_typed_errors() {
+        let (mut hub, id, now) = fixture();
+        for n in 0..127 {
+            hub.publish(&format!("topic-{n}"), json!({})).unwrap();
+        }
+        assert_eq!(
+            hub.publish("too-many", json!({})).unwrap_err().code,
+            ErrorCode::Busy
+        );
+        let methods = (0..512).map(|n| (format!("ui.method{n}"), 1)).collect();
+        assert_eq!(hub.register(id, methods).unwrap_err().code, ErrorCode::Busy);
+        assert!(nacre_protocol::framing::encode(&hub.welcome()).is_ok());
+        hub.begin_call(id, &Id::Integer(9)).unwrap();
+        hub.finish_call(
+            id,
+            Id::Integer(9),
+            Reply::Ok {
+                ok: json!("x".repeat(nacre_protocol::MAX_FRAME)),
+            },
+        )
+        .unwrap();
+        assert!(matches!(
+            send(&mut hub, id, now),
+            Message::Ret {
+                reply: Reply::Err {
+                    err: Failure {
+                        code: ErrorCode::TooLarge,
+                        ..
+                    }
+                },
+                ..
+            }
+        ));
+    }
+}

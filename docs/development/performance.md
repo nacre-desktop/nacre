@@ -1486,3 +1486,50 @@ The earlier candidate sample was 98.56→30.96 ms CPU and native17.86 MiB;
 the table is the final sample after the unregistered-directory writer fix and
 integration of the existing Niri hover update. Both Python control samples show
 busy-machine variability; no wall-clock claim follows from these values.
+
+### Foundation F1 daemon and private link (nested, busy machine)
+
+`tools/benchmark-daemon.py` reuses the existing headless labwc/niri/Hyprland
+lifecycle, stops before any Quickshell launch, and uses `performance.py`'s CPU
+and memory readers. HOME/XDG, both bus addresses and sockets are private.
+The release binary is built first. Each backend uses 100 discarded warm-ups,
+5,000 persistent-socket empty calls, 35 seconds for the two-thread blocking pool
+to retire, then 60 seconds idle with a private 20-second watchdog configuration.
+These are helper observations, not physical desktop or complete shell timings.
+The captures predate the final activation-only listener check; the call path is unchanged.
+
+| New private-link measurement | Nested niri | Nested Hyprland |
+| --- | ---: | ---: |
+| Empty call median / p99, including benchmark JSON/socket overhead | 0.044 / 0.274 ms | 0.039 / 0.278 ms |
+| Daemon user + system CPU per empty call, 10 ms accounting ticks | 0.024 ms | 0.020 ms |
+| Idle helper RSS, median | 14.24 MiB | 14.21 MiB |
+| Idle CPU in 60.08 seconds, 100 Hz accounting | 0 observed ticks | 0 observed ticks |
+| Threads throughout the settled idle sample | 1 | 1 |
+| Main-thread sleep/wake cycles in that sample | 17 | 17 |
+| Replacement process start to native client's fresh compositor data | 258 ms | 255 ms |
+| Accepted quiet idle PSS / calibrated PSS budget | Pending | Pending |
+
+This API has no pre-foundation daemon baseline. No launcher, dashboard, wallpaper,
+palette or keybinding improvement is claimed at F1; QML is untouched. Zero idle
+ticks means below the 10 ms accounting resolution, not zero CPU consumption.
+The kernel does not expose `sched_wakeup` counts here. The cycle measurement is
+the voluntary-switch delta with one thread and sleeping endpoints (about 0.28/s);
+it is a documented event-loop proxy, not a direct kernel wakeup measurement.
+Restart freshness ends at client data, not a rendered UI frame.
+
+The call captures had measured SwapPss zero and host swap-in of 10/1 pages.
+The idle captures retained measured SwapPss zero but host swap-in was
+32,947/3,548 pages at 4,096 bytes/page, exceeding the agreed under-1-MiB gate.
+Their PSS is discarded as performance evidence; no initial PSS budget or saving
+is established. Helper RSS and CPU above are busy-machine observations only.
+Python execs were not traced in these captures and are unknown. Separate native
+integration tests work with an empty PATH and verify private notification delivery,
+socket activation, restart/resubscribe, safe mode and cleanup. They do not replace
+the final five-minute launch proof or the pending frozen desktop-PC A/B/A/B plan.
+
+The ELF fingerprints and raw paging counters stay in the private capture.
+Run the tool with `--backend niri` or `hyprland`, a matching prebuilt
+`--helper-binary`, the existing labwc prerequisites and `--output REPORT.json`.
+The daemon units are staged without enabling/starting them. A rare safe-mode
+notice is delivered by a bounded native nice-10 worker using zbus directly;
+it cannot activate an absent notification server and exits after acknowledgement.

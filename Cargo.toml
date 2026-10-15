@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/nacre-helper"]
-exclude = ["deps/orient"]
+members = ["crates/nacre-helper", "crates/nacre-protocol"]
+exclude = ["deps/orient", "fuzz"]
 resolver = "2"
 
 [workspace.package]
@@ -13,6 +13,7 @@ publish = false
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
+tokio = { version = "1", features = ["rt", "net", "io-util", "time", "sync", "signal", "macros", "process"] }
 
 [profile.release]
 lto = "thin"

@@ -179,6 +179,25 @@ inherited provider credentials. A synthetic API-key negative control checks its
 stdout. Child environment inheritance and the existing session-user trust and
 last-known-good recovery policies are preserved; no privilege is added.
 
+### Foundation private link
+
+The daemon uses a 0700 socket directory, a 0600 socket and same-UID credentials
+on both ends; no network listener. JSON lines, clients, calls, subscriptions,
+reply/event bytes and snapshot baselines are bounded. Linked/foreign endpoints,
+unsafe lock/crash records and wrong activation descriptors are refused. Crash
+logs omit panic payloads and desktop text; a synthetic title negative control
+covers real daemon restarts. Namespace-mapped root ownership is accepted for
+ancestors only; the endpoint directory still requires the caller's exact UID.
+This retains the existing session-user trust boundary.
+
+UI fallback requires an absent default endpoint or daemon-proven
+`dispatched:false`; provider errors, loss and deadlines never authorize replay.
+An explicit private socket override disables fallback. The rare notice worker
+has a concurrency/deadline bound, lowers its own priority, receives a parent-death
+signal and uses zbus with no auto-start. A private-bus test checks actual delivery
+and that flag. No daemon unit, live provider ownership or live binding is activated
+by this work. Existing deliberate AI/update permissions remain unchanged.
+
 The Wave 4 session observer reads Secret Service's `Locked` property and
 login1's `PrepareForSleep` signal. It performs no privileged login1 operation or
 new lock/power policy. Session evidence uses a private directory and files before

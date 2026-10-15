@@ -9,8 +9,26 @@ use std::io::{self, BufRead};
 
 fn run() -> Result<i32> {
     let mut arguments = std::env::args().skip(1);
-    let tool = arguments.next().ok_or("Expected a helper command")?;
+    let name = std::env::args_os().next().and_then(|path| {
+        std::path::Path::new(&path)
+            .file_name()
+            .map(|name| name.to_owned())
+    });
+    let tool = match name.as_deref().and_then(std::ffi::OsStr::to_str) {
+        Some("nacrectl") => "ctl".to_owned(),
+        Some("nacre-daemon") => "daemon".to_owned(),
+        _ => arguments.next().ok_or("Expected a helper command")?,
+    };
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "ctl" {
+        return nacre_helper::daemon::client::run(&arguments);
+    }
+    if tool == "daemon" {
+        return nacre_helper::daemon::run(&arguments);
+    }
+    if tool == "daemon-notice" {
+        return nacre_helper::daemon::workers::notice(&arguments);
+    }
     if tool == "session-watch" {
         return nacre_helper::session_watch::run(&arguments);
     }

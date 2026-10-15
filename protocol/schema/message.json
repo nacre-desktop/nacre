@@ -1,0 +1,527 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Message",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "hello"
+        },
+        "proto": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "min": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "client": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "t",
+        "proto",
+        "client"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "welcome"
+        },
+        "proto": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "min": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "boot": {
+          "type": "string"
+        },
+        "topics": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0,
+            "maximum": 65535
+          }
+        },
+        "methods": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Method"
+          }
+        },
+        "frame_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "t",
+        "proto",
+        "min",
+        "boot",
+        "topics",
+        "methods"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "sub"
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "t",
+        "topics"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "unsub"
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "t",
+        "topics"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "resync"
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "t",
+        "topics"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "snap"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "seq": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "t",
+        "topic",
+        "seq",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "patch"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "base": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "seq": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "t",
+        "topic",
+        "base",
+        "seq",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "call"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "m": {
+          "type": "string"
+        },
+        "p": {
+          "type": "object",
+          "additionalProperties": true,
+          "default": {}
+        },
+        "timeout": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 1,
+          "maximum": 120000
+        }
+      },
+      "required": [
+        "t",
+        "id",
+        "m"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "ret"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        }
+      },
+      "required": [
+        "t",
+        "id"
+      ],
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "ok": true
+          },
+          "required": [
+            "ok"
+          ],
+          "not": {
+            "required": [
+              "err"
+            ]
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "err": {
+              "$ref": "#/$defs/Failure"
+            }
+          },
+          "required": [
+            "err"
+          ],
+          "not": {
+            "required": [
+              "ok"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "ev"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "seq": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "data": true
+      },
+      "required": [
+        "t",
+        "topic",
+        "name",
+        "seq",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "lost"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "from": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "to": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "t",
+        "topic",
+        "from",
+        "to"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "ping"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        }
+      },
+      "required": [
+        "t",
+        "id"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "pong"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        }
+      },
+      "required": [
+        "t",
+        "id"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "register"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "methods": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0,
+            "maximum": 65535
+          }
+        }
+      },
+      "required": [
+        "t",
+        "provider",
+        "methods"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "error"
+        },
+        "err": {
+          "$ref": "#/$defs/Failure"
+        }
+      },
+      "required": [
+        "t",
+        "err"
+      ]
+    }
+  ],
+  "$defs": {
+    "Method": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "class": {
+          "$ref": "#/$defs/Capability"
+        },
+        "timeout": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "maximum": 120000
+        },
+        "params": true,
+        "result": true
+      },
+      "required": [
+        "v",
+        "class",
+        "timeout",
+        "params",
+        "result"
+      ]
+    },
+    "Capability": {
+      "type": "string",
+      "enum": [
+        "ui",
+        "desktop",
+        "system",
+        "privileged"
+      ]
+    },
+    "Id": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "format": "int64",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      ]
+    },
+    "Failure": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retry": {
+          "type": "boolean"
+        },
+        "dispatched": {
+          "description": "False only when the daemon proves no UI provider received the call.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retry"
+      ]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "invalid_request",
+        "unsupported_version",
+        "too_large",
+        "permission_denied",
+        "unknown_topic",
+        "unknown_method",
+        "unavailable",
+        "busy",
+        "timeout",
+        "stale_revision",
+        "validation",
+        "io",
+        "internal"
+      ]
+    }
+  }
+}

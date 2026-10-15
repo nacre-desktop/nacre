@@ -1,0 +1,13 @@
+[Unit]
+Description=Nacre desktop state service
+PartOf=graphical-session.target
+Requires=nacre-daemon.socket
+After=graphical-session.target
+
+[Service]
+Type=notify
+ExecStart=%h/.local/share/nacre/shell/bin/nacre-daemon
+WatchdogSec=20
+Restart=on-failure
+RestartSec=0.5
+TimeoutStopSec=5

@@ -1,0 +1,28 @@
+[package]
+name = "nacre-protocol-fuzz"
+version = "0.0.0"
+edition = "2021"
+license = "GPL-3.0-only"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+nacre-protocol = { path = "../crates/nacre-protocol" }
+serde_json = "1"
+
+[[bin]]
+name = "decoder"
+path = "fuzz_targets/decoder.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "merge_patch"
+path = "fuzz_targets/merge_patch.rs"
+test = false
+doc = false
+bench = false

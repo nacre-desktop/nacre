@@ -69,6 +69,12 @@ cases exact; private bus/socket, linked-state/XDG and both nested compositors pa
 259 Rust/fmt/clippy;917 full repo +15 incoming Niri checks/534 parity pass.
 Python watch currently fails at removed event_socket bridge; no valid idle baseline.
 Session check CPU125.79→29.50ms;20Pythonstarts→0; nativeRSS18.09MiB/idle0ticks30s.
-F0 67674e85 public; Bead ADR311a2f09 CI green. Workspace fixture repair:3 tests/fmt/clippy pass.
-Next: wait for green published preparation-fixture CI, then F1 daemon/link.
+F0 67674e85 CI38764589681 green; repaired main5995d171 CI38768972757 green.
+F1 recovered:8 protocol/23 core/6 native integration tests;31 wire objects; Luau analyzer passes.
+Decoder/merge-patch fuzz targets compile; nightly/soak and accepted idle PSS remain pending.
+Nested niri/Hyprland call p99 .274/.278ms; helperRSS14.24/14.21MiB; idle captures paged.
+UI fallback only before dispatch; rare safe notice uses a bounded native nice10 zbus worker.
+Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
+Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
+Next: publish F1 and await green CI, then F2 niri events; activated listener validation is covered.
 No live desktop/config/network changes, tags, releases or package publication.

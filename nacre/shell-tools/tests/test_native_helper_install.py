@@ -19,6 +19,24 @@ spec.loader.exec_module(installer)
 
 
 class NativeHelperInstallTests(unittest.TestCase):
+    def test_daemon_aliases_are_native_and_unmanaged_commands_are_preserved(self):
+        with tempfile.TemporaryDirectory(prefix="daemon-install-") as directory:
+            runtime = Path(directory) / "runtime"
+            helper = runtime / "tools/nacre-helper"
+            helper.parent.mkdir(parents=True)
+            helper.write_bytes(b"\x7fELFnative-fixture")
+            installer.install_daemon_links(helper)
+            installer.install_daemon_links(helper)
+            for name in ("nacrectl", "nacre-daemon"):
+                alias = runtime / "bin" / name
+                self.assertEqual(os.readlink(alias), "../tools/nacre-helper")
+                self.assertEqual(alias.read_bytes(), helper.read_bytes())
+            alias.unlink()
+            alias.write_text("private command")
+            with self.assertRaisesRegex(RuntimeError, "unmanaged"):
+                installer.install_daemon_links(helper)
+            self.assertEqual(alias.read_text(), "private command")
+
     def test_upgrade_removes_retired_helper_but_preserves_unported_runtime(self):
         with tempfile.TemporaryDirectory() as directory:
             tools = Path(directory)

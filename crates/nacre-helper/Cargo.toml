@@ -7,6 +7,11 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+nacre-protocol = { path = "../nacre-protocol" }
+tokio.workspace = true
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+listenfd = "1"
 orient-core = { path = "../../deps/orient/crates/orient-core" }
 orient-decoder = { path = "../../deps/orient/crates/orient-decoder" }
 serde.workspace = true
@@ -16,7 +21,7 @@ image = { version = "=0.25.9", default-features = false, features = ["jpeg", "pn
 sha2 = "0.10"
 tempfile = "3"
 regex = "1"
-nix = { version = "0.30", features = ["fs", "user", "signal", "feature"] }
+nix = { version = "0.30", features = ["fs", "user", "signal", "feature", "socket"] }
 chrono = "0.4"
 chrono-tz = "0.10"
 walkdir = "2"
@@ -25,6 +30,7 @@ zbus = { version = "5", features = ["blocking-api"] }
 zvariant = { version = "5", features = ["gvariant"] }
 async-io = "2"
 futures-lite = "2"
+futures-util = "0.3"
 clap = { version = "4", features = ["derive"] }
 unicode-normalization = "=0.1.24"
 unicode-casefold = "0.2"
@@ -48,3 +54,4 @@ include_dir = "0.7"
 
 [dev-dependencies]
 flate2 = "1"
+tokio = { workspace = true, features = ["test-util"] }

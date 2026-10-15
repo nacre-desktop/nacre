@@ -1,0 +1,12 @@
+[Unit]
+Description=Nacre private desktop link
+PartOf=graphical-session.target
+
+[Socket]
+ListenStream=%t/nacre/daemon.sock
+SocketMode=0600
+DirectoryMode=0700
+RemoveOnStop=yes
+
+[Install]
+WantedBy=graphical-session.target
