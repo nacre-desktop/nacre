@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseRevision": "1b94cd36931b4b9c16e9d16eb93dbe47fd2ffbd5",
+  "baseRevision": "3d6fe27d870bca4f11c356c032a2f3fef064fe8e",
   "fixture": "Synthetic desktop; AI/Brain/battery/Wi-Fi/Bluetooth available; packages absent; planned backends disabled",
   "surfaces": [
     {
@@ -1144,10 +1144,10 @@
     "nacre/shell/modules/topbar/NacreHeaderForwarder.qml": "0f87ec01befede94635ad0fb93716063b04952a5a8f7f8cab0a21787629d2536",
     "nacre/shell/modules/topbar/NacreStatusPeek.qml": "115f3831aac232888de72a902d547600fbb0e287871514bf0f4a78510e546a5e",
     "nacre/shell/modules/topbar/NacreWorkspaceAppIcon.qml": "9c329a21cb4f06fb8da904120d37730caf97cc9aacc27959211d5c1d371ca917",
-    "nacre/shell/modules/topbar/NacreHeader.qml": "d859b42acf8a7e1a69bff4bdbbb2c6d2550a558fc63e3f5a5865d8c778ef8986",
     "nacre/shell/modules/topbar/NacreStatusHint.qml": "c5f5451bc4e9d20055625355c09f6da9cf9762d993ba69e0a48f3203860291a3",
     "nacre/shell/modules/topbar/NacreWorkspacePearl.qml": "7b43d3e9728d2dd5599711ebec36f849163c163f92b2d2275c86aada60ca72da",
-    "nacre/shell/modules/topbar/NacreWorkspaceRow.qml": "65ef62f5dba5d7830161ae34e51ec9ee7e9a6621d57acdb1e37a20e5412a7ce7",
+    "nacre/shell/modules/topbar/NacreHeader.qml": "17be49c341c562b7b6fe3111285fe780e95099c015bfed150a8e777ba67922b6",
+    "nacre/shell/modules/topbar/NacreWorkspaceRow.qml": "5b30c62a68e5f63eb12dbd4b09f9e9f4a2d971780a4190b63d40f6e58b6a154f",
     "nacre/shell/modules/welcome/NacreWelcomeDemo.qml": "2ff09f932831509688f55fa1ce417123d54216e38ebcb38aebdd46800abcc61d",
     "nacre/shell/modules/welcome/NacreWelcomeHost.qml": "699dbf3c8263e6b712d7a96617526cd019c52af460e81f230055bd1259ce085d",
     "nacre/shell/modules/welcome/NacreWelcomeRow.qml": "c16afe2cdfd242d55506db976f6e820b6171853861e6763ddce715fd0247a845",
@@ -1195,7 +1195,7 @@
     "nacre/shell/modules/settings/registry/navigation.json": "e99c85bdf4d7ebc08fd3b0acbe55c46321d8bc2bf90f0f8e762a06f228f32e5d",
     "nacre/shell/modules/settings/registry/registry.js": "0fcad22e2c54d094a906806c311e860e9ea47286bae325519b6665a5eb16ff1a",
     "nacre/shell/modules/settings/registry/fragment.schema.json": "20a1a731554e360e8b78049b37644b8deedf44d6ffce61996e8b8878c88e36a3",
-    "nacre/shell/modules/settings/registry/settings.json": "8943caafdcc9050879650d2147325b2b72fd4f4667cc1561771b67ee1432d31c",
+    "nacre/shell/modules/settings/registry/settings.json": "bf8f6936ee15ca1c55726ea45cba87ee94f9fc2216994a49d64b4453696942a5",
     "nacre/shell/modules/dashboard/extras/NacreAiUsageExtra.qml": "1b4434d349150005debb84e9c7060e336c1dc96cffc6939fd3fb48660d5fc2a2",
     "nacre/shell/modules/dashboard/extras/NacreBrainExtra.qml": "83658d5e8a574e1a43a85006d5c50f56a27fdcf85099ee0ef51ba01a6072c209",
     "nacre/shell/modules/dashboard/extras/NacreClipboardExtra.qml": "1908df63ede9db43d799a1f8fb5e7279a85da846fb4850770687a133433ba449",
@@ -1230,7 +1230,7 @@
     "nacre/shell/modules/bar/popouts/NacreSoundPopup.qml": "56ba1c422d9a4e94e3172215d12bc0b863aa05346e2968c512f3200bd8464b42",
     "nacre/shell/modules/bar/popouts/network-groups.js": "d39100bf91ba4c0816a2c91f1a02f9619b329f6ebf88c2e7e55f4676059b8c4d",
     "nacre/shell/modules/bar/popouts/NacreHistoryPopup.qml": "05f5577f22e35d52c6b19a6dc2730d6f43aef82a842e2ba95ad182eb2e0dc4e3",
-    "nacre/shell-tools/theme-targets.json": "744f98c10e07fe12f2b09ab3464dbbe89ca39ba03e85351e6a3026b0f4cc81fa",
+    "nacre/shell-tools/theme-targets.json": "37f516753e221461012cf5026646de359871e13d7bd4fec4e8a723062922623d",
     "nacre/shell-tools/nacre-state-files.json": "d56b37d6d0dd91cc15171b31da477c94bc3bee367f5581d514ed1acd84f2d910",
     "tools/settings-preview.py": "1aa6b8395f5ec8d258bc89f13caa47b65e5d4a29718ae69b68a2dceeb72f95eb",
     "tools/settings_preview_fixtures.py": "8467a234fef680d8b5a2c6d488d4fec1a4da18ae97a0add0e80578320d2f3724"
