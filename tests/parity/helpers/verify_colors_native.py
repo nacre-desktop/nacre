@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 
 from colors_reference_files import Files, signature, unpack
+from historical_palette_assets import stage as historical_assets
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / "crates/nacre-helper/tests/fixtures/colors-pipeline-reference.json.gz"
@@ -112,7 +113,7 @@ def main():
                 env = dict(
                     HOME=str(home),
                     PATH=str(tools),
-                    NACRE_HELPER_TOOLS=str(ROOT / "nacre/shell-tools"),
+                    NACRE_HELPER_TOOLS=historical_assets(base),
                     NACRE_SVG_REFERENCE=str(responses),
                     NACRE_COMPOSITOR="hyprland",
                     XDG_RUNTIME_DIR=str(base / "runtime"),
