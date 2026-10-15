@@ -211,7 +211,9 @@ fn srcinfo(directory: &Path, base: &str) -> Result<(Vec<String>, Vec<String>)> {
     if text.len() > 262_144 {
         return Err("AUR metadata is too large".into());
     }
-    let mut dependencies = BTreeSet::new();
+    // Arch AUR recipes may omit standard base-devel tools from makedepends.
+    // Resolve this official dependency before review; install it only after final consent.
+    let mut dependencies = BTreeSet::from(["base-devel".to_owned()]);
     let mut packages = BTreeSet::new();
     let mut valid_base = false;
     for line in text.lines() {
@@ -799,13 +801,13 @@ mod tests {
             recipes: [
                 (
                     "editor".into(),
-                    recipe("editor", &["library", "python>=3.10", "libc"]),
+                    recipe("editor", &["library", "python>=3.10", "libc", "base-devel"]),
                 ),
                 ("library".into(), recipe("library", &[])),
             ]
             .into_iter()
             .collect(),
-            official: ["python".into()].into_iter().collect(),
+            official: ["python".into(), "base-devel".into()].into_iter().collect(),
             installed: ["libc".into()].into_iter().collect(),
             consent: true,
             ..Default::default()
@@ -837,7 +839,7 @@ mod tests {
                 "review:library:1/2",
                 "review:editor:2/2",
                 "consent",
-                "install:{\"python>=3.10\"}",
+                "install:{\"base-devel\", \"python>=3.10\"}",
                 "build:library:false",
                 "build:editor:true"
             ]
@@ -940,7 +942,8 @@ mod tests {
         assert!(document.contains("post.install"));
         assert!(document.contains("fix.patch"));
         assert!(!directory.join("should-never-exist").exists());
-        let (_, packages) = srcinfo(directory, "fixture")?;
+        let (dependencies, packages) = srcinfo(directory, "fixture")?;
+        assert!(dependencies.contains(&"base-devel".to_owned()));
         assert_eq!(packages, vec!["fixture"]);
         fs::write(directory.join("fix.patch"), "changed patch\n")?;
         assert_ne!(tracked(directory)?.1, digest);

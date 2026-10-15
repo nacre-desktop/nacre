@@ -4,7 +4,9 @@ The general profile requires terminal-pager review before AUR builds or installs
 Software app offers, font offers and package search all use this same installation
 boundary. Official repository packages keep ordinary pacman confirmation and do
 not require AUR tools. AUR review requires `git`, `less`, `pacman` and `makepkg`
-from base-devel; missing tools produce an explanation rather than a silent bypass.
+plus the standard base-devel build environment. Missing review tools produce an
+explanation rather than a silent bypass. Missing base-devel is included in the
+official dependency plan and installed only after all reviews and final consent.
 
 1. Resolve missing dependencies from the tracked `.SRCINFO`, without sourcing
    PKGBUILD. Fetch each AUR package base into an owned, detached checkout.
