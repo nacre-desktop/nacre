@@ -1,0 +1,4 @@
+// Available with either Nacre workspace policy.
+binds {
+    Super+Alt+V repeat=false hotkey-overlay-title="Bring visitors here" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces bring"; }
+}

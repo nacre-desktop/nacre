@@ -52,7 +52,8 @@ def probe(driver, helper, count, output):
             json.dumps(
                 {
                     "monitorWorkspaceActions": True,
-                    "niriWorkspaceOutputs": names,
+                    "niriWorkspaceMode": "fixed-all",
+                    "niriWorkspaceSets": names,
                     "unrelatedPreference": "preserved",
                 }
             )
@@ -299,7 +300,7 @@ def probe(driver, helper, count, output):
             report["validationFailureRollsBack"] = True
 
             controls("rotate", "next")
-            saved = json.loads(desktop.read_text())["niriWorkspaceOutputs"]
+            saved = json.loads(desktop.read_text())["niriWorkspaceSets"]
             stop(clients)
             stop(current)
             compositor()

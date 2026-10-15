@@ -2214,7 +2214,7 @@
   "settings.registry.windows-workspaces.workflows.label": "Workflows",
   "settings.registry.windows-workspaces.workflows.workflow.label": "Workflows",
   "settings.registry.windows-workspaces.workspaces.label": "Workspaces",
-  "settings.registry.windows-workspaces.workspaces.workspaceCount.description": "The workspaces shown in the bar.",
+  "settings.registry.windows-workspaces.workspaces.workspaceCount.description": "Size of the named workspace set (six by default).",
   "settings.registry.windows-workspaces.workspaces.workspaceCount.label": "Workspace count",
   "settings.registry.windows-workspaces.workspaces.workspaceIcons.description": "Symbols in the bar.",
   "settings.registry.windows-workspaces.workspaces.workspaceIcons.label": "Workspace symbols",
@@ -3348,5 +3348,16 @@
   "software.aur.provenance": "AUR review policy provenance",
   "software.aur.provenance-description": "Show the effective policy, registered key and source in a terminal.",
   "software.aur.launcher": "AUR package review policy",
-  "software.aur.launcher-description": "Choose recipe review and inspect its profile provenance"
+  "software.aur.launcher-description": "Choose recipe review and inspect its profile provenance",
+  "settings.registry.windows-workspaces.workspaces.monitorWorkspaceActions.description": "Available only with fixed sets on all monitors. Bring visitors here is available in both modes (Super+Alt+V).",
+  "settings.registry.windows-workspaces.workspaces.monitorWorkspaceActions.label": "Send, swap and rotate shortcuts",
+  "settings.registry.windows-workspaces.workspaces.niriWorkspaceMode.description": "The primary monitor keeps the named set. Secondary monitors grow and shrink dynamically. Send, swap and rotate shortcuts require fixed sets on all monitors.",
+  "settings.registry.windows-workspaces.workspaces.niriWorkspaceMode.label": "Monitor workspaces",
+  "settings.registry.windows-workspaces.workspaces.workspacePrimaryOutput.description": "Connector name, for example DP-1. When unavailable, use the laptop display, then the first connected monitor.",
+  "settings.registry.windows-workspaces.workspaces.workspacePrimaryOutput.label": "Primary workspace monitor",
+  "settings.workspaces.mode.fixed-all": "Fixed sets on all monitors",
+  "settings.workspaces.mode.primary-dynamic": "Primary fixed, other monitors dynamic",
+  "launcher.catalog.bring-visitors.label": "Bring visitors here",
+  "launcher.catalog.bring-visitors.description": "Keep visiting windows on this monitor after reconnect",
+  "workspaces.requires-niri": "Available on Niri only."
 }

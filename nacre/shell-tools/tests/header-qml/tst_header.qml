@@ -47,6 +47,9 @@ TestCase {
     }
     function init() {
         NacreCompositor.capabilities = ({});
+        NacreCompositor.monitors = ({
+                values: []
+            });
         NacreCompositor.workspaces = ({
                 values: []
             });
@@ -147,10 +150,10 @@ TestCase {
                     name: focused
                 });
             NacreCompositor.activeWsId = focused === "test" ? 2 : 1;
-            compare(laptop.workspaceIds.join(","), "1,2,3");
-            compare(external.workspaceIds.join(","), "1,2");
-            tryVerify(() => laptop.activeCell?.workspaceId === 2);
-            tryVerify(() => external.activeCell?.workspaceId === 1);
+            compare(laptop.workspaceIds.join(","), "niri-workspace:101,niri-workspace:102,niri-workspace:103");
+            compare(external.workspaceIds.join(","), "niri-workspace:201,niri-workspace:202");
+            tryVerify(() => laptop.activeCell?.labelNumber === 2);
+            tryVerify(() => external.activeCell?.labelNumber === 1);
             compare(laptop.activeCell.windowCount, 1);
             compare(external.activeCell.windowCount, 2);
             verify(findChild(laptop, "nacreWorkspace1").urgent);
@@ -172,8 +175,8 @@ TestCase {
                     }
                 ]
             });
-        tryCompare(laptop, "workspaceIds", [1]);
-        tryVerify(() => laptop.activeCell?.workspaceId === 1);
+        tryCompare(laptop, "workspaceIds", ["niri-workspace:102"]);
+        tryVerify(() => laptop.activeCell?.labelNumber === 1);
         compare(laptop.activeCell.windowCount, 1);
         verify(laptop.activate(1));
         compare(NacreCompositor.requests.pop(), "workspace niri-workspace:102");
@@ -210,8 +213,8 @@ TestCase {
             NacreCompositor.focusedMonitor = ({
                     name: output
                 });
-            compare(laptop.workspaceIds.join(","), "1,2,3,4,5,6");
-            compare(external.workspaceIds.join(","), "1,2,3,4,5,6");
+            compare(laptop.workspaceIds.join(","), "test:1,test:2,test:3,test:4,test:5,test:6");
+            compare(external.workspaceIds.join(","), "external:1,external:2,external:3,external:4,external:5,external:6");
             verify(!laptop.activate(7));
             verify(external.activate(6));
             compare(NacreCompositor.requests.pop(), "workspace external:6");
@@ -222,41 +225,153 @@ TestCase {
                         active: value.index === 6
                     }))
             });
-        tryVerify(() => laptop.activeCell?.workspaceId === 6);
-        tryVerify(() => external.activeCell?.workspaceId === 6);
+        tryVerify(() => laptop.activeCell?.labelNumber === 6);
+        tryVerify(() => external.activeCell?.labelNumber === 6);
         compare(laptop.workspaceIds.length, 6);
         compare(external.workspaceIds.length, 6);
     }
-    function test_configured_monitor_controls_keep_six_slots_during_an_exchange() {
+    function test_adopted_occupied_workspace_stays_visible_after_the_fixed_set() {
         NacreBar.workspaceCount = 6;
         NacreCompositor.capabilities = ({
                 perOutputWorkspaces: true
             });
-        DesktopSettings.data = {
-            monitorWorkspaceActions: true
-        };
-        NacreCompositor.workspaces = ({
-                values: []
-            });
-        const view = createTemporaryObject(row, test, {
-            outputName: "external"
+        const values = Array.from({
+            length: 6
+        }, (_, index) => ({
+                    id: "fixed:" + index,
+                    index: index + 1,
+                    name: "fixed-" + index,
+                    outputId: "test",
+                    fixedSlot: true
+                }));
+        values.push({
+            id: "adopted",
+            index: 7,
+            outputId: "test",
+            originOutput: "test",
+            visiting: false
         });
-        compare(view.workspaceIds.join(","), "1,2,3,4,5,6");
-        verify(!view.activate(3));
+        values.push({
+            id: "spare",
+            index: 8,
+            outputId: "test"
+        });
         NacreCompositor.workspaces = ({
+                values: values
+            });
+        NacreCompositor.windows = [
+            {
+                workspaceId: "adopted"
+            }
+        ];
+        const view = createTemporaryObject(row, test, {
+            outputName: "test"
+        });
+        compare(view.workspaceIds.length, 7);
+        verify(view.workspaceIds.includes("adopted"));
+        verify(!view.workspaceIds.includes("spare"));
+    }
+    function test_visitors_are_occupied_grouped_and_debounced_with_stable_clicks() {
+        NacreCompositor.capabilities = ({
+                perOutputWorkspaces: true
+            });
+        NacreCompositor.monitors = ({
                 values: [
                     {
-                        id: "niri-workspace:1",
-                        outputId: "external",
-                        index: 3,
-                        active: true,
-                        name: "incoming"
+                        name: "test"
+                    },
+                    {
+                        name: "external"
                     }
                 ]
             });
-        compare(view.workspaceIds.join(","), "1,2,3,4,5,6");
-        verify(view.activate(3));
-        compare(NacreCompositor.requests.pop(), "workspace niri-workspace:1");
+        const own = {
+            id: "niri-workspace:1",
+            index: 1,
+            originIndex: 1,
+            outputId: "test",
+            name: "own",
+            active: true
+        };
+        const visitor = {
+            id: "niri-workspace:9",
+            index: 2,
+            originIndex: 4,
+            outputId: "test",
+            originOutput: "external",
+            visiting: true
+        };
+        const empty = {
+            id: "niri-workspace:10",
+            index: 3,
+            originIndex: 5,
+            outputId: "test",
+            originOutput: "external",
+            visiting: true
+        };
+        NacreCompositor.workspaces = ({
+                values: [own]
+            });
+        NacreCompositor.windows = [
+            {
+                workspaceId: visitor.id
+            }
+        ];
+        const view = createTemporaryObject(row, test, {
+            outputName: "test"
+        });
+        wait(0);
+        NacreCompositor.monitors = ({
+                values: [
+                    {
+                        name: "test"
+                    }
+                ]
+            });
+        NacreCompositor.workspaces = ({
+                values: [own, empty, visitor]
+            });
+        compare(view.workspaceIds.length, 1);
+        wait(100);
+        compare(view.workspaceIds.length, 1);
+        // Reconnect inside the grace period cancels visible visitor churn.
+        NacreCompositor.monitors = ({
+                values: [
+                    {
+                        name: "test"
+                    },
+                    {
+                        name: "external"
+                    }
+                ]
+            });
+        NacreCompositor.workspaces = ({
+                values: [own]
+            });
+        wait(3100);
+        compare(view.workspaceIds.length, 1);
+        NacreCompositor.monitors = ({
+                values: [
+                    {
+                        name: "test"
+                    }
+                ]
+            });
+        NacreCompositor.workspaces = ({
+                values: [empty, visitor, own]
+            });
+        tryCompare(view, "workspaceIds", [own.id, visitor.id], 4000);
+        verify(view.activate(visitor.id));
+        compare(NacreCompositor.requests.pop(), "workspace " + visitor.id);
+        compare(findChild(view, "nacreWorkspace4").record.originOutput, "external");
+        // A later reindex cannot retarget the visible cell to another workspace.
+        NacreCompositor.workspaces = ({
+                values: [own, Object.assign({}, visitor, {
+                        index: 3
+                    })]
+            });
+        verify(view.activate(visitor.id));
+        compare(NacreCompositor.requests.pop(), "workspace " + visitor.id);
     }
     function test_numbered_pearls_use_readable_ink_for_dark_and_pale_accents() {
         const pearl = createTemporaryObject(pearlView, test, {

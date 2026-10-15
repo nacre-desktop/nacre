@@ -187,6 +187,15 @@ fn decode(value: Value, schema: &Schema) -> std::result::Result<(Value, u64), St
             .entry("dashboardEnabled".to_owned())
             .or_insert(json!(true));
     }
+    if schema.id == "desktop" && version < 3 {
+        let object = data.as_object_mut().unwrap();
+        if let Some(outputs) = object.remove("niriWorkspaceOutputs") {
+            object.entry("niriWorkspaceSets").or_insert(outputs);
+        }
+        object
+            .entry("niriWorkspaceMode")
+            .or_insert(json!("primary-dynamic"));
+    }
     if schema.id == "control-center" && version < 2 {
         if data.get("tiles").is_none() {
             let mut tiles = schema.defaults["tiles"].as_array().unwrap().clone();
@@ -599,7 +608,7 @@ mod tests {
         assert_eq!(fs::read(&path)?, original);
         write_as(&path, Some(by_id("desktop")?), &data)?;
         assert_eq!(
-            fs::read(path.with_file_name("desktop.json.pre-v1-to-v2.bak"))?,
+            fs::read(path.with_file_name("desktop.json.pre-v1-to-v3.bak"))?,
             original
         );
         Ok(())
@@ -717,7 +726,7 @@ mod tests {
         let other = folder.path().join("other");
         fs::write(&path, b"{}")?;
         fs::write(&other, b"keep")?;
-        std::os::unix::fs::symlink(&other, path.with_file_name("state.json.pre-v0-to-v2.bak"))?;
+        std::os::unix::fs::symlink(&other, path.with_file_name("state.json.pre-v0-to-v3.bak"))?;
         assert!(write_as(&path, Some(by_id("desktop")?), &json!({})).is_err());
         assert_eq!(fs::read(&path)?, b"{}");
         assert_eq!(fs::read(&other)?, b"keep");

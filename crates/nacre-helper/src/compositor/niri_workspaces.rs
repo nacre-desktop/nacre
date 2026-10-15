@@ -35,8 +35,8 @@ pub struct Plan {
     pub after: Layout,
     pub send: Option<u64>,
 }
-struct Native {
-    connection: Connection,
+pub(crate) struct Native {
+    pub(crate) connection: Connection,
 }
 impl Transport for Native {
     fn snapshot(
@@ -47,6 +47,7 @@ impl Transport for Native {
         let timeout = Duration::from_secs_f64(timeout);
         let outputs = self.connection.response("Outputs", timeout, max_bytes)?;
         let rows = self.connection.response("Workspaces", timeout, max_bytes)?;
+        let windows = self.connection.response("Windows", timeout, max_bytes)?;
         let bad = || crate::compositor::niri_state::Error {
             kind: "ValueError",
             message: "Malformed native monitor/workspace state".into(),
@@ -63,7 +64,7 @@ impl Transport for Native {
             .cloned()
             .unwrap_or(Value::Null);
         Ok(
-            json!({"monitors":monitors,"workspaces":workspaces,"focusedMonitor":{"name":selected["outputId"]},"activeWorkspace":selected}),
+            json!({"monitors":monitors,"windows":windows,"workspaces":workspaces,"focusedMonitor":{"name":selected["outputId"]},"activeWorkspace":selected}),
         )
     }
     fn request(
@@ -224,7 +225,7 @@ pub fn plan(snapshot: &Value, count: usize, mode: Mode, direction: i32) -> Resul
         send,
     })
 }
-fn action(io: &mut impl Transport, name: &str, params: Value) -> Result<()> {
+pub(crate) fn action(io: &mut impl Transport, name: &str, params: Value) -> Result<()> {
     let response = io.request(json!({"Action":{name:params}}), TIMEOUT, MAX_BYTES)?;
     if response != "Handled" {
         return Err("Compositor did not acknowledge the workspace action".into());
@@ -381,7 +382,7 @@ impl Preferences {
         let previous = fs::read(&self.fragment)?;
         let replacement = ownership(layout);
         let desktop: Value = crate::state::read_strict(&desktop_path, json!({}))?;
-        let old_mapping = desktop.get("niriWorkspaceOutputs").cloned();
+        let old_mapping = desktop.get("niriWorkspaceSets").cloned();
         let mut combined = old_mapping.clone().unwrap_or(json!({}));
         let map = combined
             .as_object_mut()
@@ -392,7 +393,7 @@ impl Preferences {
         let names = vec![String::new(); layout.slots[&layout.focused].len()];
         let text = crate::niri_session_runtime::workspace_declarations(
             &names,
-            &json!({"niriWorkspaceOutputs":combined}),
+            &json!({"niriWorkspaceMode":"fixed-all","niriWorkspaceSets":combined}),
         )?;
         // Validate the actual loader with only this include replaced before publishing.
         let mut fragment = tempfile::NamedTempFile::new_in(self.fragment.parent().unwrap())?;
@@ -429,13 +430,13 @@ impl Preferences {
         }
         files::atomic(&self.fragment, text.as_bytes())?;
         if let Err(error) = crate::state::update_as(&desktop_path, schema, |mut value| {
-            if value.get("niriWorkspaceOutputs").cloned() != old_mapping {
+            if value.get("niriWorkspaceSets").cloned() != old_mapping {
                 return Err("Workspace preferences changed during the exchange".into());
             }
             value
                 .as_object_mut()
                 .ok_or("Invalid desktop preferences")?
-                .insert("niriWorkspaceOutputs".into(), combined.clone());
+                .insert("niriWorkspaceSets".into(), combined.clone());
             Ok(value)
         }) {
             files::atomic(&self.fragment, &previous)?;
@@ -466,6 +467,17 @@ pub fn run(args: &[String]) -> Result<i32> {
     } else {
         None
     };
+    let paths = Paths::environment()?;
+    if args.as_slice() == ["bring"] {
+        return super::niri_workspace_policy::bring(&paths);
+    }
+    let desktop = crate::state::read_strict(&paths.config.join("desktop.json"), json!({}))?;
+    if desktop["niriWorkspaceMode"] != "fixed-all" || desktop["monitorWorkspaceActions"] != true {
+        return Err(
+            "Send/swap/rotate require fixed sets on all monitors and monitor shortcuts enabled"
+                .into(),
+        );
+    }
     let dry = args.first().is_some_and(|s| s == "plan");
     if dry {
         args.remove(0);
@@ -485,7 +497,6 @@ pub fn run(args: &[String]) -> Result<i32> {
             )
         }
     };
-    let paths = Paths::environment()?;
     let profile: Value = serde_json::from_slice(&fs::read(paths.config.join("profile.json"))?)?;
     let count = profile["workspaceCount"]
         .as_u64()

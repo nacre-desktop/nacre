@@ -69,7 +69,7 @@ pub fn validate_profile(input: &Value) -> Result<Value> {
     })
 }
 fn validate_profile_value(input: &Value) -> Result<Value> {
-    let mut profile = value!({"version":1,"id":"default","components":["configs","shell"],"workspaceCount":5,"workspaceNames":[],"workspaceIcons":[],"startup":[],"routes":[],"brainWorkspace":null,"aiWorkspace":null,"aiFullAccess":false,"windowTrashBindings":false});
+    let mut profile = value!({"version":1,"id":"default","components":["configs","shell"],"workspaceCount":6,"workspaceNames":[],"workspaceIcons":[],"startup":[],"routes":[],"brainWorkspace":null,"aiWorkspace":null,"aiFullAccess":false,"windowTrashBindings":false});
     let fields = input.as_object().ok_or("Unknown profile fields")?;
     if fields
         .keys()

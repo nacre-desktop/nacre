@@ -14,7 +14,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -50,7 +50,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\nworkspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -84,6 +84,18 @@
           "source-revision": {
             "text": "fixture-revision\n",
             "mode": 420
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
+            "mode": 384
+          },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
           }
         },
         "directories": {
@@ -104,7 +116,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],
@@ -141,7 +153,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -177,7 +189,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\nworkspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -215,6 +227,18 @@
           "stock-niri": {
             "text": "Prepared with --stock-niri\n",
             "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
+            "mode": 384
+          },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
           }
         },
         "directories": {
@@ -235,7 +259,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],
@@ -272,7 +296,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -316,7 +340,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\nworkspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -350,6 +374,18 @@
           "source-revision": {
             "text": "fixture-revision\n",
             "mode": 420
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
+            "mode": 384
+          },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
           }
         },
         "directories": {
@@ -370,7 +406,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],
@@ -407,7 +443,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -451,7 +487,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\nworkspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -489,6 +525,18 @@
           "stock-niri": {
             "text": "Prepared with --stock-niri\n",
             "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
+            "mode": 384
+          },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
           }
         },
         "directories": {
@@ -509,7 +557,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],
@@ -546,7 +594,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -588,7 +636,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\nworkspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -622,6 +670,18 @@
           "source-revision": {
             "text": "fixture-revision\n",
             "mode": 420
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
+            "mode": 384
+          },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
           }
         },
         "directories": {
@@ -642,7 +702,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],
@@ -679,7 +739,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -721,7 +781,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\nworkspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -759,6 +819,18 @@
           "stock-niri": {
             "text": "Prepared with --stock-niri\n",
             "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
+            "mode": 384
+          },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
           }
         },
         "directories": {
@@ -779,7 +851,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],
@@ -816,7 +888,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -860,7 +932,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\nworkspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -894,6 +966,18 @@
           "source-revision": {
             "text": "fixture-revision\n",
             "mode": 420
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
+            "mode": 384
+          },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
           }
         },
         "directories": {
@@ -914,7 +998,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],
@@ -951,7 +1035,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -995,7 +1079,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\nworkspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -1033,6 +1117,18 @@
           "stock-niri": {
             "text": "Prepared with --stock-niri\n",
             "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
+            "mode": 384
+          },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
           }
         },
         "directories": {
@@ -1053,7 +1149,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],
@@ -1090,7 +1186,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -1175,7 +1271,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],
@@ -1206,7 +1302,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -1291,7 +1387,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],
@@ -1322,7 +1418,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -1398,7 +1494,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],
@@ -1429,7 +1525,7 @@
         "workspaceNames": [
           "One",
           "",
-          "Quoted \"\u00f8"
+          "Quoted \"ø"
         ],
         "workspaceIcons": [],
         "startup": [],
@@ -1505,7 +1601,7 @@
               "workspaceNames": [
                 "One",
                 "",
-                "Quoted \"\u00f8"
+                "Quoted \"ø"
               ],
               "workspaceIcons": [],
               "startup": [],

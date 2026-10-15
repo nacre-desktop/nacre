@@ -395,7 +395,10 @@ pub fn prepare_configuration(
         config.join("keyboard.kdl"),
         crate::compositor_config::render_keyboard(keyboard, "niri")?,
     )?;
-    let workspace_names = names
+    let desktop_path = paths.config.join("desktop.json");
+    let desktop: Value = crate::state::read_strict(&desktop_path, value!({}))?;
+    let routed_names = crate::compositor::niri_workspace_policy::primary_names(&names, &desktop);
+    let workspace_names = routed_names
         .iter()
         .enumerate()
         .map(|(index, name)| (index as i64 + 1, name.clone()))
@@ -424,12 +427,6 @@ pub fn prepare_configuration(
         palette = palette.replace(&format!("{{{{{role}}}}}"), color);
     }
     fs::write(config.join("colors.kdl"), palette)?;
-    let desktop_path = paths.config.join("desktop.json");
-    let desktop: Value = match fs::read(desktop_path) {
-        Ok(bytes) => serde_json::from_slice(&bytes)?,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => value!({}),
-        Err(error) => return Err(error.into()),
-    };
     let mut host = desktop.clone();
     host.as_object_mut()
         .ok_or("Invalid desktop preferences")?
@@ -471,16 +468,20 @@ pub fn prepare_configuration(
     }
     text.push_str("include \"desktop.kdl\"\n");
     let workspaces = workspace_declarations(&names, &desktop)?;
-    if desktop["monitorWorkspaceActions"] == true {
-        fs::write(config.join("workspaces.kdl"), workspaces)?;
-        fs::write(
-            config.join("monitor-workspace-actions.kdl"),
-            fs::read(backend.join("niri/monitor-workspace-actions.kdl"))?,
-        )?;
-        text.push_str("include \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\n");
+    fs::write(config.join("workspaces.kdl"), workspaces)?;
+    let shortcuts = if desktop["monitorWorkspaceActions"] == true
+        && desktop["niriWorkspaceMode"] == "fixed-all"
+    {
+        fs::read(backend.join("niri/monitor-workspace-actions.kdl"))?
     } else {
-        text.push_str(&workspaces);
-    }
+        Vec::new()
+    };
+    fs::write(config.join("monitor-workspace-actions.kdl"), shortcuts)?;
+    fs::write(
+        config.join("workspace-visitors.kdl"),
+        fs::read(backend.join("niri/workspace-visitors.kdl"))?,
+    )?;
+    text.push_str("include \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\n");
     text.push_str("hotkey-overlay {\n    skip-at-startup\n}\n");
     fs::write(config.join("config.kdl"), text)?;
     for file in fs::read_dir(&config)? {
@@ -496,42 +497,7 @@ pub fn prepare_configuration(
 }
 
 pub(crate) fn workspace_declarations(names: &[String], desktop: &Value) -> Result<String> {
-    let mut text = String::new();
-    if let Some(outputs) = desktop.get("niriWorkspaceOutputs") {
-        let outputs = outputs
-            .as_object()
-            .filter(|map| !map.is_empty())
-            .ok_or("Invalid workspace outputs")?;
-        let mut seen = std::collections::HashSet::new();
-        for (output, workspaces) in outputs {
-            if output.is_empty() || output.len() > 256 {
-                return Err("Invalid workspace output name".into());
-            }
-            let workspaces = workspaces
-                .as_array()
-                .filter(|rows| rows.len() == names.len())
-                .ok_or("Each output must have the configured workspace count")?;
-            for name in workspaces {
-                let name = name
-                    .as_str()
-                    .filter(|name| !name.is_empty() && name.len() <= 200)
-                    .ok_or("Invalid persistent workspace name")?;
-                if !seen.insert(name) {
-                    return Err("Persistent workspace names must be unique across outputs".into());
-                }
-                text.push_str(&format!(
-                    "workspace {} {{\n    open-on-output {}\n}}\n",
-                    json::encode(&name)?,
-                    json::encode(output)?
-                ));
-            }
-        }
-    } else {
-        for name in names {
-            text.push_str(&format!("workspace {}\n", json::encode(name)?));
-        }
-    }
-    Ok(text)
+    crate::compositor::niri_workspace_policy::declarations(names, desktop, None)
 }
 
 fn append_scales(preferences: &mut String, desktop: &Value) -> Result<()> {
@@ -817,18 +783,19 @@ mod tests {
     fn persistent_workspace_sets_have_equal_counts_and_distinct_names() -> Result<()> {
         let names: Vec<String> = (1..=6).map(|i| format!("nacre-{i}")).collect();
         let external: Vec<String> = (1..=6).map(|i| format!("external-{i}")).collect();
-        let desktop = value!({"niriWorkspaceOutputs":{"eDP-1":names,"DP-1":external}});
+        let desktop = value!({"niriWorkspaceMode":"fixed-all","niriWorkspaceSets":{"eDP-1":names,"DP-1":external}});
         let text = workspace_declarations(&names, &desktop)?;
         assert_eq!(text.matches("workspace ").count(), 12);
         assert_eq!(text.matches("open-on-output \"eDP-1\"").count(), 6);
         assert_eq!(text.matches("open-on-output \"DP-1\"").count(), 6);
-        assert!(
-            workspace_declarations(&names, &value!({"niriWorkspaceOutputs":{"DP-1":["one"]}}))
-                .is_err()
-        );
         assert!(workspace_declarations(
             &names,
-            &value!({"niriWorkspaceOutputs":{"eDP-1":names,"DP-1":names}})
+            &value!({"niriWorkspaceMode":"fixed-all","niriWorkspaceSets":{"DP-1":["one"]}})
+        )
+        .is_err());
+        assert!(workspace_declarations(
+            &names,
+            &value!({"niriWorkspaceMode":"fixed-all","niriWorkspaceSets":{"eDP-1":names,"DP-1":names}})
         )
         .is_err());
         assert_eq!(
@@ -881,6 +848,7 @@ mod tests {
         fs::create_dir_all(&paths.state)?;
         let mut desktop = case["desktop"].clone();
         desktop["monitorWorkspaceActions"] = value!(true);
+        desktop["niriWorkspaceMode"] = value!("fixed-all");
         fs::write(
             paths.config.join("desktop.json"),
             serde_json::to_vec(&desktop)?,

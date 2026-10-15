@@ -10,13 +10,38 @@ Item {
     property string outputName: ""
     readonly property bool perOutput: NacreCompositor.capabilities?.perOutputWorkspaces === true
     readonly property var outputWorkspaces: perOutput ? NacreCompositor.workspaces.values.filter(value => value.outputId === outputName) : []
-    // A complete configured set of named workspaces is persistent. Keep Niri's
-    // automatic spare outside that set, including while another output has focus.
-    readonly property var rowWorkspaces: {
-        const named = outputWorkspaces.filter(value => !!value.name).sort((a, b) => a.index - b.index);
-        return named.length >= NacreBar.workspaceCount ? named.slice(0, NacreBar.workspaceCount) : outputWorkspaces;
+    readonly property string topology: NacreCompositor.monitors.values.map(value => value.name).sort().join("\n")
+    property var rowWorkspaces: []
+    property string displayedTopology: ""
+    readonly property var candidateWorkspaces: {
+        const occupied = value => NacreCompositor.windows.some(client => client.workspaceId === value.id);
+        const own = outputWorkspaces.filter(value => !value.visiting).sort((a, b) => a.index - b.index);
+        const named = own.filter(value => value.fixedSlot === true || (!!value.name && !/^\d+$/.test(value.name)));
+        const local = named.length >= NacreBar.workspaceCount ? [...named, ...own.filter(value => !named.includes(value) && occupied(value))] : own;
+        if (!local.length && own.length)
+            local.push(own[0]);
+        const visitors = outputWorkspaces.filter(value => value.visiting && occupied(value)).sort((a, b) => String(a.originOutput).localeCompare(String(b.originOutput)) || a.originIndex - b.originIndex);
+        return [...local, ...visitors];
     }
-    readonly property int activeWorkspaceIndex: perOutput ? outputWorkspaces.find(value => value.active)?.index ?? 0 : NacreCompositor.activeWsId
+    function updateRows() {
+        rowWorkspaces = candidateWorkspaces;
+        displayedTopology = topology;
+    }
+    onCandidateWorkspacesChanged: {
+        if (ready && displayedTopology !== topology) {
+            if (!hotplug.running)
+                hotplug.start();
+        } else if (!hotplug.running)
+            updateRows();
+    }
+    onTopologyChanged: if (ready)
+        hotplug.restart()
+    Timer {
+        id: hotplug
+        interval: 3000
+        onTriggered: root.updateRows()
+    }
+    readonly property var activeWorkspaceIndex: perOutput ? outputWorkspaces.find(value => value.active)?.id ?? "" : NacreCompositor.activeWsId
     property real availableWidth: 640
     property bool ready: false
     property Item activeCell: null
@@ -50,13 +75,8 @@ Item {
         }
     }
     readonly property var workspaceIds: {
-        if (perOutput) {
-            if (DesktopSettings.data.monitorWorkspaceActions === true)
-                return Array.from({
-                    length: NacreBar.workspaceCount
-                }, (_, index) => index + 1);
-            return rowWorkspaces.map(value => value.index).sort((a, b) => a - b);
-        }
+        if (perOutput)
+            return rowWorkspaces.map(value => value.id);
         const ids = new Set(Array.from({
             length: NacreBar.workspaceCount
         }, (_, index) => index + 1));
@@ -78,12 +98,13 @@ Item {
     }
     onWorkspaceIdsChanged: synchronizeIds()
     Component.onCompleted: {
+        updateRows();
         synchronizeIds();
         Qt.callLater(() => ready = true);
     }
     onActiveWorkspaceIndexChanged: Qt.callLater(synchronize)
     function workspace(index) {
-        return outputWorkspaces.find(value => value.index === index);
+        return rowWorkspaces.find(value => value.id === index);
     }
     function windowsForWorkspace(index) {
         if (!perOutput)
@@ -92,7 +113,9 @@ Item {
         return value ? NacreCompositor.windows.filter(client => client.workspaceId === value.id) : [];
     }
     function activate(id) {
-        if (!Number.isInteger(id) || !workspaceIds.includes(id))
+        if (perOutput && Number.isInteger(id))
+            id = rowWorkspaces.find(value => value.index === id)?.id;
+        if (!workspaceIds.includes(id))
             return false;
         // Display numbers repeat on different outputs and can be reindexed.
         const reference = perOutput ? workspace(id)?.id : id;
@@ -161,8 +184,13 @@ Item {
             delegate: NacreSurface {
                 id: cell
                 required property int index
-                required property int modelData
-                readonly property int workspaceId: modelData
+                required property var modelData
+                readonly property var workspaceId: modelData
+                readonly property var record: root.perOutput ? root.workspace(workspaceId) : null
+                readonly property int labelNumber: record?.originIndex ?? record?.index ?? Number(modelData)
+                readonly property bool visitor: record?.visiting === true
+                readonly property bool groupStart: visitor && (index === 0 || root.rowWorkspaces[index - 1]?.originOutput !== record?.originOutput)
+                readonly property int groupSpace: groupStart ? 48 : 0
                 readonly property bool selected: root.activeWorkspaceIndex === workspaceId
                 readonly property var windows: root.windowsForWorkspace(workspaceId)
                 readonly property int windowCount: windows.length
@@ -170,12 +198,12 @@ Item {
                 readonly property bool urgent: windows.some(client => client.urgent === true) || (root.perOutput && root.workspace(workspaceId)?.urgent === true)
                 readonly property var shownWindows: windows.slice(0, root.iconAllocation[workspaceId] ?? 0)
                 readonly property int overflow: selected && root.showWindowHints ? Math.max(0, windowCount - shownWindows.length) : 0
-                readonly property color accent: root.tint(index, workspaceId)
-                objectName: "nacreWorkspace" + workspaceId
+                readonly property color accent: root.tint(index, labelNumber)
+                objectName: "nacreWorkspace" + labelNumber
                 function settleMotion() {
                     cellResize.complete();
                 }
-                width: root.customIcons ? 46 : 32 + shownWindows.length * 18 + (overflow ? 20 : 0) + (selected && windowCount && root.showWindowHints ? 4 : 0)
+                width: groupSpace + (root.customIcons ? 46 : 32 + shownWindows.length * 18 + (overflow ? 20 : 0) + (selected && windowCount && root.showWindowHints ? 4 : 0))
                 height: 30
                 radius: 15
                 color: root.customIcons && selected ? accent : pointer.hovered ? Qt.alpha(accent, .10) : "transparent"
@@ -187,16 +215,33 @@ Item {
                         easing.type: Easing.OutCubic
                     }
                 }
+                Rectangle {
+                    visible: cell.groupStart
+                    x: 5
+                    y: 6
+                    width: 1
+                    height: 18
+                    color: NacreColours.palette.m3outlineVariant
+                }
+                NacreText {
+                    visible: cell.groupStart
+                    x: 10
+                    width: 36
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "▣ " + (cell.record?.originOutput || "")
+                    elide: Text.ElideRight
+                    font.pointSize: 8
+                }
                 HoverHandler {
                     id: pointer
                 }
                 NacreWorkspacePearl {
                     objectName: "workspacePearl"
-                    x: 16 - width / 2
+                    x: cell.groupSpace + 16 - width / 2
                     y: (cell.height - height) / 2
                     visible: !root.customIcons && !cell.selected
                     accent: cell.accent
-                    workspaceId: cell.workspaceId
+                    workspaceId: cell.labelNumber
                     occupied: cell.occupied
                     urgent: cell.urgent
                 }
@@ -206,12 +251,12 @@ Item {
                     spacing: 4
                     NacreIcon {
                         visible: !!text
-                        text: NacreBar.workspaceIcons[cell.workspaceId - 1] || ""
+                        text: NacreBar.workspaceIcons[cell.labelNumber - 1] || ""
                         font.pointSize: 11
                         color: cell.selected ? NacreColours.palette.m3onPrimary : NacreColours.palette.m3onSurfaceVariant
                     }
                     NacreText {
-                        text: cell.workspaceId
+                        text: cell.labelNumber
                         font.pointSize: 10
                         color: cell.selected ? NacreColours.palette.m3onPrimary : NacreColours.palette.m3onSurfaceVariant
                     }
@@ -231,7 +276,7 @@ Item {
                         one: "Workspace {workspace}, {count} window",
                         other: "Workspace {workspace}, {count} windows"
                     }, {
-                        workspace: cell.workspaceId,
+                        workspace: cell.labelNumber,
                         count: cell.windowCount
                     })
                     function onClicked() {
@@ -239,7 +284,7 @@ Item {
                     }
                 }
                 Row {
-                    x: 33
+                    x: cell.groupSpace + 33
                     objectName: "workspaceApps"
                     visible: !root.customIcons && cell.selected && root.showWindowHints
                     anchors.verticalCenter: parent.verticalCenter
@@ -272,11 +317,11 @@ Item {
                     id: tip
                     visible: pointer.hovered
                     delay: 450
-                    text: NacreI18n.tr(cell.selected ? "workspaces.tooltip.active" : "workspaces.tooltip.inactive", {
+                    text: (cell.visitor ? "▣ " + cell.record.originOutput + "\n" : "") + NacreI18n.tr(cell.selected ? "workspaces.tooltip.active" : "workspaces.tooltip.inactive", {
                         one: "Workspace {workspace} · {count} window{titles}{more}",
                         other: "Workspace {workspace} · {count} windows{titles}{more}"
                     }, {
-                        workspace: cell.workspaceId,
+                        workspace: cell.labelNumber,
                         count: cell.windowCount,
                         titles: cell.windowCount ? "\n" + cell.windows.slice(0, 5).map(client => NacreI18n.windowCaption(WindowTitle.caption(client.title || client.wmClass || NacreI18n.tr("workspaces.window.fallback", "Window"), client.wmClass, ChatWindowTitle.titles[client.pid]), client.wmClass).slice(0, 80)).join("\n") : "",
                         more: cell.windowCount > 5 ? NacreI18n.tr("workspaces.tooltip.more", "\n+{count} more", {
@@ -303,9 +348,9 @@ Item {
         z: -1
         objectName: "activeWorkspaceCapsule"
         visible: !root.customIcons && !!root.activeCell
-        x: root.activeCell?.x ?? 0
+        x: (root.activeCell?.x ?? 0) + (root.activeCell?.groupSpace ?? 0)
         y: 1
-        width: root.activeCell?.width ?? 32
+        width: (root.activeCell?.width ?? 32) - (root.activeCell?.groupSpace ?? 0)
         height: 28
         radius: 14
         color: Qt.tint(NacreColours.palette.m3surfaceContainer, Qt.alpha(root.activeCell?.accent ?? NacreColours.palette.m3primary, .15))
@@ -331,7 +376,7 @@ Item {
             objectName: "activeWorkspacePearl"
             x: 5
             anchors.verticalCenter: parent.verticalCenter
-            workspaceId: root.activeCell?.workspaceId ?? 0
+            workspaceId: root.activeCell?.labelNumber ?? 0
             current: true
             occupied: true
             urgent: root.activeCell?.urgent ?? false

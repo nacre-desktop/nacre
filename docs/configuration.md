@@ -7,7 +7,7 @@ wallpapers, conversations or notes.
 
 ## Profiles
 
-The [default profile](../profiles/default.json) has `version: 1`, five workspace
+The [default profile](../profiles/default.json) has `version: 1`, six workspace
 pearls, no startup apps and no app-to-workspace assignments. AI and Brain open on
 the current workspace unless `aiWorkspace` or `brainWorkspace` is set. The bar
 keeps extra occupied workspaces visible; scroll over the pearls to switch, or
@@ -20,20 +20,47 @@ Omitting the option preserves an existing profile; explicitly choosing `default`
 replaces its startup/routing choices. Updates preserve private overrides or refuse
 conflicting edits. Startup entries are argument arrays, not shell snippets.
 
-On Niri, each monitor’s bar shows its own workspaces, active marker and window
-hints, even when another monitor has focus. Clicking or scrolling that row
-switches workspaces on that monitor. When an output has a full set of named workspaces matching `workspaceCount`,
-the bar keeps that configured set and leaves Niri’s automatic spare out of the
-row. Native overview can still reach workspaces outside the configured set.
+## Monitor workspaces
 
-To keep equal persistent sets across known monitors, `desktop.json` can contain
-`niriWorkspaceOutputs`, mapping output names to arrays of unique workspace names.
-Each array must contain exactly `workspaceCount` names; session preparation writes
-`open-on-output` declarations. Names must be unique across monitors. These private
-monitor preferences remain outside the profile repository.
+**Settings → Windows & workspaces** selects Niri's monitor policy. The default is
+**Primary fixed, other monitors dynamic**. The primary keeps `workspaceCount`
+named workspaces (six for new profiles). Other monitors start with Niri's single
+unnamed workspace and grow when used; unused workspaces disappear. Nacre never
+creates additional empty workspaces. Niri itself keeps its native trailing spare.
+Existing profiles retain their explicit workspace count.
 
-For configured Niri monitor sets, `monitorWorkspaceActions: true` in
-`desktop.json` enables these additional controls when preparing the session:
+**Primary workspace monitor** accepts a connector such as `DP-1`. If it is absent,
+the laptop display (`eDP`/`LVDS`) is preferred, followed by the first connected
+connector in name order. Leaving it blank uses the same fallback. The fixed set
+follows the selected primary, including when undocking. Startup app routes keep
+using workspace names rather than unstable display numbers.
+
+Opt into **Fixed sets on all monitors** to keep an equal named set on every
+connected output. On disconnect, occupied workspaces visit a remaining monitor.
+Empty named visitors lose their names and are removed by Niri. Reconnect recreates
+the full set with `open-on-output`; occupied visitors retain their identities and
+return home. Each monitor's previous active workspace and selected window are
+restored when still available, including an empty named slot recreated with a new
+native ID. An empty dynamic view reuses Niri’s existing spare. Closing a window while disconnected cannot restore that closed window.
+
+Bars show their own set first, then a divider and occupied visitors grouped by
+home monitor with a monitor badge. Empty visitors are never appended. A three-second
+presentation grace period absorbs disconnect/reconnect blips. Niri's native window
+moves happen immediately; the bar never holds up compositor recovery. Bar clicks
+use opaque workspace IDs, so a changing display number cannot retarget a click.
+
+**Bring visitors here** is available in the launcher and on **Super+Alt+V** in both
+modes. In fixed mode it merges visiting windows into the same-numbered local slot.
+In dynamic mode it merges into the current workspace, appending tiled windows as
+columns at the right. Selecting a visiting dynamic workspace also adopts that
+workspace on its present monitor. Merged/adopted windows stay after reconnect.
+The command operates on visitors on the focused monitor and preserves the prior
+view/selected window where that window still exists. Floating windows keep their
+floating state.
+
+**Send, swap and rotate shortcuts** is an additional opt-in, available only with
+fixed sets on all monitors. In the default dynamic-secondary model these shortcuts
+are disabled because another monitor has no fixed numbered destination set.
 
 | Shortcut | Action |
 | --- | --- |
@@ -42,22 +69,30 @@ For configured Niri monitor sets, `monitorWorkspaceActions: true` in
 | Super+Alt+PageDown / PageUp | Exchange the selected workspace with the next / previous monitor’s selected workspace. |
 | Super+Alt+Shift+PageDown / PageUp | Rotate all configured workspace sets forward / backward between monitors. |
 
-Monitor order follows layout position: left to right, then top to bottom when
-horizontal positions match, wrapping at either end. With two screens, both
-directions select the other screen. These controls also work in Bird’s Eye:
-selection means the keyboard-selected workspace or tile, not a hovered preview.
-Sending a tile keeps the current view; exchanges keep focus on the same physical
-monitor and preserve each workspace’s windows and internal layout. Each screen
-keeps its configured number of slots, including during an exchange. All connected
-monitors must have a complete named set; an unavailable destination fails before
-moving anything.
+Monitor order for these controls follows layout position: left to right, then top
+to bottom, with connector name breaking ties and wrapping at either end. They work
+in Bird's Eye with the keyboard-selected tile/workspace. Sending keeps the current
+view; exchanges retain windows/layout and save the new home assignments. All
+connected monitors must have a complete set before an operation starts. A failed
+exchange attempts to restore owners, order and views.
 
-Workspace exchanges update the private output assignments, so reconnecting or
-restarting uses the new owners. A failed exchange attempts to restore the original
-owners, order and views; disconnect recovery never removes workspaces or windows.
+The private versioned `desktop.json` store uses `niriWorkspaceMode`
+(`primary-dynamic` or `fixed-all`), `workspacePrimaryOutput`,
+`monitorWorkspaceActions` and `niriWorkspaceSets` (connector → unique names).
+Version 3 migrates the former `niriWorkspaceOutputs` map to `niriWorkspaceSets`
+and selects the new default unless a mode was explicitly set. Reading is lazy;
+the first successful save, including managed session reconciliation, keeps the
+original bytes in `desktop.json.pre-vN-to-v3.bak`. Newer-version stores are refused
+without modification. Private output names and assignments stay outside profiles.
+Prepared sessions own `workspaces.kdl` and the optional shortcut include; changing
+the policy in Settings updates these through the compositor event owner.
 
-Niri workspace numbers are dynamic on each output; its preparation path converts
-profile routes to named workspaces.
+**Hyprland differs:** its workspace numbers are global, and its current Nacre
+backend has no per-output dynamic workspace sets or reliable original-output
+visitor identities. These Niri policy controls, visitor merge action and monitor
+send/swap/rotate bindings are therefore unavailable there. The existing global
+workspace bar and ordinary move/focus shortcuts remain supported. This change
+does not emulate Niri hotplug return behavior on Hyprland.
 
 ## Personal trash bindings (opt-in)
 

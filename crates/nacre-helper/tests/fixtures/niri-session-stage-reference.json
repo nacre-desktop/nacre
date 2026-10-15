@@ -79,7 +79,7 @@
           "mode": 416
         },
         ".config/nacre/profile.json": {
-          "text": "{\n  \"version\": 1,\n  \"id\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\"\n  ],\n  \"workspaceCount\": 5,\n  \"workspaceNames\": [],\n  \"workspaceIcons\": [],\n  \"startup\": [],\n  \"routes\": [],\n  \"brainWorkspace\": null,\n  \"aiWorkspace\": null,\n  \"aiFullAccess\": false,\n  \"windowTrashBindings\": false\n}\n",
+          "text": "{\n  \"version\": 1,\n  \"id\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\"\n  ],\n  \"workspaceCount\": 6,\n  \"workspaceNames\": [],\n  \"workspaceIcons\": [],\n  \"startup\": [],\n  \"routes\": [],\n  \"brainWorkspace\": null,\n  \"aiWorkspace\": null,\n  \"aiFullAccess\": false,\n  \"windowTrashBindings\": false\n}\n",
           "mode": 420
         },
         ".config/nacre/profile.lua": {
@@ -148,7 +148,7 @@
           "mode": 416
         },
         ".config/nacre/profile.json": {
-          "text": "{\n  \"version\": 1,\n  \"id\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\",\n    \"ai\"\n  ],\n  \"workspaceCount\": 5,\n  \"workspaceNames\": [],\n  \"workspaceIcons\": [],\n  \"startup\": [],\n  \"routes\": [],\n  \"brainWorkspace\": null,\n  \"aiWorkspace\": null,\n  \"aiFullAccess\": false,\n  \"windowTrashBindings\": false\n}\n",
+          "text": "{\n  \"version\": 1,\n  \"id\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\",\n    \"ai\"\n  ],\n  \"workspaceCount\": 6,\n  \"workspaceNames\": [],\n  \"workspaceIcons\": [],\n  \"startup\": [],\n  \"routes\": [],\n  \"brainWorkspace\": null,\n  \"aiWorkspace\": null,\n  \"aiFullAccess\": false,\n  \"windowTrashBindings\": false\n}\n",
           "mode": 420
         },
         ".config/nacre/profile.lua": {
@@ -224,7 +224,7 @@
           "mode": 416
         },
         ".config/nacre/profile.json": {
-          "text": "{\n  \"version\": 1,\n  \"id\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\",\n    \"brain\"\n  ],\n  \"workspaceCount\": 5,\n  \"workspaceNames\": [],\n  \"workspaceIcons\": [],\n  \"startup\": [],\n  \"routes\": [],\n  \"brainWorkspace\": null,\n  \"aiWorkspace\": null,\n  \"aiFullAccess\": false,\n  \"windowTrashBindings\": false\n}\n",
+          "text": "{\n  \"version\": 1,\n  \"id\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\",\n    \"brain\"\n  ],\n  \"workspaceCount\": 6,\n  \"workspaceNames\": [],\n  \"workspaceIcons\": [],\n  \"startup\": [],\n  \"routes\": [],\n  \"brainWorkspace\": null,\n  \"aiWorkspace\": null,\n  \"aiFullAccess\": false,\n  \"windowTrashBindings\": false\n}\n",
           "mode": 420
         },
         ".config/nacre/profile.lua": {
@@ -306,7 +306,7 @@
           "mode": 416
         },
         ".config/nacre/profile.json": {
-          "text": "{\n  \"version\": 1,\n  \"id\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\",\n    \"ai\",\n    \"brain\"\n  ],\n  \"workspaceCount\": 5,\n  \"workspaceNames\": [],\n  \"workspaceIcons\": [],\n  \"startup\": [],\n  \"routes\": [],\n  \"brainWorkspace\": null,\n  \"aiWorkspace\": null,\n  \"aiFullAccess\": false,\n  \"windowTrashBindings\": false\n}\n",
+          "text": "{\n  \"version\": 1,\n  \"id\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\",\n    \"ai\",\n    \"brain\"\n  ],\n  \"workspaceCount\": 6,\n  \"workspaceNames\": [],\n  \"workspaceIcons\": [],\n  \"startup\": [],\n  \"routes\": [],\n  \"brainWorkspace\": null,\n  \"aiWorkspace\": null,\n  \"aiFullAccess\": false,\n  \"windowTrashBindings\": false\n}\n",
           "mode": 420
         },
         ".config/nacre/profile.lua": {

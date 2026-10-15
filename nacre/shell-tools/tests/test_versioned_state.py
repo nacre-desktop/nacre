@@ -1,6 +1,8 @@
 """Every persistent schema: migrations, exact backups, downgrades and recovery."""
 
 import json
+import os
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -82,7 +84,7 @@ class StateTests(unittest.TestCase):
             path.parent.mkdir()
             original = b'{"custom":"keep"}'
             path.write_bytes(original)
-            backup = path.with_name(path.name + ".pre-v0-to-v2.bak")
+            backup = path.with_name(path.name + ".pre-v0-to-v3.bak")
             outside = Path(folder) / "outside"
             outside.write_text("untouched")
             backup.symlink_to(outside)
@@ -104,9 +106,9 @@ class StateTests(unittest.TestCase):
                     )
                 )
             self.assertEqual(
-                path.with_name(path.name + ".pre-v0-to-v2.bak").read_bytes(), original
+                path.with_name(path.name + ".pre-v0-to-v3.bak").read_bytes(), original
             )
-            self.assertEqual(json.loads(path.read_bytes())["version"], 2)
+            self.assertEqual(json.loads(path.read_bytes())["version"], 3)
 
     def test_desktop_edges_split_without_losing_profile_snapshot_or_new_keys(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -128,9 +130,80 @@ class StateTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), original)
             state.write(path, current)
             self.assertEqual(
-                path.with_name(path.name + ".pre-v1-to-v2.bak").read_bytes(), original
+                path.with_name(path.name + ".pre-v1-to-v3.bak").read_bytes(), original
             )
-            self.assertEqual(json.loads(path.read_bytes())["version"], 2)
+            self.assertEqual(json.loads(path.read_bytes())["version"], 3)
+
+    def test_workspace_output_migration_preserves_map_and_original_bytes(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "nacre/desktop.json"
+            path.parent.mkdir()
+            original = (
+                b'{"version":2,"niriWorkspaceOutputs":{"DP-1":["a","b"]},"unknown":7}'
+            )
+            path.write_bytes(original)
+            value = state.read_json_file(path)
+            self.assertEqual(value["niriWorkspaceMode"], "primary-dynamic")
+            self.assertEqual(value["niriWorkspaceSets"], {"DP-1": ["a", "b"]})
+            self.assertNotIn("niriWorkspaceOutputs", value)
+            self.assertEqual(path.read_bytes(), original)
+            state.write(path, value)
+            self.assertEqual(
+                path.with_name(path.name + ".pre-v2-to-v3.bak").read_bytes(), original
+            )
+            self.assertEqual(json.loads(path.read_bytes())["unknown"], 7)
+
+    def test_registered_desktop_writer_migrates_and_backs_up_the_original(self):
+        helper = Path(
+            os.environ.get(
+                "NACRE_HELPER_BINARY",
+                Path(__file__).resolve().parents[3] / "target/debug/nacre-helper",
+            )
+        )
+        if not helper.is_file():
+            self.skipTest("Build the native helper before Settings migration checks")
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            path = home / ".config/nacre/desktop.json"
+            path.parent.mkdir(parents=True)
+            original = b'{"version":2,"niriWorkspaceOutputs":{"DP-1":["one"]},"unrelated":"keep"}'
+            path.write_bytes(original)
+            environment = dict(
+                os.environ,
+                HOME=str(home),
+                XDG_CONFIG_HOME=str(home / ".config"),
+                XDG_STATE_HOME=str(home / ".local/state"),
+                XDG_CACHE_HOME=str(home / ".cache"),
+            )
+
+            def save():
+                return subprocess.run(
+                    [str(helper), "state-file", "set-id", "desktop"],
+                    input=json.dumps(
+                        {"key": ["workspacePrimaryOutput"], "value": "DP-1"}
+                    )
+                    + "\n",
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+
+            result = save()
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            saved = json.loads(path.read_bytes())
+            self.assertEqual(saved["version"], 3)
+            self.assertEqual(saved["niriWorkspaceSets"], {"DP-1": ["one"]})
+            self.assertEqual(saved["niriWorkspaceMode"], "primary-dynamic")
+            self.assertNotIn("niriWorkspaceOutputs", saved)
+            self.assertEqual(saved["unrelated"], "keep")
+            backup = path.with_name("desktop.json.pre-v2-to-v3.bak")
+            self.assertEqual(backup.read_bytes(), original)
+            future = b'{"version":99,"future":"keep"}'
+            path.write_bytes(future)
+            self.assertNotEqual(save().returncode, 0)
+            self.assertEqual(path.read_bytes(), future)
+            self.assertEqual(backup.read_bytes(), original)
 
     def test_control_center_v1_migration_keeps_optional_order(self):
         with tempfile.TemporaryDirectory() as folder:

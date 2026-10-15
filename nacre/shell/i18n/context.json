@@ -3402,5 +3402,16 @@
   "software.aur.provenance": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
   "software.aur.provenance-description": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
   "software.aur.launcher": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
-  "software.aur.launcher-description": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings."
+  "software.aur.launcher-description": "Registered profile AUR review policy and its provenance; no package action is performed by opening Settings.",
+  "settings.registry.windows-workspaces.workspaces.monitorWorkspaceActions.description": "Monitor workspace policy, Settings and visitor merge action.",
+  "settings.registry.windows-workspaces.workspaces.monitorWorkspaceActions.label": "Monitor workspace policy, Settings and visitor merge action.",
+  "settings.registry.windows-workspaces.workspaces.niriWorkspaceMode.description": "Monitor workspace policy, Settings and visitor merge action.",
+  "settings.registry.windows-workspaces.workspaces.niriWorkspaceMode.label": "Monitor workspace policy, Settings and visitor merge action.",
+  "settings.registry.windows-workspaces.workspaces.workspacePrimaryOutput.description": "Monitor workspace policy, Settings and visitor merge action.",
+  "settings.registry.windows-workspaces.workspaces.workspacePrimaryOutput.label": "Monitor workspace policy, Settings and visitor merge action.",
+  "settings.workspaces.mode.fixed-all": "Monitor workspace policy, Settings and visitor merge action.",
+  "settings.workspaces.mode.primary-dynamic": "Monitor workspace policy, Settings and visitor merge action.",
+  "launcher.catalog.bring-visitors.label": "Monitor workspace policy, Settings and visitor merge action.",
+  "launcher.catalog.bring-visitors.description": "Monitor workspace policy, Settings and visitor merge action.",
+  "workspaces.requires-niri": "Disabled visitor workspace launcher action on Hyprland."
 }

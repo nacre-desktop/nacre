@@ -246,8 +246,17 @@ pub fn run(argv: &[String]) -> crate::Result<i32> {
             }
             super::backend::Backend::Niri(backend) => {
                 let mut events = backend.events()?;
+                let mut workspaces = super::niri_workspace_policy::Session::default();
+                let manage_workspaces =
+                    std::env::var("NACRE_NIRI_WORKSPACE_POLICY").as_deref() == Ok("1");
                 loop {
-                    println!("{}", crate::json::encode(&events.next_value()?)?);
+                    let mut value = events.next_value()?;
+                    if manage_workspaces {
+                        if let Err(error) = workspaces.accept(&mut value) {
+                            eprintln!("Workspace policy: {error}");
+                        }
+                    }
+                    println!("{}", crate::json::encode(&value)?);
                     std::io::stdout().flush()?;
                 }
             }

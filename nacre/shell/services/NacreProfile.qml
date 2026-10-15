@@ -8,7 +8,7 @@ Singleton {
     id: root
     property bool ready: false
     property var data: ({
-            workspaceCount: 5,
+            workspaceCount: 6,
             workspaceNames: [],
             workspaceIcons: [],
             components: ["configs", "shell"]

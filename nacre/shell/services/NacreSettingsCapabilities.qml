@@ -25,6 +25,8 @@ Singleton {
             panelDragging: NacreCompositor.capabilities?.nativePanelDrag === true,
             windowCapture: NacreCompositor.capabilities?.windowCapture === true
         };
+        result.niriFixedWorkspaces = NacreCompositor.backendName === "niri" && DesktopSettings.data.niriWorkspaceMode === "fixed-all";
+        result.niriWorkspaces = NacreCompositor.backendName === "niri";
         result["input.controls"] = ["hyprland", "niri"].includes(NacreCompositor.backendName);
         result["input.touchpadSpeed"] = NacreCompositor.backendName === "niri";
         result.touchpad = /touchpad|trackpad/i.test(inputDevices.text());

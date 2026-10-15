@@ -259,8 +259,8 @@ Scope {
             }, {
                 count: Updates.count
             }) : NacreI18n.tr("ui.menu-context.status.up-to-date", "Up to date")) : typeof checked === "boolean" ? (["setting", "dnd", "night-light", "stay-awake", "mute", "mic-mute", "wifi", "bluetooth"].includes(row.state) ? (checked ? NacreI18n.tr("ui.menu-context.status.on", "On") : NacreI18n.tr("ui.menu-context.status.off", "Off")) : checked ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : "") : "";
-        result.disabled = !!row.capability && snapshot.capabilities[row.capability] !== true && workflows.data.capabilities?.[row.capability] !== true;
-        result.reason = result.disabled ? NacreI18n.tr("launcher.disabled.optional-tool-is-not-installed", "Optional tool is not installed") : "";
+        result.disabled = row.capability === "niriWorkspaces" ? NacreCompositor.backendName !== "niri" : !!row.capability && snapshot.capabilities[row.capability] !== true && workflows.data.capabilities?.[row.capability] !== true;
+        result.reason = row.capability === "niriWorkspaces" && result.disabled ? NacreI18n.tr("workspaces.requires-niri", "Available on Niri only.") : result.disabled ? NacreI18n.tr("launcher.disabled.optional-tool-is-not-installed", "Optional tool is not installed") : "";
         if (row.id === "software.tui.new" && !(library.data.tui?.terminals || []).length) {
             result.disabled = true;
             result.reason = NacreI18n.tr("software.tui.requires-terminal", "Install a supported terminal first");
@@ -1419,6 +1419,10 @@ Scope {
             return NacreCompositor.focusWindow(value);
         if (operation === "url" && /^https?:\/\//.test(value)) {
             AppLaunch.run(["xdg-open", value]);
+            return true;
+        }
+        if (operation === "bring-visitors" && NacreCompositor.backendName === "niri") {
+            AppLaunch.run([NacrePaths.helperBinary, "monitor-workspaces", "bring"]);
             return true;
         }
         if (operation === "command" && Array.isArray(row.arguments) && row.arguments.length) {

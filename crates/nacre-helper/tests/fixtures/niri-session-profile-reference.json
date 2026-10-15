@@ -30,7 +30,7 @@
             "configs",
             "shell"
           ],
-          "workspaceCount": 5,
+          "workspaceCount": 6,
           "workspaceNames": [],
           "workspaceIcons": [],
           "startup": [],
@@ -67,7 +67,7 @@
             "configs",
             "shell"
           ],
-          "workspaceCount": 5,
+          "workspaceCount": 6,
           "workspaceNames": [],
           "workspaceIcons": [],
           "startup": [],
@@ -92,7 +92,7 @@
             "configs",
             "shell"
           ],
-          "workspaceCount": 5,
+          "workspaceCount": 6,
           "workspaceNames": [],
           "workspaceIcons": [],
           "startup": [],
@@ -137,7 +137,7 @@
         "value": null,
         "error": {
           "type": "ValueError",
-          "message": "Workspace count must be 1\u201310"
+          "message": "Workspace count must be 1–10"
         }
       }
     },
@@ -149,7 +149,7 @@
         "value": null,
         "error": {
           "type": "ValueError",
-          "message": "Workspace count must be 1\u201310"
+          "message": "Workspace count must be 1–10"
         }
       }
     },
@@ -161,7 +161,7 @@
         "value": null,
         "error": {
           "type": "ValueError",
-          "message": "Workspace count must be 1\u201310"
+          "message": "Workspace count must be 1–10"
         }
       }
     },
@@ -173,7 +173,7 @@
         "value": null,
         "error": {
           "type": "ValueError",
-          "message": "Workspace count must be 1\u201310"
+          "message": "Workspace count must be 1–10"
         }
       }
     },
@@ -357,7 +357,7 @@
             "configs",
             "shell"
           ],
-          "workspaceCount": 5,
+          "workspaceCount": 6,
           "workspaceNames": [],
           "workspaceIcons": [],
           "startup": [
@@ -399,7 +399,7 @@
             "configs",
             "shell"
           ],
-          "workspaceCount": 5,
+          "workspaceCount": 6,
           "workspaceNames": [],
           "workspaceIcons": [],
           "startup": [],

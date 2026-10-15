@@ -59,6 +59,7 @@ TestCase {
         };
         DesktopExtras.clips = [];
         NacreCompositor.windows = [];
+        NacreCompositor.backendName = "hyprland";
         NacrePanelState.calls = [];
     }
 
@@ -505,6 +506,20 @@ TestCase {
         value.navigate("software.development");
         findChild(value, "launcherSearch").text = "touchpad";
         verify(value.entries.some(row => row.value === "touchpad-disable"));
+    }
+
+    function test_bring_visitors_is_capability_gated_and_dispatches_the_scoped_helper() {
+        const value = view();
+        let action = value.menu.node("actions.bring-visitors");
+        verify(action.disabled);
+        verify(!value.menu.execute(action));
+        compare(AppLaunch.commands.length, 0);
+        NacreCompositor.backendName = "niri";
+        action = value.menu.node("actions.bring-visitors");
+        verify(!action.disabled);
+        verify(value.menu.execute(action));
+        compare(AppLaunch.commands.length, 1);
+        compare(AppLaunch.commands[0].slice(-2).join(","), "monitor-workspaces,bring");
     }
 
     function test_setup_actions_use_hardware_results_and_confirmation() {

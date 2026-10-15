@@ -34,7 +34,10 @@
       "weatherLocation": "",
       "weatherFahrenheit": false,
       "interfaceFont": "",
-      "language": "system"
+      "language": "system",
+      "niriWorkspaceMode": "primary-dynamic",
+      "workspacePrimaryOutput": "",
+      "monitorWorkspaceActions": false
     },
     "error": "not enough values to unpack (expected 2, got 1)",
     "pending": false

@@ -144,6 +144,10 @@ def _decode(value, entry):
                     document.pop(old)
         # Dashboard had no independent off switch; preserve that behavior.
         data.setdefault("dashboardEnabled", True)
+    if entry["id"] == "desktop" and version < 3:
+        if "niriWorkspaceOutputs" in data:
+            data.setdefault("niriWorkspaceSets", data.pop("niriWorkspaceOutputs"))
+        data.setdefault("niriWorkspaceMode", "primary-dynamic")
     if entry["id"] == "control-center" and version < 2:
         data = dict(
             data,

@@ -1655,6 +1655,22 @@
       "value": "system",
       "labelId": "software.aur.launcher",
       "descriptionId": "software.aur.launcher-description"
+    },
+    {
+      "id": "actions.bring-visitors",
+      "kind": "action",
+      "label": "Bring visitors here",
+      "description": "Keep visiting windows on this monitor after reconnect",
+      "icon": "workspaces",
+      "operation": "bring-visitors",
+      "aliases": [
+        "merge monitors",
+        "undock",
+        "visiting workspaces"
+      ],
+      "capability": "niriWorkspaces",
+      "labelId": "launcher.catalog.bring-visitors.label",
+      "descriptionId": "launcher.catalog.bring-visitors.description"
     }
   ],
   "software": [

@@ -34,7 +34,10 @@
       "weatherLocation": "",
       "weatherFahrenheit": false,
       "interfaceFont": "",
-      "language": "system"
+      "language": "system",
+      "niriWorkspaceMode": "primary-dynamic",
+      "workspacePrimaryOutput": "",
+      "monitorWorkspaceActions": false
     },
     "monitors": [],
     "pending": false,

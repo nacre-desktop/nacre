@@ -49,5 +49,8 @@
   "touchpadTypingGuard": true,
   "monoFont": "",
   "textSize": 12,
-  "reduceMotion": false
+  "reduceMotion": false,
+  "niriWorkspaceMode": "primary-dynamic",
+  "workspacePrimaryOutput": "",
+  "monitorWorkspaceActions": false
 }

@@ -2,13 +2,16 @@ use niri::layout::LayoutElement;
 use niri::niri::State;
 use niri_config::Config;
 use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
-use std::{env, path::Path};
+use std::{env, path::Path, io::{BufRead, Write}};
 fn main() {
     let mut args = env::args().skip(1);
     let config = args.next().expect("config");
     let count: u8 = args.next().unwrap_or("3".into()).parse().unwrap();
     let telemetry = args.next();
-    let config = Config::load(Path::new(&config)).config.unwrap();
+    let config_path = niri_config::ConfigPath::Explicit(Path::new(&config).to_path_buf());
+    let parsed = Config::load(Path::new(&config));
+    let includes = parsed.includes;
+    let config = parsed.config.unwrap();
     let mut event_loop = EventLoop::<State>::try_new().unwrap();
     let mut state = State::new(
         config,
@@ -20,6 +23,7 @@ fn main() {
         false,
     )
     .unwrap();
+    niri::utils::watcher::setup(&mut state, &config_path, includes);
     state.backend.headless().add_renderer().unwrap();
     for n in 1..=count {
         state
@@ -27,6 +31,36 @@ fn main() {
             .headless()
             .add_output(&mut state.niri, n, (800, 600));
     }
+    // Commands arrive only on this owned driver's stdin. Removing several
+    // connectors in one dispatch models an undock without intermediate client work.
+    let (sender, receiver) = smithay::reexports::calloop::channel::channel::<String>();
+    std::thread::spawn(move || {
+        for line in std::io::stdin().lock().lines().map_while(Result::ok) {
+            if sender.send(line).is_err() { break; }
+        }
+    });
+    event_loop.handle().insert_source(receiver, |event, _, state| {
+        if let smithay::reexports::calloop::channel::Event::Msg(line) = event {
+            let mut words = line.split_whitespace();
+            let command = words.next().unwrap_or("");
+            for number in words.filter_map(|s| s.parse::<u8>().ok()) {
+                let name = format!("headless-{number}");
+                let output = state.niri.global_space.outputs().find(|o| o.name() == name).cloned();
+                if command == "remove" {
+                    if let Some(output) = output {
+                        state.niri.remove_output(&output);
+                        state.backend.headless().ipc_outputs().lock().unwrap().retain(|_, o| o.name != name);
+                    }
+                } else if command == "add" && output.is_none() {
+                    state.backend.headless().add_output(&mut state.niri, number, (800,600));
+                }
+            }
+            state.niri.on_ipc_outputs_changed();
+            state.refresh_and_flush_clients();
+            println!("done {line}");
+            std::io::stdout().flush().unwrap();
+        }
+    }).unwrap();
     state.refresh_and_flush_clients();
     println!(
         "{}\t{}",

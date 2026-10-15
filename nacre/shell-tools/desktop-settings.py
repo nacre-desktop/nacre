@@ -42,6 +42,8 @@ PRESET_KEYS = [
     if key not in INPUT_KEYS
     and key != "language"
     and key != "monoFont"
+    and key
+    not in ("niriWorkspaceMode", "workspacePrimaryOutput", "monitorWorkspaceActions")
     and not key.startswith(("lock", "weather", "interface"))
 ]
 OPTIONS = set(compositor.desktop_option_keys())
@@ -131,12 +133,22 @@ def validate(key, value):
         low, high = RANGES[key]
         if type(value) is not int or not low <= value <= high:
             raise ValueError(f"{key} must be an integer from {low} to {high}")
+    elif key == "niriWorkspaceMode":
+        if value not in ("primary-dynamic", "fixed-all"):
+            raise ValueError(
+                "Choose primary with dynamic secondary monitors, or fixed sets on all monitors"
+            )
     elif key == "language":
         if value not in ("system", "en", "pseudo") or (
             value == "pseudo" and os.environ.get("NACRE_DEVELOPER_MODE") != "1"
         ):
             raise ValueError("Choose System default or English")
-    elif key in ("weatherLocation", "interfaceFont", "monoFont"):
+    elif key in (
+        "weatherLocation",
+        "interfaceFont",
+        "monoFont",
+        "workspacePrimaryOutput",
+    ):
         if (
             not isinstance(value, str)
             or len(value) > 80

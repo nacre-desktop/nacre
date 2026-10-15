@@ -2275,6 +2275,98 @@
       }
     },
     {
+      "id": "windows-workspaces.workspaces.niriWorkspaceMode",
+      "page": "windows-workspaces",
+      "section": "windows-workspaces.workspaces",
+      "key": "niriWorkspaceMode",
+      "labelId": "settings.registry.windows-workspaces.workspaces.niriWorkspaceMode.label",
+      "descriptionId": "settings.registry.windows-workspaces.workspaces.niriWorkspaceMode.description",
+      "type": "enum",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "niriWorkspaceMode"
+        ]
+      },
+      "default": "primary-dynamic",
+      "apply": "instant",
+      "synonyms": [
+        "monitors",
+        "hotplug",
+        "visitors"
+      ],
+      "advanced": false,
+      "visibleWhen": {
+        "capability": "niriWorkspaces"
+      },
+      "options": [
+        {
+          "value": "primary-dynamic",
+          "labelId": "settings.workspaces.mode.primary-dynamic"
+        },
+        {
+          "value": "fixed-all",
+          "labelId": "settings.workspaces.mode.fixed-all"
+        }
+      ]
+    },
+    {
+      "id": "windows-workspaces.workspaces.workspacePrimaryOutput",
+      "page": "windows-workspaces",
+      "section": "windows-workspaces.workspaces",
+      "key": "workspacePrimaryOutput",
+      "labelId": "settings.registry.windows-workspaces.workspaces.workspacePrimaryOutput.label",
+      "descriptionId": "settings.registry.windows-workspaces.workspaces.workspacePrimaryOutput.description",
+      "type": "string",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "workspacePrimaryOutput"
+        ]
+      },
+      "default": "",
+      "apply": "instant",
+      "synonyms": [
+        "monitors",
+        "hotplug",
+        "visitors"
+      ],
+      "advanced": false,
+      "visibleWhen": {
+        "capability": "niriWorkspaces"
+      }
+    },
+    {
+      "id": "windows-workspaces.workspaces.monitorWorkspaceActions",
+      "page": "windows-workspaces",
+      "section": "windows-workspaces.workspaces",
+      "key": "monitorWorkspaceActions",
+      "labelId": "settings.registry.windows-workspaces.workspaces.monitorWorkspaceActions.label",
+      "descriptionId": "settings.registry.windows-workspaces.workspaces.monitorWorkspaceActions.description",
+      "type": "boolean",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "monitorWorkspaceActions"
+        ]
+      },
+      "default": false,
+      "apply": "instant",
+      "synonyms": [
+        "monitors",
+        "hotplug",
+        "visitors"
+      ],
+      "advanced": false,
+      "visibleWhen": {
+        "capability": "niriWorkspaces"
+      },
+      "enabledWhen": {
+        "capability": "niriFixedWorkspaces"
+      },
+      "unavailableId": "settings.registry.windows-workspaces.workspaces.monitorWorkspaceActions.description"
+    },
+    {
       "id": "windows-workspaces.workspaces.workspaceCount",
       "page": "windows-workspaces",
       "section": "windows-workspaces.workspaces",
@@ -2288,7 +2380,7 @@
           "workspaceCount"
         ]
       },
-      "default": 5,
+      "default": 6,
       "apply": "instant",
       "synonyms": [],
       "advanced": false,

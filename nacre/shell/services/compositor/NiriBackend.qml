@@ -122,8 +122,8 @@ Singleton {
             ordered.push(window);
         }
         const retired = Object.values(byId).filter(window => !next[window.windowId]);
-        workspaceValues = value.workspaces;
         monitorValues = value.monitors;
+        workspaceValues = value.workspaces;
         activeWorkspace = value.activeWorkspace || null;
         focusedMonitor = value.focusedMonitor || null;
         byId = next;
@@ -191,7 +191,8 @@ Singleton {
         objectName: "niriEventStream"
         running: true
         environment: ({
-                NACRE_COMPOSITOR: "niri"
+                NACRE_COMPOSITOR: "niri",
+                NACRE_NIRI_WORKSPACE_POLICY: "1"
             })
         command: [NacrePaths.helperBinary, "compositor", "events"]
         stdout: SplitParser {
