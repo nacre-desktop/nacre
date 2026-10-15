@@ -69,6 +69,22 @@ async def main():
             )
         for effect in rule.get("effects", []):
             append(root / "effects.jsonl", effect)
+
+        async def emit(specification):
+            await asyncio.sleep(specification.get("delay", 0))
+            await bus.send(
+                Message.new_signal(
+                    specification["path"],
+                    specification["interface"],
+                    specification["member"],
+                    specification.get("signature", ""),
+                    typed(specification.get("body", [])),
+                )
+            )
+
+        for specification in rule.get("signals", []):
+            asyncio.create_task(emit(specification))
+
         reply = rule.get("reply", {})
         if "error" in reply:
             return Message.new_error(message, reply["error"], reply.get("text", ""))

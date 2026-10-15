@@ -10,7 +10,7 @@ Singleton {
     id: root
     readonly property string currentNamePath: NacrePaths.state.slice(7) + "/wallpaper/last.txt"
     readonly property string path: NacrePaths.pictures.slice(7) + "/Wallpapers"
-    readonly property string tool: NacrePaths.tools + "/wallpaper-media.py"
+    readonly property string tool: "wallpaper-media"
     property var list: []
     readonly property bool demoRestoring: demoRestore.running
     signal demoRestored
@@ -372,7 +372,7 @@ Singleton {
     Process {
         id: catalog
         objectName: "wallpaperCatalog"
-        command: ["python3", root.tool, "catalog"]
+        command: [NacrePaths.helperBinary, root.tool, "catalog"]
         stdout: StdioCollector {
             onStreamFinished: root.catalogReceived = root.publishCatalog(text)
         }
@@ -395,7 +395,7 @@ Singleton {
         id: demoRestore
         property string token: ""
         property bool received: false
-        command: ["python3", root.tool, "demo-restore", token]
+        command: [NacrePaths.helperBinary, root.tool, "demo-restore", token]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -424,7 +424,7 @@ Singleton {
         objectName: "wallpaperCommit"
         property string requestPath: ""
         property string previousPath: ""
-        command: ["python3", root.tool, "select", requestPath, "--stream-presentation"]
+        command: [NacrePaths.helperBinary, root.tool, "select", requestPath, "--stream-presentation"]
         readonly property Connections output: Connections {
             target: commit.stdout
             function onRead(data) {
@@ -449,7 +449,7 @@ Singleton {
         transport: commit
         objectName: "wallpaperPreferences"
         property var value: ({})
-        command: ["python3", root.tool, Object.keys(value).some(key => key.startsWith("palette")) ? "theme" : "preferences", "--stream-presentation"]
+        command: [NacrePaths.helperBinary, root.tool, Object.keys(value).some(key => key.startsWith("palette")) ? "theme" : "preferences", "--stream-presentation"]
         stdinEnabled: true
         onStarted: write(JSON.stringify(value) + "\n")
         readonly property Connections output: Connections {
@@ -471,7 +471,7 @@ Singleton {
         objectName: "wallpaperImporter"
         property var files: []
         property string action: "pick"
-        command: ["python3", root.tool, action]
+        command: [NacrePaths.helperBinary, root.tool, action]
         stdinEnabled: action === "import"
         onStarted: if (action === "import")
             write(JSON.stringify(files) + "\n")
@@ -497,7 +497,7 @@ Singleton {
     Process {
         id: warmer
         objectName: "wallpaperWarmer"
-        command: ["nice", "-n", "19", "python3", root.tool, "warm"]
+        command: ["nice", "-n", "19", NacrePaths.helperBinary, root.tool, "warm"]
         stdout: StdioCollector {}
         onExited: {
             if (root.warmQueued)

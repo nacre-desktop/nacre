@@ -251,6 +251,98 @@ def read_packet(process, timeout=8):
 
 
 def execute(case, command, trace=None):
+    if case["helper"] == "wallpaper-media" and case.get("args") == ["session"]:
+        # Replace only the transport: strict logind calls retain the frozen
+        # loginctl/busctl effects and response data.
+        case = dict(case)
+        commands = case["commands"]
+        display = commands["loginctl"][0].get("stdout", "").strip()
+        user = "/org/freedesktop/login1/user/_1000"
+        path = "/org/freedesktop/login1/session/_" + display if display else "/"
+        manager = "org.freedesktop.login1.Manager"
+
+        def rule(
+            path,
+            interface,
+            member,
+            signature,
+            body,
+            reply_signature,
+            reply,
+            effect=None,
+        ):
+            return dict(
+                match=dict(
+                    destination="org.freedesktop.login1",
+                    path=path,
+                    interface=interface,
+                    member=member,
+                    signature=signature,
+                    body=body,
+                ),
+                reply=dict(signature=reply_signature, body=reply),
+                effects=[effect] if effect else [],
+            )
+
+        def effect(command, argv):
+            return dict(command=command, argv=argv, stdin="")
+
+        case["dbus"] = [
+            rule(
+                "/org/freedesktop/login1", manager, "GetUser", "u", [1000], "o", [user]
+            ),
+            rule(
+                user,
+                "org.freedesktop.DBus.Properties",
+                "Get",
+                "ss",
+                ["org.freedesktop.login1.User", "Display"],
+                "v",
+                [{"variant": "(so)", "value": [display, path]}],
+                effect(
+                    "loginctl", ["show-user", "1000", "--property=Display", "--value"]
+                ),
+            ),
+        ]
+        if display:
+            locked = commands["loginctl"][1]["stdout"].strip() == "yes"
+            case["dbus"] += [
+                rule(
+                    path,
+                    "org.freedesktop.DBus.Properties",
+                    "Get",
+                    "ss",
+                    ["org.freedesktop.login1.Session", "LockedHint"],
+                    "v",
+                    [{"variant": "b", "value": locked}],
+                    effect(
+                        "loginctl",
+                        ["show-session", display, "--property=LockedHint", "--value"],
+                    ),
+                ),
+                rule(
+                    "/org/freedesktop/login1",
+                    manager,
+                    "GetSession",
+                    "s",
+                    [display],
+                    "o",
+                    [path],
+                    effect(
+                        "busctl",
+                        [
+                            "--system",
+                            "call",
+                            "org.freedesktop.login1",
+                            "/org/freedesktop/login1",
+                            manager,
+                            "GetSession",
+                            "s",
+                            display,
+                        ],
+                    ),
+                ),
+            ]
     if case["helper"] == "window-hide":
         # Supply the notification API instead of the retired notify-send tool.
         # Record its equivalent effect so the immutable reference stays exact.

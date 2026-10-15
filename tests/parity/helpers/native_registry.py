@@ -21,6 +21,7 @@ MIGRATED = frozenset(
         "login-appearance",
         "demo-wallpapers",
         "wallpaper-watch",
+        "wallpaper-media",
         "colors",
         "classic-state",
         "branding",

@@ -128,6 +128,7 @@ def retire_native_helpers(directory):
         "lock-dashboard",
         "provision",
         "wallpaper-watch",
+        "wallpaper-media",
         "demo-wallpapers",
         "helper-service",
         "diagnostics",

@@ -27,11 +27,104 @@ fn main() {
             media.state_path = request["state"].as_str().ok_or("Missing state")?.into();
             media.prefs_path = request["prefs"].as_str().ok_or("Missing prefs")?.into();
             media.now_ms = request["now_ms"].as_i64();
+            if let Some(log) = request["command_log"].as_str() {
+                let log = std::path::PathBuf::from(log);
+                let failure = request["command_error"].as_str().map(str::to_owned);
+                let query = request
+                    .get("command_palette")
+                    .filter(|value| !value.is_null())
+                    .cloned();
+                media.palette_command = Some(Box::new(move |command| {
+                    use std::io::Write;
+                    let mut file = std::fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(&log)?;
+                    writeln!(file, "{}", serde_json::to_string(command)?)?;
+                    if let Some(message) = &failure {
+                        return Err(message.clone().into());
+                    }
+                    query
+                        .as_ref()
+                        .map(serde_json::to_string)
+                        .transpose()
+                        .map_err(Into::into)
+                }));
+            }
             let args = request["args"].as_array().ok_or("Missing media args")?;
             let path = |index: usize| -> Result<&Path> {
                 Ok(Path::new(args[index].as_str().ok_or("Missing media path")?))
             };
+            let paths = media.paths.clone();
+            let backend = nacre_helper::compositor::backend::Backend::new(
+                paths.clone(),
+                std::env::vars().collect(),
+            )?;
+            let publisher = nacre_helper::classic_state::Publisher {
+                paths: paths.clone(),
+                assets: media.assets.clone(),
+                backend,
+                system_icons: "/usr/share/icons".into(),
+                monitors: Some(Vec::new()),
+                now_ms: media.now_ms,
+            };
+            let mut cli = nacre_helper::palette_cli::Cli {
+                paths,
+                publisher,
+                publish: true,
+            };
             return match request["method"].as_str().ok_or("Missing media method")? {
+                "import_files" => media.import_files(&args[0]),
+                "theme" => media.theme(&mut cli, &args[0]),
+                "select" => media.select(&mut cli, path(0)?),
+                "warm" => media.warm(
+                    &mut cli,
+                    args.first().and_then(Value::as_bool).unwrap_or(true),
+                ),
+                "prepared_theme" => Ok(json!(media.prepared_theme(
+                    &mut cli.publisher,
+                    path(0)?,
+                    args.get(1).and_then(Value::as_bool).unwrap_or(true)
+                )?)),
+                "demo_start" => media.demo_start(),
+                "demo_restore" => {
+                    let token = args.first().and_then(Value::as_str);
+                    if let Some(log) = request["publication_log"].as_str() {
+                        let mut first = true;
+                        let snapshot = media.demo_snapshot(token)?;
+                        let item = cli.publisher.restore_demo_with_publish(
+                            &snapshot,
+                            true,
+                            |_, poster, _| {
+                                use std::io::Write;
+                                let mut file = std::fs::OpenOptions::new()
+                                    .create(true)
+                                    .append(true)
+                                    .open(log)?;
+                                writeln!(file, "{}", serde_json::to_string(&poster)?)?;
+                                let failure =
+                                    request["publication_error"].as_str().filter(|_| first);
+                                first = false;
+                                failure.map_or(Ok(()), |message| Err(message.into()))
+                            },
+                        )?;
+                        Ok(json!({"media":item,"preferences":media.settings()?}))
+                    } else {
+                        media.demo_restore(&mut cli, token)
+                    }
+                }
+                "demo_scenes" => media.demo_scenes(),
+                "wallpaper_mode" => Ok(json!(
+                    nacre_helper::wallpaper_media::Media::wallpaper_mode(path(0)?)?
+                )),
+                "atomic" => {
+                    nacre_helper::wallpaper_media::atomic(path(0)?, &args[1])?;
+                    Ok(Value::Null)
+                }
+                "read" => {
+                    nacre_helper::state::read(path(0)?, args.get(1).cloned().unwrap_or(Value::Null))
+                }
+
                 "settings" => media.settings(),
                 "media_state" => media.media_state(),
                 "palette_presets" => media.palette_presets(),

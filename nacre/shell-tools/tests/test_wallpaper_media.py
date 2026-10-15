@@ -1,5 +1,4 @@
 import shutil
-import importlib.util
 import json
 import os
 import tempfile
@@ -8,14 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 from PIL import Image
 
-spec = importlib.util.spec_from_file_location(
-    "wallpaper_media", Path(__file__).resolve().parents[1] / "wallpaper-media.py"
-)
-media = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(media)
-from native_media_subset import install
-
-install(media)
+import native_wallpaper_media as media
 
 
 class WallpaperMediaTests(unittest.TestCase):
@@ -591,18 +583,57 @@ class PersistentPublisherTests(unittest.TestCase):
         stream = io.StringIO("".join(json.dumps(item) + "\n" for item in lines))
         output = io.StringIO()
 
-        def theme(value):
-            print(json.dumps({"presentation": {"mode": "light"}}), flush=True)
-            return {"paletteMode": value["paletteMode"]}
+        # The replaced Python callbacks are now real native publication and IO.
+        from nacre_native_palette import wallpaper_media as native
 
-        with (
-            patch.dict(os.environ, {}, clear=False),
-            patch.object(media, "theme", side_effect=theme),
-            patch.object(media, "preference", side_effect=lambda value: value),
-        ):
-            self.assertEqual(media.serve(stream, output), 0)
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            with patch.dict(
+                os.environ,
+                {
+                    "HOME": str(home),
+                    "XDG_CONFIG_HOME": str(home / ".config"),
+                    "XDG_STATE_HOME": str(home / ".local/state"),
+                    "XDG_CACHE_HOME": str(home / ".cache"),
+                    "NACRE_HELPER_TOOLS": str(Path(media.__file__).parent),
+                },
+            ):
+                poster = home / "poster.png"
+                Image.new("RGB", (32, 24), "red").save(poster)
+                digest = "a" * 64
+                thumbnail = home / ".cache/nacre/wallpapers" / digest / "thumbnail.jpg"
+                thumbnail.parent.mkdir(parents=True)
+                Image.new("RGB", (32, 24), "red").save(thumbnail)
+                data = json.loads(
+                    Path(media.__file__).with_name("reference-style.json").read_text()
+                )
+                data.update(
+                    name="dynamic",
+                    mode="light",
+                    variant="tonalspot",
+                    flavour="default",
+                    input={"harmony": False},
+                    source={"digest": digest, "selected": "ff0000"},
+                )
+                media_file = home / ".local/state/nacre/wallpaper/media.json"
+                media_file.parent.mkdir(parents=True)
+                media_file.write_text(
+                    json.dumps({"poster": str(poster), "appliedAtMs": 123})
+                )
+                (home / ".local/state/nacre/scheme.json").write_text(json.dumps(data))
+                cli_config = home / ".config/nacre/cli.json"
+                cli_config.parent.mkdir(parents=True, exist_ok=True)
+                cli_config.write_text(
+                    json.dumps({"version": 1, "wallpaper": {"postHook": None}})
+                )
+                native.preference({"paletteMode": "light"})
+                marker = Path(native.palette_marker(poster, "default"))
+                marker.parent.mkdir(parents=True, exist_ok=True)
+                marker.write_text(json.dumps(data))
+                self.assertEqual(media.serve(stream, output), 0)
         result = [json.loads(line) for line in output.getvalue().splitlines()]
         self.assertTrue(result[0]["ready"])
+        self.assertIn("presentation", result[1], result)
         self.assertEqual(result[1]["presentation"]["mode"], "light")
         self.assertEqual([r["code"] for r in result if r.get("done")], [0, 1, 0])
         self.assertEqual(result[-1]["result"]["layout"], "hexagons")

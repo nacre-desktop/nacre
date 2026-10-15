@@ -11,7 +11,7 @@ def command(name, *arguments):
     binary = os.environ.get("NACRE_TEST_HELPER_BINARY")
     if binary:
         return [binary, name, *arguments]
-    if name == "wallpaper-watch":
+    if name in {"wallpaper-watch", "wallpaper-media"}:
         from nacre_native_config import _binary
 
         return [str(_binary()), name, *arguments]

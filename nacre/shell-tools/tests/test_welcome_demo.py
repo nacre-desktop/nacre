@@ -13,6 +13,10 @@ ROOT = Path(__file__).parents[1]
 
 
 def load(name):
+    if name == "wallpaper-media":
+        import native_wallpaper_media
+
+        return native_wallpaper_media
     if name == "classic-state":
         import native_classic_state
 

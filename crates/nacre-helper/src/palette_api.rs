@@ -453,6 +453,31 @@ pub fn call(module: &str, operation: &str, request: &Request) -> Result<Value> {
         ("wallpaper-media", operation) => {
             let media = Media::new(paths.clone(), assets.clone())?;
             match operation {
+                "session" => Media::session(),
+                "wallpaper_mode" => Ok(json!(Media::wallpaper_mode(&request.path(0, "poster")?)?)),
+                "select" | "theme" | "prepared_theme" | "warm" | "demo_start" | "demo_restore"
+                | "demo_scenes" | "pick" => {
+                    let mut cli = crate::palette_cli::Cli::environment(true)?;
+                    match operation {
+                        "select" => media.select(&mut cli, &request.path(0, "path")?),
+                        "theme" => media.theme(&mut cli, request.argument(0, "value")?),
+                        "prepared_theme" => Ok(json!(media.prepared_theme(
+                            &mut cli.publisher,
+                            &request.path(0, "poster")?,
+                            request.boolean(1, "live", true)?
+                        )?)),
+                        "warm" => media.warm(&mut cli, request.boolean(0, "include_demo", true)?),
+                        "demo_start" => media.demo_start(),
+                        "demo_restore" => media.demo_restore(
+                            &mut cli,
+                            request.value(0, "token").and_then(Value::as_str),
+                        ),
+                        "demo_scenes" => media.demo_scenes(),
+                        _ => media.pick(),
+                    }
+                }
+
+                "import_files" => media.import_files(request.argument(0, "paths")?),
                 "settings" => media.settings(),
                 "media_state" => media.media_state(),
                 "palette_presets" => media.palette_presets(),

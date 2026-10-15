@@ -142,6 +142,30 @@ pub fn weak_canonical(path: &Path) -> Result<PathBuf> {
     }
 }
 
+pub fn unquote(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut result = Vec::new();
+    let mut index = 0;
+    let digit = |byte: u8| match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    };
+    while index < bytes.len() {
+        if bytes[index] == b'%' && index + 2 < bytes.len() {
+            if let (Some(high), Some(low)) = (digit(bytes[index + 1]), digit(bytes[index + 2])) {
+                result.push(high * 16 + low);
+                index += 3;
+                continue;
+            }
+        }
+        result.push(bytes[index]);
+        index += 1;
+    }
+    String::from_utf8_lossy(&result).into_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -447,13 +447,26 @@ pub fn fit(
 /// Preserve the palette CLI's explicit square JPEG draft before EXIF/thumbnailing.
 /// Uses the same native TurboJPEG API as Orient; no decoder subprocess is started.
 pub fn thumbnail_source(path: &std::path::Path, maximum: usize) -> Result<image::RgbImage> {
+    draft_source(path, maximum, true)
+}
+/// The image-only mode classifier uses Pillow's original, unoriented pixels.
+pub fn draft_source(
+    path: &std::path::Path,
+    maximum: usize,
+    oriented: bool,
+) -> Result<image::RgbImage> {
     use image::{DynamicImage, ImageDecoder, ImageFormat, ImageReader};
     if maximum == 0 {
         return Err("Invalid JPEG draft bound".into());
     }
     let reader = ImageReader::open(path)?.with_guessed_format()?;
     if reader.format() != Some(ImageFormat::Jpeg) {
-        return Ok(DynamicImage::ImageRgba8(orient_decoder::load_rgba_oriented(path)?).to_rgb8());
+        let image = if oriented {
+            orient_decoder::load_rgba_oriented(path)?
+        } else {
+            orient_decoder::load_rgba(path)?
+        };
+        return Ok(DynamicImage::ImageRgba8(image).to_rgb8());
     }
     let mut metadata = reader.into_decoder()?;
     let orientation = metadata.orientation()?;
@@ -511,6 +524,8 @@ pub fn thumbnail_source(path: &std::path::Path, maximum: usize) -> Result<image:
         image::RgbImage::from_raw(header.width.try_into()?, header.height.try_into()?, pixels)
             .ok_or("Invalid JPEG draft dimensions")?;
     let mut image = DynamicImage::ImageRgb8(rgb);
-    image.apply_orientation(orientation);
+    if oriented {
+        image.apply_orientation(orientation);
+    }
     Ok(image.to_rgb8())
 }

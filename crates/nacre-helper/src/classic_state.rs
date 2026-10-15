@@ -122,21 +122,20 @@ pub fn validated_colors(data: &Value, assets: &Path) -> Result<Map<String, Value
         .collect())
 }
 pub fn atomic_write(path: &Path, text: &str) -> Result<()> {
-    if state::write_text(path, text)? {
-        return Ok(());
+    if !state::write_text(path, text)? {
+        let parent = path.parent().ok_or("Invalid publication path")?;
+        fs::create_dir_all(parent)?;
+        let mut temporary = tempfile::Builder::new()
+            .prefix(&format!(
+                ".{}",
+                path.file_name()
+                    .ok_or("Missing filename")?
+                    .to_string_lossy()
+            ))
+            .tempfile_in(parent)?;
+        temporary.write_all(text.as_bytes())?;
+        temporary.persist(path)?;
     }
-    let parent = path.parent().ok_or("Invalid publication path")?;
-    fs::create_dir_all(parent)?;
-    let mut temporary = tempfile::Builder::new()
-        .prefix(&format!(
-            ".{}",
-            path.file_name()
-                .ok_or("Missing filename")?
-                .to_string_lossy()
-        ))
-        .tempfile_in(parent)?;
-    temporary.write_all(text.as_bytes())?;
-    temporary.persist(path)?;
     if path
         .file_name()
         .is_some_and(|name| name == "presentation.json")

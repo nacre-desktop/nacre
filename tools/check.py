@@ -249,13 +249,24 @@ def main():
         "Native Niri legacy assertions and frozen reference integrity passed.",
         flush=True,
     )
-    for contract in ("colors", "palette_cli", "wallpaper_watch"):
+    for contract in (
+        "colors",
+        "palette_cli",
+        "wallpaper_watch",
+        "wallpaper_media_cli",
+        "wallpaper_media_files",
+        "wallpaper_media_pipeline",
+        "wallpaper_session",
+        "wallpaper_demo",
+        "wallpaper_warm",
+        "wallpaper_pick",
+    ):
         run(
             [sys.executable, f"tests/parity/helpers/verify_{contract}_native.py"],
             env=environment,
         )
     print(
-        "Native palette and wallpaper watcher immutable workflow references passed.",
+        "Native palette and wallpaper immutable workflow references passed.",
         flush=True,
     )
 

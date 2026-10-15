@@ -1,4 +1,5 @@
 //! Track-keyed private artwork/lyrics caches, with direct Orient library calls.
+use crate::paths::unquote;
 use crate::{files, i18n::tr, json, orient, paths::Paths, Result};
 use regex::Regex;
 use serde_json::{json, Value};
@@ -65,29 +66,6 @@ fn quote(value: &str, plus: bool) -> String {
             }
         })
         .collect()
-}
-fn unquote(value: &str) -> String {
-    let bytes = value.as_bytes();
-    let mut result = Vec::new();
-    let mut index = 0;
-    let digit = |byte: u8| match byte {
-        b'0'..=b'9' => Some(byte - b'0'),
-        b'a'..=b'f' => Some(byte - b'a' + 10),
-        b'A'..=b'F' => Some(byte - b'A' + 10),
-        _ => None,
-    };
-    while index < bytes.len() {
-        if bytes[index] == b'%' && index + 2 < bytes.len() {
-            if let (Some(high), Some(low)) = (digit(bytes[index + 1]), digit(bytes[index + 2])) {
-                result.push(high * 16 + low);
-                index += 3;
-                continue;
-            }
-        }
-        result.push(bytes[index]);
-        index += 1;
-    }
-    String::from_utf8_lossy(&result).into_owned()
 }
 
 fn get(url: &str, maximum: u64) -> Result<Vec<u8>> {

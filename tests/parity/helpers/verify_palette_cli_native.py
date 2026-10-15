@@ -11,6 +11,8 @@ import tempfile
 
 from colors_reference_files import Files, unpack
 
+from historical_palette_assets import stage as historical_assets
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -53,7 +55,7 @@ def main():
                 "XDG_CONFIG_HOME": str(home / ".config"),
                 "XDG_STATE_HOME": str(home / ".local/state"),
                 "XDG_CACHE_HOME": str(home / ".cache"),
-                "NACRE_HELPER_TOOLS": str(ROOT / "nacre/shell-tools"),
+                "NACRE_HELPER_TOOLS": historical_assets(home.parent),
                 "NACRE_LANGUAGE": "en",
                 "NACRE_COMPOSITOR": "hyprland",
             }

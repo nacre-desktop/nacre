@@ -1,4 +1,5 @@
 import QtQuick
+import qs.utils
 import Quickshell.Io
 
 QtObject {
@@ -101,7 +102,7 @@ QtObject {
     }
     readonly property Process server: Process {
         objectName: "paletteServer"
-        command: ["python3", root.tool, "serve"]
+        command: [NacrePaths.helperBinary, root.tool, "serve"]
         stdinEnabled: true
         running: root.transport === null
         stdout: SplitParser {

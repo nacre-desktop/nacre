@@ -73,6 +73,7 @@ fn call(helper: &str, operation: &str, request: &Request) -> Result<Value> {
             | "lock-dashboard"
             | "palette_engine"
             | "colors"
+            | "wallpaper-media"
     ) {
         return nacre_helper::palette_api::call(
             helper,
@@ -248,6 +249,11 @@ fn main() {
     })();
     let (reply, code) = match result {
         Ok(v) => (v, 0),
+        Err(error) if error.is::<nacre_helper::wallpaper_media::ToolFailure>() => {
+            // The original developer API did not catch CalledProcessError.
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
         Err(error) => {
             let kind = if let Some(error) =
                 error.downcast_ref::<nacre_helper::login_appearance::LoginError>()

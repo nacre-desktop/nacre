@@ -1,0 +1,100 @@
+{
+  "source_sha256": "74795d256c7f4e44b5d19e6ed7b58a158d3a1905b552097c99de1681abcbc4a2",
+  "cases": [
+    {
+      "name": "empty",
+      "stdout": "{\"locked\": false, \"path\": \"\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "effects": [
+        {
+          "command": "loginctl",
+          "argv": [
+            "show-user",
+            "@UID@",
+            "--property=Display",
+            "--value"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "locked",
+      "stdout": "{\"locked\": true, \"path\": \"/org/freedesktop/login1/session/_7\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "effects": [
+        {
+          "command": "loginctl",
+          "argv": [
+            "show-user",
+            "@UID@",
+            "--property=Display",
+            "--value"
+          ]
+        },
+        {
+          "command": "loginctl",
+          "argv": [
+            "show-session",
+            "7",
+            "--property=LockedHint",
+            "--value"
+          ]
+        },
+        {
+          "command": "busctl",
+          "argv": [
+            "--system",
+            "call",
+            "org.freedesktop.login1",
+            "/org/freedesktop/login1",
+            "org.freedesktop.login1.Manager",
+            "GetSession",
+            "s",
+            "7"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unlocked",
+      "stdout": "{\"locked\": false, \"path\": \"/org/freedesktop/login1/session/_7\"}\n",
+      "stderr": "",
+      "exit": 0,
+      "effects": [
+        {
+          "command": "loginctl",
+          "argv": [
+            "show-user",
+            "@UID@",
+            "--property=Display",
+            "--value"
+          ]
+        },
+        {
+          "command": "loginctl",
+          "argv": [
+            "show-session",
+            "7",
+            "--property=LockedHint",
+            "--value"
+          ]
+        },
+        {
+          "command": "busctl",
+          "argv": [
+            "--system",
+            "call",
+            "org.freedesktop.login1",
+            "/org/freedesktop/login1",
+            "org.freedesktop.login1.Manager",
+            "GetSession",
+            "s",
+            "7"
+          ]
+        }
+      ]
+    }
+  ]
+}

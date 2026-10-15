@@ -10,12 +10,10 @@ Singleton {
 
     property bool sleeping: false
     property bool locked: false
-    property string awaiting: ""
     readonly property bool batteryPaused: NacreWallpapers.preferences.motionMode === "still" || (NacreWallpapers.preferences.motionMode === "battery" && UPower.onBattery)
     property bool paused: NacreWallpapers.preferences.paused ?? false
     readonly property bool pauseCovered: NacreWallpapers.preferences.pauseCovered ?? true
     property string sessionPath: ""
-    property bool sessionSignal: false
 
     IpcHandler {
         target: "wallpaperPlayback"
@@ -31,42 +29,17 @@ Singleton {
     }
     Process {
         running: true
-        command: ["python3", NacrePaths.tools + "/wallpaper-media.py", "session"]
+        command: [NacrePaths.helperBinary, "wallpaper-media", "session", "--watch"]
 
         stdout: SplitParser {
-            splitMarker: ""
             onRead: line => {
                 try {
                     const value = JSON.parse(line);
                     root.locked = value.locked ?? false;
                     root.sessionPath = value.path ?? "";
+                    root.sleeping = value.sleeping ?? false;
                 } catch (e) {
                     console.warn("WallpaperPlayback: Cannot decode wallpaper session state:", e);
-                }
-            }
-        }
-    }
-
-    Process {
-        running: true
-        command: ["dbus-monitor", "--system", "type='signal',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'", "type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='org.freedesktop.login1.Session'"]
-
-        stdout: SplitParser {
-            onRead: line => {
-                if (line.includes("member=PrepareForSleep")) {
-                    root.awaiting = "sleep";
-                } else if (line.includes("member=PropertiesChanged")) {
-                    root.awaiting = "";
-                    root.sessionSignal = !!root.sessionPath && line.includes("path=" + root.sessionPath + ";");
-                } else if (line.trim() === 'string "LockedHint"') {
-                    root.awaiting = root.sessionSignal ? "lock" : "";
-                } else if (line.trim().startsWith("boolean ")) {
-                    const value = line.trim().endsWith("true");
-                    if (root.awaiting === "sleep")
-                        root.sleeping = value;
-                    else if (root.awaiting === "lock")
-                        root.locked = value;
-                    root.awaiting = "";
                 }
             }
         }

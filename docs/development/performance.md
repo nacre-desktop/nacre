@@ -1212,3 +1212,109 @@ Frozen cases preserve thirteen CLI outputs/errors, six module calls, fifteen ser
 event steps, directory/file bytes and modes, symlinks and SIGTERM exit status.
 Absolute XDG roots follow QML; unexpected watch/scan failures are surfaced rather
 than ignored. QML explicitly watches the native helper as the engine dependency.
+
+## Wave 3 media server, busy-machine checkpoint
+
+Laptop busy-machine helper-only samples; no desktop-PC or whole-shell claim.
+`tools/benchmark-wallpaper-media.py` uses the existing helper child user+system
+CPU accounting and `performance.py` RSS/process-tick readers. Both sides have
+explicit private HOME, all four XDG roots, D-Bus and absent compositor sockets;
+Fontconfig environment overrides are cleared. Builds finish before sampling.
+The baseline is the unchanged Python media source from 85652512 (SHA-256
+`74795d256c7f4e44b5d19e6ed7b58a158d3a1905b552097c99de1681abcbc4a2`).
+
+| Measurement | Python coordinator | Native server |
+| --- | ---: | ---: |
+| Startup + preferences CPU, 20 interleaved calls | 86.21 ms | 11.58 ms |
+| Resident RSS after preferences | 25.84 MiB | 16.73 MiB |
+| Resident RSS after one real wallpaper publication | 26.18 MiB | 27.35 MiB |
+| Idle CPU after preferences, 30 s / 100 Hz | 0 observed ticks | 0 observed ticks |
+| Idle CPU after publication, 30 s / 100 Hz | 0 observed ticks | 1 tick (0.033%) |
+| Resident media processes / Python processes | 1 / 1 | 1 / 0 |
+
+The native server is 1.17 MiB larger after publication in this sample. The
+single observed idle tick is 10 ms of CPU accounting; this establishes no
+battery improvement. Measured-process SwapPss remains zero in both samples.
+This checks one small static scene, not a large library, video decode or
+aggregate shell RSS/PSS. Selection-to-last-visible-consumer and A/B/A/B results
+remain pending the owner-announced window.
+
+Earlier exploratory captures inherited XDG_DATA_HOME and are excluded from
+these results. Their post-publication RSS suggested retained raster pages;
+returning unused GNU allocator pages after a palette request remains in the
+candidate. Its final effect is included in the fully private figures above.
+No whole-desktop speed or quiet-window regression conclusion follows from them.
+
+<details><summary>fully-private-preferences receipt</summary>
+
+```json
+{
+  "condition": "busy machine",
+  "source_sha256": "74795d256c7f4e44b5d19e6ed7b58a158d3a1905b552097c99de1681abcbc4a2",
+  "native_sha256": "3ea8827eff467f6076c48355a425fa3ac82dc76c9d4a09af4048b69c1303ca87",
+  "method": "benchmark-helpers.py child CPU; performance.py helper RSS and process ticks",
+  "workload": "startup + preferences CPU; idle memory after preferences only",
+  "clock_ticks_per_second": 100,
+  "results": {
+    "python": {
+      "calls": 20,
+      "startup_request_cpu_ms": 86.21444999999997,
+      "helper_rss_mib": 25.83984375,
+      "idle_cpu_seconds": 0.0,
+      "idle_seconds": 30.000071802001912,
+      "idle_cpu_percent": 0.0,
+      "process_count": 1,
+      "python_process_count": 1
+    },
+    "rust": {
+      "calls": 20,
+      "startup_request_cpu_ms": 11.575200000000013,
+      "helper_rss_mib": 16.73046875,
+      "idle_cpu_seconds": 0.0,
+      "idle_seconds": 30.000103288999526,
+      "idle_cpu_percent": 0.0,
+      "process_count": 1,
+      "python_process_count": 0
+    }
+  }
+}
+```
+
+</details>
+
+<details><summary>fully-private-publication receipt</summary>
+
+```json
+{
+  "condition": "busy machine",
+  "source_sha256": "74795d256c7f4e44b5d19e6ed7b58a158d3a1905b552097c99de1681abcbc4a2",
+  "native_sha256": "3ea8827eff467f6076c48355a425fa3ac82dc76c9d4a09af4048b69c1303ca87",
+  "method": "benchmark-helpers.py child CPU; performance.py helper RSS and process ticks",
+  "workload": "startup + preferences CPU; idle memory after one wallpaper publication",
+  "clock_ticks_per_second": 100,
+  "results": {
+    "python": {
+      "calls": 20,
+      "startup_request_cpu_ms": 79.04169999999999,
+      "helper_rss_mib": 26.1796875,
+      "idle_cpu_seconds": 0.0,
+      "idle_seconds": 30.000243774004048,
+      "idle_cpu_percent": 0.0,
+      "process_count": 1,
+      "python_process_count": 1
+    },
+    "rust": {
+      "calls": 20,
+      "startup_request_cpu_ms": 10.435250000000007,
+      "helper_rss_mib": 27.34765625,
+      "idle_cpu_seconds": 0.010000000000000009,
+      "idle_seconds": 30.000156602996867,
+      "idle_cpu_percent": 0.03333315933091182,
+      "process_count": 1,
+      "python_process_count": 0
+    }
+  }
+}
+```
+
+</details>
