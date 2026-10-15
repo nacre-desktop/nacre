@@ -46,6 +46,13 @@ TestCase {
         }
     }
     function init() {
+        NacreCompositor.capabilities = ({});
+        NacreCompositor.workspaces = ({
+                values: []
+            });
+        NacreCompositor.focusedMonitor = ({
+                name: "test"
+            });
         NacreCompositor.requests = [];
         NacrePanelState.calls = [];
         AppLaunch.calls = [];
@@ -75,6 +82,104 @@ TestCase {
         verify(!view.activate(8));
         verify(!view.activate(NaN));
         compare(NacreCompositor.requests.length, 1);
+    }
+    function test_each_output_keeps_its_workspaces_selection_windows_and_actions() {
+        NacreCompositor.capabilities = ({
+                perOutputWorkspaces: true
+            });
+        NacreCompositor.workspaces = ({
+                values: [
+                    {
+                        id: "niri-workspace:101",
+                        index: 1,
+                        outputId: "test",
+                        active: false,
+                        urgent: true
+                    },
+                    {
+                        id: "niri-workspace:102",
+                        index: 2,
+                        outputId: "test",
+                        active: true
+                    },
+                    {
+                        id: "niri-workspace:103",
+                        index: 3,
+                        outputId: "test",
+                        active: false
+                    },
+                    {
+                        id: "niri-workspace:201",
+                        index: 1,
+                        outputId: "external",
+                        active: true
+                    },
+                    {
+                        id: "niri-workspace:202",
+                        index: 2,
+                        outputId: "external",
+                        active: false
+                    }
+                ]
+            });
+        NacreCompositor.windows = [
+            {
+                workspaceId: "niri-workspace:102",
+                wmClass: "kitty"
+            },
+            {
+                workspaceId: "niri-workspace:201",
+                wmClass: "firefox"
+            },
+            {
+                workspaceId: "niri-workspace:201",
+                wmClass: "editor"
+            }
+        ];
+        const laptopHeader = createTemporaryObject(header, test);
+        const laptop = findChild(laptopHeader, "nacreWorkspaceRow");
+        const external = createTemporaryObject(row, test, {
+            outputName: "external",
+            y: 100
+        });
+        for (const focused of ["test", "external", "test"]) {
+            NacreCompositor.focusedMonitor = ({
+                    name: focused
+                });
+            NacreCompositor.activeWsId = focused === "test" ? 2 : 1;
+            compare(laptop.workspaceIds.join(","), "1,2,3");
+            compare(external.workspaceIds.join(","), "1,2");
+            tryVerify(() => laptop.activeCell?.workspaceId === 2);
+            tryVerify(() => external.activeCell?.workspaceId === 1);
+            compare(laptop.activeCell.windowCount, 1);
+            compare(external.activeCell.windowCount, 2);
+            verify(findChild(laptop, "nacreWorkspace1").urgent);
+            verify(!findChild(external, "nacreWorkspace1").urgent);
+        }
+        mouseClick(findChild(laptop, "nacreWorkspace1"), 16, 15);
+        compare(NacreCompositor.requests.pop(), "workspace niri-workspace:101");
+        verify(external.step(1));
+        compare(NacreCompositor.requests.pop(), "workspace niri-workspace:202");
+        verify(!external.activate(3));
+        // A topology update removes a workspace and reindexes a surviving ID.
+        NacreCompositor.workspaces = ({
+                values: [
+                    {
+                        id: "niri-workspace:102",
+                        index: 1,
+                        outputId: "test",
+                        active: true
+                    }
+                ]
+            });
+        tryCompare(laptop, "workspaceIds", [1]);
+        tryVerify(() => laptop.activeCell?.workspaceId === 1);
+        compare(laptop.activeCell.windowCount, 1);
+        verify(laptop.activate(1));
+        compare(NacreCompositor.requests.pop(), "workspace niri-workspace:102");
+        tryCompare(external, "workspaceIds", []);
+        tryCompare(external, "activeCell", null);
+        verify(!external.activate(1));
     }
     function test_numbered_pearls_use_readable_ink_for_dark_and_pale_accents() {
         const pearl = createTemporaryObject(pearlView, test, {

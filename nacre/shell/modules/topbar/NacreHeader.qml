@@ -271,6 +271,8 @@ Item {
             implicitHeight: 34
             NacreWorkspaceRow {
                 id: workspaces
+                objectName: "nacreWorkspaceRow"
+                outputName: root.screen.name
                 availableWidth: Math.max(170, Math.min(720, root.width / 2 - 130, root.width - right.width - 220))
                 anchors.centerIn: parent
             }

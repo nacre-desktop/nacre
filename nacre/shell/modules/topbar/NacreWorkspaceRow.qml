@@ -7,6 +7,10 @@ import qs.config
 
 Item {
     id: root
+    property string outputName: ""
+    readonly property bool perOutput: NacreCompositor.capabilities?.perOutputWorkspaces === true
+    readonly property var outputWorkspaces: perOutput ? NacreCompositor.workspaces.values.filter(value => value.outputId === outputName) : []
+    readonly property int activeWorkspaceIndex: perOutput ? outputWorkspaces.find(value => value.active)?.index ?? 0 : NacreCompositor.activeWsId
     property real availableWidth: 640
     property bool ready: false
     property Item activeCell: null
@@ -20,8 +24,8 @@ Item {
             result[id] = 0;
         if (!showWindowHints)
             return result;
-        const active = NacreCompositor.activeWsId;
-        const count = NacreCompositor.capabilities?.perOutputWorkspaces ? NacreCompositor.windowsForWorkspace(active).length : NacreCompositor.windows.filter(client => client.workspace?.id === active).length;
+        const active = activeWorkspaceIndex;
+        const count = windowsForWorkspace(active).length;
         const base = displayIds.length * 32 + Math.max(0, displayIds.length - 1) * 2 + (count ? 4 : 0);
         let shown = Math.min(3, count, Math.max(0, Math.floor((availableWidth - base) / 18)));
         while (shown > 0 && base + shown * 18 + (shown < count ? 20 : 0) > availableWidth)
@@ -40,8 +44,8 @@ Item {
         }
     }
     readonly property var workspaceIds: {
-        if (NacreCompositor.capabilities?.perOutputWorkspaces)
-            return NacreCompositor.workspaces.values.filter(value => value.outputId === NacreCompositor.focusedMonitor?.name).map(value => value.index).sort((a, b) => a - b);
+        if (perOutput)
+            return outputWorkspaces.map(value => value.index).sort((a, b) => a - b);
         const ids = new Set(Array.from({
             length: NacreBar.workspaceCount
         }, (_, index) => index + 1));
@@ -54,7 +58,7 @@ Item {
     implicitWidth: beads.implicitWidth
     implicitHeight: 30
     function synchronize() {
-        activeCell = repeater.itemAt(displayIds.indexOf(NacreCompositor.activeWsId));
+        activeCell = repeater.itemAt(displayIds.indexOf(activeWorkspaceIndex));
     }
     function synchronizeIds() {
         if (workspaceIds.length !== displayIds.length || workspaceIds.some((id, index) => id !== displayIds[index]))
@@ -66,19 +70,27 @@ Item {
         synchronizeIds();
         Qt.callLater(() => ready = true);
     }
-    Connections {
-        target: NacreCompositor
-        function onActiveWsIdChanged() {
-            Qt.callLater(root.synchronize);
-        }
+    onActiveWorkspaceIndexChanged: Qt.callLater(synchronize)
+    function workspace(index) {
+        return outputWorkspaces.find(value => value.index === index);
+    }
+    function windowsForWorkspace(index) {
+        if (!perOutput)
+            return NacreCompositor.windows.filter(client => client.workspace?.id === index);
+        const value = workspace(index);
+        return value ? NacreCompositor.windows.filter(client => client.workspaceId === value.id) : [];
     }
     function activate(id) {
-        return Number.isInteger(id) && workspaceIds.includes(id) ? NacreCompositor.switchWorkspace(id) : false;
+        if (!Number.isInteger(id) || !workspaceIds.includes(id))
+            return false;
+        // Display numbers repeat on different outputs and can be reindexed.
+        const reference = perOutput ? workspace(id)?.id : id;
+        return reference !== undefined ? NacreCompositor.switchWorkspace(reference) : false;
     }
     function step(direction) {
         if (!Number.isFinite(direction) || direction === 0)
             return false;
-        const index = workspaceIds.indexOf(NacreCompositor.activeWsId);
+        const index = workspaceIds.indexOf(activeWorkspaceIndex);
         const next = index + Math.sign(direction);
         return index >= 0 && next >= 0 && next < workspaceIds.length ? activate(workspaceIds[next]) : false;
     }
@@ -140,11 +152,11 @@ Item {
                 required property int index
                 required property int modelData
                 readonly property int workspaceId: modelData
-                readonly property bool selected: NacreCompositor.activeWsId === workspaceId
-                readonly property var windows: NacreCompositor.capabilities?.perOutputWorkspaces ? NacreCompositor.windowsForWorkspace(workspaceId) : NacreCompositor.windows.filter(client => client.workspace?.id === workspaceId)
+                readonly property bool selected: root.activeWorkspaceIndex === workspaceId
+                readonly property var windows: root.windowsForWorkspace(workspaceId)
                 readonly property int windowCount: windows.length
                 readonly property bool occupied: windowCount > 0
-                readonly property bool urgent: windows.some(client => client.urgent === true) || (NacreCompositor.capabilities?.perOutputWorkspaces === true && NacreCompositor.workspaceUrgent(workspaceId))
+                readonly property bool urgent: windows.some(client => client.urgent === true) || (root.perOutput && root.workspace(workspaceId)?.urgent === true)
                 readonly property var shownWindows: windows.slice(0, root.iconAllocation[workspaceId] ?? 0)
                 readonly property int overflow: selected && root.showWindowHints ? Math.max(0, windowCount - shownWindows.length) : 0
                 readonly property color accent: root.tint(index, workspaceId)

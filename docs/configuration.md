@@ -19,6 +19,12 @@ Source installs accept the same choices through `./install.sh --profile`.
 Omitting the option preserves an existing profile; explicitly choosing `default`
 replaces its startup/routing choices. Updates preserve private overrides or refuse
 conflicting edits. Startup entries are argument arrays, not shell snippets.
+
+On Niri, each monitor’s bar shows its own workspaces, active marker and window
+hints, even when another monitor has focus. Clicking or scrolling that row
+switches workspaces on that monitor. Niri keeps a trailing empty workspace on
+each output.
+
 Niri workspace numbers are dynamic on each output; its preparation path converts
 profile routes to named workspaces.
 
