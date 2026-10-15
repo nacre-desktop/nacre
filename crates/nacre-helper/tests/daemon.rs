@@ -402,6 +402,7 @@ fn watch_exits_when_its_output_is_closed_instead_of_reconnecting_forever() -> Re
     let server = UnixListener::bind(&endpoint)?;
     fs::set_permissions(&endpoint, fs::Permissions::from_mode(0o600))?;
     let (ready, resume) = std::sync::mpsc::channel();
+    let (subscribed, subscription) = std::sync::mpsc::channel();
     let server = thread::spawn(move || {
         let (stream, _) = server.accept().unwrap();
         let mut reader = BufReader::new(stream);
@@ -410,13 +411,11 @@ fn watch_exits_when_its_output_is_closed_instead_of_reconnecting_forever() -> Re
         writeln!(reader.get_mut(),"{}",json!({"t":"welcome","proto":1,"min":1,"boot":"fixture","topics":{"compositor":1},"methods":{}})).unwrap();
         line.clear();
         reader.read_line(&mut line).unwrap();
-        resume.recv_timeout(Duration::from_secs(5)).unwrap();
-        writeln!(
-            reader.get_mut(),
-            "{}",
-            json!({"t":"snap","topic":"compositor","seq":0,"data":{"available":true}})
-        )
-        .unwrap();
+        assert_eq!(serde_json::from_str::<Value>(&line).unwrap()["t"], "sub");
+        subscribed.send(()).unwrap();
+        // Hold an idle connection: detecting the closed output must not require
+        // another daemon message or a timeout/reconnect to provoke a write.
+        let _ = resume.recv_timeout(Duration::from_secs(5));
     });
     let mut watch = command(home.path(), &home.path().join("niri.sock"), &endpoint);
     let mut watch = Process(
@@ -431,13 +430,14 @@ fn watch_exits_when_its_output_is_closed_instead_of_reconnecting_forever() -> Re
         next_message(&mut output)?,
         nacre_protocol::Message::Welcome { .. }
     ));
+    subscription.recv_timeout(Duration::from_secs(5))?;
     drop(output);
-    ready.send(())?;
     assert!(watch
         .0
         .wait_timeout(Duration::from_secs(5))?
         .ok_or("Closed-output watch did not exit")?
         .success());
+    ready.send(())?;
     server.join().map_err(|_| "Private watch fixture failed")?;
     Ok(())
 }

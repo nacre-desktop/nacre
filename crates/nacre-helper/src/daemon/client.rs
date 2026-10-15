@@ -158,6 +158,34 @@ fn print(message: &Message) -> Result<()> {
     Ok(())
 }
 async fn watch(topic: &str) -> Result<i32> {
+    tokio::select! {
+        result = watch_messages(topic) => result,
+        closed = output_closed() => { closed?; Ok(0) },
+    }
+}
+async fn output_closed() -> Result<()> {
+    let output = io::stdout();
+    if rustix::fs::fstat(&output)?.st_mode & nix::libc::S_IFMT != nix::libc::S_IFIFO {
+        std::future::pending::<()>().await;
+        return Ok(());
+    }
+    // Reopening our pipe gives the observer independent nonblocking flags;
+    // duplicating stdout would change the flags used by ordinary output writes.
+    let descriptor = match rustix::fs::open(
+        "/proc/self/fd/1",
+        rustix::fs::OFlags::WRONLY | rustix::fs::OFlags::NONBLOCK | rustix::fs::OFlags::CLOEXEC,
+        rustix::fs::Mode::empty(),
+    ) {
+        Ok(descriptor) => descriptor,
+        Err(rustix::io::Errno::NXIO) => return Ok(()),
+        Err(error) => return Err(error.into()),
+    };
+    // Linux reports EPOLLERR when the last reader closes. No timer polls it.
+    let observer = tokio::net::unix::pipe::Sender::from_owned_fd(descriptor)?;
+    let _closed = observer.ready(tokio::io::Interest::ERROR).await?;
+    Ok(())
+}
+async fn watch_messages(topic: &str) -> Result<i32> {
     let mut mirror = Mirror::default();
     let mut retry = 50u64;
     loop {

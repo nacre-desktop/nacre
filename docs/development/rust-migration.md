@@ -8,8 +8,8 @@ Keep public commands, QML appearance, user data, privilege and session policy.
 | 0 Orient decoder | Complete | 49 inputs / 55 frames, 160 palettes exact, including JPEG; notices retained. |
 | 1 Frequent helpers | Complete; CI green | 13 ports; busy service RSS 26.95 → 10.21 MiB; absolute XDG roots follow QML. |
 | 2 Compositor / pearls | Complete; CI green | Preview CPU 52.58 → 1.26 ms; RSS 21.54 → 7.30 MiB; native IPC/session runtime. |
-| 3 Wallpaper / colors | ports complete, quiet A/B/A/B pending (desktop unreachable) | Runtime CI 38723440822 green; 237 Rust / 916 repo / 534 frozen parity. |
-| 4 Remaining shell tools | redirected: foundation F1–F4 first | Session-watch c9d251fb CI38754725745 green; F0 charter/protocol first. |
+| 3 Wallpaper / colors | ports complete, quiet A/B/A/B pending (desktop reachable again) | Frozen revisions below retained; fresh frozen-source builds next. |
+| 4 Remaining shell tools | redirected: foundation F1–F4 first | F1 10e86036 CI38797680489 green; consumer/watch follow-ups validating; engine after F2. |
 | 5 AI | Pending | Claude stream-json; existing permissions/history; sidebar-chat, composer and AI controller belong here. |
 | 6 Brain | Pending | Same bge-small model; cosine ≥ 0.9999 or backed-up automatic reindex. |
 | 7 Installer / proof | Pending | install*.py/login-install.py deferred here; packaging owned separately. |
@@ -49,13 +49,13 @@ Direct pinned Orient libraries own paired publication; no Orient process/RPC.
 Custom absolute XDG paths and direct D-Bus/socket transports are intended differences.
 Reference outputs are immutable; security additions use explicit new cases.
 
-Foundation order: F0 charter/protocol → F1 daemon/link → F2 always-on fold-ins
-(one commit each) → F3 QML client → F4 single-writer settings; stop after F4.
+Foundation: F0 → F1 daemon/link → F2 fold-ins (one commit each) → launcher engine
+(schema first, immutable JS parity, indexed providers) → F3 QML → F4 settings; stop after F4.
 Long-running or frequently called work → daemon service; rare/heavy/risky → worker.
 Settings' unpublished controller port is parked for F4, not a standalone landing.
 Bead owns its ADR/F5 framework work; protocol changes coordinate across agents.
 No live daemon units, notification ownership or keybindings without owner approval.
-Nightly fuzz/soak jobs, Bead hosting/menu.query and remaining Wave4 ports deferred.
+Nightly fuzz/soak, Bead hosting and remaining Wave4 ports deferred; menu.query now follows F2.
 Apply docs/development/security-review.md cases where relevant, preserving privileges.
 Never alter deliberate AI permissions or paru -Syu --skipreview.
 Media response trim moved after cleanup: matched native RSS29.19→27.80MiB;
@@ -70,11 +70,11 @@ cases exact; private bus/socket, linked-state/XDG and both nested compositors pa
 Python watch currently fails at removed event_socket bridge; no valid idle baseline.
 Session check CPU125.79→29.50ms;20Pythonstarts→0; nativeRSS18.09MiB/idle0ticks30s.
 F0 67674e85 CI38764589681 green; repaired main5995d171 CI38768972757 green.
-F1 recovered:8 protocol/23 core/6 native integration tests;31 wire objects; Luau analyzer passes.
+F1:8 protocol/23 core/6 native integration tests;31 wire objects; minimal consumer32B; Luau passes.
 Decoder/merge-patch fuzz targets compile; nightly/soak and accepted idle PSS remain pending.
-Nested niri/Hyprland call p99 .274/.278ms; helperRSS14.24/14.21MiB; idle captures paged.
-UI fallback only before dispatch; rare safe notice uses a bounded native nice10 zbus worker.
+Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hostswap-in0.
+UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-Next: publish F1 and await green CI, then F2 niri events; activated listener validation is covered.
+Next: publish consumer/watch follow-ups (goldens unchanged), resume preserved F2 events; CI gates stay.
 No live desktop/config/network changes, tags, releases or package publication.
