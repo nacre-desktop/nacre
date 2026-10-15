@@ -18,10 +18,11 @@ jobs:
   shell:
     continue-on-error: true
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 45
     container: ghcr.io/archlinux/archlinux:latest
     env:
       LIBGL_ALWAYS_SOFTWARE: "1"
+      CARGO_BUILD_JOBS: "2"
     steps:
       - name: Install disposable software-rendered session tools
         run: pacman -Syu --noconfirm --needed git python python-pillow quickshell qt6-wayland qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats labwc wlr-randr wtype niri mesa dbus ffmpeg ttf-dejavu gcc pkgconf rust lcms2 cmake make
@@ -33,20 +34,28 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           cargo build -j2 --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
+          cargo build -j2 --release --locked --bin nacre-helper
       - name: Measure the reference in the same disposable runner
         if: github.event_name == 'workflow_dispatch'
         env:
           REFERENCE_REVISION: ${{ inputs.reference_revision }}
         run: |
+          reference_args=(--control --helper-binary "$PWD/target/release/nacre-helper" --orient-binary "$PWD/deps/orient/target/release/orient")
           if test -n "$REFERENCE_REVISION"; then
             reference=$(git rev-parse --verify --end-of-options "${REFERENCE_REVISION}^{commit}")
-            control="--revision $reference"
-          else
-            control="--control"
+            reference_dir=$(mktemp -d /tmp/nacre-performance-reference-XXXXXX)
+            git worktree add --detach "$reference_dir" "$reference"
+            git -C "$reference_dir" submodule update --init --recursive
+            cargo build -j2 --release --locked --manifest-path "$reference_dir/deps/orient/Cargo.toml" -p orient-cli
+            reference_args=(--revision "$reference" --orient-binary "$reference_dir/deps/orient/target/release/orient")
+            if test -f "$reference_dir/Cargo.toml"; then
+              cargo build -j2 --release --locked --manifest-path "$reference_dir/Cargo.toml" --bin nacre-helper
+              reference_args+=(--helper-binary "$reference_dir/target/release/nacre-helper")
+            fi
           fi
-          python tools/performance-session.py --backend niri --parent-renderer pixman --budget-tier software --orient-binary deps/orient/target/release/orient $control --quick --repeats 5 --idle-seconds 15 --check-budgets --output /tmp/performance-niri-before.json
+          python tools/performance-session.py --backend niri --parent-renderer pixman --budget-tier software "${reference_args[@]}" --quick --repeats 5 --idle-seconds 15 --check-budgets --output /tmp/performance-niri-before.json
       - name: Measure shell memory and key event to complete frame
-        run: python tools/performance-session.py --backend niri --parent-renderer pixman --budget-tier software --orient-binary deps/orient/target/release/orient --quick --repeats 5 --idle-seconds 15 --check-budgets --output /tmp/performance-niri.json
+        run: python tools/performance-session.py --backend niri --parent-renderer pixman --budget-tier software --helper-binary "$PWD/target/release/nacre-helper" --orient-binary deps/orient/target/release/orient --quick --repeats 5 --idle-seconds 15 --check-budgets --output /tmp/performance-niri.json
       - name: Preserve measured distributions
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

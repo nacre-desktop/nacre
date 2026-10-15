@@ -76,5 +76,6 @@ Next: finish current-main CI; resume desktop A/B/A/B when connectivity is restor
 Both compositors: baseline/native Qt/Kitty and actual lock new-color pixels verified.
 Developer lock probe uses immediate-render for software Niri; default flags unchanged.
 Presentation harness: 14 tests pass; GTK pixel endpoint remains unverified in both.
+Advisory performance CI builds each revision's own helper and pinned engine.
 Full desktop time remains unavailable; owner-announced quiet A/B/A/B is mandatory.
 No live deployment, tags, package publication or session takeover in this task.

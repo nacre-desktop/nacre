@@ -650,13 +650,16 @@ Run with the pinned native engine and installed performance-session prerequisite
 
 ```sh
 PATH="$PWD/.venv/bin:$PATH" python tools/performance-session.py \
-  --backend hyprland --quick --check-budgets --output /tmp/shell-hyprland.json
+  --backend hyprland --helper-binary "$PWD/target/release/nacre-helper" \
+  --quick --check-budgets --output /tmp/shell-hyprland.json
 PATH="$PWD/.venv/bin:$PATH" python tools/performance-session.py \
-  --backend niri --quick --check-budgets --output /tmp/shell-niri.json
+  --backend niri --helper-binary "$PWD/target/release/nacre-helper" \
+  --quick --check-budgets --output /tmp/shell-niri.json
 ```
 
-Use `--revision COMMIT` for an immutable source comparison while keeping the same
-harness, engine and host. For concurrent development, `--control` disables only
+Use `--revision COMMIT` for an immutable source comparison on the same harness
+and host. Supply the matching prebuilt helper and pinned engine for that revision.
+For concurrent development, `--control` disables only
 this pass in the copied current source: hidden-decoder release, deferred refresh,
 asynchronous dashboard construction. The rest of
 current main, including unrelated UI changes, remains identical. Extra snapshot
