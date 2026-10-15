@@ -52,7 +52,36 @@ fn main() {
                             format!("[{}, {}, {}]", tile.window().id().get(), pos.x, pos.y)
                         })
                         .collect();
-                    let value = format!("{{\"tiles\":[{}]}}", tiles.join(","));
+                    let zoom = state.niri.layout.overview_zoom();
+                    let mut visible = Vec::new();
+                    for mon in state.niri.layout.monitors() {
+                        for (workspace, geo) in mon.workspaces_with_render_geo() {
+                            for (tile, pos, shown) in workspace.tiles_with_render_positions() {
+                                if shown {
+                                    let size = tile.tile_size();
+                                    visible.push(format!(
+                                        "[{}, {}, {}, {}, {}]",
+                                        tile.window().id().get(),
+                                        geo.loc.x + pos.x * zoom,
+                                        geo.loc.y + pos.y * zoom,
+                                        size.w * zoom,
+                                        size.h * zoom
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                    let selected = state
+                        .niri
+                        .layout
+                        .focus()
+                        .map_or("null".into(), |window| window.id().get().to_string());
+                    let value = format!(
+                        "{{\"tiles\":[{}],\"visible\":[{}],\"selected\":{}}}",
+                        tiles.join(","),
+                        visible.join(","),
+                        selected
+                    );
                     let next = format!("{path}.next");
                     std::fs::write(&next, value).unwrap();
                     std::fs::rename(next, path).unwrap();

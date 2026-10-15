@@ -66,7 +66,25 @@ def prepare(source):
         )
         subprocess.run(["git", "apply", str(PATCH.resolve())], cwd=source, check=True)
     elif changes != PATCH.read_bytes():
-        raise ValueError("Source has other changes; refusing to overwrite them")
+        previous = PATCH.with_name("niri-26.04-overview-hover-v1.patch")
+        if not previous.is_file() or changes != previous.read_bytes():
+            raise ValueError("Source has other changes; refusing to overwrite them")
+        subprocess.run(
+            ["git", "apply", "--check", "--reverse", str(previous)],
+            cwd=source,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "apply", "--reverse", str(previous)], cwd=source, check=True
+        )
+        try:
+            subprocess.run(
+                ["git", "apply", "--check", str(PATCH)], cwd=source, check=True
+            )
+            subprocess.run(["git", "apply", str(PATCH)], cwd=source, check=True)
+        except subprocess.CalledProcessError:
+            subprocess.run(["git", "apply", str(previous)], cwd=source, check=True)
+            raise
     return source
 
 

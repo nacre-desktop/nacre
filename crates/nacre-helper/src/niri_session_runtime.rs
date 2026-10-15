@@ -153,6 +153,14 @@ pub fn command(
     Ok((args, environment))
 }
 pub const HOVER_SOURCE: &str = "8ed0da44d974c32c6877d2f4630c314da0717ecb";
+pub fn hover_patch_digest() -> String {
+    format!(
+        "{:x}",
+        Sha256::digest(include_bytes!(
+            "../../../tools/patches/niri-26.04-overview-hover.patch"
+        ))
+    )
+}
 pub trait Versions {
     fn version(&mut self, binary: &Path) -> Result<String>;
 }
@@ -203,6 +211,7 @@ pub fn verified_hover_binary(
         || !packaged && manifest["nestedVerified"] != true
         || manifest["sourceRevision"] != HOVER_SOURCE
         || manifest["protocol"] != "NacreOverviewHoverStream"
+        || manifest["patchSha256"] != hover_patch_digest()
     {
         return Ok(None);
     }
@@ -1114,6 +1123,7 @@ mod tests {
             fs::write(&binary, "verified companion\n")?;
             fs::set_permissions(&binary, fs::Permissions::from_mode(0o700))?;
             let mut manifest = value!({"schema":1,"enabled":true,"nestedVerified":true,"sourceRevision":HOVER_SOURCE,"protocol":"NacreOverviewHoverStream","binarySha256":format!("{:x}",Sha256::digest(fs::read(&binary)?))});
+            manifest["patchSha256"] = value!(hover_patch_digest());
             match variant {
                 "changed-binary" => fs::write(&binary, "changed\n")?,
                 "no-nested-proof" => manifest["nestedVerified"] = value!(false),

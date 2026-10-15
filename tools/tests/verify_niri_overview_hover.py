@@ -88,6 +88,12 @@ def verify(binary, output):
         )
         for key in ("NIRI_SOCKET", "DISPLAY", "NACRE_QS_CONFIG", "QT_LOGGING_RULES"):
             env.pop(key, None)
+        tools = root / "home/.local/share/nacre/shell/tools"
+        tools.mkdir(parents=True)
+        helper = Path(
+            os.environ.get("NACRE_HELPER_BINARY", ROOT / "target/release/nacre-helper")
+        )
+        shutil.copy2(helper, tools / "nacre-helper")
         processes = []
         with (output.with_suffix(".log")).open("wb") as log:
             # A private bus without activation directories keeps portal helpers

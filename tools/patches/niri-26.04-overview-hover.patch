@@ -52,6 +52,28 @@ index 308b312..afaea81 100644
      /// Pick a window with the mouse and print information about it.
      PickWindow,
      /// Pick a color from the screen with the mouse.
+diff --git a/src/input/mod.rs b/src/input/mod.rs
+index f1ad493..c7e18e1 100644
+--- a/src/input/mod.rs
++++ b/src/input/mod.rs
+@@ -2577,7 +2577,7 @@ impl State {
+             }
+         }
+ 
+-        self.niri.handle_focus_follows_mouse(&under);
++        self.niri.handle_focus_follows_mouse(&under, new_pos);
+ 
+         self.niri.pointer_contents.clone_from(&under);
+ 
+@@ -2680,7 +2680,7 @@ impl State {
+ 
+         let under = self.niri.contents_under(pos);
+ 
+-        self.niri.handle_focus_follows_mouse(&under);
++        self.niri.handle_focus_follows_mouse(&under, pos);
+ 
+         self.niri.pointer_contents.clone_from(&under);
+ 
 diff --git a/src/ipc/client.rs b/src/ipc/client.rs
 index 40a58ef..27faa18 100644
 --- a/src/ipc/client.rs
@@ -284,8 +306,339 @@ index db71da6..53ba23e 100644
 +        ));
 +    }
 +}
+diff --git a/src/layout/mod.rs b/src/layout/mod.rs
+index 5c4dd63..d510acf 100644
+--- a/src/layout/mod.rs
++++ b/src/layout/mod.rs
+@@ -1547,6 +1547,35 @@ impl<W: LayoutElement> Layout<W> {
+         }
+     }
+ 
++    pub fn activate_window_without_scrolling(&mut self, window: &W::Id) {
++        if self.interactive_move.is_some() {
++            return;
++        }
++        let MonitorSet::Normal {
++            monitors,
++            active_monitor_idx,
++            ..
++        } = &mut self.monitor_set
++        else {
++            return;
++        };
++        for (monitor_idx, mon) in monitors.iter_mut().enumerate() {
++            let active_workspace = mon.active_workspace_idx();
++            for (workspace_idx, ws) in mon.workspaces.iter_mut().enumerate() {
++                if !self.overview_open && workspace_idx != active_workspace {
++                    continue;
++                }
++                if ws.activate_window_without_scrolling(window) {
++                    *active_monitor_idx = monitor_idx;
++                    if self.overview_open {
++                        mon.activate_workspace_without_scrolling(workspace_idx);
++                    }
++                    return;
++                }
++            }
++        }
++    }
++
+     pub fn activate_window_without_raising(&mut self, window: &W::Id) {
+         if let Some(InteractiveMoveState::Moving(move_)) = &self.interactive_move {
+             if move_.tile.window().id() == window {
+@@ -4589,6 +4618,11 @@ impl<W: LayoutElement> Layout<W> {
+ 
+         for mon in monitors {
+             mon.overview_open = self.overview_open;
++            if !self.overview_open
++                && matches!(mon.workspace_switch, Some(WorkspaceSwitch::Hover(_)))
++            {
++                mon.activate_workspace(mon.active_workspace_idx());
++            }
+             mon.set_overview_progress(self.overview_progress.as_ref());
+         }
+     }
+diff --git a/src/layout/monitor.rs b/src/layout/monitor.rs
+index 53c0606..dc00fc3 100644
+--- a/src/layout/monitor.rs
++++ b/src/layout/monitor.rs
+@@ -92,6 +92,8 @@ pub struct Monitor<W: LayoutElement> {
+ 
+ #[derive(Debug)]
+ pub enum WorkspaceSwitch {
++    /// Overview pointer selection keeps the overview camera in place.
++    Hover(f64),
+     Animation(Animation),
+     Gesture(WorkspaceSwitchGesture),
+ }
+@@ -199,6 +201,7 @@ pub type MonitorRenderElement<R> =
+ impl WorkspaceSwitch {
+     pub fn current_idx(&self) -> f64 {
+         match self {
++            WorkspaceSwitch::Hover(idx) => *idx,
+             WorkspaceSwitch::Animation(anim) => anim.value(),
+             WorkspaceSwitch::Gesture(gesture) => {
+                 gesture.current_idx + gesture.animation.as_ref().map_or(0., |anim| anim.value())
+@@ -208,6 +211,7 @@ impl WorkspaceSwitch {
+ 
+     pub fn target_idx(&self) -> f64 {
+         match self {
++            WorkspaceSwitch::Hover(idx) => *idx,
+             WorkspaceSwitch::Animation(anim) => anim.to(),
+             WorkspaceSwitch::Gesture(gesture) => gesture.current_idx,
+         }
+@@ -215,6 +219,7 @@ impl WorkspaceSwitch {
+ 
+     pub fn offset(&mut self, delta: isize) {
+         match self {
++            WorkspaceSwitch::Hover(idx) => *idx += delta as f64,
+             WorkspaceSwitch::Animation(anim) => anim.offset(delta as f64),
+             WorkspaceSwitch::Gesture(gesture) => {
+                 if delta >= 0 {
+@@ -230,6 +235,7 @@ impl WorkspaceSwitch {
+ 
+     fn is_animation_ongoing(&self) -> bool {
+         match self {
++            WorkspaceSwitch::Hover(_) => false,
+             WorkspaceSwitch::Animation(_) => true,
+             WorkspaceSwitch::Gesture(gesture) => gesture.animation.is_some(),
+         }
+@@ -430,6 +436,16 @@ impl<W: LayoutElement> Monitor<W> {
+         self.add_workspace_at(self.workspaces.len());
+     }
+ 
++    pub fn activate_workspace_without_scrolling(&mut self, idx: usize) {
++        if self.active_workspace_idx == idx {
++            return;
++        }
++        let view = self.workspace_render_idx();
++        self.previous_workspace_id = Some(self.workspaces[self.active_workspace_idx].id());
++        self.active_workspace_idx = idx;
++        self.workspace_switch = Some(WorkspaceSwitch::Hover(view));
++    }
++
+     pub fn activate_workspace(&mut self, idx: usize) {
+         self.activate_workspace_with_anim_config(idx, None);
+     }
+@@ -467,7 +483,9 @@ impl<W: LayoutElement> Monitor<W> {
+             }
+             _ => {
+                 // Don't animate if nothing changed.
+-                if prev_active_idx == idx {
++                if prev_active_idx == idx
++                    && !matches!(self.workspace_switch, Some(WorkspaceSwitch::Hover(_)))
++                {
+                     return;
+                 }
+ 
+@@ -1066,7 +1084,7 @@ impl<W: LayoutElement> Monitor<W> {
+                     }
+                 }
+             }
+-            None => (),
++            Some(WorkspaceSwitch::Hover(_)) | None => (),
+         }
+ 
+         for ws in &mut self.workspaces {
+@@ -1096,8 +1114,10 @@ impl<W: LayoutElement> Monitor<W> {
+             .as_ref()
+             .and_then(|hint| hint.workspace.existing_id());
+ 
++        let selected = self.active_workspace_ref().id();
++        let overview = self.overview_open;
+         for (ws, geo) in self.workspaces_with_render_geo_mut(true) {
+-            ws.update_render_elements(is_active);
++            ws.update_render_elements(is_active && (!overview || ws.id() == selected));
+ 
+             if Some(ws.id()) == insert_hint_ws_id {
+                 insert_hint_ws_geo = Some(geo);
+diff --git a/src/layout/scrolling.rs b/src/layout/scrolling.rs
+index 007bcaf..cf5d5f1 100644
+--- a/src/layout/scrolling.rs
++++ b/src/layout/scrolling.rs
+@@ -52,6 +52,9 @@ pub struct ScrollingSpace<W: LayoutElement> {
+     /// for natural handling of fullscreen windows, which must ignore work area padding.
+     view_offset: ViewOffset,
+ 
++    /// Hover focus must not re-fit the viewport when the client acknowledges focus.
++    hover_view_frozen: bool,
++
+     /// Whether to activate the previous, rather than the next, column upon column removal.
+     ///
+     /// When a new column is created and removed with no focus changes in-between, it is more
+@@ -298,6 +301,7 @@ impl<W: LayoutElement> ScrollingSpace<W> {
+             active_column_idx: 0,
+             interactive_resize: None,
+             view_offset: ViewOffset::Static(0.),
++            hover_view_frozen: false,
+             activate_prev_column_on_removal: None,
+             view_offset_to_restore: None,
+             closing_windows: Vec::new(),
+@@ -748,6 +752,7 @@ impl<W: LayoutElement> ScrollingSpace<W> {
+         prev_idx: Option<usize>,
+         config: niri_config::Animation,
+     ) {
++        self.hover_view_frozen = false;
+         let new_view_offset = self.compute_new_view_offset_for_column(target_x, idx, prev_idx);
+         self.animate_view_offset_with_config(idx, new_view_offset, config);
+     }
+@@ -774,6 +779,7 @@ impl<W: LayoutElement> ScrollingSpace<W> {
+     }
+ 
+     fn activate_column_with_anim_config(&mut self, idx: usize, config: niri_config::Animation) {
++        self.hover_view_frozen = false;
+         if self.active_column_idx == idx
+             // During a DnD scroll, animate even when activating the same window, for DnD hold.
+             && (self.columns.is_empty() || !self.view_offset.is_dnd_scroll())
+@@ -1386,7 +1392,10 @@ impl<W: LayoutElement> ScrollingSpace<W> {
+ 
+             // We might need to move the view to ensure the resized window is still visible. But
+             // only do it when the view isn't frozen by an interactive resize or a view gesture.
+-            if self.interactive_resize.is_none() && !self.view_offset.is_gesture() {
++            if self.interactive_resize.is_none()
++                && !self.view_offset.is_gesture()
++                && !self.hover_view_frozen
++            {
+                 // Synchronize the horizontal view movement with the resize so that it looks nice.
+                 // This is especially important for always-centered view.
+                 let config = if ongoing_resize_anim {
+@@ -1432,6 +1441,24 @@ impl<W: LayoutElement> ScrollingSpace<W> {
+         (from_view_offset - new_view_offset).abs() / self.working_area.size.w
+     }
+ 
++    /// Select a tile while preserving the view, including any keyboard animation.
++    pub fn activate_window_without_scrolling(&mut self, window: &W::Id) -> bool {
++        let Some(idx) = self.columns.iter().position(|col| col.contains(window)) else {
++            return false;
++        };
++        self.columns[idx].activate_window(window);
++        self.hover_view_frozen = true;
++        if self.active_column_idx != idx {
++            let delta = self.column_x(self.active_column_idx) - self.column_x(idx);
++            self.view_offset.offset(delta);
++            self.active_column_idx = idx;
++            self.activate_prev_column_on_removal = None;
++            self.view_offset_to_restore = None;
++            self.interactive_resize = None;
++        }
++        true
++    }
++
+     pub fn activate_window(&mut self, window: &W::Id) -> bool {
+         let column_idx = self.columns.iter().position(|col| col.contains(window));
+         let Some(column_idx) = column_idx else {
+diff --git a/src/layout/tests.rs b/src/layout/tests.rs
+index 31265dd..e5c970c 100644
+--- a/src/layout/tests.rs
++++ b/src/layout/tests.rs
+@@ -482,6 +482,7 @@ enum Op {
+     FocusWindowOrWorkspaceDown,
+     FocusWindowOrWorkspaceUp,
+     FocusWindow(#[proptest(strategy = "1..=5usize")] usize),
++    HoverFocusWindow(#[proptest(strategy = "1..=5usize")] usize),
+     FocusWindowInColumn(#[proptest(strategy = "1..=5u8")] u8),
+     FocusWindowTop,
+     FocusWindowBottom,
+@@ -1130,6 +1131,7 @@ impl Op {
+             Op::FocusWindowOrWorkspaceDown => layout.focus_window_or_workspace_down(),
+             Op::FocusWindowOrWorkspaceUp => layout.focus_window_or_workspace_up(),
+             Op::FocusWindow(id) => layout.activate_window(&id),
++            Op::HoverFocusWindow(id) => layout.activate_window_without_scrolling(&id),
+             Op::FocusWindowInColumn(index) => layout.focus_window_in_column(index),
+             Op::FocusWindowTop => layout.focus_window_top(),
+             Op::FocusWindowBottom => layout.focus_window_bottom(),
+@@ -3929,3 +3931,63 @@ proptest! {
+         check_ops_with_options(options, ops);
+     }
+ }
++
++#[test]
++fn hover_focus_preserves_view_for_partially_visible_tile() {
++    let mut layout = check_ops([
++        Op::AddOutput(1),
++        Op::AddWindow {
++            params: TestWindowParams::new(1),
++        },
++        Op::AddWindow {
++            params: TestWindowParams::new(2),
++        },
++        Op::AddWindow {
++            params: TestWindowParams::new(3),
++        },
++        Op::FocusColumnFirst,
++        Op::CompleteAnimations,
++    ]);
++    let before = layout.active_workspace().unwrap().scrolling().view_pos();
++    layout.activate_window_without_scrolling(&3);
++    layout.update_window(&3, None);
++    layout.refresh(true);
++    assert_eq!(*layout.focus().unwrap().id(), 3);
++    assert_eq!(
++        layout.active_workspace().unwrap().scrolling().view_pos(),
++        before
++    );
++    layout.verify_invariants();
++    layout.focus_column_first();
++    layout.verify_invariants();
++}
++
++#[test]
++fn hover_focus_in_overview_preserves_workspace_camera_until_close() {
++    let mut layout = check_ops([
++        Op::AddOutput(1),
++        Op::AddWindow {
++            params: TestWindowParams::new(1),
++        },
++        Op::FocusWorkspaceDown,
++        Op::AddWindow {
++            params: TestWindowParams::new(2),
++        },
++        Op::FocusWorkspaceUp,
++        Op::ToggleOverview,
++        Op::CompleteAnimations,
++    ]);
++    let before = layout.monitors().next().unwrap().workspace_render_idx();
++    layout.activate_window_without_scrolling(&2);
++    layout.refresh(true);
++    assert_eq!(*layout.focus().unwrap().id(), 2);
++    assert_eq!(
++        layout.monitors().next().unwrap().workspace_render_idx(),
++        before
++    );
++    layout.verify_invariants();
++    layout.close_overview();
++    check_ops_on_layout(&mut layout, [Op::CompleteAnimations]);
++    assert_eq!(layout.monitors().next().unwrap().workspace_render_idx(), 1.);
++    layout.verify_invariants();
++}
+diff --git a/src/layout/workspace.rs b/src/layout/workspace.rs
+index 49548a8..aa7960e 100644
+--- a/src/layout/workspace.rs
++++ b/src/layout/workspace.rs
+@@ -1841,6 +1841,21 @@ impl<W: LayoutElement> Workspace<W> {
+         }
+     }
+ 
++    pub fn activate_window_without_scrolling(&mut self, window: &W::Id) -> bool {
++        if self.floating.activate_window_without_raising(window) {
++            self.floating_is_active = FloatingActive::Yes;
++            true
++        } else if self.scrolling.activate_window_without_scrolling(window) {
++            self.floating_is_active = match self.floating_is_active {
++                FloatingActive::Yes => FloatingActive::NoButRaised,
++                other => other,
++            };
++            true
++        } else {
++            false
++        }
++    }
++
+     pub fn activate_window_without_raising(&mut self, window: &W::Id) -> bool {
+         if self.floating.activate_window_without_raising(window) {
+             self.floating_is_active = FloatingActive::Yes;
 diff --git a/src/niri.rs b/src/niri.rs
-index ec40e01..f49701b 100644
+index ec40e01..ae36c4b 100644
 --- a/src/niri.rs
 +++ b/src/niri.rs
 @@ -814,6 +814,7 @@ impl State {
@@ -296,10 +649,11 @@ index ec40e01..f49701b 100644
          foreign_toplevel::refresh(self);
          ext_workspace::refresh(self);
  
-@@ -6172,6 +6173,20 @@ impl Niri {
+@@ -6172,7 +6173,25 @@ impl Niri {
          }
      }
  
+-    pub fn handle_focus_follows_mouse(&mut self, new_focus: &PointContents) {
 +    pub fn update_overview_hover(&self) {
 +        let Some(server) = self.ipc_server.as_ref() else {
 +            return;
@@ -314,6 +668,61 @@ index ec40e01..f49701b 100644
 +        };
 +        server.update_overview_hover(id);
 +    }
-     pub fn handle_focus_follows_mouse(&mut self, new_focus: &PointContents) {
++    pub fn handle_focus_follows_mouse(
++        &mut self,
++        new_focus: &PointContents,
++        position: Point<f64, Logical>,
++    ) {
          let Some(ffm) = self.config.borrow().input.focus_follows_mouse else {
              return;
+         };
+@@ -6196,9 +6215,12 @@ impl Niri {
+         }
+ 
+         if let Some(window) = &new_focus.window {
+-            if !self.layout.is_overview_open() && current_focus.window.as_ref() != Some(window) {
+-                let (window, hit) = window;
+-
++            let (window, hit) = window;
++            let no_scroll = ffm.max_scroll_amount.is_some_and(|amount| amount.0 == 0.);
++            let overview = self.layout.is_overview_open();
++            let selected = self.layout.focus().is_some_and(|win| win.window == *window)
++                && self.layer_shell_on_demand_focus.is_none();
++            if !selected && (!overview || no_scroll) {
+                 // Don't trigger focus-follows-mouse over the tab indicator.
+                 if matches!(
+                     hit,
+@@ -6209,17 +6231,27 @@ impl Niri {
+                     return;
+                 }
+ 
+-                if !self.layout.should_trigger_focus_follows_mouse_on(window) {
++                if !overview && !self.layout.should_trigger_focus_follows_mouse_on(window) {
+                     return;
+                 }
+ 
+-                if let Some(threshold) = ffm.max_scroll_amount {
+-                    if self.layout.scroll_amount_to_activate(window) > threshold.0 {
+-                        return;
++                if no_scroll {
++                    // Ignore the outermost pixels where off-screen CSD input margins can peek in.
++                    if let Some((output, point)) = self.output_under(position) {
++                        let width = output_size(output).w;
++                        if point.x <= 1. || point.x >= width - 2. {
++                            return;
++                        }
+                     }
++                    self.layout.activate_window_without_scrolling(window);
++                } else {
++                    if let Some(threshold) = ffm.max_scroll_amount {
++                        if self.layout.scroll_amount_to_activate(window) > threshold.0 {
++                            return;
++                        }
++                    }
++                    self.layout.activate_window_without_raising(window);
+                 }
+-
+-                self.layout.activate_window_without_raising(window);
+                 self.layer_shell_on_demand_focus = None;
+             }
+         }

@@ -1,0 +1,2 @@
+# Unified patch context markers include a space on otherwise blank lines.
+tools/patches/niri-26.04-overview-hover*.patch whitespace=-blank-at-eol

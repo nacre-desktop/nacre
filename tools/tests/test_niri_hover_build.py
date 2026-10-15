@@ -73,6 +73,31 @@ class HoverBuildTests(unittest.TestCase):
                     build.prepare(source)
                 self.assertEqual(extra.read_text(), "do not remove\n")
 
+    def test_previous_patch_upgrades_and_failed_candidate_restores_it(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source, revision, patch_file = self.fixture_source(Path(folder))
+            with (
+                patch.object(build, "SOURCE", revision),
+                patch.object(build, "PATCH", patch_file),
+            ):
+                build.prepare(source)
+                previous = patch_file.with_name("niri-26.04-overview-hover-v1.patch")
+                previous.write_bytes(patch_file.read_bytes())
+                (source / "tracked.rs").write_text("upgraded\n")
+                patch_file.write_bytes(
+                    subprocess.check_output(
+                        ["git", "diff", "--binary", "--abbrev=7", "HEAD"], cwd=source
+                    )
+                )
+                (source / "tracked.rs").write_text("patched\n")
+                build.prepare(source)
+                self.assertEqual((source / "tracked.rs").read_text(), "upgraded\n")
+                previous.write_bytes(patch_file.read_bytes())
+                patch_file.write_text("invalid candidate patch\n")
+                with self.assertRaises(subprocess.CalledProcessError):
+                    build.prepare(source)
+                self.assertEqual((source / "tracked.rs").read_text(), "upgraded\n")
+
     def test_install_requires_proof_for_exact_binary_patch_and_qml(self):
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder)

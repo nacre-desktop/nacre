@@ -153,19 +153,29 @@ Frozen compiler references remain unchanged; parity applies only this declared
 prefix substitution, including its KDL quoting. Binding keys, actions and
 arguments remain exact.
 
-Niri hover focus intentionally adds `max-scroll-amount="0%"` when `followMouse`
-is enabled. Defaults enable it: moving onto a visible tile focuses it only when
-focus will not scroll the view. Settings regeneration retains this bound; turning
-hover focus off still omits the node. The frozen rendering corpus remains
-unchanged, with this exact node substitution declared in its comparison test.
-See [Niri's input configuration](https://github.com/niri-wm/niri/wiki/Configuration:-Input#focus-follows-mouse).
+Niri hover focus adds `max-scroll-amount="0%"` when `followMouse` is enabled.
+General defaults enable it. The Nacre companion focuses even partly visible tiles
+without moving the view and preserves that position through the client's focus
+acknowledgement. Pointer movement inside an already-hovered tile reclaims focus
+after keyboard navigation. The outermost two horizontal logical pixels do not
+activate off-screen input margins. Keyboard navigation still scrolls normally.
+Stock Niri interprets the same setting more narrowly and refuses a focus change
+that would require scrolling; see [Niri's input configuration](https://github.com/niri-wm/niri/wiki/Configuration:-Input#focus-follows-mouse).
 
-The opt-in native regression probe checks the behavior with three real Wayland
-tiles in an isolated headless Niri. An unrestricted control must reproduce edge
-scrolling. The general defaults and regenerated settings must focus fully visible
-tiles without changing their rendered positions at either edge, while the native
-directional keyboard actions still scroll. The driver exposes optional private
-geometry telemetry because Niri 26.04 does not populate tiled positions in IPC.
+In Bird's Eye, hover changes the real layout selection and its native focus ring,
+including tiles on another visible workspace, while preserving the overview's
+camera. Application keyboard focus stays cleared until overview closes. Tile
+shortcuts operate on the hovered selection; keyboard workspace navigation and
+closing overview can then move the view explicitly. Hover captions remain
+available to opt-in clients; ordinary event streams retain their protocol.
+
+The opt-in native regression uses three real Wayland tiles, a virtual pointer
+and a private headless compositor. An unrestricted control must reproduce edge
+scrolling. Defaults and regenerated settings must pass full/partial hover focus,
+same-tile pointer movement, stationary edges, native keyboard scrolling, overview
+selection, cross-workspace hover, implicit workspace moves and exit selection.
+The driver exposes private geometry telemetry because Niri 26.04 does not populate
+tiled positions in IPC. Screenshots show the native overview selection.
 
 ```sh
 python3 tools/tests/verify_niri_hover_focus.py \
@@ -185,6 +195,19 @@ writer as well as generated KDL. A later desktop preference save can otherwise
 reintroduce unrestricted `focus-follows-mouse` in a later include and override a
 previously bounded host setting. Validate every active include and exercise a
 settings save after installation.
+
+Companion selection also requires the installed manifest's patch digest to match
+the helper's embedded patch. An old caption-only companion must be rebuilt rather
+than silently reused. Source preparation upgrades only the exact previous owned
+patch (`niri-26.04-overview-hover-v1.patch`), restores it if the new patch cannot
+apply, and refuses unrelated source edits. Frozen install references retain their
+bytes; their comparison declares only the owned patch-digest substitution and
+current trust fixtures supply the required digest.
+
+A configuration reload cannot replace running compositor code. Stage the tested
+companion with rollback first; activation requires a new session, which closes
+that compositor's applications. Preserve the current session until the owner is
+ready to restart it.
 
 The frozen compositor entrypoint cases use the uninstalled `compositor-reference`
 provider to retain their original connection lifecycle while calling the same

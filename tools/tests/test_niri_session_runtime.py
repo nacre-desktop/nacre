@@ -72,6 +72,11 @@ class NiriRuntimeTests(unittest.TestCase):
                 "nestedVerified": True,
                 "sourceRevision": runtime.HOVER_SOURCE,
                 "protocol": "NacreOverviewHoverStream",
+                "patchSha256": hashlib.sha256(
+                    (
+                        ROOT / "tools/patches/niri-26.04-overview-hover.patch"
+                    ).read_bytes()
+                ).hexdigest(),
                 "binarySha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
             }
             (root / "manifest.json").write_text(json.dumps(manifest))
@@ -79,6 +84,14 @@ class NiriRuntimeTests(unittest.TestCase):
                 runtime.subprocess, "check_output", return_value="niri 26.04 (stock)"
             ):
                 self.assertEqual(runtime.overview_hover_binary(home), binary)
+                current_patch = manifest.pop("patchSha256")
+                (root / "manifest.json").write_text(json.dumps(manifest))
+                self.assertIsNone(runtime.overview_hover_binary(home))
+                manifest["patchSha256"] = "old companion patch"
+                (root / "manifest.json").write_text(json.dumps(manifest))
+                self.assertIsNone(runtime.overview_hover_binary(home))
+                manifest["patchSha256"] = current_patch
+                (root / "manifest.json").write_text(json.dumps(manifest))
                 binary.write_text("changed after verification")
                 self.assertIsNone(runtime.overview_hover_binary(home))
             manifest["binarySha256"] = hashlib.sha256(binary.read_bytes()).hexdigest()

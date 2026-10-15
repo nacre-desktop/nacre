@@ -19,6 +19,8 @@ import subprocess
 import tempfile
 import time
 
+from PIL import Image
+
 from verify_niri_overview_hover import build_pointer
 
 REPO = Path(__file__).resolve().parents[2]
@@ -57,7 +59,7 @@ def verify(driver, helper, pointer, output):
         loader = config / "config.kdl"
         fixture = root / "client.qml"
         fixture.write_text(
-            "import Quickshell\nimport QtQuick\nShellRoot {\n"
+            'import Quickshell\nimport Quickshell.Io\nimport Quickshell.Wayland\nimport QtQuick\nShellRoot {\nPanelWindow { id: overlay; visible: false; anchors.top: true; anchors.right: true; implicitWidth: 120; implicitHeight: 80; exclusiveZone: 0; WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand; color: "#222222" }\nIpcHandler { target: "hoverFocus"; function panel(value: bool): void { overlay.visible = value; } }\n'
             + "\n".join(
                 f'FloatingWindow {{ visible: true; title: "Hover {name}"; implicitWidth: 350; implicitHeight: 200; Rectangle {{ anchors.fill: parent; color: "#557799" }} }}'
                 for name in ("Alpha", "Beta", "Gamma")
@@ -156,7 +158,7 @@ def verify(driver, helper, pointer, output):
                 def windows():
                     return sorted(
                         request("Windows")["Windows"],
-                        key=lambda row: row["layout"]["pos_in_scrolling_layout"],
+                        key=lambda entry: entry["layout"]["pos_in_scrolling_layout"],
                     )
 
                 def positions():
@@ -165,13 +167,13 @@ def verify(driver, helper, pointer, output):
                     return [by_id[w["id"]] for w in windows()]
 
                 def focused():
-                    return next(w["id"] for w in windows() if w["is_focused"])
+                    return next((w["id"] for w in windows() if w["is_focused"]), None)
 
-                def move(x, env=env):
+                def move(x, y=300, env=env):
                     selected = dict(env)
                     selected.pop("LD_LIBRARY_PATH", None)
                     subprocess.run(
-                        [str(pointer), str(int(x)), "300", "800", "600"],
+                        [str(pointer), str(int(x)), str(int(y)), "800", "600"],
                         env=selected,
                         check=True,
                     )
@@ -235,8 +237,57 @@ def verify(driver, helper, pointer, output):
                         name,
                         "Right edge scrolled",
                     )
+                    # Hovering the visible part of an overflowing tile must focus it,
+                    # rather than reject it as stock max-scroll-amount=0 does.
+                    move(before[2][0] + 25)
+                    assert focused() == third and positions() == before, (
+                        name,
+                        "Partial tile hover failed",
+                        focused(),
+                        third,
+                        before,
+                        positions(),
+                    )
+                    # Pointer motion within a tile must reclaim selection after keyboard use.
+                    action("FocusColumnFirst")
+                    move(before[2][0] + 28)
+                    assert focused() == third and positions() == before, (
+                        name,
+                        "Same-tile pointer motion failed",
+                    )
                     move(before[0][0] + 80)
                     assert focused() == first and positions() == before
+                    panel_env = dict(env)
+                    panel_env.pop("LD_LIBRARY_PATH", None)
+
+                    def panel(visible, panel_env=panel_env):
+                        subprocess.run(
+                            [
+                                "quickshell",
+                                "-p",
+                                str(fixture),
+                                "ipc",
+                                "call",
+                                "hoverFocus",
+                                "panel",
+                                str(visible).lower(),
+                            ],
+                            env=panel_env,
+                            check=True,
+                            capture_output=True,
+                        )
+                        time.sleep(0.15)
+
+                    panel(True)
+                    move(740, 30)
+                    assert request("FocusedWindow")["FocusedWindow"] is None, (
+                        "Panel did not take keyboard focus"
+                    )
+                    move(before[0][0] + 80)
+                    assert focused() == first and positions() == before, (
+                        "Hover did not reclaim focus from panel"
+                    )
+                    panel(False)
                     # These are the native actions used by directional keyboard bindings.
                     action("FocusColumnRight")
                     action("FocusColumnRight")
@@ -252,7 +303,107 @@ def verify(driver, helper, pointer, output):
                     )
                     action("FocusColumnFirst")
                     assert focused() == first and positions() == before
+                    # Bird's Eye hover changes the real layout selection without moving
+                    # either tiles or workspace rows. App keyboard focus stays cleared.
+                    action("ToggleOverview")
+
+                    def geometry():
+                        return json.loads((root / "geometry.json").read_text())
+
+                    view = geometry()["visible"]
+                    targets = {row[0]: row for row in view}
+                    target = targets[third]
+                    selected = dict(env)
+                    selected.pop("LD_LIBRARY_PATH", None)
+
+                    def point(x, y, selected=selected):
+                        subprocess.run(
+                            [str(pointer), str(int(x)), str(int(y)), "800", "600"],
+                            env=selected,
+                            check=True,
+                        )
+                        time.sleep(0.15)
+
+                    point(target[1] + 25, target[2] + target[4] / 2)
+                    assert geometry()["selected"] == third, (
+                        name,
+                        "Overview hover did not select",
+                    )
+                    assert {r[0]: r[1:] for r in geometry()["visible"]} == {
+                        r[0]: r[1:] for r in view
+                    }, (
+                        name,
+                        "Overview hover moved view",
+                    )
+                    assert request("FocusedWindow")["FocusedWindow"] is None
+                    # An implicit native workspace move must now target the hovered tile.
+                    action(
+                        "MoveWindowToWorkspace",
+                        window_id=None,
+                        reference={"Index": 2},
+                        focus=False,
+                    )
+                    assert (
+                        next(
+                            row["workspace_id"]
+                            for row in windows()
+                            if row["id"] == third
+                        )
+                        != rows[2]["workspace_id"]
+                    )
+                    assert request("OverviewState")["OverviewState"]["is_open"]
+                    cross_view = geometry()["visible"]
+                    target = next(r for r in cross_view if r[0] == third)
+                    assert target[2] < 598, (
+                        "Destination workspace is not visible in overview"
+                    )
+                    point(target[1] + 25, min(target[2] + target[4] / 2, 580))
+                    assert geometry()["selected"] == third, (
+                        name,
+                        "Other-workspace hover did not select",
+                    )
+                    assert {r[0]: r[1:] for r in geometry()["visible"]} == {
+                        r[0]: r[1:] for r in cross_view
+                    }, (name, "Workspace row moved on hover")
+                    image_path = output.with_name(output.stem + "." + name + ".png")
+                    action(
+                        "ScreenshotScreen",
+                        write_to_disk=True,
+                        show_pointer=False,
+                        path=str(image_path),
+                    )
+                    deadline = time.monotonic() + 5
+                    while not image_path.exists():
+                        assert time.monotonic() < deadline, (
+                            "Native overview screenshot missing"
+                        )
+                        time.sleep(0.05)
+                    pixels = Image.open(image_path).convert("RGB")
+                    bright = []
+                    for x in range(pixels.width):
+                        for y in range(pixels.height):
+                            red, green, blue = pixels.getpixel((x, y))
+                            if green > 140 and blue > 180 and blue > red + 40:
+                                bright.append((x, y))
+                    assert bright, "Selected overview tile has no visible highlight"
+                    assert all(
+                        target[1] - 3 <= x <= target[1] + target[3] + 3
+                        and target[2] - 3 <= y <= target[2] + target[4] + 3
+                        for x, y in bright
+                    ), "Another workspace still has a bright selection ring"
+                    action("ToggleOverview")
+                    assert focused() == third, "Closing overview lost hovered selection"
                     report[name] = {
+                        "otherWorkspaceHoverSelects": True,
+                        "otherWorkspaceViewStationary": True,
+                        "singleBrightSelectionRing": True,
+                        "exitRetainsSelection": True,
+                        "hoverReclaimsPanelFocus": True,
+                        "partialHoverFocus": True,
+                        "sameTilePointerMotion": True,
+                        "overviewHoverSelects": True,
+                        "overviewViewStationary": True,
+                        "overviewMoveTargetsHover": True,
                         "visibleHoverFocus": True,
                         "rightEdgeStationary": True,
                         "leftEdgeStationary": True,

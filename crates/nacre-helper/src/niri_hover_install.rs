@@ -128,7 +128,22 @@ pub fn prepare_source(source: &Path, revision: &str, patch: &Path) -> Result<()>
         git(&["apply", "--check", patch])?;
         git(&["apply", patch])?;
     } else if changes != fs::read(patch)? {
-        return Err("Source has other changes; refusing to overwrite them".into());
+        let previous = patch.with_file_name("niri-26.04-overview-hover-v1.patch");
+        if !previous.is_file() || changes != fs::read(&previous)? {
+            return Err("Source has other changes; refusing to overwrite them".into());
+        }
+        let previous = previous.canonicalize()?;
+        let previous = previous.to_str().ok_or("Invalid previous patch path")?;
+        let current = patch.canonicalize()?;
+        let current = current.to_str().ok_or("Invalid patch path")?;
+        git(&["apply", "--check", "--reverse", previous])?;
+        git(&["apply", "--reverse", previous])?;
+        if let Err(failure) =
+            git(&["apply", "--check", current]).and_then(|_| git(&["apply", current]))
+        {
+            git(&["apply", previous])?;
+            return Err(failure);
+        }
     }
     Ok(())
 }
@@ -241,6 +256,19 @@ mod tests {
         prepare_source(&source, revision.trim(), &patch)?;
         prepare_source(&source, revision.trim(), &patch)?;
         assert_eq!(fs::read_to_string(source.join("tracked.rs"))?, "patched\n");
+        let previous = patch.with_file_name("niri-26.04-overview-hover-v1.patch");
+        fs::copy(&patch, &previous)?;
+        fs::write(source.join("tracked.rs"), "upgraded\n")?;
+        fs::write(&patch, git(&["diff", "--binary", "--abbrev=7", "HEAD"])?)?;
+        fs::write(source.join("tracked.rs"), "patched\n")?;
+        prepare_source(&source, revision.trim(), &patch)?;
+        assert_eq!(fs::read_to_string(source.join("tracked.rs"))?, "upgraded\n");
+        let current = fs::read(&patch)?;
+        fs::write(&previous, &current)?;
+        fs::write(&patch, "invalid candidate patch\n")?;
+        assert!(prepare_source(&source, revision.trim(), &patch).is_err());
+        assert_eq!(fs::read_to_string(source.join("tracked.rs"))?, "upgraded\n");
+        fs::write(&patch, current)?;
         fs::write(source.join("unrelated.txt"), "unrelated edit\n")?;
         assert_eq!(
             prepare_source(&source, revision.trim(), &patch)
@@ -268,9 +296,17 @@ mod tests {
     }
     #[test]
     fn frozen_proof_rejection_manifest_permissions_and_upgrade_backups() -> Result<()> {
-        let reference: Value = serde_json::from_str(include_str!(
-            "../tests/fixtures/niri-hover-install-reference.json"
-        ))?;
+        let previous_digest = format!(
+            "{:x}",
+            Sha256::digest(include_bytes!(
+                "../../../tools/patches/niri-26.04-overview-hover-v1.patch"
+            ))
+        );
+        let text = include_str!("../tests/fixtures/niri-hover-install-reference.json").replace(
+            &previous_digest,
+            &crate::niri_session_runtime::hover_patch_digest(),
+        );
+        let reference: Value = serde_json::from_str(&text)?;
         let patch = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tools/patches/niri-26.04-overview-hover.patch");
         for case in reference["cases"]
