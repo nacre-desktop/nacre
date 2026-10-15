@@ -36,7 +36,8 @@ FloatingWindow {
     onWindowConnected: activate()
     NacreClip {
         anchors.fill: parent
-        radius: NacreTokens.radii.large
+        // Match the compositor geometry so its border cannot show through corners.
+        radius: DesktopSettings.data.rounding ?? NacreTokens.radii.large
         color: NacreTokens.body
         NacreAppHeader {
             id: header

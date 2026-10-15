@@ -3,6 +3,7 @@ import QtQuick.Window
 import Quickshell
 import Quickshell.Io
 import qs.widgets
+import qs.services
 
 FloatingWindow {
     id: root
@@ -74,7 +75,7 @@ FloatingWindow {
     NacreClip {
         id: surface
         anchors.fill: parent
-        radius: NacreTokens.radii.large
+        radius: DesktopSettings.data.rounding ?? NacreTokens.radii.large
         color: NacreTokens.body
         Item {
             id: titlebar
