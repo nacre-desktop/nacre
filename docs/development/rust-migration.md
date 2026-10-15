@@ -9,7 +9,7 @@ Keep public commands, QML appearance, user data, privilege and session policy.
 | 1 Frequent helpers | Complete; CI green | 13 ports; busy service RSS 26.95 → 10.21 MiB; absolute XDG roots follow QML. |
 | 2 Compositor / pearls | Complete; CI green | Preview CPU 52.58 → 1.26 ms; RSS 21.54 → 7.30 MiB; native IPC/session runtime. |
 | 3 Wallpaper / colors | ports complete, quiet A/B/A/B pending (desktop unreachable) | Runtime CI 38723440822 green; 237 Rust / 916 repo / 534 frozen parity. |
-| 4 Remaining shell tools | Active | Media fix CI green; supervisor public; session-watch validating; recovery/policy preserved. |
+| 4 Remaining shell tools | redirected: foundation F1–F4 first | Session-watch c9d251fb CI38754725745 green; F0 charter/protocol first. |
 | 5 AI | Pending | Claude stream-json; existing permissions/history; sidebar-chat, composer and AI controller belong here. |
 | 6 Brain | Pending | Same bge-small model; cosine ≥ 0.9999 or backed-up automatic reindex. |
 | 7 Installer / proof | Pending | install*.py/login-install.py deferred here; packaging owned separately. |
@@ -49,10 +49,13 @@ Direct pinned Orient libraries own paired publication; no Orient process/RPC.
 Custom absolute XDG paths and direct D-Bus/socket transports are intended differences.
 Reference outputs are immutable; security additions use explicit new cases.
 
-Wave4 order: supervisor, session-watch; desktop-settings, desktop-extras (chat bridge),
-weather, updates, control-tools, device-actions, timezone, maintenance; then Welcome,
-display-recover, startup-apps, workflow-profiles, idle/power-button policy, screenshot,
-file-manager integrations, isolate-apps, profile-policy, font-setup.
+Foundation order: F0 charter/protocol → F1 daemon/link → F2 always-on fold-ins
+(one commit each) → F3 QML client → F4 single-writer settings; stop after F4.
+Long-running or frequently called work → daemon service; rare/heavy/risky → worker.
+Settings' unpublished controller port is parked for F4, not a standalone landing.
+Bead owns its ADR/F5 framework work; protocol changes coordinate across agents.
+No live daemon units, notification ownership or keybindings without owner approval.
+Nightly fuzz/soak jobs, Bead hosting/menu.query and remaining Wave4 ports deferred.
 Apply docs/development/security-review.md cases where relevant, preserving privileges.
 Never alter deliberate AI permissions or paru -Syu --skipreview.
 Media response trim moved after cleanup: matched native RSS29.19→27.80MiB;
@@ -66,5 +69,5 @@ cases exact; private bus/socket, linked-state/XDG and both nested compositors pa
 259 Rust/fmt/clippy;917 full repo +15 incoming Niri checks/534 parity pass.
 Python watch currently fails at removed event_socket bridge; no valid idle baseline.
 Session check CPU125.79→29.50ms;20Pythonstarts→0; nativeRSS18.09MiB/idle0ticks30s.
-Next: publish/check session-watch CI, then desktop-settings (150 validation/50 controller cases frozen).
+Next: validate/publish F0, wait for green CI, then F1 daemon/link.
 No live desktop/config/network changes, tags, releases or package publication.
