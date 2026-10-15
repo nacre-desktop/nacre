@@ -329,6 +329,130 @@ class PackageSetupTests(unittest.TestCase):
                 )
                 releases.deploy_package(root, profile, {"layout": "us"}, "hyprland")
 
+    def test_native_aliases_dispatch_without_activation_and_roll_back(self):
+        helper = Path(
+            os.environ.get(
+                "NACRE_HELPER_BINARY", TOOLS.parent / "target/release/nacre-helper"
+            )
+        )
+        self.assertTrue(
+            helper.is_file(), "Build the candidate native helper before source checks"
+        )
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            shutil.copy2(helper, root / "nacre/shell-tools/nacre-helper")
+            unit_root = root / "deployment/core/.config/systemd/user"
+            unit_root.mkdir(parents=True)
+            units = ("nacre-daemon.socket", "nacre-daemon.service")
+            for name in units:
+                shutil.copy2(
+                    TOOLS.parent / "nacre/shell-tools" / name, unit_root / name
+                )
+            with (
+                patch.object(releases, "HOME", home),
+                patch.object(releases, "STATE", home / "releases"),
+                patch.object(releases, "subprocess") as processes,
+            ):
+                record = releases.deploy_package(
+                    root, profile, {"layout": "us"}, "hyprland"
+                )
+                processes.run.assert_not_called()
+            manifest = package_runtime._state.read_json_file(
+                home / ".local/state/nacre/package-links.json"
+            )
+            for name in ("nacre-daemon", "nacrectl"):
+                for prefix in (".local/bin", ".local/share/nacre/shell/bin"):
+                    relative = Path(prefix) / name
+                    self.assertIn(str(relative), manifest)
+                    self.assertEqual(
+                        (home / relative).resolve(strict=True),
+                        root / "nacre/shell-tools/nacre-helper",
+                    )
+            for name in units:
+                self.assertEqual(
+                    (home / ".config/systemd/user" / name).read_bytes(),
+                    (unit_root / name).read_bytes(),
+                )
+            self.assertFalse(
+                any(
+                    "nacre-daemon" in str(path)
+                    for path in package_runtime.links(root, profile)
+                    if ".wants/" in str(path)
+                )
+            )
+            before = set(home.rglob("*"))
+            environment = {
+                **os.environ,
+                "HOME": str(home),
+                "NACRE_DAEMON_SOCKET": str(home / "absent-runtime/daemon.sock"),
+            }
+            controller = subprocess.run(
+                [str(home / ".local/bin/nacrectl"), "--help"],
+                env=environment,
+                text=True,
+                capture_output=True,
+                timeout=5,
+            )
+            self.assertEqual(controller.returncode, 0, controller.stderr)
+            self.assertIn("nacrectl status", controller.stdout)
+            # A rejected argument exercises daemon argv0 dispatch without starting
+            # a listener, user unit or desktop process.
+            daemon = subprocess.run(
+                [str(home / ".local/bin/nacre-daemon"), "--package-probe-no-start"],
+                env=environment,
+                text=True,
+                capture_output=True,
+                timeout=5,
+            )
+            self.assertNotEqual(daemon.returncode, 0)
+            self.assertIn("Expected nacre-helper daemon", daemon.stderr)
+            self.assertEqual(set(home.rglob("*")), before)
+            with (
+                patch.object(releases, "HOME", home),
+                patch.object(releases, "STATE", home / "releases"),
+                patch.object(releases, "subprocess") as processes,
+            ):
+                releases.restore(Path(record["release"]), record)
+                processes.run.assert_not_called()
+            for name in ("nacre-daemon", "nacrectl"):
+                self.assertFalse((home / ".local/bin" / name).is_symlink())
+                self.assertFalse(
+                    (home / ".local/share/nacre/shell/bin" / name).is_symlink()
+                )
+            for name in units:
+                self.assertFalse((home / ".config/systemd/user" / name).exists())
+
+    def test_native_aliases_preserve_foreign_files_links_and_directories(self):
+        for prefix in (".local/bin", ".local/share/nacre/shell/bin"):
+            for kind in ("file", "link", "directory"):
+                with (
+                    self.subTest(prefix=prefix, kind=kind),
+                    tempfile.TemporaryDirectory() as folder,
+                ):
+                    root, home, profile = self.fixture(folder)
+                    path = home / prefix / "nacrectl"
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    if kind == "link":
+                        path.symlink_to(home / "foreign")
+                    elif kind == "directory":
+                        path.mkdir()
+                        (path / "keep").write_text("personal")
+                    else:
+                        path.write_text("personal")
+                    with self.assertRaisesRegex(
+                        RuntimeError, "Local runtime preserved"
+                    ):
+                        package_runtime.plan(home, root, profile)
+                    if kind == "link":
+                        self.assertEqual(os.readlink(path), str(home / "foreign"))
+                    else:
+                        self.assertEqual(
+                            (
+                                path / "keep" if kind == "directory" else path
+                            ).read_text(),
+                            "personal",
+                        )
+
     def test_legacy_palette_link_retirement_rolls_back_and_preserves_foreign_data(self):
         for foreign in (None, "link", "directory"):
             with self.subTest(foreign=foreign), tempfile.TemporaryDirectory() as folder:
@@ -1218,6 +1342,29 @@ class ArchPackageLayoutTests(unittest.TestCase):
             )
             self.assertNotIn(Path("usr/bin/orient"), owned)
             self.assertIn(Path("usr/bin/nacre_shell"), owned)
+            for name in ("nacre-daemon", "nacrectl"):
+                relative = Path("usr/bin") / name
+                self.assertIn(relative, owned)
+                self.assertTrue((base / "core" / relative).is_symlink())
+                self.assertEqual(
+                    (base / "core" / relative).resolve(strict=True),
+                    base / "core/usr/lib/nacre/nacre-helper",
+                )
+            for name in ("nacre-daemon.socket", "nacre-daemon.service"):
+                relative = Path(".config/systemd/user") / name
+                self.assertIn(relative, deployment_owned)
+                self.assertEqual(
+                    (
+                        base / "core/usr/share/nacre/deployment/core" / relative
+                    ).read_bytes(),
+                    (TOOLS.parent / "nacre/shell-tools" / name).read_bytes(),
+                )
+            self.assertFalse(
+                any(
+                    "nacre-daemon" in str(path) and ".wants/" in str(path)
+                    for path in owned | deployment_owned
+                )
+            )
             self.assertFalse((base / "core/usr/share/nacre/runtime/palette").exists())
             for name in ("LICENSE-Orient", "LICENSE-Pillow"):
                 notice = Path("usr/share/licenses/nacre") / name

@@ -42,6 +42,14 @@ Offline build seeds use the candidate helper with a private HOME/XDG environment
 and disconnected D-Bus addresses. Setup retires only recorded legacy palette
 symlinks, preserving foreign files and the existing snapshot/rollback boundary.
 
+`nacre-daemon` and `nacrectl` are native aliases of that same helper. Package
+setup records their private links in its runtime manifest and stages the user
+socket/service templates. It creates no enablement links, starts no units and
+does not activate the daemon. Foundation live installation and activation are
+separate approval steps; the socket's `[Install]` section only describes a future
+explicit enable action. Private links and templates use normal rollback and
+foreign-file preservation checks.
+
 ## Prepare a candidate
 
 Commit and push the reviewed source first. Generate a recipe in a separate,

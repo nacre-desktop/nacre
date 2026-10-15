@@ -54,6 +54,14 @@ for target in (binary, reference, *binary.parents, *reference.parents):
     if not target.is_symlink():
         assert metadata.st_mode & 0o022 == 0, target
 assert run("pacman", "-Qoq", str(binary)).stdout.strip() == "nacre"
+for name in ("nacre-daemon", "nacrectl"):
+    alias = Path("/usr/bin") / name
+    assert alias.is_symlink() and alias.resolve(strict=True) == binary
+    assert alias.lstat().st_uid == 0
+    for parent in alias.parents:
+        assert parent.stat().st_uid == 0 and parent.stat().st_mode & 0o022 == 0
+    assert run("pacman", "-Qoq", str(alias)).stdout.strip() == "nacre"
+assert "nacrectl status" in run("nacrectl", "--help").stdout
 assert run("pacman", "-Qoq", "/usr/bin/orient").stdout.strip() == "orient"
 assert run("pacman", "-Qoq", "/usr/bin/nacre_shell").stdout.strip() == "nacre"
 assert importlib.util.find_spec("nacre_shell") is None, (
@@ -143,6 +151,19 @@ assert not (
     home / ".config/systemd/user/graphical-session.target.wants/nacre-shell.service"
 ).exists()
 assert digest(plain) == plain_hash
+for name in ("nacre-daemon", "nacrectl"):
+    private = home / ".local/share/nacre/shell/bin" / name
+    public = home / ".local/bin" / name
+    assert private.is_symlink() and private.resolve(strict=True) == binary
+    assert public.is_symlink() and public.resolve(strict=True) == binary
+for name in ("nacre-daemon.socket", "nacre-daemon.service"):
+    assert (home / ".config/systemd/user" / name).is_file()
+assert not any(
+    "nacre-daemon" in path.name
+    for directory in (home / ".config/systemd/user").glob("*.wants")
+    for path in directory.iterdir()
+), "Package setup must not enable foundation units"
+print("Native daemon/controller aliases and manual-only unit templates are prepared.")
 if backend in {"niri", "both"}:
     sys.path.insert(0, "/usr/share/nacre/tools")
     from package_niri import validate, command

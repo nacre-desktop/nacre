@@ -81,6 +81,12 @@ def links(root, profile, compositor="hyprland"):
         ".local/share/nacre/thunar-style": Path("/usr/lib/nacre/thunar-style"),
         ".config/quickshell/nacre": root / "nacre/shell",
     }
+    for name in ("nacre-daemon", "nacrectl"):
+        # Symlink invocation preserves argv0 for the native multi-call binary.
+        # Keep these in the runtime manifest: broken template symlinks would be
+        # skipped by the deployment file collector before runtime links exist.
+        values[f".local/share/nacre/shell/bin/{name}"] = Path("../tools/nacre-helper")
+        values[f".local/bin/{name}"] = Path("../share/nacre/shell/bin") / name
     if "brain" in profile["components"]:
         values[".local/share/nacre/brain"] = root / "brain"
         for target in ("nacre-niri.target", "nacre-hyprland.target"):
