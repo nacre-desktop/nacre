@@ -32,7 +32,8 @@
       "id": "kde",
       "labelId": "settings.publisher.kde",
       "outputs": [
-        ".config/kdeglobals"
+        ".config/kdeglobals",
+        ".local/share/color-schemes/Nacre.colors"
       ],
       "template": null,
       "tool": null
@@ -41,7 +42,8 @@
       "id": "dolphin",
       "labelId": "settings.publisher.dolphin",
       "outputs": [
-        ".config/nacre/qt.conf"
+        ".config/kdeglobals",
+        ".local/share/color-schemes/Nacre.colors"
       ],
       "template": null,
       "tool": "dolphin"

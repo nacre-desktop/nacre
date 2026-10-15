@@ -157,3 +157,9 @@ The original empty `wallpaper-media/catalog` input predates optional theme bundl
 Its sandbox supplies an empty bundle-asset directory, preserving the recorded
 input without filtering output or regenerating expected files. Explicitly
 configured catalog cases retain current bundle assets; the harness checks both.
+
+Publisher replay assets retain the original `theme-targets.json` input captured
+before the Dolphin reader metadata correction. The current manifest lists
+Dolphin's actual KDE scheme files; a separate reader regression checks that
+mapping. The historical input is checksum-pinned, and expected output files are
+unchanged.

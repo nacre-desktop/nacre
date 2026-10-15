@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "targets": [
+    {
+      "id": "gtk3",
+      "labelId": "settings.publisher.gtk3",
+      "outputs": [
+        ".config/gtk-3.0/gtk.css"
+      ],
+      "template": "gtk3-colors.css.in",
+      "tool": null
+    },
+    {
+      "id": "gtk4",
+      "labelId": "settings.publisher.gtk4",
+      "outputs": [
+        ".config/gtk-4.0/gtk.css"
+      ],
+      "template": "gtk4-colors.css.in",
+      "tool": null
+    },
+    {
+      "id": "qt",
+      "labelId": "settings.publisher.qt",
+      "outputs": [
+        ".config/nacre/qt.conf"
+      ],
+      "template": null,
+      "tool": null
+    },
+    {
+      "id": "kde",
+      "labelId": "settings.publisher.kde",
+      "outputs": [
+        ".config/kdeglobals"
+      ],
+      "template": null,
+      "tool": null
+    },
+    {
+      "id": "dolphin",
+      "labelId": "settings.publisher.dolphin",
+      "outputs": [
+        ".config/nacre/qt.conf"
+      ],
+      "template": null,
+      "tool": "dolphin"
+    },
+    {
+      "id": "thunar",
+      "labelId": "settings.publisher.thunar",
+      "outputs": [
+        ".config/gtk-3.0/gtk.css"
+      ],
+      "template": null,
+      "tool": "thunar"
+    },
+    {
+      "id": "kitty",
+      "labelId": "settings.publisher.kitty",
+      "outputs": [
+        ".config/nacre/kitty-colors.conf"
+      ],
+      "template": "kitty-colors.conf.in",
+      "tool": "kitty"
+    },
+    {
+      "id": "rofi",
+      "labelId": "settings.publisher.rofi",
+      "outputs": [
+        ".config/nacre/rofi.rasi"
+      ],
+      "template": "rofi-colors.rasi.in",
+      "tool": "rofi"
+    },
+    {
+      "id": "lock",
+      "labelId": "settings.publisher.lock",
+      "outputs": [
+        ".config/hypr/hyprlock.conf"
+      ],
+      "template": "hyprlock.conf.in",
+      "tool": "hyprlock"
+    },
+    {
+      "id": "login",
+      "labelId": "settings.publisher.login",
+      "outputs": [
+        ".local/state/nacre/shell/login-preview/theme.conf"
+      ],
+      "template": null,
+      "tool": null
+    }
+  ]
+}

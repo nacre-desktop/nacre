@@ -722,7 +722,7 @@ The publisher manifest drives App theming rows. `colors.appThemes` contains
 opt-out booleans; a missing key follows the desktop. Pausing retains existing
 application files through subsequent palette publications. Re-enabling applies
 the live palette through `nacre-helper app-theme TARGET true`. Shared outputs have
-shared switches: Dolphin/Qt and Thunar/GTK 3. Settings explains this beside each
+shared switches: Dolphin/KDE and Thunar/GTK 3. Settings explains this beside each
 row rather than claiming independent control of a shared toolkit theme. The
 normal publisher and lock-ready widget preparation both respect the lock gate;
 widgets continue updating with the retained lock colors. Future publishers add a

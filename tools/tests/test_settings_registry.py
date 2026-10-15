@@ -17,6 +17,31 @@ def catalog():
 
 
 class SettingsRegistryTests(unittest.TestCase):
+    def test_dolphin_theme_switch_matches_the_native_style_reader(self):
+        import re
+
+        manifest = json.loads(
+            (ROOT / "nacre/shell-tools/theme-targets.json").read_text()
+        )
+        targets = {row["id"]: row for row in manifest["targets"]}
+        style = (ROOT / "nacre/shell-tools/dolphin-style.cpp").read_text()
+        reader = re.search(r'source = home \+ "([^"]+)";', style).group(1).lstrip("/")
+        self.assertIn(reader, targets["dolphin"]["outputs"])
+        self.assertIn(reader, targets["kde"]["outputs"])
+        settings = {
+            row["id"]: row
+            for fragment in catalog()
+            for row in fragment.get("settings", [])
+        }
+        self.assertEqual(
+            settings["colors/app-theming.targets.dolphin"]["store"],
+            settings["colors/app-theming.targets.kde"]["store"],
+        )
+        self.assertNotEqual(
+            settings["colors/app-theming.targets.dolphin"]["store"],
+            settings["colors/app-theming.targets.qt"]["store"],
+        )
+
     def test_widget_module_exports_new_controls_for_live_reload(self):
         folder = ROOT / "nacre/shell/widgets"
         declarations = (folder / "qmldir").read_text().splitlines()

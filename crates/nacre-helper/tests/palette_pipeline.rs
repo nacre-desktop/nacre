@@ -417,6 +417,24 @@ fn whole_publication_preserves_every_frozen_file_and_link() -> Result<()> {
     let transactions = expanded(&packed["data"], &packed["strings"])?;
     let references = [fixture()?, transactions];
     let root = tempfile::tempdir()?;
+    let historic_root = root.path().join("historical-assets");
+    let historic_assets = historic_root.join("shell-tools");
+    fs::create_dir_all(&historic_assets)?;
+    for entry in fs::read_dir(assets())? {
+        let entry = entry?;
+        if entry.file_name() == "theme-targets.json" {
+            fs::write(
+                historic_assets.join(entry.file_name()),
+                include_bytes!("fixtures/theme-targets-original-v1.json"),
+            )?;
+        } else if entry.file_name() != "theme-bundles" {
+            symlink(entry.path(), historic_assets.join(entry.file_name()))?;
+        }
+    }
+    symlink(
+        assets().parent().unwrap().join("shell"),
+        historic_root.join("shell"),
+    )?;
     let binary = root.path().join("bin");
     fs::create_dir(&binary)?;
     let renderer = binary.join("rsvg-convert");
@@ -499,7 +517,7 @@ fn whole_publication_preserves_every_frozen_file_and_link() -> Result<()> {
                     }
                 }
             }
-            let mut request = serde_json::json!({"home":home,"backend":case.get("backend").cloned().unwrap_or(serde_json::json!("hyprland")),"assets":assets(),"system_icons":home.join("empty-system-icons"),"monitors":reference["monitors"],"now_ms":reference["now_ms"],"wallpaper":home.join("scene.png")});
+            let mut request = serde_json::json!({"home":home,"backend":case.get("backend").cloned().unwrap_or(serde_json::json!("hyprland")),"assets":historic_assets,"system_icons":home.join("empty-system-icons"),"monitors":reference["monitors"],"now_ms":reference["now_ms"],"wallpaper":home.join("scene.png")});
             if let Some(transaction) = case["request"].as_object() {
                 for (key, value) in transaction {
                     let value: Value = serde_json::from_str(
@@ -802,6 +820,7 @@ fn app_followers_hold_current_colors_and_resume_only_the_selected_group() -> Res
         ("gtk4", ".config/gtk-4.0/gtk.css"),
         ("qt", ".config/nacre/qt.conf"),
         ("kde", ".config/kdeglobals"),
+        ("dolphin", ".local/share/color-schemes/Nacre.colors"),
         ("kitty", ".config/nacre/kitty-colors.conf"),
         ("rofi", ".config/nacre/rofi.rasi"),
         ("lock", ".config/hypr/hyprlock.conf"),
@@ -809,13 +828,13 @@ fn app_followers_hold_current_colors_and_resume_only_the_selected_group() -> Res
     for (_, name) in outputs {
         let path = home.path().join(name);
         fs::create_dir_all(path.parent().unwrap())?;
-        fs::write(path, "custom colors\n")?;
+        fs::write(path, "[General]\nName=Custom colors\n")?;
     }
     publisher.apply_palette(None, false)?;
     for (_, name) in outputs {
         assert_eq!(
             fs::read_to_string(home.path().join(name))?,
-            "custom colors\n",
+            "[General]\nName=Custom colors\n",
             "{name}"
         );
     }
@@ -825,18 +844,26 @@ fn app_followers_hold_current_colors_and_resume_only_the_selected_group() -> Res
     assert!(publisher::theme_target_enabled(&paths, "thunar")?);
     assert_ne!(
         fs::read_to_string(home.path().join(outputs[0].1))?,
-        "custom colors\n"
+        "[General]\nName=Custom colors\n"
     );
     for (_, name) in outputs.into_iter().skip(1) {
         assert_eq!(
             fs::read_to_string(home.path().join(name))?,
-            "custom colors\n",
+            "[General]\nName=Custom colors\n",
             "{name}"
         );
     }
     publisher.set_theme_target("dolphin", true)?;
-    assert!(publisher::theme_target_enabled(&paths, "qt")?);
-    publisher.set_theme_target("qt", false)?;
+    assert!(publisher::theme_target_enabled(&paths, "kde")?);
+    assert_ne!(
+        fs::read_to_string(home.path().join(".local/share/color-schemes/Nacre.colors"))?,
+        "[General]\nName=Custom colors\n"
+    );
+    assert_eq!(
+        fs::read_to_string(home.path().join(".config/nacre/qt.conf"))?,
+        "[General]\nName=Custom colors\n"
+    );
+    publisher.set_theme_target("kde", false)?;
     assert!(!publisher::theme_target_enabled(&paths, "dolphin")?);
     let before = fs::read(paths.config.join("colors.json"))?;
     assert!(publisher.set_theme_target("../not-a-target", true).is_err());

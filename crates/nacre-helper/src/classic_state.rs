@@ -228,7 +228,7 @@ pub fn render_template(
 /// Follow preferences are opt-out. Shared application outputs use one switch.
 pub fn theme_target_key(id: &str) -> &str {
     match id {
-        "dolphin" => "qt",
+        "dolphin" => "kde",
         "thunar" => "gtk3",
         other => other,
     }
