@@ -9,6 +9,8 @@ from pathlib import Path
 import re
 import shutil
 import signal
+import shlex
+import socket
 import subprocess
 import sys
 import tempfile
@@ -17,6 +19,7 @@ import io
 import hashlib
 import importlib.util
 import time
+import threading
 
 import performance
 
@@ -30,6 +33,17 @@ PROBE = """
     property string perfAction: ""
     property var perfResult: ({})
     property var perfWait: ({})
+    property string perfWallpaper: ""
+    property string perfPrimary: ""
+    function perfChooseWallpaper(path, primary) {
+        perfSequence++;
+        perfAction = "wallpaper-colors";
+        perfWallpaper = path;
+        perfPrimary = primary.toLowerCase().replace("#", "");
+        perfResult = {sequence: perfSequence};
+        perfStarted = Date.now();
+        NacreWallpapers.setWallpaper(path);
+    }
     function perfOpen(action) {
         perfSequence++;
         perfAction = action;
@@ -60,6 +74,14 @@ PROBE = """
         target: root.contentItem.Window.window
         function onFrameSwapped() {
             if (!root.perfStarted) return;
+            if (root.perfAction === "wallpaper-colors") {
+                const active = NacrePresentation.active;
+                if (active?.poster !== root.perfWallpaper || active?.colours?.primary?.toLowerCase().replace("#", "") !== root.perfPrimary) return;
+                if (root.perfImages(root.contentItem).pending) return;
+                root.perfResult = Object.assign({}, root.perfResult, {shellFrameMs: Date.now() - root.perfStarted, chosenAtMs: root.perfStarted, shellFrameAtMs: Date.now(), primary: root.perfPrimary, poster: root.perfWallpaper});
+                root.perfStarted = 0;
+                return;
+            }
             const panel = root.perfAction === "launcher" ? panelHost.launcher : panelHost.dashboard;
             root.perfWait = {visible: panel.visible, opening: panel.opening, presented: panel.presentedHeight, content: panel.contentHeight, queue: NacreDashboardState.queue.length, message: NacreDashboardState.message, images: root.perfImages(panel)};
             if (root.perfFind(panel, root.perfAction === "launcher" ? "launcherPage" : "dashboardPage")?.status !== Loader.Ready) return;
@@ -98,6 +120,7 @@ PROBE = """
         function pinDashboard(): void { flags.dashboardPinned = true; }
         function pause(paused: bool): void { NacreWallpapers.preferences = Object.assign({}, NacreWallpapers.preferences, {paused: paused}); }
         function open(action: string): void { root.perfOpen(action); }
+        function chooseWallpaper(path: string, primary: string): void { root.perfChooseWallpaper(path, primary); }
         function wallpaper(data: string): void {
             const fixture = JSON.parse(data);
             NacreWallpapers.media = fixture.media;
@@ -154,6 +177,172 @@ def paging():
         line.split() for line in Path("/proc/vmstat").read_text().splitlines()
     )
     return {key: int(fields[key]) for key in ("pswpin", "pswpout")}
+
+
+def machine_metadata(proc=Path("/proc"), sysroot=Path("/sys"), etc=Path("/etc")):
+    """Read the requested machine facts without hostnames or configuration changes."""
+    errors = []
+
+    def read(path):
+        try:
+            return path.read_text()
+        except OSError as error:
+            errors.append(path.name + ": " + type(error).__name__)
+            return ""
+
+    cpus = [
+        line.split(":", 1)[1].strip()
+        for line in read(proc / "cpuinfo").splitlines()
+        if line.startswith("model name") and ":" in line
+    ]
+    memory = dict(
+        line.split(":", 1)
+        for line in read(proc / "meminfo").splitlines()
+        if ":" in line
+    )
+    total = memory.get("MemTotal", "").split()
+    distro = dict(
+        line.split("=", 1)
+        for line in read(etc / "os-release").splitlines()
+        if "=" in line and not line.startswith("#")
+    )
+    governors = sorted(
+        {
+            read(path).strip()
+            for path in (sysroot / "devices/system/cpu/cpufreq").glob(
+                "policy*/scaling_governor"
+            )
+        }
+    )
+    return {
+        "cpu": cpus[0] if cpus else "unavailable",
+        "logical_cpus": len(cpus),
+        "ram_bytes": int(total[0]) * 1024 if total and total[0].isdigit() else None,
+        "kernel": read(proc / "sys/kernel/osrelease").strip() or "unavailable",
+        "distro": distro.get("PRETTY_NAME", distro.get("NAME", "unavailable")).strip(
+            '"'
+        ),
+        "cpu_governors": governors,
+        "errors": errors,
+    }
+
+
+def desktop_palette_result(chosen_at_ns, expected_colors, frames):
+    """Aggregate only attributed compositor pixels, never file/state acknowledgements."""
+    required = ("shell", "gtk", "qt", "kitty", "lock")
+    if set(expected_colors) != set(required):
+        raise ValueError("Expected colors must name every desktop consumer")
+    missing = {}
+    accepted = {}
+    for name in required:
+        frame = frames.get(name)
+        if not frame or frame.get("boundary") != "compositor-pixel-capture":
+            missing[name] = "no attributed compositor frame"
+            continue
+        color = str(frame.get("color", "")).lower().removeprefix("#")
+        expected = str(expected_colors[name]).lower().removeprefix("#")
+        region = frame.get("region")
+        digest = frame.get("capture_sha256", "")
+        observed = frame.get("observed_at_ns")
+        if color != expected:
+            missing[name] = "rendered color has not converged"
+        elif (
+            not isinstance(region, list)
+            or len(region) != 4
+            or region[2] <= 0
+            or region[3] <= 0
+            or not re.fullmatch("[0-9a-f]{64}", digest)
+        ):
+            missing[name] = "missing pixel region or capture digest"
+        elif not isinstance(observed, int) or observed < chosen_at_ns:
+            missing[name] = "frame predates the selection or its clock is invalid"
+        else:
+            accepted[name] = frame
+    complete = not missing
+    return {
+        "complete": complete,
+        "missing": missing,
+        "frames": accepted,
+        "visible_upper_bound_ms": (
+            max(frame["observed_at_ns"] for frame in accepted.values()) - chosen_at_ns
+        )
+        / 1e6
+        if complete
+        else None,
+        "boundary": "selection to last attributed compositor pixel capture, including capture overhead",
+    }
+
+
+def quiet_window_failures(report):
+    """Owner's comparison gate; independent of the stricter CI budgets."""
+    failures = []
+    start, end = report.get("paging_start"), report.get("paging_end")
+    page_size = report.get("page_size_bytes")
+    if not start or not end or not isinstance(page_size, int) or page_size <= 0:
+        return ["missing host paging counters or page size"]
+    pages = end["pswpin"] - start["pswpin"]
+    if pages < 0:
+        failures.append("host paging counter reset during capture")
+    elif pages * page_size >= 1048576:
+        failures.append("host swap-in reached the 1 MiB limit")
+    for name, scenario in report.get("scenarios", {}).items():
+        count = len(scenario.get("samples", []))
+        coverage = (
+            scenario.get("memory_valid_samples", {}).get("swap_pss", {}).get("shell", 0)
+        )
+        swap = scenario.get("swap_pss_mib", {}).get("shell")
+        if not count or coverage != count or not swap:
+            failures.append(name + ": incomplete measured-process SwapPss coverage")
+        elif swap["max"] != 0:
+            failures.append(name + ": measured processes have swapped pages")
+        for sample in scenario.get("samples", []):
+            processes = sample.get("processes")
+            if not processes or any(
+                row.get("swap_pss_mib") is None for row in processes
+            ):
+                failures.append(name + ": incomplete per-process SwapPss coverage")
+                break
+            if any(row["swap_pss_mib"] != 0 for row in processes):
+                failures.append(name + ": measured processes have swapped pages")
+                break
+    if not report.get("scenarios"):
+        failures.append("missing measured-process scenarios")
+    if "wallpaper_frame_smoke" in report:
+        samples = report.get("palette_process_swap_samples", [])
+        if not samples or any(not sample.get("processes") for sample in samples):
+            failures.append("missing palette-process SwapPss coverage during selection")
+        for sample in samples:
+            if any(
+                row.get("swap_pss_bytes") != 0 for row in sample.get("processes", [])
+            ):
+                failures.append("palette processes swapped or have unknown SwapPss")
+                break
+    return failures
+
+
+def monitor_palette_swap(stop, samples):
+    """Cover witnesses/compositors as well as shell descendants during the action."""
+    while True:
+        processes = []
+        for row in performance.snapshot(os.getpid(), detached=False).values():
+            try:
+                text = Path(f"/proc/{row['pid']}/smaps_rollup").read_text()
+                value = re.search(r"(?m)^SwapPss:\s+(\d+) kB$", text)
+                swap = int(value[1]) * 1024 if value else None
+            except (FileNotFoundError, ProcessLookupError):
+                continue
+            except OSError:
+                # Unreadable live processes are unknown; never assume zero.
+                swap = None
+            current = performance.process(row["pid"])
+            if current is None or current["start"] != row["start"]:
+                continue
+            processes.append(
+                {"pid": row["pid"], "name": row["name"], "swap_pss_bytes": swap}
+            )
+        samples.append({"at_ns": time.time_ns(), "processes": processes})
+        if stop.wait(0.25):
+            return
 
 
 def fixture(home, source, video=False):
@@ -213,7 +402,7 @@ def disable_speed_pass(shell):
         path.write_text(source.replace(before, after))
 
 
-def prepare(directory, revision=None, control=False):
+def prepare(directory, revision=None, control=False, helper_binary=None):
     from PIL import Image
 
     home = directory / "home"
@@ -221,12 +410,28 @@ def prepare(directory, revision=None, control=False):
     source = ROOT
     if revision:
         archive = subprocess.check_output(
-            ["git", "archive", revision, "nacre/shell", "nacre/shell-tools"], cwd=ROOT
+            [
+                "git",
+                "archive",
+                revision,
+                "nacre/shell",
+                "nacre/shell-tools",
+                "nacre/shell-cli",
+            ],
+            cwd=ROOT,
         )
         source = directory / "source"
         source.mkdir()
         with tarfile.open(fileobj=io.BytesIO(archive)) as files:
             files.extractall(source, filter="data")
+    if (source / "nacre/shell-cli").is_dir():
+        adapter = home / ".local/share/nacre/shell-cli"
+        adapter.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(
+            source / "nacre/shell-cli",
+            adapter,
+            ignore=shutil.ignore_patterns("__pycache__", "orient"),
+        )
     shutil.copytree(source / "nacre/shell", shell)
     if control:
         disable_speed_pass(shell)
@@ -236,10 +441,40 @@ def prepare(directory, revision=None, control=False):
         tools,
         ignore=shutil.ignore_patterns("tests", "__pycache__"),
     )
-    (tools / "branding").symlink_to(ROOT / "nacre/branding", target_is_directory=True)
+    native_commands = any(
+        "NacrePaths.helperBinary" in path.read_text()
+        for path in (shell / "services").glob("*.qml")
+    )
+    if native_commands:
+        if helper_binary is None or not Path(helper_binary).is_file():
+            raise ValueError(
+                "This revision needs --helper-binary built from the exact revision under test"
+            )
+        shutil.copy2(Path(helper_binary).resolve(), tools / "nacre-helper")
+        bridge = home / ".local/share/nacre/shell/bin/nacre_shell"
+        bridge.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(tools / "cli-bridge.sh", bridge)
+        bridge.chmod(0o700)
+    # Both adapter generations resolve shared state from their source sibling.
+    (home / ".local/share/nacre/shell-tools").symlink_to(
+        tools, target_is_directory=True
+    )
+    # Native helpers resolve sibling source assets through the installed layout.
+    (tools.parent / "source").symlink_to(shell, target_is_directory=True)
+    (tools.parent / "shell-cli").symlink_to(
+        home / ".local/share/nacre/shell-cli", target_is_directory=True
+    )
     runtime_python = home / ".local/share/nacre/palette-runtime/venv"
-    runtime_python.parent.mkdir(parents=True)
-    runtime_python.symlink_to(sys.prefix, target_is_directory=True)
+    runtime_bin = runtime_python / "bin"
+    runtime_bin.mkdir(parents=True)
+    (runtime_bin / "python").symlink_to(sys.executable)
+    adapter_cli = runtime_bin / "nacre_shell"
+    adapter_cli.write_text(
+        "#!/usr/bin/env sh\nexec "
+        + shlex.quote(sys.executable)
+        + ' -m nacre_shell "$@"\n'
+    )
+    adapter_cli.chmod(0o700)
     for relative in (
         ".config/nacre",
         ".cache",
@@ -355,9 +590,11 @@ def shell_environment(tools, environment):
 
 
 def run(args, directory):
-    home, shell, movie = prepare(directory, args.revision, args.control)
+    home, shell, movie = prepare(
+        directory, args.revision, args.control, args.helper_binary
+    )
     # Unix-domain socket paths (including Hyprland signatures) must fit 108 bytes.
-    runtime = Path(tempfile.mkdtemp(prefix="npr-"))
+    runtime = Path(tempfile.mkdtemp(prefix="npr-", dir="/tmp"))
     env = {
         key: value
         for key, value in os.environ.items()
@@ -381,11 +618,15 @@ def run(args, directory):
         QT_QPA_PLATFORM="wayland",
         QT_SCALE_FACTOR="1",
         NACRE_COMPOSITOR=args.backend,
-        PYTHONPATH=str(ROOT / "nacre/shell-cli/src"),
+        PYTHONPATH=str(home / ".local/share/nacre/shell-cli/src"),
+        DBUS_SYSTEM_BUS_ADDRESS="unix:path=" + str(runtime / "absent-system-bus"),
     )
     if args.orient_binary:
         env["NACRE_ORIENT_BINARY"] = str(args.orient_binary.resolve(strict=True))
     processes = []
+    palette_monitor = None
+    palette_stop = threading.Event()
+    palette_swap_samples = []
 
     def start(command, name, environment):
         log = (directory / (name + ".log")).open("w")
@@ -473,10 +714,10 @@ def run(args, directory):
                 'input { keyboard { xkb { layout "us"; }; }; };\noutput "winit" { mode "1920x1080"; scale 1; };\nprefer-no-csd\nwindow-rule { match app-id="^org[.]quickshell$"; open-floating true; }\n'
             )
             start(["niri", "-c", str(config)], "compositor", env)
-            socket = wait_for(
+            niri_socket = wait_for(
                 lambda: next(iter(runtime.glob("niri.*.sock")), None), "niri socket"
             )
-            env["NIRI_SOCKET"] = str(socket)
+            env["NIRI_SOCKET"] = str(niri_socket)
         if args.backend != "labwc":
             wait_for(lambda: (runtime / "wayland-1").exists(), "nested Wayland socket")
             env["WAYLAND_DISPLAY"] = "wayland-1"
@@ -504,17 +745,31 @@ def run(args, directory):
             ),
             "shell PID",
         )
+        # Witnesses and CLI calls must share the shell's disposable bus. Never
+        # inherit the owner's session bus or create a second notification domain.
+        private_environment = dict(
+            field.split(b"=", 1)
+            for field in Path(f"/proc/{pid}/environ").read_bytes().split(b"\0")
+            if b"=" in field
+        )
+        shell_env["DBUS_SESSION_BUS_ADDRESS"] = private_environment[
+            b"DBUS_SESSION_BUS_ADDRESS"
+        ].decode()
         wait_for(lambda: state("nacre", "state"), "shell IPC")
         time.sleep(10)
         ipc("nacre", "close")
         versions = {}
         for name, command in {
             "quickshell": ["quickshell", "--version"],
+            "niri": ["niri", "--version"],
+            "hyprland": ["Hyprland", "--version"],
             "compositor": [
                 "Hyprland" if args.backend == "hyprland" else "niri",
                 "--version",
             ],
             "qt": ["pkg-config", "--modversion", "Qt6Core"],
+            "gtk3": ["pkg-config", "--modversion", "gtk+-3.0"],
+            "kitty": ["kitty", "--version"],
             "orient": [
                 str(args.orient_binary or Path(sys.prefix) / "bin/orient"),
                 "--version",
@@ -533,6 +788,7 @@ def run(args, directory):
             except (OSError, subprocess.SubprocessError, IndexError):
                 versions[name] = "unavailable"
         report = {
+            "machine": machine_metadata(),
             "versions": versions,
             "control": args.control,
             "budget_tier": args.budget_tier,
@@ -541,8 +797,22 @@ def run(args, directory):
             "sampler_sha256": hashlib.sha256(
                 Path(performance.__file__).read_bytes()
             ).hexdigest(),
+            "helper_sha256": hashlib.sha256(
+                (home / ".local/share/nacre/shell/tools/nacre-helper").read_bytes()
+            ).hexdigest()
+            if args.helper_binary
+            else None,
+            "palette_probe_sha256": {
+                name: hashlib.sha256(
+                    (args.palette_probes / name).read_bytes()
+                ).hexdigest()
+                for name in ("gtk-palette", "qt-palette")
+            }
+            if args.palette_probes
+            else {},
             "paging_start": paging(),
             "paging_end": paging(),
+            "page_size_bytes": os.sysconf("SC_PAGE_SIZE"),
             "revision": args.revision
             or subprocess.check_output(
                 ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
@@ -661,7 +931,500 @@ def run(args, directory):
                 }
                 ipc("nacre", "close")
 
+        if args.wallpaper_frame_smoke:
+            from PIL import Image
+
+            config = home / ".config/nacre"
+            (config / "cli.json").write_text(
+                json.dumps({"version": 1, "wallpaper": {"postHook": None}})
+            )
+            (config / "wallpaper-picker.json").write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "paletteMode": "dark",
+                        "palettePersonality": "natural",
+                    }
+                )
+            )
+            scheme = json.loads(
+                (
+                    home / ".local/share/nacre/shell/tools/reference-style.json"
+                ).read_text()
+            )
+            scheme["name"] = "dynamic"
+            (home / ".local/state/nacre/scheme.json").write_text(json.dumps(scheme))
+            selected = home / "Pictures/Wallpapers/color-selection.png"
+            Image.new("RGB", (320, 200), "#1752a4").save(selected)
+            palette_cli = home / ".local/share/nacre/shell/bin/nacre_shell"
+            prepared = subprocess.run(
+                [
+                    str(palette_cli),
+                    "wallpaper",
+                    "--print",
+                    str(selected),
+                    "--mode",
+                    "dark",
+                ],
+                env=shell_env,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=30,
+            )
+            if prepared.returncode:
+                raise RuntimeError(
+                    "Palette precomputation failed: "
+                    + prepared.stderr[-1000:]
+                    + prepared.stdout[-500:]
+                )
+            palette = json.loads(prepared.stdout)
+            primary = palette["colours"]["primary"]
+            witnesses = {}
+            if args.palette_probes:
+                qt_settings = home / ".config/qt6ct/qt6ct.conf"
+                qt_settings.parent.mkdir(parents=True, exist_ok=True)
+                qt_settings.write_text(
+                    "[Appearance]\ncustom_palette=true\ncolor_scheme_path="
+                    + str(config / "qt.conf")
+                    + "\n"
+                )
+                initial = home / "Pictures/Wallpapers/initial-colors.png"
+                Image.new("RGB", (320, 200), "#8a3510").save(initial)
+                published = subprocess.run(
+                    [
+                        str(palette_cli),
+                        "wallpaper",
+                        "--file",
+                        str(initial),
+                        "--mode",
+                        "dark",
+                    ],
+                    env=shell_env,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+                if published.returncode:
+                    raise RuntimeError(
+                        "Initial palette publication failed: "
+                        + published.stderr[-1500:]
+                        + published.stdout[-500:]
+                    )
+                initial_palette = json.loads(
+                    (home / ".local/state/nacre/scheme.json").read_text()
+                )
+                for consumer in ("gtk", "qt"):
+                    binary = args.palette_probes / (consumer + "-palette")
+                    if not binary.is_file():
+                        raise RuntimeError(
+                            "Missing prebuilt palette witness: " + str(binary)
+                        )
+                    witness_env = dict(
+                        shell_env, GDK_BACKEND="wayland", QT_QPA_PLATFORMTHEME="qt6ct"
+                    )
+                    witnesses[consumer] = start(
+                        [str(binary.resolve())], consumer + "-witness", witness_env
+                    )
+                    wait_for(
+                        lambda consumer=consumer: (
+                            '"primary"'
+                            in (directory / (consumer + "-witness.log")).read_text()
+                        ),
+                        consumer + " initial paint",
+                    )
+                kitty_config = home / ".config/kitty/kitty.conf"
+                kitty_config.parent.mkdir(parents=True, exist_ok=True)
+                kitty_config.write_text(
+                    "include " + str(config / "kitty-colors.conf") + "\n"
+                )
+                kitty_socket = runtime / "kitty-witness.sock"
+                start(
+                    [
+                        "kitty",
+                        "--config",
+                        str(kitty_config),
+                        "--title",
+                        "Nacre palette Kitty witness",
+                        "--",
+                        sys.executable,
+                        str(ROOT / "tools/performance-probes/kitty-palette.py"),
+                        "--socket",
+                        str(kitty_socket),
+                    ],
+                    "kitty-witness",
+                    shell_env,
+                )
+                wait_for(kitty_socket.exists, "Kitty witness socket")
+                kitty_peer = socket.socket(socket.AF_UNIX)
+                kitty_peer.settimeout(3)
+                kitty_peer.connect(str(kitty_socket))
+                kitty_stream = kitty_peer.makefile("rwb", buffering=0)
+                json.loads(kitty_stream.readline())
+                initial_kitty_blue = re.search(
+                    r"(?m)^color12 #([0-9a-fA-F]{6})$",
+                    (config / "kitty-colors.conf").read_text(),
+                )[1]
+                if args.backend == "niri":
+                    # Arrange only private witnesses before starting the clock.
+                    windows = json.loads(
+                        subprocess.check_output(
+                            ["niri", "msg", "-j", "windows"],
+                            env=env,
+                            text=True,
+                            timeout=5,
+                        )
+                    )
+                    for index, title in enumerate(
+                        (
+                            "Nacre palette GTK witness",
+                            "Nacre palette Qt witness",
+                            "Nacre palette Kitty witness",
+                        )
+                    ):
+                        window = next(v for v in windows if v["title"] == title)
+                        ident = str(window["id"])
+                        for action in (
+                            ["move-window-to-floating"],
+                            ["set-window-width", "320"],
+                            ["set-window-height", "240"],
+                            [
+                                "move-floating-window",
+                                "--x",
+                                str(40 + index * 400),
+                                "--y",
+                                "100",
+                            ],
+                        ):
+                            subprocess.run(
+                                ["niri", "msg", "action", *action, "--id", ident],
+                                env=env,
+                                check=True,
+                                capture_output=True,
+                                timeout=5,
+                            )
+            palette_monitor = threading.Thread(
+                target=monitor_palette_swap, args=(palette_stop, palette_swap_samples)
+            )
+            palette_monitor.start()
+            ipc("performanceFrame", "chooseWallpaper", str(selected), primary)
+            result = wait_for(
+                lambda: (
+                    value
+                    if (value := state("performanceFrame", "state"))
+                    and "shellFrameAtMs" in value
+                    else None
+                ),
+                "wallpaper shell color frame",
+                timeout=30,
+            )
+            pixels = directory / "wallpaper-frame.png"
+            capture_started = time.time_ns()
+            subprocess.run(
+                ["grim", str(pixels)],
+                env=env,
+                check=True,
+                capture_output=True,
+                timeout=10,
+            )
+            capture_finished = time.time_ns()
+            with Image.open(pixels) as screenshot:
+                rgb = screenshot.convert("RGB")
+                wanted = tuple(
+                    int(primary[index : index + 2], 16) for index in (0, 2, 4)
+                )
+                primary_pixels = sum(
+                    pixel == wanted for pixel in rgb.get_flattened_data()
+                )
+            if primary_pixels == 0:
+                raise RuntimeError(
+                    "Expected palette primary is absent from compositor pixels"
+                )
+            report["wallpaper_frame_smoke"] = {
+                "palette_cache_state": "selected image precomputed; warm-cache functional smoke",
+                "shell": result,
+                "screenshot": {
+                    "sha256": hashlib.sha256(pixels.read_bytes()).hexdigest(),
+                    "exact_primary_pixels": primary_pixels,
+                    "capture_started_ns": capture_started,
+                    "capture_finished_ns": capture_finished,
+                    "boundary": "compositor capture; any scene occurrence, not per-client attribution",
+                },
+                "whole_desktop_complete": False,
+                "expected": {
+                    "gtk": primary,
+                    "qt": primary,
+                    "kitty_background": palette["colours"]["surfaceContainerLow"],
+                },
+                "missing_consumers": ["gtk", "qt", "kitty", "actual-lock-surface"],
+                "boundary": "controller setWallpaper to shell frameSwapped, then whole-scene compositor pixel check",
+            }
+            if witnesses:
+                # A bounded observation window exposes clients that never repaint;
+                # paint callbacks remain diagnostic, not compositor frame evidence.
+                time.sleep(5)
+                report["wallpaper_frame_smoke"]["paint_witnesses"] = {
+                    name: {
+                        "exit_code": process.poll(),
+                        "observations": [
+                            json.loads(line)
+                            for line in (directory / (name + "-witness.log"))
+                            .read_text()
+                            .splitlines()
+                            if line.startswith('{"consumer":')
+                        ],
+                        "diagnostics": (
+                            directory / (name + "-witness.log")
+                        ).read_text()[-2000:],
+                        "boundary": "application paint callback; compositor attribution still required",
+                    }
+                    for name, process in witnesses.items()
+                }
+                kitty_stream.write(b'{"action":"query"}\n')
+                report["wallpaper_frame_smoke"]["kitty_state"] = json.loads(
+                    kitty_stream.readline()
+                )
+                if args.backend in ("hyprland", "niri"):
+                    if args.backend == "hyprland":
+                        clients = json.loads(
+                            subprocess.check_output(
+                                ["hyprctl", "clients", "-j"],
+                                env=env,
+                                text=True,
+                                timeout=5,
+                            )
+                        )
+                    else:
+                        windows = json.loads(
+                            subprocess.check_output(
+                                ["niri", "msg", "-j", "windows"],
+                                env=env,
+                                text=True,
+                                timeout=5,
+                            )
+                        )
+                        active = {
+                            v["id"]
+                            for v in json.loads(
+                                subprocess.check_output(
+                                    ["niri", "msg", "-j", "workspaces"],
+                                    env=env,
+                                    text=True,
+                                    timeout=5,
+                                )
+                            )
+                            if v["is_active"]
+                        }
+                        clients = []
+                        for window in windows:
+                            layout = window.get("layout", {})
+                            position = layout.get("tile_pos_in_workspace_view")
+                            if position is None or window["workspace_id"] not in active:
+                                continue
+                            clients.append(
+                                {
+                                    "title": window["title"],
+                                    "at": [
+                                        round(a + b)
+                                        for a, b in zip(
+                                            position,
+                                            layout["window_offset_in_tile"],
+                                            strict=True,
+                                        )
+                                    ],
+                                    "size": layout["window_size"],
+                                }
+                            )
+                    capture_started = time.time_ns()
+                    subprocess.run(
+                        ["grim", str(pixels)],
+                        env=env,
+                        check=True,
+                        capture_output=True,
+                        timeout=10,
+                    )
+                    capture_finished = time.time_ns()
+                    with Image.open(pixels) as image:
+                        rgb = image.convert("RGB")
+                        crops = {}
+                        for name, title in (
+                            ("gtk", "Nacre palette GTK witness"),
+                            ("qt", "Nacre palette Qt witness"),
+                            ("kitty", "Nacre palette Kitty witness"),
+                        ):
+                            client = next(
+                                (v for v in clients if v.get("title") == title), None
+                            )
+                            if client is None:
+                                crops[name] = {"missing": "witness surface is absent"}
+                                continue
+                            x, y = client["at"]
+                            width, height = client["size"]
+                            region = [x, y, width, height]
+                            expected_color = (
+                                palette["colours"]["surface"]
+                                if name == "gtk"
+                                else primary
+                                if name != "kitty"
+                                else re.search(
+                                    r"(?m)^color12 #([0-9a-fA-F]{6})$",
+                                    (config / "kitty-colors.conf").read_text(),
+                                )[1]
+                            )
+                            wanted = tuple(
+                                int(expected_color[i : i + 2], 16) for i in (0, 2, 4)
+                            )
+                            count = sum(
+                                pixel == wanted
+                                for pixel in rgb.crop(
+                                    (x, y, x + width, y + height)
+                                ).get_flattened_data()
+                            )
+                            observations = (
+                                report["wallpaper_frame_smoke"]["paint_witnesses"]
+                                .get(name, {})
+                                .get("observations", [])
+                            )
+                            initial_color = (
+                                observations[0]["primary"]
+                                if observations
+                                else initial_kitty_blue
+                            )
+                            if name == "gtk":
+                                initial_color = initial_palette["colours"]["surface"]
+                            old = tuple(
+                                int(initial_color[i : i + 2], 16) for i in (0, 2, 4)
+                            )
+                            previous_count = sum(
+                                pixel == old
+                                for pixel in rgb.crop(
+                                    (x, y, x + width, y + height)
+                                ).get_flattened_data()
+                            )
+                            crops[name] = {
+                                "region": region,
+                                "initial_color": initial_color,
+                                "role": "surface"
+                                if name == "gtk"
+                                else "color12"
+                                if name == "kitty"
+                                else "primary",
+                                "previous_primary_pixels": previous_count,
+                                "bounds_inside_capture": 0 <= x
+                                and 0 <= y
+                                and x + width <= rgb.width
+                                and y + height <= rgb.height,
+                                "exact_color_pixels": count,
+                                "color": expected_color if count else None,
+                                "expected_color": expected_color,
+                                "capture_started_ns": capture_started,
+                                "observed_at_ns": capture_finished,
+                                "capture_sha256": hashlib.sha256(
+                                    pixels.read_bytes()
+                                ).hexdigest(),
+                                "boundary": "compositor-pixel-capture",
+                            }
+                    report["wallpaper_frame_smoke"]["witness_pixels"] = crops
+                    for name, crop in crops.items():
+                        if crop.get("exact_color_pixels", 0) and crop.get(
+                            "bounds_inside_capture"
+                        ):
+                            report["wallpaper_frame_smoke"]["missing_consumers"].remove(
+                                name
+                            )
+                kitty_stream.write(b'{"action":"quit"}\n')
+                kitty_stream.close()
+                kitty_peer.close()
+                if args.lock_frame_smoke:
+                    lock_config = home / ".config/hypr/hyprlock.conf"
+                    wait_for(
+                        lambda: (
+                            lock_config.is_file() and primary in lock_config.read_text()
+                        ),
+                        "generated lock palette",
+                    )
+                    lock = start(
+                        [
+                            "hyprlock",
+                            "--config",
+                            str(lock_config),
+                            "--grace",
+                            "0",
+                            "--no-fade-in",
+                            "--immediate-render",
+                        ],
+                        "lock-witness",
+                        shell_env,
+                    )
+                    time.sleep(2)
+                    lock_pixels = directory / "actual-lock-frame.png"
+                    started = time.time_ns()
+                    captured = subprocess.run(
+                        ["grim", str(lock_pixels)],
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    finished = time.time_ns()
+                    lock_result = {
+                        "options": [
+                            "--grace",
+                            "0",
+                            "--no-fade-in",
+                            "--immediate-render",
+                        ],
+                        "session_locked": "onLockLocked called"
+                        in (directory / "lock-witness.log").read_text(),
+                        "exit_code": lock.poll(),
+                        "capture_exit_code": captured.returncode,
+                        "diagnostics": (directory / "lock-witness.log").read_text()[
+                            -1500:
+                        ],
+                        "capture_stderr": captured.stderr[-500:],
+                    }
+                    if captured.returncode == 0:
+                        with Image.open(lock_pixels) as image:
+                            wanted = tuple(
+                                int(primary[i : i + 2], 16) for i in (0, 2, 4)
+                            )
+                            count = sum(
+                                pixel == wanted
+                                for pixel in image.convert("RGB").get_flattened_data()
+                            )
+                        lock_result.update(
+                            exact_primary_pixels=count,
+                            capture_started_ns=started,
+                            observed_at_ns=finished,
+                            capture_sha256=hashlib.sha256(
+                                lock_pixels.read_bytes()
+                            ).hexdigest(),
+                            boundary="private nested session lock compositor capture; verify lock acquired in diagnostics",
+                        )
+                    if not lock_result["session_locked"]:
+                        lock_result["boundary"] = (
+                            "ordinary scene capture; actual nested session lock was not acquired"
+                        )
+                        lock_result["missing"] = "actual lock-surface pixel evidence"
+                    report["wallpaper_frame_smoke"]["actual_lock"] = lock_result
+                    if lock_result["session_locked"] and lock_result.get(
+                        "exact_primary_pixels", 0
+                    ):
+                        report["wallpaper_frame_smoke"]["missing_consumers"].remove(
+                            "actual-lock-surface"
+                        )
+        if palette_monitor:
+            palette_stop.set()
+            palette_monitor.join()
+            report["palette_process_swap_samples"] = palette_swap_samples
         sample("fresh_static")
+        if args.wallpaper_frame_smoke:
+            report["paging_end"] = paging()
+            report["paging_gate_failures"] = quiet_window_failures(report)
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(json.dumps(report, indent=2) + "\n")
+            return report
         if not args.no_latency:
             measure_actions("cold", 1)
             time.sleep(6)
@@ -749,6 +1512,7 @@ def run(args, directory):
         time.sleep(6)
         sample("static_after_video")
         report["paging_end"] = paging()
+        report["paging_gate_failures"] = quiet_window_failures(report)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2) + "\n")
         return report
@@ -764,14 +1528,35 @@ def run(args, directory):
                 )
         raise
     finally:
+        if palette_monitor and palette_monitor.is_alive():
+            palette_stop.set()
+            palette_monitor.join()
+        compositor_logs = list(runtime.glob("hypr/*/hyprland.log"))
+        if compositor_logs:
+            tail = compositor_logs[0].read_text(errors="replace").splitlines()[-50:]
+            (directory / "compositor-final.log").write_text("\n".join(tail) + "\n")
+            if not args.output.exists():
+                print(
+                    "Private compositor final diagnostics:\n" + "\n".join(tail[-20:]),
+                    file=sys.stderr,
+                )
         for process in reversed(processes):
-            if process.poll() is None:
+            try:
                 os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            if process.poll() is None:
                 try:
                     process.wait(timeout=3)
                 except subprocess.TimeoutExpired:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    process.wait()
+                    pass
+            # A wrapper may exit before children or D-Bus activated services.
+            # Every group was created by start_new_session in this harness.
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.wait()
         shutil.rmtree(runtime)
 
 
@@ -843,6 +1628,11 @@ def check_report(report, budgets):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--backend", choices=("hyprland", "niri"), default="hyprland")
+    parser.add_argument(
+        "--helper-binary",
+        type=Path,
+        help="Prebuilt native helper matching the selected immutable revision",
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--labwc", default="labwc")
     parser.add_argument(
@@ -858,6 +1648,21 @@ def main():
     parser.add_argument("--repeats", type=int, default=10)
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--latency-only", action="store_true")
+    parser.add_argument(
+        "--wallpaper-frame-smoke",
+        action="store_true",
+        help="Exercise selection-to-shell-frame only; never reports a whole-desktop result",
+    )
+    parser.add_argument(
+        "--palette-probes",
+        type=Path,
+        help="Directory containing prebuilt gtk-palette and qt-palette developer witnesses",
+    )
+    parser.add_argument(
+        "--lock-frame-smoke",
+        action="store_true",
+        help="Start actual Hyprlock only inside the disposable nested compositor",
+    )
     parser.add_argument("--no-latency", action="store_true")
     parser.add_argument(
         "--revision", help="Immutable git revision for the before capture"
@@ -889,6 +1694,10 @@ def main():
         "--orient-binary", type=Path, help="Pinned native engine for fixture helpers"
     )
     args = parser.parse_args()
+    if args.palette_probes and not args.wallpaper_frame_smoke:
+        parser.error("--palette-probes requires --wallpaper-frame-smoke")
+    if args.lock_frame_smoke and not args.palette_probes:
+        parser.error("--lock-frame-smoke requires --palette-probes")
     if args.keep_fixtures:
         args.keep_fixtures.mkdir()
         report = run(args, args.keep_fixtures.resolve())

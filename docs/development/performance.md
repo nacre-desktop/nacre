@@ -1356,3 +1356,41 @@ including paused application colors while widget data keeps updating.
   }
 }
 ```
+
+### Wave 3 presentation checks (busy laptop; timing gate pending)
+
+The Python baseline `e910ffd7` and native lock/palette build `665684eb` were
+exercised with private HOME/XDG roots, a private session bus and nested Hyprland
+and niri. Builds completed before these functional captures. These are not
+quiet-window latency, desktop memory or battery measurements.
+
+| Consumer evidence | Python baseline | Native |
+| --- | --- | --- |
+| Shell selected poster/palette, frame callback and scene pixels | Confirmed | Confirmed |
+| Qt themed selection: new accent in mapped window pixels | Confirmed | Confirmed |
+| Kitty existing ANSI text: new accent in mapped window pixels | Confirmed | Confirmed |
+| GTK 3 themed widget: expected new palette pixels | Not demonstrated | Not demonstrated |
+| Actual nested lock on both compositors: acquired and new accent pixels | Confirmed | Confirmed |
+| Whole-desktop completion time | No verified endpoint | No verified endpoint |
+
+GTK's paint callback still resolves the preceding accent in both builds. Its
+window pixels do not establish the expected new palette. A finite all-consumer
+latency cannot be reported from this fixture. This is shared baseline behavior;
+no migration regression has been established. The niri software lab lacks
+the DMA buffers requested by Hyprlock's resource preload. The developer lock probe
+uses `--immediate-render --no-fade-in --grace 0` in both builds; lock acquisition
+and new accent pixels then pass on both compositors. Default lock startup time
+was not measured, and production lock options are unchanged.
+
+The developer harness now stages each revision's own CLI adapter and exact
+prebuilt helper, records binary hashes and machine/tool versions, and samples
+SwapPss during selection for the private witness/compositor processes as well
+as shell descendants. See [presentation witnesses](../../tools/performance-probes/README.md).
+The selected palette is precomputed: this is a warm-cache functional scenario.
+Its five-second observation and two-second lock wait are not latency estimates.
+
+A busy-host smoke recorded 274 host swap-in pages at 4,096 bytes/page
+(1,122,304 bytes), exceeding the owner's 1 MiB gate, while sampled processes
+had SwapPss zero. It supplies functional evidence only. The required desktop-PC
+A/B/A/B comparison still awaits the owner's next announced quiet window; keep
+its results separate from these laptop checks and discard invalid captures.
