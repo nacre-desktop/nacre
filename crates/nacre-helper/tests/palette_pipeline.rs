@@ -766,3 +766,90 @@ fn concurrent_main_gradient_preference_matches_its_original_python_outputs() -> 
     }
     Ok(())
 }
+
+#[test]
+fn app_followers_hold_current_colors_and_resume_only_the_selected_group() -> Result<()> {
+    use serde_json::json;
+    let home = tempfile::tempdir()?;
+    let paths = Paths::new(home.path());
+    let backend = nacre_helper::compositor::backend::Backend::new(
+        paths.clone(),
+        [("NACRE_COMPOSITOR".into(), "hyprland".into())]
+            .into_iter()
+            .collect(),
+    )?;
+    let mut publisher = publisher::Publisher {
+        paths: paths.clone(),
+        assets: assets(),
+        backend,
+        system_icons: home.path().join("no-icons"),
+        monitors: Some(Vec::new()),
+        now_ms: None,
+    };
+    fs::create_dir_all(&paths.state)?;
+    fs::create_dir_all(&paths.config)?;
+    let data: Value = serde_json::from_slice(&fs::read(assets().join("reference-style.json"))?)?;
+    fs::write(paths.state.join("scheme.json"), serde_json::to_vec(&data)?)?;
+    // Every publisher is stopped, preserving individually chosen application files.
+    fs::write(
+        paths.config.join("colors.json"),
+        serde_json::to_vec(
+            &json!({"version":1,"favorites":[],"appThemes":{"gtk3":false,"gtk4":false,"qt":false,"kde":false,"kitty":false,"rofi":false,"lock":false,"login":false}}),
+        )?,
+    )?;
+    let outputs = [
+        ("gtk3", ".config/gtk-3.0/gtk.css"),
+        ("gtk4", ".config/gtk-4.0/gtk.css"),
+        ("qt", ".config/nacre/qt.conf"),
+        ("kde", ".config/kdeglobals"),
+        ("kitty", ".config/nacre/kitty-colors.conf"),
+        ("rofi", ".config/nacre/rofi.rasi"),
+        ("lock", ".config/hypr/hyprlock.conf"),
+    ];
+    for (_, name) in outputs {
+        let path = home.path().join(name);
+        fs::create_dir_all(path.parent().unwrap())?;
+        fs::write(path, "custom colors\n")?;
+    }
+    publisher.apply_palette(None, false)?;
+    for (_, name) in outputs {
+        assert_eq!(
+            fs::read_to_string(home.path().join(name))?,
+            "custom colors\n",
+            "{name}"
+        );
+    }
+    // Shared-output aliases follow exactly the preference shown by Settings.
+    publisher.set_theme_target("thunar", true)?;
+    assert!(publisher::theme_target_enabled(&paths, "gtk3")?);
+    assert!(publisher::theme_target_enabled(&paths, "thunar")?);
+    assert_ne!(
+        fs::read_to_string(home.path().join(outputs[0].1))?,
+        "custom colors\n"
+    );
+    for (_, name) in outputs.into_iter().skip(1) {
+        assert_eq!(
+            fs::read_to_string(home.path().join(name))?,
+            "custom colors\n",
+            "{name}"
+        );
+    }
+    publisher.set_theme_target("dolphin", true)?;
+    assert!(publisher::theme_target_enabled(&paths, "qt")?);
+    publisher.set_theme_target("qt", false)?;
+    assert!(!publisher::theme_target_enabled(&paths, "dolphin")?);
+    let before = fs::read(paths.config.join("colors.json"))?;
+    assert!(publisher.set_theme_target("../not-a-target", true).is_err());
+    assert_eq!(fs::read(paths.config.join("colors.json"))?, before);
+    // Newer-version preferences are never overwritten by a theme click.
+    fs::write(
+        paths.config.join("colors.json"),
+        b"{\"version\":99,\"future\":true}",
+    )?;
+    assert!(publisher.set_theme_target("kitty", true).is_err());
+    assert_eq!(
+        fs::read(paths.config.join("colors.json"))?,
+        b"{\"version\":99,\"future\":true}"
+    );
+    Ok(())
+}

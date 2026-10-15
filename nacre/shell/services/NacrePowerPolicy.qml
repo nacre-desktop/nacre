@@ -26,16 +26,32 @@ Singleton {
         command: ["/usr/bin/python3", "/usr/bin/powerprofilesctl", "get"]
         onExited: (code, status) => root.serviceReady = status === 0 && code === 0
     }
+    property string applied: ""
+    readonly property Process profileWriter: Process {
+        property string requested: ""
+        command: ["/usr/bin/python3", "/usr/bin/powerprofilesctl", "set", requested]
+        stderr: StdioCollector {
+            onStreamFinished: if (text.trim())
+                root.error = text.trim()
+        }
+        onExited: code => {
+            if (code === 0)
+                root.applied = requested;
+            else if (!root.error)
+                root.error = NacreI18n.tr("settings.registry.power.profiles.failed", "The power profile could not be applied.");
+            if (requested !== root.desired)
+                Qt.callLater(root.apply);
+        }
+    }
     function apply() {
-        if (!available || !["power-saver", "balanced", "performance"].includes(desired) || desired === "performance" && !PowerProfiles.hasPerformanceProfile)
+        if (!desired)
+            applied = "";
+        if (!available || profileWriter.running || desired === applied || !["power-saver", "balanced", "performance"].includes(desired) || desired === "performance" && !PowerProfiles.hasPerformanceProfile)
             return;
-        const profiles = {
-            "power-saver": PowerProfile.PowerSaver,
-            balanced: PowerProfile.Balanced,
-            performance: PowerProfile.Performance
-        };
-        if (PowerProfiles.profile !== profiles[desired])
-            PowerProfiles.profile = profiles[desired];
+        // powerprofilesctl reports D-Bus failures; the QML property setter has no acknowledgement.
+        error = "";
+        profileWriter.requested = desired;
+        profileWriter.running = true;
     }
     onDesiredChanged: apply()
     onAvailableChanged: apply()
@@ -48,7 +64,9 @@ Singleton {
     Connections {
         target: UPower
         function onOnBatteryChanged() {
+            root.applied = "";
             root.refresh();
+            Qt.callLater(root.apply);
         }
     }
 }

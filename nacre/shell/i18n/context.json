@@ -3142,7 +3142,7 @@
   "settings.registry.control.available.label": "Other unselected tiles supported on this machine.",
   "settings.registry.ui.confirm-restart": "Confirmation before desktop restart.",
   "settings.registry.ui.confirm-rollback": "Confirmation before release rollback.",
-  "settings.registry.colors.target.description": "Description of a real target in the shared publisher manifest.",
+  "settings.registry.colors.target.description": "Settings application palette followers and dependent control guidance.",
   "settings.registry.colors.target.unavailable": "Developer-only reserved toggle; hidden in normal Settings.",
   "settings.registry.lock-login.preview.label": "Portable Settings action label or explanation.",
   "settings.registry.lock-login.preview.description": "Portable Settings action label or explanation.",
@@ -3387,5 +3387,11 @@
   "software.bundle.wallpaper": "Theme bundle preview and explicit apply scope; palette and wallpaper can be applied independently.",
   "software.bundle.apply-scope": "Theme bundle preview and explicit apply scope; palette and wallpaper can be applied independently.",
   "software.bundle.apply": "Theme bundle preview and explicit apply scope; palette and wallpaper can be applied independently.",
-  "software.bundle.credit": "{credit} names the upstream palette author; explains independent image licensing and adapted rendering."
+  "software.bundle.credit": "{credit} names the upstream palette author; explains independent image licensing and adapted rendering.",
+  "settings.registry.colors.target.shared": "Settings application palette followers and dependent control guidance.",
+  "settings.registry.power.profiles.failed": "Error acknowledgement from power-profiles-daemon; current preference remains visible.",
+  "settings.registry.colors.palette.failed": "Settings contrast/variant publisher process failed.",
+  "settings.registry.colors.target.failed": "Settings application palette followers and dependent control guidance.",
+  "settings.registry.colors.target.paused": "App theming target is paused; later palette changes leave existing colors alone.",
+  "settings.registry.ui.enable-first": "Settings application palette followers and dependent control guidance."
 }

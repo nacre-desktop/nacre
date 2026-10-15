@@ -11,6 +11,8 @@ NacreSurface {
     required property var registry
     required property var store
     signal entitiesRequested
+    property string statusText: ""
+    property string description: registry.text(setting.descriptionId)
     property bool highlighted: false
     readonly property var currentValue: store.value(setting)
     readonly property bool stacked: width < NacreTokens.space.huge * 17
@@ -36,10 +38,18 @@ NacreSurface {
         }
         NacreText {
             width: parent.width
-            text: root.registry.text(root.setting.descriptionId)
+            text: root.description
             wrapMode: Text.Wrap
             color: NacreTokens.mutedInk
             font.pointSize: NacreTokens.textSize.caption
+        }
+        NacreText {
+            visible: root.statusText.length > 0
+            width: parent.width
+            text: root.statusText
+            color: NacreTokens.mutedInk
+            font.pointSize: NacreTokens.textSize.caption
+            wrapMode: Text.Wrap
         }
         NacreSurface {
             visible: root.profile
@@ -57,8 +67,11 @@ NacreSurface {
         }
         NacreText {
             width: parent.width
-            visible: !root.profile && (!root.store.available(root.setting) || !Registry.allowed(root.setting.enabledWhen, root.store.capabilities))
-            text: root.registry.text(root.setting.unavailableId || "settings.registry.ui.unavailable")
+            readonly property var dependency: root.store.schema.settings.find(item => item.id === root.setting.dependsOn)
+            visible: !root.profile && !root.editable
+            text: dependency && root.store.value(dependency) !== true ? root.registry.text("settings.registry.ui.enable-first", {
+                label: root.registry.text(dependency.labelId)
+            }) : root.registry.text(root.setting.unavailableId || "settings.registry.ui.unavailable")
             wrapMode: Text.Wrap
             color: NacreTokens.mutedInk
             font.pointSize: NacreTokens.textSize.caption

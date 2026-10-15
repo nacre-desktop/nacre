@@ -8,8 +8,17 @@ import qs.utils
 Column {
     id: root
     required property var registry
+    required property var store
     readonly property var published: NacreSettingsStorage.documents["theme-targets"]?.targets || []
-    readonly property var targets: published.length ? published : JSON.parse(manifest.text()).targets
+    readonly property var targets: {
+        if (published.length)
+            return published;
+        try {
+            return JSON.parse(manifest.text()).targets || [];
+        } catch (error) {
+            return [];
+        }
+    }
     spacing: NacreTokens.space.sm
     FileView {
         id: manifest
@@ -19,32 +28,25 @@ Column {
     }
     Repeater {
         model: root.targets
-        delegate: NacreSurface {
+        delegate: SettingsRow {
             id: target
             required property var modelData
+            readonly property var descriptor: root.registry.schema.settings.find(row => row.id === "colors/app-theming.targets." + modelData.id)
+            visible: !!descriptor
             width: root.width
-            height: Math.max(title.implicitHeight, status.implicitHeight) + NacreTokens.space.xl * 2
-            radius: NacreTokens.radii.small
-            color: NacreTokens.body
-            NacreText {
-                id: title
-                x: NacreTokens.space.md
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width / 2
-                text: root.registry.text(target.modelData.labelId)
-                wrapMode: Text.Wrap
-            }
-            NacreText {
-                id: status
-                anchors.right: parent.right
-                anchors.rightMargin: NacreTokens.space.md
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width / 2 - NacreTokens.space.md * 2
-                horizontalAlignment: Text.AlignRight
-                wrapMode: Text.Wrap
-                color: NacreTokens.mutedInk
-                font.pointSize: NacreTokens.textSize.caption
-                text: root.registry.text(target.modelData.status === "tool-missing" ? "settings.registry.ui.theme-missing" : target.modelData.status === "current" ? "settings.registry.ui.theme-current" : "settings.registry.ui.publisher-status")
+            registry: root.registry
+            store: root.store
+            setting: descriptor || ({})
+            statusText: root.registry.text(modelData.status === "tool-missing" ? "settings.registry.ui.theme-missing" : root.store.value(setting) === false ? "settings.registry.colors.target.paused" : modelData.status === "current" ? "settings.registry.ui.theme-current" : "settings.registry.ui.publisher-status")
+            description: {
+                const canonical = descriptor?.store.key[1];
+                const shared = root.targets.filter(row => {
+                    const other = root.registry.schema.settings.find(item => item.id === "colors/app-theming.targets." + row.id);
+                    return other?.store.key[1] === canonical && row.id !== modelData.id;
+                }).map(row => root.registry.text(row.labelId));
+                return shared.length ? root.registry.text("settings.registry.colors.target.shared", {
+                    apps: shared.join(", ")
+                }) : root.registry.text("settings.registry.colors.target.description");
             }
         }
     }

@@ -88,6 +88,38 @@ class LockReadyTests(unittest.TestCase):
                 self.assertEqual(image.mode, "RGBA")
                 self.assertEqual(image.getpixel((0, 0))[3], 0)
 
+    def test_paused_lock_theme_retains_colors_while_widgets_update(self):
+        prepare = load("lock-prepare")
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            ready = home / ".cache/nacre/lock-ready"
+            ready.mkdir(parents=True)
+            retained = json.loads((ROOT / "reference-style.json").read_text())[
+                "colours"
+            ]
+            (ready / "snapshot.json").write_text(json.dumps({"colors": retained}))
+            prefs = home / ".config/nacre/colors.json"
+            prefs.parent.mkdir(parents=True)
+            prefs.write_text(json.dumps({"version": 1, "appThemes": {"lock": False}}))
+            changed = dict(retained, primary="abcdef")
+            with patch.object(prepare.dashboard, "publish") as publish:
+                prepare.prepare(
+                    {
+                        "colors": changed,
+                        "preferences": {},
+                        "weather": {"description": "New weather"},
+                    },
+                    home,
+                )
+            self.assertEqual(publish.call_args.args[1], retained)
+            snapshot = json.loads((ready / "snapshot.json").read_text())
+            self.assertEqual(snapshot["colors"], retained)
+            self.assertEqual(snapshot["weather"]["description"], "New weather")
+            prefs.write_text(json.dumps({"version": 1, "appThemes": {"lock": True}}))
+            with patch.object(prepare.dashboard, "publish") as publish:
+                prepare.prepare({"colors": changed, "preferences": {}}, home)
+            self.assertEqual(publish.call_args.args[1], changed)
+
     def test_ready_labels_separate_safe_notifications_and_preload_art(self):
         prepare = load("lock-prepare")
         with tempfile.TemporaryDirectory() as folder:

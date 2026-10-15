@@ -11,6 +11,53 @@ SettingsStore {
     property var inputDesired: ({})
     property int inputRevision: 0
     property string inputError: ""
+    property string themeError: ""
+    property string paletteError: ""
+    property var paletteQueue: []
+    function nextPalette() {
+        if (palette.running || !paletteQueue.length)
+            return;
+        palette.command = paletteQueue[0];
+        paletteQueue = paletteQueue.slice(1);
+        paletteError = "";
+        palette.running = true;
+    }
+    property var themeQueue: []
+    function themeChange(setting, value) {
+        const id = setting.key;
+        themeQueue = [...themeQueue.filter(item => item.id !== id),
+            {
+                id,
+                value
+            }
+        ];
+        nextTheme();
+    }
+    function nextTheme() {
+        if (themeWorker.running || !themeQueue.length)
+            return;
+        themeWorker.change = themeQueue[0];
+        themeQueue = themeQueue.slice(1);
+        themeError = "";
+        themeWorker.running = true;
+    }
+    readonly property Process themeWorker: Process {
+        id: themeProcess
+        property var change: null
+        property string failure: ""
+        onStarted: failure = ""
+        command: change ? [NacrePaths.helperBinary, "app-theme", change.id, String(change.value)] : []
+        stderr: StdioCollector {
+            onStreamFinished: themeProcess.failure = text.trim()
+        }
+        onExited: code => {
+            if (code !== 0 && !root.themeError)
+                root.themeError = failure || NacreI18n.tr("settings.registry.colors.target.failed", "Application colors could not be updated.");
+            NacreSettingsStorage.request("colors");
+            NacreSettingsStorage.request("theme-targets");
+            Qt.callLater(root.nextTheme);
+        }
+    }
     property bool colorMigrationRequested: false
     function refreshColors() {
         const preferences = NacreSettingsStorage.documents["wallpaper-picker"];
@@ -22,7 +69,7 @@ SettingsStore {
         }
     }
     function issue(page) {
-        return error || (["colors", "wallpaper"].includes(page) ? NacreWallpapers.error : "") || "";
+        return error || (page === "power" ? NacrePowerPolicy.error : "") || (["colors", "wallpaper"].includes(page) ? NacreWallpapers.error : "") || "";
     }
     function inputChange(setting, value) {
         const key = setting.store.key[0], revision = ++inputRevision;
@@ -193,11 +240,13 @@ SettingsStore {
                 values[setting.id] = DesktopSettings.data[setting.store.key[0]] ?? setting.default;
         return values;
     }
-    error: inputError || Object.values(NacreSettingsStorage.errors).find(value => !!value) || DesktopSettings.error || ""
+    error: paletteError || themeError || inputError || Object.values(NacreSettingsStorage.errors).find(value => !!value) || DesktopSettings.error || ""
     function applySetting(setting, value) {
         const id = setting.store.id;
         const key = setting.store.key;
-        if (["keyboard-layout", "touchpad-enabled"].includes(setting.adapter))
+        if (setting.adapter === "app-theme")
+            themeChange(setting, value);
+        else if (["keyboard-layout", "touchpad-enabled"].includes(setting.adapter))
             inputChange(setting, value);
         else if (id === "ai-settings" && key[0] === "default_assistant")
             SidebarChat.setProvider(value);
@@ -221,8 +270,8 @@ SettingsStore {
             NacreSettingsStorage.request("colors", key, value);
             NacreColours.setMode(value === "wallpaper" ? "auto" : value);
         } else if (id === "scheme") {
-            palette.command = [NacrePaths.helperBinary, "nacre_shell", "--publish", "scheme", "set", key[0] === "flavour" ? "-f" : "-v", value];
-            palette.running = true;
+            paletteQueue = [...paletteQueue, [NacrePaths.helperBinary, "nacre_shell", "--publish", "scheme", "set", key[0] === "flavour" ? "-f" : "-v", value]];
+            nextPalette();
         } else
             NacreSettingsStorage.request(id, key, value);
     }
@@ -269,5 +318,17 @@ SettingsStore {
         else if (action === "idle-policy")
             AppLaunch.run(["kitty", "--title", "Idle policy", "--", "nacre", "idle"]);
     }
-    readonly property NacrePaletteTask palette: NacrePaletteTask {}
+    readonly property Process palette: Process {
+        property string failure: ""
+        onStarted: failure = ""
+        stderr: StdioCollector {
+            onStreamFinished: palette.failure = text.trim()
+        }
+        onExited: code => {
+            if (code !== 0 && !root.paletteError)
+                root.paletteError = failure || NacreI18n.tr("settings.registry.colors.palette.failed", "Desktop colors could not be updated.");
+            NacreSettingsStorage.request("scheme");
+            Qt.callLater(root.nextPalette);
+        }
+    }
 }

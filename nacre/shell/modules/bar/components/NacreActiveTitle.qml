@@ -97,7 +97,7 @@ Item {
             width: Math.max(0, row.width - x)
             anchors.verticalCenter: parent.verticalCenter
             text: root.displayTitle.slice(root.spinnerPrefix.length)
-            font.family: NacreAppearance.font.family.mono
+            font.family: NacreTokens.textFamily
             font.pointSize: NacreAppearance.font.size.smaller
             color: root.colour
             elide: Text.ElideRight

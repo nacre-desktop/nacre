@@ -28,6 +28,48 @@ class ConfigurationTests(unittest.TestCase):
         selected.start()
         self.addCleanup(selected.stop)
 
+    def test_default_wallpapers_are_real_flat_assets_and_personal_files_survive(self):
+        from unittest.mock import patch
+        import hashlib
+
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            with patch.object(
+                module,
+                "selected_profile",
+                return_value={"id": "default", "components": ["configs", "shell"]},
+            ):
+                files = module.files(module.ROOT)
+                scenes = {
+                    path: source
+                    for path, source in files.items()
+                    if path.parts[:2] == ("Pictures", "Wallpapers")
+                }
+                self.assertEqual(len(scenes), 4)
+                manifest = json.loads(
+                    (
+                        module.ROOT / "nacre/shell-tools/demo-wallpapers/manifest.json"
+                    ).read_text()
+                )
+                hashes = {row["file"]: row["sha256"] for row in manifest["wallpapers"]}
+                for path, source in scenes.items():
+                    self.assertEqual(len(path.parts), 3)
+                    self.assertEqual(
+                        hashlib.sha256(source.read_bytes()).hexdigest(),
+                        hashes[source.name],
+                    )
+                    self.assertGreater(source.stat().st_size, 100000)
+                folder = home / "Pictures/Wallpapers"
+                folder.mkdir(parents=True)
+                personal = folder / "personal.jpg"
+                personal.write_bytes(b"personal wallpaper")
+                module.apply(
+                    home, module.ROOT, only=tuple(str(path) for path in scenes)
+                )
+                self.assertEqual(personal.read_bytes(), b"personal wallpaper")
+                self.assertEqual(len(list(folder.glob("nacre-*.jpg"))), 4)
+                self.assertFalse(any(path.is_dir() for path in folder.iterdir()))
+
     def test_nacre_ai_desktop_entry_installs_the_public_menu_route(self):
         with tempfile.TemporaryDirectory() as directory:
             root, home = Path(directory) / "repo", Path(directory) / "home"

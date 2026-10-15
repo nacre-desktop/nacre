@@ -26,6 +26,7 @@ class SettingsPowerTests(unittest.TestCase):
             for name, body in {
                 "NacreSettingsStorage": "property var documents:({});property var present:({})",
                 "NacreControlTools": "property var data:({})",
+                "NacreI18n": "function tr(id,fallback){return fallback}",
             }.items():
                 (fixtures / (name + ".qml")).write_text(
                     "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"

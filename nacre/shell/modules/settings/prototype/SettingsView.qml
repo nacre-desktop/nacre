@@ -10,6 +10,8 @@ FocusScope {
     required property var store
     property bool development: false
     property var entitySetting: null
+    property real entityPosition: 0
+    property int navigationRevision: 0
     property var capabilities: ({})
     property var screen
     property string page: "panels"
@@ -33,25 +35,53 @@ FocusScope {
     function focusSearch() {
         search.forceActiveFocus();
     }
+    function navigate(link) {
+        backStack = [];
+        return open(link, false);
+    }
+    function openEntity(setting) {
+        entityPosition = scroll.contentY;
+        entitySetting = setting;
+        navigationRevision++;
+        pageMotion.cancel();
+        scroll.contentY = 0;
+    }
+    function restorePosition(position) {
+        const revision = navigationRevision;
+        Qt.callLater(() => {
+            if (revision === navigationRevision)
+                scroll.contentY = Math.max(0, Math.min(position, Math.max(0, scroll.contentHeight - scroll.height)));
+        });
+    }
     function back() {
+        if (entitySetting) {
+            entitySetting = null;
+            navigationRevision++;
+            pageMotion.cancel();
+            restorePosition(entityPosition);
+            return;
+        }
         if (!backStack.length)
             return open(current?.parent || "panels", false);
         const previous = backStack[backStack.length - 1];
         backStack = backStack.slice(0, -1);
         open(previous.route, false);
-        Qt.callLater(() => scroll.contentY = Math.min(previous.position, Math.max(0, scroll.contentHeight - scroll.height)));
+        restorePosition(previous.position);
     }
     function open(link, remember = true) {
         const route = Registry.resolve(schema, link, capabilities, development);
         if (!route)
             return false;
-        if (remember && current && route.page !== page)
+        if (remember && current && route.page !== page && schema.pages.find(item => item.id === route.page)?.parent)
             backStack = [...backStack,
                 {
                     route: page + (highlight ? "#" + highlight : ""),
                     position: scroll.contentY
                 }
             ];
+        if (!schema.pages.find(item => item.id === route.page)?.parent)
+            backStack = [];
+        navigationRevision++;
         pendingAction = null;
         entitySetting = null;
         page = route.page;
@@ -105,7 +135,7 @@ FocusScope {
     }
     onCapabilitiesChanged: {
         if (current && !Registry.visiblePage(schema, current, capabilities))
-            open("panels");
+            navigate("panels");
     }
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
@@ -114,7 +144,7 @@ FocusScope {
             else if (overflowOpen)
                 overflowOpen = false;
             else if (entitySetting)
-                entitySetting = null;
+                back();
             else if (query)
                 query = "";
             else
@@ -194,7 +224,7 @@ FocusScope {
             currentIndex: root.navigation.findIndex(item => item.id === Registry.rootPage(root.schema, root.page))
             font.family: NacreTokens.textFamily
             Accessible.name: root.registry.text("settings.registry.ui.navigation")
-            onActivated: index => root.open(root.navigation[index].id)
+            onActivated: index => root.navigate(root.navigation[index].id)
         }
         ListView {
             id: nav
@@ -245,11 +275,11 @@ FocusScope {
                 NacreInteraction {
                     accessibleName: label.text
                     function onClicked() {
-                        root.open(navItem.modelData.id);
+                        root.navigate(navItem.modelData.id);
                     }
                     Keys.onPressed: event => {
                         if ([Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space].includes(event.key)) {
-                            root.open(navItem.modelData.id);
+                            root.navigate(navItem.modelData.id);
                             event.accepted = true;
                         } else if ([Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End].includes(event.key)) {
                             const next = event.key === Qt.Key_Home ? 0 : event.key === Qt.Key_End ? nav.count - 1 : Math.max(0, Math.min(nav.count - 1, navItem.index + (event.key === Qt.Key_Down ? 1 : -1)));
@@ -288,7 +318,8 @@ FocusScope {
             width: scroll.width
             spacing: NacreTokens.space.xl
             Row {
-                visible: (!!root.current?.parent || root.backStack.length > 0) && !root.query
+                objectName: "registryBack"
+                visible: (!!root.current?.parent || root.backStack.length > 0 || !!root.entitySetting) && !root.query
                 spacing: NacreTokens.space.sm
                 ActionButton {
                     text: root.registry.text("settings.registry.ui.back")
@@ -436,13 +467,17 @@ FocusScope {
                 color: NacreTokens.mutedInk
             }
             Loader {
+                id: entityLoader
                 width: parent.width
+                objectName: "registryEntity"
                 active: !!root.entitySetting && !root.query
+                visible: active
+                height: active && item ? item.implicitHeight : 0
                 sourceComponent: EntityContent {
                     setting: root.entitySetting
                     registry: root.registry
                     store: root.store
-                    onBack: root.entitySetting = null
+                    onBack: root.back()
                 }
             }
             Repeater {
@@ -510,6 +545,7 @@ FocusScope {
                         active: card.modelData.customType === "publisher-targets"
                         sourceComponent: PublisherTargets {
                             registry: root.registry
+                            store: root.store
                         }
                     }
                     Loader {
@@ -537,7 +573,7 @@ FocusScope {
                             registry: root.registry
                             store: root.store
                             highlighted: root.highlight === modelData.id
-                            onEntitiesRequested: root.entitySetting = modelData
+                            onEntitiesRequested: root.openEntity(modelData)
                         }
                     }
                     Repeater {

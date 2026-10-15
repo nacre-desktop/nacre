@@ -3112,8 +3112,9 @@
         "gtk3"
       ],
       "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.target.unavailable"
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
     },
     {
       "id": "colors/app-theming.targets.gtk4",
@@ -3136,8 +3137,9 @@
         "gtk4"
       ],
       "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.target.unavailable"
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
     },
     {
       "id": "colors/app-theming.targets.qt",
@@ -3160,8 +3162,9 @@
         "qt"
       ],
       "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.target.unavailable"
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
     },
     {
       "id": "colors/app-theming.targets.kde",
@@ -3184,8 +3187,9 @@
         "kde"
       ],
       "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.target.unavailable"
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
     },
     {
       "id": "colors/app-theming.targets.dolphin",
@@ -3199,7 +3203,7 @@
         "id": "colors",
         "key": [
           "appThemes",
-          "dolphin"
+          "qt"
         ]
       },
       "default": true,
@@ -3208,8 +3212,9 @@
         "dolphin"
       ],
       "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.target.unavailable"
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
     },
     {
       "id": "colors/app-theming.targets.thunar",
@@ -3223,7 +3228,7 @@
         "id": "colors",
         "key": [
           "appThemes",
-          "thunar"
+          "gtk3"
         ]
       },
       "default": true,
@@ -3232,8 +3237,9 @@
         "thunar"
       ],
       "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.target.unavailable"
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
     },
     {
       "id": "colors/app-theming.targets.kitty",
@@ -3256,8 +3262,9 @@
         "kitty"
       ],
       "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.target.unavailable"
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
     },
     {
       "id": "colors/app-theming.targets.rofi",
@@ -3280,8 +3287,9 @@
         "rofi"
       ],
       "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.target.unavailable"
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
     },
     {
       "id": "colors/app-theming.targets.lock",
@@ -3304,8 +3312,9 @@
         "lock"
       ],
       "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.target.unavailable"
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
     },
     {
       "id": "colors/app-theming.targets.login",
@@ -3328,8 +3337,9 @@
         "login"
       ],
       "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.target.unavailable"
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
     },
     {
       "id": "panels/dashboard/extras.editor.enabled",

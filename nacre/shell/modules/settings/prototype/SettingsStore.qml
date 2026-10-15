@@ -49,7 +49,7 @@ QtObject {
     }
     function enabled(setting) {
         const parent = schema.settings.find(item => item.id === setting.dependsOn);
-        return !setting.editorOwned && available(setting) && provenance(setting) !== "profile" && Registry.allowed(setting.enabledWhen, capabilities) && (!parent || value(parent) === true);
+        return (!setting.editorOwned || setting.adapter === "app-theme") && available(setting) && provenance(setting) !== "profile" && Registry.allowed(setting.enabledWhen, capabilities) && (!parent || value(parent) === true);
     }
     function write(setting, next, confirmed = false) {
         // QML models wrap data objects; ownership is by ID, not JS identity.

@@ -22,7 +22,7 @@ SettingsView {
     function restoreState(data) {
         if (data.page === page)
             query = data.query || "";
-        backStack = data.backStack || [];
+        backStack = (current?.parent ? data.backStack || [] : []).filter(item => typeof item.route === "string" && Number.isFinite(item.position)).slice(-64);
     }
     function focusContent() {
         forceActiveFocus(Qt.OtherFocusReason);
@@ -31,7 +31,11 @@ SettingsView {
     Connections {
         target: NacrePanelState
         function onSettingsPageChanged() {
-            root.open(NacrePanelState.settingsPage);
+            if (NacrePanelState.settingsPage !== root.page + (root.highlight ? "#" + root.highlight : ""))
+                if (root.schema.pages.find(item => item.id === NacrePanelState.settingsPage.split("#")[0])?.parent)
+                    root.open(NacrePanelState.settingsPage);
+                else
+                    root.navigate(NacrePanelState.settingsPage);
         }
     }
 }

@@ -23,6 +23,20 @@ fn run() -> Result<i32> {
     if tool == "palette-api" {
         return nacre_helper::palette_api::run(&arguments);
     }
+    if tool == "app-theme" {
+        let [id, value] = arguments.as_slice() else {
+            return Err("Expected theme target and true/false".into());
+        };
+        let enabled = match value.as_str() {
+            "true" => true,
+            "false" => false,
+            _ => return Err("Expected true or false".into()),
+        };
+        let mut publisher = nacre_helper::classic_state::Publisher::environment()?;
+        publisher.set_theme_target(id, enabled)?;
+        println!("{}", serde_json::json!({"ok":true}));
+        return Ok(0);
+    }
     if tool == "classic-state" {
         let mut publisher = nacre_helper::classic_state::Publisher::environment()?;
         publisher.apply_palette(arguments.first().map(std::path::Path::new), true)?;

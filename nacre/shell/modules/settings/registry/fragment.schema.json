@@ -341,7 +341,8 @@
             "enum": [
               "color-mode",
               "keyboard-layout",
-              "touchpad-enabled"
+              "touchpad-enabled",
+              "app-theme"
             ]
           },
           "entityType": {

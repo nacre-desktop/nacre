@@ -102,6 +102,12 @@ def files(root=ROOT):
     result[Path(".config/systemd/user/nacre-niri-widths.service")] = (
         root / "nacre/shell-tools/nacre-niri-widths.service"
     )
+    # The general profile starts with actual licensed, offline wallpaper choices.
+    # Flat unique names avoid empty category scaffolding and personal-file collisions.
+    if selected_profile(root).get("id") == "default":
+        collection = root / "nacre/shell-tools/demo-wallpapers"
+        for source in sorted(collection.glob("*.jpg")):
+            result[Path("Pictures/Wallpapers") / ("nacre-" + source.name)] = source
     features = selected_profile(root)["components"]
 
     def included(path):

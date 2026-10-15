@@ -9,6 +9,7 @@ import sys
 import tempfile
 
 from nacre_native_palette import lock_dashboard as dashboard
+import nacre_state as _state
 
 ROOT = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("lockinfo", ROOT / "lock-info.py")
@@ -28,6 +29,25 @@ def atomic(path, text):
 def prepare(data, home=None):
     home = Path.home() if home is None else Path(home)
     ready = home / ".cache/nacre/lock-ready"
+    # Widgets keep updating while an opted-out lock retains its last palette.
+    try:
+        follow = (
+            _state.read_json_file(home / ".config/nacre/colors.json")
+            .get("appThemes", {})
+            .get("lock", True)
+        )
+    except FileNotFoundError:
+        follow = True
+    if follow is False:
+        try:
+            retained = json.loads((ready / "snapshot.json").read_text()).get("colors")
+        except (OSError, ValueError):
+            retained = None
+        data = dict(
+            data,
+            colors=retained
+            or json.loads((ROOT / "reference-style.json").read_text())["colours"],
+        )
     settings = data.get("preferences", {})
     data = dict(data, batteryLabel=info.label("status", data, settings))
     for kind in ("weather", "media", "play-icon", "status"):

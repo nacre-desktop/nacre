@@ -8,6 +8,9 @@ TestCase {
     when: windowShown
     property var policy: NacrePowerPolicy
     function init() {
+        policy.profileWriter.running = false;
+        policy.applied = "";
+        policy.error = "";
         policy.serviceReady = true;
         NacreControlTools.data = {
             powerProfilesSupported: true
@@ -24,15 +27,21 @@ TestCase {
         PowerProfiles.profile = PowerProfile.Balanced;
         UPower.onBattery = false;
     }
+    function acknowledge(expected) {
+        verify(policy.profileWriter.running);
+        compare(policy.profileWriter.command.join("|"), "/usr/bin/python3|/usr/bin/powerprofilesctl|set|" + expected);
+        policy.profileWriter.finish(0);
+        compare(policy.applied, expected);
+    }
     function test_opt_in_and_source_change() {
         UPower.onBattery = true;
         compare(PowerProfiles.profile, PowerProfile.Balanced);
         NacreSettingsStorage.present = {
             power: true
         };
-        compare(PowerProfiles.profile, PowerProfile.PowerSaver);
+        acknowledge("power-saver");
         UPower.onBattery = false;
-        compare(PowerProfiles.profile, PowerProfile.Balanced);
+        acknowledge("balanced");
         NacreSettingsStorage.documents = {
             power: {
                 enabled: true,
@@ -40,9 +49,9 @@ TestCase {
                 battery: "balanced"
             }
         };
-        compare(PowerProfiles.profile, PowerProfile.Performance);
+        acknowledge("performance");
         UPower.onBattery = true;
-        compare(PowerProfiles.profile, PowerProfile.Balanced);
+        acknowledge("balanced");
     }
     function test_service_and_hardware_limits_do_not_apply() {
         NacreControlTools.data = {
@@ -58,7 +67,7 @@ TestCase {
         };
         verify(!policy.available);
         policy.serviceReady = true;
-        compare(PowerProfiles.profile, PowerProfile.PowerSaver);
+        acknowledge("power-saver");
         PowerProfiles.hasPerformanceProfile = false;
         NacreSettingsStorage.documents = {
             power: {
@@ -67,6 +76,19 @@ TestCase {
                 battery: "performance"
             }
         };
-        compare(PowerProfiles.profile, PowerProfile.PowerSaver);
+        verify(!policy.profileWriter.running);
+    }
+    function test_failed_write_is_visible_and_new_source_is_queued() {
+        NacreSettingsStorage.present = {
+            power: true
+        };
+        compare(policy.profileWriter.requested, "balanced");
+        UPower.onBattery = true;
+        policy.profileWriter.finish(1);
+        tryCompare(policy.profileWriter, "requested", "power-saver");
+        verify(policy.profileWriter.running);
+        policy.profileWriter.finish(1);
+        verify(policy.error.length > 0);
+        compare(policy.applied, "");
     }
 }

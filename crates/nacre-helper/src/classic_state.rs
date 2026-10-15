@@ -225,6 +225,18 @@ pub fn render_template(
     };
     crate::palette_engine::render_values(&fs::read_to_string(source)?, colors)
 }
+/// Follow preferences are opt-out. Shared application outputs use one switch.
+pub fn theme_target_key(id: &str) -> &str {
+    match id {
+        "dolphin" => "qt",
+        "thunar" => "gtk3",
+        other => other,
+    }
+}
+pub fn theme_target_enabled(paths: &Paths, id: &str) -> Result<bool> {
+    let prefs = state::read(&paths.config.join("colors.json"), json!({}))?;
+    Ok(prefs["appThemes"][theme_target_key(id)] != false)
+}
 pub fn publish_terminal_colors(
     paths: &Paths,
     assets: &Path,
@@ -321,6 +333,9 @@ pub fn publish_terminal_colors(
         roles.insert(format!("color{i}"), json!(value));
         roles.insert(format!("color{}", i + 8), json!(bright));
     }
+    if !theme_target_enabled(paths, "kitty")? {
+        return Ok(());
+    }
     atomic_write(
         &paths.config.join("kitty-colors.conf"),
         &render_template(assets, "hyprland", "kitty-colors.conf.in", &roles)?,
@@ -388,6 +403,31 @@ pub fn publish_application_colors(
     live: bool,
     connection: Option<&zbus::blocking::Connection>,
 ) -> Result<String> {
+    publish_application_colors_selected(
+        paths,
+        assets,
+        system_icons,
+        colors,
+        data,
+        live,
+        connection,
+        None,
+    )
+}
+#[allow(clippy::too_many_arguments)]
+fn publish_application_colors_selected(
+    paths: &Paths,
+    assets: &Path,
+    system_icons: &Path,
+    colors: &Map<String, Value>,
+    data: &Value,
+    live: bool,
+    connection: Option<&zbus::blocking::Connection>,
+    only: Option<&str>,
+) -> Result<String> {
+    let enabled = |id: &str| -> Result<bool> {
+        Ok(only.is_none_or(|selected| selected == id) && theme_target_enabled(paths, id)?)
+    };
     let root = paths.config.parent().ok_or("Missing config root")?;
     let mode = data["mode"].as_str().ok_or("Missing mode")?;
     let primary = colors["primary"].as_str().ok_or("Missing primary")?;
@@ -418,6 +458,9 @@ pub fn publish_application_colors(
     .into_iter()
     .collect();
     for version in ["3.0", "4.0"] {
+        if !enabled(if version == "3.0" { "gtk3" } else { "gtk4" })? {
+            continue;
+        }
         let folder = root.join(format!("gtk-{version}"));
         let name = if version == "3.0" {
             "gtk3-colors.css.in"
@@ -461,74 +504,78 @@ pub fn publish_application_colors(
             atomic_write(&settings, &text)?;
         }
     }
-    crate::kde_palette::publish(paths, &Value::Object(colors.clone()), &icon_theme)?;
-    let qt_roles = [
-        "onSurface",
-        "surfaceContainer",
-        "surfaceBright",
-        "surfaceContainerHigh",
-        "surfaceDim",
-        "outlineVariant",
-        "onSurface",
-        "onPrimary",
-        "onSurface",
-        "surface",
-        "surface",
-        "shadow",
-        "primary",
-        "onPrimary",
-        "primary",
-        "tertiary",
-        "surfaceContainerLow",
-        "onSurface",
-        "surfaceContainer",
-        "onSurface",
-        "onSurfaceVariant",
-        "primary",
-    ];
-    let row = qt_roles
-        .into_iter()
-        .map(|role| {
-            colors
-                .get(role)
-                .and_then(Value::as_str)
-                .map(|value| format!("#ff{value}"))
-                .ok_or_else(|| format!("Missing palette role: {role}").into())
-        })
-        .collect::<Result<Vec<_>>>()?
-        .join(", ");
-    let qt_path = paths.config.join("qt.conf");
-    let qt = format!(
-        "[ColorScheme]\n{}",
-        ["active", "inactive", "disabled"]
-            .iter()
-            .map(|group| format!("{group}_colors={row}\n"))
-            .collect::<String>()
-    );
-    atomic_write(&qt_path, &qt)?;
-    for version in [5, 6] {
-        let settings = root.join(format!("qt{version}ct/qt{version}ct.conf"));
-        if settings.exists() {
-            let mut text = fs::read_to_string(&settings)?;
-            for (key, value) in [
-                ("color_scheme_path", qt_path.to_string_lossy().into_owned()),
-                ("custom_palette", "true".into()),
-            ] {
-                text = patterns[key]
-                    .replace_all(&text, |_: &regex::Captures| format!("{key}={value}"))
-                    .into_owned();
+    if enabled("kde")? {
+        crate::kde_palette::publish(paths, &Value::Object(colors.clone()), &icon_theme)?;
+    }
+    if enabled("qt")? {
+        let qt_roles = [
+            "onSurface",
+            "surfaceContainer",
+            "surfaceBright",
+            "surfaceContainerHigh",
+            "surfaceDim",
+            "outlineVariant",
+            "onSurface",
+            "onPrimary",
+            "onSurface",
+            "surface",
+            "surface",
+            "shadow",
+            "primary",
+            "onPrimary",
+            "primary",
+            "tertiary",
+            "surfaceContainerLow",
+            "onSurface",
+            "surfaceContainer",
+            "onSurface",
+            "onSurfaceVariant",
+            "primary",
+        ];
+        let row = qt_roles
+            .into_iter()
+            .map(|role| {
+                colors
+                    .get(role)
+                    .and_then(Value::as_str)
+                    .map(|value| format!("#ff{value}"))
+                    .ok_or_else(|| format!("Missing palette role: {role}").into())
+            })
+            .collect::<Result<Vec<_>>>()?
+            .join(", ");
+        let qt_path = paths.config.join("qt.conf");
+        let qt = format!(
+            "[ColorScheme]\n{}",
+            ["active", "inactive", "disabled"]
+                .iter()
+                .map(|group| format!("{group}_colors={row}\n"))
+                .collect::<String>()
+        );
+        atomic_write(&qt_path, &qt)?;
+        for version in [5, 6] {
+            let settings = root.join(format!("qt{version}ct/qt{version}ct.conf"));
+            if settings.exists() {
+                let mut text = fs::read_to_string(&settings)?;
+                for (key, value) in [
+                    ("color_scheme_path", qt_path.to_string_lossy().into_owned()),
+                    ("custom_palette", "true".into()),
+                ] {
+                    text = patterns[key]
+                        .replace_all(&text, |_: &regex::Captures| format!("{key}={value}"))
+                        .into_owned();
+                }
+                if !icon_theme.is_empty() {
+                    text = patterns["icon_theme"]
+                        .replace_all(&text, |_: &regex::Captures| {
+                            format!("icon_theme={icon_theme}")
+                        })
+                        .into_owned();
+                }
+                atomic_write(&settings, &text)?;
             }
-            if !icon_theme.is_empty() {
-                text = patterns["icon_theme"]
-                    .replace_all(&text, |_: &regex::Captures| {
-                        format!("icon_theme={icon_theme}")
-                    })
-                    .into_owned();
-            }
-            atomic_write(&settings, &text)?;
         }
     }
-    if live {
+    if live && enabled("kde")? {
         let connection = connection.ok_or("Missing desktop D-Bus connection")?;
         for change in [0i32, 4] {
             connection.emit_signal(
@@ -670,6 +717,85 @@ impl Publisher {
             now_ms: None,
         })
     }
+    /// Settings changes only the selected publisher group, never compositor or wallpaper state.
+    pub fn set_theme_target(&mut self, id: &str, enabled: bool) -> Result<()> {
+        let manifest: Value =
+            serde_json::from_slice(&fs::read(self.assets.join("theme-targets.json"))?)?;
+        if !manifest["targets"]
+            .as_array()
+            .is_some_and(|rows| rows.iter().any(|row| row["id"] == id))
+        {
+            return Err("Unknown application theme target".into());
+        }
+        let _guard = publication_lock(&self.paths)?;
+        let key = theme_target_key(id);
+        let path = self.paths.config.join("colors.json");
+        let schema = state::schema(&path).ok_or("Missing colors store schema")?;
+        let previous = state::read(&path, json!({}))?["appThemes"][key].clone();
+        state::update_as(&path, schema, |mut prefs| {
+            if prefs["appThemes"].is_null() {
+                prefs["appThemes"] = json!({});
+            }
+            if !prefs["appThemes"].is_object() {
+                return Err("Invalid application theme preferences".into());
+            }
+            prefs["appThemes"][key] = json!(enabled);
+            Ok(prefs)
+        })?;
+        let result = (|| -> Result<()> {
+            if enabled {
+                let data = state::read(&self.paths.state.join("scheme.json"), Value::Null)?;
+                let colors = validated_colors(&data, &self.assets)?;
+                match key {
+                    "gtk3" | "gtk4" | "qt" | "kde" => {
+                        publish_application_colors_selected(
+                            &self.paths,
+                            &self.assets,
+                            &self.system_icons,
+                            &colors,
+                            &data,
+                            false,
+                            None,
+                            Some(key),
+                        )?;
+                    }
+                    "kitty" => {
+                        publish_terminal_colors(&self.paths, &self.assets, &colors, &data)?;
+                        reload_terminals(&self.paths.home);
+                    }
+                    "rofi" => atomic_write(
+                        &self.paths.config.join("rofi.rasi"),
+                        &render_template(
+                            &self.assets,
+                            self.backend.name(),
+                            "rofi-colors.rasi.in",
+                            &colors,
+                        )?,
+                    )?,
+                    "lock" | "login" => {
+                        let selected = self.selected(None)?;
+                        self.publish_lock_login(&colors, &selected)?;
+                    }
+                    _ => return Err("Unsupported application theme target".into()),
+                }
+            }
+            self.publish_target_manifest()
+        })();
+        if result.is_err() {
+            state::update_as(&path, schema, |mut prefs| {
+                if previous.is_null() {
+                    prefs["appThemes"]
+                        .as_object_mut()
+                        .ok_or("Invalid theme preferences")?
+                        .remove(key);
+                } else {
+                    prefs["appThemes"][key] = previous;
+                }
+                Ok(prefs)
+            })?;
+        }
+        result
+    }
     pub fn apply_palette(&mut self, wallpaper: Option<&Path>, live: bool) -> Result<()> {
         let _guard = publication_lock(&self.paths)?;
         self.apply_locked(wallpaper, live)
@@ -774,15 +900,17 @@ impl Publisher {
                 + "\n"),
         )?;
         let config = self.publish_compositor_palette(&colors)?;
-        atomic_write(
-            &paths.config.join("rofi.rasi"),
-            &render_template(
-                &self.assets,
-                self.backend.name(),
-                "rofi-colors.rasi.in",
-                &colors,
-            )?,
-        )?;
+        if theme_target_enabled(paths, "rofi")? {
+            atomic_write(
+                &paths.config.join("rofi.rasi"),
+                &render_template(
+                    &self.assets,
+                    self.backend.name(),
+                    "rofi-colors.rasi.in",
+                    &colors,
+                )?,
+            )?;
+        }
         let connection = if live {
             match zbus::blocking::Connection::session() {
                 Ok(connection) => Some(connection),
@@ -822,34 +950,37 @@ impl Publisher {
         colors: &Map<String, Value>,
         selected: &str,
     ) -> Result<()> {
-        let preferences = match state::read(&self.paths.config.join("desktop.json"), json!({})) {
-            Ok(value) => value,
-            Err(error) => {
-                eprintln!("Lock palette preferences: {error}");
-                json!({})
-            }
-        };
-        let monitors = if let Some(monitors) = &self.monitors {
-            monitors.clone()
-        } else {
-            crate::lock_config::monitor_layout(&self.paths, &mut self.backend)?
-        };
-        let config = crate::lock_config::prepare_config(
-            &self.paths,
-            &self.assets,
-            colors,
-            Path::new(selected),
-            &preferences,
-            &self.paths.tools().join("lock-info.py"),
-            &monitors,
-        )?;
-        let config_root = self
-            .paths
-            .config
-            .parent()
-            .ok_or("Invalid lock config root")?;
-        atomic_write(&config_root.join("hypr/hyprlock.conf"), &config)?;
-        if !selected.is_empty() {
+        if theme_target_enabled(&self.paths, "lock")? {
+            let preferences = match state::read(&self.paths.config.join("desktop.json"), json!({}))
+            {
+                Ok(value) => value,
+                Err(error) => {
+                    eprintln!("Lock palette preferences: {error}");
+                    json!({})
+                }
+            };
+            let monitors = if let Some(monitors) = &self.monitors {
+                monitors.clone()
+            } else {
+                crate::lock_config::monitor_layout(&self.paths, &mut self.backend)?
+            };
+            let config = crate::lock_config::prepare_config(
+                &self.paths,
+                &self.assets,
+                colors,
+                Path::new(selected),
+                &preferences,
+                &self.paths.tools().join("lock-info.py"),
+                &monitors,
+            )?;
+            let config_root = self
+                .paths
+                .config
+                .parent()
+                .ok_or("Invalid lock config root")?;
+            atomic_write(&config_root.join("hypr/hyprlock.conf"), &config)?;
+        }
+        if !selected.is_empty() && theme_target_enabled(&self.paths, "login")? {
             let policy = crate::login_appearance::Policy::environment()?;
             if let Err(error) = crate::login_appearance::publish(
                 &self.paths,
@@ -864,7 +995,7 @@ impl Publisher {
         }
         Ok(())
     }
-    fn publish_target_manifest(&self) -> Result<()> {
+    pub fn publish_target_manifest(&self) -> Result<()> {
         use std::os::unix::fs::PermissionsExt;
         let manifest: Value =
             serde_json::from_slice(&fs::read(self.assets.join("theme-targets.json"))?)?;
@@ -902,6 +1033,10 @@ impl Publisher {
                 "not-published"
             });
             target["available"] = json!(available);
+            let id = target["id"].as_str().ok_or("Missing target id")?;
+            if !theme_target_enabled(&self.paths, id)? {
+                target["status"] = json!("paused");
+            }
             targets.push(target);
         }
         atomic_write(
@@ -917,7 +1052,11 @@ impl Publisher {
         connection: Option<&zbus::blocking::Connection>,
     ) -> Result<()> {
         reload_terminals(&self.paths.home);
-        if let Some(connection) = connection {
+        if let Some(connection) = connection.filter(|_| {
+            ["gtk3", "gtk4", "kde"]
+                .iter()
+                .any(|id| theme_target_enabled(&self.paths, id).unwrap_or(false))
+        }) {
             if let Err(error) = publish_dconf(
                 connection,
                 data["mode"].as_str().ok_or("Missing mode")?,

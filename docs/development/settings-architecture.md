@@ -708,3 +708,35 @@ can retain its previous implicit-directory type list after new files appear; the
 explicit manifest and an existing-file reload make the new controls available
 without restarting the desktop. Update the manifest when adding a widget; the
 registry tests check that it covers every shared QML component.
+
+
+### Usability follow-up: navigation and application colors
+
+Sidebar navigation selects a root page without Back history. Back belongs to
+subpages and entity editors; cross-links retain their originating page (for
+example Privacy → dashboard Weather → Privacy). Entity loaders explicitly have
+zero height while inactive. Scroll restoration has a navigation revision guard so
+an older deferred callback cannot move a newly opened page.
+
+The publisher manifest drives App theming rows. `colors.appThemes` contains
+opt-out booleans; a missing key follows the desktop. Pausing retains existing
+application files through subsequent palette publications. Re-enabling applies
+the live palette through `nacre-helper app-theme TARGET true`. Shared outputs have
+shared switches: Dolphin/Qt and Thunar/GTK 3. Settings explains this beside each
+row rather than claiming independent control of a shared toolkit theme. The
+normal publisher and lock-ready widget preparation both respect the lock gate;
+widgets continue updating with the retained lock colors. Future publishers add a
+manifest target and its portable descriptor together.
+
+Power policy remains opt-in. Disabled source choices explain the master switch.
+Selections use acknowledged `powerprofilesctl set` requests, serialize source
+changes, and report errors on the Power page. The system Python is explicit to
+avoid selecting the palette runtime's interpreter. Private D-Bus/native QML proof
+covers enable, AC, battery and AC return without changing host hardware policy.
+
+The general default profile includes four licensed offline scene JPEGs directly
+under `Pictures/Wallpapers`; it creates no category scaffolding. Unique `nacre-`
+filenames use the existing guarded configuration deployment and preserve personal
+wallpaper files. Interface font applies to the desktop active-window title as
+well as application headers. Switches use primary pearl knobs and secondary
+container tracks; the global gradient preference also controls their sheen.

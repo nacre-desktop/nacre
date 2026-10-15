@@ -151,6 +151,95 @@ TestCase {
         view.back();
         compare(view.page, "privacy");
     }
+    function test_publisher_manifest_switches_share_real_output_preferences() {
+        testStore.availableStores = [...testStore.availableStores, "colors"];
+        NacreSettingsStorage.documents = {
+            "theme-targets": {
+                targets: [
+                    {
+                        id: "gtk3",
+                        labelId: "settings.publisher.gtk3",
+                        status: "current"
+                    },
+                    {
+                        id: "thunar",
+                        labelId: "settings.publisher.thunar",
+                        status: "current"
+                    },
+                    {
+                        id: "kitty",
+                        labelId: "settings.publisher.kitty",
+                        status: "current"
+                    }
+                ]
+            }
+        };
+        const view = createTemporaryObject(viewComponent, test);
+        verify(view.open("colors/app-theming"));
+        wait(30);
+        const gtk = findChild(view, "control-colors/app-theming.targets.gtk3");
+        const thunar = findChild(view, "control-colors/app-theming.targets.thunar");
+        verify(gtk && thunar);
+        verify(gtk.checked && thunar.checked);
+        mouseClick(gtk, gtk.width / 2, gtk.height / 2);
+        compare(testStore.files.colors.appThemes.gtk3, false);
+        verify(!thunar.checked);
+        mouseClick(thunar, thunar.width / 2, thunar.height / 2);
+        verify(gtk.checked && thunar.checked);
+        verify(view.results.length === 0);
+        view.query = "Thunar";
+        verify(view.results.some(item => item.id === "colors/app-theming.targets.thunar"));
+        NacreSettingsStorage.documents = {};
+    }
+    function test_power_master_switch_unlocks_real_profile_choices() {
+        testStore.availableStores = [...testStore.availableStores, "power"];
+        testStore.capabilities = Object.assign({}, testStore.capabilities, {
+            powerProfiles: true,
+            performanceProfile: true
+        });
+        testStore.accept("power", {
+            enabled: false,
+            ac: "balanced",
+            battery: "power-saver"
+        });
+        const view = createTemporaryObject(viewComponent, test);
+        view.open("power");
+        wait(30);
+        const toggle = findChild(view, "control-power.profiles.enabled");
+        const ac = findChild(view, "option-power.profiles.ac-performance");
+        verify(toggle.enabled);
+        verify(!ac.enabled);
+        mouseClick(toggle, toggle.width / 2, toggle.height / 2);
+        tryVerify(() => testStore.files.power.enabled === true);
+        verify(ac.enabled);
+        mouseClick(ac, ac.width / 2, ac.height / 2);
+        tryCompare(testStore.files.power, "ac", "performance");
+        const battery = findChild(view, "option-power.profiles.battery-balanced");
+        mouseClick(battery, battery.width / 2, battery.height / 2);
+        tryCompare(testStore.files.power, "battery", "balanced");
+    }
+    function test_root_navigation_has_no_history_and_entity_back_collapses_loader() {
+        const view = createTemporaryObject(viewComponent, test);
+        view.open("panels");
+        view.open("launcher");
+        compare(view.backStack.length, 0);
+        verify(!findChild(view, "registryBack").visible);
+        const setting = testRegistry.schema.settings.find(row => row.id === "launcher/favorites.list.favorites");
+        verify(setting);
+        view.entitySetting = setting;
+        wait(30);
+        const loader = findChild(view, "registryEntity");
+        verify(loader.height > 0);
+        view.entitySetting = null;
+        wait(30);
+        verify(!loader.visible);
+        compare(loader.height, 0);
+        view.open("colors");
+        const scroll = findChild(view, "registryScroll");
+        wait(30);
+        compare(scroll.contentY, 0);
+        verify(scroll.contentHeight < 2500);
+    }
     function test_user_only_switches_segments_and_profile_dependency() {
         const view = createTemporaryObject(viewComponent, test);
         wait(30);

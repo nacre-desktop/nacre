@@ -45,6 +45,9 @@ ShellRoot {
  property var powerPolicy:NacrePowerPolicy
  IpcHandler {target:"settingsRuntime"
   function write(id:string,value:string):bool {return NacreSettingsProvider.write({id:id},JSON.parse(value))}
+  function back():void {NacreSettingsApp.window.view.back()}
+  function entity(id:string):void {const view=NacreSettingsApp.window.view;view.openEntity(view.schema.settings.find(row=>row.id===id))}
+  function layout():string {const view=NacreSettingsApp.window.view;const flick=view.findRow(view,"registryScroll");const loader=view.findRow(view,"registryEntity");return JSON.stringify({page:view.page,back:view.backStack.length,backVisible:view.findRow(view,"registryBack").visible,entityHeight:loader.height,scrollY:flick.contentY,contentHeight:flick.contentHeight})}
   function state():string {return JSON.stringify({files:NacreSettingsProvider.files,error:NacreSettingsProvider.error,inputBusy:NacreSettingsProvider.inputWorker.running,inputQueue:NacreSettingsProvider.inputQueue.length,desktopBusy:DesktopSettings.busy,desktopQueue:DesktopSettings.queue.length})}
  }
 }
@@ -103,6 +106,12 @@ ShellRoot {
             config_dir.mkdir(parents=True)
             shutil.copy2(
                 source_root / "profiles/default.json", config_dir / "profile.json"
+            )
+            state_dir = home / ".local/state/nacre"
+            state_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(
+                source_root / "nacre/shell-tools/reference-style.json",
+                state_dir / "scheme.json",
             )
             env.update(NACRE_COMPOSITOR="niri")
         niri_config = root / "config.kdl"
@@ -239,6 +248,73 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                         ipc("open", route).check_returncode()
                         time.sleep(0.15)
                         checked.append({"route": route, "state": snapshot()})
+
+                    def runtime(method, *args):
+                        result = subprocess.run(
+                            [
+                                "quickshell",
+                                "ipc",
+                                "-p",
+                                str(config / "shell.qml"),
+                                "call",
+                                "settingsRuntime",
+                                method,
+                                *args,
+                            ],
+                            env=env,
+                            capture_output=True,
+                            text=True,
+                            timeout=10,
+                        )
+                        result.check_returncode()
+                        return (
+                            json.loads(result.stdout) if result.stdout.strip() else None
+                        )
+
+                    ipc("open", "panels").check_returncode()
+                    ipc("open", "launcher").check_returncode()
+                    time.sleep(0.1)
+                    assert not runtime("layout")["backVisible"]
+                    ipc("open", "privacy").check_returncode()
+                    ipc("open", "panels/dashboard#weatherPhotos").check_returncode()
+                    time.sleep(0.1)
+                    runtime("back")
+                    assert runtime("layout")["page"] == "privacy"
+                    ipc("open", "launcher/favorites").check_returncode()
+                    runtime("entity", "launcher/favorites.list.favorites")
+                    assert runtime("layout")["entityHeight"] > 0
+                    runtime("back")
+                    time.sleep(0.1)
+                    assert runtime("layout")["entityHeight"] == 0
+                    ipc("open", "launcher").check_returncode()
+                    assert runtime("layout")["scrollY"] == 0
+                    for value in ["false", "true"]:
+                        assert (
+                            runtime("write", "colors/app-theming.targets.kitty", value)
+                            is True
+                        )
+                        wait_for(
+                            lambda: runtime("state"),
+                            lambda state, value=value: (
+                                state["files"]
+                                .get("colors", {})
+                                .get("appThemes", {})
+                                .get("kitty")
+                                == (value == "true")
+                            ),
+                        )
+                    assert (home / ".config/nacre/kitty-colors.conf").is_file()
+                    assert (
+                        runtime("write", "colors.readability.contrast", '"hard"')
+                        is True
+                    )
+                    wait_for(
+                        lambda: json.loads(
+                            (home / ".local/state/nacre/scheme.json").read_text()
+                        ),
+                        lambda data: data.get("flavour") == "hard",
+                        timeout=30,
+                    )
                     native_write = subprocess.run(
                         [
                             "quickshell",
@@ -371,6 +447,10 @@ window-rule {match title="^Nacre Settings Preview$";open-floating true;}
                         json.dumps(
                             {
                                 "routes": checked,
+                                "rootAndContextNavigationVerified": True,
+                                "entityHeightCollapsed": True,
+                                "publisherToggleAcknowledged": True,
+                                "contrastPublisherAcknowledged": True,
                                 "privateStoreAcknowledged": True,
                                 "mixedInputWritesAcknowledged": True,
                                 "productionProviderAcknowledged": True,
