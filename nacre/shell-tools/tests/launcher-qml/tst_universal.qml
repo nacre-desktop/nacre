@@ -327,6 +327,30 @@ TestCase {
         compare(chrome.package, "google-chrome");
         compare(chrome.kind, "app");
     }
+    function test_bundle_requires_preview_and_routes_explicit_scope() {
+        const value = view();
+        value.menu.library.data = {
+            themes: BundleData.rows
+        };
+        value.navigate("software.themes");
+        const bundle = value.entries.find(row => row.bundle);
+        verify(bundle);
+        value.run(value.menu.itemActions(bundle).find(row => row.operation === "software-preview"));
+        verify(value.softwareDetails.bundle);
+        const worker = findChild(value.menu.library, "softwareLibraryAction");
+        verify(!worker.running);
+        const loader = findChild(value, "softwarePreviewLoader");
+        tryVerify(() => !!loader.item);
+        loader.item.bundleApplyRequested("light", "wallpaper");
+        compare(worker.operation, "bundle-apply");
+        compare(worker.payload.mode, "light");
+        compare(worker.payload.scope, "wallpaper");
+        worker.running = false;
+        value.navigate("software.development");
+        findChild(value, "launcherSearch").text = "catppuccin";
+        verify(value.entries.some(row => row.bundle));
+    }
+
     function test_themes_preview_light_and_dark_without_applying_until_requested() {
         const value = view();
         value.menu.library.data = {

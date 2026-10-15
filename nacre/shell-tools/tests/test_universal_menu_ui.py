@@ -28,6 +28,7 @@ def stage(target):
         "NacreCalculatorPad",
         "NacreThemePreview",
         "NacreSoftwarePreview",
+        "NacreBundlePreview",
     ):
         stage_qml(
             SHELL / "modules/launcher" / (name + ".qml"), target / (name + ".qml")
@@ -115,6 +116,22 @@ def stage(target):
     with (fixtures / "qmldir").open("a") as manifest:
         manifest.write("\nBrandLogo 1.0 BrandLogo.qml\n")
     shutil.copy2(SHELL / "widgets/FastScroll.qml", fixtures / "FastScroll.qml")
+    bundles = json.loads((TOOLS / "theme-bundles/catalog.json").read_text())["bundles"]
+    for bundle in bundles:
+        bundle["bundle"] = True
+        bundle["credit"] = (
+            bundle["upstream"]["credit"]
+            + " · MIT palette; Nacre Orbits wallpapers · CC0. Orient role adaptation, not pixel-identical rendering."
+        )
+        for wallpaper in bundle["wallpapers"]:
+            wallpaper["path"] = str(TOOLS / "theme-bundles" / wallpaper["file"])
+    (fixtures / "BundleData.qml").write_text(
+        "pragma Singleton\nimport QtQuick\nQtObject {property var rows:"
+        + json.dumps(bundles)
+        + "}"
+    )
+    with (fixtures / "qmldir").open("a") as manifest:
+        manifest.write("\nsingleton BundleData 1.0 BundleData.qml\n")
     (target / "tst_menu.qml").write_text(
         (TOOLS / "tests/launcher-qml/tst_universal.qml").read_text()
     )

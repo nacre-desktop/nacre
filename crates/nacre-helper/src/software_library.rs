@@ -150,9 +150,15 @@ fn theme_remove(paths: &Paths, id: &str) -> Result<Value> {
     Ok(json!({"message":tr("helper.software-library.saved-theme-removed", "Saved theme removed")}))
 }
 fn theme_export(paths: &Paths, id: &str, input: &Value) -> Result<Value> {
-    let palettes: Value = serde_json::from_str(include_str!(
+    let mut palettes: Value = serde_json::from_str(include_str!(
         "../../../nacre/shell-tools/palette-presets.json"
     ))?;
+    palettes.as_array_mut().unwrap().extend(
+        crate::theme_bundles::catalog(&paths.assets())?
+            .as_array()
+            .ok_or("Invalid bundles")?
+            .clone(),
+    );
     let saved = read(&paths.config.join("colors.json"), json!({"favorites":[]}))?;
     let item = if let Some(id) = id.strip_prefix("favorite:") {
         saved["favorites"]
@@ -588,6 +594,12 @@ fn list(paths: &Paths) -> Result<Value> {
     let mut themes: Value = serde_json::from_str(include_str!(
         "../../../nacre/shell-tools/palette-presets.json"
     ))?;
+    themes.as_array_mut().unwrap().extend(
+        crate::theme_bundles::catalog(&paths.assets())?
+            .as_array()
+            .ok_or("Invalid bundles")?
+            .clone(),
+    );
     let saved = read(&paths.config.join("colors.json"), json!({"favorites":[]}))?;
     if let Some(favorites) = saved["favorites"].as_array() {
         for item in favorites {
@@ -941,6 +953,7 @@ pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Value> {
         "tui-launch" => crate::software_tui::execute(&paths, "launch", id, None),
         "install-builtin" => install_builtin(&paths, id),
         "clone" => clone_extension(&paths, id, &input.unwrap_or(Value::Null)),
+        "bundle-apply" => crate::theme_bundles::apply(id, &input.unwrap_or(Value::Null)),
         "theme-remove" => theme_remove(&paths, id),
         "theme-export" => theme_export(&paths, id, &input.unwrap_or(Value::Null)),
         "extension-theme" => {

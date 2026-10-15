@@ -476,7 +476,7 @@ NacreSurface {
             };
             return;
         }
-        if (entry.operation === "software-preview") {
+        if (entry.operation === "software-preview" || entry.bundle && !entry.bundleScope) {
             softwareDetails = entry;
             return;
         }
@@ -1328,8 +1328,17 @@ NacreSurface {
                 root.softwareDetails = null;
                 root.focusExplicit();
             }
+            onBundleApplyRequested: (mode, scope) => {
+                root.run(Object.assign({}, root.softwareDetails, {
+                    operation: "software-theme",
+                    themeMode: mode,
+                    bundleScope: scope
+                }));
+                root.softwareDetails = null;
+            }
             onApplyRequested: mode => {
                 root.run(Object.assign({}, root.softwareDetails, {
+                    operation: "software-theme",
                     themeMode: mode
                 }));
                 root.softwareDetails = null;

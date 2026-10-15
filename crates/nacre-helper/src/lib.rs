@@ -77,5 +77,6 @@ pub mod kde_palette;
 pub mod template_export;
 pub mod terminal_branding;
 pub mod terminal_font;
+pub mod theme_bundles;
 
 pub mod login_appearance;

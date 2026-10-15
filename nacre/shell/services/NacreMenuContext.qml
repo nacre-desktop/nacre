@@ -892,6 +892,12 @@ Scope {
     function themeRows() {
         return (library.data.themes || NacreWallpapers.palettes || []).map(theme => valueRow("software.themes", Qt.md5(theme.id), theme.name, "software-theme", theme.id, "palette", NacreI18n.tr("software.theme.description", "Use this palette throughout your desktop and applications"), {
                 theme: true,
+                bundle: theme.bundle === true,
+                wallpapers: theme.wallpapers || [],
+                modeNames: theme.modeNames || {},
+                credit: theme.credit || "",
+                upstreamCredit: theme.upstream?.credit || "",
+                website: theme.upstream?.url || "",
                 colors: theme.swatches || [theme.modes?.dark?.primary, theme.modes?.dark?.secondary, theme.modes?.dark?.tertiary].filter(Boolean),
                 themeModes: theme.modes || ({}),
                 surface: theme.surface || theme.modes?.dark?.surface || "#151515",
@@ -1062,14 +1068,23 @@ Scope {
                 confirm: NacreI18n.tr("software.tui.remove-confirm", "Remove this launcher entry? The command and its data will be retained.")
             });
         if (entry.theme || entry.screenshots?.length)
-            add(NacreI18n.tr("software.preview.more", "View previews"), "software-preview");
+            result.push(Object.assign({}, entry, {
+                id: entry.id + ".preview",
+                operation: "software-preview",
+                transient: true,
+                name: NacreI18n.tr("software.preview.more", "View previews")
+            }));
         if (entry.theme) {
-            add(NacreI18n.tr("software.theme.apply-dark", "Apply dark theme"), "software-theme", entry.value, {
-                themeMode: "dark"
-            });
-            add(NacreI18n.tr("software.theme.apply-light", "Apply light theme"), "software-theme", entry.value, {
-                themeMode: "light"
-            });
+            if (!entry.bundle) {
+                add(NacreI18n.tr("software.theme.apply-dark", "Apply dark theme"), "software-theme", entry.value, {
+                    themeMode: "dark",
+                    bundle: entry.bundle
+                });
+                add(NacreI18n.tr("software.theme.apply-light", "Apply light theme"), "software-theme", entry.value, {
+                    themeMode: "light",
+                    bundle: entry.bundle
+                });
+            }
             add(NacreI18n.tr("software.theme.export", "Export theme"), "form", "software-theme-export", {
                 themePreset: entry.value
             });
@@ -1438,6 +1453,14 @@ Scope {
             return app ? NacreApps.launch(app) : false;
         }
         if (operation === "software-theme") {
+            if (row.bundle) {
+                if (!row.bundleScope || NacreWallpapers.themeBusy)
+                    return false;
+                return library.work("bundle-apply", value, {
+                    mode: row.themeMode || "dark",
+                    scope: row.bundleScope
+                });
+            }
             NacreWallpapers.preference({
                 palettePreset: value,
                 paletteMode: row.themeMode || NacreWallpapers.appearancePreferences.paletteMode || "dark"

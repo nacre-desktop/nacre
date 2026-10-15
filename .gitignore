@@ -62,3 +62,6 @@ node_modules/
 # Public synthetic evidence for the Settings migration.
 !/assets/screenshots/settings-final/
 !/assets/screenshots/settings-final/*.png
+
+# Original palette-generated CC0 theme bundle art; see per-asset provenance.
+!nacre/shell-tools/theme-bundles/*.png

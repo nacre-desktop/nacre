@@ -114,6 +114,13 @@ suites = {
         """const panel=createTemporaryObject(center,this);for(const section of ["home","network","bluetooth","audio","battery","session","updates","notifications","edit"]){panel.selectedSection=section;wait(100);capture(panel,"controls-"+section)}const scroll=findChild(panel,"controlPageScroll");scroll.contentY=Math.max(0,scroll.contentHeight-scroll.height);wait(100);capture(panel,"controls-edit-actions");NacreControlPreferences.save(NacreControlPreferences.allowed);panel.selectedSection="home";wait(100);capture(panel,"controls-custom");scroll.contentY=Math.max(0,scroll.contentHeight-scroll.height);wait(100);capture(panel,"controls-custom-actions");NacreControlPreferences.reset()""",
         "",
     ),
+    "themes": (
+        "test_universal_menu_ui",
+        "UniversalMenuUITests",
+        "test_routes_search_keyboard_favorites_and_guards",
+        """const panel=createTemporaryObject(scene,this);wait(120);panel.menu.library.data={themes:BundleData.rows};panel.navigate("software.themes");verify(panel.entries.filter(row=>row.bundle).length===2);for(const bundle of panel.entries.filter(row=>row.bundle)){panel.run(bundle);wait(180);capture(panel,"theme-"+bundle.value.replace(":","-")+"-both-modes");panel.softwareDetails=null;}""",
+        "",
+    ),
     "launcher": (
         "test_universal_menu_ui",
         "UniversalMenuUITests",

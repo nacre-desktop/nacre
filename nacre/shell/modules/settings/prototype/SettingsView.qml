@@ -474,6 +474,11 @@ FocusScope {
                         }
                     }
                     Loader {
+                        width: parent.width
+                        active: card.modelData.customType === "theme-bundles"
+                        sourceComponent: ThemeBundles {}
+                    }
+                    Loader {
                         id: editorLoader
                         objectName: root.schema.settings.find(item => item.section === card.modelData.id && item.editorOwned)?.id || "sharedEditor-" + card.modelData.id
                         width: parent.width

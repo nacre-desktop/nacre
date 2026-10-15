@@ -1,0 +1,1490 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nacre reviewed theme bundle catalog v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "mappingVersion",
+    "bundles"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "mappingVersion": {
+      "const": 1
+    },
+    "bundles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "version",
+          "upstream",
+          "modeNames",
+          "sourceColors",
+          "modes",
+          "wallpapers"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^bundle:[a-z0-9-]+$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "upstream": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url",
+              "revision",
+              "license",
+              "credit",
+              "licenseFile"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "pattern": "^https://"
+              },
+              "revision": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{40}$"
+              },
+              "license": {
+                "const": "MIT"
+              },
+              "credit": {
+                "type": "string",
+                "minLength": 1
+              },
+              "licenseFile": {
+                "type": "string",
+                "pattern": "^upstream/[A-Za-z-]+\\.txt$"
+              }
+            }
+          },
+          "modeNames": {
+            "type": "object",
+            "required": [
+              "dark",
+              "light"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "dark": {
+                "type": "string",
+                "minLength": 1
+              },
+              "light": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "sourceColors": {
+            "type": "object",
+            "required": [
+              "dark",
+              "light"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "dark": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string",
+                  "pattern": "^[a-fA-F0-9]{6}$"
+                }
+              },
+              "light": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string",
+                  "pattern": "^[a-fA-F0-9]{6}$"
+                }
+              }
+            }
+          },
+          "modes": {
+            "type": "object",
+            "required": [
+              "dark",
+              "light"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "dark": {
+                "type": "object",
+                "required": [
+                  "surface",
+                  "surfaceDim",
+                  "surfaceBright",
+                  "surfaceContainerLowest",
+                  "surfaceContainerLow",
+                  "surfaceContainer",
+                  "surfaceContainerHigh",
+                  "surfaceContainerHighest",
+                  "frame",
+                  "background",
+                  "surfaceVariant",
+                  "onSurface",
+                  "onSurfaceVariant",
+                  "shadow",
+                  "scrim",
+                  "onBackground",
+                  "outline",
+                  "outlineVariant",
+                  "inverseSurface",
+                  "inverseOnSurface",
+                  "primary",
+                  "onPrimary",
+                  "primaryDim",
+                  "primaryContainer",
+                  "onPrimaryContainer",
+                  "primaryFixed",
+                  "primaryFixedDim",
+                  "onPrimaryFixed",
+                  "onPrimaryFixedVariant",
+                  "primaryPaletteKeyColor",
+                  "primary_paletteKeyColor",
+                  "secondary",
+                  "onSecondary",
+                  "secondaryDim",
+                  "secondaryContainer",
+                  "onSecondaryContainer",
+                  "secondaryFixed",
+                  "secondaryFixedDim",
+                  "onSecondaryFixed",
+                  "onSecondaryFixedVariant",
+                  "secondaryPaletteKeyColor",
+                  "secondary_paletteKeyColor",
+                  "tertiary",
+                  "onTertiary",
+                  "tertiaryDim",
+                  "tertiaryContainer",
+                  "onTertiaryContainer",
+                  "tertiaryFixed",
+                  "tertiaryFixedDim",
+                  "onTertiaryFixed",
+                  "onTertiaryFixedVariant",
+                  "tertiaryPaletteKeyColor",
+                  "tertiary_paletteKeyColor",
+                  "error",
+                  "onError",
+                  "errorDim",
+                  "errorContainer",
+                  "onErrorContainer",
+                  "success",
+                  "onSuccess",
+                  "successDim",
+                  "successContainer",
+                  "onSuccessContainer",
+                  "surfaceTint",
+                  "overtone",
+                  "orient1",
+                  "orient2",
+                  "orient3",
+                  "inversePrimary",
+                  "neutralPaletteKeyColor",
+                  "neutralVariantPaletteKeyColor",
+                  "neutral_paletteKeyColor",
+                  "neutral_variant_paletteKeyColor",
+                  "errorPaletteKeyColor",
+                  "rosewater",
+                  "flamingo",
+                  "pink",
+                  "mauve",
+                  "red",
+                  "maroon",
+                  "peach",
+                  "yellow",
+                  "green",
+                  "teal",
+                  "sky",
+                  "sapphire",
+                  "blue",
+                  "lavender",
+                  "text",
+                  "subtext1",
+                  "subtext0",
+                  "overlay2",
+                  "overlay1",
+                  "overlay0",
+                  "surface2",
+                  "surface1",
+                  "surface0",
+                  "base",
+                  "mantle",
+                  "crust",
+                  "klink",
+                  "kvisited",
+                  "knegative",
+                  "kneutral",
+                  "kpositive",
+                  "klinkSelection",
+                  "kvisitedSelection",
+                  "knegativeSelection",
+                  "kneutralSelection",
+                  "kpositiveSelection",
+                  "term0",
+                  "term8",
+                  "term1",
+                  "term9",
+                  "term2",
+                  "term10",
+                  "term3",
+                  "term11",
+                  "term4",
+                  "term12",
+                  "term5",
+                  "term13",
+                  "term6",
+                  "term14",
+                  "term7",
+                  "term15"
+                ],
+                "additionalProperties": {
+                  "type": "string",
+                  "pattern": "^[a-fA-F0-9]{6}$"
+                },
+                "properties": {
+                  "surface": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceBright": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceContainerLowest": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceContainerLow": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceContainerHigh": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceContainerHighest": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "frame": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "background": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSurface": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSurfaceVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "shadow": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "scrim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onBackground": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "outline": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "outlineVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "inverseSurface": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "inverseOnSurface": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onPrimary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primaryDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onPrimaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primaryFixedDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onPrimaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onPrimaryFixedVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primaryPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primary_paletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSecondary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondaryDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSecondaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondaryFixedDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSecondaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSecondaryFixedVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondaryPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondary_paletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onTertiary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiaryDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onTertiaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiaryFixedDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onTertiaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onTertiaryFixedVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiaryPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiary_paletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "error": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onError": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "errorDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "errorContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onErrorContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "success": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSuccess": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "successDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "successContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSuccessContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceTint": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "overtone": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "orient1": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "orient2": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "orient3": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "inversePrimary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "neutralPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "neutralVariantPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "neutral_paletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "neutral_variant_paletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "errorPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "rosewater": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "flamingo": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "pink": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "mauve": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "red": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "maroon": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "peach": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "yellow": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "green": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "teal": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "sky": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "sapphire": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "blue": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "lavender": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "subtext1": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "subtext0": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "overlay2": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "overlay1": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "overlay0": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surface2": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surface1": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surface0": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "base": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "mantle": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "crust": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "klink": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kvisited": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "knegative": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kneutral": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kpositive": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "klinkSelection": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kvisitedSelection": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "knegativeSelection": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kneutralSelection": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kpositiveSelection": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term0": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term8": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term1": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term9": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term2": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term10": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term3": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term11": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term4": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term12": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term5": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term13": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term6": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term14": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term7": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term15": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  }
+                }
+              },
+              "light": {
+                "type": "object",
+                "required": [
+                  "surface",
+                  "surfaceDim",
+                  "surfaceBright",
+                  "surfaceContainerLowest",
+                  "surfaceContainerLow",
+                  "surfaceContainer",
+                  "surfaceContainerHigh",
+                  "surfaceContainerHighest",
+                  "frame",
+                  "background",
+                  "surfaceVariant",
+                  "onSurface",
+                  "onSurfaceVariant",
+                  "shadow",
+                  "scrim",
+                  "onBackground",
+                  "outline",
+                  "outlineVariant",
+                  "inverseSurface",
+                  "inverseOnSurface",
+                  "primary",
+                  "onPrimary",
+                  "primaryDim",
+                  "primaryContainer",
+                  "onPrimaryContainer",
+                  "primaryFixed",
+                  "primaryFixedDim",
+                  "onPrimaryFixed",
+                  "onPrimaryFixedVariant",
+                  "primaryPaletteKeyColor",
+                  "primary_paletteKeyColor",
+                  "secondary",
+                  "onSecondary",
+                  "secondaryDim",
+                  "secondaryContainer",
+                  "onSecondaryContainer",
+                  "secondaryFixed",
+                  "secondaryFixedDim",
+                  "onSecondaryFixed",
+                  "onSecondaryFixedVariant",
+                  "secondaryPaletteKeyColor",
+                  "secondary_paletteKeyColor",
+                  "tertiary",
+                  "onTertiary",
+                  "tertiaryDim",
+                  "tertiaryContainer",
+                  "onTertiaryContainer",
+                  "tertiaryFixed",
+                  "tertiaryFixedDim",
+                  "onTertiaryFixed",
+                  "onTertiaryFixedVariant",
+                  "tertiaryPaletteKeyColor",
+                  "tertiary_paletteKeyColor",
+                  "error",
+                  "onError",
+                  "errorDim",
+                  "errorContainer",
+                  "onErrorContainer",
+                  "success",
+                  "onSuccess",
+                  "successDim",
+                  "successContainer",
+                  "onSuccessContainer",
+                  "surfaceTint",
+                  "overtone",
+                  "orient1",
+                  "orient2",
+                  "orient3",
+                  "inversePrimary",
+                  "neutralPaletteKeyColor",
+                  "neutralVariantPaletteKeyColor",
+                  "neutral_paletteKeyColor",
+                  "neutral_variant_paletteKeyColor",
+                  "errorPaletteKeyColor",
+                  "rosewater",
+                  "flamingo",
+                  "pink",
+                  "mauve",
+                  "red",
+                  "maroon",
+                  "peach",
+                  "yellow",
+                  "green",
+                  "teal",
+                  "sky",
+                  "sapphire",
+                  "blue",
+                  "lavender",
+                  "text",
+                  "subtext1",
+                  "subtext0",
+                  "overlay2",
+                  "overlay1",
+                  "overlay0",
+                  "surface2",
+                  "surface1",
+                  "surface0",
+                  "base",
+                  "mantle",
+                  "crust",
+                  "klink",
+                  "kvisited",
+                  "knegative",
+                  "kneutral",
+                  "kpositive",
+                  "klinkSelection",
+                  "kvisitedSelection",
+                  "knegativeSelection",
+                  "kneutralSelection",
+                  "kpositiveSelection",
+                  "term0",
+                  "term8",
+                  "term1",
+                  "term9",
+                  "term2",
+                  "term10",
+                  "term3",
+                  "term11",
+                  "term4",
+                  "term12",
+                  "term5",
+                  "term13",
+                  "term6",
+                  "term14",
+                  "term7",
+                  "term15"
+                ],
+                "additionalProperties": {
+                  "type": "string",
+                  "pattern": "^[a-fA-F0-9]{6}$"
+                },
+                "properties": {
+                  "surface": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceBright": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceContainerLowest": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceContainerLow": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceContainerHigh": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceContainerHighest": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "frame": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "background": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSurface": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSurfaceVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "shadow": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "scrim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onBackground": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "outline": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "outlineVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "inverseSurface": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "inverseOnSurface": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onPrimary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primaryDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onPrimaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primaryFixedDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onPrimaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onPrimaryFixedVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primaryPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "primary_paletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSecondary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondaryDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSecondaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondaryFixedDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSecondaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSecondaryFixedVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondaryPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "secondary_paletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onTertiary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiaryDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onTertiaryContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiaryFixedDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onTertiaryFixed": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onTertiaryFixedVariant": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiaryPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "tertiary_paletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "error": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onError": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "errorDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "errorContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onErrorContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "success": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSuccess": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "successDim": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "successContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "onSuccessContainer": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surfaceTint": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "overtone": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "orient1": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "orient2": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "orient3": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "inversePrimary": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "neutralPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "neutralVariantPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "neutral_paletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "neutral_variant_paletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "errorPaletteKeyColor": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "rosewater": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "flamingo": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "pink": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "mauve": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "red": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "maroon": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "peach": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "yellow": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "green": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "teal": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "sky": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "sapphire": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "blue": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "lavender": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "subtext1": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "subtext0": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "overlay2": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "overlay1": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "overlay0": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surface2": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surface1": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "surface0": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "base": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "mantle": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "crust": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "klink": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kvisited": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "knegative": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kneutral": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kpositive": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "klinkSelection": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kvisitedSelection": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "knegativeSelection": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kneutralSelection": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "kpositiveSelection": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term0": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term8": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term1": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term9": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term2": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term10": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term3": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term11": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term4": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term12": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term5": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term13": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term6": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term14": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term7": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  },
+                  "term15": {
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{6}$"
+                  }
+                }
+              }
+            }
+          },
+          "wallpapers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "mode",
+                "name",
+                "file",
+                "sourceFile",
+                "sha256",
+                "sourceSha256",
+                "size",
+                "license",
+                "artist",
+                "source"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "artist": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "mode": {
+                  "enum": [
+                    "dark",
+                    "light"
+                  ]
+                },
+                "file": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+\\.png$"
+                },
+                "sourceFile": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+\\.svg$"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "sourceSha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "size": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "license": {
+                  "const": "CC0-1.0"
+                }
+              }
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      }
+    }
+  }
+}

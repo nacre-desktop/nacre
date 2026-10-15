@@ -309,7 +309,13 @@ fn run() -> Result<i32> {
         let input = if arguments.first().is_some_and(|a| {
             matches!(
                 a.as_str(),
-                "import" | "clone" | "theme-import" | "theme-export" | "open" | "tui-create"
+                "import"
+                    | "clone"
+                    | "theme-import"
+                    | "theme-export"
+                    | "open"
+                    | "tui-create"
+                    | "bundle-apply"
             )
         }) {
             let mut line = String::new();

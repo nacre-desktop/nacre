@@ -8,6 +8,14 @@
       "order": -1
     },
     {
+      "id": "colors.bundles",
+      "page": "colors",
+      "labelId": "software.bundle.title",
+      "descriptionId": "software.bundle.description",
+      "order": 1,
+      "customType": "theme-bundles"
+    },
+    {
       "id": "panels.overview",
       "page": "panels",
       "labelId": "settings.registry.panels.overview.label",

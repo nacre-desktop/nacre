@@ -1,8 +1,10 @@
-# Software roadmap: Phase 2 proposal
+# Software roadmap: Phase 2
 
-Status: planning only, 2026-10-15. This document does not enable theme bundles,
-an extension feed or a different AUR installation policy. Those changes require
-a separately approved implementation. Phase 1 is described in
+Status: approved Phase 2 implementation in progress, 2026-10-15. The two
+[theme bundle pilots](theme-bundles.md) and registered monospace/Kitty font choice
+are implemented in source. Remaining proposals below describe their own scope;
+this document does not enable an extension feed or a different AUR installation
+policy. Phase 1 is described in
 [software-phase-one.md](software-phase-one.md).
 
 ## Named theme bundles
@@ -37,7 +39,7 @@ light adaptations must be named and credited as Nacre adaptations.
 | [Rosé Pine](https://rosepinetheme.com/palette/) | Main or Moon / Dawn | Soft botanical and architectural images |
 | [Solarized](https://github.com/altercation/solarized) | Upstream dark / light | Balanced blue, cream and low-detail scenes |
 
-Begin with two bundles that already have upstream dark/light variants. Validate
+The two pilots are Catppuccin Mocha/Latte and Rosé Pine Main/Dawn. Validate
 readability, selected/disabled states, terminal colors, external app exports,
 multiple wallpaper aspect ratios and offline operation. Add the remaining
 candidates only after the role mapping and asset rights are reviewed. Avoid

@@ -63,6 +63,11 @@ class SettingsPrototypeTests(unittest.TestCase):
                     stage_qml(
                         SHELL / folder / (name + ".qml"), fixtures / (name + ".qml")
                     )
+            for name in ["NacreBundlePreview", "NacreThemePreview", "NacreMenuButton"]:
+                stage_qml(
+                    SHELL / "modules/launcher" / (name + ".qml"),
+                    fixtures / (name + ".qml"),
+                )
             install_foundation_interaction(fixtures, SHELL / "widgets")
             schema_root = SHELL / "modules/settings/registry"
             manifest = json.loads((schema_root / "manifest.json").read_text())

@@ -3379,5 +3379,13 @@
   "software.fonts.mono-title": "Monospace font choice shared by Kitty and Nacre. {font} is an installed font family.",
   "software.fonts.mono-description": "Monospace font choice shared by Kitty and Nacre. {font} is an installed font family.",
   "software.fonts.mono-choice": "Monospace font choice shared by Kitty and Nacre. {font} is an installed font family.",
-  "software.fonts.mono-preview": "Monospace font choice shared by Kitty and Nacre. {font} is an installed font family."
+  "software.fonts.mono-preview": "Monospace font choice shared by Kitty and Nacre. {font} is an installed font family.",
+  "software.bundle.title": "Theme bundle preview and explicit apply scope; palette and wallpaper can be applied independently.",
+  "software.bundle.description": "Theme bundle preview and explicit apply scope; palette and wallpaper can be applied independently.",
+  "software.bundle.both": "Theme bundle preview and explicit apply scope; palette and wallpaper can be applied independently.",
+  "software.bundle.palette": "Theme bundle preview and explicit apply scope; palette and wallpaper can be applied independently.",
+  "software.bundle.wallpaper": "Theme bundle preview and explicit apply scope; palette and wallpaper can be applied independently.",
+  "software.bundle.apply-scope": "Theme bundle preview and explicit apply scope; palette and wallpaper can be applied independently.",
+  "software.bundle.apply": "Theme bundle preview and explicit apply scope; palette and wallpaper can be applied independently.",
+  "software.bundle.credit": "{credit} names the upstream palette author; explains independent image licensing and adapted rendering."
 }

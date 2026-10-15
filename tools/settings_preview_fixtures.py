@@ -249,7 +249,7 @@ def stage(target, *, icons=False):
         "NacreBrightness": "function getMonitorForScreen(screen){return {available:true}}",
         "NacreKeyboardLight": "property bool available:true",
         "NacreProfile": "property bool ai:true;property bool brain:true;property var data:({workspaceCount:5})",
-        "NacreWallpapers": "property string thumbnail: Qt.resolvedUrl('../wallpaper-demo.svg').toString().replace('file://','');property string current: '';property var appearancePreferences:({})",
+        "NacreWallpapers": "property string thumbnail: Qt.resolvedUrl('../wallpaper-demo.svg').toString().replace('file://','');property string current: '';property var appearancePreferences:({});property bool themeBusy:false",
         "DesktopExtras": "property var busy:({});property string message:'';property var keys:[{key:'Super+Space',description:'Launcher'},{key:'Super+Ctrl+D',description:'Detach panel'}];function request(kind,data){}",
         "NacreSettingsStorage": "property var documents:("
         + json.dumps(
@@ -267,6 +267,24 @@ def stage(target, *, icons=False):
     }
     for name, body in simple.items():
         singleton(services, name, body)
+    bundles = json.loads(
+        (ROOT / "nacre/shell-tools/theme-bundles/catalog.json").read_text()
+    )["bundles"]
+    for bundle in bundles:
+        bundle["bundle"] = True
+        bundle["credit"] = (
+            bundle["upstream"]["credit"]
+            + " · MIT palette; Nacre Orbits · CC0. Orient adaptation."
+        )
+        for wallpaper in bundle["wallpapers"]:
+            wallpaper["path"] = str(
+                ROOT / "nacre/shell-tools/theme-bundles" / wallpaper["file"]
+            )
+    (services / "NacreSoftwareLibrary.qml").write_text(
+        "import QtQuick\nQtObject {property bool active:true;property bool busy:false;property string message:'';property var data:"
+        + json.dumps({"themes": bundles})
+        + ";function work(operation,value,payload){}}"
+    )
     (target / "wallpaper-demo.svg").write_text(
         '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#304c61"/><circle cx="450" cy="100" r="45" fill="#b3cdd7"/><path d="M0 230L150 100L300 260L460 160L640 270V360H0Z" fill="#607d88"/><path d="M0 320L210 190L420 330L570 210L640 280V360H0Z" fill="#213d4d"/></svg>'
     )

@@ -3325,5 +3325,13 @@
   "software.fonts.mono-title": "Terminal font",
   "software.fonts.mono-description": "Choose fonts for Kitty and Nacre monospace text",
   "software.fonts.mono-choice": "Terminal font: {font}",
-  "software.fonts.mono-preview": "Use for Kitty and Nacre monospace text"
+  "software.fonts.mono-preview": "Use for Kitty and Nacre monospace text",
+  "software.bundle.title": "Theme bundles",
+  "software.bundle.description": "Preview dark and light palettes with original wallpapers before applying.",
+  "software.bundle.both": "Palette and wallpaper",
+  "software.bundle.palette": "Palette only",
+  "software.bundle.wallpaper": "Wallpaper only",
+  "software.bundle.apply-scope": "What to apply",
+  "software.bundle.apply": "Apply selection",
+  "software.bundle.credit": "{credit} · MIT palette; Nacre Orbits wallpapers · CC0. Orient adaptation; rendering differs from upstream."
 }

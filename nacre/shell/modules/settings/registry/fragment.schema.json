@@ -142,7 +142,8 @@
               "device-content",
               "shortcuts",
               "publisher-targets",
-              "addon-cards"
+              "addon-cards",
+              "theme-bundles"
             ]
           },
           "editor": {

@@ -717,6 +717,12 @@ impl Publisher {
             let presets: Value =
                 serde_json::from_slice(&fs::read(self.assets.join("palette-presets.json"))?)?;
             let mut presets = presets.as_array().ok_or("Invalid palette presets")?.clone();
+            presets.extend(
+                crate::theme_bundles::catalog(&self.assets)?
+                    .as_array()
+                    .ok_or("Invalid bundles")?
+                    .clone(),
+            );
             let stored = state::read(&paths.config.join("colors.json"), json!({}))?;
             if let Some(favorites) = stored["favorites"].as_array() {
                 for favorite in favorites {

@@ -148,6 +148,15 @@ impl Media {
                 presets.as_array_mut().ok_or("Invalid palette presets")?.push(json!({"id":format!("favorite:{}",favorite["id"].as_str().unwrap()),"name":favorite["name"],"seed":favorite["palette"]["colours"]["overtone"],"group":"saved","swatches":favorite["swatches"],"surface":favorite["modes"]["dark"]["frame"],"modes":favorite["modes"]}));
             }
         }
+        presets
+            .as_array_mut()
+            .ok_or("Invalid palette presets")?
+            .extend(
+                crate::theme_bundles::catalog(&self.assets)?
+                    .as_array()
+                    .ok_or("Invalid bundles")?
+                    .clone(),
+            );
         Ok(presets)
     }
     pub fn preference(&self, value: &Value) -> Result<Value> {
