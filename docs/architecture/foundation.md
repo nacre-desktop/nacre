@@ -130,13 +130,26 @@ PipeWire/tray now, build a native lock, use D-Bus/Varlink/gRPC/binary encoding f
 the private link, or move nacre-shell mid-feature.
 
 F0 records this charter and protocol. F1 builds the daemon/link and read-only
-compositor service. F2 folds in always-on helpers, one commit each. F3 adds the
-QML client and repository-default keybindings. F4 makes settings single-writer
+compositor service. F2 folds in always-on helpers, one commit each. The launcher
+engine step below follows F2. F3 adds the QML client, launcher query client and
+repository-default keybindings. F4 makes settings single-writer
 and then stops for a report. CI must be green before each next step.
 
+Owner sequencing update, 2026-10-15: port the current `services/app-search.js`,
+`modules/launcher/menu-model.js` and `app-browser.js` ranking/provider behavior to
+a Rust library hosted by the daemon immediately after F2, before F3. Publish
+`menu.query` request/result schemas and golden transcripts in nacre-protocol as
+the first commit, so Bead can build its client. Freeze current JS ordered results
+for query/catalog fixtures before porting; match them exactly. Index application
+folders with inotify, keep frecency in the existing launcher-preferences store
+with one writer, and reuse menu-backend's special searches as providers. Add
+`menu.activate` only if needed. Measure daemon CPU/query and p50/p99 at realistic
+catalog sizes, aiming well below 1 ms per keystroke. F3 switches the QML launcher
+behind the same fallback setting; its JavaScript path stays for one release.
+
 Bead proceeds independently with F5 headless services, deterministic testing,
-crash safety, data sources and compositor blur. Hosting its notification server,
-extracting the launcher engine/menu.query, and nightly fuzz/soak jobs are deferred.
+crash safety, data sources and compositor blur. Hosting its notification server
+and nightly fuzz/soak jobs are deferred.
 The rest of the migration follows one rule: long-running or frequently called
 work becomes a daemon service; rare, heavy or risky work becomes a worker.
 

@@ -172,6 +172,10 @@ Generation is deterministic and CI rejects stale files. Goldens cover handshake,
 snapshot/coalesced patch/resync, calls/errors, events/lost, UI routing and restart.
 Clients replay the same committed transcripts. Property tests cover patch
 round trips and recovery after gaps; fuzz targets cover framing and merge patch.
+JSON object key order is not part of the wire contract; clients compare decoded
+messages. The protocol library enables only Tokio's I/O utilities and leaves JSON
+map ordering to its consumer. Export tests alone enable deterministic ordered maps;
+CI also builds a separate consumer to catch dependency-feature leakage.
 Nested niri and Hyprland tests subscribe, kill -9, restart and verify resync.
 Nightly jobs and the full three-hour soak remain deferred to the later rails step.
 
