@@ -22,8 +22,15 @@ conflicting edits. Startup entries are argument arrays, not shell snippets.
 
 On Niri, each monitor’s bar shows its own workspaces, active marker and window
 hints, even when another monitor has focus. Clicking or scrolling that row
-switches workspaces on that monitor. Niri keeps a trailing empty workspace on
-each output.
+switches workspaces on that monitor. When an output has a full set of named workspaces matching `workspaceCount`,
+the bar keeps that configured set and leaves Niri’s automatic spare out of the
+row. Native overview can still reach workspaces outside the configured set.
+
+To keep equal persistent sets across known monitors, `desktop.json` can contain
+`niriWorkspaceOutputs`, mapping output names to arrays of unique workspace names.
+Each array must contain exactly `workspaceCount` names; session preparation writes
+`open-on-output` declarations. Names must be unique across monitors. These private
+monitor preferences remain outside the profile repository.
 
 Niri workspace numbers are dynamic on each output; its preparation path converts
 profile routes to named workspaces.

@@ -10,6 +10,12 @@ Item {
     property string outputName: ""
     readonly property bool perOutput: NacreCompositor.capabilities?.perOutputWorkspaces === true
     readonly property var outputWorkspaces: perOutput ? NacreCompositor.workspaces.values.filter(value => value.outputId === outputName) : []
+    // A complete configured set of named workspaces is persistent. Keep Niri's
+    // automatic spare outside that set, including while another output has focus.
+    readonly property var rowWorkspaces: {
+        const named = outputWorkspaces.filter(value => !!value.name).sort((a, b) => a.index - b.index);
+        return named.length >= NacreBar.workspaceCount ? named.slice(0, NacreBar.workspaceCount) : outputWorkspaces;
+    }
     readonly property int activeWorkspaceIndex: perOutput ? outputWorkspaces.find(value => value.active)?.index ?? 0 : NacreCompositor.activeWsId
     property real availableWidth: 640
     property bool ready: false
@@ -45,7 +51,7 @@ Item {
     }
     readonly property var workspaceIds: {
         if (perOutput)
-            return outputWorkspaces.map(value => value.index).sort((a, b) => a - b);
+            return rowWorkspaces.map(value => value.index).sort((a, b) => a - b);
         const ids = new Set(Array.from({
             length: NacreBar.workspaceCount
         }, (_, index) => index + 1));

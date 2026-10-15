@@ -181,6 +181,52 @@ TestCase {
         tryCompare(external, "activeCell", null);
         verify(!external.activate(1));
     }
+    function test_six_persistent_workspaces_per_output_exclude_the_automatic_spare() {
+        NacreBar.workspaceCount = 6;
+        NacreCompositor.capabilities = ({
+                perOutputWorkspaces: true
+            });
+        const values = [];
+        for (const output of ["test", "external"]) {
+            for (let index = 1; index <= 7; index++)
+                values.push({
+                    id: output + ":" + index,
+                    index: index,
+                    outputId: output,
+                    name: index <= 6 ? output + "-" + index : "",
+                    active: index === 1
+                });
+        }
+        NacreCompositor.workspaces = ({
+                values: values
+            });
+        const laptop = createTemporaryObject(row, test, {
+            outputName: "test"
+        });
+        const external = createTemporaryObject(row, test, {
+            outputName: "external"
+        });
+        for (const output of ["test", "external", "test"]) {
+            NacreCompositor.focusedMonitor = ({
+                    name: output
+                });
+            compare(laptop.workspaceIds.join(","), "1,2,3,4,5,6");
+            compare(external.workspaceIds.join(","), "1,2,3,4,5,6");
+            verify(!laptop.activate(7));
+            verify(external.activate(6));
+            compare(NacreCompositor.requests.pop(), "workspace external:6");
+        }
+        // Populating the sixth slot changes the active workspace, never the count.
+        NacreCompositor.workspaces = ({
+                values: values.map(value => Object.assign({}, value, {
+                        active: value.index === 6
+                    }))
+            });
+        tryVerify(() => laptop.activeCell?.workspaceId === 6);
+        tryVerify(() => external.activeCell?.workspaceId === 6);
+        compare(laptop.workspaceIds.length, 6);
+        compare(external.workspaceIds.length, 6);
+    }
     function test_numbered_pearls_use_readable_ink_for_dark_and_pale_accents() {
         const pearl = createTemporaryObject(pearlView, test, {
             workspaceId: 12,

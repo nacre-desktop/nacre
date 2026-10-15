@@ -461,9 +461,7 @@ pub fn prepare_configuration(
         ));
     }
     text.push_str("include \"desktop.kdl\"\n");
-    for name in names {
-        text.push_str(&format!("workspace {}\n", json::encode(&name)?));
-    }
+    text.push_str(&workspace_declarations(&names, &desktop)?);
     text.push_str("hotkey-overlay {\n    skip-at-startup\n}\n");
     fs::write(config.join("config.kdl"), text)?;
     for file in fs::read_dir(&config)? {
@@ -476,6 +474,45 @@ pub fn prepare_configuration(
         fs::set_permissions(marker, fs::Permissions::from_mode(0o600))?;
     }
     Ok(())
+}
+
+fn workspace_declarations(names: &[String], desktop: &Value) -> Result<String> {
+    let mut text = String::new();
+    if let Some(outputs) = desktop.get("niriWorkspaceOutputs") {
+        let outputs = outputs
+            .as_object()
+            .filter(|map| !map.is_empty())
+            .ok_or("Invalid workspace outputs")?;
+        let mut seen = std::collections::HashSet::new();
+        for (output, workspaces) in outputs {
+            if output.is_empty() || output.len() > 256 {
+                return Err("Invalid workspace output name".into());
+            }
+            let workspaces = workspaces
+                .as_array()
+                .filter(|rows| rows.len() == names.len())
+                .ok_or("Each output must have the configured workspace count")?;
+            for name in workspaces {
+                let name = name
+                    .as_str()
+                    .filter(|name| !name.is_empty() && name.len() <= 200)
+                    .ok_or("Invalid persistent workspace name")?;
+                if !seen.insert(name) {
+                    return Err("Persistent workspace names must be unique across outputs".into());
+                }
+                text.push_str(&format!(
+                    "workspace {} {{\n    open-on-output {}\n}}\n",
+                    json::encode(&name)?,
+                    json::encode(output)?
+                ));
+            }
+        }
+    } else {
+        for name in names {
+            text.push_str(&format!("workspace {}\n", json::encode(name)?));
+        }
+    }
+    Ok(text)
 }
 
 fn append_scales(preferences: &mut String, desktop: &Value) -> Result<()> {
@@ -757,6 +794,30 @@ pub fn run(args: &[String]) -> Result<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn persistent_workspace_sets_have_equal_counts_and_distinct_names() -> Result<()> {
+        let names: Vec<String> = (1..=6).map(|i| format!("nacre-{i}")).collect();
+        let external: Vec<String> = (1..=6).map(|i| format!("external-{i}")).collect();
+        let desktop = value!({"niriWorkspaceOutputs":{"eDP-1":names,"DP-1":external}});
+        let text = workspace_declarations(&names, &desktop)?;
+        assert_eq!(text.matches("workspace ").count(), 12);
+        assert_eq!(text.matches("open-on-output \"eDP-1\"").count(), 6);
+        assert_eq!(text.matches("open-on-output \"DP-1\"").count(), 6);
+        assert!(
+            workspace_declarations(&names, &value!({"niriWorkspaceOutputs":{"DP-1":["one"]}}))
+                .is_err()
+        );
+        assert!(workspace_declarations(
+            &names,
+            &value!({"niriWorkspaceOutputs":{"eDP-1":names,"DP-1":names}})
+        )
+        .is_err());
+        assert_eq!(
+            workspace_declarations(&names, &value!({}))?.lines().count(),
+            6
+        );
+        Ok(())
+    }
     #[test]
     fn frozen_original_argument_parser_help_errors_and_exit_codes() -> Result<()> {
         for source in [
