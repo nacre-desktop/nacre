@@ -652,6 +652,50 @@ def ssh_exec(host, command):
     os.execvpe("ssh", ["ssh", "-t", host, command], ssh_environment())
 
 
+def history_worker_command(child):
+    """Keep history and resumed workers out of Niri's code-overlay user namespace.
+
+    Bubblewrap's single-user mapping hides host root ownership from OpenSSH,
+    which then rejects system configuration files. The normal user manager
+    launches the existing worker with a terminal and the selected environment.
+    """
+    if os.environ.get("NACRE_COMPOSITOR") != "niri":
+        return child
+    try:
+        mappings = Path("/proc/self/uid_map").read_text().splitlines()
+        if not mappings or any(int(row.split()[1]) == 0 for row in mappings):
+            return child
+    except (OSError, ValueError, IndexError):
+        return child
+    runner = shutil.which("systemd-run")
+    if not runner:
+        return child
+    command = [
+        runner,
+        "--user",
+        "--quiet",
+        "--wait",
+        "--collect",
+        "--pty" if sys.stdout.isatty() else "--pipe",
+        "--working-directory=" + str(Path.cwd()),
+    ]
+    for name in (
+        "PATH",
+        "TERM",
+        "LANG",
+        "LC_ALL",
+        "SSH_AUTH_SOCK",
+        "CODEX_HOME",
+        "NACRE_AI_PROJECTS",
+        "NACRE_BRAIN",
+        "NACRE_BRAIN_DIR",
+        "NACRE_COMPOSITOR",
+    ):
+        if name in os.environ:
+            command.append("--setenv=" + name + "=" + os.environ[name])
+    return [*command, "--", *child]
+
+
 def worker_window(args):
     """Keep startup failures visible instead of losing the new terminal."""
     if sys.stdout.isatty():
@@ -663,7 +707,7 @@ def worker_window(args):
             child += ["--project", args.project]
         if args.account is not None:
             child += ["--account", args.account]
-        result = subprocess.run(child)
+        result = subprocess.run(history_worker_command(child))
         if result.returncode:
             input(
                 tr(

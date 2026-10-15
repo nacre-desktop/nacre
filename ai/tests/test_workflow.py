@@ -26,6 +26,61 @@ def module(name):
     return loaded
 
 
+class HistoryNamespaceTests(unittest.TestCase):
+    def test_niri_history_worker_uses_host_terminal_and_selected_account(self):
+        ai = module("nacre-ai")
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "NACRE_COMPOSITOR": "niri",
+                    "CODEX_HOME": "/selected/account",
+                    "SSH_AUTH_SOCK": "/selected/agent.sock",
+                    "TERM": "xterm-kitty",
+                },
+                clear=True,
+            ),
+            patch.object(Path, "read_text", return_value="1000 1000 1\n"),
+            patch.object(ai.shutil, "which", return_value="/usr/bin/systemd-run"),
+            patch.object(ai.sys.stdout, "isatty", return_value=True),
+            patch.object(
+                ai.subprocess, "run", return_value=SimpleNamespace(returncode=0)
+            ) as run,
+        ):
+            ai.worker_window(
+                SimpleNamespace(worker_command="sessions", project=None, account="work")
+            )
+        command = run.call_args.args[0]
+        self.assertEqual(command[0], "/usr/bin/systemd-run")
+        self.assertIn("--pty", command)
+        self.assertIn("--setenv=CODEX_HOME=/selected/account", command)
+        self.assertIn("--setenv=SSH_AUTH_SOCK=/selected/agent.sock", command)
+        self.assertEqual(command[-3:], ["sessions", "--account", "work"])
+
+    def test_normal_niri_and_other_desktops_keep_direct_worker(self):
+        ai = module("nacre-ai")
+        child = ["python", "nacre-ai", "sessions"]
+        for desktop, mapping in (
+            ("niri", "0 0 4294967295\n"),
+            ("hyprland", "1000 1000 1\n"),
+        ):
+            with (
+                patch.dict(os.environ, NACRE_COMPOSITOR=desktop),
+                patch.object(Path, "read_text", return_value=mapping),
+            ):
+                self.assertEqual(ai.history_worker_command(child), child)
+
+    def test_missing_user_manager_tool_keeps_existing_launch_path(self):
+        ai = module("nacre-ai")
+        child = ["python", "nacre-ai", "sessions"]
+        with (
+            patch.dict(os.environ, NACRE_COMPOSITOR="niri"),
+            patch.object(Path, "read_text", return_value="1000 1000 1\n"),
+            patch.object(ai.shutil, "which", return_value=None),
+        ):
+            self.assertEqual(ai.history_worker_command(child), child)
+
+
 class AgentProfilePolicyTests(unittest.TestCase):
     def test_full_access_requires_an_explicit_personal_profile(self):
         with (
