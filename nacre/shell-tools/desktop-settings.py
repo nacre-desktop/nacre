@@ -41,6 +41,7 @@ PRESET_KEYS = [
     for key in DEFAULTS
     if key not in INPUT_KEYS
     and key != "language"
+    and key != "monoFont"
     and not key.startswith(("lock", "weather", "interface"))
 ]
 OPTIONS = set(compositor.desktop_option_keys())
@@ -155,6 +156,12 @@ def config_lua(data):
     return compositor.render_desktop_options(data)
 
 
+def publish_mono_font(family):
+    from nacre_native_config import _binary
+
+    subprocess.run([str(_binary()), "terminal-font", family], check=True, timeout=10)
+
+
 def persist(data):
     if (
         compositor.capabilities.get("perOutputWorkspaces")
@@ -265,7 +272,9 @@ def main():
             if a.action == "init":
                 if PENDING.exists():
                     revert()
-                persist(load())
+                data = load()
+                publish_mono_font(data.get("monoFont", ""))
+                persist(data)
                 ensure_include()
             elif a.action == "set":
                 key, raw = a.args
@@ -292,7 +301,16 @@ def main():
                 data[key] = value
                 if key in OPTIONS or key in INPUT_KEYS:
                     compositor.set_desktop_options({key: value}, timeout=8)
-                persist(data)
+                if key == "monoFont":
+                    previous = load().get("monoFont", "")
+                    publish_mono_font(value)
+                    try:
+                        palette.atomic_write(STATE, json.dumps(data, indent=2) + "\n")
+                    except Exception:
+                        publish_mono_font(previous)
+                        raise
+                else:
+                    persist(data)
                 if key == "interfaceGradients":
                     scheme = HOME / ".local/state/nacre/scheme.json"
                     if scheme.exists():

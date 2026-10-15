@@ -51,6 +51,13 @@ fn run() -> Result<i32> {
     if tool == "login-appearance" {
         return nacre_helper::login_appearance::run(&arguments);
     }
+    if tool == "terminal-font" {
+        let [family] = arguments.as_slice() else {
+            return Err("Expected a font family (empty resets to the default)".into());
+        };
+        nacre_helper::terminal_font::publish(&nacre_helper::paths::Paths::environment()?, family)?;
+        return Ok(0);
+    }
     if tool == "terminal-branding" {
         return nacre_helper::terminal_branding::run(&arguments);
     }

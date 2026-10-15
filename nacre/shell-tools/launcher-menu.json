@@ -722,6 +722,16 @@
       "descriptionId": "launcher.catalog.style.fonts.description"
     },
     {
+      "id": "style.mono-fonts",
+      "kind": "group",
+      "label": "Terminal font",
+      "icon": "terminal",
+      "description": "Choose fonts for Kitty and Nacre monospace text",
+      "provider": "fonts",
+      "labelId": "software.fonts.mono-title",
+      "descriptionId": "software.fonts.mono-description"
+    },
+    {
       "id": "style.animations",
       "kind": "action",
       "label": "Animations",

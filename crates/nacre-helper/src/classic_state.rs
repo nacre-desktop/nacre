@@ -8,6 +8,58 @@ use std::{
     path::Path,
 };
 
+/// Reload only terminals owned by this UID and exact HOME (never another session).
+pub fn reload_terminals(home: &Path) {
+    let reload = || -> Result<()> {
+        // Keep nested/private publication away from another HOME's terminals.
+        for entry in fs::read_dir("/proc")? {
+            let entry = entry?;
+            let Some(pid) = entry
+                .file_name()
+                .to_str()
+                .and_then(|s| s.parse::<i32>().ok())
+                .and_then(rustix::process::Pid::from_raw)
+            else {
+                continue;
+            };
+            let root = entry.path();
+            let notify = || -> Result<()> {
+                if fs::metadata(&root)?.uid() != nix::unistd::getuid().as_raw()
+                    || fs::read_to_string(root.join("comm"))?.trim() != "kitty"
+                {
+                    return Ok(());
+                }
+                let environment = fs::read(root.join("environ"))?;
+                let expected = format!("HOME={}", home.display());
+                if !environment
+                    .split(|byte| *byte == 0)
+                    .any(|value| value == expected.as_bytes())
+                {
+                    return Ok(());
+                }
+                let descriptor =
+                    rustix::process::pidfd_open(pid, rustix::process::PidfdFlags::empty())?;
+                rustix::process::pidfd_send_signal(&descriptor, rustix::process::Signal::USR1)?;
+                Ok(())
+            };
+            if let Err(error) = notify() {
+                if !error.downcast_ref::<std::io::Error>().is_some_and(|e| {
+                    matches!(
+                        e.kind(),
+                        std::io::ErrorKind::NotFound | std::io::ErrorKind::PermissionDenied
+                    )
+                }) {
+                    eprintln!("Terminal palette reload: {error}");
+                }
+            }
+        }
+        Ok(())
+    };
+    if let Err(error) = reload() {
+        eprintln!("Terminal configuration reload: {error}");
+    }
+}
+
 fn encoded<T: serde::Serialize>(value: &T) -> Result<String> {
     json::dumps(value, false)
 }
@@ -859,48 +911,7 @@ impl Publisher {
         config: &str,
         connection: Option<&zbus::blocking::Connection>,
     ) -> Result<()> {
-        // Keep nested/private publication away from another HOME's terminals.
-        for entry in fs::read_dir("/proc")? {
-            let entry = entry?;
-            let Some(pid) = entry
-                .file_name()
-                .to_str()
-                .and_then(|s| s.parse::<i32>().ok())
-                .and_then(rustix::process::Pid::from_raw)
-            else {
-                continue;
-            };
-            let root = entry.path();
-            let notify = || -> Result<()> {
-                if fs::metadata(&root)?.uid() != nix::unistd::getuid().as_raw()
-                    || fs::read_to_string(root.join("comm"))?.trim() != "kitty"
-                {
-                    return Ok(());
-                }
-                let environment = fs::read(root.join("environ"))?;
-                let expected = format!("HOME={}", self.paths.home.display());
-                if !environment
-                    .split(|byte| *byte == 0)
-                    .any(|value| value == expected.as_bytes())
-                {
-                    return Ok(());
-                }
-                let descriptor =
-                    rustix::process::pidfd_open(pid, rustix::process::PidfdFlags::empty())?;
-                rustix::process::pidfd_send_signal(&descriptor, rustix::process::Signal::USR1)?;
-                Ok(())
-            };
-            if let Err(error) = notify() {
-                if !error.downcast_ref::<std::io::Error>().is_some_and(|e| {
-                    matches!(
-                        e.kind(),
-                        std::io::ErrorKind::NotFound | std::io::ErrorKind::PermissionDenied
-                    )
-                }) {
-                    eprintln!("Terminal palette reload: {error}");
-                }
-            }
-        }
+        reload_terminals(&self.paths.home);
         if let Some(connection) = connection {
             if let Err(error) = publish_dconf(
                 connection,

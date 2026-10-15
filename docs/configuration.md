@@ -114,3 +114,17 @@ file for changes; these owner switches are separate from whether a tool or devic
 is available. Invalid or newer stores are left untouched and use safe defaults.
 `webEngine` selects `duckduckgo` (default), `google` or `brave` for the generic web
 search result. Saved named web searches keep their explicit URLs.
+
+### Monospace and terminal fonts
+
+Style → Terminal font and Settings → Appearance → Fonts share the registered
+`appearance.fonts.monoFont` preference in `desktop.json`. The curated Phase 1
+families can be installed from Style; installed families are selectable without
+changing the interface font. Ordinary launcher search finds terminal font choices.
+Nacre monospace text and Kitty use this choice. An empty choice restores the
+Nacre terminal default, JetBrainsMono Nerd Font. Desktop presets preserve it.
+
+Kitty reads a generated `nacre/kitty-font.conf` include and reloads its configuration
+when the choice changes. Private Kitty `custom.conf` remains the final override.
+Only this user's terminals with the same HOME are notified; nested fixture homes
+cannot reload the owner's terminals. See [Kitty configuration](https://sw.kovidgoyal.net/kitty/conf/).

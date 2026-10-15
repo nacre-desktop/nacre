@@ -1858,7 +1858,12 @@
       },
       "default": "",
       "apply": "instant",
-      "synonyms": [],
+      "synonyms": [
+        "terminal",
+        "Kitty",
+        "monospace",
+        "code"
+      ],
       "advanced": false,
       "picker": "font"
     },

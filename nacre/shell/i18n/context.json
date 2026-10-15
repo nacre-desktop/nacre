@@ -3375,5 +3375,9 @@
   "settings.registry.ui.shortcuts-empty": "Settings graphical selector, preview fixture or input status. System identifiers remain unchanged.",
   "settings.registry.keyboard-mouse.shake-planned": "Settings graphical selector, preview fixture or input status. System identifiers remain unchanged.",
   "settings.registry.ui.custom-command": "Settings graphical selector, preview fixture or input status. System identifiers remain unchanged.",
-  "settings.registry.ui.choose-app": "Settings graphical selector, preview fixture or input status. System identifiers remain unchanged."
+  "settings.registry.ui.choose-app": "Settings graphical selector, preview fixture or input status. System identifiers remain unchanged.",
+  "software.fonts.mono-title": "Monospace font choice shared by Kitty and Nacre. {font} is an installed font family.",
+  "software.fonts.mono-description": "Monospace font choice shared by Kitty and Nacre. {font} is an installed font family.",
+  "software.fonts.mono-choice": "Monospace font choice shared by Kitty and Nacre. {font} is an installed font family.",
+  "software.fonts.mono-preview": "Monospace font choice shared by Kitty and Nacre. {font} is an installed font family."
 }

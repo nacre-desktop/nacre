@@ -366,7 +366,7 @@ Scope {
                     status: entry.accent === NacreWallpapers.selectedAccent ? NacreI18n.tr("ui.menu-context.status.in-use", "In use") : ""
                 }));
         if (node.provider === "fonts")
-            return fontRows();
+            return fontRows(route === "style.mono-fonts");
         if (node.provider === "windows")
             return windowSearchRecords.map(client => valueRow(route, String(client.windowId), NacreI18n.windowCaption(client.title || client.wmClass, client.wmClass), "focus", client.windowId, "window", NacreI18n.tr("launcher.provider.workspace", "Workspace {workspace}", {
                     workspace: client.workspaceName
@@ -959,12 +959,15 @@ Scope {
                 status: entry.root ? NacreI18n.tr("software.actions.admin", "Administrator permission") : ""
             }));
     }
-    function fontRows() {
+    function fontRows(mono = false) {
+        const route = mono ? "style.mono-fonts" : "style.fonts";
+        const key = mono ? "monoFont" : "interfaceFont";
+        const operation = mono ? "mono-font" : "font";
         const curated = catalog.fonts || [];
-        const rows = [valueRow("style.fonts", "default", NacreI18n.tr("launcher.provider.nacre-default", "Nacre default"), "font", "", "text_fields", NacreI18n.tr("ui.menu-context.description.ibm-plex-sans", "{font}", {
-                font: "IBM Plex Sans"
+        const rows = [valueRow(route, "default", NacreI18n.tr("launcher.provider.nacre-default", "Nacre default"), operation, "", "text_fields", NacreI18n.tr("ui.menu-context.description.ibm-plex-sans", "{font}", {
+                font: mono ? "JetBrainsMono Nerd Font" : "IBM Plex Sans"
             }), {
-                checked: !DesktopSettings.data.interfaceFont
+                checked: !DesktopSettings.data[key]
             })];
         const used = new Set();
         for (const item of curated) {
@@ -973,10 +976,10 @@ Scope {
                 used.add(family);
             const aur = item.repository === "AUR" && !snapshot.capabilities.aur;
             const disabled = family ? false : !snapshot.capabilities.packages || aur;
-            rows.push(valueRow("style.fonts", Qt.md5(family || item.package), item.name, family ? "font" : "install-package", family || item.package, "text_fields", family ? NacreI18n.tr("software.fonts.choose", "Preview and select this interface font") : NacreI18n.tr("software.fonts.install", "Install this font package in a visible terminal"), {
+            rows.push(valueRow(route, Qt.md5(family || item.package), (mono ? NacreI18n.tr("software.fonts.mono-choice", "Terminal font: {font}", {font: item.name}) : item.name), family ? operation : "install-package", family || item.package, "text_fields", family && mono ? NacreI18n.tr("software.fonts.mono-preview", "Use for Kitty and Nacre monospace text") : family ? NacreI18n.tr("software.fonts.choose", "Preview and select this interface font") : NacreI18n.tr("software.fonts.install", "Install this font package in a visible terminal"), {
                 previewFont: family || "",
-                checked: !!family && DesktopSettings.data.interfaceFont === family,
-                aliases: [item.package, ...item.families, "font typeface nerd"],
+                checked: !!family && DesktopSettings.data[key] === family,
+                aliases: [item.package, ...item.families, mono ? "terminal monospace font typeface nerd" : "interface font typeface nerd"],
                 disabled: disabled,
                 status: family ? NacreI18n.tr("ui.menu-context.status.installed", "Installed") : item.repository,
                 reason: aur ? NacreI18n.tr("launcher.install-offer.aur", "Requires paru or yay for AUR installation") : disabled ? NacreI18n.tr("launcher.disabled.requires-an-arch-compatible-package-manager", "Requires an Arch-compatible package manager") : "",
@@ -985,12 +988,12 @@ Scope {
                 })
             }));
         }
-        for (const family of snapshot.fonts || [])
+        for (const family of mono ? [] : snapshot.fonts || [])
             if (!used.has(family))
-                rows.push(valueRow("style.fonts", Qt.md5(family), family, "font", family, "text_fields", NacreI18n.tr("launcher.provider.preview-this-interface-font", "Preview this interface font"), {
+                rows.push(valueRow(route, Qt.md5(family), family, operation, family, "text_fields", NacreI18n.tr("launcher.provider.preview-this-interface-font", "Preview this interface font"), {
                     previewFont: family,
                     disabled: family.length > 80,
-                    checked: DesktopSettings.data.interfaceFont === family
+                    checked: DesktopSettings.data[key] === family
                 }));
         return rows;
     }
@@ -1010,7 +1013,7 @@ Scope {
         return softwareRows("software.discover.ai").filter(row => row.category === "ai" && row.checked && !row.desktopId);
     }
     function globalRows(query) {
-        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), installedAiRows(), sourceOptions.actions ? systemRows("health").concat(systemRows("setup"), systemRows("hardware"), systemRows("speed")) : [], tuiRows().filter(row => !apps.some(app => app.id.replace(/\.desktop$/, "") === "nacre-tui-" + row.value)), captureRows());
+        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), provider("style.mono-fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), installedAiRows(), sourceOptions.actions ? systemRows("health").concat(systemRows("setup"), systemRows("hardware"), systemRows("speed")) : [], tuiRows().filter(row => !apps.some(app => app.id.replace(/\.desktop$/, "") === "nacre-tui-" + row.value)), captureRows());
     }
     function itemActions(entry) {
         if (!entry)
@@ -1354,8 +1357,8 @@ Scope {
             AppLaunch.run(["kitty", "--class", "nacre-control", "--title", row.name, "--", NacrePaths.helperBinary, "software-environments", "run", row.environmentOperation, value]);
             return true;
         }
-        if (operation === "font") {
-            DesktopSettings.set("interfaceFont", value);
+        if (operation === "font" || operation === "mono-font") {
+            DesktopSettings.set(operation === "mono-font" ? "monoFont" : "interfaceFont", value);
             return true;
         }
         if (operation === "setting-toggle") {

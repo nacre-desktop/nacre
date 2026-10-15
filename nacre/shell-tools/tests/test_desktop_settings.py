@@ -27,6 +27,37 @@ def screen(name, w, h, scale=1, transform=0):
 
 
 class DesktopSettingsTests(unittest.TestCase):
+    def test_mono_font_failure_preserves_setting_and_restores_terminal_projection(self):
+        import io
+        import sys
+        from contextlib import redirect_stdout
+
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "desktop.json"
+            path.write_text(json.dumps({"monoFont": "Old Mono"}))
+            with (
+                patch.object(desktop, "STATE", path),
+                patch.object(desktop, "PENDING", Path(folder) / "pending.json"),
+                patch.object(desktop, "monitor_state", return_value=[]),
+                patch.object(desktop, "publish_mono_font") as publish,
+                patch.object(
+                    desktop.palette,
+                    "atomic_write",
+                    side_effect=OSError("fixture write failure"),
+                ),
+                patch.object(
+                    sys, "argv", ["desktop-settings", "set", "monoFont", '"Fira Code"']
+                ),
+                redirect_stdout(io.StringIO()),
+            ):
+                desktop.main()
+                self.assertEqual(
+                    [call.args[0] for call in publish.call_args_list],
+                    ["Fira Code", "Old Mono"],
+                )
+                self.assertEqual(json.loads(path.read_text()), {"monoFont": "Old Mono"})
+        self.assertNotIn("monoFont", desktop.PRESET_KEYS)
+
     def test_input_validation_and_unchosen_overrides(self):
         for key, value in [
             ("mouseSpeed", True),

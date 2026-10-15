@@ -599,6 +599,27 @@ TestCase {
         verify(value.entries.some(row => row.name === "Meslo Nerd"));
     }
 
+    function test_monospace_font_is_globally_searchable_and_independent() {
+        const value = view();
+        value.menu.snapshot = Object.assign({}, value.menu.snapshot, {
+            fonts: ["JetBrains Mono", "FiraCode Nerd Font"],
+            capabilities: {packages: true, aur: false}
+        });
+        DesktopSettings.set("interfaceFont", "IBM Plex Sans");
+        value.navigate("style.mono-fonts");
+        const row = value.entries.find(row => row.value === "FiraCode Nerd Font");
+        compare(row.operation, "mono-font");
+        value.menu.execute(row);
+        compare(DesktopSettings.data.monoFont, "FiraCode Nerd Font");
+        compare(DesktopSettings.data.interfaceFont, "IBM Plex Sans");
+        value.navigate("software.development");
+        findChild(value, "launcherSearch").text = "terminal font fira";
+        verify(value.entries.some(row => row.operation === "mono-font"));
+        value.navigate("style.mono-fonts");
+        value.menu.execute(value.entries.find(row => row.value === ""));
+        compare(DesktopSettings.data.monoFont, "");
+    }
+
     function test_tui_creation_literal_arguments_search_and_removal() {
         const value = view();
         value.menu.library.data = Object.assign({}, value.menu.library.data, {

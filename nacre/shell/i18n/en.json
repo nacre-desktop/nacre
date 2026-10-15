@@ -1822,7 +1822,7 @@
   "settings.registry.appearance.fonts.interfaceFont.description": "The font used by desktop controls.",
   "settings.registry.appearance.fonts.interfaceFont.label": "Interface font",
   "settings.registry.appearance.fonts.label": "Fonts",
-  "settings.registry.appearance.fonts.monoFont.description": "The font used for code and aligned text.",
+  "settings.registry.appearance.fonts.monoFont.description": "The font used in Kitty, code and aligned text.",
   "settings.registry.appearance.fonts.monoFont.label": "Monospace font",
   "settings.registry.appearance.fonts.textSize.description": "The size of desktop text.",
   "settings.registry.appearance.fonts.textSize.label": "Text size",
@@ -3321,5 +3321,9 @@
   "settings.registry.keyboard-mouse.mouse.shakeCursor.description": "Enlarge the pointer when you shake the mouse.",
   "settings.registry.keyboard-mouse.shake-planned": "Pointer enlargement needs a supported compositor backend.",
   "settings.registry.ui.choose-app": "Choose application",
-  "settings.registry.ui.custom-command": "Custom command"
+  "settings.registry.ui.custom-command": "Custom command",
+  "software.fonts.mono-title": "Terminal font",
+  "software.fonts.mono-description": "Choose fonts for Kitty and Nacre monospace text",
+  "software.fonts.mono-choice": "Terminal font: {font}",
+  "software.fonts.mono-preview": "Use for Kitty and Nacre monospace text"
 }
