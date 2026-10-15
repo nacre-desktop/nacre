@@ -50,8 +50,13 @@ Item {
         }
     }
     readonly property var workspaceIds: {
-        if (perOutput)
+        if (perOutput) {
+            if (DesktopSettings.data.monitorWorkspaceActions === true)
+                return Array.from({
+                    length: NacreBar.workspaceCount
+                }, (_, index) => index + 1);
             return rowWorkspaces.map(value => value.index).sort((a, b) => a - b);
+        }
         const ids = new Set(Array.from({
             length: NacreBar.workspaceCount
         }, (_, index) => index + 1));

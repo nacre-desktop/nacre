@@ -227,6 +227,37 @@ TestCase {
         compare(laptop.workspaceIds.length, 6);
         compare(external.workspaceIds.length, 6);
     }
+    function test_configured_monitor_controls_keep_six_slots_during_an_exchange() {
+        NacreBar.workspaceCount = 6;
+        NacreCompositor.capabilities = ({
+                perOutputWorkspaces: true
+            });
+        DesktopSettings.data = {
+            monitorWorkspaceActions: true
+        };
+        NacreCompositor.workspaces = ({
+                values: []
+            });
+        const view = createTemporaryObject(row, test, {
+            outputName: "external"
+        });
+        compare(view.workspaceIds.join(","), "1,2,3,4,5,6");
+        verify(!view.activate(3));
+        NacreCompositor.workspaces = ({
+                values: [
+                    {
+                        id: "niri-workspace:1",
+                        outputId: "external",
+                        index: 3,
+                        active: true,
+                        name: "incoming"
+                    }
+                ]
+            });
+        compare(view.workspaceIds.join(","), "1,2,3,4,5,6");
+        verify(view.activate(3));
+        compare(NacreCompositor.requests.pop(), "workspace niri-workspace:1");
+    }
     function test_numbered_pearls_use_readable_ink_for_dark_and_pale_accents() {
         const pearl = createTemporaryObject(pearlView, test, {
             workspaceId: 12,

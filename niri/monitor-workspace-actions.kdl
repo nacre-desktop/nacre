@@ -1,0 +1,19 @@
+// Optional persistent-workspace controls; generated sessions include this when enabled.
+binds {
+    Super+Ctrl+1 repeat=false hotkey-overlay-title="Send tile to workspace 1 on next monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send next 1"; }
+    Super+Ctrl+Shift+1 repeat=false hotkey-overlay-title="Send tile to workspace 1 on previous monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send previous 1"; }
+    Super+Ctrl+2 repeat=false hotkey-overlay-title="Send tile to workspace 2 on next monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send next 2"; }
+    Super+Ctrl+Shift+2 repeat=false hotkey-overlay-title="Send tile to workspace 2 on previous monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send previous 2"; }
+    Super+Ctrl+3 repeat=false hotkey-overlay-title="Send tile to workspace 3 on next monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send next 3"; }
+    Super+Ctrl+Shift+3 repeat=false hotkey-overlay-title="Send tile to workspace 3 on previous monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send previous 3"; }
+    Super+Ctrl+4 repeat=false hotkey-overlay-title="Send tile to workspace 4 on next monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send next 4"; }
+    Super+Ctrl+Shift+4 repeat=false hotkey-overlay-title="Send tile to workspace 4 on previous monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send previous 4"; }
+    Super+Ctrl+5 repeat=false hotkey-overlay-title="Send tile to workspace 5 on next monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send next 5"; }
+    Super+Ctrl+Shift+5 repeat=false hotkey-overlay-title="Send tile to workspace 5 on previous monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send previous 5"; }
+    Super+Ctrl+6 repeat=false hotkey-overlay-title="Send tile to workspace 6 on next monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send next 6"; }
+    Super+Ctrl+Shift+6 repeat=false hotkey-overlay-title="Send tile to workspace 6 on previous monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces send previous 6"; }
+    Super+Alt+Page_Up repeat=false hotkey-overlay-title="Exchange selected workspace: previous monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces swap previous"; }
+    Super+Alt+Page_Down repeat=false hotkey-overlay-title="Exchange selected workspace: next monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces swap next"; }
+    Super+Alt+Shift+Page_Up repeat=false hotkey-overlay-title="Rotate all workspace sets: previous monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces rotate previous"; }
+    Super+Alt+Shift+Page_Down repeat=false hotkey-overlay-title="Rotate all workspace sets: next monitor" { spawn-sh "exec \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" monitor-workspaces rotate next"; }
+}

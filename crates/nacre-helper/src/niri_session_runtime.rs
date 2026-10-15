@@ -461,7 +461,17 @@ pub fn prepare_configuration(
         ));
     }
     text.push_str("include \"desktop.kdl\"\n");
-    text.push_str(&workspace_declarations(&names, &desktop)?);
+    let workspaces = workspace_declarations(&names, &desktop)?;
+    if desktop["monitorWorkspaceActions"] == true {
+        fs::write(config.join("workspaces.kdl"), workspaces)?;
+        fs::write(
+            config.join("monitor-workspace-actions.kdl"),
+            fs::read(backend.join("niri/monitor-workspace-actions.kdl"))?,
+        )?;
+        text.push_str("include \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\n");
+    } else {
+        text.push_str(&workspaces);
+    }
     text.push_str("hotkey-overlay {\n    skip-at-startup\n}\n");
     fs::write(config.join("config.kdl"), text)?;
     for file in fs::read_dir(&config)? {
@@ -476,7 +486,7 @@ pub fn prepare_configuration(
     Ok(())
 }
 
-fn workspace_declarations(names: &[String], desktop: &Value) -> Result<String> {
+pub(crate) fn workspace_declarations(names: &[String], desktop: &Value) -> Result<String> {
     let mut text = String::new();
     if let Some(outputs) = desktop.get("niriWorkspaceOutputs") {
         let outputs = outputs
@@ -843,6 +853,59 @@ mod tests {
                 }
             }
         }
+        Ok(())
+    }
+    #[test]
+    fn enabled_monitor_actions_prepare_owned_workspace_and_binding_includes() -> Result<()> {
+        let reference: Value = serde_json::from_str(include_str!(
+            "../tests/fixtures/niri-session-preparation-reference.json"
+        ))?;
+        let case = reference["cases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|case| case["observed"]["error"].is_null())
+            .unwrap();
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        fs::create_dir_all(&paths.state)?;
+        let mut desktop = case["desktop"].clone();
+        desktop["monitorWorkspaceActions"] = value!(true);
+        fs::write(
+            paths.config.join("desktop.json"),
+            serde_json::to_vec(&desktop)?,
+        )?;
+        fs::write(
+            paths.state.join("scheme.json"),
+            serde_json::to_vec(&case["scheme"])?,
+        )?;
+        let destination = home.path().join("stage");
+        fs::create_dir_all(&destination)?;
+        let backend = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .canonicalize()?;
+        prepare_configuration(
+            &backend,
+            &destination,
+            &paths,
+            &case["profile"],
+            &case["keyboard"],
+            false,
+            |_| Ok(()),
+        )?;
+        let root = fs::read_to_string(destination.join("config/config.kdl"))?;
+        assert!(root.contains("include \"workspaces.kdl\""));
+        assert!(root.contains("include \"monitor-workspace-actions.kdl\""));
+        assert!(!root.contains("\nworkspace "));
+        assert_eq!(
+            fs::read(destination.join("config/monitor-workspace-actions.kdl"))?,
+            fs::read(backend.join("niri/monitor-workspace-actions.kdl"))?
+        );
+        assert!(
+            fs::read_to_string(destination.join("config/workspaces.kdl"))?.contains("workspace ")
+        );
+        assert!(!paths.config.join("niri/workspaces.kdl").exists());
         Ok(())
     }
     #[test]

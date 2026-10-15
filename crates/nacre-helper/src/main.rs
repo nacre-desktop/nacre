@@ -17,6 +17,9 @@ fn run() -> Result<i32> {
     if tool == "lock-prepare" {
         return nacre_helper::lock_prepare::run(&arguments);
     }
+    if tool == "monitor-workspaces" {
+        return nacre_helper::compositor::niri_workspaces::run(&arguments);
+    }
     if tool == "wallpaper-media" {
         return nacre_helper::wallpaper_media::run(&arguments);
     }

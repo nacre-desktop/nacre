@@ -32,6 +32,30 @@ Each array must contain exactly `workspaceCount` names; session preparation writ
 `open-on-output` declarations. Names must be unique across monitors. These private
 monitor preferences remain outside the profile repository.
 
+For configured Niri monitor sets, `monitorWorkspaceActions: true` in
+`desktop.json` enables these additional controls when preparing the session:
+
+| Shortcut | Action |
+| --- | --- |
+| Super+Ctrl+1–6 | Send the selected tile to that workspace on the next monitor. |
+| Super+Ctrl+Shift+1–6 | Send it to the previous monitor instead. |
+| Super+Alt+PageDown / PageUp | Exchange the selected workspace with the next / previous monitor’s selected workspace. |
+| Super+Alt+Shift+PageDown / PageUp | Rotate all configured workspace sets forward / backward between monitors. |
+
+Monitor order follows layout position: left to right, then top to bottom when
+horizontal positions match, wrapping at either end. With two screens, both
+directions select the other screen. These controls also work in Bird’s Eye:
+selection means the keyboard-selected workspace or tile, not a hovered preview.
+Sending a tile keeps the current view; exchanges keep focus on the same physical
+monitor and preserve each workspace’s windows and internal layout. Each screen
+keeps its configured number of slots, including during an exchange. All connected
+monitors must have a complete named set; an unavailable destination fails before
+moving anything.
+
+Workspace exchanges update the private output assignments, so reconnecting or
+restarting uses the new owners. A failed exchange attempts to restore the original
+owners, order and views; disconnect recovery never removes workspaces or windows.
+
 Niri workspace numbers are dynamic on each output; its preparation path converts
 profile routes to named workspaces.
 

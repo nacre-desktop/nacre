@@ -561,3 +561,35 @@ real niri session, after retaining a working TTY/login recovery path.
 Full daily-driver acceptance remains incomplete until these hardware/service
 checks pass. The packaged setup/dependency gate is retained; this source audit
 does not upgrade the machine or authorize live-session testing.
+
+
+## Optional monitor workspace controls
+
+Configured persistent monitor sets can enable the separate native binding file
+`niri/monitor-workspace-actions.kdl` with `monitorWorkspaceActions: true`.
+`nacre-helper monitor-workspaces` reads native workspace names and opaque IDs;
+bar display labels are deliberately not used to identify persistent slots.
+Unit tests exercise two/three-screen ordering, explicit slot sends, selected
+workspace exchanges, full-set rotations, missing targets, partial/lost replies,
+preference failures and disconnected-output recovery. Native configuration tests
+retain the original preparation references when the option is absent.
+
+The opt-in integration probe uses the actual Niri headless backend with two and
+three virtual outputs, private HOME/runtime/bus paths and two owned Qt clients:
+
+```sh
+python tools/tests/verify_monitor_workspaces.py \
+  --driver /path/to/headless-niri-driver \
+  --helper /path/to/candidate/nacre-helper \
+  --output /tmp/monitor-workspaces.json
+```
+
+`tools/tests/monitor_workspaces_headless.rs` is the driver source. Link it against
+the tested Niri library and matching niri-config/Smithay artifacts with that
+library’s Rust compiler; it does not replace or start a desktop session. The probe
+requires Quickshell, Niri, a software EGL renderer and dbus-daemon. It verifies
+real tile movement in overview without following, workspace/whole-set round trips,
+stable window workspace identities, six persistent slots, rollback after invalid
+configuration and saved assignments after restarting its own compositor. It never
+selects the running desktop socket or imports an activation environment. The
+headless proof does not claim physical key delivery or physical hotplug behavior.
