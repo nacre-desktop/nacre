@@ -20,6 +20,7 @@ def process(pid, proc=Path("/proc")):
         args = (directory / "cmdline").read_bytes().split(b"\0")
         return {
             "pid": int(pid),
+            "state": fields[0],
             "ppid": int(fields[1]),
             "start": int(fields[19]),
             "ticks": int(fields[11]) + int(fields[12]),
@@ -45,7 +46,7 @@ def memory(pid, proc=Path("/proc")):
             "rss": fields["Rss"],
             "pss": fields["Pss"],
             "uss": fields["Private_Clean"] + fields["Private_Dirty"],
-            "swap_pss": fields.get("SwapPss", 0),
+            "swap_pss": fields.get("SwapPss"),
             "memory_error": None,
         }
     except (OSError, ValueError, KeyError) as error:
@@ -106,7 +107,28 @@ def snapshot(shell_pid, proc=Path("/proc"), detached=True):
         row.update(memory(pid, proc))
         # A process may exit or its PID may be reused while reading the rollup.
         current = process(pid, proc)
+        exit_errors = ("ProcessLookupError", "FileNotFoundError")
+        if (
+            current
+            and current["start"] == row["start"]
+            and current.get("state") not in ("Z", "X")
+            and row.get("memory_error") in exit_errors
+        ):
+            # Exec/exit can race a rollup before stat reflects the transition.
+            # Retry once immediately, then recheck identity; persistent live
+            # errors still remain unknown and invalidate the capture.
+            row.update(memory(pid, proc))
+            current = process(pid, proc)
         if current and current["start"] == row["start"]:
+            # Exited, unreaped children retain /proc/stat while their memory
+            # maps disappear. Omit only a confirmed exit race, never a live
+            # unreadable process or a successfully measured swapped process.
+            if (
+                current.get("state") in ("Z", "X")
+                and row.get("memory_error") in exit_errors
+            ):
+                continue
+            row["state"] = current.get("state")
             result[pid] = row
     return result
 
@@ -126,7 +148,7 @@ def summarize(values):
 def idle(shell_pid, duration, interval, spawn_log=None, detached=True):
     ticks_per_second = os.sysconf("SC_CLK_TCK")
     first = snapshot(shell_pid, detached=detached)
-    if shell_pid not in first:
+    if shell_pid not in first or first[shell_pid].get("state") in ("Z", "X"):
         raise ValueError("Shell PID is not running")
     identity = first[shell_pid]["start"]
     seen = {(pid, row["start"]) for pid, row in first.items()}
@@ -145,7 +167,11 @@ def idle(shell_pid, duration, interval, spawn_log=None, detached=True):
         time.sleep(min(interval, max(0, duration - (time.monotonic() - start))))
         now = time.monotonic()
         rows = snapshot(shell_pid, detached=detached)
-        if shell_pid not in rows or rows[shell_pid]["start"] != identity:
+        if (
+            shell_pid not in rows
+            or rows[shell_pid]["start"] != identity
+            or rows[shell_pid].get("state") in ("Z", "X")
+        ):
             raise ValueError("Shell exited or restarted; repeat the comparison")
         changes = {}
         for pid, row in rows.items():
@@ -179,6 +205,7 @@ def idle(shell_pid, duration, interval, spawn_log=None, detached=True):
                     "pid": pid,
                     "start_ticks": row["start"],
                     "name": row["name"],
+                    "state": row.get("state"),
                     "cpu_percent": changes[pid]
                     / ticks_per_second
                     / (now - before)

@@ -637,6 +637,7 @@ def run(args, directory):
         DBUS_SESSION_BUS_ADDRESS="unix:path=" + str(runtime / "absent-session-bus"),
         DBUS_SYSTEM_BUS_ADDRESS="unix:path=" + str(runtime / "absent-system-bus"),
         HYPRLAND_NO_SYSTEMD="1",
+        GVFS_DISABLE_FUSE="1",
     )
     if args.orient_binary:
         env["NACRE_ORIENT_BINARY"] = str(args.orient_binary.resolve(strict=True))

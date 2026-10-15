@@ -74,6 +74,7 @@ class BudgetTests(unittest.TestCase):
                         "XDG_RUNTIME_DIR": "/unused-owner-runtime",
                         "DBUS_SESSION_BUS_ADDRESS": "unix:path=/unused-owner-bus",
                         "HYPRLAND_NO_SYSTEMD": "0",
+                        "GVFS_DISABLE_FUSE": "0",
                     },
                 ),
                 patch.object(
@@ -95,6 +96,7 @@ class BudgetTests(unittest.TestCase):
                     "unix:path=" + str(runtime / "absent-session-bus"),
                 )
                 self.assertEqual(environment["HYPRLAND_NO_SYSTEMD"], "1")
+                self.assertEqual(environment["GVFS_DISABLE_FUSE"], "1")
                 self.assertFalse(runtime.exists())
 
     def test_palette_gate_covers_witnesses_during_selection(self):

@@ -1611,3 +1611,19 @@ projections, including states before initial stream readiness. No frozen output
 was regenerated. No whole-shell, physical desktop, battery or Python-launch
 claim follows from this capture; the full F2 and frozen Wave 3 comparisons remain
 separate gates.
+
+The first full frozen-source baseline capture was discarded because a short-lived
+helper's memory rollup became unreadable while its process record still existed.
+The sampler now records process state and omits an unreadable sample only when
+the post-read record confirms an exited zombie/dead process with an exit-race
+error. It retains unknown live/permission-denied samples and successfully read
+nonzero SwapPss, including a read immediately before exit. A missing SwapPss field
+also remains unknown. A live exit-race read is retried once immediately with
+another identity check; a persistent failure still invalidates the run.
+A real unreaped child and explicit live/swapped controls
+verify this distinction; see the [kernel proc documentation](https://docs.kernel.org/filesystems/proc.html).
+The discarded reports are retained and are not retroactively repaired. A later
+private-runtime cleanup encountered a disconnected GVFS FUSE mount; that mount
+was removed only from the recorded disposable runtime. The lab now sets
+`GVFS_DISABLE_FUSE=1`, the [documented GIO control](https://docs.gtk.org/gio/overview.html),
+before launching children. This changes no installed session configuration.
