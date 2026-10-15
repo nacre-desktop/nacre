@@ -256,6 +256,60 @@ fn actual_daemon_ready_native_client_restart_safe_mode_and_cleanup() -> Result<(
     Ok(())
 }
 #[test]
+fn native_niri_event_clients_share_daemon_stream_and_shutdown_without_a_timer() -> Result<()> {
+    let home = tempfile::Builder::new().prefix("ne-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let source = Source::new(source_path.clone())?;
+    let endpoint = home.path().join("daemon.sock");
+    let notify = home.path().join("notify.sock");
+    let notifications = UnixDatagram::bind(&notify)?;
+    notifications.set_read_timeout(Some(Duration::from_secs(10)))?;
+    let mut daemon = command(home.path(), &source_path, &endpoint);
+    daemon
+        .arg("daemon")
+        .env("NOTIFY_SOCKET", &notify)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let _daemon = Process(daemon.spawn()?);
+    let mut packet = [0; 256];
+    let size = notifications.recv(&mut packet)?;
+    assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
+    let environment = command(home.path(), &source_path, &endpoint)
+        .get_envs()
+        .filter_map(|(name, value)| {
+            value.map(|value| {
+                (
+                    name.to_string_lossy().into_owned(),
+                    value.to_string_lossy().into_owned(),
+                )
+            })
+        })
+        .collect();
+    let mut first = nacre_helper::daemon::niri_events::Source::connect(&environment, &source_path)?
+        .ok_or("Missing event proxy")?;
+    let backend = nacre_helper::compositor::niri::Backend::new(
+        nacre_helper::paths::Paths::new(home.path()),
+        environment.clone(),
+    );
+    let mut second = backend.events()?;
+    let snapshot = first.next_value()?;
+    assert_eq!(snapshot["type"], "snapshot");
+    assert_eq!(snapshot["windows"][0]["title"], "DO_NOT_LOG_WINDOW_TITLE");
+    assert_eq!(snapshot, second.next_value()?);
+    // One event stream and one persistent request connection, regardless of consumers.
+    assert_eq!(source.sockets.lock().unwrap().len(), 2);
+    let control = first.control()?;
+    let (finished, result) = std::sync::mpsc::channel();
+    let reader = thread::spawn(move || finished.send(first.next_value().is_err()));
+    control.shutdown(std::net::Shutdown::Both)?;
+    assert!(result.recv_timeout(Duration::from_secs(3))?);
+    reader.join().map_err(|_| "Event reader failed")??;
+    drop(second);
+    Ok(())
+}
+
+#[test]
 fn native_aliases_dispatch_without_python_and_explicit_private_socket_never_falls_back(
 ) -> Result<()> {
     let home = tempfile::Builder::new().prefix("nc-").tempdir()?;

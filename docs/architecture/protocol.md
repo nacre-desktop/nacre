@@ -191,11 +191,27 @@ Keyboard names are scalar lists. Title-only updates are limited to 10 Hz.
 Niri requires one shared event socket and one persistent request socket;
 Hyprland has one event socket and closes each request socket by protocol.
 
+On niri, `compositor.events` v1 carries the one-release event-command bridge.
+Its snapshot is `{backend,available,connectionId}`; `connectionId` is an opaque
+local socket identity, never a path. Subscribe to it and `compositor` together.
+Its `ev` messages use name `niri` and the existing normalized event data. The
+daemon sends the corresponding state before each event; a slow client gets the
+latest consistent state rather than every intermediate snapshot. Title-only
+notifications may coalesce. On `lost` or a state-chain gap, refresh both topics
+before processing more events. Events before subscription are represented by
+the initial snapshot. Unresolved desktop entities/references are omitted/cleared,
+including transient startup, window-close and disabled-output observations.
+These are intended differences from the direct event stream.
+The native compatibility command checks that the daemon serves its selected niri
+socket. A missing default daemon or an older daemon without this advertised lane
+uses the existing direct runtime; an explicit override or a session mismatch
+never falls back. Disconnection retains the command's existing exit/restart policy.
+
 `daemon.status` returns boot, safe-mode, client and service status.
 `daemon.ping` returns null without outside work. `daemon` is the service-health
 topic; safe mode also exposes one stable record on `daemon.notice`.
-Settings and other desktop services arrive in F2–F4; notification hosting and
-`menu.query` remain deferred. Wire schemas cover structural shapes/ranges;
+Settings and other desktop services arrive in F2–F4; `menu.query` follows F2 and
+notification hosting remains deferred. Wire schemas cover structural shapes/ranges;
 the decoder also enforces UTF-8 byte bounds and cross-field constraints.
 
 The same ELF dispatches `nacre-helper daemon` / `nacre-daemon`, and

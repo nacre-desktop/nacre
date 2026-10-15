@@ -182,6 +182,17 @@ impl Backend {
         if self.session_id().is_empty() {
             return Err(failure("RuntimeError", "NIRI_SOCKET is unavailable"));
         }
+        if let Some(source) = crate::daemon::niri_events::Source::connect(
+            &self.environment,
+            Path::new(self.session_id()),
+        )
+        .map_err(|error| failure("ConnectionError", error.to_string()))?
+        {
+            return Ok(niri_events::Events::from_daemon(
+                source,
+                niri_transport::Connection::new(self.session_id()),
+            ));
+        }
         let hover = self
             .environment
             .get("NACRE_NIRI_HOVER_STREAM")

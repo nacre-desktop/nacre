@@ -35,12 +35,17 @@ struct Client {
     pub wake: Rc<Notify>,
     topics: BTreeMap<String, Subscription>,
     generation: u64,
-    events: VecDeque<(Message, usize)>,
+    events: VecDeque<Event>,
     event_bytes: usize,
     lost: BTreeMap<String, (u64, u64)>,
     replies: VecDeque<(Message, usize)>,
     reply_bytes: usize,
     inflight: BTreeSet<Id>,
+}
+struct Event {
+    message: Message,
+    bytes: usize,
+    after: Vec<(String, u64)>,
 }
 pub struct Packet {
     pub message: Message,
@@ -291,9 +296,9 @@ impl Hub {
                 client.lost.remove(topic);
             }
             client.events.retain(
-                |(event, _)| !matches!(event,Message::Ev {topic,..} if topics.contains(topic)),
+                |event| !matches!(&event.message,Message::Ev {topic,..} if topics.contains(topic)),
             );
-            client.event_bytes = client.events.iter().map(|(_, bytes)| bytes).sum();
+            client.event_bytes = client.events.iter().map(|event| event.bytes).sum();
         }
     }
     pub fn enqueue(&mut self, id: u64, message: Message) -> Result<(), Failure> {
@@ -348,6 +353,22 @@ impl Hub {
         self.enqueue(id, message)
     }
     pub fn event(&mut self, topic: &str, name: &str, data: Value) -> Result<(), Failure> {
+        self.event_after(topic, name, data, None)
+    }
+    /// Deliver an event only after its subscribed state dependencies are current.
+    pub fn event_after(
+        &mut self,
+        topic: &str,
+        name: &str,
+        data: Value,
+        state: Option<&str>,
+    ) -> Result<(), Failure> {
+        let mut after = Vec::new();
+        for dependency in std::iter::once(topic).chain(state.filter(|state| *state != topic)) {
+            if let Some(value) = self.topics.get(dependency) {
+                after.push((dependency.to_owned(), value.seq));
+            }
+        }
         let seq = self
             .event_seq
             .get(topic)
@@ -369,10 +390,19 @@ impl Hub {
             .values_mut()
             .filter(|client| client.topics.contains_key(topic))
         {
-            client.events.push_back((message.clone(), bytes));
+            client.events.push_back(Event {
+                message: message.clone(),
+                bytes,
+                after: after.clone(),
+            });
             client.event_bytes += bytes;
             while client.events.len() > MAX_EVENTS || client.event_bytes > QUEUE_BYTES {
-                if let Some((Message::Ev { topic, seq, .. }, bytes)) = client.events.pop_front() {
+                if let Some(Event {
+                    message: Message::Ev { topic, seq, .. },
+                    bytes,
+                    ..
+                }) = client.events.pop_front()
+                {
                     client.event_bytes -= bytes;
                     client
                         .lost
@@ -391,25 +421,6 @@ impl Hub {
         };
         if let Some((message, bytes)) = client.replies.pop_front() {
             client.reply_bytes -= bytes;
-            return (
-                Some(Packet {
-                    message,
-                    commit: None,
-                }),
-                None,
-            );
-        }
-        if let Some((topic, (from, to))) = client.lost.pop_first() {
-            return (
-                Some(Packet {
-                    message: Message::Lost { topic, from, to },
-                    commit: None,
-                }),
-                None,
-            );
-        }
-        if let Some((message, bytes)) = client.events.pop_front() {
-            client.event_bytes -= bytes;
             return (
                 Some(Packet {
                     message,
@@ -465,6 +476,35 @@ impl Hub {
                 }),
                 deadline,
             );
+        }
+        if let Some((topic, (from, to))) = client.lost.pop_first() {
+            return (
+                Some(Packet {
+                    message: Message::Lost { topic, from, to },
+                    commit: None,
+                }),
+                deadline,
+            );
+        }
+        let ready = client.events.front().is_some_and(|event| {
+            event.after.iter().all(|(topic, seq)| {
+                client.topics.get(topic).is_none_or(|subscription| {
+                    !subscription.force
+                        && subscription.considered.is_some_and(|known| known >= *seq)
+                })
+            })
+        });
+        if ready {
+            if let Some(event) = client.events.pop_front() {
+                client.event_bytes -= event.bytes;
+                return (
+                    Some(Packet {
+                        message: event.message,
+                        commit: None,
+                    }),
+                    deadline,
+                );
+            }
         }
         (None, deadline)
     }
@@ -696,6 +736,41 @@ mod tests {
         ));
         hub.unsubscribe(id, &["x".into()]);
         assert_eq!(hub.clients[&id].event_bytes, 0);
+    }
+    #[test]
+    fn semantic_events_wait_for_successfully_delivered_state_without_blocking_replies() {
+        let (mut hub, id, now) = fixture();
+        send(&mut hub, id, now);
+        hub.publish("events", json!({})).unwrap();
+        hub.subscribe(id, &["events".into()], false).unwrap();
+        let now = Instant::now();
+        send(&mut hub, id, now);
+        hub.publish("x", json!({"v":1})).unwrap();
+        hub.event_after("events", "changed", json!({}), Some("x"))
+            .unwrap();
+        assert!(hub.next(id, now + Duration::from_millis(1)).0.is_none());
+        hub.enqueue(id, Message::Pong { id: Id::Integer(7) })
+            .unwrap();
+        assert!(matches!(send(&mut hub, id, now), Message::Pong { .. }));
+        let at = now + Duration::from_millis(16);
+        let packet = hub.next(id, at).0.unwrap();
+        assert!(matches!(packet.message,Message::Patch {ref topic,..} if topic=="x"));
+        // Merely constructing an outgoing patch must not release its event.
+        assert!(matches!(
+            hub.next(id, at).0.unwrap().message,
+            Message::Patch { .. }
+        ));
+        hub.sent(id, &packet, at);
+        assert!(matches!(send(&mut hub, id, at), Message::Ev { .. }));
+        hub.publish("x", json!({"v":2})).unwrap();
+        hub.publish("x", json!({"v":1})).unwrap();
+        hub.event_after("events", "unchanged", json!({}), Some("x"))
+            .unwrap();
+        // A coalesced return to the delivered value needs no redundant patch.
+        assert!(matches!(
+            send(&mut hub, id, at + Duration::from_millis(16)),
+            Message::Ev { .. }
+        ));
     }
     #[test]
     fn oversized_state_and_duplicate_calls_and_second_ui_provider_are_rejected() {

@@ -198,6 +198,16 @@ signal and uses zbus with no auto-start. A private-bus test checks actual delive
 and that flag. No daemon unit, live provider ownership or live binding is activated
 by this work. Existing deliberate AI/update permissions remain unchanged.
 
+The niri event compatibility client compares the selected compositor socket's
+opaque identity with the daemon's advertised event lane before accepting state.
+A wrong session or an explicit missing daemon fails without opening another
+compositor connection. Tests cover both refusals and bounded semantic-event
+batches; idle reader shutdown uses the socket's shutdown event, not a timer.
+The nested measurement harness supplies an absent private session-bus address
+before its first child and disables Hyprland's user-manager integration. A guard
+test intercepts that first launch and checks isolation from inherited desktop
+addresses; the shell later receives its own private D-Bus session.
+
 The Wave 4 session observer reads Secret Service's `Locked` property and
 login1's `PrepareForSleep` signal. It performs no privileged login1 operation or
 new lock/power policy. Session evidence uses a private directory and files before

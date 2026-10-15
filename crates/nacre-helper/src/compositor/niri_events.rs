@@ -159,6 +159,7 @@ impl Outputs for Connection {
 }
 pub struct Events<T: Outputs> {
     socket: Option<EventSocket>,
+    daemon: Option<crate::daemon::niri_events::Source>,
     pub state: State,
     outputs: T,
     pending: VecDeque<Value>,
@@ -167,6 +168,9 @@ pub struct Events<T: Outputs> {
 impl<T: Outputs> Events<T> {
     /// A duplicate descriptor lets an owning observer interrupt a blocked read.
     pub(crate) fn control(&self) -> Result<UnixStream> {
+        if let Some(daemon) = &self.daemon {
+            return daemon.control().map_err(|error| invalid(error.to_string()));
+        }
         self.socket
             .as_ref()
             .ok_or_else(|| invalid("niri event stream disconnected"))?
@@ -183,11 +187,22 @@ impl<T: Outputs> Events<T> {
             .ok_or_else(|| invalid("Malformed niri output records"))?;
         Ok(Self {
             socket: Some(socket),
+            daemon: None,
             state: State::new(initial),
             outputs,
             pending: VecDeque::new(),
             failed: false,
         })
+    }
+    pub(crate) fn from_daemon(daemon: crate::daemon::niri_events::Source, outputs: T) -> Self {
+        Self {
+            socket: None,
+            daemon: Some(daemon),
+            state: State::new(serde_json::Map::new()),
+            outputs,
+            pending: VecDeque::new(),
+            failed: false,
+        }
     }
     pub fn next_value(&mut self) -> Result<Value> {
         if self.failed {
@@ -195,6 +210,11 @@ impl<T: Outputs> Events<T> {
                 kind: "ConnectionError",
                 message: "niri event stream disconnected".into(),
             });
+        }
+        if let Some(daemon) = &mut self.daemon {
+            return daemon
+                .next_value()
+                .map_err(|error| invalid(error.to_string()));
         }
         let result = self.read_next();
         if result.is_err() {

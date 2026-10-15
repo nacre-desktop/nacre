@@ -251,6 +251,61 @@ fn niri_keyboard(event: &Value, keyboard: &mut Value) -> Result<bool> {
     }
     Ok(changed)
 }
+fn title_event(event: &Value) -> bool {
+    event["type"] == "window-title"
+        && event
+            .get("changes")
+            .and_then(Value::as_array)
+            .is_none_or(|changes| changes.len() == 1)
+}
+fn queue_event(events: &mut Vec<Value>, event: Value) -> Result<bool> {
+    // Semantic deltas contain only a kind, IDs and small scalar flags. This
+    // bounds the pre-publication batch to 256 KiB even for malformed IPC input.
+    if serde_json::to_vec(&event)?.len() > 1024 {
+        return Err("Niri semantic event exceeds its bound".into());
+    }
+    if title_event(&event) {
+        if let Some(previous) = events
+            .iter_mut()
+            .find(|previous| title_event(previous) && previous["windowId"] == event["windowId"])
+        {
+            *previous = event;
+            return Ok(true);
+        }
+        if events.len() == nacre_protocol::MAX_EVENTS {
+            if let Some(index) = events.iter().position(title_event) {
+                events.remove(index);
+            } else {
+                // State still contains every latest title; intermediate title
+                // notifications may coalesce behind the pending semantic burst.
+                return Ok(true);
+            }
+        }
+    } else if events.len() == nacre_protocol::MAX_EVENTS {
+        return Ok(false);
+    }
+    events.push(event);
+    Ok(true)
+}
+fn flush_niri(
+    hub: &Shared,
+    state: &niri_state::State,
+    keyboard: &Value,
+    ready: &Ready,
+    connection: &str,
+    events: &mut Vec<Value>,
+) -> Result<()> {
+    publish(hub, &state.snapshot()?, "niri", keyboard, ready)?;
+    let mut hub = hub.borrow_mut();
+    hub.publish(
+        super::niri_events::TOPIC,
+        json!({"backend":"niri","available":true,"connectionId":connection}),
+    )?;
+    for event in events.drain(..) {
+        hub.event_after(super::niri_events::TOPIC, "niri", event, Some("compositor"))?;
+    }
+    Ok(())
+}
 async fn niri(hub: Shared, environment: BTreeMap<String, String>, ready: Ready) -> Result<()> {
     let path = PathBuf::from(
         environment
@@ -258,6 +313,7 @@ async fn niri(hub: Shared, environment: BTreeMap<String, String>, ready: Ready) 
             .filter(|s| !s.is_empty())
             .ok_or("Missing compositor socket")?,
     );
+    let connection_id = super::niri_events::identity(&path)?;
     let hover = environment
         .get("NACRE_NIRI_HOVER_STREAM")
         .is_none_or(|value| value != "0");
@@ -275,6 +331,7 @@ async fn niri(hub: Shared, environment: BTreeMap<String, String>, ready: Ready) 
     let mut state = niri_state::State::new(initial);
     let mut partial = Vec::new();
     let mut keyboard = json!({"names":[],"currentIndex":null,"activeName":""});
+    let mut events = Vec::new();
     let mut due = None;
     let mut last = tokio::time::Instant::now() - Duration::from_millis(100);
     loop {
@@ -284,14 +341,31 @@ async fn niri(hub: Shared, environment: BTreeMap<String, String>, ready: Ready) 
                 let keyboard_changed=niri_keyboard(&event,&mut keyboard)?;
                 let normalized=state.apply(&event)?;
                 let refresh=event.get("WorkspacesChanged").is_some()||event.get("ConfigLoaded").is_some();
-                if refresh {let updated=outputs(connection).await?;connection=updated.0;state.outputs=updated.1;}
+                let mut outputs_changed=false;
+                if refresh {let updated=outputs(connection).await?;connection=updated.0;outputs_changed=state.outputs!=updated.1;state.outputs=updated.1;}
                 if state.ready.contains("window") && state.ready.contains("workspace") && (normalized["type"]!="other" || keyboard_changed || refresh) {
-                    let title_only=normalized["type"]=="window-title" && normalized.get("changes").and_then(Value::as_array).is_none_or(|changes|changes.len()==1);
+                    if normalized["type"]!="other" {
+                        let mut next=vec![normalized.clone()];
+                        if let Some(changes)=normalized.get("changes").and_then(Value::as_array) {
+                            for kind in changes.iter().skip(1) {
+                                next.push(json!({"type":kind,"windowId":normalized["windowId"]}));
+                            }
+                        }
+                        if outputs_changed {next.push(json!({"type":"outputs-changed"}));}
+                        for event in next {
+                            if !queue_event(&mut events,event.clone())? {
+                                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&mut events)?;
+                                last=tokio::time::Instant::now();
+                                if !queue_event(&mut events,event)? {return Err("Compositor event batch exceeded its bound".into());}
+                            }
+                        }
+                    }
+                    let title_only=title_event(&normalized);
                     schedule(&mut due,last,title_only);
                 }
             },
             _=wait_due(due)=>{
-                publish(&hub,&state.snapshot()?,"niri",&keyboard,&ready)?;
+                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&mut events)?;
                 last=tokio::time::Instant::now();due=None;
             },
         }
@@ -403,6 +477,35 @@ pub async fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn semantic_batches_bound_bytes_and_count_and_coalesce_only_titles() -> Result<()> {
+        let mut events = Vec::new();
+        for version in 0..300 {
+            assert!(queue_event(
+                &mut events,
+                json!({"type":"window-title","windowId":"w1","version":version})
+            )?);
+        }
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0]["version"], 299);
+        for id in 0..255 {
+            assert!(queue_event(
+                &mut events,
+                json!({"type":"window-close","windowId":id})
+            )?);
+        }
+        assert_eq!(events.len(), 256);
+        assert!(!queue_event(
+            &mut events,
+            json!({"type":"window-open","windowId":"next"})
+        )?);
+        assert!(queue_event(
+            &mut events,
+            json!({"type":"configuration-reloaded","failed":"x".repeat(1024)})
+        )
+        .is_err());
+        Ok(())
+    }
     fn consistent(data: &Value) {
         for row in data["workspaces"].as_object().unwrap().values() {
             if let Some(output) = id(&row["outputId"]) {

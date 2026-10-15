@@ -1568,3 +1568,46 @@ Both call and idle intervals pass the agreed paging gate. The three-hour memory
 plateau, direct kernel wakeup counter, rendered UI recovery and frozen-source
 Wave 3 A/B/A/B remain pending. Python launches were not traced here. The lower
 call times on this other machine are not a before/after migration speedup.
+
+### Foundation F2 niri event compatibility clients (desktop-PC, nested)
+
+The exact pre-fold-in parent `de55e286` and the event-sharing candidate were
+built with the same desktop Rust toolchain, release profile and pinned Orient
+source before measurement. A private wrapper reused `benchmark-daemon.py`'s
+headless niri lifecycle and `performance.py`'s process/memory accounting.
+Each A/B/A/B interval settled for 35 seconds, then sampled for 60 seconds at
+250 ms intervals. A ran the daemon plus three direct `compositor events`
+consumers; B ran the daemon plus three clients of its shared event lane.
+The table averages the two per-run medians for each side.
+
+| Event-client group measurement | Direct events | Shared daemon events |
+| --- | ---: | ---: |
+| Combined helper PSS | 21.04 MiB | 17.70 MiB |
+| Combined helper RSS, including shared pages more than once | 66.37 MiB | 50.84 MiB |
+| Native helper processes / settled threads per process | 4 / 1 | 4 / 1 |
+| Idle CPU per process, 60 seconds at 100 Hz | 0 observed ticks | 0 observed ticks |
+| Daemon main-thread voluntary sleep-wake cycles per interval | 17 | 17 |
+| Client main-thread voluntary sleep-wake cycles per interval | 0 | 0 |
+
+Both pairs show lower combined PSS: 20.99→17.61 and 21.09→17.80 MiB.
+The average reduction is 3.34 MiB (15.9%). Host swap-in counts were 1/0/0/0
+pages at 4,096 bytes/page, swap-out was zero, and all measured SwapPss samples
+were zero. All four intervals pass the agreed gate. Voluntary switches are
+sleep-wake proxies, not direct kernel wakeup counters.
+
+Baseline ELF SHA-256: `894be75c3414d2467c60312d446be66d936ce9b0565b2d98361789c6a9e9f84c`.
+Candidate ELF: `16ab5d038bec6c0853981291ce3c365f865c54262afc8a4a28b08e27400b2795`.
+Private report digest: `a608e2da54997a756b0ffbc7bf55929a8622f6ce517ca186cf3df0fa6e909fc0`.
+An earlier comparison used a CI-built F1 baseline and a desktop-built candidate;
+it is retained as exploratory evidence and does not determine a regression.
+
+This is the event-client component group, excluding the compositor and UI. The
+helper count is unchanged at this step; the remaining F2 services consolidate
+processes later. A native private-socket test verifies that multiple consumers
+share one compositor event connection and one request connection. Existing
+direct frozen outputs stay exact; the bridge additionally checks 79 frozen
+state observations: 54 exact and 25 explicitly asserted consistent-reference
+projections, including states before initial stream readiness. No frozen output
+was regenerated. No whole-shell, physical desktop, battery or Python-launch
+claim follows from this capture; the full F2 and frozen Wave 3 comparisons remain
+separate gates.

@@ -43,7 +43,13 @@ fn absent(error: &std::io::Error) -> bool {
 }
 pub async fn connect() -> std::result::Result<Client, ConnectError> {
     let path = socket::path().map_err(ConnectError::Failed)?;
-    if let Err(error) = socket::validate_endpoint(&path) {
+    connect_at(&path, "nacrectl").await
+}
+pub(crate) async fn connect_at(
+    path: &std::path::Path,
+    name: &str,
+) -> std::result::Result<Client, ConnectError> {
+    if let Err(error) = socket::validate_endpoint(path) {
         return Err(if error.downcast_ref::<io::Error>().is_some_and(absent) {
             ConnectError::Absent
         } else {
@@ -81,7 +87,7 @@ pub async fn connect() -> std::result::Result<Client, ConnectError> {
     let hello = Message::Hello {
         proto: nacre_protocol::VERSION,
         min: Some(nacre_protocol::MIN_VERSION),
-        client: "nacrectl".into(),
+        client: name.into(),
     };
     let welcome = tokio::time::timeout(Duration::from_secs(5), async {
         framing::write(&mut writer, &hello).await?;
@@ -117,6 +123,10 @@ pub async fn connect() -> std::result::Result<Client, ConnectError> {
     })
 }
 impl Client {
+    pub(crate) fn control(&self) -> Result<std::os::unix::net::UnixStream> {
+        use std::os::fd::AsFd;
+        Ok(self.writer.as_ref().as_fd().try_clone_to_owned()?.into())
+    }
     pub async fn call(
         &mut self,
         method: &str,

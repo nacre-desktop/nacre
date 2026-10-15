@@ -3,10 +3,12 @@
 import copy
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sys
 import unittest
 import tempfile
+from types import SimpleNamespace
 from unittest.mock import patch
 
 TOOLS = Path(__file__).resolve().parents[1]
@@ -46,6 +48,55 @@ def report():
 
 
 class BudgetTests(unittest.TestCase):
+    def test_first_nested_process_uses_private_bus_and_cannot_start_user_manager(self):
+        class StopBeforeLaunch(Exception):
+            pass
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            home = root / "home"
+            home.mkdir()
+            args = SimpleNamespace(
+                backend="niri",
+                revision=None,
+                control=False,
+                helper_binary=None,
+                orient_binary=None,
+                parent_renderer="pixman",
+                labwc_libraries=None,
+                labwc="unused-labwc",
+            )
+            with (
+                patch.dict(
+                    os.environ,
+                    {
+                        "HOME": "/unused-owner-home",
+                        "XDG_RUNTIME_DIR": "/unused-owner-runtime",
+                        "DBUS_SESSION_BUS_ADDRESS": "unix:path=/unused-owner-bus",
+                        "HYPRLAND_NO_SYSTEMD": "0",
+                    },
+                ),
+                patch.object(
+                    session, "prepare", return_value=(home, root / "shell", None)
+                ),
+                patch.object(
+                    session.subprocess, "Popen", side_effect=StopBeforeLaunch
+                ) as launch,
+            ):
+                with self.assertRaises(StopBeforeLaunch):
+                    session.run(args, root)
+                environment = launch.call_args.kwargs["env"]
+                runtime = Path(environment["XDG_RUNTIME_DIR"])
+                self.assertEqual(environment["HOME"], str(home))
+                self.assertEqual(runtime.parent, Path("/tmp"))
+                self.assertTrue(runtime.name.startswith("npr-"))
+                self.assertEqual(
+                    environment["DBUS_SESSION_BUS_ADDRESS"],
+                    "unix:path=" + str(runtime / "absent-session-bus"),
+                )
+                self.assertEqual(environment["HYPRLAND_NO_SYSTEMD"], "1")
+                self.assertFalse(runtime.exists())
+
     def test_palette_gate_covers_witnesses_during_selection(self):
         data = report()
         data["page_size_bytes"] = 4096

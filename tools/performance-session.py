@@ -634,7 +634,9 @@ def run(args, directory):
         QT_SCALE_FACTOR="1",
         NACRE_COMPOSITOR=args.backend,
         PYTHONPATH=str(home / ".local/share/nacre/shell-cli/src"),
+        DBUS_SESSION_BUS_ADDRESS="unix:path=" + str(runtime / "absent-session-bus"),
         DBUS_SYSTEM_BUS_ADDRESS="unix:path=" + str(runtime / "absent-system-bus"),
+        HYPRLAND_NO_SYSTEMD="1",
     )
     if args.orient_binary:
         env["NACRE_ORIENT_BINARY"] = str(args.orient_binary.resolve(strict=True))

@@ -3,6 +3,7 @@ pub mod client;
 pub mod compositor;
 pub mod crashes;
 pub mod hub;
+pub mod niri_events;
 pub mod notify;
 pub mod session;
 pub mod socket;
@@ -25,6 +26,12 @@ async fn serve(
     hub.borrow_mut().publish("daemon", status)?;
     let paths = Paths::environment()?;
     let environment: std::collections::BTreeMap<String, String> = std::env::vars().collect();
+    if matches!(crate::compositor::backend::select(&environment), Ok("niri")) {
+        hub.borrow_mut().publish(
+            niri_events::TOPIC,
+            json!({"backend":"niri","available":false,"connectionId":null}),
+        )?;
+    }
     let (ready, initialized) = tokio::sync::oneshot::channel();
     let ready = Rc::new(RefCell::new(Some(ready)));
     let _ready_keepalive = ready.clone();

@@ -28,11 +28,19 @@ fn validate_listener(socket: &impl std::os::fd::AsFd) -> Result<()> {
 }
 
 pub fn path() -> Result<PathBuf> {
-    let path = if let Some(path) = env::var_os("NACRE_DAEMON_SOCKET") {
+    path_from(
+        env::var_os("NACRE_DAEMON_SOCKET").as_deref(),
+        env::var_os("XDG_RUNTIME_DIR").as_deref(),
+    )
+}
+pub(crate) fn path_from(
+    selected: Option<&std::ffi::OsStr>,
+    runtime: Option<&std::ffi::OsStr>,
+) -> Result<PathBuf> {
+    let path = if let Some(path) = selected {
         PathBuf::from(path)
     } else {
-        PathBuf::from(env::var_os("XDG_RUNTIME_DIR").ok_or("XDG_RUNTIME_DIR is required")?)
-            .join("nacre/daemon.sock")
+        PathBuf::from(runtime.ok_or("XDG_RUNTIME_DIR is required")?).join("nacre/daemon.sock")
     };
     if !path.is_absolute()
         || path.as_os_str().as_bytes().len() > 107
