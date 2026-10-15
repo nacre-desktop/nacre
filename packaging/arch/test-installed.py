@@ -6,6 +6,7 @@ VM/disposable runtime root, never a maintainer's account.
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -54,6 +55,40 @@ for target in (binary, reference, *binary.parents, *reference.parents):
         assert metadata.st_mode & 0o022 == 0, target
 assert run("pacman", "-Qoq", str(binary)).stdout.strip() == "nacre"
 assert run("pacman", "-Qoq", "/usr/bin/orient").stdout.strip() == "orient"
+assert run("pacman", "-Qoq", "/usr/bin/nacre_shell").stdout.strip() == "nacre"
+assert importlib.util.find_spec("nacre_shell") is None, (
+    "Palette Python SDK is developer-only"
+)
+assert not Path("/usr/share/nacre/runtime/palette").exists()
+metadata = json.loads(Path("/usr/share/nacre/package.json.installed").read_text())
+engine = metadata["orient"]["engine"]
+assert run("orient", "--version").stdout.strip() == engine
+assert run("nacre_shell", "--version").stdout.strip() == engine
+for package in (
+    "fontconfig",
+    "freetype2",
+    "libraqm",
+    "libjpeg-turbo",
+    "lcms2",
+    "librsvg",
+):
+    run("pacman", "-Q", package)
+for name in (
+    "LICENSE-Orient",
+    "LICENSE-Pillow",
+    "NOTICE-Orient",
+    "libjpeg-turbo-LICENSE.md",
+):
+    notice = Path("/usr/share/licenses/nacre") / name
+    assert notice.is_file() and notice.stat().st_uid == 0
+# The public native CLI must work before setup creates private runtime links.
+wallpaper = Path("/usr/share/nacre/nacre/shell-tools/demo-wallpapers/forest.jpg")
+query = json.loads(run("nacre_shell", "wallpaper", "--print", str(wallpaper)).stdout)
+assert query["engine"] == engine and query["colours"]
+assert not (home / ".local/state/nacre").exists(), "Read-only native query wrote state"
+print(
+    "Native palette CLI and independently packaged Orient match the engine lock before setup."
+)
 # Simulate a distro-configured plain Niri/Noctalia session, kept byte-for-byte.
 plain = home / ".config/niri/config.kdl"
 plain.parent.mkdir(parents=True)
@@ -149,6 +184,34 @@ wallpaper = Path((home / ".local/state/nacre/wallpaper/last.txt").read_text().st
 assert wallpaper.is_file() and wallpaper.suffix == ".jpg"
 presentation = json.loads((home / ".local/state/nacre/presentation.json").read_text())
 assert presentation["poster"] == str(wallpaper) and presentation["colours"]
+render = subprocess.run(
+    [str(binary), "palette-api", "lock-dashboard", "publish"],
+    input=json.dumps(
+        {
+            "args": [
+                {"preferences": {}, "notifications": []},
+                presentation["colours"],
+                str(wallpaper),
+                None,
+                {"$path": str(home)},
+                [],
+            ],
+            "kwargs": {},
+        }
+    ),
+    text=True,
+    capture_output=True,
+    timeout=120,
+)
+assert render.returncode == 0, render.stderr + render.stdout
+assert "result" in json.loads(render.stdout)
+panels = list((home / ".cache/nacre/lock-ready").glob("dashboard-*-initial.png"))
+assert panels and all(
+    panel.read_bytes().startswith(b"\x89PNG\r\n\x1a\n") for panel in panels
+)
+print(
+    "Installed native image/text renderer produces real lock panels without the developer SDK."
+)
 favorites = json.loads((home / ".config/nacre/launcher.json").read_text())["favorites"]
 assert {
     "nacre-settings",
@@ -211,8 +274,9 @@ managed.write_bytes(original)
 run("nacre", "rollback")
 assert digest(palette) == palette_hash and account.exists()
 run(*base, "--yes")
-assert (home / ".local/share/nacre/palette-runtime").resolve() == Path(
-    "/usr/share/nacre/runtime/palette"
+assert not (home / ".local/share/nacre/palette-runtime").is_symlink()
+assert (home / ".local/share/nacre/shell/tools").resolve() == Path(
+    "/usr/share/nacre/nacre/shell-tools"
 )
 print("Conflict refusal, package rollback and reapply pass without a desktop session.")
 print("FRESH_USER_PACKAGE_PROOF_OK")

@@ -30,6 +30,18 @@ lock assets seed only missing user files; later palette changes are preserved.
 Setup does not run source checks, provision a virtual environment or invoke
 source/native installers. Source contributors retain `install.sh`.
 
+The palette CLI is native: `/usr/bin/nacre_shell` dispatches through the packaged
+bridge to `/usr/lib/nacre/nacre-helper`. Its read-only assets remain under
+`/usr/share/nacre`; no Python palette wheel or runtime venv is installed. The
+Python SDK remains a developer reference for source checks. Remaining Python
+helpers and Brain still require Python/Pillow. Declare the native renderer's
+Fontconfig, FreeType, Raqm, JPEG, Little CMS and SVG libraries directly rather
+than relying on those Python dependencies to pull them in. Embedded Orient and
+Pillow-derived code notices accompany the helper in `/usr/share/licenses/nacre`.
+Offline build seeds use the candidate helper with a private HOME/XDG environment
+and disconnected D-Bus addresses. Setup retires only recorded legacy palette
+symlinks, preserving foreign files and the existing snapshot/rollback boundary.
+
 ## Prepare a candidate
 
 Commit and push the reviewed source first. Generate a recipe in a separate,
@@ -65,9 +77,10 @@ namcap PKGBUILD ./*.pkg.tar.zst
 ```
 
 Record exact commits, package hashes and check summaries in the release
-validation record, following this [clean-chroot checklist](#clean-chroot-and-fresh-user-proof). Review every namcap diagnostic; Python
-entry-point module detection can produce false positives, which require wheel
-smoke evidence rather than suppression.
+validation record, following this [clean-chroot checklist](#clean-chroot-and-fresh-user-proof).
+Review every namcap diagnostic. Installed acceptance checks both native palette
+and independent Orient identities against the engine lock, runs a real native
+image/text render, and verifies that the developer SDK is absent.
 
 Use a separate VM or disposable chroot with **runtime packages only**, a fresh
 ordinary user, no provider credentials and no inherited desktop configuration.

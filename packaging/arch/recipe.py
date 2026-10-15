@@ -24,7 +24,7 @@ def render(root, revision, sequence=None):
         f"orient::git+https://github.com/nacre-desktop/orient.git#commit={lock['revision']}",
     ]
     checksums = ["SKIP", "SKIP"]
-    core_licenses = ["GPL-3.0-only"]
+    core_licenses = ["GPL-3.0-only", "MIT", "MIT-CMU", "BSD-3-Clause", "IJG", "Zlib"]
     for group in json.loads((root / "nacre/shell-tools/font-assets.json").read_text())[
         "groups"
     ]:
@@ -97,7 +97,6 @@ prepare() {{
 
 build() {{
   cd "$srcdir/nacre"
-  python -m build --wheel --no-isolation nacre/shell-cli
   python packaging/arch/build.py "$PWD" "$srcdir/artifacts" "$srcdir"
 }}
 
@@ -107,7 +106,6 @@ check() {{
   cargo build --locked --examples
   npm ci --ignore-scripts --no-audit --no-fund
   python -m venv --system-site-packages "$srcdir/check-env"
-  "$srcdir/check-env/bin/python" -m installer nacre/shell-cli/dist/*.whl
   export NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper"
   export NACRE_ORIENT_BINARY=/usr/bin/orient
   python packaging/arch/check.py "$srcdir/check-env/bin/python"
@@ -118,7 +116,6 @@ package_nacre() {{
   depends={array(core)}
   optdepends={array(mapping["core_optional"])}
   cd "$srcdir/nacre"
-  python -m installer --destdir="$pkgdir" nacre/shell-cli/dist/*.whl
   python packaging/arch/stage.py "$PWD" "$pkgdir" core "$srcdir/artifacts"
 }}
 

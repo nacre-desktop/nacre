@@ -321,10 +321,60 @@ class PackageSetupTests(unittest.TestCase):
                 )
                 releases.restore(Path(record["release"]), record)
                 self.assertEqual(
-                    (home / ".local/share/nacre/palette-runtime").resolve(),
-                    root / "runtime/palette",
+                    (home / ".local/share/nacre/shell/tools").resolve(),
+                    root / "nacre/shell-tools",
+                )
+                self.assertFalse(
+                    (home / ".local/share/nacre/palette-runtime").is_symlink()
                 )
                 releases.deploy_package(root, profile, {"layout": "us"}, "hyprland")
+
+    def test_legacy_palette_link_retirement_rolls_back_and_preserves_foreign_data(self):
+        for foreign in (None, "link", "directory"):
+            with self.subTest(foreign=foreign), tempfile.TemporaryDirectory() as folder:
+                root, home, profile = self.fixture(folder)
+                relative = Path(".local/share/nacre/palette-runtime")
+                path = home / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                target = root / "runtime/palette"
+                if foreign == "directory":
+                    path.mkdir()
+                    (path / "private.txt").write_text("keep")
+                else:
+                    path.symlink_to(home / "foreign" if foreign else target)
+                manifest = home / ".local/state/nacre/package-links.json"
+                manifest.parent.mkdir(parents=True)
+                manifest.write_text(json.dumps({str(relative): str(target)}))
+                before = manifest.read_bytes()
+                with (
+                    patch.object(releases, "HOME", home),
+                    patch.object(releases, "STATE", home / "releases"),
+                ):
+                    if foreign:
+                        with self.assertRaisesRegex(
+                            RuntimeError, "Local runtime preserved"
+                        ):
+                            releases.deploy_package(
+                                root, profile, {"layout": "us"}, "hyprland"
+                            )
+                        self.assertEqual(manifest.read_bytes(), before)
+                        if foreign == "directory":
+                            self.assertEqual((path / "private.txt").read_text(), "keep")
+                        else:
+                            self.assertEqual(os.readlink(path), str(home / "foreign"))
+                        continue
+                    record = releases.deploy_package(
+                        root, profile, {"layout": "us"}, "hyprland"
+                    )
+                    self.assertFalse(path.is_symlink())
+                    self.assertNotIn(
+                        str(relative), package_runtime._state.read_json_file(manifest)
+                    )
+                    releases.restore(Path(record["release"]), record)
+                    self.assertEqual(os.readlink(path), str(target))
+                    self.assertEqual(manifest.read_bytes(), before)
+                    releases.deploy_package(root, profile, {"layout": "us"}, "hyprland")
+                    self.assertFalse(path.is_symlink())
 
     def test_failed_apply_restores_keyboard_config_and_runtime(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -1028,6 +1078,72 @@ path.write_text(json.dumps(events))
 
 
 class ArchPackageLayoutTests(unittest.TestCase):
+    def test_native_palette_recipe_declares_runtime_and_embedded_licenses(self):
+        recipe = load(TOOLS.parent / "packaging/arch/recipe.py", "native_arch_recipe")
+        rendered = recipe.render(TOOLS.parent, "a" * 40, 12)
+        core = rendered.split("package_nacre() {", 1)[1].split("package_nacre-ai()", 1)[
+            0
+        ]
+        for name in (
+            "fontconfig",
+            "freetype2",
+            "libraqm",
+            "libjpeg-turbo",
+            "lcms2",
+            "librsvg",
+        ):
+            self.assertIn(
+                "'" + name + "'", core.split("depends=", 1)[1].splitlines()[0]
+            )
+        for license_id in ("MIT", "MIT-CMU", "BSD-3-Clause", "IJG", "Zlib"):
+            self.assertIn(
+                "'" + license_id + "'", core.split("license=", 1)[1].splitlines()[0]
+            )
+        self.assertNotIn("-m installer", rendered)
+        self.assertNotIn("--wheel", rendered)
+
+    def test_native_candidate_seeds_palette_and_lock_assets_offline(self):
+        build = load(TOOLS.parent / "packaging/arch/build.py", "native_arch_build")
+        helper = Path(
+            os.environ.get(
+                "NACRE_HELPER_BINARY", TOOLS.parent / "target/release/nacre-helper"
+            )
+        )
+        self.assertTrue(
+            helper.is_file(), "Build the candidate native helper before source checks"
+        )
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            home = base / "defaults"
+            foreign = base / "foreign"
+            foreign.mkdir()
+            with patch.dict(
+                os.environ,
+                {
+                    "HOME": str(foreign),
+                    "XDG_CONFIG_HOME": str(foreign),
+                    "XDG_STATE_HOME": str(foreign),
+                    "NACRE_HELPER_BINARY": "/absent/foreign-helper",
+                    "NACRE_HELPER_TOOLS": str(foreign),
+                    "NIRI_SOCKET": "/absent/foreign-session",
+                },
+            ):
+                build.seed_defaults(TOOLS.parent.resolve(), home, helper)
+            self.assertEqual(list(foreign.iterdir()), [])
+            state = package_runtime._state
+            colors = state.read_json_file(home / ".local/state/nacre/scheme.json")[
+                "colours"
+            ]
+            presentation = state.read_json_file(
+                home / ".local/state/nacre/presentation.json"
+            )
+            self.assertEqual(presentation["colours"], colors)
+            self.assertTrue((home / ".config/hypr/hyprlock.conf").is_file())
+            ready = home / ".cache/nacre/lock-ready"
+            self.assertTrue(list(ready.glob("dashboard-*-initial.png")))
+            self.assertEqual((ready / "media.txt").stat().st_mode & 0o777, 0o600)
+            self.assertFalse((home / ".runtime").exists())
+
     def test_development_archives_have_monotonic_snapshot_versions(self):
         recipe = load(TOOLS.parent / "packaging/arch/recipe.py", "setup_arch_recipe")
         older = recipe.render(TOOLS.parent, "a" * 40, 11)
@@ -1101,6 +1217,15 @@ class ArchPackageLayoutTests(unittest.TestCase):
                 Path("usr/lib/nacre/thunar-style/nacre-thunar-theme.so"), owned
             )
             self.assertNotIn(Path("usr/bin/orient"), owned)
+            self.assertIn(Path("usr/bin/nacre_shell"), owned)
+            self.assertFalse((base / "core/usr/share/nacre/runtime/palette").exists())
+            for name in ("LICENSE-Orient", "LICENSE-Pillow"):
+                notice = Path("usr/share/licenses/nacre") / name
+                self.assertIn(notice, owned)
+                self.assertEqual(
+                    (base / "core" / notice).read_bytes(),
+                    (TOOLS.parent / "crates/nacre-helper" / name).read_bytes(),
+                )
             if (TOOLS.parent / "nacre/shell-tools/emoji-LICENSE.txt").is_file():
                 self.assertIn(Path("usr/share/licenses/nacre/emoji-LICENSE.txt"), owned)
             self.assertIn(Path("usr/share/nacre/nacre/shell-tools/nacre-helper"), owned)

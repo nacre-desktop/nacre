@@ -76,6 +76,9 @@ def stage(root, destination, component, build):
                 {
                     "version": (root / "VERSION").read_text().strip(),
                     "revision": (build / "revision").read_text().strip(),
+                    "orient": json.loads((root / "dependencies.lock.json").read_text())[
+                        "orient"
+                    ],
                     "compositors": list(
                         json.loads((root / "packaging/sessions.json").read_text())
                     ),
@@ -114,6 +117,17 @@ def stage(root, destination, component, build):
             True,
         )
         copy(deploy / ".local/bin/nacre", destination / "usr/bin/nacre")
+        palette_cli = shared / "bin/nacre_shell"
+        palette_cli.write_text(
+            "#!/bin/sh\n"
+            "export NACRE_HELPER_BINARY=/usr/lib/nacre/nacre-helper\n"
+            "export NACRE_HELPER_TOOLS=/usr/share/nacre/nacre/shell-tools\n"
+            'exec /usr/share/nacre/nacre/shell-tools/cli-bridge.sh "$@"\n'
+        )
+        palette_cli.chmod(0o755)
+        (destination / "usr/bin/nacre_shell").symlink_to(
+            "../share/nacre/bin/nacre_shell"
+        )
         for name in (
             "nacre-shell",
             "nacre-session-watch",
@@ -220,11 +234,19 @@ def stage(root, destination, component, build):
                 ]
             )
         )
-        palette = shared / "runtime/palette/venv"
-        (palette / "bin").mkdir(parents=True)
-        for name in ("python", "nacre_shell", "orient"):
-            (palette / "bin" / name).symlink_to("/usr/bin/" + name)
-        (palette / "lib").symlink_to("/usr/lib")
+        for name in ("LICENSE-Orient", "LICENSE-Pillow"):
+            copy(
+                root / "crates/nacre-helper" / name,
+                destination / "usr/share/licenses/nacre" / name,
+            )
+        for name, source in (
+            ("NOTICE-Orient", "NOTICE"),
+            ("libjpeg-turbo-LICENSE.md", "third-party/libjpeg-turbo-LICENSE.md"),
+        ):
+            copy(
+                root / "deps/orient" / source,
+                destination / "usr/share/licenses/nacre" / name,
+            )
         for name in ("dolphin-style", "thunar-style"):
             copy(build / "native" / name, destination / "usr/lib/nacre" / name)
         for source in (build / "fonts").glob("*.ttf"):

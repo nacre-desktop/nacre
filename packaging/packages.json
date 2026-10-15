@@ -26,6 +26,10 @@
       "brightnessctl",
       "ffmpeg",
       "fontconfig",
+      "freetype2",
+      "libraqm",
+      "libjpeg-turbo",
+      "lcms2",
       "librsvg",
       "qt6-imageformats",
       "qt6-multimedia",
@@ -75,9 +79,6 @@
     ],
     "build": [
       "git",
-      "python-build",
-      "python-installer",
-      "python-hatchling",
       "nodejs",
       "rust",
       "cargo",
@@ -93,6 +94,7 @@
       "dbus",
       "ttf-dejavu",
       "python-dbus-next",
+      "python-jsonschema",
       "bubblewrap"
     ],
     "core_optional": [

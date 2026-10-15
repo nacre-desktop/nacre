@@ -77,7 +77,6 @@ def links(root, profile, compositor="hyprland"):
     values = {
         ".local/share/nacre/shell/source": root / "nacre/shell",
         ".local/share/nacre/shell/tools": root / "nacre/shell-tools",
-        ".local/share/nacre/palette-runtime": root / "runtime/palette",
         ".local/share/nacre/dolphin-style": Path("/usr/lib/nacre/dolphin-style"),
         ".local/share/nacre/thunar-style": Path("/usr/lib/nacre/thunar-style"),
         ".config/quickshell/nacre": root / "nacre/shell",
@@ -105,6 +104,9 @@ def plan(home, root, profile, compositor="hyprland"):
         for backend in ("hyprland", "niri")
         for path in links(root, {"components": ["ai", "brain"]}, backend)
     }
+    # Retire only a legacy palette link recorded in the managed manifest. The
+    # usual exact-target checks below still refuse foreign links/directories.
+    permitted.add(".local/share/nacre/palette-runtime")
     # Migrate only the exact links recorded by the old globally-enabled setup.
     permitted.update(
         f".config/systemd/user/graphical-session.target.wants/{name}.service"
