@@ -1,3 +1,4 @@
+use niri::layout::LayoutElement;
 use niri::niri::State;
 use niri_config::Config;
 use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
@@ -6,6 +7,7 @@ fn main() {
     let mut args = env::args().skip(1);
     let config = args.next().expect("config");
     let count: u8 = args.next().unwrap_or("3".into()).parse().unwrap();
+    let telemetry = args.next();
     let config = Config::load(Path::new(&config)).config.unwrap();
     let mut event_loop = EventLoop::<State>::try_new().unwrap();
     let mut state = State::new(
@@ -40,6 +42,22 @@ fn main() {
             .display()
     );
     event_loop
-        .run(None, &mut state, |state| state.refresh_and_flush_clients())
+        .run(None, &mut state, |state| {
+            state.refresh_and_flush_clients();
+            if let Some(path) = &telemetry {
+                if let Some(ws) = state.niri.layout.active_workspace() {
+                    let tiles: Vec<_> = ws
+                        .tiles_with_render_positions()
+                        .map(|(tile, pos, _)| {
+                            format!("[{}, {}, {}]", tile.window().id().get(), pos.x, pos.y)
+                        })
+                        .collect();
+                    let value = format!("{{\"tiles\":[{}]}}", tiles.join(","));
+                    let next = format!("{path}.next");
+                    std::fs::write(&next, value).unwrap();
+                    std::fs::rename(next, path).unwrap();
+                }
+            }
+        })
         .unwrap();
 }

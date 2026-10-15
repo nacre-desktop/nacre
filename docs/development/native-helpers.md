@@ -160,6 +160,32 @@ hover focus off still omits the node. The frozen rendering corpus remains
 unchanged, with this exact node substitution declared in its comparison test.
 See [Niri's input configuration](https://github.com/niri-wm/niri/wiki/Configuration:-Input#focus-follows-mouse).
 
+The opt-in native regression probe checks the behavior with three real Wayland
+tiles in an isolated headless Niri. An unrestricted control must reproduce edge
+scrolling. The general defaults and regenerated settings must focus fully visible
+tiles without changing their rendered positions at either edge, while the native
+directional keyboard actions still scroll. The driver exposes optional private
+geometry telemetry because Niri 26.04 does not populate tiled positions in IPC.
+
+```sh
+python3 tools/tests/verify_niri_hover_focus.py \
+  --driver /path/to/monitor-workspaces-headless \
+  --helper /path/to/current/nacre-helper \
+  --output /tmp/niri-hover-focus.json
+```
+
+Build the driver from `tools/tests/monitor_workspaces_headless.rs` against the
+matching Niri library. `--pointer` may select an existing protocol client;
+otherwise the probe builds the pinned virtual-pointer client. It never sends
+input to the current desktop. This verifies native navigation actions, rather
+than physical keyboard hardware.
+
+When backporting this setting to an older installation, update the settings
+writer as well as generated KDL. A later desktop preference save can otherwise
+reintroduce unrestricted `focus-follows-mouse` in a later include and override a
+previously bounded host setting. Validate every active include and exercise a
+settings save after installation.
+
 The frozen compositor entrypoint cases use the uninstalled `compositor-reference`
 provider to retain their original connection lifecycle while calling the same
 Rust actions, reducer, rendering and event code. Production connection reuse is
