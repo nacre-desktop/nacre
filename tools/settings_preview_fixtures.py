@@ -279,7 +279,9 @@ def stage(target, *, icons=False):
             if path.name == "shell.qml":
                 continue
             prefix = (
-                "singleton " if bool(re.search(r"(?m)^\s*pragma Singleton\s*$", path.read_text())) else ""
+                "singleton "
+                if bool(re.search(r"(?m)^\s*pragma Singleton\s*$", path.read_text()))
+                else ""
             )
             rows.append(f"{prefix}{path.stem} 1.0 {path.name}")
         if rows:

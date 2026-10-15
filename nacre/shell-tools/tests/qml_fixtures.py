@@ -66,7 +66,9 @@ def stage_qml(source, destination):
         for folder in [tree, *[p for p in tree.rglob("*") if p.is_dir()]]:
             entries = []
             for path in folder.glob("*.qml"):
-                singleton = bool(re.search(r"(?m)^\s*pragma Singleton\s*$", path.read_text()))
+                singleton = bool(
+                    re.search(r"(?m)^\s*pragma Singleton\s*$", path.read_text())
+                )
                 entries.append(
                     f"{'singleton ' if singleton else ''}{path.stem} 1.0 {path.name}"
                 )
@@ -189,7 +191,9 @@ def install_modules(directory):
         types = {}
         if originals:
             for path in originals.glob("*.qml"):
-                singleton = bool(re.search(r"(?m)^\s*pragma Singleton\s*$", path.read_text()))
+                singleton = bool(
+                    re.search(r"(?m)^\s*pragma Singleton\s*$", path.read_text())
+                )
                 if (
                     not singleton
                     or originals.name in ("config", "utils")
