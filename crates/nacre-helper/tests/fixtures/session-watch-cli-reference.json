@@ -1,0 +1,62 @@
+{
+  "source_sha256": "72a54f4ad5f3da2629a8ff2683d33c499ca99362fa2a00eeff6ad938e8673317",
+  "cases": [
+    {
+      "args": [],
+      "stdout": "",
+      "stderr": "usage: session-watch.py [-h] [--event EVENT] {check,ready,watch}\nsession-watch.py: error: the following arguments are required: action\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--help"
+      ],
+      "stdout": "usage: session-watch.py [-h] [--event EVENT] {check,ready,watch}\n\npositional arguments:\n  {check,ready,watch}\n\noptions:\n  -h, --help           show this help message and exit\n  --event EVENT\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "bad"
+      ],
+      "stdout": "",
+      "stderr": "usage: session-watch.py [-h] [--event EVENT] {check,ready,watch}\nsession-watch.py: error: argument action: invalid choice: 'bad' (choose from 'check', 'ready', 'watch')\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--bad"
+      ],
+      "stdout": "",
+      "stderr": "usage: session-watch.py [-h] [--event EVENT] {check,ready,watch}\nsession-watch.py: error: the following arguments are required: action\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "check",
+        "--event"
+      ],
+      "stdout": "",
+      "stderr": "usage: session-watch.py [-h] [--event EVENT] {check,ready,watch}\nsession-watch.py: error: argument --event: expected one argument\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--e",
+        "fixture",
+        "--help"
+      ],
+      "stdout": "usage: session-watch.py [-h] [--event EVENT] {check,ready,watch}\n\npositional arguments:\n  {check,ready,watch}\n\noptions:\n  -h, --help           show this help message and exit\n  --event EVENT\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--help=invalid"
+      ],
+      "stdout": "",
+      "stderr": "usage: session-watch.py [-h] [--event EVENT] {check,ready,watch}\nsession-watch.py: error: argument -h/--help: ignored explicit argument 'invalid'\n",
+      "exit": 2
+    }
+  ]
+}

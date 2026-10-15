@@ -32,6 +32,7 @@ MIGRATED = frozenset(
         "lock-prepare",
         "palette_engine",
         "shell-supervisor",
+        "session-watch",
         "nacre-colors",
         "nacre_shell",
         "launcher-preferences",

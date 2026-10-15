@@ -165,6 +165,16 @@ pub struct Events<T: Outputs> {
     failed: bool,
 }
 impl<T: Outputs> Events<T> {
+    /// A duplicate descriptor lets an owning observer interrupt a blocked read.
+    pub(crate) fn control(&self) -> Result<UnixStream> {
+        self.socket
+            .as_ref()
+            .ok_or_else(|| invalid("niri event stream disconnected"))?
+            .stream
+            .get_ref()
+            .try_clone()
+            .map_err(io_error)
+    }
     pub fn new(socket: EventSocket, mut outputs: T) -> Result<Self> {
         let initial = outputs
             .outputs()?

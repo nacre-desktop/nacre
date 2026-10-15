@@ -1,0 +1,113 @@
+{
+  "source_sha256": "72a54f4ad5f3da2629a8ff2683d33c499ca99362fa2a00eeff6ad938e8673317",
+  "restore": [
+    {
+      "name": "niri",
+      "saved": [
+        {
+          "name": "DP-1",
+          "width": 1920
+        },
+        {
+          "name": "HDMI-A-1",
+          "width": 3840
+        }
+      ],
+      "result": []
+    },
+    {
+      "name": "missing",
+      "saved": [
+        {
+          "name": "DP-1",
+          "width": 1920
+        },
+        {
+          "name": "HDMI-A-1",
+          "width": 3840
+        }
+      ],
+      "result": []
+    },
+    {
+      "name": "disconnected",
+      "saved": [
+        {
+          "name": "DP-1",
+          "width": 1920
+        },
+        {
+          "name": "HDMI-A-1",
+          "width": 3840
+        }
+      ],
+      "result": []
+    },
+    {
+      "name": "connected",
+      "saved": [
+        {
+          "name": "DP-1",
+          "width": 1920
+        },
+        {
+          "name": "HDMI-A-1",
+          "width": 3840
+        }
+      ],
+      "result": [
+        [
+          {
+            "name": "DP-1",
+            "width": 1920
+          }
+        ]
+      ]
+    }
+  ],
+  "watch": [
+    [
+      "check",
+      "observer-start"
+    ],
+    [
+      "restore"
+    ],
+    [
+      "check",
+      "before-sleep"
+    ],
+    [
+      "sleep",
+      0.5
+    ],
+    [
+      "restore"
+    ],
+    [
+      "check",
+      "resume"
+    ],
+    [
+      "sleep",
+      0.3
+    ],
+    [
+      "restore"
+    ],
+    [
+      "check",
+      "display-hotplug"
+    ],
+    [
+      "unsubscribe-logind"
+    ],
+    [
+      "close-events"
+    ],
+    [
+      "error",
+      "Session observer ended"
+    ]
+  ]
+}

@@ -25,6 +25,7 @@ class NativeHelperInstallTests(unittest.TestCase):
             for name in (
                 "palette_engine.py",
                 "shell-supervisor.py",
+                "session-watch.py",
                 "pearl-state.py",
                 "pearl-window.py",
                 "compositor.py",
@@ -41,6 +42,7 @@ class NativeHelperInstallTests(unittest.TestCase):
             installer.retire_native_helpers(tools)
             self.assertFalse((tools / "palette_engine.py").exists())
             self.assertFalse((tools / "shell-supervisor.py").exists())
+            self.assertFalse((tools / "session-watch.py").exists())
             self.assertFalse((tools / "pearl-state.py").exists())
             for name in (
                 "pearl-window.py",

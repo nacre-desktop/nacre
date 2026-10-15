@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 import nacre_native_compositor as compositor
+from nacre_native_config import _binary as helper_binary
 
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre"
@@ -256,8 +257,8 @@ def main():
     elif a.action == "session":
         subprocess.run(
             [
-                sys.executable,
-                str(Path(__file__).with_name("session-watch.py")),
+                str(helper_binary()),
+                "session-watch",
                 "check",
                 "--event",
                 "manual",

@@ -1,0 +1,22 @@
+{
+  "source_sha256": "72a54f4ad5f3da2629a8ff2683d33c499ca99362fa2a00eeff6ad938e8673317",
+  "record": {
+    "event": "fixture",
+    "checked": "2026-10-01T12:00:00+00:00",
+    "desktopReady": false,
+    "wallet": "unavailable",
+    "monitors": [],
+    "brainWindows": 0,
+    "configErrors": ""
+  },
+  "files": {
+    "events.jsonl": {
+      "mode": "0o600",
+      "text": "{\"event\": \"fixture\", \"checked\": \"2026-10-01T12:00:00+00:00\", \"desktopReady\": false, \"wallet\": \"unavailable\", \"monitors\": [], \"brainWindows\": 0, \"configErrors\": \"\", \"version\": 1}\n"
+    },
+    "latest.json": {
+      "mode": "0o600",
+      "text": "{\"event\": \"fixture\", \"checked\": \"2026-10-01T12:00:00+00:00\", \"desktopReady\": false, \"wallet\": \"unavailable\", \"monitors\": [], \"brainWindows\": 0, \"configErrors\": \"\"}\n"
+    }
+  }
+}

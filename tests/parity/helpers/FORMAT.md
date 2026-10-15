@@ -180,3 +180,15 @@ The original pre-exec termination case also records a diagnostic fake-QS launch
 trace; only that trace is scheduler-dependent and excluded from equality.
 The separate `terminate-child` reference fixes the input synchronization and
 checks the full launch/SIGTERM trace. No frozen expected file is rewritten.
+
+The Wave 4 session observer adds immutable `session-watch-*-reference.json`
+contracts: four registered records/files plus an injected unregistered directory, three
+readiness decisions, four saved
+output policies, the ordered sleep/resume/hotplug/EOF effects, and seven CLI
+cases. Producers refuse replacement. Rust integration tests exercise those
+references and private real D-Bus/socket traffic. Absolute custom XDG state roots
+are an intended difference, matching `NacrePaths.qml`; linked/foreign/hard-linked
+state is rejected and existing private modes are repaired. The unobserved
+`latest.next` scratch write is omitted; final published bytes/modes are exact.
+The current Python watch path fails on the retired `event_socket` bridge method;
+native observation uses direct sockets and D-Bus, without changing session policy.

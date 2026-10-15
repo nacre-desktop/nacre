@@ -83,18 +83,19 @@ class HelperCompositorMigrationTests(unittest.TestCase):
             ]
         }
         session = SimpleNamespace(readiness=Mock())
-        spec = SimpleNamespace(loader=SimpleNamespace(exec_module=lambda module: None))
         with (
             tempfile.TemporaryDirectory() as folder,
             patch.dict(os.environ, {"XDG_RUNTIME_DIR": folder}),
             patch.object(startup.POLICY, "load", return_value=profile),
             patch.dict(startup.compositor.capabilities, {"perOutputWorkspaces": False}),
             patch.object(
-                startup.importlib.util, "spec_from_file_location", return_value=spec
+                startup, "helper_binary", return_value=Path("/fixture/nacre-helper")
             ),
             patch.object(
-                startup.importlib.util, "module_from_spec", return_value=session
-            ),
+                startup.subprocess,
+                "run",
+                side_effect=lambda *_, **__: session.readiness(),
+            ) as ready,
             patch.object(startup.shutil, "which", return_value="/fake/example-browser"),
             patch.object(
                 startup.compositor,
@@ -112,6 +113,33 @@ class HelperCompositorMigrationTests(unittest.TestCase):
         launch.assert_called_once()
         self.assertEqual(launch.call_args.args[0][-1], "example-browser")
         session.readiness.assert_called_once_with()
+        ready.assert_called_once_with(
+            ["/fixture/nacre-helper", "session-watch", "ready"],
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+
+    def test_readiness_failure_never_launches_selected_apps(self):
+        startup = load("startup-apps")
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.dict(os.environ, {"XDG_RUNTIME_DIR": folder}),
+            patch.object(startup.POLICY, "load", return_value={"startup": [{}]}),
+            patch.object(
+                startup, "helper_binary", return_value=Path("/fixture/nacre-helper")
+            ),
+            patch.object(
+                startup.subprocess,
+                "run",
+                side_effect=subprocess.CalledProcessError(1, "readiness"),
+            ),
+            patch.object(startup.subprocess, "Popen") as launch,
+            patch.object(startup.compositor, "query") as query,
+        ):
+            with self.assertRaises(subprocess.CalledProcessError):
+                startup.main()
+        launch.assert_not_called()
+        query.assert_not_called()
 
     def test_saved_workflow_applies_only_connected_outputs(self):
         workflows = load("workflow-profiles")

@@ -9,7 +9,13 @@ ROOT = Path(__file__).parents[1]
 
 
 def load(name):
-    spec = importlib.util.spec_from_file_location(name, ROOT / (name + ".py"))
+    spec = importlib.util.spec_from_file_location(
+        name,
+        ROOT
+        / (
+            "tests/native_session_watch.py" if name == "session-watch" else name + ".py"
+        ),
+    )
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     return m

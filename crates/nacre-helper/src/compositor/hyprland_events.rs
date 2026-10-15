@@ -37,6 +37,10 @@ pub struct Events {
     ended: bool,
 }
 impl Events {
+    /// A duplicate descriptor lets an owning observer interrupt a blocked read.
+    pub(crate) fn control(&self) -> Result<UnixStream> {
+        self.stream.get_ref().try_clone().map_err(io_error)
+    }
     pub fn next_before(&mut self, deadline: std::time::Instant) -> Result<Option<Value>> {
         let timeout = deadline
             .checked_duration_since(std::time::Instant::now())

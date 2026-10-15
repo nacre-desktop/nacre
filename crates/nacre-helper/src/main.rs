@@ -11,6 +11,9 @@ fn run() -> Result<i32> {
     let mut arguments = std::env::args().skip(1);
     let tool = arguments.next().ok_or("Expected a helper command")?;
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "session-watch" {
+        return nacre_helper::session_watch::run(&arguments);
+    }
     if tool == "shell-supervisor" {
         return nacre_helper::shell_supervisor::run(None);
     }

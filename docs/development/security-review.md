@@ -178,3 +178,10 @@ then merges them with its own environment locally. The helper does not dump
 inherited provider credentials. A synthetic API-key negative control checks its
 stdout. Child environment inheritance and the existing session-user trust and
 last-known-good recovery policies are preserved; no privilege is added.
+
+The Wave 4 session observer reads Secret Service's `Locked` property and
+login1's `PrepareForSleep` signal. It performs no privileged login1 operation or
+new lock/power policy. Session evidence uses a private directory and files before
+writing, repairs existing private modes, and rejects linked, foreign-owned and
+hard-linked destinations. Explicit tests leave linked targets unchanged; real
+private D-Bus/socket tests cover resume/hotplug and subscription cleanup.

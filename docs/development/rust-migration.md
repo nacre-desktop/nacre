@@ -9,7 +9,7 @@ Keep public commands, QML appearance, user data, privilege and session policy.
 | 1 Frequent helpers | Complete; CI green | 13 ports; busy service RSS 26.95 → 10.21 MiB; absolute XDG roots follow QML. |
 | 2 Compositor / pearls | Complete; CI green | Preview CPU 52.58 → 1.26 ms; RSS 21.54 → 7.30 MiB; native IPC/session runtime. |
 | 3 Wallpaper / colors | ports complete, quiet A/B/A/B pending (desktop unreachable) | Runtime CI 38723440822 green; 237 Rust / 916 repo / 534 frozen parity. |
-| 4 Remaining shell tools | Active | Brief media RSS check, then supervisor → session-watch; preserve recovery/policy. |
+| 4 Remaining shell tools | Active | Media fix CI green; supervisor public; session-watch validating; recovery/policy preserved. |
 | 5 AI | Pending | Claude stream-json; existing permissions/history; sidebar-chat, composer and AI controller belong here. |
 | 6 Brain | Pending | Same bge-small model; cosine ≥ 0.9999 or backed-up automatic reindex. |
 | 7 Installer / proof | Pending | install*.py/login-install.py deferred here; packaging owned separately. |
@@ -57,10 +57,14 @@ Apply docs/development/security-review.md cases where relevant, preserving privi
 Never alter deliberate AI permissions or paru -Syu --skipreview.
 Media response trim moved after cleanup: matched native RSS29.19→27.80MiB;
 Python controls25.95/26.24MiB; no retained decoded frames or battery claim.
-Media fix 16ea1b94 published; CI pending. Supervisor caller switch validating:
+Media fix 16ea1b94: CI 38737660609 green; supervisor 253008f5: CI 38742419146 green.
 Supervisor: 17 contracts + security canary + nested niri/Hyprland pass;
 249 Rust / repo checks / 534 original parity pass; caller switch retires Python.
 Supervisor busy CPU98.58→22.38ms; helper-groupRSS24.64→10.77MiB;2→1 processes.
-Next: check supervisor CI, then port session-watch; 4 records, 3 readiness,
-4 display policies, 12 ordered event effects and 7 CLI cases frozen.
+Session-watch: 5 records/files, 3 readiness, 4 display policies, 12 event effects, 7 CLI
+cases exact; private bus/socket, linked-state/XDG and both nested compositors pass.
+259 Rust/fmt/clippy;917 full repo +15 incoming Niri checks/534 parity pass.
+Python watch currently fails at removed event_socket bridge; no valid idle baseline.
+Session check CPU125.79→29.50ms;20Pythonstarts→0; nativeRSS18.09MiB/idle0ticks30s.
+Next: publish/check session-watch CI, then desktop-settings (150 validation/50 controller cases frozen).
 No live desktop/config/network changes, tags, releases or package publication.

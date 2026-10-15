@@ -1,0 +1,302 @@
+{
+  "source_sha256": "72a54f4ad5f3da2629a8ff2683d33c499ca99362fa2a00eeff6ad938e8673317",
+  "clock": "2026-10-01T12:00:00+00:00",
+  "records": [
+    {
+      "name": "unlocked",
+      "inputs": {
+        "desktop": "{\"launcherMode\":\"apps\"}",
+        "wallet": "b false",
+        "monitors": [
+          {
+            "name": "DP-1",
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.25
+          }
+        ],
+        "windows": [
+          {
+            "class": "nacre-brain"
+          },
+          {
+            "class": "chrome-127.0.0.1__-Default"
+          },
+          {
+            "class": "other"
+          }
+        ],
+        "configErrors": "fixture error"
+      },
+      "result": {
+        "event": "fixture",
+        "checked": "2026-10-01T12:00:00+00:00",
+        "desktopReady": true,
+        "wallet": "unlocked",
+        "monitors": [
+          {
+            "name": "DP-1",
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.25
+          }
+        ],
+        "brainWindows": 2,
+        "configErrors": "fixture error"
+      },
+      "files": {
+        "events.jsonl": {
+          "mode": "0o600",
+          "text": "{\"event\": \"fixture\", \"checked\": \"2026-10-01T12:00:00+00:00\", \"desktopReady\": true, \"wallet\": \"unlocked\", \"monitors\": [{\"name\": \"DP-1\", \"width\": 1920, \"height\": 1080, \"scale\": 1.25}], \"brainWindows\": 2, \"configErrors\": \"fixture error\", \"version\": 1}\n"
+        },
+        "latest.json": {
+          "mode": "0o600",
+          "text": "{\"event\": \"fixture\", \"checked\": \"2026-10-01T12:00:00+00:00\", \"desktopReady\": true, \"wallet\": \"unlocked\", \"monitors\": [{\"name\": \"DP-1\", \"width\": 1920, \"height\": 1080, \"scale\": 1.25}], \"brainWindows\": 2, \"configErrors\": \"fixture error\", \"version\": 1}\n"
+        },
+        "latest.json.schema.lock": {
+          "mode": "0o600",
+          "text": ""
+        }
+      }
+    },
+    {
+      "name": "locked",
+      "inputs": {
+        "desktop": "{\"launcherMode\":\"apps\"}",
+        "wallet": "b true",
+        "monitors": [
+          {
+            "name": "DP-1",
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.25
+          }
+        ],
+        "windows": [
+          {
+            "class": "nacre-brain"
+          },
+          {
+            "class": "chrome-127.0.0.1__-Default"
+          },
+          {
+            "class": "other"
+          }
+        ],
+        "configErrors": "fixture error"
+      },
+      "result": {
+        "event": "fixture",
+        "checked": "2026-10-01T12:00:00+00:00",
+        "desktopReady": true,
+        "wallet": "locked",
+        "monitors": [
+          {
+            "name": "DP-1",
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.25
+          }
+        ],
+        "brainWindows": 2,
+        "configErrors": "fixture error"
+      },
+      "files": {
+        "events.jsonl": {
+          "mode": "0o600",
+          "text": "{\"event\": \"fixture\", \"checked\": \"2026-10-01T12:00:00+00:00\", \"desktopReady\": true, \"wallet\": \"locked\", \"monitors\": [{\"name\": \"DP-1\", \"width\": 1920, \"height\": 1080, \"scale\": 1.25}], \"brainWindows\": 2, \"configErrors\": \"fixture error\", \"version\": 1}\n"
+        },
+        "latest.json": {
+          "mode": "0o600",
+          "text": "{\"event\": \"fixture\", \"checked\": \"2026-10-01T12:00:00+00:00\", \"desktopReady\": true, \"wallet\": \"locked\", \"monitors\": [{\"name\": \"DP-1\", \"width\": 1920, \"height\": 1080, \"scale\": 1.25}], \"brainWindows\": 2, \"configErrors\": \"fixture error\", \"version\": 1}\n"
+        },
+        "latest.json.schema.lock": {
+          "mode": "0o600",
+          "text": ""
+        }
+      }
+    },
+    {
+      "name": "unavailable",
+      "inputs": {
+        "desktop": "{\"launcherMode\":\"apps\"}",
+        "wallet": "",
+        "monitors": [
+          {
+            "name": "DP-1",
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.25
+          }
+        ],
+        "windows": [
+          {
+            "class": "nacre-brain"
+          },
+          {
+            "class": "chrome-127.0.0.1__-Default"
+          },
+          {
+            "class": "other"
+          }
+        ],
+        "configErrors": "fixture error"
+      },
+      "result": {
+        "event": "fixture",
+        "checked": "2026-10-01T12:00:00+00:00",
+        "desktopReady": true,
+        "wallet": "unavailable",
+        "monitors": [
+          {
+            "name": "DP-1",
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.25
+          }
+        ],
+        "brainWindows": 2,
+        "configErrors": "fixture error"
+      },
+      "files": {
+        "events.jsonl": {
+          "mode": "0o600",
+          "text": "{\"event\": \"fixture\", \"checked\": \"2026-10-01T12:00:00+00:00\", \"desktopReady\": true, \"wallet\": \"unavailable\", \"monitors\": [{\"name\": \"DP-1\", \"width\": 1920, \"height\": 1080, \"scale\": 1.25}], \"brainWindows\": 2, \"configErrors\": \"fixture error\", \"version\": 1}\n"
+        },
+        "latest.json": {
+          "mode": "0o600",
+          "text": "{\"event\": \"fixture\", \"checked\": \"2026-10-01T12:00:00+00:00\", \"desktopReady\": true, \"wallet\": \"unavailable\", \"monitors\": [{\"name\": \"DP-1\", \"width\": 1920, \"height\": 1080, \"scale\": 1.25}], \"brainWindows\": 2, \"configErrors\": \"fixture error\", \"version\": 1}\n"
+        },
+        "latest.json.schema.lock": {
+          "mode": "0o600",
+          "text": ""
+        }
+      }
+    },
+    {
+      "name": "shell-not-ready",
+      "inputs": {
+        "desktop": "invalid",
+        "wallet": "b false",
+        "monitors": [
+          {
+            "name": "DP-1",
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.25
+          }
+        ],
+        "windows": [
+          {
+            "class": "nacre-brain"
+          },
+          {
+            "class": "chrome-127.0.0.1__-Default"
+          },
+          {
+            "class": "other"
+          }
+        ],
+        "configErrors": "fixture error"
+      },
+      "result": {
+        "event": "fixture",
+        "checked": "2026-10-01T12:00:00+00:00",
+        "desktopReady": false,
+        "wallet": "unlocked",
+        "monitors": [
+          {
+            "name": "DP-1",
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.25
+          }
+        ],
+        "brainWindows": 2,
+        "configErrors": "fixture error"
+      },
+      "files": {
+        "events.jsonl": {
+          "mode": "0o600",
+          "text": "{\"event\": \"fixture\", \"checked\": \"2026-10-01T12:00:00+00:00\", \"desktopReady\": false, \"wallet\": \"unlocked\", \"monitors\": [{\"name\": \"DP-1\", \"width\": 1920, \"height\": 1080, \"scale\": 1.25}], \"brainWindows\": 2, \"configErrors\": \"fixture error\", \"version\": 1}\n"
+        },
+        "latest.json": {
+          "mode": "0o600",
+          "text": "{\"event\": \"fixture\", \"checked\": \"2026-10-01T12:00:00+00:00\", \"desktopReady\": false, \"wallet\": \"unlocked\", \"monitors\": [{\"name\": \"DP-1\", \"width\": 1920, \"height\": 1080, \"scale\": 1.25}], \"brainWindows\": 2, \"configErrors\": \"fixture error\", \"version\": 1}\n"
+        },
+        "latest.json.schema.lock": {
+          "mode": "0o600",
+          "text": ""
+        }
+      }
+    }
+  ],
+  "readiness": [
+    {
+      "name": "unavailable-is-ready",
+      "states": [
+        {
+          "desktopReady": true,
+          "wallet": "unavailable"
+        }
+      ],
+      "result": {
+        "desktopReady": true,
+        "wallet": "unavailable",
+        "event": "startup-readiness"
+      },
+      "events": [
+        "startup-readiness"
+      ]
+    },
+    {
+      "name": "locked-then-unlocked",
+      "states": [
+        {
+          "desktopReady": true,
+          "wallet": "locked"
+        },
+        {
+          "desktopReady": true,
+          "wallet": "unlocked"
+        }
+      ],
+      "result": {
+        "desktopReady": true,
+        "wallet": "unlocked",
+        "event": "startup-readiness"
+      },
+      "events": [
+        "startup-readiness",
+        "startup-readiness"
+      ]
+    },
+    {
+      "name": "not-ready-timeout",
+      "states": [
+        {
+          "desktopReady": false,
+          "wallet": "unlocked"
+        },
+        {
+          "desktopReady": false,
+          "wallet": "unlocked"
+        },
+        {
+          "desktopReady": false,
+          "wallet": "unlocked"
+        }
+      ],
+      "result": {
+        "desktopReady": false,
+        "wallet": "unlocked",
+        "event": "startup-timeout"
+      },
+      "events": [
+        "startup-readiness",
+        "startup-readiness",
+        "startup-timeout"
+      ]
+    }
+  ]
+}

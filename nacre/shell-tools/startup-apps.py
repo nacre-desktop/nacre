@@ -10,6 +10,7 @@ import importlib.util
 from pathlib import Path
 
 import nacre_native_compositor as compositor
+from nacre_native_config import _binary as helper_binary
 
 HOME = Path.home()
 
@@ -63,12 +64,11 @@ def main():
             fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return
-        spec = importlib.util.spec_from_file_location(
-            "session", Path(__file__).with_name("session-watch.py")
+        subprocess.run(
+            [str(helper_binary()), "session-watch", "ready"],
+            check=True,
+            stdout=subprocess.DEVNULL,
         )
-        session = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(session)
-        session.readiness()
         clients = compositor.query("windows", timeout=None)
         for label, workspace, argv, exists in plan(clients, profile):
             if exists or not shutil.which(argv[0]):

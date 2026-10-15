@@ -1442,3 +1442,47 @@ actual supervised private niri/Hyprland sessions pass. Startup still allows one
 last-known-good restore; runtime failure still returns to systemd. Rejected code,
 preferences and file permissions/timestamps are preserved. The native environment
 query emits only changed display/session variables, with a credential-canary test.
+
+### Wave 4 session observer (busy machine)
+
+Twenty fresh `check` calls were interleaved with private HOME/XDG, D-Bus,
+compositor sockets and the same inert QS reply. Release builds finished first.
+`benchmark-session-watch.py` uses the helper benchmark's child user+system CPU
+method; the bus/compositor providers and measurement driver are excluded.
+
+| Session measurement | Python | Native |
+| --- | ---: | ---: |
+| Check CPU per call | 125.79 ms | 29.50 ms |
+| Python launches in 20 checks | 20 | 0 |
+| Resident observer helper RSS | unavailable | 18.09 MiB |
+| Helper processes during valid idle sample | unavailable | 1 |
+| Helper CPU during 30 s idle, 100 Hz | unavailable | 0 ticks |
+
+The original Python `watch` replay exits 1: its `event_socket` request reaches a
+retired compositor-bridge operation. An idle comparison against that failed
+process would be misleading. Native observation directly subscribes to login1
+and compositor events; private real-bus/socket tests cover sleep, resume,
+hotplug and disconnect cleanup. Readiness and display-restoration policy are
+unchanged, including 500 ms resume and 300 ms hotplug delays. No wall-clock,
+whole-shell RSS/PSS or battery improvement is inferred from this busy sample.
+
+The original source SHA-256 is
+`72a54f4ad5f3da2629a8ff2683d33c499ca99362fa2a00eeff6ad938e8673317`;
+measured release helper SHA-256 is
+`e3b7873621037e9a32684431f92abd451ab6dac04ef7dd2ab9737296a3e0954b`.
+Frozen current-Python records, files, modes, readiness, output filters, ordered
+watch effects and CLI cases remain immutable. Custom absolute XDG roots follow
+QML as intended; linked/foreign/hard-linked evidence is refused and private
+permissions are applied before writing. Missing desktop/wallet/compositor
+observations retain their existing values and now emit journal diagnostics.
+
+Both supervised nested niri and Hyprland checks reached real shell readiness and
+ran the observer as one native process, with no Python child. The wider palette
+witness also passed on both. Its first niri pixel capture missed the exact primary
+color; an identical-source retry passed. The cause is unverified; this is not a
+quiet-window performance comparison.
+
+The earlier candidate sample was 98.56→30.96 ms CPU and native17.86 MiB;
+the table is the final sample after the unregistered-directory writer fix and
+integration of the existing Niri hover update. Both Python control samples show
+busy-machine variability; no wall-clock claim follows from these values.

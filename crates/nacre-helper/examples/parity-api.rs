@@ -49,6 +49,17 @@ fn call(helper: &str, operation: &str, request: &Request) -> Result<Value> {
         std::process::exit(1);
     }
     let paths = Paths::environment()?;
+    if helper == "session-watch" && operation == "check" {
+        use nacre_helper::session_watch::Observer;
+        return nacre_helper::session_watch::Session::new(paths)?.check(
+            request
+                .args
+                .first()
+                .or_else(|| request.kwargs.get("event"))
+                .and_then(Value::as_str)
+                .unwrap_or("manual"),
+        );
+    }
     if helper == "shell-supervisor" {
         let root = paths.share.join("shell");
         return match operation {
