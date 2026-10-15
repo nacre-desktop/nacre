@@ -61,7 +61,6 @@ Both show zero idle CPU ticks over 30 s (10 ms resolution); no lower idle-CPU cl
 Media in task/zero-python-wallpaper-media: 222 Rust / 892 repo / 526 parity pass.
 Frozen current Python first: 13 CLI/protocol, 11 Pillow mode, import/catalog,
 three session, nine publication steps, two demos and warm/cache-repair workflows.
-Native mode/import/session/CLI/select/theme/demos match their references locally.
 Publication replay keeps its original snapshot immutable; an additive original
 cache manifest prevents filename-normalizer collisions from omitting cache files.
 Warm three-stage/128-file, pick and direct session signal replays pass.
@@ -73,9 +72,9 @@ Fully private busy media RSS: 25.84 → 16.73 MiB ready; 26.18 → 27.35 after p
 Integration preserves terminal fonts and bundled palettes from concurrent main.
 Historical replays stage their original asset set; real bundle catalog checked separately.
 Media 330f250e published; CI fresh-install passes, two Welcome fixture timeouts fixed.
-Mocks now supply asset IO to native demo snapshots; no full-poster generation in fixtures.
-Next: push/check fixture fix CI, then finish the lock dependency unit.
-Lock-prepare/lock-info remain: 141 label/eight artwork/three prep refs; no Rust port.
+Fixture fix e0297dc9 public; mocks preserve asset IO; CI 38704429475 running.
+Next: green fixture-fix CI, then finish the lock dependency unit.
+Lock info/preparation local: 224 Rust tests, 141 labels, eight art, three prep refs pass.
 Then visible-consumer timing harness and owner-announced quiet A/B/A/B.
 Preserve concurrent Settings changes; rebase only own commits, owner identity.
 No live changes or publication beyond normal source pushes.
