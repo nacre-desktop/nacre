@@ -59,12 +59,11 @@ Busy watcher RSS 16.75 → 10.20 MiB; startup+change CPU 31.36 → 3.13 ms.
 
 Media 330f250e public; exact fixture fixes e0297dc9 / dcfa8297 / b9523e2c.
 CI 38713957659: media parity/fresh-install pass; shared gallery fixture failed.
-Gallery 261730d4 / Colors fixture 7a239361 fixed by owners; CI 38718767282 pending.
+Gallery bus/pager 261730d4/29b02a25 and Colors 7a239361 fixed by owners; CI pending.
 Local gates: 222 Rust / 892 repo / 526 parity and all immutable workflow cases pass.
 Fully private busy CPU 86.21 → 11.58 ms; ready RSS 25.84 → 16.73 MiB.
 After publication RSS 26.18 → 27.35 MiB; 30 s idle CPU 0/1 ticks (10 ms resolution).
 No battery, whole-shell latency or quiet regression claim from busy helper samples.
-
 Lock 665684eb and unused palette bridge retirement 1fd542a4 public; CI pending.
 Native labels 141 / artwork eight / CLI 11 / preparation three cases/files exact.
 237 Rust / 329 tools / 107 AI / 45 Brain / 428 shell / 534 parity cases pass.
@@ -72,7 +71,8 @@ Native QML/install/generated callbacks replace Python; frozen workflows all pass
 Frozen preparation inputs explicitly include private XDG_DATA_HOME/public fonts.
 An initial uncontrolled-font capture is preserved privately; no expected file rewritten.
 Busy cached lock CPU 78.29 → 2.57 ms/call; 100 Python launches → zero.
-Next: check/fix lock CI 38720641767 and cleanup CI 38721823499.
+Own superseded CIs cancelled normally; current-main Source CI covers all ports.
+Next: check/fix current-main Source CI, then the owner-announced quiet A/B/A/B.
 Both compositors: baseline/native Qt/Kitty and actual lock new-color pixels verified.
 Developer lock probe uses immediate-render for software Niri; default flags unchanged.
 Presentation harness: 14 tests pass; GTK pixel endpoint remains unverified in both.
