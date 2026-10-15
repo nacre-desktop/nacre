@@ -1,6 +1,10 @@
 //! Native desktop helper boundaries. Orient remains an independent MIT dependency.
 #![deny(unsafe_code)]
 pub mod arguments;
+pub mod branding;
+pub mod classic_state;
+pub mod colors;
+pub mod colors_launch;
 pub mod compositor;
 pub mod compositor_compat;
 pub mod compositor_config;
@@ -10,12 +14,17 @@ pub mod dashboard_system;
 pub mod demo_wallpapers;
 pub mod diagnostics;
 pub mod diagnostics_native;
+pub mod file_icons;
 pub mod files;
 pub mod i18n;
+pub mod image_paint;
+pub mod image_text;
 pub mod json;
 pub mod launcher_preferences;
 pub mod launcher_workflows;
 pub mod light_devices;
+pub mod lock_config;
+pub mod lock_dashboard;
 pub mod menu;
 pub mod menu_actions;
 pub mod menu_arguments;
@@ -34,12 +43,16 @@ pub mod niri_session_stage;
 pub mod niri_widths;
 pub mod notification_history;
 pub mod orient;
+pub mod palette_api;
+pub mod palette_cli;
+pub mod palette_engine;
 pub mod paths;
 pub mod pearl_state;
 pub mod pearl_window;
 pub mod process;
 pub mod resource_state;
 pub mod service;
+pub mod signals;
 pub mod software_actions;
 pub mod software_ai;
 pub mod software_environments;
@@ -52,6 +65,7 @@ pub mod software_tui;
 pub mod state;
 pub mod systemd;
 pub mod unicode;
+pub mod wallpaper_media;
 pub mod window_chat_title;
 pub mod window_hide;
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -59,6 +73,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 pub mod kde_palette;
 
+pub mod template_export;
 pub mod terminal_branding;
 
 pub mod login_appearance;

@@ -2,6 +2,8 @@
 
 import importlib.util
 import json
+import os
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -12,6 +14,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load(name):
+    if name in {"branding", "lock-config"}:
+        import native_branding
+        import native_lock_config
+
+        return native_branding if name == "branding" else native_lock_config
     spec = importlib.util.spec_from_file_location(
         name.replace("-", "_"), ROOT / (name + ".py")
     )
@@ -27,17 +34,38 @@ class LockReadyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder)
             monitors = [dict(name="eDP-1", width=2880, height=1800, scale=1.5)]
-            with patch.object(
-                config.compositor, "query", return_value=monitors
-            ) as query:
-                text = config.prepare_config(
-                    colors, "/tmp/wall.jpg", {}, ROOT / "lock-info.py", home
-                )
-            query.assert_called_once_with("monitors", timeout=2)
+            sys.path.insert(0, str(ROOT.parents[1] / "tests/parity/helpers"))
+            from native_compositor_peer import Peer
+
+            (home / "effects.jsonl").touch()
+            peer = Peer(
+                home, [{"argv": ["monitors", "-j"], "stdout": json.dumps(monitors)}]
+            )
+            environment = {
+                "XDG_RUNTIME_DIR": str(home / "runtime"),
+                "HYPRLAND_INSTANCE_SIGNATURE": "fixture",
+                "NACRE_COMPOSITOR": "hyprland",
+            }
+            try:
+                with patch.dict(os.environ, environment):
+                    text = config.prepare_config(
+                        colors, "/tmp/wall.jpg", {}, ROOT / "lock-info.py", home
+                    )
+            finally:
+                peer.close()
+                sys.path.pop(0)
+            effects = [
+                json.loads(line)
+                for line in (home / "effects.jsonl").read_text().splitlines()
+            ]
+            self.assertEqual(
+                effects,
+                [{"command": "hyprctl", "argv": ["monitors", "-j"], "stdin": ""}],
+            )
             self.assertIn("monitor = eDP-1", text)
             self.assertIn("position = -678, -397", text)
             self.assertNotIn("position = -452, -280", text)
-            with patch.object(config.compositor, "query", side_effect=OSError):
+            with patch.dict(os.environ, environment):
                 self.assertEqual(
                     config.prepare_config(
                         colors, "/tmp/wall.jpg", {}, ROOT / "lock-info.py", home
@@ -50,8 +78,7 @@ class LockReadyTests(unittest.TestCase):
         colors = json.loads((ROOT / "reference-style.json").read_text())["colours"]
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder)
-            with patch.object(brand, "refresh_terminal_menus"):
-                brand.publish(colors, home)
+            brand.publish(colors, home)
             root = home / ".local/share/nacre/branding"
             with Image.open(root / "nacre-lock.png") as image:
                 self.assertEqual(image.mode, "RGBA")

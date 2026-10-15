@@ -8,15 +8,12 @@ from pathlib import Path
 import sys
 import tempfile
 
+from nacre_native_palette import lock_dashboard as dashboard
+
 ROOT = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("lockinfo", ROOT / "lock-info.py")
 info = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(info)
-spec = importlib.util.spec_from_file_location(
-    "lockdashboard", ROOT / "lock-dashboard.py"
-)
-dashboard = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(dashboard)
 
 
 def atomic(path, text):

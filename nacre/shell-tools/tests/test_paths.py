@@ -42,7 +42,7 @@ Item {
             compare(paths.share, "/test home/.local/share/nacre");
             compare(paths.tools, paths.share + "/shell/tools");
             compare(paths.shellBin, paths.share + "/shell/bin");
-            compare(paths.palettePython, paths.share + "/palette-runtime/venv/bin/python");
+            compare(paths.helperBinary, paths.tools + "/nacre-helper");
             compare(paths.compositorTools, paths.tools);
             compare(paths.pearlTools, paths.tools);
             compare(paths.dashboardTools, paths.tools);

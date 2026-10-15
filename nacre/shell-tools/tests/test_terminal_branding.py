@@ -2,7 +2,6 @@
 
 import base64
 import fcntl
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -19,11 +18,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
-spec = importlib.util.spec_from_file_location(
-    "branding", ROOT / "nacre/shell-tools/branding.py"
-)
-branding = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(branding)
+import native_branding as branding
 
 
 class TerminalBrandingTests(unittest.TestCase):
@@ -69,13 +64,26 @@ class TerminalBrandingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             text = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="red"/></svg>'
-            with patch.object(branding, "raster", wraps=branding.raster) as render:
+            commands = home / "bin"
+            commands.mkdir()
+            calls = home / "raster-calls"
+            wrapper = commands / "rsvg-convert"
+            renderer = shutil.which("rsvg-convert")
+            wrapper.write_text(
+                "#!/usr/bin/env python3\nimport os,sys\n"
+                + f"with open({str(calls)!r},'a') as stream: stream.write('call\\n')\n"
+                + f"os.execv({renderer!r},[{renderer!r},*sys.argv[1:]])\n"
+            )
+            wrapper.chmod(0o755)
+            with patch.dict(
+                os.environ, PATH=str(commands) + os.pathsep + os.environ["PATH"]
+            ):
                 first = branding.cached_png(text, home, 16)
                 self.assertEqual(branding.cached_png(text, home, 16), first)
-                self.assertEqual(render.call_count, 1)
+                self.assertEqual(len(calls.read_text().splitlines()), 1)
                 second = branding.cached_png(text.replace("red", "blue"), home, 16)
                 self.assertNotEqual(second, first)
-                self.assertEqual(render.call_count, 2)
+                self.assertEqual(len(calls.read_text().splitlines()), 2)
             self.assertFalse((home / ".local/share/nacre/branding").exists())
             self.assertTrue(
                 all(
@@ -148,7 +156,7 @@ class TerminalBrandingTests(unittest.TestCase):
                 "logo-widget.qml.in",
                 *(app + "-label.svg.in" for app in branding.APPLICATIONS),
             ):
-                shutil.copyfile(Path(branding.__file__).with_name(name), tools / name)
+                shutil.copyfile(ROOT / "nacre/shell-tools" / name, tools / name)
             shutil.copyfile(
                 branding.GEOMETRY, root / "nacre/shell/branding/nacre-master.svg"
             )
@@ -194,11 +202,10 @@ class TerminalBrandingTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
-            with patch.object(branding, "refresh_terminal_menus"):
-                branding.publish(
-                    {"primary": "ff0000", "secondary": "0000ff", "surface": "121212"},
-                    home,
-                )
+            branding.publish(
+                {"primary": "ff0000", "secondary": "0000ff", "surface": "121212"},
+                home,
+            )
             folder = home / ".local/share/nacre/branding"
             image = Image.open(folder / "nacre-lock.png")
             self.assertEqual(image.mode, "RGBA")
@@ -229,31 +236,55 @@ class TerminalBrandingTests(unittest.TestCase):
     def test_notification_targets_only_exact_menu_controller(self):
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder) / "home"
-            proc = Path(folder) / "proc"
-            proc.mkdir()
-            menu = str(home / ".local/bin/nacre-ai")
-            for pid, argv in [
-                (111, ["python3", menu, "dashboard"]),
-                (112, ["python3", menu]),
-                (222, ["kitty", menu, "dashboard"]),
-                (333, ["python3", menu, "new"]),
-                (444, ["python3", "/other/nacre-ai", "dashboard"]),
-            ]:
-                path = proc / str(pid)
-                path.mkdir()
-                (path / "cmdline").write_bytes(b"\0".join(a.encode() for a in argv))
-            with (
-                patch.object(branding.os, "pidfd_open", return_value=7) as opened,
-                patch.object(branding.signal, "pidfd_send_signal") as notified,
-                patch.object(branding.os, "close") as closed,
-            ):
-                branding.refresh_terminal_menus(home, proc)
-            self.assertCountEqual(
-                [call.args[0] for call in opened.call_args_list], [111, 112]
+            menu = home / ".local/bin/nacre-ai"
+            menu.parent.mkdir(parents=True)
+            marker = Path(folder) / "signals"
+            body = (
+                "import os,signal,time\n"
+                + f"def received(*_):\n with open({str(marker)!r},'a') as stream: stream.write(str(os.getpid())+'\\n')\n"
+                + "signal.signal(signal.SIGWINCH, received)\nprint('ready',flush=True)\n"
+                + "while True: time.sleep(1)\n"
             )
-            self.assertEqual(notified.call_count, 2)
-            notified.assert_any_call(7, signal.SIGWINCH)
-            self.assertEqual(closed.call_count, 2)
+            menu.write_text(body)
+            other = Path(folder) / "other/nacre-ai"
+            other.parent.mkdir()
+            other.write_text(body)
+            children = []
+            try:
+                for argv in (
+                    ["python3", str(menu), "dashboard"],
+                    ["python3", str(menu)],
+                    ["kitty", str(menu), "dashboard"],
+                    ["python3", str(menu), "new"],
+                    ["python3", str(other), "dashboard"],
+                ):
+                    child = subprocess.Popen(
+                        argv,
+                        executable=sys.executable,
+                        env={**os.environ, "HOME": str(home)},
+                        stdout=subprocess.PIPE,
+                        text=True,
+                    )
+                    children.append(child)
+                    self.assertEqual(child.stdout.readline().strip(), "ready")
+                branding.refresh_terminal_menus(home, Path("/proc"))
+                deadline = time.monotonic() + 3
+                observed = []
+                while time.monotonic() < deadline:
+                    observed = (
+                        marker.read_text().splitlines() if marker.exists() else []
+                    )
+                    if len(observed) >= 2:
+                        break
+                    time.sleep(0.01)
+                self.assertCountEqual(
+                    [int(pid) for pid in observed],
+                    [child.pid for child in children[:2]],
+                )
+            finally:
+                for child in children:
+                    child.terminate()
+                    child.communicate(timeout=5)
 
     def test_real_idle_curses_menu_reloads_png_after_redraw_signal(self):
         with tempfile.TemporaryDirectory() as folder:

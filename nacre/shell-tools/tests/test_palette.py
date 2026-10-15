@@ -1,5 +1,4 @@
 from unittest.mock import patch
-import importlib.util
 import contextlib
 import io
 import json
@@ -14,11 +13,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-spec = importlib.util.spec_from_file_location(
-    "palette", Path(__file__).resolve().parents[1] / "classic-state.py"
-)
-palette = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(palette)
+import native_classic_state as palette
 
 
 class PaletteCommitTest(unittest.TestCase):
@@ -138,7 +133,9 @@ class PaletteCommitTest(unittest.TestCase):
             state = home / ".local/state/nacre"
             state.mkdir(parents=True)
             colors = json.loads(
-                Path(palette.__file__).with_name("reference-style.json").read_text()
+                (
+                    Path(__file__).resolve().parents[1] / "reference-style.json"
+                ).read_text()
             )["colours"]
             (state / "scheme.json").write_text(
                 json.dumps({"mode": "dark", "colours": colors})
@@ -191,12 +188,16 @@ class PaletteCommitTest(unittest.TestCase):
                 json.dumps({"palettePreset": "ocean", "paletteMode": "dark"})
             )
             presets = json.loads(
-                Path(palette.__file__).with_name("palette-presets.json").read_text()
+                (
+                    Path(__file__).resolve().parents[1] / "palette-presets.json"
+                ).read_text()
             )
             expected = next(p for p in presets if p["id"] == "ocean")["modes"]["dark"]
             for primary, mode in [("ff0000", "light"), ("00ff00", "dark")]:
                 colors = json.loads(
-                    Path(palette.__file__).with_name("reference-style.json").read_text()
+                    (
+                        Path(__file__).resolve().parents[1] / "reference-style.json"
+                    ).read_text()
                 )["colours"]
                 colors["primary"] = primary
                 (state / "scheme.json").write_text(
@@ -224,7 +225,7 @@ class PaletteCommitTest(unittest.TestCase):
         import colorsys
 
         presets = json.loads(
-            Path(palette.__file__).with_name("palette-presets.json").read_text()
+            (Path(__file__).resolve().parents[1] / "palette-presets.json").read_text()
         )
         self.assertEqual(len(presets), 30)
         self.assertEqual(len({p["id"] for p in presets}), 30)
@@ -286,10 +287,10 @@ class PaletteCommitTest(unittest.TestCase):
 
     def test_presets_have_all_roles_and_readable_foreground_pairs(self):
         presets = json.loads(
-            Path(palette.__file__).with_name("palette-presets.json").read_text()
+            (Path(__file__).resolve().parents[1] / "palette-presets.json").read_text()
         )
         roles = json.loads(
-            Path(palette.__file__).with_name("reference-style.json").read_text()
+            (Path(__file__).resolve().parents[1] / "reference-style.json").read_text()
         )["colours"]
         for preset in presets:
             for colors in preset["modes"].values():
@@ -313,7 +314,9 @@ class PaletteCommitTest(unittest.TestCase):
             state = home / ".local/state/nacre"
             state.mkdir(parents=True)
             colors = json.loads(
-                Path(palette.__file__).with_name("reference-style.json").read_text()
+                (
+                    Path(__file__).resolve().parents[1] / "reference-style.json"
+                ).read_text()
             )["colours"]
             (state / "scheme.json").write_text(
                 json.dumps({"mode": "dark", "colours": colors})
@@ -370,7 +373,7 @@ class PaletteCommitTest(unittest.TestCase):
             )
             self.assertEqual((state / "scheme.json").read_bytes(), before)
             config = home / ".config/nacre/cli.json"
-            config.parent.mkdir(parents=True)
+            config.parent.mkdir(parents=True, exist_ok=True)
             config.write_text(json.dumps({"wallpaper": {"postHook": "custom hook"}}))
             self.assertFalse(
                 palette.commit_prepared(home, image, data, thumbnail, live=False)
@@ -404,7 +407,7 @@ class PublicationBoundaryTests(unittest.TestCase):
         state = home / ".local/state/nacre"
         state.mkdir(parents=True)
         colors = json.loads(
-            Path(palette.__file__).with_name("reference-style.json").read_text()
+            (Path(__file__).resolve().parents[1] / "reference-style.json").read_text()
         )["colours"]
         if missing:
             colors.pop(missing)

@@ -3,6 +3,7 @@ use crate::Result;
 use std::{
     env,
     ffi::OsStr,
+    fs,
     path::{Path, PathBuf},
 };
 
@@ -86,6 +87,58 @@ impl Paths {
     }
     pub fn screenshots(&self) -> PathBuf {
         self.home.join("Pictures/Screenshots")
+    }
+}
+
+pub fn expand(path: &Path) -> Result<PathBuf> {
+    let text = path.to_string_lossy();
+    if text == "~" || text.starts_with("~/") {
+        let home = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .or_else(|| {
+                nix::unistd::User::from_uid(nix::unistd::getuid())
+                    .ok()
+                    .flatten()
+                    .map(|user| user.dir)
+            })
+            .ok_or("Could not determine home directory.")?;
+        return Ok(home.join(text.strip_prefix("~/").unwrap_or("")));
+    }
+    if let Some(rest) = text.strip_prefix('~') {
+        let (name, tail) = rest.split_once('/').unwrap_or((rest, ""));
+        let user =
+            nix::unistd::User::from_name(name)?.ok_or("Could not determine home directory.")?;
+        return Ok(user.dir.join(tail));
+    }
+    Ok(path.to_owned())
+}
+pub fn weak_canonical(path: &Path) -> Result<PathBuf> {
+    let absolute = if path.is_absolute() {
+        path.to_owned()
+    } else {
+        std::env::current_dir()?.join(path)
+    };
+    let mut parent = absolute.as_path();
+    let mut tails = Vec::new();
+    loop {
+        match fs::canonicalize(parent) {
+            Ok(mut root) => {
+                for tail in tails.iter().rev() {
+                    root.push(tail);
+                }
+                return Ok(root);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                tails.push(
+                    parent
+                        .file_name()
+                        .ok_or("Invalid appearance path")?
+                        .to_owned(),
+                );
+                parent = parent.parent().ok_or("Invalid appearance root")?;
+            }
+            Err(error) => return Err(error.into()),
+        }
     }
 }
 

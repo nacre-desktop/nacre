@@ -41,14 +41,9 @@ def run(args, **kw):
 
 
 def save(path, value):
-    from importlib.util import spec_from_file_location, module_from_spec
+    from nacre_native_palette import classic_state
 
-    spec = spec_from_file_location(
-        "palette", Path(__file__).with_name("classic-state.py")
-    )
-    module = module_from_spec(spec)
-    spec.loader.exec_module(module)
-    module.atomic_write(path, json.dumps(value))
+    classic_state.atomic_write(path, json.dumps(value))
 
 
 def launch(command):

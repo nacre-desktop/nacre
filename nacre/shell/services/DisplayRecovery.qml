@@ -129,7 +129,7 @@ Singleton {
     }
     Process {
         id: lockLayout
-        command: ["python3", NacrePaths.tools + "/lock-config.py"]
+        command: [NacrePaths.helperBinary, "lock-config"]
     }
     Process {
         id: fallback

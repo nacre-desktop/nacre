@@ -1145,3 +1145,44 @@ bytes, file modes, source/destination stat receipts and damaged/missing-file
 repair. The bundle remains offline and the private wallpaper library is untouched.
 Absolute XDG cache roots and surfaced unexpected receipt I/O errors are intended
 differences. Existing cache identities and receipts remain readable.
+
+### Wave 3 native palette pipeline (busy machine, partial helper evidence)
+
+The same 64 × 40 PNG and request produced identical palette colors before and
+after. One hundred fresh cache-warm previews were interleaved Python/Rust;
+`benchmark-helpers.py` child user + system CPU excludes driver CPU and waiting.
+`performance.py` sampled only the persistent Colors helper and its descendants,
+after one preview. These are laptop busy-machine numbers, not desktop-PC results.
+
+| Measure | Python baseline | Native candidate |
+| --- | ---: | ---: |
+| Fresh cached preview CPU, ms/call | 65.821 | 9.984 |
+| Colors helper family RSS, MiB | 34.016 | 16.848 |
+| Colors helper family processes | 2 | 1 |
+| Python execs in a separately traced preview | 1 | 0 |
+| Orient subprocess execs in that preview | 1 | 0 |
+
+The integrated baseline is e910ffd7, keeping concurrent Settings changes constant,
+with its exact Orient pin from CI 38654603463; the candidate
+uses the pinned Orient libraries in-process. RSS includes the baseline's resident
+Orient worker. The native trace contains only `nacre-helper`. Binary/input hashes
+and raw results are in `rust-migration-results.json`. The earlier c1417afe
+comparison remains there separately; the table uses the integrated baseline.
+
+Reproduce with `tools/benchmark-palette.py --baseline BASELINE_CHECKOUT
+--baseline-engine BASELINE_ORIENT --native NATIVE_HELPER --image INPUT_PNG
+--repeats 100 --output REPORT_JSON`. The script checks the engine pin and color
+parity before timing, uses disposable HOME/XDG roots and stops its workers.
+The missing trace tool was extracted privately; no system package was installed.
+
+Whole-desktop wallpaper/palette latency, the last visible consumer's frame,
+launcher/dashboard action timings, idle CPU and whole-shell RSS/PSS remain
+unmeasured for this unit. They require the announced quiet window and complete
+A/B/A/B runs under the revised swap rule. API readiness or files written do not
+prove that shell, GTK/Qt, Kitty and the lock screen have displayed the colors.
+
+Concurrent main added automatic wallpaper mode and a border-gradient preference.
+Six separate original-main gradient references preserve that behavior. Existing
+frozen outputs are unchanged; only the documented additive `paletteAutoMode:false`
+picker default is compatible with the older Colors snapshot. Every other byte,
+file mode, link and cache entry remains checked.

@@ -1,0 +1,85 @@
+{
+  "source_sha256": "2846931176e2fb3899122dd566445727e04579ad449b0e359196886a94d0db55",
+  "cases": [
+    {
+      "name": "current",
+      "path": ".config/nacre/colors.json",
+      "text": " { \"version\" : 1, \"note\":\"keep\", \"value\":1e-06 } \n",
+      "before": null,
+      "result": true,
+      "files": {
+        ".config/nacre/colors.json": {
+          "base64": "IHsgInZlcnNpb24iIDogMSwgIm5vdGUiOiJrZWVwIiwgInZhbHVlIjoxZS0wNiB9IAo=",
+          "mode": 384
+        },
+        ".config/nacre/colors.json.schema.lock": {
+          "base64": "",
+          "mode": 384
+        }
+      }
+    },
+    {
+      "name": "legacy",
+      "path": ".config/nacre/colors.json",
+      "text": "{\"note\":\"keep\",\"value\":0.000001}",
+      "before": null,
+      "result": true,
+      "files": {
+        ".config/nacre/colors.json": {
+          "base64": "eyJub3RlIjogImtlZXAiLCAidmFsdWUiOiAxZS0wNiwgInZlcnNpb24iOiAxfQo=",
+          "mode": 384
+        },
+        ".config/nacre/colors.json.schema.lock": {
+          "base64": "",
+          "mode": 384
+        }
+      }
+    },
+    {
+      "name": "migrate",
+      "path": ".config/nacre/colors.json",
+      "text": "{\"version\":1,\"note\":\"new\"}",
+      "before": "{\"note\":\"old\"}\n",
+      "result": true,
+      "files": {
+        ".config/nacre/colors.json": {
+          "base64": "eyJ2ZXJzaW9uIjoxLCJub3RlIjoibmV3In0=",
+          "mode": 384
+        },
+        ".config/nacre/colors.json.pre-v0-to-v1.bak": {
+          "base64": "eyJub3RlIjoib2xkIn0K",
+          "mode": 384
+        },
+        ".config/nacre/colors.json.schema.lock": {
+          "base64": "",
+          "mode": 384
+        }
+      }
+    },
+    {
+      "name": "unmanaged",
+      "path": "misc.txt",
+      "text": "not JSON",
+      "before": null,
+      "result": false,
+      "files": {}
+    },
+    {
+      "name": "array",
+      "path": ".local/state/nacre/shell/notifications/history.json",
+      "text": "{\"version\": 1, \"items\": [], \"extra\": \"keep\"}",
+      "before": null,
+      "result": true,
+      "files": {
+        ".local/state/nacre/shell/notifications/history.json": {
+          "base64": "eyJ2ZXJzaW9uIjogMSwgIml0ZW1zIjogW10sICJleHRyYSI6ICJrZWVwIn0=",
+          "mode": 384
+        },
+        ".local/state/nacre/shell/notifications/history.json.schema.lock": {
+          "base64": "",
+          "mode": 384
+        }
+      }
+    }
+  ]
+}

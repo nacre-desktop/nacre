@@ -12,6 +12,8 @@ from dbus_next.aio import MessageBus
 
 
 def plain(value):
+    if isinstance(value, bytes):
+        return list(value)
     if isinstance(value, Variant):
         return {"variant": value.signature, "value": plain(value.value)}
     if isinstance(value, list):

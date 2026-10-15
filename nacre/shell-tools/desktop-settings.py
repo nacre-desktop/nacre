@@ -13,11 +13,9 @@ import sys
 import time
 import uuid
 from pathlib import Path
-from importlib.util import spec_from_file_location, module_from_spec
 
-spec = spec_from_file_location("palette", Path(__file__).with_name("classic-state.py"))
-palette = module_from_spec(spec)
-spec.loader.exec_module(palette)
+from nacre_native_palette import classic_state as palette
+
 HOME = Path.home()
 STATE = HOME / ".config/nacre/desktop.json"
 LUA = compositor.config_path(HOME, "desktop")
@@ -305,11 +303,8 @@ def main():
                         else:
                             compositor.reload()
                 if key.startswith("lock"):
-                    spec = spec_from_file_location(
-                        "lockconfig", Path(__file__).with_name("lock-config.py")
-                    )
-                    module = module_from_spec(spec)
-                    spec.loader.exec_module(module)
+                    from nacre_native_palette import lock_config as module
+
                     module.publish(HOME)
             elif a.action == "preset":
                 name = a.args[0]

@@ -13,7 +13,6 @@ QtObject {
     readonly property string niriDesktopConfig: Quickshell.env("NACRE_NIRI_DESKTOP_CONFIG") || ""
     readonly property string helperBinary: tools + "/nacre-helper"
     readonly property string shellBin: share + "/shell/bin"
-    readonly property string palettePython: share + "/palette-runtime/venv/bin/python"
     readonly property string compositorTools: Quickshell.env("NACRE_COMPOSITOR_TOOLS") || Quickshell.env("NACRE_PEARL_TOOLS") || tools
     readonly property string pearlTools: Quickshell.env("NACRE_PEARL_TOOLS") || tools
     readonly property string dashboardTools: Quickshell.env("NACRE_DASHBOARD_TOOLS") || tools

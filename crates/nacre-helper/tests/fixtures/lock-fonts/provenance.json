@@ -1,0 +1,45 @@
+{
+  "fonttools": "4.60.1",
+  "purpose": "Test-only subsets, renamed; original glyph IDs/outlines/hinting/variation retained. All fixture text masks/offsets/advances checked identical against full pinned fonts using Pillow before capture.",
+  "fonts": [
+    {
+      "fixture": "FixtureSans.ttf",
+      "sha256": "69bffe6940a484267d59413f96c56c3d7bd2afcdbb07cee4a2f6d230d0a1b81e",
+      "bytes": 144584,
+      "source": {
+        "name": "IBMPlexSans.ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf",
+        "sha256": "3b031aa4216174205bd8471f88a49b91f093169e9e87bd5262242bc5967fe2e3",
+        "size": 537244
+      },
+      "license": "OFL-1.1",
+      "mask_length_cases": 98
+    },
+    {
+      "fixture": "FixtureSymbols.ttf",
+      "sha256": "e4d9cbb75566b5b8a03cef142b5c79916ba2f6f6f9c906b7463059d11282cb76",
+      "bytes": 194488,
+      "source": {
+        "name": "MaterialSymbolsRounded.ttf",
+        "url": "https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf",
+        "sha256": "95b24392bb49efd1bc3e92cff4e2452ad094461bab7c97e7d8723fab97e330ca",
+        "size": 15214520
+      },
+      "license": "Apache-2.0",
+      "mask_length_cases": 140
+    },
+    {
+      "fixture": "FixtureCard.ttf",
+      "sha256": "6038a160b491e121c1f12c7bccb4a9c8730296e3adc1086a059404ed84b7451c",
+      "bytes": 759720,
+      "source": {
+        "family": "DejaVu Sans",
+        "version": "2.37",
+        "upstream": "https://dejavu-fonts.github.io/",
+        "file": "DejaVuSans.ttf"
+      },
+      "license": "Bitstream Vera / DejaVu",
+      "modified": false
+    }
+  ]
+}

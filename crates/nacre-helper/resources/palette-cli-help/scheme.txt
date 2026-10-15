@@ -1,0 +1,5 @@
+positional arguments:
+  {list,get,set}
+
+options:
+  -h, --help      show this help message and exit

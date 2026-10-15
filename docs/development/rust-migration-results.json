@@ -1581,5 +1581,67 @@
         }
       ]
     }
+  },
+  "wave3_palette_preview_busy_machine": {
+    "condition": "busy machine",
+    "method": "benchmark-helpers.py child user+system CPU, interleaved fresh processes; performance.py helper-only RSS; strace execve counts",
+    "baseline_commit": "c1417afe3783d1b5164c17aa504f7e314c79a278",
+    "baseline_engine": "orient-0.1.0.dev6-55b192008cc8-468228d426c5",
+    "results": {
+      "python": {
+        "calls": 100,
+        "cpu_ms_per_call": 65.77181000000009,
+        "one_call_execs": {
+          "python": 1,
+          "orient": 1
+        },
+        "helper_rss_mib": 33.48828125,
+        "helper_processes": 2
+      },
+      "rust": {
+        "calls": 100,
+        "cpu_ms_per_call": 9.960889999999916,
+        "one_call_execs": {
+          "nacre-helper": 1
+        },
+        "helper_rss_mib": 17.04296875,
+        "helper_processes": 1
+      }
+    },
+    "baseline_engine_sha256": "0f699fe43cf505d3a4858db441ccf039426b01942b6b35a7a4dae093d282b79b",
+    "native_sha256": "28e18dd55fa0d08ac039e4ea3b9db7b550d1b90a52529248930ccee39a934253",
+    "native_engine": "orient-0.1.0.dev6-55b192008cc8-2728325fc7aa",
+    "input_sha256": "1001fa6f3dd929ca14be8a640fd2a8d13319d4307219d680144b465550939aa3"
+  },
+  "wave3_palette_preview_integrated_busy_machine": {
+    "condition": "busy machine",
+    "method": "benchmark-helpers.py child user+system CPU, interleaved fresh processes; performance.py helper-only RSS; strace execve counts",
+    "baseline_commit": "e910ffd7202a332c652ef227ddcf5970c39714bb",
+    "baseline_engine": "orient-0.1.0.dev6-55b192008cc8-468228d426c5",
+    "baseline_engine_sha256": "0f699fe43cf505d3a4858db441ccf039426b01942b6b35a7a4dae093d282b79b",
+    "native_sha256": "fcd26505253ac1d16166351a194cf0ebaea0814bfc61a90e7fd8b20b65ceb1a0",
+    "native_engine": "orient-0.1.0.dev6-55b192008cc8-2728325fc7aa",
+    "input_sha256": "1001fa6f3dd929ca14be8a640fd2a8d13319d4307219d680144b465550939aa3",
+    "results": {
+      "python": {
+        "calls": 100,
+        "cpu_ms_per_call": 65.82065000000003,
+        "one_call_execs": {
+          "python": 1,
+          "orient": 1
+        },
+        "helper_rss_mib": 34.015625,
+        "helper_processes": 2
+      },
+      "rust": {
+        "calls": 100,
+        "cpu_ms_per_call": 9.98448999999996,
+        "one_call_execs": {
+          "nacre-helper": 1
+        },
+        "helper_rss_mib": 16.84765625,
+        "helper_processes": 1
+      }
+    }
   }
 }

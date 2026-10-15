@@ -1,0 +1,7 @@
+options:
+  -h, --help     show this help message and exit
+  -n, --name
+  -f, --flavour
+  -m, --mode
+  -v, --variant
+  --json

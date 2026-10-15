@@ -1,6 +1,5 @@
 """Real preview/export/favorite/apply behavior in an isolated fake desktop home."""
 
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -15,9 +14,7 @@ from PIL import Image
 
 TOOLS = Path(__file__).parents[1]
 sys.path.insert(0, str(TOOLS.parent / "shell-cli/src"))
-spec = importlib.util.spec_from_file_location("colors_app_backend", TOOLS / "colors.py")
-colors = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(colors)
+import native_colors as colors
 
 
 class ColorsBackendTests(unittest.TestCase):
@@ -211,7 +208,11 @@ class ColorsBackendTests(unittest.TestCase):
 
     def test_worker_responds_without_waiting_for_stdin_eof(self):
         process = subprocess.Popen(
-            [sys.executable, str(TOOLS / "colors.py"), "preview"],
+            [
+                os.environ.get("NACRE_HELPER_BINARY", str(TOOLS / "nacre-helper")),
+                "colors",
+                "preview",
+            ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

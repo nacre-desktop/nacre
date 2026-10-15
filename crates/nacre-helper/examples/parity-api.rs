@@ -43,7 +43,46 @@ impl Request {
     }
 }
 fn call(helper: &str, operation: &str, request: &Request) -> Result<Value> {
+    if helper == "lock-config" && operation == "output_width" {
+        // The historical module never exported this name: preserve missing-attribute failure.
+        eprintln!("AttributeError: module has no attribute 'output_width'");
+        std::process::exit(1);
+    }
     let paths = Paths::environment()?;
+    if helper == "nacre_shell" && operation == "from_image" {
+        let mut options = request.kwargs.clone();
+        if let Some(path) = options
+            .get("cache_dir")
+            .and_then(|v| v.get("$path"))
+            .cloned()
+        {
+            options.insert("cache_dir".into(), path);
+        }
+        return nacre_helper::orient::from_image(
+            Path::new(request.text(0, "path")?),
+            &Value::Object(options),
+        );
+    }
+
+    if matches!(
+        helper,
+        "classic-state"
+            | "branding"
+            | "file-icons"
+            | "lock-config"
+            | "lock-dashboard"
+            | "palette_engine"
+            | "colors"
+    ) {
+        return nacre_helper::palette_api::call(
+            helper,
+            operation,
+            &nacre_helper::palette_api::Request {
+                args: request.args.clone(),
+                kwargs: request.kwargs.clone(),
+            },
+        );
+    }
     match (helper, operation) {
         ("demo-wallpapers", "collection") => {
             nacre_helper::demo_wallpapers::collection(&paths.assets().join("demo-wallpapers"))

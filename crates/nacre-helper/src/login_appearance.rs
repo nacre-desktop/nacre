@@ -62,59 +62,8 @@ fn private_directory(path: &Path, chmod: bool) -> Result<()> {
     }
     Ok(())
 }
-fn expanded(path: &Path) -> Result<PathBuf> {
-    let text = path.to_string_lossy();
-    if text == "~" || text.starts_with("~/") {
-        let home = std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .or_else(|| {
-                nix::unistd::User::from_uid(nix::unistd::getuid())
-                    .ok()
-                    .flatten()
-                    .map(|user| user.dir)
-            })
-            .ok_or("Could not determine home directory.")?;
-        return Ok(home.join(text.strip_prefix("~/").unwrap_or("")));
-    }
-    if let Some(rest) = text.strip_prefix('~') {
-        let (name, tail) = rest.split_once('/').unwrap_or((rest, ""));
-        let user =
-            nix::unistd::User::from_name(name)?.ok_or("Could not determine home directory.")?;
-        return Ok(user.dir.join(tail));
-    }
-    Ok(path.to_owned())
-}
-fn weak_canonical(path: &Path) -> Result<PathBuf> {
-    let absolute = if path.is_absolute() {
-        path.to_owned()
-    } else {
-        std::env::current_dir()?.join(path)
-    };
-    let mut parent = absolute.as_path();
-    let mut tails = Vec::new();
-    loop {
-        match fs::canonicalize(parent) {
-            Ok(mut root) => {
-                for tail in tails.iter().rev() {
-                    root.push(tail);
-                }
-                return Ok(root);
-            }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                tails.push(
-                    parent
-                        .file_name()
-                        .ok_or("Invalid appearance path")?
-                        .to_owned(),
-                );
-                parent = parent.parent().ok_or("Invalid appearance root")?;
-            }
-            Err(error) => return Err(error.into()),
-        }
-    }
-}
 pub fn prepare(paths: &Paths, wallpaper: &Path, cache: Option<&Path>) -> Result<(PathBuf, String)> {
-    let image = expanded(wallpaper)?;
+    let image = crate::paths::expand(wallpaper)?;
     let image = match fs::canonicalize(&image) {
         Ok(image) => image,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -191,7 +140,8 @@ pub fn publish(
         );
     }
     private_directory(preview, true)?;
-    let canonical = weak_canonical(preview)? == weak_canonical(&canonical_preview)?;
+    let canonical =
+        crate::paths::weak_canonical(preview)? == crate::paths::weak_canonical(&canonical_preview)?;
     let cache = if canonical {
         paths.cache.join("login-images")
     } else {
@@ -206,9 +156,11 @@ pub fn publish(
     }
     let mut destinations = vec![preview];
     if canonical
-        && weak_canonical(&paths.home)? == weak_canonical(&policy.base_home)?
+        && crate::paths::weak_canonical(&paths.home)?
+            == crate::paths::weak_canonical(&policy.base_home)?
         && (public != policy.system_public
-            || weak_canonical(&paths.home)? == weak_canonical(&policy.unix_home)?)
+            || crate::paths::weak_canonical(&paths.home)?
+                == crate::paths::weak_canonical(&policy.unix_home)?)
         && public.is_dir()
         && fs::metadata(public)?.uid() == nix::unistd::getuid().as_raw()
         && nix::unistd::access(public, nix::unistd::AccessFlags::W_OK).is_ok()

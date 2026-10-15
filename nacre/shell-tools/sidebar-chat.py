@@ -106,12 +106,9 @@ def emit(value):
 
 
 def atomic(path, value):
-    spec = spec_from_file_location(
-        "palette", Path(__file__).with_name("classic-state.py")
-    )
-    m = module_from_spec(spec)
-    spec.loader.exec_module(m)
-    m.atomic_write(path, json.dumps(value))
+    from nacre_native_palette import classic_state
+
+    classic_state.atomic_write(path, json.dumps(value))
 
 
 def preferences():

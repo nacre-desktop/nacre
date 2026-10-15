@@ -1,0 +1,54 @@
+{
+  "commit": "c1417afe3783d1b5164c17aa504f7e314c79a278",
+  "source_sha256": "7024db811ee242ee5247cefb498431ca9cffcad34b6e5080924681581a232c1d",
+  "cases": [
+    {
+      "args": [
+        "scheme",
+        "--help"
+      ],
+      "stdout": "usage: python -m nacre_shell scheme [-h] {list,get,set} ...\n\npositional arguments:\n  {list,get,set}\n\noptions:\n  -h, --help      show this help message and exit\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "scheme",
+        "list",
+        "--help"
+      ],
+      "stdout": "usage: python -m nacre_shell scheme list [-h] [-n] [-f] [-m] [-v]\n\noptions:\n  -h, --help      show this help message and exit\n  -n, --names\n  -f, --flavours\n  -m, --modes\n  -v, --variants\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "scheme",
+        "get",
+        "--help"
+      ],
+      "stdout": "usage: python -m nacre_shell scheme get [-h] [-n] [-f] [-m] [-v] [--json]\n\noptions:\n  -h, --help     show this help message and exit\n  -n, --name\n  -f, --flavour\n  -m, --mode\n  -v, --variant\n  --json\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "scheme",
+        "set",
+        "--help"
+      ],
+      "stdout": "usage: python -m nacre_shell scheme set [-h] [--notify] [-r]\n                                        [-n {default,dynamic}]\n                                        [-f {default,hard}] [-m {dark,light}]\n                                        [-v {tonalspot,vibrant,expressive,fidelity,fruitsalad,monochrome,neutral,rainbow,content}]\n                                        [--accent ACCENT] [--auto-accent]\n\noptions:\n  -h, --help            show this help message and exit\n  --notify\n  -r, --random\n  -n, --name {default,dynamic}\n  -f, --flavour {default,hard}\n  -m, --mode {dark,light}\n  -v, --variant {tonalspot,vibrant,expressive,fidelity,fruitsalad,monochrome,neutral,rainbow,content}\n  --accent ACCENT       explicit six-digit accent; 'auto' is accepted\n                        separately\n  --auto-accent\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "wallpaper",
+        "--help"
+      ],
+      "stdout": "usage: python -m nacre_shell wallpaper [-h] [-p [PRINT] | -r [RANDOM] |\n                                       -f FILE] [-n] [-t THRESHOLD] [-N]\n                                       [--accent ACCENT] [--source SOURCE]\n                                       [--mode {dark,light}]\n                                       [--harmony | --no-harmony]\n                                       [--personality {natural,pigment,harmony,pop,mist,vivid,pearl,tide,source}]\n                                       [--background-from-wallpaper | --no-background-from-wallpaper]\n\noptions:\n  -h, --help            show this help message and exit\n  -p, --print [PRINT]\n  -r, --random [RANDOM]\n  -f, --file FILE\n  -n, --no-filter\n  -t, --threshold THRESHOLD\n  -N, --no-smart\n  --accent ACCENT\n  --source SOURCE       optional animated analysis source for a prepared\n                        poster\n  --mode {dark,light}\n  --harmony, --no-harmony\n                        prefer related, substantial supporting colors\n  --personality {natural,pigment,harmony,pop,mist,vivid,pearl,tide,source}\n  --background-from-wallpaper, --no-background-from-wallpaper\n",
+      "stderr": "",
+      "exit": 0
+    }
+  ]
+}

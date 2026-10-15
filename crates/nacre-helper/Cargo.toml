@@ -22,6 +22,7 @@ chrono-tz = "0.10"
 walkdir = "2"
 wait-timeout = "0.2"
 zbus = { version = "5", features = ["blocking-api"] }
+zvariant = { version = "5", features = ["gvariant"] }
 async-io = "2"
 futures-lite = "2"
 clap = { version = "4", features = ["derive"] }
@@ -37,6 +38,13 @@ fancy-regex = "0.16"
 wayland-client = "0.31"
 wayland-protocols-wlr = { version = "0.3", features = ["client"] }
 x11rb = { version = "=0.13.2", default-features = false }
+roxmltree = "=0.21.1"
+fontconfig = "=0.11.0"
+freetype-rs = "=0.38.0"
+html-escape = "=0.2.13"
+turbojpeg = { version = "=1.5.1", default-features = false, features = ["cmake"] }
+gif = "0.14"
+include_dir = "0.7"
 
 [dev-dependencies]
 flate2 = "1"

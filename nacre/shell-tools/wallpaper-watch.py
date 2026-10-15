@@ -33,10 +33,7 @@ def flavour(path):
 
 
 def watch(root, scheme, engine=None):
-    engine = (
-        engine
-        or Path.home() / ".local/share/nacre/palette-runtime/venv/bin/nacre_shell"
-    )
+    engine = engine or Path.home() / ".local/share/nacre/shell/bin/nacre_shell"
     root.mkdir(parents=True, exist_ok=True)
     scheme.parent.mkdir(parents=True, exist_ok=True)
     fd = LIBC.inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC)

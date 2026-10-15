@@ -55,7 +55,7 @@ class ExternalCompositorEntrypointTests(unittest.TestCase):
             "bin/xdg-open",
             "brain/control.py",
             "tools/releases.py",
-            "nacre/shell-cli/src/nacre_shell/cli.py",
+            "crates/nacre-helper/src/palette_cli.rs",
         ):
             with self.subTest(filename=filename):
                 source = (ROOT / filename).read_text()

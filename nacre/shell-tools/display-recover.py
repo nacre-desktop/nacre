@@ -66,7 +66,7 @@ def main():
             return
         try:
             subprocess.run(
-                ["python3", str(Path(__file__).with_name("lock-config.py"))],
+                [str(Path(__file__).with_name("nacre-helper")), "lock-config"],
                 check=True,
                 capture_output=True,
                 timeout=4,

@@ -5,8 +5,8 @@ QtObject {
     property string home: "file:///fixture"
     property string share: home.slice(7) + "/.local/share/nacre"
     property string tools: share + "/shell/tools"
+    property string helperBinary: tools + "/nacre-helper"
     property string shellBin: share + "/shell/bin"
-    property string palettePython: share + "/palette-runtime/venv/bin/python"
     property string compositorTools: Quickshell.env("NACRE_COMPOSITOR_TOOLS") || Quickshell.env("NACRE_PEARL_TOOLS") || tools
     property string pearlTools: Quickshell.env("NACRE_PEARL_TOOLS") || tools
     property string dashboardTools: Quickshell.env("NACRE_DASHBOARD_TOOLS") || tools

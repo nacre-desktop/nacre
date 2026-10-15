@@ -1,6 +1,5 @@
 """Protect lock privacy, glass compositing and shared native output geometry."""
 
-import importlib.util
 import json
 from pathlib import Path
 import tempfile
@@ -8,12 +7,8 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("dashboard", ROOT / "lock-dashboard.py")
-dashboard = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(dashboard)
-spec = importlib.util.spec_from_file_location("lockconfig", ROOT / "lock-config.py")
-config = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(config)
+import native_lock_dashboard as dashboard
+import native_lock_config as config
 
 
 class LockDashboardTests(unittest.TestCase):

@@ -221,7 +221,7 @@ SettingsStore {
             NacreSettingsStorage.request("colors", key, value);
             NacreColours.setMode(value === "wallpaper" ? "auto" : value);
         } else if (id === "scheme") {
-            palette.command = [NacrePaths.palettePython, "-m", "nacre_shell", "scheme", key[0] === "flavour" ? "-f" : "-v", value];
+            palette.command = [NacrePaths.helperBinary, "nacre_shell", "--publish", "scheme", "set", key[0] === "flavour" ? "-f" : "-v", value];
             palette.running = true;
         } else
             NacreSettingsStorage.request(id, key, value);

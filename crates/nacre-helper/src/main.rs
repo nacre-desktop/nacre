@@ -11,6 +11,37 @@ fn run() -> Result<i32> {
     let mut arguments = std::env::args().skip(1);
     let tool = arguments.next().ok_or("Expected a helper command")?;
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "nacre-colors" {
+        return nacre_helper::colors_launch::run(&arguments);
+    }
+    if tool == "palette-api" {
+        return nacre_helper::palette_api::run(&arguments);
+    }
+    if tool == "classic-state" {
+        let mut publisher = nacre_helper::classic_state::Publisher::environment()?;
+        publisher.apply_palette(arguments.first().map(std::path::Path::new), true)?;
+        return Ok(0);
+    }
+    if tool == "lock-config" {
+        nacre_helper::palette_api::call(
+            "lock-config",
+            "publish",
+            &nacre_helper::palette_api::Request::default(),
+        )?;
+        return Ok(0);
+    }
+    if tool == "file-icons" || tool == "lock-dashboard" {
+        return Ok(0);
+    }
+    if tool == "nacre_shell" {
+        return nacre_helper::palette_cli::run(&arguments);
+    }
+    if tool == "colors" {
+        return nacre_helper::colors::run(&arguments);
+    }
+    if tool == "branding" {
+        return nacre_helper::branding::run(&arguments);
+    }
     if tool == "demo-wallpapers" {
         return nacre_helper::demo_wallpapers::run(&arguments);
     }

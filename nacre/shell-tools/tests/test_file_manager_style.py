@@ -8,6 +8,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load(name):
+    if name == "file-icons":
+        import native_file_icons
+
+        return native_file_icons
     if name == "kde-palette":
         import native_kde_palette
 

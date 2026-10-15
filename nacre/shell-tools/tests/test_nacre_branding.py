@@ -1,7 +1,6 @@
 """Approved artwork stays one source across small, colored and raster outputs."""
 
 import hashlib
-import importlib.util
 import json
 from pathlib import Path
 import shutil
@@ -11,9 +10,7 @@ import unittest
 from xml.etree import ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("nacre_brand", ROOT / "branding.py")
-brand = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(brand)
+import native_branding as brand
 
 
 class NacreBrandingTests(unittest.TestCase):

@@ -1,80 +1,69 @@
 # Rust runtime migration
 
-Installed runtime target: no Python processes or Python/Pillow dependencies.
-QML UI, commands/protocols/user state stay compatible; developer-only Python remains permitted.
+Installed Nacre must run no Python processes and require no Python/Pillow runtime.
+Keep QML, public commands, protocols and existing user data; no UI/design work.
+
 | Wave | Status | Numbers / decisions |
 | --- | --- | --- |
-| 0 Orient decoder | Complete; quiet timings deferred | Exact decoder/dev6; busy helper CPU/RSS baseline recorded. |
-| 1 Service / frequent helpers | Complete; quiet timings deferred | 13 ports; RSS 26.95 -> 10.21 MiB (busy); Source/install CI green. |
-| 2 Compositor / pearls | Complete; quiet timings deferred | Preview parserCPU52.58 ->1.26ms/RSS21.54 ->7.30MiB (busy). |
-| 3 Wallpaper / colors | KDE + terminal + login public; demo ready to publish | Busy KDE CPU25.39 ->1.25ms; final quiet A/B/A/B pending. |
-| 4 Remaining shell tools | Pending | Preserve privilege and session policy. |
-| 5 AI | Pending | Claude CLI stream-json; retain existing permissions/history. |
-| 6 Brain | Pending | bge-small vectors cosine >= 0.9999 or backed-up reindex. |
-| 7 Installer / proof | Pending | Disposable installs and nested sessions; zero Python launches. |
+| 0 Orient decoder | Complete | 49 inputs / 55 frames and 160 palettes exact, including JPEG; notices retained. |
+| 1 Service / frequent helpers | Complete; CI green | 13 ports; busy helper RSS 26.95 → 10.21 MiB. Absolute XDG roots match QML. |
+| 2 Compositor / pearls | Complete; CI green | Preview busy CPU 52.58 → 1.26 ms; RSS 21.54 → 7.30 MiB. Native IPC/session runtime. |
+| 3 Wallpaper / colors | Active | Four small helpers public; native palette pipeline validating as one unit. |
+| 4 Remaining shell tools | Pending | Preserve session/privilege policy; bring palette dependencies forward only as needed. |
+| 5 AI | Pending | Claude stream-json CLI; retain existing permissions/history. |
+| 6 Brain | Pending | Same bge-small model; cosine ≥ 0.9999 or backed-up automatic reindex. |
+| 7 Installer / proof | Pending | Disposable installs/nested sessions and zero Python launches; shared packaging belongs to install task. |
 
-Baseline references: `performance.md` (~105 ms launcher, ~115 ms dashboard, ~225 ms wallpaper pair, ~190 ms palette pair; fresh Python helpers 19–58 ms,
-~33 MiB helper RSS). These historical figures are not new matched measurements.
+Historical baselines in performance.md: launcher ≈ 105 ms, dashboard ≈ 115 ms,
+wallpaper pair ≈ 225 ms, palette pair ≈ 190 ms; fresh Python helpers 19–58 ms.
+These are not new matched measurements. No new whole-desktop speed claim yet.
+Busy-machine evidence: child user+system CPU, launches and helper RSS only.
+Do not use whole-shell wall time or aggregate RSS/PSS while paging.
+The original lab captures were discarded; the unchanged baseline also failed.
 
-2026-10-13: Orient decoder/dev6 `0f2200f` and RPC/packaging `2ebc2ca` are public;
-all CI green. Nacre final pin/adapter/package follow-up is public through `9d97b1d`.
-49 frozen inputs / 55 frames and 160 PNG/GIF/WebP/JPEG palette cases exact.
-Rust/Clippy/fmt, 67 Python tests, both goldens and sdist/wheel smoke pass.
-Combined Nacre gate: 789 tests; syntax/lint/QML/JS/config and CI pass.
-Shared Rust workspace foundation `e4ca136` is public (no caller cutover yet).
+Quiet gate: measured processes SwapPss 0; host swap-in UNDER 1 MiB.
+Record page counts/page size; discard runs above that or with measured-process swap.
+At the next owner-announced desktop window, compare built baseline/native A/B/A/B.
+No new window announced. Include it before Wave 3 final status.
+Earlier 126/33-page captures are not a complete comparison and cannot be stitched in.
+No reboot, swap, governor or live-session changes are needed for these ports.
 
-Matched lab held QML/tools at `0ecb3bb7`, applied C8 pin only, used public 1080p
-PNGs, private HOME/XDG/D-Bus and nested Hyprland/headless labwc, 10 actions each.
-Initial shell captures are discarded as performance evidence: cache warming and
-paging were active, and the focused repeat failed in the unchanged baseline.
-No shell wall-clock, RSS/PSS or idle CPU improvement is claimed in this window.
-Owner authorized continued ports; all correctness gates stay mandatory.
-Busy-machine evidence: helper user+sys CPU, launches, helper RSS only.
-Owner revised quiet gate: measured processes must have SwapPss0; host swap-in
-must stay under1MiB. Record host page counts and page size. Prior126/33-page
-captures fit that allowance but do not form complete A/B/A/B; repeat at next
-announced window and include before Wave3 final status. Correctness gates unchanged.
-Wave3 may proceed now. No reboot, swap or live-session changes needed for ports.
+Wave 3 public receipts (desktop + fresh-install Source CI green):
+- KDE 10b1d328 / receipt 720525e6: CI 38631961373 + 38635667735; 14+3 cases.
+- Terminal c4877dd5: CI 38644066952; 42 function + 2 real PTY references.
+- Login 11f7705e: CI 38652117086; 20 cases / 13 exact preview PNGs.
+- Demo c1417afe: CI 38654603463; 14 cases; 203 Rust / 884 repo / 526 parity.
+Busy CPU ms/call: KDE 25.39 → 1.25; terminal 29.02 → 1.07;
+login cache hit 50.74 → 0.95; demo verified 59.06 → 10.39, fast 43.49 → 0.91.
+Each 100-call run reduced Python launches from 100 to zero.
 
-Wave 1 service, six hosted and five frequent helpers plus diagnostics are public.
-Caller swaps, source retirement and historical assertion mappings are retained.
-Per-helper publication completed at 3ca5d316; Source and Niri install CI green.
-Frozen helper corpus: `tests/parity/helpers` (separate parity task; do not regenerate).
+Palette pipeline candidate: task/zero-python-palette-pipeline, rebased onto e910ffd7.
+Direct pinned Orient core/decoder calls; paired publication holds one shared lock.
+Required branding, file-icons and lock preparation code moves with this unit.
+Native-only clients bridge remaining Python callers; retired implementations removed.
+16 immutable publication/transaction cases match bytes, modes, symlinks and stamps.
+Six Colors workflows and 13 original shared engine-cache files match exactly.
+12 CLI workflows and five additional original subcommand-help cases match exactly.
+Four complete lock PNGs, 56 font masks/metrics and 36 geometry masks match.
+Before integration: 526 parity, Clippy, 216 Rust tests and 884 repo tests passed.
+Integration preserves automatic wallpaper mode and border-gradient controls from main.
+Integrated: six gradient refs, 22 media tests, 221 Rust tests and 889 repo tests pass.
+Busy cached preview CPU 65.82 → 9.98 ms; Colors RSS 34.02 → 16.85 MiB (2 → 1 processes).
+Reference producers refuse replacement; existing frozen outputs are immutable.
+New help references were captured separately from unchanged c1417afe sources.
+State write_text preserves legacy bytes; existing write/update APIs are unchanged.
 
-Follow-up: Rust Paths accepts absolute config/state/cache XDG roots, otherwise
-HOME defaults, matching QML. Custom-XDG behavior is an intended parity difference;
-current frozen cases use defaults and remain unchanged.
-Main CI gate retained; 2753707f fixed isolation without changing goldens/skips.
-Wave 1 source/install CI passed; hardware checks remain manual.
+Intended differences: custom absolute XDG roots follow QML; dconf and compositor
+socket operations replace equivalent processes; terminal reloads target the same HOME.
+Main added paletteAutoMode=false: one explicit old picker-file default is compatible;
+all other frozen file bytes remain checked, and original expectations are unchanged.
+The retired provisioner has developer-only historical tests, no runtime entry point.
+Orient 3efe8d1 supplies exact image APIs: all seven CI 38664017062 jobs green.
+Core colors are unchanged; only submodule/lock/SDK/bootstrap engine-label pins change.
+Shared Arch recipes/Core maps remain with the packaging owner; handoff coordinated.
 
-Next: publish demo wallpapers:14 frozen cases/203Rust/884repo/526parity pass; busy CPU normal59.06->10.39ms, fast43.49->0.91ms,100->0Python per100calls. Login11f7705e local199Rust/884repo/526parity; SourceCI38652117086 desktop + fresh-install green. Orient820e199 all7CIjobs green including clean Arch build; terminalc4877dd5 CI38644066952 green. Then palette pipeline as one in-process Orient unit, watcher, media. Measure final visible shell/GTK/Qt/Kitty/lock frames plus helper CPU; watcher/server RSS+idleCPU. Revised quiet A/B/A/B due before Wave3 final status. Missing-Niri stock test skip254f6dd6 is public; Source CI38622342266 desktop + fresh-install passed. Wave2 final preview d3127939 is public; Source CI38618169781 desktop + fresh-install fully green. Preview:35 frozen /171 Rust /857 repo /526 parity /8 original assertions /3 production tests; actual Bubblewrap isolation and real nested Niri clean-exit pass; fmt/Clippy/2745 translations current. No copied credentials or session takeover; private system-bus address for native hardware APIs is an intended difference; explicit AI permissions retained. Busy parser CPU52.58 ->1.26ms/RSS21.54 ->7.30MiB (one controlled-child sample),100 ->0 Python. Runtime424+c78 CI38604183117 and recorder51f8ee91 CI38611294733 fully green. Shared packaging remains install task.
-Window-hide cutover: 126 Rust tests, 821 repo plus 3 native checks, 12 frozen cases, 11 original assertions and 3 socket/D-Bus goldens pass. Busy CPU 46.26 -> 2.19 ms, helper RSS 17.33 -> 7.27 MiB; 100 -> 0 Python starts. No state migration; notification failures reach stderr and lock symlinks are refused. CI repair 2c31dbd2 / CI38568187548 fully green; no new skips.
-Wave 2: compilers public at 314a2603; CI 38539710564 Source + Niri install green.
-Three compiler sources retired; 84 integrated Rust tests / 770 repo tests / 526 cases pass.
-Native-only Python clients remain until their later-wave callers are ported; no backend implementation remains.
-Compositor busy fresh CPU 46.07 -> 1.35 ms; persistent RSS 7.90 MiB, one connection. Main69ceaeec/116a337b:123Rust/821repo/526parity pass; compat77131ae9:124Rust/821repo/526 pass. CI38564916648: fresh-install passed; control fixture failed because Python availability mocks did not reach Rust. Explicit fixture input preserves all assertions; 8 control tests pass with empty PATH; no skips. Niri exact: 79 snapshots / 78 actions / 12 frames / 45 emissions / 8 handshakes / 110 config/query / 7 bindings / 21 display / 13 file / 18 night-light / 11 metadata; Hyprland 195 cases; CLI 34 dispatch cases.
-Busy fresh CPU: 55.67/38.50/35.55/16.88 -> 1.95/1.16/1.11/0.89 ms; Python 404 -> 0.
-Capture: 11 frozen cases match; 0600/0700 security difference tracked; IPC/events pass.
-Disposable release install/empty-PATH commands and atomic replacement tests pass.
-QML kill/malformed/timeout recovery passes with a native fixture; service Python retired.
-Media API: 64 frozen artwork cases pass (63 PNG files plus Pillow I;16 error);
-128px frames / 160 palettes unchanged; Orient `40c1a75` public, all 7 CI jobs green.
-Intended differences: unexpected telemetry/cache failures reach stderr; NVML
-replaces nvidia-smi; inventory CLI bridges the existing diagnostic module call.
-d920 fingerprint: native-image compares two declared IDs against lock/pin/build;
-17 controls and all 349 cases pass; frozen outputs/core/colors unchanged.
-Hyprland lab backend cannot start (headless/nested); native socket/capture fixtures pass.
-No live machine/config changes; no tags or package uploads.
-Port security follow-ups: [security review](security-review.md#fix-during-port).
-Keep existing AI access/consent/retention policies; add explicit security cases
-and intended differences when implementing the reviewed port hardening.
-
-## Soak lifecycle acceptance
-
-Retain per-PID/start-time resident-plus-swapped memory measurements when porting
-persistent helpers. The completed three-hour Niri/Hyprland default-allocator
-stress captures showed flat long-lived helper memory; they do not demonstrate a
-Python helper leak. Test cancellation, bounded request/model caches, child reaping
-and wallpaper-watch/service restart counts during repeated wallpaper/video,
-palette and pearl operations. Short helper lifetimes and isolated zombie samples
-alone do not prove a leak. See [the measured comparison](soak.md#results-and-fixes).
+Next: finish integration gates and the exact candidate handoff to packaging;
+push and check CI. Then wallpaper-watch,
+wallpaper-media, their RSS/idle CPU, visible-consumer timings and quiet A/B/A/B.
+Preserve concurrent Settings changes; rebase only own commits, owner identity.
+No live deployment, tags, package publication or session takeover in this task.

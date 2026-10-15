@@ -17,7 +17,7 @@ import tempfile
 import urllib.parse
 import time
 from pathlib import Path
-from PIL import Image, ImageOps, ImageStat
+from PIL import Image, ImageStat
 
 HOME = Path.home()
 try:
@@ -65,64 +65,21 @@ def read(path, default):
 
 
 def settings():
-    result = dict(
-        {
-            "kind": "static",
-            "layout": "carousel",
-            "paused": False,
-            "motionMode": "full",
-            "pauseCovered": True,
-            "rotationEnabled": False,
-            "rotationMinutes": 30,
-            "rotationKind": "all",
-            "rotationShuffle": True,
-            "palettePreset": "wallpaper",
-            "paletteMode": "dark",
-            "paletteAutoMode": False,
-            "paletteHarmony": False,
-            "palettePersonality": "natural",
-        },
-        **read(PREFS, {}),
-    )
+    from nacre_native_palette import wallpaper_media as native
 
-    original_personality = result["palettePersonality"]
-    result.setdefault(
-        "paletteBackgroundFromWallpaper", original_personality != "natural"
-    )
-    if original_personality == "source":
-        result["palettePersonality"] = "natural"
-    if result["rotationEnabled"] and not result.get("rotationAnchorMs"):
-        result["rotationAnchorMs"] = (
-            int(PREFS.stat().st_mtime * 1000) if PREFS.exists() else 0
-        )
-    return result
+    return native.settings()
 
 
 def media_state():
-    path = STATE / "media.json"
-    result = read(path, {})
-    if result and not result.get("appliedAtMs"):
-        result["appliedAtMs"] = int(path.stat().st_mtime * 1000)
-    return result
+    from nacre_native_palette import wallpaper_media as native
+
+    return native.media_state()
 
 
 def palette_presets():
-    presets = read(Path(__file__).with_name("palette-presets.json"), [])
-    for favorite in read(HOME / ".config/nacre/colors.json", {}).get("favorites", []):
-        if not re.fullmatch(r"[0-9a-f]{16}", favorite.get("id", "")):
-            continue
-        presets.append(
-            {
-                "id": "favorite:" + favorite["id"],
-                "name": favorite["name"],
-                "seed": favorite["palette"]["colours"]["overtone"],
-                "group": "saved",
-                "swatches": favorite["swatches"],
-                "surface": favorite["modes"]["dark"]["frame"],
-                "modes": favorite["modes"],
-            }
-        )
-    return presets
+    from nacre_native_palette import wallpaper_media as native
+
+    return native.palette_presets()
 
 
 def wallpaper_mode(poster):
@@ -226,298 +183,37 @@ def theme(value):
 
 
 def preference(value):
-    if isinstance(value, dict) and value.get("palettePersonality") == "source":
-        value = dict(
-            value,
-            palettePersonality="natural",
-            paletteBackgroundFromWallpaper=value.get(
-                "paletteBackgroundFromWallpaper", True
-            ),
-        )
-    allowed = {
-        "kind": ("static", "dynamic"),
-        "motionMode": ("full", "battery", "still"),
-        "layout": ("carousel", "spotlight", "hexagons"),
-        "rotationKind": ("all", "static", "dynamic"),
-        "paletteMode": ("dark", "light"),
-        "palettePersonality": (
-            "natural",
-            "pigment",
-            "harmony",
-            "pop",
-            "mist",
-            "vivid",
-            "pearl",
-            "tide",
-        ),
-        "palettePreset": ("wallpaper", *[item["id"] for item in palette_presets()]),
-    }
-    boolean_keys = (
-        "paused",
-        "pauseCovered",
-        "rotationEnabled",
-        "rotationShuffle",
-        "paletteHarmony",
-        "paletteAutoMode",
-        "paletteBackgroundFromWallpaper",
-    )
-    if not isinstance(value, dict) or any(
-        k not in (*allowed, *boolean_keys, "rotationMinutes") for k in value
-    ):
-        raise ValueError(
-            tr(
-                "helper.wallpaper-media.unknown-picker-preference",
-                "Unknown picker preference",
-            )
-        )
-    for k, v in value.items():
-        if k in allowed and v not in allowed[k]:
-            raise ValueError(
-                tr(
-                    "helper.wallpaper-media.invalid-picker-preference",
-                    "Invalid picker preference",
-                )
-            )
-        if k in boolean_keys and type(v) is not bool:
-            raise ValueError(
-                tr(
-                    "helper.wallpaper-media.expected-a-boolean-preference",
-                    "Expected a boolean preference",
-                )
-            )
-        if k == "rotationMinutes" and (type(v) is not int or not 5 <= v <= 1440):
-            raise ValueError(
-                tr(
-                    "helper.wallpaper-media.choose-a-wallpaper-interval-between-5-and-1440-minutes",
-                    "Choose a wallpaper interval between 5 and 1440 minutes",
-                )
-            )
-    PREFS.parent.mkdir(parents=True, exist_ok=True)
-    with PREFS.with_suffix(".lock").open("w") as lock:
-        os.chmod(lock.name, 0o600)
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        result = settings()
-        previous = dict(result)
-        result.update(value)
-        if (result["rotationEnabled"] and not previous["rotationEnabled"]) or any(
-            key in value and value[key] != previous[key]
-            for key in ("rotationMinutes", "rotationKind")
-        ):
-            result["rotationAnchorMs"] = int(time.time() * 1000)
-        atomic(PREFS, result)
-        return result
+    from nacre_native_palette import wallpaper_media as native
+
+    return native.preference(value)
 
 
 def previews(poster):
-    stat = poster.stat()
-    key = hashlib.sha256(
-        (
-            str(poster) + str(stat.st_size) + str(stat.st_mtime_ns) + "preview-v1"
-        ).encode()
-    ).hexdigest()
-    CACHE.mkdir(parents=True, exist_ok=True)
-    files = {
-        name: CACHE / (key + "-" + name + ".jpg") for name in ("thumbnail", "preview")
-    }
-    if any(not path.exists() for path in files.values()):
-        with Image.open(poster) as image:
-            image = ImageOps.exif_transpose(image).convert("RGB")
-            for name, size in [("thumbnail", (640, 400)), ("preview", (1600, 1000))]:
-                if files[name].exists():
-                    continue
-                resized = image.copy()
-                resized.thumbnail(size, Image.Resampling.LANCZOS)
-                fd, temp = tempfile.mkstemp(dir=CACHE, suffix=".jpg")
-                os.close(fd)
-                try:
-                    resized.save(temp, quality=88, optimize=False)
-                    os.chmod(temp, 0o600)
-                    os.replace(temp, files[name])
-                finally:
-                    Path(temp).unlink(missing_ok=True)
-    return {name: str(path) for name, path in files.items()}
+    from nacre_native_palette import wallpaper_media as native
+
+    return native.previews(poster)
 
 
 def describe(path):
-    path = Path(path).expanduser().resolve()
-    if not path.is_file() or path.suffix.lower() not in IMAGES | VIDEOS:
-        raise ValueError(
-            tr(
-                "helper.wallpaper-media.select-a-local-image-gif-or-video",
-                "Select a local image, GIF or video",
-            )
-        )
-    animated = False
-    if path.suffix.lower() == ".gif":
-        with Image.open(path) as image:
-            animated = getattr(image, "n_frames", 1) > 1
-    dynamic = path.suffix.lower() in VIDEOS or animated
-    poster = path
-    if dynamic:
-        stat = path.stat()
-        key = hashlib.sha256(
-            (str(path) + str(stat.st_size) + str(stat.st_mtime_ns)).encode()
-        ).hexdigest()
-        CACHE.mkdir(parents=True, exist_ok=True)
-        poster = CACHE / (key + ".png")
-        if not poster.exists():
-            fd, name = tempfile.mkstemp(dir=CACHE, suffix=".png")
-            os.close(fd)
-            temporary = Path(name)
-            try:
-                if animated:
-                    with Image.open(path) as image:
-                        image.seek(0)
-                        image = image.convert("RGB")
-                        image.thumbnail((1920, 1080))
-                        image.save(temporary)
-                else:
-                    subprocess.run(
-                        [
-                            "ffmpeg",
-                            "-nostdin",
-                            "-v",
-                            "error",
-                            "-threads",
-                            "2",
-                            "-i",
-                            str(path),
-                            "-frames:v",
-                            "1",
-                            "-vf",
-                            "scale=1920:1080:force_original_aspect_ratio=decrease",
-                            "-y",
-                            str(temporary),
-                        ],
-                        capture_output=True,
-                        timeout=30,
-                        check=True,
-                    )
-                with Image.open(temporary) as image:
-                    image.verify()
-                temporary.chmod(0o600)
-                temporary.replace(poster)
-            finally:
-                temporary.unlink(missing_ok=True)
-    return dict(
-        path=str(path),
-        name=path.stem.replace("_", " "),
-        poster=str(poster),
-        dynamic=dynamic,
-        animated=animated,
-        **previews(poster),
-    )
+    from nacre_native_palette import wallpaper_media as native
+
+    return native.describe(path)
 
 
 def catalog():
-    LIBRARY.mkdir(parents=True, exist_ok=True)
-    (LIBRARY / "Dynamic").mkdir(exist_ok=True)
-    rows = []
-    errors = []
-    for path in sorted(LIBRARY.rglob("*"), key=lambda p: str(p).casefold()):
-        if path.is_file() and path.suffix.lower() in IMAGES | VIDEOS:
-            try:
-                rows.append(describe(path))
-            except (
-                OSError,
-                ValueError,
-                KeyError,
-                TypeError,
-                RuntimeError,
-                subprocess.SubprocessError,
-                Image.DecompressionBombError,
-            ):
-                errors.append(path.name)
-    return dict(
-        entries=rows,
-        preferences=settings(),
-        media=media_state(),
-        errors=errors,
-        palettes=[
-            dict(
-                {key: item[key] for key in ("id", "name", "seed", "group")},
-                swatches=[
-                    item["modes"]["dark"][key]
-                    for key in ("primary", "secondary", "tertiary")
-                ],
-                surface=item["modes"]["dark"]["surface"],
-            )
-            for item in palette_presets()
-        ],
-    )
+    from nacre_native_palette import wallpaper_media as native
+
+    return native.catalog()
 
 
 def palette_marker(
     poster, flavour, harmony=None, source=None, mode=None, personality=None
 ):
-    poster = Path(poster)
-    stat = poster.stat()
-    active = media_state()
-    source = source or (
-        active.get("path") if active.get("poster") == str(poster) else str(poster)
+    from nacre_native_palette import wallpaper_media as native
+
+    return Path(
+        native.palette_marker(poster, flavour, harmony, source, mode, personality)
     )
-    original = Path(source) if source and Path(source).is_file() else poster
-    source_stat = original.stat()
-    cli = HOME / ".local/share/nacre/palette-runtime/venv/bin/nacre_shell"
-    marker = cli.parents[2] / "orient-build.json"
-    engine = (
-        marker.read_text()
-        if marker.exists()
-        else str(cli.stat().st_mtime_ns)
-        if cli.exists()
-        else "uninstalled"
-    )
-    scheme = read(HOME / ".local/state/nacre/scheme.json", {})
-    config = read(HOME / ".config/nacre/cli.json", {})
-    generation = json.dumps(
-        {
-            "original": [
-                str(original),
-                source_stat.st_size,
-                source_stat.st_mtime_ns,
-                source_stat.st_ctime_ns,
-            ],
-            "mode": mode or scheme.get("mode", "dark"),
-            "variant": scheme.get("variant", "tonalspot"),
-            "orient": config.get("orient", {}),
-            "harmony": settings().get("paletteHarmony", False)
-            if harmony is None
-            else harmony,
-            "personality": personality
-            or (
-                settings().get("palettePersonality", "natural")
-                if harmony is None
-                else ("harmony" if harmony else "natural")
-            ),
-            "backgroundFromWallpaper": settings().get(
-                "paletteBackgroundFromWallpaper", False
-            ),
-            "clockHour": time.localtime().tm_hour
-            if read(HOME / ".config/nacre/colors.json", {})
-            .get("wallpapers", {})
-            .get(str(poster.resolve()), {})
-            .get("tideAutomatic")
-            else None,
-            "choices": read(HOME / ".config/nacre/colors.json", {})
-            .get("wallpapers", {})
-            .get(str(poster.resolve()), {}),
-        },
-        sort_keys=True,
-    )
-    key = hashlib.sha256(
-        (
-            str(poster)
-            + str(stat.st_size)
-            + str(stat.st_mtime_ns)
-            + str(stat.st_ctime_ns)
-            + str(stat.st_ino)
-            + str(flavour)
-            + engine
-            + generation
-            + "palette-warm-orient-v3"
-        ).encode()
-    ).hexdigest()
-    return CACHE / (key + ".palette.json")
 
 
 def prepared_theme(poster, live=True):
@@ -564,7 +260,7 @@ def warm(include_demo=True):
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return {"busy": True}
-        cli = HOME / ".local/share/nacre/palette-runtime/venv/bin/nacre_shell"
+        cli = HOME / ".local/share/nacre/shell/bin/nacre_shell"
         from nacre_native_config import _binary
 
         def prepare_login(poster):
@@ -799,6 +495,16 @@ def import_files(paths):
 
 @functools.lru_cache(maxsize=8)
 def demo_module(name):
+    if name in {
+        "classic-state",
+        "branding",
+        "file-icons",
+        "lock-config",
+        "lock-dashboard",
+    }:
+        import nacre_native_palette
+
+        return getattr(nacre_native_palette, name.replace("-", "_"))
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(

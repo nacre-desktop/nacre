@@ -24,13 +24,14 @@ DEST = HOME / ".local/share/nacre/shell"
 STATE = HOME / ".local/state/nacre/shell"
 
 
-def refresh_orient(runtime):
+def refresh_orient(helper):
     state = HOME / ".local/state/nacre"
     scheme = _state.read_json_file(state / "scheme.json")
     # Fixed presets are resolved by the existing publisher, not by this command.
     subprocess.run(
         [
-            str(runtime / "venv/bin/nacre_shell"),
+            str(helper),
+            "nacre_shell",
             "scheme",
             "set",
             "-m",
@@ -119,6 +120,13 @@ def retire_native_helpers(directory):
         "kde-palette",
         "terminal-branding",
         "login-appearance",
+        "colors",
+        "classic-state",
+        "branding",
+        "file-icons",
+        "lock-config",
+        "lock-dashboard",
+        "provision",
         "demo-wallpapers",
         "helper-service",
         "diagnostics",
@@ -188,11 +196,7 @@ def deploy(code_only=False):
                         },
                     )
                 )
-    runtime = HOME / ".local/share/nacre/palette-runtime"
-    if (
-        not Path("/usr/bin/quickshell").is_file()
-        or not (runtime / "venv/bin/python").is_file()
-    ):
+    if not Path("/usr/bin/quickshell").is_file() or not helper.is_file():
         raise RuntimeError(
             tr(
                 "helper.install.install-system-desktop-packages-and-provision-the-palette-engine",
@@ -200,7 +204,7 @@ def deploy(code_only=False):
             )
         )
     # The release transaction snapshots the old runtime before this activation.
-    subprocess.run(["python3", str(ROOT / "provision.py")], check=True)
+
     # Fonts have their own hash/notice/rollback owner; loaded applications stay alive.
     subprocess.run(["python3", str(ROOT / "font-setup.py"), "--apply"], check=True)
     pending = DEST / "source.next"
@@ -340,9 +344,9 @@ def deploy(code_only=False):
         current.symlink_to(DEST / "source")
         subprocess.run(["python3", str(ROOT / "install-extras.py")], check=True)
         if (HOME / ".local/state/nacre/scheme.json").exists():
-            refresh_orient(runtime)
+            refresh_orient(target)
             subprocess.run(
-                ["python3", str(DEST / "tools/classic-state.py")], check=True
+                [str(DEST / "tools/nacre-helper"), "classic-state"], check=True
             )
         subprocess.run(["python3", str(ROOT / "isolate-apps.py")], check=True)
         subprocess.run(["systemctl", "--user", "restart", "nacre-shell"], check=True)
@@ -465,7 +469,7 @@ def deploy(code_only=False):
                 shutil.copy2(path, saved)
                 entry.update(type="file", backup=str(saved))
             entries.append(entry)
-        subprocess.run(["python3", str(DEST / "tools/classic-state.py")], check=True)
+        subprocess.run([str(DEST / "tools/nacre-helper"), "classic-state"], check=True)
         for entry in entries:
             entry["after_hash"] = digest(Path(entry["target"]))
     _state.write(backup / "manifest.json", entries)

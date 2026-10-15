@@ -13,6 +13,9 @@ spec = importlib.util.spec_from_file_location(
 )
 media = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(media)
+from native_media_subset import install
+
+install(media)
 
 
 class WallpaperMediaTests(unittest.TestCase):
@@ -76,17 +79,10 @@ class WallpaperMediaTests(unittest.TestCase):
         bad = media.LIBRARY / "bad.png"
         good = media.LIBRARY / "good.png"
         bad.write_bytes(b"invalid")
-        good.write_bytes(b"fixture")
-
-        def describe(path):
-            if path == bad:
-                raise Image.DecompressionBombError("Image is unsafe to decode")
-            return {"path": str(path)}
-
-        with patch.object(media, "describe", side_effect=describe):
-            result = media.catalog()
+        Image.new("RGB", (32, 20), "#224466").save(good)
+        result = media.catalog()
         self.assertEqual(result["errors"], ["bad.png"])
-        self.assertEqual(result["entries"], [{"path": str(good)}])
+        self.assertEqual([item["path"] for item in result["entries"]], [str(good)])
 
     def test_source_preference_migrates_without_changing_file_on_read(self):
         media.PREFS.parent.mkdir(parents=True)
@@ -348,7 +344,7 @@ class OrientPreparedCacheTests(unittest.TestCase):
             home = Path(folder)
             poster = home / "poster.png"
             Image.new("RGB", (32, 24), "red").save(poster)
-            cli = home / ".local/share/nacre/palette-runtime/venv/bin/nacre_shell"
+            cli = home / ".local/share/nacre/shell/bin/nacre_shell"
             cli.parent.mkdir(parents=True)
             colors = json.loads(
                 Path(media.__file__).with_name("reference-style.json").read_text()

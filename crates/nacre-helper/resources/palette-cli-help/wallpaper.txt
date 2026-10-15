@@ -1,0 +1,16 @@
+options:
+  -h, --help            show this help message and exit
+  -p, --print [PRINT]
+  -r, --random [RANDOM]
+  -f, --file FILE
+  -n, --no-filter
+  -t, --threshold THRESHOLD
+  -N, --no-smart
+  --accent ACCENT
+  --source SOURCE       optional animated analysis source for a prepared
+                        poster
+  --mode {dark,light}
+  --harmony, --no-harmony
+                        prefer related, substantial supporting colors
+  --personality {natural,pigment,harmony,pop,mist,vivid,pearl,tide,source}
+  --background-from-wallpaper, --no-background-from-wallpaper

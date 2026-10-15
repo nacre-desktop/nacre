@@ -17,7 +17,8 @@ def module(name, file):
 
 
 info = module("lockinfo", "lock-info.py")
-config = module("lockconfig", "lock-config.py")
+import native_lock_config as config
+
 devices = module("devices", "device-actions.py")
 weather = module("weather", "weather.py")
 

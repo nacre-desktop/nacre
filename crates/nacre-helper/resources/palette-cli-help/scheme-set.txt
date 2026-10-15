@@ -1,0 +1,11 @@
+options:
+  -h, --help            show this help message and exit
+  --notify
+  -r, --random
+  -n, --name {default,dynamic}
+  -f, --flavour {default,hard}
+  -m, --mode {dark,light}
+  -v, --variant {tonalspot,vibrant,expressive,fidelity,fruitsalad,monochrome,neutral,rainbow,content}
+  --accent ACCENT       explicit six-digit accent; 'auto' is accepted
+                        separately
+  --auto-accent

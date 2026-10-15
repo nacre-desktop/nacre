@@ -47,8 +47,7 @@ Singleton {
     property string exportDirectory: ""
     readonly property bool previewBusy: queued || inFlight
     readonly property bool actionBusy: actionJob.running
-    readonly property string python: NacrePaths.palettePython
-    readonly property string tool: NacrePaths.tools + "/colors.py"
+    readonly property string tool: "colors"
     readonly property bool ready: !!preview.id && preview.request === options && !previewBusy && !error
     readonly property bool applied: !!preview.id && saved.lastApplied === preview.id && NacreWallpapers.actualCurrent === preview.image && NacrePresentation.active.colours?.surface === preview.palette?.colours?.surface
     function open(image = "") {
@@ -251,7 +250,7 @@ Singleton {
     }
     Process {
         id: previewServer
-        command: ["nice", "-n", "10", root.python, root.tool, "serve"]
+        command: ["nice", "-n", "10", NacrePaths.helperBinary, root.tool, "serve"]
         stdinEnabled: true
         stdout: SplitParser {
             onRead: text => root.acceptPreview(text)
@@ -271,7 +270,7 @@ Singleton {
     }
     Process {
         id: catalogJob
-        command: [root.python, root.tool, "catalog"]
+        command: [NacrePaths.helperBinary, root.tool, "catalog"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -293,7 +292,7 @@ Singleton {
         property var request: ({})
         property string output: ""
         property string failure: ""
-        command: [root.python, root.tool, action]
+        command: [NacrePaths.helperBinary, root.tool, action]
         stdinEnabled: true
         environment: ({
                 NACRE_PRESENTATION_STREAM: action === "apply" ? "1" : "0"

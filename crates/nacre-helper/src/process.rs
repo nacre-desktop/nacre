@@ -126,7 +126,7 @@ fn spawn_detached_io(
 // Selector signalfd handling blocks these signals in its own thread; child
 // commands must retain the previous Python helper's unblocked signal behavior.
 #[allow(unsafe_code)]
-fn restore_child_signals(command: &mut Command) {
+pub(crate) fn restore_child_signals(command: &mut Command) {
     use std::os::unix::process::CommandExt;
     // SAFETY: only async-signal-safe sigemptyset/sigaddset/pthread_sigmask calls,
     // with stack data, no heap allocation, locks or arbitrary user callbacks.

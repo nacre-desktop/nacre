@@ -60,6 +60,9 @@ def test_environment():
         "NACRE_PEARL_TOOLS",
         "NACRE_QS_CONFIG",
         "NIRI_SOCKET",
+        "NIRI_CONFIG",
+        "NACRE_NIRI_CONFIG",
+        "NACRE_NIRI_DESKTOP_CONFIG",
         "HYPRLAND_INSTANCE_SIGNATURE",
         "XDG_CURRENT_DESKTOP",
         "WAYLAND_DISPLAY",
@@ -246,6 +249,16 @@ def main():
         "Native Niri legacy assertions and frozen reference integrity passed.",
         flush=True,
     )
+    for contract in ("colors", "palette_cli"):
+        run(
+            [sys.executable, f"tests/parity/helpers/verify_{contract}_native.py"],
+            env=environment,
+        )
+    print(
+        "Native Colors and palette CLI immutable workflow references passed.",
+        flush=True,
+    )
+
     run(
         [sys.executable, "tests/parity/helpers/verify_hyprland_native.py"],
         env=environment,

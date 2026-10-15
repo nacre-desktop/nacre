@@ -296,6 +296,43 @@ pub fn update_as(
     schema: &Schema,
     change: impl FnOnce(Value) -> Result<Value>,
 ) -> Result<()> {
+    update_formatted(path, schema, change, None)
+}
+
+/// Preserve the established mixed text/JSON writer contract without changing
+/// write/update callers: current-version text is verbatim; migrated text uses
+/// ordinary JSON spacing and a final newline. Existing backups/locks still apply.
+pub fn write_text(path: &Path, text: &str) -> Result<bool> {
+    let Some(schema) = schema(path) else {
+        return Ok(false);
+    };
+    let mut value: Value = serde_json::from_str(text)?;
+    let current = value.get("version").and_then(Value::as_u64) == Some(schema.version);
+    if schema.shape == "array" && current {
+        value = value.get("items").cloned().ok_or(StateError::Corrupt)?;
+    }
+    // Validate the candidate before creating any filesystem state, as write_as does.
+    let mut serialized = encoded(&value, schema)?;
+    if current {
+        serialized = text.as_bytes().to_vec();
+    } else {
+        serialized =
+            json::dumps(&serde_json::from_slice::<Value>(&serialized)?, false)?.into_bytes();
+        serialized.push(b'\n');
+    }
+    if serialized.len() as u64 > LIMIT {
+        return Err("State file too large; original preserved".into());
+    }
+    update_formatted(path, schema, |_| Ok(value), Some(&serialized))?;
+    Ok(true)
+}
+
+fn update_formatted(
+    path: &Path,
+    schema: &Schema,
+    change: impl FnOnce(Value) -> Result<Value>,
+    serialized: Option<&[u8]>,
+) -> Result<()> {
     let parent = path.parent().ok_or("Invalid state path")?;
     fs::create_dir_all(parent)?;
     let lock = path.with_file_name(format!(
@@ -337,7 +374,8 @@ pub fn update_as(
         None => (schema.defaults.clone(), schema.version, false),
     };
     let value = change(current)?;
-    let encoded = encoded(&value, schema)?;
+    let canonical = encoded(&value, schema)?;
+    let encoded = serialized.map_or(canonical, <[u8]>::to_vec);
     if encoded.len() as u64 > LIMIT {
         return Err("State file too large; original preserved".into());
     }

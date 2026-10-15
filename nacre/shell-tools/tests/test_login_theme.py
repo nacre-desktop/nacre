@@ -3,7 +3,6 @@ import tempfile
 import unittest
 import os
 import configparser
-import functools
 from unittest.mock import patch
 from pathlib import Path
 from PIL import Image
@@ -12,6 +11,10 @@ BASE = Path(__file__).resolve().parents[1]
 
 
 def module(name):
+    if name == "classic-state":
+        import native_classic_state
+
+        return native_classic_state
     if name == "login-appearance":
         import native_login_appearance
 
@@ -139,31 +142,15 @@ class LoginTests(unittest.TestCase):
             image = base / "red-fixture.png"
             Image.new("RGB", (32, 24), "red").save(image)
             colors = {role: "aabbcc" for role in appearance.ROLES.values()}
-            original_spec = importlib.util.spec_from_file_location
+            import json
 
-            def isolated_spec(name, path):
-                spec = original_spec(name, path)
-                execute = spec.loader.exec_module
-
-                def load(helper):
-                    execute(helper)
-                    if name == "login_appearance":
-                        helper.HOME = live_home
-                        helper.publish = functools.partial(
-                            helper.publish, public=public
-                        )
-                    elif name == "lock_config":
-                        helper.prepare_config = lambda *args: "fixture lock config"
-
-                spec.loader.exec_module = load
-                return spec
-
-            with patch(
-                "importlib.util.spec_from_file_location", side_effect=isolated_spec
-            ):
-                palette._publish_lock_login(
-                    staged_home, staged_home / ".local/state/nacre", colors, image
-                )
+            complete = json.loads((BASE / "reference-style.json").read_text())[
+                "colours"
+            ]
+            complete.update(colors)
+            palette._publish_lock_login(
+                staged_home, staged_home / ".local/state/nacre", complete, image
+            )
             self.assertEqual(
                 (public / "background.png").read_bytes(), b"original wallpaper"
             )

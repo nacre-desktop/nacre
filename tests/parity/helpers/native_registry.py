@@ -20,6 +20,15 @@ MIGRATED = frozenset(
         "terminal-branding",
         "login-appearance",
         "demo-wallpapers",
+        "colors",
+        "classic-state",
+        "branding",
+        "file-icons",
+        "lock-config",
+        "lock-dashboard",
+        "palette_engine",
+        "nacre-colors",
+        "nacre_shell",
         "launcher-preferences",
         "light-devices",
         "menu-backend",
@@ -80,9 +89,33 @@ def command(case, override=None, *, root=ROOT, environ=None):
     if override is not None:
         return override
     helper = case["helper"]
+    original = shlex.split(case.get("command", ""))
+    if helper == "provision":
+        # Historical developer-only provisioning checks; the runtime is retired.
+        return shlex.join(
+            [
+                "python3",
+                "tests/parity/helpers/api.py",
+                "nacre/shell-tools/tests/reference_palette_provision.py",
+            ]
+        )
     if helper not in MIGRATED:
         return None
-    original = shlex.split(case.get("command", ""))
+    if helper == "nacre_shell" and original:
+        if original == ["python3", "-m", "nacre_shell"]:
+            binary = native_binary(root, environ)
+            provider = binary.parent / "examples/palette-cli-parity"
+            if not provider.is_file():
+                raise ValueError("Build the developer palette-cli-parity provider")
+            return shlex.join([str(provider), "python3 -m nacre_shell"])
+        if original == ["python3", "tests/parity/helpers/api.py", "nacre_shell.engine"]:
+            return shlex.join(
+                [str(native_binary(root, environ, module_api=True)), "nacre_shell"]
+            )
+        raise ValueError("Unsupported native palette CLI contract command")
+    if helper == "nacre-colors" and original == ["python3", "bin/nacre-colors"]:
+        return shlex.join([str(native_binary(root, environ)), helper])
+
     if (
         helper
         in {"compositor", "compositor-backends-hyprland", "compositor-backends-niri"}
@@ -191,7 +224,7 @@ def command(case, override=None, *, root=ROOT, environ=None):
 
 def assert_recordable(cases):
     """Check the entire selection before any reference file can be modified."""
-    migrated = sorted({case["helper"] for case in cases} & MIGRATED)
+    migrated = sorted({case["helper"] for case in cases} & (MIGRATED | {"provision"}))
     if migrated:
         raise ValueError(
             "Migrated helper references cannot be re-recorded: " + ", ".join(migrated)

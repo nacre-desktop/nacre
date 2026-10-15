@@ -153,46 +153,61 @@ class OrientTests(unittest.TestCase):
 
 class OrientBridgeTests(unittest.TestCase):
     def test_queries_skip_publisher_but_changes_publish_under_shared_lock(self):
+        import fcntl
+
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder)
-            runtime = home / ".local/share/nacre/palette-runtime/venv/bin"
-            runtime.mkdir(parents=True)
-            cli = runtime / "nacre_shell"
-            cli.write_text(
-                '#!/bin/sh\nif [ "$2" = set ]; then printf "%s" "${NACRE_PALETTE_LOCKED:-}" > "$HOME/locked"; fi\nprintf "ok\\n"\n'
-            )
-            cli.chmod(0o755)
-            tools = home / ".local/share/nacre/shell/tools"
-            tools.mkdir(parents=True)
-            (tools / "classic-state.py").write_text(
-                'from pathlib import Path\n(Path.home()/"published").write_text("yes")\n'
-            )
             bridge = Path(__file__).parents[1] / "cli-bridge.sh"
+            environment = {
+                **os.environ,
+                "HOME": str(home),
+                "XDG_CONFIG_HOME": str(home / ".config"),
+                "XDG_STATE_HOME": str(home / ".local/state"),
+                "XDG_CACHE_HOME": str(home / ".cache"),
+            }
+            image = home / "image.png"
+            Image.new("RGB", (32, 20), "#224466").save(image)
+            lock = home / ".local/state/nacre/palette-commit.lock"
+            published = home / ".local/state/nacre/presentation.json"
             for args in (
                 ("scheme", "get", "-m"),
-                ("wallpaper", "-p", "ignored"),
-                ("wallpaper", "--print=ignored"),
+                ("wallpaper", "-p", str(image)),
+                ("wallpaper", "--print=" + str(image)),
             ):
                 result = subprocess.run(
-                    ["bash", str(bridge), *args],
-                    env={**os.environ, "HOME": str(home)},
+                    ["sh", str(bridge), *args],
+                    env=environment,
                     capture_output=True,
                     text=True,
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertFalse((home / "published").exists())
-                self.assertFalse(
-                    (home / ".local/state/nacre/palette-commit.lock").exists()
-                )
-            result = subprocess.run(
-                ["bash", str(bridge), "scheme", "set", "-m", "dark"],
-                env={**os.environ, "HOME": str(home)},
-                capture_output=True,
-                text=True,
+                self.assertFalse(published.exists())
+                self.assertFalse(lock.exists())
+            lock.parent.mkdir(parents=True, exist_ok=True)
+            wallpaper = lock.parent / "wallpaper"
+            wallpaper.mkdir()
+            (wallpaper / "last.txt").write_text(str(image))
+            with lock.open("a") as held:
+                fcntl.flock(held, fcntl.LOCK_EX)
+                with subprocess.Popen(
+                    ["sh", str(bridge), "scheme", "set", "-n", "default", "-m", "dark"],
+                    env=environment,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                ) as process:
+                    try:
+                        with self.assertRaises(subprocess.TimeoutExpired):
+                            process.communicate(timeout=0.2)
+                        self.assertFalse(published.exists())
+                    finally:
+                        fcntl.flock(held, fcntl.LOCK_UN)
+                        _, error = process.communicate(timeout=90)
+                    self.assertEqual(process.returncode, 0, error)
+            self.assertTrue(published.exists())
+            self.assertEqual(
+                json.loads((lock.parent / "scheme.json").read_text())["mode"], "dark"
             )
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertTrue((home / "published").exists())
-            self.assertEqual((home / "locked").read_text(), "1")
 
 
 class OrientPublicCommandTests(unittest.TestCase):
