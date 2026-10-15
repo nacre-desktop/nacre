@@ -7,7 +7,7 @@ Installed Nacre must run no Python processes and require no Python/Pillow runtim
 | 0 Orient decoder | Complete | 49 inputs / 55 frames and 160 palettes exact, including JPEG; notices retained. |
 | 1 Service / frequent helpers | Complete; CI green | 13 ports; busy helper RSS 26.95 → 10.21 MiB. Absolute XDG roots match QML. |
 | 2 Compositor / pearls | Complete; CI green | Preview busy CPU 52.58 → 1.26 ms; RSS 21.54 → 7.30 MiB. Native IPC/session runtime. |
-| 3 Wallpaper / colors | Active | Palette, watcher, media and lock public; CI and quiet comparison pending. |
+| 3 Wallpaper / colors | Active | Code landed; runtime CI green; quiet comparison blocked by lab connectivity. |
 | 4 Remaining shell tools | Pending | Preserve session/privilege policy; bring palette dependencies forward only as needed. |
 | 5 AI | Pending | Claude stream-json CLI; retain existing permissions/history. |
 | 6 Brain | Pending | Same bge-small model; cosine ≥ 0.9999 or backed-up automatic reindex. |
@@ -59,23 +59,23 @@ Busy watcher RSS 16.75 → 10.20 MiB; startup+change CPU 31.36 → 3.13 ms.
 
 Media 330f250e public; exact fixture fixes e0297dc9 / dcfa8297 / b9523e2c.
 CI 38713957659: media parity/fresh-install pass; shared gallery fixture failed.
-Gallery bus/pager 261730d4/29b02a25 and Colors 7a239361 fixed by owners; CI pending.
+Gallery bus/pager 261730d4/29b02a25 and Colors 7a239361 fixed; runtime CI green.
 Local gates: 222 Rust / 892 repo / 526 parity and all immutable workflow cases pass.
 Fully private busy CPU 86.21 → 11.58 ms; ready RSS 25.84 → 16.73 MiB.
 After publication RSS 26.18 → 27.35 MiB; 30 s idle CPU 0/1 ticks (10 ms resolution).
 No battery, whole-shell latency or quiet regression claim from busy helper samples.
-Lock 665684eb and unused palette bridge retirement 1fd542a4 public; CI pending.
+Lock 665684eb / bridge retirement 1fd542a4 / presentation harness 3daa43e8 public.
 Native labels 141 / artwork eight / CLI 11 / preparation three cases/files exact.
-237 Rust / 329 tools / 107 AI / 45 Brain / 428 shell / 534 parity cases pass.
+CI 38723440822 at 81d9e520: desktop/source/gallery + fresh-install all green.
+237 Rust / 336 tools / 107 AI / 45 Brain / 428 shell / 534 parity cases pass.
 Native QML/install/generated callbacks replace Python; frozen workflows all pass.
 Frozen preparation inputs explicitly include private XDG_DATA_HOME/public fonts.
 An initial uncontrolled-font capture is preserved privately; no expected file rewritten.
 Busy cached lock CPU 78.29 → 2.57 ms/call; 100 Python launches → zero.
-Superseded own CI runs cancelled; current-main Source CI covers all ports.
-Next: finish current-main CI; resume desktop A/B/A/B when connectivity is restored.
+Next: restore remote lab connectivity, confirm quiet window, then desktop A/B/A/B.
 Both compositors: baseline/native Qt/Kitty and actual lock new-color pixels verified.
 Developer lock probe uses immediate-render for software Niri; default flags unchanged.
 Presentation harness: 14 tests pass; GTK pixel endpoint remains unverified in both.
 Advisory performance CI builds each revision's own helper and pinned engine.
 Full desktop time remains unavailable; owner-announced quiet A/B/A/B is mandatory.
-No live deployment, tags, package publication or session takeover in this task.
+No live deployment, network changes, tags, package publication or session takeover.
