@@ -30,6 +30,15 @@ def main():
         ),
     )
     args = parser.parse_args()
+    missing = [
+        name
+        for name in ["git", "kitty", "less", "dbus-run-session"]
+        if not shutil.which(name)
+    ]
+    if missing:
+        raise SystemExit("Missing private gallery tools: " + ", ".join(missing))
+    if not args.helper.is_file():
+        raise SystemExit("Candidate native helper required for the AUR pager gallery")
     if not args.xvfb:
         raise SystemExit(
             "A private Xvfb executable is required; no desktop capture fallback"
