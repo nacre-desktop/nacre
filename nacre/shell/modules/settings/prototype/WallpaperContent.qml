@@ -7,7 +7,7 @@ Column {
     spacing: NacreTokens.space.md
     NacreClip {
         width: parent.width
-        height: NacreTokens.space.huge * 5
+        height: Math.min(width * 9 / 16, NacreTokens.space.huge * 12)
         radius: NacreTokens.radii.medium
         color: NacreTokens.body
         Image {

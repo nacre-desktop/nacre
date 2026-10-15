@@ -19,9 +19,20 @@ Slider {
         x: root.leftPadding
         y: (root.height - height) / 2
         width: root.availableWidth
-        height: NacreTokens.space.sm
+        height: NacreTokens.space.md
         radius: NacreTokens.radii.full
-        color: Qt.tint(NacreTokens.raised, Qt.alpha(NacreTokens.outline, .35))
+        // Keep the palette visible on the unfilled rail, including at minimum.
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop {
+                position: 0
+                color: Qt.tint(NacreColours.palette.m3surfaceContainerHighest, Qt.alpha(NacreTokens.accent, .3))
+            }
+            GradientStop {
+                position: 1
+                color: Qt.tint(NacreColours.palette.m3surfaceContainerHighest, Qt.alpha(NacreTokens.gradientColour(NacreTokens.accent, NacreTokens.orientSecondary), .3))
+            }
+        }
         Rectangle {
             width: root.visualPosition * parent.width
             height: parent.height
