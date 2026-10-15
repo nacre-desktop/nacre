@@ -409,9 +409,17 @@ mod tests {
                 } else {
                     reply["value"].clone()
                 };
+                let expected = if name == "niri" {
+                    super::super::niri_config::frozen_rendering_output(case)?
+                } else {
+                    case["observed"]["stdout"]
+                        .as_str()
+                        .ok_or("Missing frozen API rendering")?
+                        .to_string()
+                };
                 assert_eq!(
                     crate::json::encode(&value)? + "\n",
-                    case["observed"]["stdout"],
+                    expected,
                     "{name}: {}",
                     input["name"]
                 );

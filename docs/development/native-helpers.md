@@ -153,6 +153,13 @@ Frozen compiler references remain unchanged; parity applies only this declared
 prefix substitution, including its KDL quoting. Binding keys, actions and
 arguments remain exact.
 
+Niri hover focus intentionally adds `max-scroll-amount="0%"` when `followMouse`
+is enabled. Defaults enable it: moving onto a visible tile focuses it only when
+focus will not scroll the view. Settings regeneration retains this bound; turning
+hover focus off still omits the node. The frozen rendering corpus remains
+unchanged, with this exact node substitution declared in its comparison test.
+See [Niri's input configuration](https://github.com/niri-wm/niri/wiki/Configuration:-Input#focus-follows-mouse).
+
 The frozen compositor entrypoint cases use the uninstalled `compositor-reference`
 provider to retain their original connection lifecycle while calling the same
 Rust actions, reducer, rendering and event code. Production connection reuse is

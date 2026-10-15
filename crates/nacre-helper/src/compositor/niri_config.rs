@@ -141,7 +141,8 @@ pub fn desktop(preferences: &Value) -> Result<String> {
     }
     let mut input = Vec::new();
     if preferences.get("followMouse") == Some(&Value::Bool(true)) {
-        input.push("focus-follows-mouse".to_string());
+        // Hover selects visible tiles without pulling off-screen columns into view.
+        input.push("focus-follows-mouse max-scroll-amount=\"0%\"".to_string());
     }
     let enabled = preferences
         .get("touchpadEnabled")
@@ -431,6 +432,25 @@ pub fn binding_query(records: &Value) -> Result<Value> {
 }
 
 #[cfg(test)]
+pub(super) fn frozen_rendering_output(case: &Value) -> crate::Result<String> {
+    // Preserve the frozen legacy corpus; only hover-induced scrolling changes.
+    let input = &case["request"];
+    let expected = case["observed"]["stdout"]
+        .as_str()
+        .ok_or("Missing frozen rendering")?;
+    if input["method"] == "render_desktop_options" && input["args"][0]["followMouse"] == true {
+        let legacy: String = serde_json::from_str(expected)?;
+        assert_eq!(legacy.matches("    focus-follows-mouse\n").count(), 1);
+        let bounded = legacy.replace(
+            "    focus-follows-mouse\n",
+            "    focus-follows-mouse max-scroll-amount=\"0%\"\n",
+        );
+        return Ok(crate::json::encode(&Value::from(bounded))? + "\n");
+    }
+    Ok(expected.to_string())
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     #[test]
@@ -494,9 +514,10 @@ mod tests {
                     1,
                 ),
             };
+            let expected = frozen_rendering_output(case)?;
             assert_eq!(
                 crate::json::encode(&result)? + "\n",
-                case["observed"]["stdout"],
+                expected,
                 "{}",
                 input["name"]
             );
@@ -646,6 +667,25 @@ mod input_settings_tests {
         assert!(text.contains("left-handed"));
         assert!(text.contains("accel-speed -0.2"));
         assert!(!text.contains("dwt"));
+    }
+    #[test]
+    fn default_hover_focus_survives_settings_saves_without_scrolling() {
+        let mut preferences: Value = serde_json::from_str(include_str!(
+            "../../../../nacre/shell-tools/desktop-defaults.json"
+        ))
+        .unwrap();
+        assert_eq!(preferences["followMouse"], true);
+        let bounded = "focus-follows-mouse max-scroll-amount=\"0%\"";
+        assert!(desktop(&preferences).unwrap().contains(bounded));
+        preferences["gapsIn"] = json!(14);
+        assert!(desktop(&preferences).unwrap().contains(bounded));
+        preferences["followMouse"] = json!(false);
+        assert!(!desktop(&preferences)
+            .unwrap()
+            .contains("focus-follows-mouse"));
+        preferences["followMouse"] = json!(true);
+        assert!(desktop(&preferences).unwrap().contains(bounded));
+        assert!(!desktop(&json!({})).unwrap().contains("focus-follows-mouse"));
     }
     #[test]
     fn invalid_input_values_never_become_configuration() {
