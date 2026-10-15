@@ -8,6 +8,9 @@ fn main() {
         std::io::stdin().read_to_string(&mut raw)?;
         let request: Value = serde_json::from_str(&raw)?;
         let mut cli = Cli::environment(true)?;
+        if let Some(root) = request["system_icons"].as_str() {
+            cli.publisher.system_icons = root.into();
+        }
         let mut media = Media::new(cli.paths.clone(), cli.publisher.assets.clone())?;
         media.now_ms = request["now_ms"].as_i64();
         let mut results = Vec::new();

@@ -78,6 +78,34 @@ def main():
             "NACRE_PALETTE_LOCKED",
         ):
             env.pop(key, None)
+        provider_path = (
+            ROOT
+            / "crates/nacre-helper/tests/fixtures/wallpaper-media-icon-provider-reference.json"
+        )
+        provider = json.loads(provider_path.read_text())
+        original_path = (
+            ROOT
+            / "crates/nacre-helper/tests/fixtures/wallpaper-media-pipeline-reference.json.gz"
+        )
+        assert (
+            hashlib.sha256(original_path.read_bytes()).hexdigest()
+            == provider["original_workflow_sha256"]
+        )
+        system_icons = base / "system-icons"
+        for theme in ("Papirus", "Papirus-Dark"):
+            path = system_icons / theme / "index.theme"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("[Icon Theme]\nName=" + theme + "\n")
+        for entry in provider["entries"].values():
+            canonical = system_icons / entry["canonical"]
+            canonical.parent.mkdir(parents=True, exist_ok=True)
+            if not canonical.exists():
+                canonical.write_text("<svg/>\n")
+        for name, entry in provider["entries"].items():
+            path = system_icons / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if path != system_icons / entry["canonical"]:
+                path.symlink_to(system_icons / entry["canonical"])
         steps = [
             dict(action="select", value=str(home / "dark.png")),
             *[
@@ -97,7 +125,11 @@ def main():
         result = subprocess.run(
             [str(ROOT / "target/debug/examples/wallpaper-media-parity")],
             input=json.dumps(
-                dict(now_ms=int(reference["clock_seconds"] * 1000), steps=steps)
+                dict(
+                    now_ms=int(reference["clock_seconds"] * 1000),
+                    steps=steps,
+                    system_icons=str(system_icons),
+                )
             ),
             env=env,
             capture_output=True,
@@ -174,6 +206,11 @@ def main():
             for name, record in reference["outputs"].items()
             if not name.startswith(".cache/orient/palettes/")
         }
+        for record in actual.values():
+            if "link" in record and record["link"].startswith(str(system_icons) + "/"):
+                record["link"] = (
+                    "/usr/share/icons" + record["link"][len(str(system_icons)) :]
+                )
         extra = set(actual) - set(expected)
         missing = set(expected) - set(actual)
         assert not extra and not missing, (

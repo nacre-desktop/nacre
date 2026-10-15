@@ -146,3 +146,9 @@ other actions, and unknown/malformed RPC calls remain exact. Frozen references
 retain the original RPC argv and stdin. This does not change the default check
 or permit recording a replacement. The engine's own core/decoder golden tests
 remain required evidence for direct binding; they live in the pinned Orient repo.
+
+The media publication workflow uses an explicit Papirus provider inventory, bound
+to its unchanged original capture hash. Directory entries and canonical source
+identities are inputs; the overlay never reads SVG bytes. Replay stages that
+provider privately and maps only its root to `/usr/share/icons`; every generated
+link, filename, mode and other file remains checked against the frozen outputs.

@@ -1,0 +1,1410 @@
+{
+  "original_workflow_sha256": "d61a7cad613a0544ad4d50c5424c67dce72362e3c925ff27b0242b10cf0765cc",
+  "scope": "Directory-entry names and canonical source identities only; icon bytes are not read by overlay_link",
+  "entries": {
+    "Papirus/32x32/places/folder-blue-activities.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-activities.svg"
+    },
+    "Papirus/32x32/places/folder-blue-android.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-android.svg"
+    },
+    "Papirus/32x32/places/folder-blue-apple.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-apple.svg"
+    },
+    "Papirus/32x32/places/folder-blue-applications.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-applications.svg"
+    },
+    "Papirus/32x32/places/folder-blue-arduino.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-arduino.svg"
+    },
+    "Papirus/32x32/places/folder-blue-backup.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-backup.svg"
+    },
+    "Papirus/32x32/places/folder-blue-books.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-books.svg"
+    },
+    "Papirus/32x32/places/folder-blue-cd.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-cd.svg"
+    },
+    "Papirus/32x32/places/folder-blue-code.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-code.svg"
+    },
+    "Papirus/32x32/places/folder-blue-desktop.svg": {
+      "canonical": "Papirus/32x32/places/user-blue-desktop.svg"
+    },
+    "Papirus/32x32/places/folder-blue-development.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-development.svg"
+    },
+    "Papirus/32x32/places/folder-blue-docker.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-docker.svg"
+    },
+    "Papirus/32x32/places/folder-blue-documents-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-documents-open.svg"
+    },
+    "Papirus/32x32/places/folder-blue-documents.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-documents.svg"
+    },
+    "Papirus/32x32/places/folder-blue-download-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-download-open.svg"
+    },
+    "Papirus/32x32/places/folder-blue-download.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-download.svg"
+    },
+    "Papirus/32x32/places/folder-blue-downloads.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-download.svg"
+    },
+    "Papirus/32x32/places/folder-blue-drag-accept.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-drag-accept.svg"
+    },
+    "Papirus/32x32/places/folder-blue-dropbox.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-dropbox.svg"
+    },
+    "Papirus/32x32/places/folder-blue-favorites.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-favorites.svg"
+    },
+    "Papirus/32x32/places/folder-blue-games.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-games.svg"
+    },
+    "Papirus/32x32/places/folder-blue-git.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-git.svg"
+    },
+    "Papirus/32x32/places/folder-blue-github.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-github.svg"
+    },
+    "Papirus/32x32/places/folder-blue-gitlab.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-gitlab.svg"
+    },
+    "Papirus/32x32/places/folder-blue-gnome.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-gnome.svg"
+    },
+    "Papirus/32x32/places/folder-blue-google-drive.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-google-drive.svg"
+    },
+    "Papirus/32x32/places/folder-blue-image-people.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-image-people.svg"
+    },
+    "Papirus/32x32/places/folder-blue-important.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-important.svg"
+    },
+    "Papirus/32x32/places/folder-blue-java.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-java.svg"
+    },
+    "Papirus/32x32/places/folder-blue-kde.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-kde.svg"
+    },
+    "Papirus/32x32/places/folder-blue-linux.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-linux.svg"
+    },
+    "Papirus/32x32/places/folder-blue-locked.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-locked.svg"
+    },
+    "Papirus/32x32/places/folder-blue-mail-cloud.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-mail-cloud.svg"
+    },
+    "Papirus/32x32/places/folder-blue-mail.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-mail.svg"
+    },
+    "Papirus/32x32/places/folder-blue-mega.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-mega.svg"
+    },
+    "Papirus/32x32/places/folder-blue-meocloud.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-meocloud.svg"
+    },
+    "Papirus/32x32/places/folder-blue-music-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-music-open.svg"
+    },
+    "Papirus/32x32/places/folder-blue-music.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-music.svg"
+    },
+    "Papirus/32x32/places/folder-blue-network.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-network.svg"
+    },
+    "Papirus/32x32/places/folder-blue-nextcloud.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-nextcloud.svg"
+    },
+    "Papirus/32x32/places/folder-blue-notes.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-notes.svg"
+    },
+    "Papirus/32x32/places/folder-blue-obsidian.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-obsidian.svg"
+    },
+    "Papirus/32x32/places/folder-blue-onedrive.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-onedrive.svg"
+    },
+    "Papirus/32x32/places/folder-blue-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-open.svg"
+    },
+    "Papirus/32x32/places/folder-blue-owncloud.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-owncloud.svg"
+    },
+    "Papirus/32x32/places/folder-blue-pcloud.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-pcloud.svg"
+    },
+    "Papirus/32x32/places/folder-blue-photo.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-photo.svg"
+    },
+    "Papirus/32x32/places/folder-blue-pictures-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-pictures-open.svg"
+    },
+    "Papirus/32x32/places/folder-blue-pictures.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-pictures.svg"
+    },
+    "Papirus/32x32/places/folder-blue-print.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-print.svg"
+    },
+    "Papirus/32x32/places/folder-blue-private.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-private.svg"
+    },
+    "Papirus/32x32/places/folder-blue-projects.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-projects.svg"
+    },
+    "Papirus/32x32/places/folder-blue-public.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-image-people.svg"
+    },
+    "Papirus/32x32/places/folder-blue-publicshare-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-publicshare-open.svg"
+    },
+    "Papirus/32x32/places/folder-blue-recent.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-recent.svg"
+    },
+    "Papirus/32x32/places/folder-blue-remote-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-remote-open.svg"
+    },
+    "Papirus/32x32/places/folder-blue-remote.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-remote.svg"
+    },
+    "Papirus/32x32/places/folder-blue-script.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-script.svg"
+    },
+    "Papirus/32x32/places/folder-blue-snap.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-snap.svg"
+    },
+    "Papirus/32x32/places/folder-blue-steam.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-steam.svg"
+    },
+    "Papirus/32x32/places/folder-blue-sync.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-sync.svg"
+    },
+    "Papirus/32x32/places/folder-blue-syncthing.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-syncthing.svg"
+    },
+    "Papirus/32x32/places/folder-blue-systemd.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-systemd.svg"
+    },
+    "Papirus/32x32/places/folder-blue-tar.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-tar.svg"
+    },
+    "Papirus/32x32/places/folder-blue-templates-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-templates-open.svg"
+    },
+    "Papirus/32x32/places/folder-blue-templates.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-templates.svg"
+    },
+    "Papirus/32x32/places/folder-blue-torrent.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-torrent.svg"
+    },
+    "Papirus/32x32/places/folder-blue-unlocked.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-unlocked.svg"
+    },
+    "Papirus/32x32/places/folder-blue-vbox.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-vbox.svg"
+    },
+    "Papirus/32x32/places/folder-blue-video.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-video.svg"
+    },
+    "Papirus/32x32/places/folder-blue-videos-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-videos-open.svg"
+    },
+    "Papirus/32x32/places/folder-blue-videos.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-video.svg"
+    },
+    "Papirus/32x32/places/folder-blue-visiting.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-visiting.svg"
+    },
+    "Papirus/32x32/places/folder-blue-vmware.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-vmware.svg"
+    },
+    "Papirus/32x32/places/folder-blue-wifi.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-wifi.svg"
+    },
+    "Papirus/32x32/places/folder-blue-wine.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-wine.svg"
+    },
+    "Papirus/32x32/places/folder-blue-yandex-disk.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue-yandex-disk.svg"
+    },
+    "Papirus/32x32/places/folder-blue.svg": {
+      "canonical": "Papirus/32x32/places/folder-blue.svg"
+    },
+    "Papirus/48x48/places/folder-blue-activities.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-activities.svg"
+    },
+    "Papirus/48x48/places/folder-blue-android.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-android.svg"
+    },
+    "Papirus/48x48/places/folder-blue-apple.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-apple.svg"
+    },
+    "Papirus/48x48/places/folder-blue-applications.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-applications.svg"
+    },
+    "Papirus/48x48/places/folder-blue-arduino.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-arduino.svg"
+    },
+    "Papirus/48x48/places/folder-blue-backup.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-backup.svg"
+    },
+    "Papirus/48x48/places/folder-blue-books.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-books.svg"
+    },
+    "Papirus/48x48/places/folder-blue-cd.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-cd.svg"
+    },
+    "Papirus/48x48/places/folder-blue-code.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-code.svg"
+    },
+    "Papirus/48x48/places/folder-blue-desktop.svg": {
+      "canonical": "Papirus/48x48/places/user-blue-desktop.svg"
+    },
+    "Papirus/48x48/places/folder-blue-development.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-development.svg"
+    },
+    "Papirus/48x48/places/folder-blue-docker.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-docker.svg"
+    },
+    "Papirus/48x48/places/folder-blue-documents-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-documents-open.svg"
+    },
+    "Papirus/48x48/places/folder-blue-documents.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-documents.svg"
+    },
+    "Papirus/48x48/places/folder-blue-download-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-download-open.svg"
+    },
+    "Papirus/48x48/places/folder-blue-download.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-download.svg"
+    },
+    "Papirus/48x48/places/folder-blue-downloads.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-download.svg"
+    },
+    "Papirus/48x48/places/folder-blue-drag-accept.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-drag-accept.svg"
+    },
+    "Papirus/48x48/places/folder-blue-dropbox.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-dropbox.svg"
+    },
+    "Papirus/48x48/places/folder-blue-favorites.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-favorites.svg"
+    },
+    "Papirus/48x48/places/folder-blue-games.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-games.svg"
+    },
+    "Papirus/48x48/places/folder-blue-git.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-git.svg"
+    },
+    "Papirus/48x48/places/folder-blue-github.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-github.svg"
+    },
+    "Papirus/48x48/places/folder-blue-gitlab.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-gitlab.svg"
+    },
+    "Papirus/48x48/places/folder-blue-gnome.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-gnome.svg"
+    },
+    "Papirus/48x48/places/folder-blue-google-drive.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-google-drive.svg"
+    },
+    "Papirus/48x48/places/folder-blue-image-people.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-image-people.svg"
+    },
+    "Papirus/48x48/places/folder-blue-important.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-important.svg"
+    },
+    "Papirus/48x48/places/folder-blue-java.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-java.svg"
+    },
+    "Papirus/48x48/places/folder-blue-kde.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-kde.svg"
+    },
+    "Papirus/48x48/places/folder-blue-linux.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-linux.svg"
+    },
+    "Papirus/48x48/places/folder-blue-locked.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-locked.svg"
+    },
+    "Papirus/48x48/places/folder-blue-mail-cloud.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-mail-cloud.svg"
+    },
+    "Papirus/48x48/places/folder-blue-mail.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-mail.svg"
+    },
+    "Papirus/48x48/places/folder-blue-mega.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-mega.svg"
+    },
+    "Papirus/48x48/places/folder-blue-meocloud.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-meocloud.svg"
+    },
+    "Papirus/48x48/places/folder-blue-music-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-music-open.svg"
+    },
+    "Papirus/48x48/places/folder-blue-music.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-music.svg"
+    },
+    "Papirus/48x48/places/folder-blue-network.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-network.svg"
+    },
+    "Papirus/48x48/places/folder-blue-nextcloud.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-nextcloud.svg"
+    },
+    "Papirus/48x48/places/folder-blue-notes.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-notes.svg"
+    },
+    "Papirus/48x48/places/folder-blue-obsidian.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-obsidian.svg"
+    },
+    "Papirus/48x48/places/folder-blue-onedrive.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-onedrive.svg"
+    },
+    "Papirus/48x48/places/folder-blue-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-open.svg"
+    },
+    "Papirus/48x48/places/folder-blue-owncloud.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-owncloud.svg"
+    },
+    "Papirus/48x48/places/folder-blue-pcloud.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-pcloud.svg"
+    },
+    "Papirus/48x48/places/folder-blue-photo.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-photo.svg"
+    },
+    "Papirus/48x48/places/folder-blue-pictures-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-pictures-open.svg"
+    },
+    "Papirus/48x48/places/folder-blue-pictures.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-pictures.svg"
+    },
+    "Papirus/48x48/places/folder-blue-print.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-print.svg"
+    },
+    "Papirus/48x48/places/folder-blue-private.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-private.svg"
+    },
+    "Papirus/48x48/places/folder-blue-projects.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-projects.svg"
+    },
+    "Papirus/48x48/places/folder-blue-public.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-image-people.svg"
+    },
+    "Papirus/48x48/places/folder-blue-publicshare-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-publicshare-open.svg"
+    },
+    "Papirus/48x48/places/folder-blue-recent.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-recent.svg"
+    },
+    "Papirus/48x48/places/folder-blue-remote-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-remote-open.svg"
+    },
+    "Papirus/48x48/places/folder-blue-remote.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-remote.svg"
+    },
+    "Papirus/48x48/places/folder-blue-script.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-script.svg"
+    },
+    "Papirus/48x48/places/folder-blue-snap.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-snap.svg"
+    },
+    "Papirus/48x48/places/folder-blue-steam.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-steam.svg"
+    },
+    "Papirus/48x48/places/folder-blue-sync.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-sync.svg"
+    },
+    "Papirus/48x48/places/folder-blue-syncthing.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-syncthing.svg"
+    },
+    "Papirus/48x48/places/folder-blue-systemd.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-systemd.svg"
+    },
+    "Papirus/48x48/places/folder-blue-tar.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-tar.svg"
+    },
+    "Papirus/48x48/places/folder-blue-templates-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-templates-open.svg"
+    },
+    "Papirus/48x48/places/folder-blue-templates.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-templates.svg"
+    },
+    "Papirus/48x48/places/folder-blue-torrent.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-torrent.svg"
+    },
+    "Papirus/48x48/places/folder-blue-unlocked.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-unlocked.svg"
+    },
+    "Papirus/48x48/places/folder-blue-vbox.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-vbox.svg"
+    },
+    "Papirus/48x48/places/folder-blue-video.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-video.svg"
+    },
+    "Papirus/48x48/places/folder-blue-videos-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-videos-open.svg"
+    },
+    "Papirus/48x48/places/folder-blue-videos.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-video.svg"
+    },
+    "Papirus/48x48/places/folder-blue-visiting.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-visiting.svg"
+    },
+    "Papirus/48x48/places/folder-blue-vmware.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-vmware.svg"
+    },
+    "Papirus/48x48/places/folder-blue-wifi.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-wifi.svg"
+    },
+    "Papirus/48x48/places/folder-blue-wine.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-wine.svg"
+    },
+    "Papirus/48x48/places/folder-blue-yandex-disk.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue-yandex-disk.svg"
+    },
+    "Papirus/48x48/places/folder-blue.svg": {
+      "canonical": "Papirus/48x48/places/folder-blue.svg"
+    },
+    "Papirus/64x64/places/folder-blue-activities.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-activities.svg"
+    },
+    "Papirus/64x64/places/folder-blue-android.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-android.svg"
+    },
+    "Papirus/64x64/places/folder-blue-apple.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-apple.svg"
+    },
+    "Papirus/64x64/places/folder-blue-applications.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-applications.svg"
+    },
+    "Papirus/64x64/places/folder-blue-arduino.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-arduino.svg"
+    },
+    "Papirus/64x64/places/folder-blue-backup.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-backup.svg"
+    },
+    "Papirus/64x64/places/folder-blue-books.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-books.svg"
+    },
+    "Papirus/64x64/places/folder-blue-cd.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-cd.svg"
+    },
+    "Papirus/64x64/places/folder-blue-code.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-code.svg"
+    },
+    "Papirus/64x64/places/folder-blue-desktop.svg": {
+      "canonical": "Papirus/64x64/places/user-blue-desktop.svg"
+    },
+    "Papirus/64x64/places/folder-blue-development.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-development.svg"
+    },
+    "Papirus/64x64/places/folder-blue-docker.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-docker.svg"
+    },
+    "Papirus/64x64/places/folder-blue-documents-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-documents-open.svg"
+    },
+    "Papirus/64x64/places/folder-blue-documents.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-documents.svg"
+    },
+    "Papirus/64x64/places/folder-blue-download-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-download-open.svg"
+    },
+    "Papirus/64x64/places/folder-blue-download.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-download.svg"
+    },
+    "Papirus/64x64/places/folder-blue-downloads.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-download.svg"
+    },
+    "Papirus/64x64/places/folder-blue-drag-accept.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-drag-accept.svg"
+    },
+    "Papirus/64x64/places/folder-blue-dropbox.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-dropbox.svg"
+    },
+    "Papirus/64x64/places/folder-blue-favorites.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-favorites.svg"
+    },
+    "Papirus/64x64/places/folder-blue-games.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-games.svg"
+    },
+    "Papirus/64x64/places/folder-blue-git.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-git.svg"
+    },
+    "Papirus/64x64/places/folder-blue-github.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-github.svg"
+    },
+    "Papirus/64x64/places/folder-blue-gitlab.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-gitlab.svg"
+    },
+    "Papirus/64x64/places/folder-blue-gnome.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-gnome.svg"
+    },
+    "Papirus/64x64/places/folder-blue-google-drive.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-google-drive.svg"
+    },
+    "Papirus/64x64/places/folder-blue-image-people.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-image-people.svg"
+    },
+    "Papirus/64x64/places/folder-blue-important.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-important.svg"
+    },
+    "Papirus/64x64/places/folder-blue-java.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-java.svg"
+    },
+    "Papirus/64x64/places/folder-blue-kde.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-kde.svg"
+    },
+    "Papirus/64x64/places/folder-blue-linux.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-linux.svg"
+    },
+    "Papirus/64x64/places/folder-blue-locked.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-locked.svg"
+    },
+    "Papirus/64x64/places/folder-blue-mail-cloud.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-mail-cloud.svg"
+    },
+    "Papirus/64x64/places/folder-blue-mail.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-mail.svg"
+    },
+    "Papirus/64x64/places/folder-blue-mega.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-mega.svg"
+    },
+    "Papirus/64x64/places/folder-blue-meocloud.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-meocloud.svg"
+    },
+    "Papirus/64x64/places/folder-blue-music-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-music-open.svg"
+    },
+    "Papirus/64x64/places/folder-blue-music.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-music.svg"
+    },
+    "Papirus/64x64/places/folder-blue-network.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-network.svg"
+    },
+    "Papirus/64x64/places/folder-blue-nextcloud.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-nextcloud.svg"
+    },
+    "Papirus/64x64/places/folder-blue-notes.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-notes.svg"
+    },
+    "Papirus/64x64/places/folder-blue-obsidian.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-obsidian.svg"
+    },
+    "Papirus/64x64/places/folder-blue-onedrive.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-onedrive.svg"
+    },
+    "Papirus/64x64/places/folder-blue-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-open.svg"
+    },
+    "Papirus/64x64/places/folder-blue-owncloud.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-owncloud.svg"
+    },
+    "Papirus/64x64/places/folder-blue-pcloud.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-pcloud.svg"
+    },
+    "Papirus/64x64/places/folder-blue-photo.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-photo.svg"
+    },
+    "Papirus/64x64/places/folder-blue-pictures-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-pictures-open.svg"
+    },
+    "Papirus/64x64/places/folder-blue-pictures.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-pictures.svg"
+    },
+    "Papirus/64x64/places/folder-blue-print.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-print.svg"
+    },
+    "Papirus/64x64/places/folder-blue-private.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-private.svg"
+    },
+    "Papirus/64x64/places/folder-blue-projects.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-projects.svg"
+    },
+    "Papirus/64x64/places/folder-blue-public.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-image-people.svg"
+    },
+    "Papirus/64x64/places/folder-blue-publicshare-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-publicshare-open.svg"
+    },
+    "Papirus/64x64/places/folder-blue-recent.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-recent.svg"
+    },
+    "Papirus/64x64/places/folder-blue-remote-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-remote-open.svg"
+    },
+    "Papirus/64x64/places/folder-blue-remote.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-remote.svg"
+    },
+    "Papirus/64x64/places/folder-blue-script.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-script.svg"
+    },
+    "Papirus/64x64/places/folder-blue-snap.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-snap.svg"
+    },
+    "Papirus/64x64/places/folder-blue-steam.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-steam.svg"
+    },
+    "Papirus/64x64/places/folder-blue-sync.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-sync.svg"
+    },
+    "Papirus/64x64/places/folder-blue-syncthing.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-syncthing.svg"
+    },
+    "Papirus/64x64/places/folder-blue-systemd.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-systemd.svg"
+    },
+    "Papirus/64x64/places/folder-blue-tar.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-tar.svg"
+    },
+    "Papirus/64x64/places/folder-blue-templates-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-templates-open.svg"
+    },
+    "Papirus/64x64/places/folder-blue-templates.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-templates.svg"
+    },
+    "Papirus/64x64/places/folder-blue-torrent.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-torrent.svg"
+    },
+    "Papirus/64x64/places/folder-blue-unlocked.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-unlocked.svg"
+    },
+    "Papirus/64x64/places/folder-blue-vbox.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-vbox.svg"
+    },
+    "Papirus/64x64/places/folder-blue-video.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-video.svg"
+    },
+    "Papirus/64x64/places/folder-blue-videos-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-videos-open.svg"
+    },
+    "Papirus/64x64/places/folder-blue-videos.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-video.svg"
+    },
+    "Papirus/64x64/places/folder-blue-visiting.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-visiting.svg"
+    },
+    "Papirus/64x64/places/folder-blue-vmware.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-vmware.svg"
+    },
+    "Papirus/64x64/places/folder-blue-wifi.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-wifi.svg"
+    },
+    "Papirus/64x64/places/folder-blue-wine.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-wine.svg"
+    },
+    "Papirus/64x64/places/folder-blue-yandex-disk.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue-yandex-disk.svg"
+    },
+    "Papirus/64x64/places/folder-blue.svg": {
+      "canonical": "Papirus/64x64/places/folder-blue.svg"
+    },
+    "Papirus/32x32/places/folder-grey-activities.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-activities.svg"
+    },
+    "Papirus/32x32/places/folder-grey-android.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-android.svg"
+    },
+    "Papirus/32x32/places/folder-grey-apple.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-apple.svg"
+    },
+    "Papirus/32x32/places/folder-grey-applications.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-applications.svg"
+    },
+    "Papirus/32x32/places/folder-grey-arduino.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-arduino.svg"
+    },
+    "Papirus/32x32/places/folder-grey-backup.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-backup.svg"
+    },
+    "Papirus/32x32/places/folder-grey-books.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-books.svg"
+    },
+    "Papirus/32x32/places/folder-grey-cd.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-cd.svg"
+    },
+    "Papirus/32x32/places/folder-grey-code.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-code.svg"
+    },
+    "Papirus/32x32/places/folder-grey-desktop.svg": {
+      "canonical": "Papirus/32x32/places/user-grey-desktop.svg"
+    },
+    "Papirus/32x32/places/folder-grey-development.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-development.svg"
+    },
+    "Papirus/32x32/places/folder-grey-docker.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-docker.svg"
+    },
+    "Papirus/32x32/places/folder-grey-documents-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-documents-open.svg"
+    },
+    "Papirus/32x32/places/folder-grey-documents.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-documents.svg"
+    },
+    "Papirus/32x32/places/folder-grey-download-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-download-open.svg"
+    },
+    "Papirus/32x32/places/folder-grey-download.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-download.svg"
+    },
+    "Papirus/32x32/places/folder-grey-downloads.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-download.svg"
+    },
+    "Papirus/32x32/places/folder-grey-drag-accept.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-drag-accept.svg"
+    },
+    "Papirus/32x32/places/folder-grey-dropbox.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-dropbox.svg"
+    },
+    "Papirus/32x32/places/folder-grey-favorites.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-favorites.svg"
+    },
+    "Papirus/32x32/places/folder-grey-games.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-games.svg"
+    },
+    "Papirus/32x32/places/folder-grey-git.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-git.svg"
+    },
+    "Papirus/32x32/places/folder-grey-github.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-github.svg"
+    },
+    "Papirus/32x32/places/folder-grey-gitlab.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-gitlab.svg"
+    },
+    "Papirus/32x32/places/folder-grey-gnome.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-gnome.svg"
+    },
+    "Papirus/32x32/places/folder-grey-google-drive.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-google-drive.svg"
+    },
+    "Papirus/32x32/places/folder-grey-image-people.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-image-people.svg"
+    },
+    "Papirus/32x32/places/folder-grey-important.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-important.svg"
+    },
+    "Papirus/32x32/places/folder-grey-java.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-java.svg"
+    },
+    "Papirus/32x32/places/folder-grey-kde.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-kde.svg"
+    },
+    "Papirus/32x32/places/folder-grey-linux.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-linux.svg"
+    },
+    "Papirus/32x32/places/folder-grey-locked.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-locked.svg"
+    },
+    "Papirus/32x32/places/folder-grey-mail-cloud.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-mail-cloud.svg"
+    },
+    "Papirus/32x32/places/folder-grey-mail.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-mail.svg"
+    },
+    "Papirus/32x32/places/folder-grey-mega.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-mega.svg"
+    },
+    "Papirus/32x32/places/folder-grey-meocloud.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-meocloud.svg"
+    },
+    "Papirus/32x32/places/folder-grey-music-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-music-open.svg"
+    },
+    "Papirus/32x32/places/folder-grey-music.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-music.svg"
+    },
+    "Papirus/32x32/places/folder-grey-network.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-network.svg"
+    },
+    "Papirus/32x32/places/folder-grey-nextcloud.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-nextcloud.svg"
+    },
+    "Papirus/32x32/places/folder-grey-notes.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-notes.svg"
+    },
+    "Papirus/32x32/places/folder-grey-obsidian.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-obsidian.svg"
+    },
+    "Papirus/32x32/places/folder-grey-onedrive.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-onedrive.svg"
+    },
+    "Papirus/32x32/places/folder-grey-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-open.svg"
+    },
+    "Papirus/32x32/places/folder-grey-owncloud.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-owncloud.svg"
+    },
+    "Papirus/32x32/places/folder-grey-pcloud.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-pcloud.svg"
+    },
+    "Papirus/32x32/places/folder-grey-photo.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-photo.svg"
+    },
+    "Papirus/32x32/places/folder-grey-pictures-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-pictures-open.svg"
+    },
+    "Papirus/32x32/places/folder-grey-pictures.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-pictures.svg"
+    },
+    "Papirus/32x32/places/folder-grey-print.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-print.svg"
+    },
+    "Papirus/32x32/places/folder-grey-private.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-private.svg"
+    },
+    "Papirus/32x32/places/folder-grey-projects.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-projects.svg"
+    },
+    "Papirus/32x32/places/folder-grey-public.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-image-people.svg"
+    },
+    "Papirus/32x32/places/folder-grey-publicshare-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-publicshare-open.svg"
+    },
+    "Papirus/32x32/places/folder-grey-recent.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-recent.svg"
+    },
+    "Papirus/32x32/places/folder-grey-remote-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-remote-open.svg"
+    },
+    "Papirus/32x32/places/folder-grey-remote.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-remote.svg"
+    },
+    "Papirus/32x32/places/folder-grey-script.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-script.svg"
+    },
+    "Papirus/32x32/places/folder-grey-snap.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-snap.svg"
+    },
+    "Papirus/32x32/places/folder-grey-steam.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-steam.svg"
+    },
+    "Papirus/32x32/places/folder-grey-sync.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-sync.svg"
+    },
+    "Papirus/32x32/places/folder-grey-syncthing.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-syncthing.svg"
+    },
+    "Papirus/32x32/places/folder-grey-systemd.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-systemd.svg"
+    },
+    "Papirus/32x32/places/folder-grey-tar.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-tar.svg"
+    },
+    "Papirus/32x32/places/folder-grey-templates-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-templates-open.svg"
+    },
+    "Papirus/32x32/places/folder-grey-templates.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-templates.svg"
+    },
+    "Papirus/32x32/places/folder-grey-torrent.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-torrent.svg"
+    },
+    "Papirus/32x32/places/folder-grey-unlocked.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-unlocked.svg"
+    },
+    "Papirus/32x32/places/folder-grey-vbox.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-vbox.svg"
+    },
+    "Papirus/32x32/places/folder-grey-video.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-video.svg"
+    },
+    "Papirus/32x32/places/folder-grey-videos-open.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-videos-open.svg"
+    },
+    "Papirus/32x32/places/folder-grey-videos.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-video.svg"
+    },
+    "Papirus/32x32/places/folder-grey-visiting.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-visiting.svg"
+    },
+    "Papirus/32x32/places/folder-grey-vmware.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-vmware.svg"
+    },
+    "Papirus/32x32/places/folder-grey-wifi.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-wifi.svg"
+    },
+    "Papirus/32x32/places/folder-grey-wine.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-wine.svg"
+    },
+    "Papirus/32x32/places/folder-grey-yandex-disk.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey-yandex-disk.svg"
+    },
+    "Papirus/32x32/places/folder-grey.svg": {
+      "canonical": "Papirus/32x32/places/folder-grey.svg"
+    },
+    "Papirus/48x48/places/folder-grey-activities.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-activities.svg"
+    },
+    "Papirus/48x48/places/folder-grey-android.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-android.svg"
+    },
+    "Papirus/48x48/places/folder-grey-apple.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-apple.svg"
+    },
+    "Papirus/48x48/places/folder-grey-applications.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-applications.svg"
+    },
+    "Papirus/48x48/places/folder-grey-arduino.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-arduino.svg"
+    },
+    "Papirus/48x48/places/folder-grey-backup.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-backup.svg"
+    },
+    "Papirus/48x48/places/folder-grey-books.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-books.svg"
+    },
+    "Papirus/48x48/places/folder-grey-cd.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-cd.svg"
+    },
+    "Papirus/48x48/places/folder-grey-code.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-code.svg"
+    },
+    "Papirus/48x48/places/folder-grey-desktop.svg": {
+      "canonical": "Papirus/48x48/places/user-grey-desktop.svg"
+    },
+    "Papirus/48x48/places/folder-grey-development.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-development.svg"
+    },
+    "Papirus/48x48/places/folder-grey-docker.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-docker.svg"
+    },
+    "Papirus/48x48/places/folder-grey-documents-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-documents-open.svg"
+    },
+    "Papirus/48x48/places/folder-grey-documents.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-documents.svg"
+    },
+    "Papirus/48x48/places/folder-grey-download-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-download-open.svg"
+    },
+    "Papirus/48x48/places/folder-grey-download.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-download.svg"
+    },
+    "Papirus/48x48/places/folder-grey-downloads.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-download.svg"
+    },
+    "Papirus/48x48/places/folder-grey-drag-accept.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-drag-accept.svg"
+    },
+    "Papirus/48x48/places/folder-grey-dropbox.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-dropbox.svg"
+    },
+    "Papirus/48x48/places/folder-grey-favorites.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-favorites.svg"
+    },
+    "Papirus/48x48/places/folder-grey-games.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-games.svg"
+    },
+    "Papirus/48x48/places/folder-grey-git.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-git.svg"
+    },
+    "Papirus/48x48/places/folder-grey-github.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-github.svg"
+    },
+    "Papirus/48x48/places/folder-grey-gitlab.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-gitlab.svg"
+    },
+    "Papirus/48x48/places/folder-grey-gnome.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-gnome.svg"
+    },
+    "Papirus/48x48/places/folder-grey-google-drive.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-google-drive.svg"
+    },
+    "Papirus/48x48/places/folder-grey-image-people.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-image-people.svg"
+    },
+    "Papirus/48x48/places/folder-grey-important.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-important.svg"
+    },
+    "Papirus/48x48/places/folder-grey-java.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-java.svg"
+    },
+    "Papirus/48x48/places/folder-grey-kde.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-kde.svg"
+    },
+    "Papirus/48x48/places/folder-grey-linux.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-linux.svg"
+    },
+    "Papirus/48x48/places/folder-grey-locked.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-locked.svg"
+    },
+    "Papirus/48x48/places/folder-grey-mail-cloud.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-mail-cloud.svg"
+    },
+    "Papirus/48x48/places/folder-grey-mail.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-mail.svg"
+    },
+    "Papirus/48x48/places/folder-grey-mega.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-mega.svg"
+    },
+    "Papirus/48x48/places/folder-grey-meocloud.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-meocloud.svg"
+    },
+    "Papirus/48x48/places/folder-grey-music-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-music-open.svg"
+    },
+    "Papirus/48x48/places/folder-grey-music.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-music.svg"
+    },
+    "Papirus/48x48/places/folder-grey-network.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-network.svg"
+    },
+    "Papirus/48x48/places/folder-grey-nextcloud.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-nextcloud.svg"
+    },
+    "Papirus/48x48/places/folder-grey-notes.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-notes.svg"
+    },
+    "Papirus/48x48/places/folder-grey-obsidian.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-obsidian.svg"
+    },
+    "Papirus/48x48/places/folder-grey-onedrive.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-onedrive.svg"
+    },
+    "Papirus/48x48/places/folder-grey-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-open.svg"
+    },
+    "Papirus/48x48/places/folder-grey-owncloud.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-owncloud.svg"
+    },
+    "Papirus/48x48/places/folder-grey-pcloud.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-pcloud.svg"
+    },
+    "Papirus/48x48/places/folder-grey-photo.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-photo.svg"
+    },
+    "Papirus/48x48/places/folder-grey-pictures-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-pictures-open.svg"
+    },
+    "Papirus/48x48/places/folder-grey-pictures.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-pictures.svg"
+    },
+    "Papirus/48x48/places/folder-grey-print.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-print.svg"
+    },
+    "Papirus/48x48/places/folder-grey-private.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-private.svg"
+    },
+    "Papirus/48x48/places/folder-grey-projects.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-projects.svg"
+    },
+    "Papirus/48x48/places/folder-grey-public.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-image-people.svg"
+    },
+    "Papirus/48x48/places/folder-grey-publicshare-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-publicshare-open.svg"
+    },
+    "Papirus/48x48/places/folder-grey-recent.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-recent.svg"
+    },
+    "Papirus/48x48/places/folder-grey-remote-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-remote-open.svg"
+    },
+    "Papirus/48x48/places/folder-grey-remote.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-remote.svg"
+    },
+    "Papirus/48x48/places/folder-grey-script.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-script.svg"
+    },
+    "Papirus/48x48/places/folder-grey-snap.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-snap.svg"
+    },
+    "Papirus/48x48/places/folder-grey-steam.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-steam.svg"
+    },
+    "Papirus/48x48/places/folder-grey-sync.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-sync.svg"
+    },
+    "Papirus/48x48/places/folder-grey-syncthing.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-syncthing.svg"
+    },
+    "Papirus/48x48/places/folder-grey-systemd.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-systemd.svg"
+    },
+    "Papirus/48x48/places/folder-grey-tar.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-tar.svg"
+    },
+    "Papirus/48x48/places/folder-grey-templates-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-templates-open.svg"
+    },
+    "Papirus/48x48/places/folder-grey-templates.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-templates.svg"
+    },
+    "Papirus/48x48/places/folder-grey-torrent.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-torrent.svg"
+    },
+    "Papirus/48x48/places/folder-grey-unlocked.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-unlocked.svg"
+    },
+    "Papirus/48x48/places/folder-grey-vbox.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-vbox.svg"
+    },
+    "Papirus/48x48/places/folder-grey-video.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-video.svg"
+    },
+    "Papirus/48x48/places/folder-grey-videos-open.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-videos-open.svg"
+    },
+    "Papirus/48x48/places/folder-grey-videos.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-video.svg"
+    },
+    "Papirus/48x48/places/folder-grey-visiting.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-visiting.svg"
+    },
+    "Papirus/48x48/places/folder-grey-vmware.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-vmware.svg"
+    },
+    "Papirus/48x48/places/folder-grey-wifi.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-wifi.svg"
+    },
+    "Papirus/48x48/places/folder-grey-wine.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-wine.svg"
+    },
+    "Papirus/48x48/places/folder-grey-yandex-disk.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey-yandex-disk.svg"
+    },
+    "Papirus/48x48/places/folder-grey.svg": {
+      "canonical": "Papirus/48x48/places/folder-grey.svg"
+    },
+    "Papirus/64x64/places/folder-grey-activities.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-activities.svg"
+    },
+    "Papirus/64x64/places/folder-grey-android.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-android.svg"
+    },
+    "Papirus/64x64/places/folder-grey-apple.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-apple.svg"
+    },
+    "Papirus/64x64/places/folder-grey-applications.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-applications.svg"
+    },
+    "Papirus/64x64/places/folder-grey-arduino.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-arduino.svg"
+    },
+    "Papirus/64x64/places/folder-grey-backup.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-backup.svg"
+    },
+    "Papirus/64x64/places/folder-grey-books.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-books.svg"
+    },
+    "Papirus/64x64/places/folder-grey-cd.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-cd.svg"
+    },
+    "Papirus/64x64/places/folder-grey-code.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-code.svg"
+    },
+    "Papirus/64x64/places/folder-grey-desktop.svg": {
+      "canonical": "Papirus/64x64/places/user-grey-desktop.svg"
+    },
+    "Papirus/64x64/places/folder-grey-development.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-development.svg"
+    },
+    "Papirus/64x64/places/folder-grey-docker.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-docker.svg"
+    },
+    "Papirus/64x64/places/folder-grey-documents-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-documents-open.svg"
+    },
+    "Papirus/64x64/places/folder-grey-documents.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-documents.svg"
+    },
+    "Papirus/64x64/places/folder-grey-download-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-download-open.svg"
+    },
+    "Papirus/64x64/places/folder-grey-download.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-download.svg"
+    },
+    "Papirus/64x64/places/folder-grey-downloads.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-download.svg"
+    },
+    "Papirus/64x64/places/folder-grey-drag-accept.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-drag-accept.svg"
+    },
+    "Papirus/64x64/places/folder-grey-dropbox.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-dropbox.svg"
+    },
+    "Papirus/64x64/places/folder-grey-favorites.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-favorites.svg"
+    },
+    "Papirus/64x64/places/folder-grey-games.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-games.svg"
+    },
+    "Papirus/64x64/places/folder-grey-git.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-git.svg"
+    },
+    "Papirus/64x64/places/folder-grey-github.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-github.svg"
+    },
+    "Papirus/64x64/places/folder-grey-gitlab.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-gitlab.svg"
+    },
+    "Papirus/64x64/places/folder-grey-gnome.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-gnome.svg"
+    },
+    "Papirus/64x64/places/folder-grey-google-drive.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-google-drive.svg"
+    },
+    "Papirus/64x64/places/folder-grey-image-people.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-image-people.svg"
+    },
+    "Papirus/64x64/places/folder-grey-important.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-important.svg"
+    },
+    "Papirus/64x64/places/folder-grey-java.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-java.svg"
+    },
+    "Papirus/64x64/places/folder-grey-kde.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-kde.svg"
+    },
+    "Papirus/64x64/places/folder-grey-linux.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-linux.svg"
+    },
+    "Papirus/64x64/places/folder-grey-locked.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-locked.svg"
+    },
+    "Papirus/64x64/places/folder-grey-mail-cloud.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-mail-cloud.svg"
+    },
+    "Papirus/64x64/places/folder-grey-mail.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-mail.svg"
+    },
+    "Papirus/64x64/places/folder-grey-mega.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-mega.svg"
+    },
+    "Papirus/64x64/places/folder-grey-meocloud.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-meocloud.svg"
+    },
+    "Papirus/64x64/places/folder-grey-music-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-music-open.svg"
+    },
+    "Papirus/64x64/places/folder-grey-music.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-music.svg"
+    },
+    "Papirus/64x64/places/folder-grey-network.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-network.svg"
+    },
+    "Papirus/64x64/places/folder-grey-nextcloud.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-nextcloud.svg"
+    },
+    "Papirus/64x64/places/folder-grey-notes.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-notes.svg"
+    },
+    "Papirus/64x64/places/folder-grey-obsidian.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-obsidian.svg"
+    },
+    "Papirus/64x64/places/folder-grey-onedrive.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-onedrive.svg"
+    },
+    "Papirus/64x64/places/folder-grey-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-open.svg"
+    },
+    "Papirus/64x64/places/folder-grey-owncloud.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-owncloud.svg"
+    },
+    "Papirus/64x64/places/folder-grey-pcloud.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-pcloud.svg"
+    },
+    "Papirus/64x64/places/folder-grey-photo.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-photo.svg"
+    },
+    "Papirus/64x64/places/folder-grey-pictures-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-pictures-open.svg"
+    },
+    "Papirus/64x64/places/folder-grey-pictures.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-pictures.svg"
+    },
+    "Papirus/64x64/places/folder-grey-print.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-print.svg"
+    },
+    "Papirus/64x64/places/folder-grey-private.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-private.svg"
+    },
+    "Papirus/64x64/places/folder-grey-projects.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-projects.svg"
+    },
+    "Papirus/64x64/places/folder-grey-public.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-image-people.svg"
+    },
+    "Papirus/64x64/places/folder-grey-publicshare-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-publicshare-open.svg"
+    },
+    "Papirus/64x64/places/folder-grey-recent.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-recent.svg"
+    },
+    "Papirus/64x64/places/folder-grey-remote-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-remote-open.svg"
+    },
+    "Papirus/64x64/places/folder-grey-remote.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-remote.svg"
+    },
+    "Papirus/64x64/places/folder-grey-script.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-script.svg"
+    },
+    "Papirus/64x64/places/folder-grey-snap.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-snap.svg"
+    },
+    "Papirus/64x64/places/folder-grey-steam.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-steam.svg"
+    },
+    "Papirus/64x64/places/folder-grey-sync.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-sync.svg"
+    },
+    "Papirus/64x64/places/folder-grey-syncthing.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-syncthing.svg"
+    },
+    "Papirus/64x64/places/folder-grey-systemd.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-systemd.svg"
+    },
+    "Papirus/64x64/places/folder-grey-tar.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-tar.svg"
+    },
+    "Papirus/64x64/places/folder-grey-templates-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-templates-open.svg"
+    },
+    "Papirus/64x64/places/folder-grey-templates.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-templates.svg"
+    },
+    "Papirus/64x64/places/folder-grey-torrent.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-torrent.svg"
+    },
+    "Papirus/64x64/places/folder-grey-unlocked.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-unlocked.svg"
+    },
+    "Papirus/64x64/places/folder-grey-vbox.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-vbox.svg"
+    },
+    "Papirus/64x64/places/folder-grey-video.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-video.svg"
+    },
+    "Papirus/64x64/places/folder-grey-videos-open.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-videos-open.svg"
+    },
+    "Papirus/64x64/places/folder-grey-videos.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-video.svg"
+    },
+    "Papirus/64x64/places/folder-grey-visiting.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-visiting.svg"
+    },
+    "Papirus/64x64/places/folder-grey-vmware.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-vmware.svg"
+    },
+    "Papirus/64x64/places/folder-grey-wifi.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-wifi.svg"
+    },
+    "Papirus/64x64/places/folder-grey-wine.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-wine.svg"
+    },
+    "Papirus/64x64/places/folder-grey-yandex-disk.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey-yandex-disk.svg"
+    },
+    "Papirus/64x64/places/folder-grey.svg": {
+      "canonical": "Papirus/64x64/places/folder-grey.svg"
+    }
+  }
+}
