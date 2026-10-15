@@ -47,7 +47,12 @@ def main():
         artifact.write_text(
             json.dumps(dict(actual=actual, expected=reference["dialogue"]), indent=2)
         )
-        raise AssertionError(f"Watcher dialogue mismatch; details {artifact}")
+        fields = [
+            key for key in actual if actual[key] != reference["dialogue"].get(key)
+        ]
+        raise AssertionError(
+            f"Watcher dialogue mismatch in {fields}; details {artifact}"
+        )
     module = json.loads(
         (FIXTURES / "wallpaper-watch-flavour-reference.json").read_text()
     )

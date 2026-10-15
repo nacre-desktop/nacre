@@ -34,6 +34,16 @@ def subscribed(process, directory):
 
 
 def capture(command):
+    # Frozen file modes use 022; the CI container may inherit 002.
+    # Scope the fixture umask and restore it even when capture fails.
+    previous = os.umask(0o022)
+    try:
+        return _capture(command)
+    finally:
+        os.umask(previous)
+
+
+def _capture(command):
     with tempfile.TemporaryDirectory(prefix="nacre-watch-reference-") as folder:
         home = Path(folder) / "home"
         home.mkdir(mode=0o700)
