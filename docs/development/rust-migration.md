@@ -22,7 +22,7 @@ Do not use whole-shell wall time or aggregate RSS/PSS while paging.
 Quiet gate: measured processes SwapPss 0; host swap-in UNDER 1 MiB.
 Record page counts/page size; discard runs above that or with measured-process swap.
 At the next owner-announced desktop window, compare built baseline/native A/B/A/B.
-No new window announced; mandatory before Wave 3 final status. No SSH in this phase.
+Quiet measurements blocked: remote lab unreachable; resume when it is accessible.
 
 Wave 3 public receipts (desktop + fresh-install Source CI green):
 - KDE 10b1d328 / receipt 720525e6: CI 38631961373 + 38635667735; 14+3 cases.
@@ -71,8 +71,8 @@ Native QML/install/generated callbacks replace Python; frozen workflows all pass
 Frozen preparation inputs explicitly include private XDG_DATA_HOME/public fonts.
 An initial uncontrolled-font capture is preserved privately; no expected file rewritten.
 Busy cached lock CPU 78.29 → 2.57 ms/call; 100 Python launches → zero.
-Own superseded CIs cancelled normally; current-main Source CI covers all ports.
-Next: check/fix current-main Source CI, then the owner-announced quiet A/B/A/B.
+Superseded own CI runs cancelled; current-main Source CI covers all ports.
+Next: finish current-main CI; resume desktop A/B/A/B when connectivity is restored.
 Both compositors: baseline/native Qt/Kitty and actual lock new-color pixels verified.
 Developer lock probe uses immediate-render for software Niri; default flags unchanged.
 Presentation harness: 14 tests pass; GTK pixel endpoint remains unverified in both.
