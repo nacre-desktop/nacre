@@ -62,14 +62,19 @@ Orient 3efe8d1 supplies exact image APIs: all seven CI 38664017062 jobs green.
 Core colors are unchanged; only submodule/lock/SDK/bootstrap engine-label pins change.
 Shared Arch recipes/Core maps remain with the packaging owner; handoff coordinated.
 
-Palette 8185a87f is public. Fresh-install CI 38675727457 passed; desktop's eight
-CLI adapter lookup failures fixed in 39323a43; retry CI 38678765683 running.
-Watcher: 13 CLI / 6 module / 15 event cases and all files match; repo 892 / parity 526 pass.
+Palette 8185a87f + harness 39323a43 public; CI 38678765683 fully green.
+Watcher 85652512 public; fresh-install passes in 38682118734 and 38686963959.
+First desktop failure: fixture umask, fixed by 26a64238 without new expectations.
+Second differs only in stderr: IN_CREATE raced an unfinished scheme JSON write.
+Read after close/move/delete; held-open regression matches unchanged Python outputs.
+Watcher: 13 CLI / 6 module / 15 event cases, every file and SIGTERM status exact.
 Busy watcher RSS 16.75 → 10.20 MiB; startup+change CPU 31.36 → 3.13 ms.
 Both show zero idle CPU ticks over 30 s (10 ms resolution); no lower idle-CPU claim.
 
-Next: green palette CI, integrate/push watcher and check CI; then wallpaper-media.
-Its prepared cache must identify pinned Orient/native helper, not the retired venv.
-Finish media RSS/idle CPU, visible-consumer timings and quiet A/B/A/B.
-Preserve concurrent Settings changes; rebase only own commits, owner identity.
+Next: finish/push watcher close-boundary fix and check CI before media lands.
+Media candidate 797fad17 locally passes 222 Rust / 892 repo / 526 parity and fixtures.
+Its cache identifies pinned Orient/native helper; Python file/callers retired together.
+Lock-prepare/lock-info remain in Wave 3; 141 label/eight artwork/three prep refs captured.
+Then visible-consumer timing harness and owner-announced quiet A/B/A/B.
+Preserve Settings and packaging-owner changes; own-only rebase and owner identity.
 No live deployment, tags, package publication or session takeover in this task.

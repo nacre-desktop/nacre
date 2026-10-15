@@ -178,7 +178,12 @@ impl Watcher {
                     if path == parent(&self.engine) {
                         dirty |= Some(name.as_os_str()) == self.engine.file_name();
                     } else if path == parent(&self.scheme) {
-                        if Some(name.as_os_str()) == self.scheme.file_name() {
+                        if Some(name.as_os_str()) == self.scheme.file_name()
+                            && mask & (0x8 | 0x40 | 0x80 | 0x200 | 0x400 | 0x800) != 0
+                        {
+                            // IN_CREATE precedes the writer's content. Read only
+                            // after close/move/delete, so valid writes are never
+                            // reported as malformed while still in progress.
                             let current = flavour(&self.scheme)?;
                             dirty |= current != previous;
                             previous = current;

@@ -108,13 +108,15 @@ def _capture(command):
                 lambda: (root / "readme.txt").write_text("ignored"),
                 False,
             )
-            step(
-                "same-scheme",
-                lambda: scheme.write_text(
-                    '{"mode":"dark","colours":{"primary":"ffffff"}}'
-                ),
-                False,
-            )
+
+            def same_scheme():
+                # A creation event arrives before the content. Hold that state
+                # briefly to exercise the write boundary deterministically.
+                with scheme.open("w") as stream:
+                    time.sleep(0.05)
+                    stream.write('{"mode":"dark","colours":{"primary":"ffffff"}}')
+
+            step("same-scheme", same_scheme, False)
             step("changed-mode", lambda: scheme.write_text('{"mode":"light"}'), True)
             step(
                 "changed-flavour",
