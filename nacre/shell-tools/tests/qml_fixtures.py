@@ -66,7 +66,7 @@ def stage_qml(source, destination):
         for folder in [tree, *[p for p in tree.rglob("*") if p.is_dir()]]:
             entries = []
             for path in folder.glob("*.qml"):
-                singleton = path.read_text().startswith("pragma Singleton")
+                singleton = bool(re.search(r"(?m)^\s*pragma Singleton\s*$", path.read_text()))
                 entries.append(
                     f"{'singleton ' if singleton else ''}{path.stem} 1.0 {path.name}"
                 )
@@ -77,7 +77,7 @@ def stage_qml(source, destination):
     lines = manifest.read_text().splitlines() if manifest.exists() else []
     name = destination.stem
     lines = [line for line in lines if name not in line.split()[:2]]
-    singleton = source.read_text().startswith("pragma Singleton")
+    singleton = bool(re.search(r"(?m)^\s*pragma Singleton\s*$", source.read_text()))
     lines.append(
         f"{'singleton ' if singleton else ''}{name} 1.0 {os.path.relpath(actual, destination.parent)}"
     )
@@ -156,7 +156,7 @@ def install_modules(directory):
             continue
         if path.stem[0].isupper():
             entries[path.stem] = (
-                path.read_text().startswith("pragma Singleton"),
+                bool(re.search(r"(?m)^\s*pragma Singleton\s*$", path.read_text())),
                 path.resolve(),
             )
     if "NacreHelpers" not in entries:
@@ -189,7 +189,7 @@ def install_modules(directory):
         types = {}
         if originals:
             for path in originals.glob("*.qml"):
-                singleton = path.read_text().startswith("pragma Singleton")
+                singleton = bool(re.search(r"(?m)^\s*pragma Singleton\s*$", path.read_text()))
                 if (
                     not singleton
                     or originals.name in ("config", "utils")

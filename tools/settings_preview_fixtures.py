@@ -1,6 +1,7 @@
 """Stage unchanged Settings/panel UI with synthetic, isolated service adapters."""
 
 import json
+import re
 import ast
 from pathlib import Path
 import shutil
@@ -278,7 +279,7 @@ def stage(target, *, icons=False):
             if path.name == "shell.qml":
                 continue
             prefix = (
-                "singleton " if path.read_text().startswith("pragma Singleton") else ""
+                "singleton " if bool(re.search(r"(?m)^\s*pragma Singleton\s*$", path.read_text())) else ""
             )
             rows.append(f"{prefix}{path.stem} 1.0 {path.name}")
         if rows:
