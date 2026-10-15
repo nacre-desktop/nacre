@@ -423,7 +423,7 @@ pub fn call(module: &str, operation: &str, request: &Request) -> Result<Value> {
                 scheme["colours"].as_object().ok_or("Missing lock colors")?,
                 Path::new(&image),
                 &preferences,
-                &paths.tools().join("lock-info.py"),
+                &paths.tools().join("nacre-helper"),
                 &monitors,
             )?;
             crate::files::atomic(
@@ -450,6 +450,60 @@ pub fn call(module: &str, operation: &str, request: &Request) -> Result<Value> {
                 .as_array()
                 .ok_or("Expected lock monitors")?,
         ),
+        ("lock-prepare", "atomic") => {
+            crate::lock_prepare::atomic(
+                &request.path(0, "path")?,
+                request.text(1, "text")?.as_bytes(),
+            )?;
+            Ok(Value::Null)
+        }
+        ("lock-prepare", "prepare") => {
+            let mut info = crate::lock_info::Info::new(home(request, 1, "home")?);
+            crate::lock_prepare::prepare(
+                request.argument(0, "data")?,
+                &mut info,
+                &assets,
+                &mut crate::lock_dashboard::Context::default(),
+            )?;
+            Ok(Value::Null)
+        }
+        ("lock-info", operation) => {
+            let mut info = crate::lock_info::Info::new(paths.clone());
+            match operation {
+                "plain" => info
+                    .plain(
+                        request.argument(0, "value")?,
+                        request
+                            .value(1, "width")
+                            .and_then(Value::as_f64)
+                            .unwrap_or(288.0),
+                        request
+                            .value(2, "lines")
+                            .and_then(Value::as_u64)
+                            .unwrap_or(2) as usize,
+                        request
+                            .value(3, "font")
+                            .and_then(Value::as_u64)
+                            .unwrap_or(14) as u32,
+                    )
+                    .map(|value| json!(value)),
+                "label" => info
+                    .label(
+                        request.text(0, "kind")?,
+                        request.argument(1, "data")?,
+                        request.argument(2, "settings")?,
+                    )
+                    .map(|value| json!(value)),
+                "artwork" => info
+                    .artwork(request.argument(0, "data")?)
+                    .map(|value| json!(value)),
+                "snapshot" => info.snapshot(),
+                "ipc" => info
+                    .ipc(request.text(0, "target")?, request.text(1, "action")?)
+                    .map(|value| json!(value)),
+                _ => Err("Unsupported native lock information call".into()),
+            }
+        }
         ("wallpaper-media", operation) => {
             let media = Media::new(paths.clone(), assets.clone())?;
             match operation {

@@ -81,3 +81,7 @@ pub mod terminal_font;
 pub mod theme_bundles;
 
 pub mod login_appearance;
+
+pub mod lock_info;
+
+pub mod lock_prepare;

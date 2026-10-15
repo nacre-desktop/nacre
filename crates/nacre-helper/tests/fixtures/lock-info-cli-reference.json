@@ -1,0 +1,96 @@
+{
+  "source_sha256": "aa38f4f85a6ba0035b23a35e7018c22df30a28eac1e0e043067e4529c74a2ad0",
+  "cases": [
+    {
+      "args": [],
+      "stdout": "",
+      "stderr": "usage: lock-info.py [-h]\n                    {weather,media,notifications,status,art,play-icon,previous,next,toggle}\nlock-info.py: error: the following arguments are required: kind\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--help"
+      ],
+      "stdout": "usage: lock-info.py [-h]\n                    {weather,media,notifications,status,art,play-icon,previous,next,toggle}\n\npositional arguments:\n  {weather,media,notifications,status,art,play-icon,previous,next,toggle}\n\noptions:\n  -h, --help            show this help message and exit\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "unknown"
+      ],
+      "stdout": "",
+      "stderr": "usage: lock-info.py [-h]\n                    {weather,media,notifications,status,art,play-icon,previous,next,toggle}\nlock-info.py: error: argument kind: invalid choice: 'unknown' (choose from 'weather', 'media', 'notifications', 'status', 'art', 'play-icon', 'previous', 'next', 'toggle')\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--wat"
+      ],
+      "stdout": "",
+      "stderr": "usage: lock-info.py [-h]\n                    {weather,media,notifications,status,art,play-icon,previous,next,toggle}\nlock-info.py: error: the following arguments are required: kind\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "weather",
+        "--bad"
+      ],
+      "stdout": "",
+      "stderr": "usage: lock-info.py [-h]\n                    {weather,media,notifications,status,art,play-icon,previous,next,toggle}\nlock-info.py: error: unrecognized arguments: --bad\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "status",
+        "extra"
+      ],
+      "stdout": "",
+      "stderr": "usage: lock-info.py [-h]\n                    {weather,media,notifications,status,art,play-icon,previous,next,toggle}\nlock-info.py: error: unrecognized arguments: extra\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--he"
+      ],
+      "stdout": "usage: lock-info.py [-h]\n                    {weather,media,notifications,status,art,play-icon,previous,next,toggle}\n\npositional arguments:\n  {weather,media,notifications,status,art,play-icon,previous,next,toggle}\n\noptions:\n  -h, --help            show this help message and exit\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--help=x"
+      ],
+      "stdout": "",
+      "stderr": "usage: lock-info.py [-h]\n                    {weather,media,notifications,status,art,play-icon,previous,next,toggle}\nlock-info.py: error: argument -h/--help: ignored explicit argument 'x'\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "-h",
+        "--bad"
+      ],
+      "stdout": "usage: lock-info.py [-h]\n                    {weather,media,notifications,status,art,play-icon,previous,next,toggle}\n\npositional arguments:\n  {weather,media,notifications,status,art,play-icon,previous,next,toggle}\n\noptions:\n  -h, --help            show this help message and exit\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "--",
+        "--help"
+      ],
+      "stdout": "",
+      "stderr": "usage: lock-info.py [-h]\n                    {weather,media,notifications,status,art,play-icon,previous,next,toggle}\nlock-info.py: error: argument kind: invalid choice: '--help' (choose from 'weather', 'media', 'notifications', 'status', 'art', 'play-icon', 'previous', 'next', 'toggle')\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "art",
+        "--help"
+      ],
+      "stdout": "usage: lock-info.py [-h]\n                    {weather,media,notifications,status,art,play-icon,previous,next,toggle}\n\npositional arguments:\n  {weather,media,notifications,status,art,play-icon,previous,next,toggle}\n\noptions:\n  -h, --help            show this help message and exit\n",
+      "stderr": "",
+      "exit": 0
+    }
+  ]
+}

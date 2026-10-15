@@ -8,7 +8,6 @@ from pathlib import Path
 import shlex
 import shutil
 import subprocess
-import sys
 
 
 def seed_defaults(root, home, helper):
@@ -62,9 +61,9 @@ def seed_defaults(root, home, helper):
         raise RuntimeError(
             "Unexpected native palette preparation result: " + result.stdout
         )
-    # This remaining lock-data caller bridges directly to the native renderer.
+    # Prepare lock data with the same native runtime used after installation.
     subprocess.run(
-        [sys.executable, str(tools / "lock-prepare.py")],
+        [str(helper), "lock-prepare"],
         input="{}\n",
         text=True,
         env=environment,

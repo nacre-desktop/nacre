@@ -67,6 +67,8 @@ fn call(helper: &str, operation: &str, request: &Request) -> Result<Value> {
     if matches!(
         helper,
         "classic-state"
+            | "lock-info"
+            | "lock-prepare"
             | "branding"
             | "file-icons"
             | "lock-config"

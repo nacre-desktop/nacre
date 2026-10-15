@@ -7,6 +7,7 @@ import datetime as dt
 import subprocess
 
 import nacre_native_compositor as compositor
+from nacre_native_config import _binary
 
 ROOT = Path(__file__).resolve().parent
 HOME = Path.home()
@@ -34,7 +35,7 @@ def put(path, text):
 
 def install():
     subprocess.run(
-        ["python3", str(ROOT / "lock-prepare.py")], input="{}\n", text=True, check=True
+        [str(_binary()), "lock-prepare"], input="{}\n", text=True, check=True
     )
     subprocess.run(["python3", str(ROOT / "install-thunar.py")], check=True)
     changed = put(

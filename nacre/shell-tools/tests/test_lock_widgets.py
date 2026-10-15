@@ -3,6 +3,8 @@ import json
 import tempfile
 import unittest
 import io
+import struct
+import zlib
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,7 +18,7 @@ def module(name, file):
     return m
 
 
-info = module("lockinfo", "lock-info.py")
+import native_lock_info as info
 import native_lock_config as config
 
 devices = module("devices", "device-actions.py")
@@ -47,15 +49,31 @@ class LockAndDeviceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             source = home / "art.bin"
-            source.write_bytes(b"fixture")
+
+            # A valid, highly compressed 24 MP PNG exercises the native 20 MP
+            # guard without allocating that image in the test driver.
+            def chunk(kind, data):
+                return (
+                    struct.pack(">I", len(data))
+                    + kind
+                    + data
+                    + struct.pack(">I", zlib.crc32(kind + data))
+                )
+
+            compressor = zlib.compressobj()
+            compressed = (
+                b"".join(compressor.compress(b"\0" * 18001) for _ in range(4000))
+                + compressor.flush()
+            )
+            source.write_bytes(
+                b"\x89PNG\r\n\x1a\n"
+                + chunk(b"IHDR", struct.pack(">IIBBBBB", 6000, 4000, 8, 2, 0, 0, 0))
+                + chunk(b"IDAT", compressed)
+                + chunk(b"IEND", b"")
+            )
             with (
                 patch.object(info, "HOME", home),
                 patch.object(info, "CACHE", home / "lock-widgets.json"),
-                patch.object(
-                    info.Image,
-                    "open",
-                    side_effect=info.Image.DecompressionBombError("Unsafe image"),
-                ),
             ):
                 result = info.artwork({"media": {"art": source.as_uri()}})
             self.assertEqual(
@@ -66,37 +84,25 @@ class LockAndDeviceTests(unittest.TestCase):
             )
 
     def test_local_artwork_read_is_bounded_before_decoding(self):
-        class BoundedStream(io.BytesIO):
-            def read(self, size=-1):
-                self.observed.append(size)
-                return super().read(size)
-
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
-            cache = home / "lock-widgets.json"
-            stream = BoundedStream(b"x" * 4000002)
-            stream.observed = []
-            original = Path.open
-
-            def open_file(path, *args, **kwargs):
-                return (
-                    stream
-                    if str(path) == "/isolated-art.bin"
-                    else original(path, *args, **kwargs)
-                )
-
+            source = home / "oversized.png"
+            raw = io.BytesIO()
+            info.Image.new("RGB", (1, 1), "black").save(raw, "PNG")
+            # This PNG would decode successfully if the byte budget were absent.
+            source.write_bytes(raw.getvalue() + b"x" * (4000002 - len(raw.getvalue())))
             with (
                 patch.object(info, "HOME", home),
-                patch.object(info, "CACHE", cache),
-                patch.object(Path, "open", open_file),
-                patch.object(info.Image, "open") as decoder,
+                patch.object(info, "CACHE", home / "lock-widgets.json"),
             ):
-                result = info.artwork({"media": {"art": "file:///isolated-art.bin"}})
-            self.assertEqual(stream.observed, [4000001])
-            decoder.assert_not_called()
+                result = info.artwork({"media": {"art": source.as_uri()}})
             self.assertEqual(
                 result, str(home / ".local/share/nacre/branding/nacre-lock.png")
             )
+            self.assertFalse(
+                json.loads((home / "lock-art-source.json").read_text())["ok"]
+            )
+            self.assertFalse(list(home.glob("lock-art-*.png")))
 
     def test_notification_privacy_is_enforced_again_after_cache_read(self):
         data = {

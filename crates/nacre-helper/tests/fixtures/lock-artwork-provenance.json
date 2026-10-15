@@ -1,0 +1,13 @@
+{
+  "source_sha256": "aa38f4f85a6ba0035b23a35e7018c22df30a28eac1e0e043067e4529c74a2ad0",
+  "expected_sha256": {
+    "native-capture-art-rgb": "b1275bef55effff703ed11562af6f9940e42d8cc8015184b570d6669c7bd3302",
+    "native-capture-art-rgba-resize": "2b811c083cc54297965b84fb0de21ab4f21672e5d75cb288b60c75094f1d021d",
+    "native-capture-art-indexed-resize": "2bac28d0218850a620ae9236053a7491fd3b38d08fde8e98c5d13fd4b944a457",
+    "native-capture-art-gif-resize": "22c1db1385bd0a0e2cfdb2233b4e9b8f3e60a5e518670a25be2e1e1ed57f6efd",
+    "native-capture-art-jpeg-resize": "88eefa11db03c21f0a4bb6ce0d876392c6b84cd42940398c56b2fbb674c2b85a",
+    "native-capture-art-webp-alpha": "76235e65b7b4a10ae7509038dd1fab662428e98d7a60256a31e0d445a5d2a164",
+    "native-capture-art-malformed": "8a72b0f76652ee10e96c7c2f973d42d928cd143c6b3669672819d3fcdc1a0534",
+    "native-capture-art-bounded": "43dd27d9d287bfdcc92f7921e591c51ed270f3c35ba544923d88b385f9f28904"
+  }
+}

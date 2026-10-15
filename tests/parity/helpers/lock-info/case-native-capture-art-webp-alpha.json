@@ -1,0 +1,25 @@
+{
+  "helper": "lock-info",
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/lock-info.py",
+  "args": [
+    "artwork",
+    "{\"args\": [{\"media\": {\"art\": \"file://{home}/art.png\"}}], \"kwargs\": {}}"
+  ],
+  "fixtures": {
+    "home/art.png": {
+      "base64": "UklGRogAAABXRUJQVlA4WAoAAAAQAAAAPwAAJwAAQUxQSBAAAAABB1CyiAgACeH/ejGi/6kPVlA4IFIAAAAwBACdASpAACgAPm0ylEckIyIhKqgAgA2JYwDS5cC1AAKqMJ2L/ByMRAAA/vC6a/4Vrt58w9rf9wbV6bOHr70Usi3FFyCrMFcqiSEqLvDb+AAA",
+      "mtime": 1700000000
+    },
+    "home/.cache/nacre": {
+      "directory": true
+    }
+  },
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/files/home~1.cache~1nacre~1lock-art-source.json/text",
+      "json_pointer": "/checked",
+      "reason": "art freshness check time.time()"
+    }
+  ]
+}

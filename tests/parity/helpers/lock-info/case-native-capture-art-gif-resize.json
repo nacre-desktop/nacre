@@ -1,0 +1,25 @@
+{
+  "helper": "lock-info",
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/lock-info.py",
+  "args": [
+    "artwork",
+    "{\"args\": [{\"media\": {\"art\": \"file://{home}/art.png\"}}], \"kwargs\": {}}"
+  ],
+  "fixtures": {
+    "home/art.png": {
+      "base64": "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",
+      "mtime": 1700000000
+    },
+    "home/.cache/nacre": {
+      "directory": true
+    }
+  },
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/files/home~1.cache~1nacre~1lock-art-source.json/text",
+      "json_pointer": "/checked",
+      "reason": "art freshness check time.time()"
+    }
+  ]
+}

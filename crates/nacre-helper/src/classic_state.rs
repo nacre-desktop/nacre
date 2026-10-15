@@ -970,7 +970,7 @@ impl Publisher {
                 colors,
                 Path::new(selected),
                 &preferences,
-                &self.paths.tools().join("lock-info.py"),
+                &self.paths.tools().join("nacre-helper"),
                 &monitors,
             )?;
             let config_root = self

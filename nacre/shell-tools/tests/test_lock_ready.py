@@ -14,6 +14,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load(name):
+    if name == "lock-prepare":
+        import native_lock_prepare
+
+        return native_lock_prepare
     if name in {"branding", "lock-config"}:
         import native_branding
         import native_lock_config

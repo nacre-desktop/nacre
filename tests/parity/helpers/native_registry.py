@@ -28,6 +28,8 @@ MIGRATED = frozenset(
         "file-icons",
         "lock-config",
         "lock-dashboard",
+        "lock-info",
+        "lock-prepare",
         "palette_engine",
         "nacre-colors",
         "nacre_shell",

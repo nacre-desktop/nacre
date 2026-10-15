@@ -259,6 +259,24 @@ def historical_catalog_mounts(case):
 
 
 def execute(case, command, trace=None):
+    if (
+        case["helper"] == "lock-prepare"
+        and case.get("stdin") == "{}\n"
+        and not case.get("command")
+    ) or (
+        case["helper"] == "install-extras"
+        and not case.get("command")
+        and "fc-match" not in case.get("commands", {})
+    ):
+        # The old fixture omits fc-match: its font provider is unavailable.
+        # Model that same input for direct Fontconfig, without modifying goldens.
+        case = copy.deepcopy(case)
+        case.setdefault("fixtures", {})["etc/fonts/nacre-no-fonts.conf"] = {
+            "text": "<fontconfig><reset-dirs/></fontconfig>"
+        }
+        case.setdefault("env", {})["FONTCONFIG_FILE"] = (
+            "/case/etc/fonts/nacre-no-fonts.conf"
+        )
     if case["helper"] == "wallpaper-media" and case.get("args") == ["session"]:
         # Replace only the transport: strict logind calls retain the frozen
         # loginctl/busctl effects and response data.

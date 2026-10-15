@@ -1,0 +1,17 @@
+{
+  "stdout": "/case/home/.cache/nacre/lock-art-43f801f80d3fdb0303c4.png",
+  "exit": 0,
+  "files": {
+    "home/.cache/nacre/lock-art-43f801f80d3fdb0303c4.png": {
+      "mode": "0o600",
+      "base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAAAoCAYAAABOzvzpAAAAZUlEQVR4nOXOQQGAMBSAUKSQ8bzYySbLYYstxj/wCsD1f89m0P2uyTwSJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3ESJ3FOD0w7VpUE1kmOv9UAAAAASUVORK5CYII="
+    },
+    "home/.cache/nacre/lock-art-source.json": {
+      "mode": "0o600",
+      "text": "{\"fingerprint\": \"file:///case/home/art.png:1700000000000000000:159\", \"checked\": \"<timestamp>\", \"ok\": true}"
+    }
+  },
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

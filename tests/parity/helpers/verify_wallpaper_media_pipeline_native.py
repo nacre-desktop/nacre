@@ -232,6 +232,32 @@ def main():
             f"Native media file set differs: extra{sorted(extra)[:4]},missing{sorted(missing)[:4]}"
         )
         for name in expected:
+            if name == ".config/hypr/hyprlock.conf":
+                old = expected[name]["text"]
+                prefix = (
+                    "python3 /fixture/home/.local/share/nacre/shell/tools/lock-info.py "
+                )
+                native = "/fixture/home/.local/share/nacre/shell/tools/nacre-helper lock-info "
+                assert (
+                    sum(
+                        old.count(prefix + action + "\n")
+                        for action in ("previous", "toggle", "next")
+                    )
+                    == 6
+                )
+                transformed = old
+                for action in ("previous", "toggle", "next"):
+                    transformed = transformed.replace(
+                        prefix + action + "\n", native + action + "\n"
+                    )
+                assert actual[name]["text"] == transformed, (
+                    "Lock callback transport or other config bytes differ"
+                )
+                assert prefix not in actual[name]["text"], (
+                    "Native lock config retains Python callbacks"
+                )
+                assert actual[name]["mode"] == expected[name]["mode"]
+                continue
             if actual[name] != expected[name]:
                 Path(
                     "/tmp/nacre-media-native-pipeline-file-difference.json"

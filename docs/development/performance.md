@@ -1318,3 +1318,41 @@ No whole-desktop speed or quiet-window regression conclusion follows from them.
 ```
 
 </details>
+
+### Wave 3 native lock data and preparation (busy machine)
+
+The cached `lock-info play-icon` path used 100 interleaved fresh calls in a
+private HOME with all four XDG roots and absent D-Bus/compositor sockets.
+The release build completed before sampling. CPU uses the existing
+`benchmark-helpers.py` child user+system accounting; wall-clock waits are excluded.
+
+| Helper CPU per call | Python | Native |
+| --- | ---: | ---: |
+| Cached lock reader | 78.29 ms | 2.57 ms |
+| Python launches in 100 calls | 100 | 0 |
+
+This is a laptop busy-machine microbenchmark. It does not measure lock startup,
+RSS/PSS of the desktop, idle CPU or selection-to-last-visible-consumer timing.
+The native preparation path retains the same private files and frozen PNG bytes,
+including paused application colors while widget data keeps updating.
+
+```json
+{
+  "condition": "busy machine",
+  "source_sha256": "aa38f4f85a6ba0035b23a35e7018c22df30a28eac1e0e043067e4529c74a2ad0",
+  "native_sha256": "5a948f8aea4de47f5e40d8d0dce49b375ce3b5895c44f45d13d766aef3beb4d0",
+  "method": "benchmark-helpers.py child user+system CPU; fresh process; cached snapshot; no shell wall-time claim",
+  "results": {
+    "python": {
+      "calls": 100,
+      "cpu_ms_per_call": 78.28809,
+      "python_launches": 100
+    },
+    "rust": {
+      "calls": 100,
+      "cpu_ms_per_call": 2.570119999999996,
+      "python_launches": 0
+    }
+  }
+}
+```

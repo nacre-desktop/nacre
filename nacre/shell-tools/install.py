@@ -126,6 +126,8 @@ def retire_native_helpers(directory):
         "file-icons",
         "lock-config",
         "lock-dashboard",
+        "lock-info",
+        "lock-prepare",
         "provision",
         "wallpaper-watch",
         "wallpaper-media",

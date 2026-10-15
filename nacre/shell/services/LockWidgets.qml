@@ -83,7 +83,7 @@ Singleton {
         id: writer
 
         stdinEnabled: true
-        command: ["python3", NacrePaths.tools + "/lock-prepare.py"]
+        command: [NacrePaths.helperBinary, "lock-prepare"]
         onStarted: write(root.presentation + "\n")
         onExited: {
             if (root.dirty)

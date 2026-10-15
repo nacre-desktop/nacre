@@ -163,7 +163,7 @@ ShellRoot {
                         }
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: AppLaunch.run(["python3", NacrePaths.tools + "/lock-info.py", parent.modelData.action])
+                            onClicked: AppLaunch.run([NacrePaths.helperBinary, "lock-info", parent.modelData.action])
                         }
                     }
                 }

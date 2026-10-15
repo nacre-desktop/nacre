@@ -257,9 +257,17 @@ pub fn render(
                 ),
                 (311.0, "skip_next".into(), "next"),
             ] {
+                let binary = if helper
+                    .extension()
+                    .is_some_and(|extension| extension == "py")
+                {
+                    helper.with_file_name("nacre-helper")
+                } else {
+                    helper.to_path_buf()
+                };
                 let command = format!(
-                    "python3 {} {action}",
-                    shell_quote(&helper.to_string_lossy())
+                    "{} lock-info {action}",
+                    shell_quote(&binary.to_string_lossy())
                 );
                 result.push_str(&block(
                     "shape",

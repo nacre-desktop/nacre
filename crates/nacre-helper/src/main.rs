@@ -11,6 +11,12 @@ fn run() -> Result<i32> {
     let mut arguments = std::env::args().skip(1);
     let tool = arguments.next().ok_or("Expected a helper command")?;
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "lock-info" {
+        return nacre_helper::lock_info::run(&arguments);
+    }
+    if tool == "lock-prepare" {
+        return nacre_helper::lock_prepare::run(&arguments);
+    }
     if tool == "wallpaper-media" {
         return nacre_helper::wallpaper_media::run(&arguments);
     }

@@ -1,0 +1,25 @@
+{
+  "helper": "lock-info",
+  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/lock-info.py",
+  "args": [
+    "artwork",
+    "{\"args\": [{\"media\": {\"art\": \"file://{home}/art.png\"}}], \"kwargs\": {}}"
+  ],
+  "fixtures": {
+    "home/art.png": {
+      "base64": "iVBORw0KGgoAAAANSUhEUgAAAwAAAAGAAQMAAAAgYJc8AAAABlBMVEXor3cXK0UyQE3BAAABFElEQVR4nO3QsQkAIBAEQbX/nrWEweCznfjgYPf6dD/3Zw07HUiJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKRCWiElGJqERUIioRlYhKROOJHqR2A//oGoC0AAAAAElFTkSuQmCC",
+      "mtime": 1700000000
+    },
+    "home/.cache/nacre": {
+      "directory": true
+    }
+  },
+  "normalizations": [
+    {
+      "kind": "timestamp",
+      "pointer": "/files/home~1.cache~1nacre~1lock-art-source.json/text",
+      "json_pointer": "/checked",
+      "reason": "art freshness check time.time()"
+    }
+  ]
+}

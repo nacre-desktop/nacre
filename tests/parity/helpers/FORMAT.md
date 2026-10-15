@@ -163,3 +163,13 @@ before the Dolphin reader metadata correction. The current manifest lists
 Dolphin's actual KDE scheme files; a separate reader regression checks that
 mapping. The historical input is checksum-pinned, and expected output files are
 unchanged.
+
+The legacy `lock-prepare/empty` and its `install-extras` caller fixtures have no
+`fc-match` provider. Native replay uses a private empty Fontconfig configuration
+to preserve that unavailable-font input and its failure/files exactly; no frozen
+expectation is changed.
+
+Intended lock transport change: exactly six media-button `onclick` lines in
+`hyprlock.conf` replace the legacy Python script with `nacre-helper lock-info`,
+keeping each action. The immutable reference is unchanged; verification requires
+all six native commands, unchanged mode and every remaining config byte.
