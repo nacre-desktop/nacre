@@ -154,6 +154,10 @@ fn status(home: &Path, source: &Path, endpoint: &Path) -> Result<Value> {
     Ok(serde_json::from_slice(&output.stdout)?)
 }
 fn next_message(reader: &mut BufReader<ChildStdout>) -> Result<nacre_protocol::Message> {
+    let line = next_line(reader)?;
+    Ok(nacre_protocol::framing::decode(&line[..line.len() - 1])?)
+}
+fn next_line(reader: &mut BufReader<ChildStdout>) -> Result<Vec<u8>> {
     let deadline = Instant::now() + Duration::from_secs(10);
     let mut line = Vec::new();
     loop {
@@ -188,7 +192,7 @@ fn next_message(reader: &mut BufReader<ChildStdout>) -> Result<nacre_protocol::M
         line.extend_from_slice(&bytes[..used]);
         reader.consume(used);
         if newline.is_some() {
-            return Ok(nacre_protocol::framing::decode(&line[..line.len() - 1])?);
+            return Ok(line);
         }
     }
 }
@@ -1312,5 +1316,190 @@ printf '{}\n'
         .file_name()
         .to_string_lossy()
         .starts_with("helper-packets-")));
+    Ok(())
+}
+
+#[test]
+fn network_watch_shares_signals_preserves_frozen_lines_and_fails_without_replay() -> Result<()> {
+    use std::os::unix::process::ExitStatusExt;
+    let reference: Value =
+        serde_json::from_str(include_str!("fixtures/network-watch-reference.json"))?;
+    let home = tempfile::Builder::new().prefix("nw-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let endpoint = home.path().join("daemon.sock");
+    let mut bus = Process(
+        Command::new("/usr/bin/dbus-daemon")
+            .args(["--session", "--nofork", "--print-address"])
+            .arg(format!(
+                "--address=unix:path={}",
+                home.path().join("bus").display()
+            ))
+            .env_clear()
+            .env("HOME", home.path())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    let mut address = String::new();
+    BufReader::new(bus.0.stdout.take().ok_or("Missing private bus")?).read_line(&mut address)?;
+    let address = address.trim();
+    let server = zbus::blocking::connection::Builder::address(address)?.build()?;
+    let mut absent = command(
+        home.path(),
+        &source_path,
+        &home.path().join("absent-daemon.sock"),
+    );
+    let mut absent = Process(
+        absent
+            .args(["network-state", "watch"])
+            .env("DBUS_SYSTEM_BUS_ADDRESS", address)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    assert!(!absent
+        .0
+        .wait_timeout(Duration::from_secs(2))?
+        .ok_or("Explicit missing daemon silently started a direct watcher")?
+        .success());
+    let notify = home.path().join("notify.sock");
+    let notifications = UnixDatagram::bind(&notify)?;
+    notifications.set_read_timeout(Some(Duration::from_secs(10)))?;
+    let start_daemon = || -> Result<Process> {
+        let mut cmd = command(home.path(), &source_path, &endpoint);
+        let process = Process(
+            cmd.arg("daemon")
+                .env("NOTIFY_SOCKET", &notify)
+                .env("DBUS_SYSTEM_BUS_ADDRESS", address)
+                .stdout(Stdio::null())
+                .stderr(
+                    fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(home.path().join("network-daemon.log"))?,
+                )
+                .spawn()?,
+        );
+        let mut packet = [0; 256];
+        let size = notifications.recv(&mut packet)?;
+        assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
+        Ok(process)
+    };
+    let mut daemon = start_daemon()?;
+    let start_watch = |name: &str, fallback: bool| -> Result<(Process, BufReader<ChildStdout>)> {
+        let mut cmd = command(home.path(), &source_path, &endpoint);
+        if fallback {
+            cmd.env_remove("NACRE_DAEMON_SOCKET")
+                .env("DBUS_SYSTEM_BUS_ADDRESS", address);
+        }
+        // Explicit clients have an absent system bus. A successful refresh proves
+        // they share the daemon rather than establishing duplicate signal sources.
+        let mut process = Process(
+            cmd.args(["network-state", "watch"])
+                .stdout(Stdio::piped())
+                .stderr(fs::File::create(home.path().join(name))?)
+                .spawn()?,
+        );
+        let mut reader = BufReader::new(
+            process
+                .0
+                .stdout
+                .take()
+                .ok_or("Missing network watch output")?,
+        );
+        assert_eq!(
+            next_line(&mut reader)?,
+            reference["startup_stdout"].as_str().unwrap().as_bytes()
+        );
+        Ok((process, reader))
+    };
+    let (mut first, mut first_read) = start_watch("network-first.log", false)?;
+    let (mut second, mut second_read) = start_watch("network-second.log", false)?;
+    let (mut standalone, mut standalone_read) = start_watch("network-standalone.log", true)?;
+    server.request_name("org.freedesktop.NetworkManager")?;
+    assert!(server.release_name("org.freedesktop.NetworkManager")?);
+    for reader in [&mut first_read, &mut second_read, &mut standalone_read] {
+        let mut lines = next_line(reader)?;
+        lines.extend(next_line(reader)?);
+        assert_eq!(
+            lines,
+            reference["owner_change_stdout"]
+                .as_str()
+                .unwrap()
+                .as_bytes()
+        );
+    }
+    nix::sys::signal::kill(
+        nix::unistd::Pid::from_raw(standalone.0.id() as i32),
+        nix::sys::signal::Signal::SIGTERM,
+    )?;
+    let exit = standalone
+        .0
+        .wait_timeout(Duration::from_secs(5))?
+        .ok_or("Standalone watcher did not stop")?;
+    assert_eq!(
+        exit.signal(),
+        Some(-reference["termination_exit"].as_i64().unwrap() as i32)
+    );
+    assert_eq!(
+        fs::read_to_string(home.path().join("network-standalone.log"))?,
+        reference["stderr"].as_str().unwrap()
+    );
+    drop(standalone_read);
+    // Closing a pipe with no new events must release an idle compatibility link.
+    drop(first_read);
+    assert!(first
+        .0
+        .wait_timeout(Duration::from_secs(5))?
+        .ok_or("Idle network client retained its pipe")?
+        .success());
+    server.request_name("org.freedesktop.NetworkManager")?;
+    server.emit_signal(
+        None::<&str>,
+        "/org/freedesktop/NetworkManager",
+        "org.freedesktop.NetworkManager",
+        "DeviceAdded",
+        &(zbus::zvariant::OwnedObjectPath::try_from(
+            "/org/freedesktop/NetworkManager/Devices/1",
+        )?,),
+    )?;
+    assert!(server.release_name("org.freedesktop.NetworkManager")?);
+    for _ in 0..3 {
+        assert_eq!(next_line(&mut second_read)?, b"changed\n");
+    }
+    // A lost dispatched stream cannot silently start a second direct watcher.
+    daemon.0.kill()?;
+    daemon.0.wait()?;
+    assert!(!second
+        .0
+        .wait_timeout(Duration::from_secs(5))?
+        .ok_or("Network client did not notice daemon death")?
+        .success());
+    drop(second_read);
+    let mut daemon = start_daemon()?;
+    let (mut third, third_read) = start_watch("network-third.log", false)?;
+    bus.0.kill()?;
+    bus.0.wait()?;
+    assert!(!third
+        .0
+        .wait_timeout(Duration::from_secs(5))?
+        .ok_or("Network client did not notice service failure")?
+        .success());
+    drop(third_read);
+    assert!(daemon.0.try_wait()?.is_none());
+    assert_eq!(
+        status(home.path(), &source_path, &endpoint)?["services"]["compositor"]["status"],
+        "running"
+    );
+    for name in [
+        "network-daemon.log",
+        "network-first.log",
+        "network-second.log",
+        "network-third.log",
+    ] {
+        assert!(!fs::read_to_string(home.path().join(name))?.contains("DO_NOT_LOG_WINDOW_TITLE"));
+    }
     Ok(())
 }

@@ -455,7 +455,7 @@ pub fn watch() -> Result<i32> {
         .await
     })
 }
-async fn watch_events(
+pub(crate) async fn watch_events(
     connection: &zbus::Connection,
     mut emit: impl FnMut() -> Result<bool>,
 ) -> Result<i32> {

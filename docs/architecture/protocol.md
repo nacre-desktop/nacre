@@ -378,3 +378,25 @@ difference: a worker operation has a ten-second deadline and the compatibility
 call has a 120-second deadline including queueing; failures are returned rather
 than retried. A running daemon retains its last good launcher preferences after
 an invalid hand edit, as required by the sole-writer policy.
+
+
+## Network change trigger v1
+
+`network.watch` reports the health of the daemon's NetworkManager signal reader,
+not NetworkManager availability, an AP list, connectivity or an action API.
+Its typed data is `{available,generation,error?}`; `generation` is a nonnegative
+JavaScript-safe integer and `error`, when present, is a sanitized message of at
+most 256 bytes. See `network-watch.json`, `network.d.luau` and `network.jsonl`.
+The generation increases for the initial subscribed reader and every matched
+NetworkManager or owner-change signal, survives service restarts within a boot,
+and resets with a new daemon boot. Snapshots coalesce at the normal frame rate.
+There is no timer or active Wi-Fi scan. Network identities never enter this topic.
+
+The one-release `network-state watch` adapter prints one initial `changed` line,
+then one per generation increment, including increments covered by a coalesced
+patch. It fails when its selected service/link fails; it never replays into a
+second direct watcher. An absent default/older non-safe daemon permits the
+existing standalone reader. An explicit missing endpoint or safe mode fails
+closed. Closing the output pipe releases the idle adapter without polling.
+These are added transport/lifecycle protections; frozen normal change lines stay
+exact. Full network device snapshots/actions and other bar services remain deferred.

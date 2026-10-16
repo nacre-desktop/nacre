@@ -7,6 +7,7 @@ pub mod helpers;
 pub mod hub;
 pub mod menu;
 pub mod menu_worker;
+pub mod network;
 pub mod niri_events;
 pub mod notify;
 pub mod serve_bridge;
@@ -82,6 +83,20 @@ async fn serve(
     if !counter.safe {
         hub.borrow_mut().service("helper-lanes", "running", 0)?;
     }
+    let network_service = if !counter.safe {
+        network::publish(&hub, 0, false, None)?;
+        hub.borrow_mut().service("network-watch", "starting", 0)?;
+        let service_hub = hub.clone();
+        let factory_hub = hub.clone();
+        let generation = Rc::new(std::cell::Cell::new(0));
+        Some(tokio::task::spawn_local(supervisor::run(
+            "network-watch",
+            service_hub,
+            move || network::run(factory_hub.clone(), generation.clone()),
+        )))
+    } else {
+        None
+    };
     let menu_service = if !counter.safe {
         let service_hub = hub.clone();
         let factory_hub = hub.clone();
@@ -189,6 +204,14 @@ async fn serve(
         }
     }
     compositor_service.abort();
+    if let Some(service) = network_service {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Network supervisor failed during shutdown");
+            }
+        }
+    }
     if let Some(service) = menu_service {
         service.abort();
         if let Err(error) = service.await {

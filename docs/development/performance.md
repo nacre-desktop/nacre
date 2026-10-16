@@ -2271,7 +2271,7 @@ retains that transport cost. No additional Python launch reduction is claimed:
 these six operations were already native before the foundation fold.
 
 The fold's measured compatibility overhead is retained after the owner continuation;
-integration still waits for the main CI repair and the fold's own green CI.
+the main repair and fold are now published with fully green CI.
 Private evidence archive SHA-256:
 `d2a9fa68770e6f1a91a128a9953d307a0c610fec889a3266d3e36fcf24042c89`.
 Revised source manifest/archive SHA-256:
@@ -2281,7 +2281,8 @@ private-HOME/runtime audit found no remaining lab processes. Main advanced
 independently after tested base `1e920ea4`; the two account-help differences now
 have exact declared comparison rules without modifying frozen outputs. Main's
 repair is `2893a96f`; Source CI38931641268 is fully green (desktop and
-fresh-install). This fold's own published CI remains the next gate.
+fresh-install). The fold is published as `92cb312c`; Source CI38942501196
+is fully green in both jobs.
 The integrated source recheck passes all 938 repository cases (three existing
 skips), native workflow references and 534 helper cases, including the two exact
 account-help extensions; the original frozen expected files are unchanged.
@@ -2309,3 +2310,176 @@ swap-out is 0/0/51/8 pages. The owner gate constrains measured SwapPss and host
 swap-in, so those swap-out counts are retained rather than silently omitted.
 Cold evidence archive SHA-256:
 `bb76629d6af13e26cab769e9d225247a3e2737ff936e708e23ba461c97f2dea8`.
+
+
+### Foundation network-watch prototype (desktop-PC nested, 2026-10-16)
+
+Before is published `92cb312c`, helper
+`d9ddfd69905129c7463fabf723fa200a5393872a1da5e07685925c1d755c86a0`.
+The unpublished prototype is
+`d17a48fe31469a988e785bc29b3a3ee3af181098c71555451ad2e1b40b9d1bff`.
+Each compositor has two alternating pairs with 320 fixture apps, a private
+D-Bus without NetworkManager, 35 seconds settling, 200 synthetic owner-change
+signals and 60 seconds idle. CPU sums daemon and watcher; fixture `gdbus` CPU
+is excluded. Providers retire before idle. No build/test runs during capture.
+The compatibility command remains, so helper count is 2 → 2, not yet one.
+
+| Measure, two runs | Before | Prototype |
+| --- | ---: | ---: |
+| niri combined RSS MiB | 48.24 / 48.21 | 45.37 / 47.02 |
+| niri combined PSS MiB | 34.03 / 33.73 | 33.83 / 35.52 |
+| Hyprland combined RSS MiB | 48.97 / 48.26 | 47.43 / 46.21 |
+| Hyprland combined PSS MiB | 34.54 / 33.96 | 35.72 / 34.59 |
+| Resident threads, either compositor | 6 / 6 | 2 / 2 |
+| All-thread voluntary switches / 60 s | 126 / 126 | 0 / 0 |
+| Observed CPU ticks / 60 s, 100 Hz | 0 / 0 | 0 / 0 |
+| niri helper CPU ms/source event | 0.03594 / 0.03613 | 0.04311 / 0.04479 |
+| Hyprland helper CPU ms/source event | 0.03354 / 0.03499 | 0.04387 / 0.04510 |
+
+The prototype does not pass the memory gate: both Hyprland PSS pairs increase,
+by 1.18 and 0.63 MiB; niri is mixed. Lower RSS and idle activity do not waive PSS.
+One focused attempt removes redundant service-status publication on every signal;
+its correctness and matched measurements are pending. Cold-frame measurement
+has not run; no launcher, battery, physical-network or typing benefit is claimed.
+No additional Python launch reduction: both sides already use native helpers.
+
+All accepted measured SwapPss values are zero. At 4,096 bytes/page, accepted idle
+host swap-in A1/B1/A2/B2 is 54/7/6/68 pages on niri and 5/118/3/0 on Hyprland;
+swap-out is zero. Signal intervals have zero host swap-in/out except niri A1,
+with eight pages in. The original niri B2 is discarded: 1,641 host pages in
+(6.41 MiB), despite measured SwapPss zero. Its replacement is retained separately.
+The first Hyprland setup failed before capture because the private harness used
+`gles` rather than `gles2`; no source, driver or live configuration changed.
+
+Prototype correctness: 351 Rust tests, 938 repository cases (three existing skips),
+534 immutable helper parity cases, formatting, Clippy and schema freshness pass.
+Frozen watch reference SHA-256:
+`5c3a54d847556bf81100c1aac0ff882fd6c6edefe3b8c54fede339e2a8f488eb`.
+Private correctness archive SHA-256:
+`4b1c4f7cef822df717a305e55c3079c43d837ec9652dacfdd3eb4f8fb928a10d`.
+Private pairs archive SHA-256:
+`b427bc7048063a198090883a568be79eb7d9a93bddc9c03b7f97d3a2b7600a81`.
+
+
+The focused attempt publishes service readiness once per reader; it changes no
+reference outputs. Its helper is
+`1f2bc758236c3e485bb31427def1db3cad0f6e3bcd9f503b2bc1b40b6eb77e90`,
+with the same before helper above. Two new niri A/B pairs add per-role anonymous,
+file and shared-memory PSS sampling, retaining the same timing and fixture method.
+
+| Focused comparison, two runs | Before | Focused candidate |
+| --- | ---: | ---: |
+| Combined RSS MiB | 48.36 / 48.50 | 47.03 / 47.68 |
+| Combined PSS MiB | 33.90 / 33.94 | 35.36 / 36.08 |
+| Daemon anonymous PSS MiB | 16.64 / 16.63 | 17.85 / 18.86 |
+| Watcher anonymous PSS MiB | 2.14 / 2.14 | 2.14 / 2.14 |
+| Helpers / resident threads | 2 / 6 | 2 / 2 |
+| All-thread voluntary switches / 60 s | 125 / 126 | 0 / 0 |
+| Observed CPU ticks / 60 s, 100 Hz | 0 / 1 | 0 / 0 |
+| Helper CPU ms/source event | 0.03560 / 0.03519 | 0.03630 / 0.03619 |
+
+PSS increases by 1.46 and 2.14 MiB. The two-run median is 33.92 → 35.72 MiB
+(+1.80 MiB, 5.3%); the ranges do not overlap. Anonymous daemon memory accounts
+for most of the increase, but live allocations versus allocator retention remain
+unresolved; this is not evidence of a leak or a three-hour trend. The CPU cost is
+closer to baseline after removing redundant status work, but memory still fails.
+At this point the owner stop rule held the fold locally. No network-watch code was
+pushed, and wallpaper-watch/F3/F4 were not started. The following Hyprland baseline
+was interrupted with scoped cleanup; it supplies no accepted measurement. The
+focused Hyprland pairs and cold-frame follow-up remain unmeasured, not zero.
+
+All four focused niri intervals pass paging: measured SwapPss zero, signal host
+swap-in/out zero, idle host swap-in A1/B1/A2/B2 86/6/6/7 pages at 4,096 bytes/page,
+swap-out zero. Actual owned helper nice 10 is recorded. All 351 Rust tests,
+938 repository cases (three existing skips), 534 immutable helper parity cases,
+formatting, Clippy and schema freshness pass again. No frozen output changed.
+The final private capture cleanup verified zero surviving tracked processes;
+the desktop checkout and immutable artifacts remain for the next comparison.
+Focused source archive SHA-256:
+`45c15999b6c96f8acbb76bf8bfabc62c0503207baaf7b20b854450cb043890a4`.
+Focused correctness archive SHA-256:
+`71689af0ceea9ab5526b73ef1fe59addeba6120a2073fd2a4c6ef69e4bddaa3e`.
+Focused pairs archive SHA-256:
+`78f417ca444d7c142ce871daf5be8ea7031bf45ffc8b2f1e25dc221c0a9217f4`.
+
+Follow-up diagnostics keep that hold in place. A full-minute trace of the
+unchanged baseline also shows anonymous PSS growing 16.64 → 18.78 MiB while
+daemon CPU time stays constant. A subsequent candidate trace directly correlates
+17.77 → 19.40 MiB anonymous PSS with anonymous huge pages increasing 0 → 14 MiB,
+again without daemon CPU work. These observations implicate background kernel
+page promotion in the short-settle comparison
+([kernel THP documentation](https://www.kernel.org/doc/html/latest/admin-guide/mm/transhuge.html));
+they do not establish a leak or
+clear the memory gate. In a diagnostic control disabling huge pages only in the
+new test children, both builds stay flat, with combined PSS 34.96 → 35.27 MiB.
+All four control cells have measured SwapPss zero; idle host swap-in is
+69/12/5/3 pages (normal before/after, disabled before/after), swap-out zero,
+4,096 bytes/page. These are diagnostic results, not acceptance or timing data.
+No product, global kernel policy or live-session setting changed.
+
+The follow-up normal-policy A/B/A/B comparison uses exactly seven warm catalog
+queries per cell, followed by at least 180 seconds of additional idle settling
+and 90 seconds of stable anonymous PSS/huge-page counts before the 60-second
+measurement. Continued promotion invalidates that cell. This method change is
+explicit: the earlier 35-second-settle results above remain unchanged.
+
+Both compositor comparisons completed, all eight cells valid on their first
+attempt. Actual additional settlement was 180 seconds in seven cells and
+215 seconds in the first Hyprland candidate. Normal huge-page policy remained
+enabled in every measured helper; no debugger, allocator tuning or process-memory
+policy override was used. The before and candidate binaries are unchanged.
+
+| Settled comparison, A1/A2 or B1/B2 | Before | Candidate |
+| --- | ---: | ---: |
+| niri combined RSS MiB | 52.39 / 52.31 | 49.70 / 48.92 |
+| niri combined PSS MiB | 37.96 / 38.10 | 37.99 / 37.23 |
+| Hyprland combined RSS MiB | 51.67 / 52.57 | 47.27 / 49.42 |
+| Hyprland combined PSS MiB | 37.52 / 38.28 | 35.69 / 37.68 |
+| Helpers / resident threads, both compositors | 2 / 6 | 2 / 2 |
+| All-thread voluntary switches / 60 s, every cell | 120 | 0 |
+| Observed CPU ticks / 60 s, 100 Hz, every cell | 0 | 0 |
+| niri helper CPU ms/source event | 0.03526 / 0.03501 | 0.03687 / 0.03631 |
+| Hyprland helper CPU ms/source event | 0.03510 / 0.03460 | 0.03709 / 0.03515 |
+| Python launches on this already-native path | 0 | 0 |
+
+The earlier persistent +1.80 MiB increase does not reproduce. PSS ranges overlap;
+the two-run median is 38.03 → 37.61 MiB on niri and 37.90 → 36.69 MiB on
+Hyprland. The synthetic source-event path adds approximately 1–2 microseconds
+of helper CPU per event; it is not a typing or physical-network benchmark.
+Compatibility clients still account for one of the two helper processes.
+This clears the combined-memory/idle gate with the method correction above;
+cold launcher verification is separate. No battery or three-hour claim is made.
+
+Measured SwapPss is zero in all cells. Idle host swap-in A1/B1/A2/B2 is
+4/0/1/0 pages on niri and 0/0/1/0 on Hyprland; all idle swap-out and all
+source-event swap-in/out are zero, at 4,096 bytes/page. Actual helper nice 10
+and the absence of idle provider children are verified. Original short-settle
+and diagnostic captures remain retained separately from these accepted runs.
+
+The cold niri follow-up uses the same frozen `75157fd3` QML/harness sources and
+the two exact helper binaries above, in A/B/A/B order. It measures Qt key-handler
+receipt to the settled `frameSwapped` boundary, excluding compositor presentation.
+No builds, tests or other captures ran alongside these measurements.
+
+| Panel frame ms, A1/A2 or B1/B2 | Before | Candidate |
+| --- | ---: | ---: |
+| Cold launcher | 449 / 462 | 460 / 424 |
+| Reopened launcher | 360 / 358 | 364 / 347 |
+| Cold dashboard | 362 / 363 | 363 / 363 |
+| Reopened dashboard | 367 / 362 | 363 / 362 |
+
+Launcher ranges overlap; the 455.5 → 442 ms two-run medians do not establish
+a speedup. No growing cold-launcher regression reproduces in this fold.
+All four captures have measured SwapPss zero and no paging-gate failures;
+host swap-in A1/B1/A2/B2 is 4/0/0/36 pages, swap-out zero, 4,096 bytes/page.
+Correctness remains 351 Rust, 938 repository cases (three existing skips),
+534 immutable parity cases, formatting, Clippy and schema freshness passing.
+All 13 source/protocol/reference hashes still match the tested source archive;
+only documentation changed during the memory diagnosis. No frozen output changed.
+The normal memory and cold-frame gates are now clear; publication still requires
+normal direct integration and full green CI before the next fold.
+
+Private diagnostic, settled-resource and cold-frame evidence archive SHA-256:
+`be077edff7de75e633eb757f83c0084fe5171f1eecb5c5e9fe43bb4a5f5aa44b`.
+The archive is verified on both hosts. A final command-line/environment audit
+found zero surviving private capture processes; the isolated lab is retained.

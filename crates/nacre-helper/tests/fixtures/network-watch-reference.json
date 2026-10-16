@@ -1,0 +1,8 @@
+{
+  "helper_sha256": "d9ddfd69905129c7463fabf723fa200a5393872a1da5e07685925c1d755c86a0",
+  "method": "Private D-Bus without NetworkManager; startup then one ephemeral owner acquires and releases the NetworkManager name; explicit SIGTERM after three lines",
+  "startup_stdout": "changed\n",
+  "owner_change_stdout": "changed\nchanged\n",
+  "stderr": "",
+  "termination_exit": -15
+}

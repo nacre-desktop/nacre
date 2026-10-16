@@ -233,3 +233,11 @@ lock and uses an endpoint-specific prefix, leaving other daemons' leases alone;
 unsafe stale entries fail visibly. Tests preserve linked/hard-linked targets.
 A lost response never authorizes replay; launcher mutations join the existing
 writer, and provider concurrency stays shared and bounded to two.
+
+
+Network-watch daemon fold: the existing NetworkManager signal matcher is reused;
+no scan, secrets request, network mutation or privileged method is added. The
+private topic carries monitor availability and a bounded generation only, with
+sanitized failure text. Explicit missing endpoints fail closed, and an accepted
+stream cannot fall back after daemon/service loss. Private-bus tests cover these
+boundaries, shared clients, exact frozen lines and closed-pipe exit.

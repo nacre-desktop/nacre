@@ -514,6 +514,9 @@ fn run() -> Result<i32> {
         }
     }
     if tool == "network-state" && arguments == ["watch"] {
+        if let Some(code) = nacre_helper::daemon::network::watch()? {
+            return Ok(code);
+        }
         return network_state::watch();
     }
     if tool == "dashboard-media" && arguments.first().is_some_and(|arg| arg == "spectrum") {

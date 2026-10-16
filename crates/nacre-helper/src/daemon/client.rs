@@ -173,7 +173,7 @@ async fn watch(topic: &str) -> Result<i32> {
         closed = output_closed() => { closed?; Ok(0) },
     }
 }
-async fn output_closed() -> Result<()> {
+pub(crate) async fn output_closed() -> Result<()> {
     let output = io::stdout();
     if rustix::fs::fstat(&output)?.st_mode & nix::libc::S_IFMT != nix::libc::S_IFIFO {
         std::future::pending::<()>().await;

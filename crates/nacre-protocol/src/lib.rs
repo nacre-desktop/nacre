@@ -4,6 +4,7 @@ pub mod artifacts;
 pub mod framing;
 pub mod helpers;
 pub mod menu;
+pub mod network;
 pub mod patch;
 pub mod widths;
 
