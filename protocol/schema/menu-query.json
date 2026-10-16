@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MenuQuery",
+  "type": "object",
+  "properties": {
+    "query": {
+      "description": "Passed unchanged to the shared engine, including all provider prefixes.",
+      "type": "string",
+      "maxLength": 65536,
+      "default": ""
+    },
+    "mode": {
+      "description": "Open string vocabulary: apps/search/actions initially; no client ranking.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "default": "apps"
+    },
+    "route": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 256
+    },
+    "limit": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 1,
+      "maximum": 2048
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MenuActivated",
+  "type": "object",
+  "properties": {
+    "keep_open": {
+      "type": "boolean",
+      "default": false
+    },
+    "view": {
+      "description": "A group/navigation result changes view state, never asks a UI to execute.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MenuView"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "MenuView": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "route": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

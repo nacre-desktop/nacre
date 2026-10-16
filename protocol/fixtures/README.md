@@ -20,3 +20,9 @@ For state replay, a wrong base must not mutate the last snapshot. `base` matches
 the last delivered sequence even when coalescing skips source revisions. A new
 boot retains old display data until fresh snapshots, but invalidates its chain.
 Requests are never automatically replayed after a deadline or disconnect.
+
+Launcher method-v1 goldens are separate from the seven unchanged wire
+transcripts: menu-apps (320 keyed items), menu-empty, menu-results (display/prefix
+shape examples), and menu-activation (opaque activation/navigation/errors).
+Their query strings illustrate shapes; the Nacre engine defines interpretation.
+No daemon method is advertised/implemented by generating these fixtures.

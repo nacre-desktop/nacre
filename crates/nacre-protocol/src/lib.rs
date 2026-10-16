@@ -2,6 +2,7 @@
 #![deny(unsafe_code)]
 pub mod artifacts;
 pub mod framing;
+pub mod menu;
 pub mod patch;
 
 use schemars::JsonSchema;

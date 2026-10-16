@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MenuQueryResult",
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "maxLength": 65536
+    },
+    "mode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "route": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "catalog_rev": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "items": {
+      "description": "Stable-ID keyed entities; order is separate and authoritative.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/MenuItem"
+      }
+    },
+    "order": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 2048
+    },
+    "total": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "query",
+    "mode",
+    "route",
+    "catalog_rev",
+    "items",
+    "order"
+  ],
+  "$defs": {
+    "MenuItem": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "kind": {
+          "description": "Extensible engine vocabulary; unknown kinds still have a display label.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 16384
+        },
+        "breadcrumb": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "icon": {
+          "description": "Theme name or local cache path, never image/base64 data.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "emoji": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "brand": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "checked": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "disabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "activation": {
+          "description": "Opaque engine descriptor, not a command or permission grant. Echo only.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 512
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ]
+    }
+  }
+}

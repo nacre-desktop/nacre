@@ -242,3 +242,31 @@ Watch reconnects and resubscribes; it exits when its output pipe closes.
 `NACRE_DAEMON_FRAME_MS` configures the advertised coalescing interval (default 16).
 Standalone tests set an absolute `NACRE_DAEMON_SOCKET` and private HOME/XDG/buses.
 User units are staged; enabling/starting them requires the owner's decision.
+
+
+## Launcher methods v1 — additive payload contract
+
+`nacre-protocol::menu` defines menu.query/menu.activate payloads. It registers no
+method; advertise these descriptors only when the engine actually serves them.
+The existing wire version, core registry and seven envelope transcripts do not
+change. New schemas, separate Luau definitions and four method transcripts are
+committed from the Rust types, including a populated320-app result.
+
+Queries carry raw query text plus mode/optional route/limit. Prefix interpretation,
+catalog loading, filtering, ranking, provider work and history belong to Nacre's
+engine. Results echo query/mode/route and catalog_rev; clients drop superseded
+query replies. items is a stable-ID-keyed object and order is authoritative.
+Kinds/modes are open strings; older clients ignore unknown optional fields.
+Display fields are name/kind plus optional description/breadcrumb/icon/emoji/
+brand/status/checked/reason/disabled. Icons are theme names or local paths; no image/base64 payload.
+
+An optional activation string is an opaque engine descriptor, not a command or a
+permission grant. Clients send id/activation/catalog_rev back to menu.activate;
+the engine validates current revision and capabilities, and owns all side effects.
+Never replay an ambiguous activation after disconnect/timeout. A successful result
+can keep the view open and optionally update its query/mode/route. Structured
+stale_revision/unavailable errors retain their normal wire meanings.
+
+The migration owner reviewed this additive contract; engine availability is
+advertised through the welcome method registry when implemented.
+It implements no helper/daemon/menu behavior and makes no latency acceptance claim.

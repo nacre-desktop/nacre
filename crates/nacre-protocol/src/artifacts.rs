@@ -191,5 +191,175 @@ pub fn generate() -> BTreeMap<String, String> {
         serde_json::to_string_pretty(&schema).expect("finite schema") + "\n",
     );
     out.insert("protocol/luau/nacre.d.luau".into(), luau_types);
+    out.extend(menu_exports());
+    out
+}
+
+/// Service-specific launcher transcripts; the original v1 wire goldens stay byte-exact.
+pub fn menu_transcripts() -> BTreeMap<String, String> {
+    use crate::menu::{
+        MenuActivate, MenuActivated, MenuItem, MenuQuery, MenuQueryResult, MenuView,
+    };
+    let item = |label: &str, kind: &str| MenuItem {
+        name: label.into(),
+        kind: kind.into(),
+        description: Some("Public fixture result".into()),
+        breadcrumb: Some("All apps".into()),
+        icon: Some("application-x-executable".into()),
+        emoji: None,
+        brand: None,
+        status: None,
+        checked: None,
+        reason: None,
+        disabled: false,
+        activation: Some(format!("fixture-{kind}")),
+    };
+    let items = (0..320)
+        .map(|i| {
+            let id = format!("app-{i:04}");
+            (id, item(&format!("Application {i:04}"), "app"))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let result = MenuQueryResult {
+        query: "".into(),
+        mode: "apps".into(),
+        route: "home".into(),
+        catalog_rev: 1,
+        order: items.keys().cloned().collect(),
+        items,
+        total: Some(320),
+    };
+    let query = MenuQuery {
+        query: "".into(),
+        mode: "apps".into(),
+        route: Some("home".into()),
+        limit: Some(320),
+    };
+    let mut cases = vec![(
+        "menu-apps",
+        vec![
+            json!({"t":"call","id":1,"m":"menu.query","p":query,"timeout":1000}),
+            json!({"t":"ret","id":1,"ok":result}),
+        ],
+    )];
+    let empty = MenuQueryResult {
+        query: "No fixture result".into(),
+        mode: "search".into(),
+        route: "home".into(),
+        catalog_rev: 1,
+        items: BTreeMap::new(),
+        order: vec![],
+        total: Some(0),
+    };
+    cases.push((
+        "menu-empty",
+        vec![
+            json!({"t":"call","id":2,"m":"menu.query","p":{"query":empty.query,"mode":"search"}}),
+            json!({"t":"ret","id":2,"ok":empty}),
+        ],
+    ));
+    let mut steps = vec![];
+    // Query interpretation remains the engine's job; these are shape examples.
+    for (i, (query, kind, label)) in [
+        ("a", "app", "Application 0000"),
+        ("> fixture", "action", "Fixture action"),
+        ("=1+1", "calculation", "2"),
+        ("emoji fixture", "emoji", "Smiling face"),
+        ("clipboard fixture", "clipboard", "Public clip"),
+        (": fixture", "file", "Fixture document"),
+        ("# fixture", "brain", "Fixture note"),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let id = format!("result-{i}");
+        let mut entry = item(label, kind);
+        if kind == "emoji" {
+            entry.emoji = Some("☺".into());
+        }
+        let result = MenuQueryResult {
+            query: query.into(),
+            mode: "search".into(),
+            route: "home".into(),
+            catalog_rev: 1,
+            items: BTreeMap::from([(id.clone(), entry)]),
+            order: vec![id],
+            total: Some(1),
+        };
+        steps.push(
+            json!({"t":"call","id":10+i,"m":"menu.query","p":{"query":query,"mode":"search"}}),
+        );
+        steps.push(json!({"t":"ret","id":10+i,"ok":result}));
+    }
+    cases.push(("menu-results", steps));
+    let activate = MenuActivate {
+        id: "app-0000".into(),
+        activation: "fixture-app".into(),
+        catalog_rev: 1,
+    };
+    let navigation = MenuActivated {
+        keep_open: true,
+        view: Some(MenuView {
+            query: Some(String::new()),
+            mode: Some("apps".into()),
+            route: Some("group.fixture".into()),
+        }),
+    };
+    cases.push(("menu-activation",vec![json!({"t":"call","id":30,"m":"menu.activate","p":activate,"timeout":3000}),json!({"t":"ret","id":30,"ok":MenuActivated::default()}),json!({"t":"call","id":31,"m":"menu.activate","p":{"id":"group.fixture","activation":"fixture-group","catalog_rev":1}}),json!({"t":"ret","id":31,"ok":navigation}),json!({"t":"call","id":32,"m":"menu.activate","p":{"id":"app-0000","activation":"fixture-app","catalog_rev":0}}),json!({"t":"ret","id":32,"err":{"code":"stale_revision","message":"Catalog changed; query again","retry":true}}),json!({"t":"call","id":33,"m":"menu.query","p":{"query":"fixture unavailable","mode":"search"}}),json!({"t":"ret","id":33,"err":{"code":"unavailable","message":"Launcher service unavailable","retry":true}})]));
+    cases
+        .into_iter()
+        .map(|(name, steps)| {
+            let text = steps
+                .into_iter()
+                .map(|step| {
+                    let bytes = serde_json::to_vec(&step).expect("finite menu golden");
+                    crate::framing::decode(&bytes).expect("bounded menu golden");
+                    String::from_utf8(bytes).expect("JSON UTF8") + "\n"
+                })
+                .collect();
+            (format!("protocol/fixtures/{name}.jsonl"), text)
+        })
+        .collect()
+}
+
+fn menu_exports() -> BTreeMap<String, String> {
+    use crate::menu::{MenuActivate, MenuActivated, MenuQuery, MenuQueryResult};
+    let schemas = [
+        ("MenuQuery", schemars::schema_for!(MenuQuery)),
+        ("MenuQueryResult", schemars::schema_for!(MenuQueryResult)),
+        ("MenuActivate", schemars::schema_for!(MenuActivate)),
+        ("MenuActivated", schemars::schema_for!(MenuActivated)),
+    ];
+    let mut out = menu_transcripts();
+    let mut definitions = BTreeMap::new();
+    let mut roots = vec![];
+    for (name, schema) in schemas {
+        let schema = serde_json::to_value(schema).expect("finite menu schema");
+        if let Some(defs) = schema.get("$defs").and_then(Value::as_object) {
+            for (key, value) in defs {
+                definitions.insert(key.clone(), value.clone());
+            }
+        }
+        let filename = match name {
+            "MenuQuery" => "menu-query",
+            "MenuQueryResult" => "menu-query-result",
+            "MenuActivate" => "menu-activate",
+            _ => "menu-activated",
+        };
+        out.insert(
+            format!("protocol/schema/{filename}.json"),
+            serde_json::to_string_pretty(&schema).expect("finite menu schema") + "\n",
+        );
+        roots.push((name, schema));
+    }
+    let mut types = String::from("-- Generated by nacre-protocol; do not edit. GPL-3.0-only.\n");
+    for (name, schema) in definitions {
+        types.push_str(&format!("export type {name} = {}\n", luau(&schema)));
+    }
+    for (name, schema) in roots {
+        types.push_str(&format!("export type {name} = {}\n", luau(&schema)));
+    }
+    types.push_str("return {}\n");
+    out.insert("protocol/luau/menu.d.luau".into(), types);
     out
 }
