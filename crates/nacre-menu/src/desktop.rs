@@ -101,7 +101,7 @@ pub fn command(text: &str) -> Vec<String> {
 }
 #[derive(Clone)]
 pub struct Entry {
-    pub data: Value,
+    pub data: std::sync::Arc<Value>,
     pub hidden: bool,
     pub path: PathBuf,
     /// Malformed non-comment lines, reported without discarding valid fields.
@@ -168,7 +168,9 @@ pub fn parse(id: &str, text: &str, message_locale: &str) -> Entry {
             .collect::<Vec<_>>()
     };
     Entry {
-        data: json!({"id":id,"name":get("Name"),"genericName":get("GenericName"),"comment":get("Comment"),"icon":get("Icon"),"categories":list("Categories"),"keywords":list("Keywords"),"command":command(&get("Exec")),"workingDirectory":get("Path"),"runInTerminal":get("Terminal")=="true","noDisplay":get("NoDisplay")=="true"}),
+        data: std::sync::Arc::new(
+            json!({"id":id,"name":get("Name"),"genericName":get("GenericName"),"comment":get("Comment"),"icon":get("Icon"),"categories":list("Categories"),"keywords":list("Keywords"),"command":command(&get("Exec")),"workingDirectory":get("Path"),"runInTerminal":get("Terminal")=="true","noDisplay":get("NoDisplay")=="true"}),
+        ),
         hidden: get("Hidden") == "true",
         path: PathBuf::new(),
         invalid_lines,
@@ -182,7 +184,10 @@ pub fn install(entries: &mut BTreeMap<String, Entry>, entry: Entry) {
         entries.insert(id, entry);
     }
 }
-pub fn applications(entries: &BTreeMap<String, Entry>, ordering: &OrderingRules) -> Vec<Value> {
+pub fn applications(
+    entries: &BTreeMap<String, Entry>,
+    ordering: &OrderingRules,
+) -> Vec<std::sync::Arc<Value>> {
     let mut rows: Vec<_> = entries
         .values()
         .filter(|e| e.data["noDisplay"] != true)

@@ -1978,3 +1978,131 @@ tests, 991 unchanged reference cases, schema freshness, 929 repository tests
 new gated-provider starvation test; the new helper passes. Existing golden
 outputs remain unchanged. Private follow-up evidence archive SHA-256:
 `4c653b505a18f2b27879dd64394919d184dc54889e0e2ed00415845dbc6d1881`.
+
+### Launcher CPU and indexed-memory audit (desktop-PC nested, 2026-10-16)
+
+The coalesced-refresh baseline is `9374bc8d`, helper SHA-256
+`f7edacd2015ea984261379069e0af2805bf647278ef6035d18a1e80b349fa054`.
+This audit uses the 320/2,000-app Alpha/Application fixture and broad `a`/`ap`
+queries, rather than the earlier nine-query average. It does not establish the
+Bead client's input-to-presentation CPU budget on another host.
+
+A private diagnostic build attributes the 320-app query as follows. Outer engine
+phases use the thread CPU clock; synchronous inner phases use elapsed time with
+no awaits. These are approximate phase means, including warm-up, not independent
+costs to add together. In particular, provider construction is inside ranking.
+
+| Phase | Mean ms/query |
+| --- | ---: |
+| Complete engine query | 1.227 |
+| Ranking including dynamic providers | 1.005 |
+| Dynamic emoji row construction, inside ranking | 0.621 |
+| Scoring and selected-row cloning, inside ranking | 0.179 |
+| Activation ticket creation | 0.153 |
+| Result validation and JSON-value conversion | 0.066 |
+| Three transport frame encodes, outside engine | 0.045 |
+
+Files, Brain and workflow row construction each took under 0.001 ms/query in
+this fixture. No filesystem-watch events or query-time index rebuilds occurred;
+only initial catalog/compositor/provider preparation was observed. This does not
+rule out UI-triggered work in a wider input-to-presentation capture. Repeated
+encoding is a small cost here; constructing the same 100 emoji rows is larger.
+
+Settled diagnostic PSS was 32.42/58.27 MiB at 320/2,000 apps: anonymous mappings
+17.23/42.92 MiB, helper mappings (code and data, including Unicode tables)
+14.09/14.25 MiB, other libraries about 1.1 MiB. Fontconfig/FreeType mapped PSS was
+about 0.16 MiB; this query path keeps icon names, not decoded icons. Unicode's
+share cannot be uniquely separated from other helper file pages by `smaps`.
+
+An isolated collator probe touched another 312 KiB of PSS while constructing the
+collator and comparing ASCII, accented, Turkish, Han and emoji strings. This is a
+small table-touching sample, not the full Unicode table size or a daemon PSS
+partition. Constructing the full CLDR search index added about 7.53 MiB of live
+allocator bytes in that probe; the daemon keeps that index in the retiring worker.
+
+A controlled teardown measures live allocation-release deltas separately:
+
+| Released allocation group | 320 apps (MiB) | 2,000 apps (MiB) |
+| --- | ---: | ---: |
+| Encoded activation tickets | 0.23 | 1.47 |
+| Prepared candidate index | 5.64 | 13.57 |
+| All-app and visible-app lists | 1.45 | 9.03 |
+| Parsed desktop entries | 0.85 | 5.31 |
+| Provider metadata snapshot | 0.69 | 0.70 |
+| Remaining context, including catalogs/translations | 3.10 | 3.31 |
+
+These allocator deltas are not a PSS partition. Allocation counters describe
+objects; PSS also reflects resident pages and file sharing. Existing idle trimming
+returned about 3.3/13.6 MiB of resident memory in these diagnostic processes;
+unused arena bytes were not all resident. See the [glibc allocation statistics](https://sourceware.org/glibc/manual/latest/html_node/Statistics-of-Malloc.html)
+and [kernel PSS documentation](https://docs.kernel.org/filesystems/proc.html).
+
+The fix shares immutable application records across parsed/all/visible lists,
+including no-op rescans. It reuses at most 256 prepared emoji rows during typing
+and releases that cache on the existing provider-retirement event before trimming.
+The full CLDR index stays in the idle-exiting worker. Frozen output files remain
+unchanged; the cache also checks changed row contents, not just emoji identity.
+
+The uninstrumented comparison runs A/B/A/B on nested niri, two runs per build and
+catalog size. Each uses 100 warm-ups and 2,000 completed sequential `a`/`ap`
+queries, then 35 seconds to retire workers and 60 seconds idle. Everything is
+built first. CPU uses the same `/proc` user+system tick accounting (0.005 ms/query
+quantum per process); round trips include client JSON decoding. The new helper is
+`c803fe026a935049c1f19eda85c828d7ae3d081b24b9176a94ea6a790e39cd18`.
+
+| Metric, median of two runs | 320 before | 320 after | 2,000 before | 2,000 after |
+| --- | ---: | ---: | ---: | ---: |
+| Daemon CPU ms/query | 1.543 | 0.743 | 1.733 | 0.938 |
+| Provider CPU ms/query | 0.343 | 0.285 | 0.348 | 0.298 |
+| Combined CPU ms/query | 1.885 | 1.028 | 2.080 | 1.235 |
+| Round-trip p50 ms | 1.983 | 1.107 | 2.183 | 1.300 |
+| Round-trip p99 ms | 2.287 | 1.287 | 2.724 | 1.641 |
+| Settled daemon RSS MiB | 37.14 | 35.76 | 61.97 | 52.48 |
+| Settled daemon PSS MiB | 33.52 | 32.17 | 58.34 | 48.85 |
+
+Combined CPU run ranges are 1.880–1.890 → 1.020–1.035 ms at 320 apps and
+2.065–2.095 → 1.225–1.245 ms at 2,000. PSS ranges are
+32.59–34.45 → 31.26–33.08 MiB and 58.24–58.44 → 48.81–48.89 MiB.
+The first 320-app pair rose 0.49 MiB; the unchanged baseline then varied
+1.86 MiB, and the second pair fell. Its overlapping ranges do not establish a
+repeatable regression or a precise small memory improvement. The 2,000-app
+reduction is outside that spread. Idle is one helper process/thread with zero
+observed CPU ticks or voluntary switches in every 60-second sample, not a claim
+of zero CPU at finer resolution or a three-hour soak. The provider exits when idle.
+
+All measured SwapPss and host swap-out counts are zero. Host swap-in pages are
+listed as query/idle, in execution order; each page is 4,096 bytes:
+
+| Run | 320 apps | 2,000 apps |
+| --- | ---: | ---: |
+| A1 baseline | 1 / 7 | 0 / 4 |
+| B1 candidate | 0 / 16 | 0 / 6 |
+| A2 baseline | 0 / 36 | 0 / 7 |
+| B2 candidate | 0 / 16 | 0 / 5 |
+
+Every interval meets the owner's measured-process SwapPss-zero and host-in-under-
+1-MiB rule. These are desktop-PC nested component measurements, not laptop or
+physical UI numbers. They meet the under-2-ms warm query CPU target on this host;
+Bead's wider input-to-presentation clock, another host, and the first query after
+a worker has exited still need separate evidence. No per-key catalog/metadata
+publication was found in this diagnostic. No UI, compositor connection or
+permission policy changed for this fix.
+
+A separate high-resolution process-clock probe confirms both broad prefixes
+return 101 rows with the same fixture. Across 200 warm calls it measures daemon
+1.539 → 0.735 ms plus provider 0.342 → 0.294 ms. After 35 seconds idle, with no
+worker left, one first query per build takes 18.30 → 18.33 ms round trip:
+daemon 3.04 → 3.14 ms, new worker lifetime CPU 14.98 → 14.93 ms. Host swap-in and
+measured SwapPss are zero. This is a single cold-start diagnostic, not a latency
+distribution. Worker startup/CLDR initialization remains outside the under-2-ms
+warm target; the cache fix does not remove it. Keeping the full index resident
+would change the memory tradeoff, so this audit preserves the 30-second worker
+policy. No physical panel or presentation timestamp is measured by these probes.
+
+Final validation: fmt/clippy, 335 Rust tests, 991 unchanged launcher reference
+cases, schema freshness, 929 repository tests (three existing skips) and 534
+helper parity cases pass. The initial full run had one curses PNG-redraw test
+failure; five focused baseline runs, five candidate runs and the unchanged full
+repeat passed. No test deadline, expected output or production curses code changed.
+Private audit evidence archive SHA-256:
+`7de916c7d183219d5736e6a047e2ad77f7bc99c0c98df43c497bdd976ec94feb`.

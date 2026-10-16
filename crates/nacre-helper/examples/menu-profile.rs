@@ -17,7 +17,7 @@ fn main() -> Result<()> {
     c.snapshot = menu::snapshot(true)?;
     c.library = software_library::execute(&["load".into()], None)?;
     c.workflows = launcher_workflows::execute(&["load".into()], None)?;
-    c.all_apps=(0..320).map(|i|json!({"id":format!("fixture-{i:04}"),"name":format!("Application {i:04}"),"genericName":"Fixture tool","comment":"Synthetic application catalog","command":["fixture-command",i.to_string()],"icon":"fixture","categories":["Utility"],"keywords":["fixture","app"],"noDisplay":false,"runInTerminal":false,"workingDirectory":""})).collect();
+    c.all_apps=(0..320).map(|i|std::sync::Arc::new(json!({"id":format!("fixture-{i:04}"),"name":format!("Application {i:04}"),"genericName":"Fixture tool","comment":"Synthetic application catalog","command":["fixture-command",i.to_string()],"icon":"fixture","categories":["Utility"],"keywords":["fixture","app"],"noDisplay":false,"runInTerminal":false,"workingDirectory":""}))).collect();
     c.visible_apps = c.all_apps.clone();
     let global = c.global_rows("app")?;
     let mut output = serde_json::Map::new();

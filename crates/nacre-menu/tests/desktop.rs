@@ -35,14 +35,22 @@ fn frozen_current_quickshell_catalog_metadata_and_commands_match() -> Result<()>
                 );
             }
         }
+        let applications = desktop::applications(&entries, &ordering);
+        for app in &applications {
+            let entry = &entries[app["id"].as_str().unwrap()];
+            assert!(std::sync::Arc::ptr_eq(app, &entry.data));
+        }
         assert_eq!(
-            serde_json::json!(desktop::applications(&entries, &ordering)),
+            serde_json::json!(applications),
             case["result"]["applications"],
             "locale{locale}"
         );
         for (id, expected) in case["result"]["lookups"].as_object().unwrap() {
             assert_eq!(
-                entries.get(id).map(|e| &e.data).unwrap_or(&Value::Null),
+                entries
+                    .get(id)
+                    .map(|e| e.data.as_ref())
+                    .unwrap_or(&Value::Null),
                 expected,
                 "lookup{id} locale{locale}"
             );

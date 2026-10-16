@@ -287,6 +287,12 @@ roots and directory replacement. No-op scans preserve the revision. Invalid hand
 edits keep the last good index; writes to corrupt preferences fail visibly.
 Registry locks do not trigger index refreshes.
 
+Application records are shared immutably between the parsed catalog and its
+visible/all-app lists. Prepared emoji rows reuse a bounded 256-entry cache while
+typing; the existing idle-worker retirement event releases that cache before
+allocator trimming. The full CLDR search index remains in the worker and exits
+with it. These caches do not change result ordering, payloads or revisions.
+
 No-op scans queue no metadata work. Metadata refreshes coalesce to one in flight
 plus one pending latest refresh, sharing the existing two-worker cap and ten-second
 deadline. `menu.providers_rev` starts at zero and advances after a completed

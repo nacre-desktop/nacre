@@ -9,7 +9,7 @@ Keep public commands, QML appearance, user data, privilege and session policy.
 | 1 Frequent helpers | Complete; CI green | 13 ports; busy service RSS 26.95 → 10.21 MiB; absolute XDG roots follow QML. |
 | 2 Compositor / pearls | Complete; CI green | Preview CPU 52.58 → 1.26 ms; RSS 21.54 → 7.30 MiB; native IPC/session runtime. |
 | 3 Wallpaper / colors | ports complete; desktop A/B/A/B captured, regression review open | Shell frame192.5→94ms Hypr/195.5→102ms niri; GTK endpoint missing; niri cold launcher+40/42ms repeats after control; Oct16 exact33a/84ce:439→460ms median, ranges423–454/440–472; noise by owner spread rule; historical gap tracked. |
-| 4 Remaining shell tools | redirected: foundation F1–F4 first | Events/session published, CI green. Launcher local: 991 frozen/332 Rust pass; niri CPU0.820–1.020ms +worker0.235–0.250ms; PSS34.86/63.32MiB (320/2000 apps). 929 repo (3 skips)/534 helper parity pass; b44d1afb published; CI38874838563 green. Refresh fix: old-helper failure reproduced; 333 Rust/991 references/929 repo/534 parity pass; niri/Hypr rechecks valid; publication/CI next. |
+| 4 Remaining shell tools | redirected: foundation F1–F4 first | Events/session/launcher published;9374 CI38883651768 green. CPU/memory audit local:320 combinedCPU1.885→1.028ms;2000 PSS58.34→48.85MiB;320 memory spread overlaps. 335 Rust/991 refs/929 repo(3 skips)/534 parity pass; audit publishing/CI next; no new F2 fold yet. |
 | 5 AI | Pending | Claude stream-json; existing permissions/history; sidebar-chat, composer and AI controller belong here. |
 | 6 Brain | Pending | Same bge-small model; cosine ≥ 0.9999 or backed-up automatic reindex. |
 | 7 Installer / proof | Pending | install*.py/login-install.py deferred here; packaging owned separately. |
@@ -76,5 +76,5 @@ Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hosts
 UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-Next: finish/publish refresh coalescing fix and CI; F2 widths/serve/network/wallpaper → F3 (memory/i18n/cold-open) → F4.
+Next: audit CI, then F2 widths/serve/network/wallpaper → F3 (i18n/cold-open) → F4.
 No live desktop/config/network changes, tags, releases or package publication.

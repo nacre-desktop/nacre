@@ -46,7 +46,13 @@ fn context(reference: &Value, name: &str) -> Result<Context> {
         c.source_options = options.clone();
     }
     if name != "empty" {
-        c.all_apps = reference["rawApps"].as_array().unwrap().clone();
+        c.all_apps = reference["rawApps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .cloned()
+            .map(std::sync::Arc::new)
+            .collect();
         c.visible_apps = c.all_apps[..2].to_vec();
     } else {
         c.emoji_entries.clear();
@@ -200,7 +206,7 @@ fn cached_generations_update_desktop_inputs_and_keep_query_data_and_history_live
     let r = reference()?;
     let mut c = context(&r, "populated")?;
     c.indexed_content("apps", "application", "all", "all")?;
-    c.visible_apps[0]["name"] = json!("Unique changed application");
+    std::sync::Arc::make_mut(&mut c.visible_apps[0])["name"] = json!("Unique changed application");
     c.inputs_changed();
     let after = c.indexed_content("apps", "unique changed", "all", "all")?;
     assert!(after

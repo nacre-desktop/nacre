@@ -488,8 +488,17 @@ struct Engine {
     secret: String,
 }
 impl Engine {
-    fn replace(&mut self, loaded: Loaded) -> Result<()> {
+    fn replace(&mut self, mut loaded: Loaded) -> Result<()> {
         if self.loaded.fingerprint == loaded.fingerprint {
+            // Keep app records shared with the prepared generation after a no-op
+            // rescan; paths and diagnostics may still need refreshing.
+            for (id, entry) in &mut loaded.entries {
+                if let Some(previous) = self.loaded.entries.get(id) {
+                    if entry.data == previous.data {
+                        entry.data = previous.data.clone();
+                    }
+                }
+            }
             self.loaded.entries = loaded.entries;
             self.loaded.directories = loaded.directories;
             self.loaded.warnings = loaded.warnings;
@@ -794,6 +803,7 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
         tokio::select! {
             result=pool.reap_idle()=>{
                 result?;
+                engine.loaded.context.retire_provider_cache();
                 // Query responses and retired-worker buffers are already dropped.
                 // Return unused allocator pages once, on the existing idle event.
                 #[cfg(target_env = "gnu")]
@@ -1155,9 +1165,9 @@ mod tests {
             "en-US",
             1720000000.0,
         )?;
-        context.all_apps = vec![
+        context.all_apps = vec![std::sync::Arc::new(
             json!({"id":"fixture","name":"Fixture app","comment":"Synthetic","genericName":"","icon":"fixture","categories":[],"keywords":[],"command":["fixture","$HOME;$(touch forbidden)"],"runInTerminal":false,"workingDirectory":""}),
-        ];
+        )];
         context.visible_apps = context.all_apps.clone();
         context.preferences = json!({"favorites":[],"hidden":[],"recent":[],"usage":{}});
         Ok(Engine {
@@ -1176,6 +1186,26 @@ mod tests {
             bytes: 0,
             secret: "fixture-secret".into(),
         })
+    }
+    #[test]
+    fn no_op_rescans_preserve_shared_app_records() -> Result<()> {
+        let mut state = engine()?;
+        let record = state.loaded.entries["fixture"].data.clone();
+        state.loaded.context.all_apps = vec![record.clone()];
+        state.loaded.context.visible_apps = vec![record.clone()];
+        let mut reloaded = engine()?.loaded;
+        reloaded.entries.get_mut("fixture").unwrap().path = "refreshed.desktop".into();
+        state.replace(reloaded)?;
+        assert!(std::sync::Arc::ptr_eq(
+            &record,
+            &state.loaded.entries["fixture"].data
+        ));
+        assert_eq!(
+            state.loaded.entries["fixture"].path,
+            PathBuf::from("refreshed.desktop")
+        );
+        assert_eq!(state.rev, 7);
+        Ok(())
     }
     #[test]
     fn activation_requires_issued_ticket_matching_id_revision_and_availability() -> Result<()> {
@@ -1263,7 +1293,8 @@ mod tests {
             .query(serde_json::from_value(json!({"limit":0}))?)
             .is_err());
         engine.loaded.context.inputs_changed();
-        engine.loaded.context.visible_apps[0]["icon"] = json!("https://invalid.example/icon.png");
+        std::sync::Arc::make_mut(&mut engine.loaded.context.visible_apps[0])["icon"] =
+            json!("https://invalid.example/icon.png");
         let result = engine.query(serde_json::from_value(
             json!({"query":"","mode":"apps","route":"apps"}),
         )?)?;
@@ -1272,8 +1303,9 @@ mod tests {
             "Remote icons must never reach an image renderer"
         );
         engine.loaded.context.inputs_changed();
-        engine.loaded.context.visible_apps[0]["id"] = json!("apps");
-        engine.loaded.context.visible_apps[0]["name"] = json!("All apps");
+        std::sync::Arc::make_mut(&mut engine.loaded.context.visible_apps[0])["id"] = json!("apps");
+        std::sync::Arc::make_mut(&mut engine.loaded.context.visible_apps[0])["name"] =
+            json!("All apps");
         let result = engine.query(serde_json::from_value(
             json!({"query":"apps","mode":"search"}),
         )?)?;

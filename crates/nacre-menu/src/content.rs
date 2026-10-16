@@ -244,7 +244,7 @@ impl Context {
         rows.extend(self.capture_rows());
         Ok(rows)
     }
-    pub(crate) fn global_dynamic(&self, query: &str) -> Result<Vec<Value>> {
+    pub(crate) fn global_dynamic_without_emoji(&self, query: &str) -> Vec<Value> {
         let mut rows = Vec::new();
         if yes(&self.source_options["files"]) {
             rows.extend(self.file_results(query));
@@ -253,6 +253,10 @@ impl Context {
             rows.extend(self.brain_rows(query));
         }
         rows.extend(self.workflow_rows(query));
+        rows
+    }
+    pub(crate) fn global_dynamic(&self, query: &str) -> Result<Vec<Value>> {
+        let mut rows = self.global_dynamic_without_emoji(query);
         rows.extend(self.provider("actions.emoji", query)?);
         Ok(rows)
     }

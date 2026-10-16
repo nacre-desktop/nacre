@@ -55,8 +55,8 @@ pub struct Context {
     pub source_options: Value,
     pub translations: Value,
     pub constants: Value,
-    pub all_apps: Vec<Value>,
-    pub visible_apps: Vec<Value>,
+    pub all_apps: Vec<std::sync::Arc<Value>>,
+    pub visible_apps: Vec<std::sync::Arc<Value>>,
     pub emoji_entries: Vec<Value>,
     pub notes: Vec<Value>,
     pub brain_query: String,
@@ -134,7 +134,10 @@ impl Context {
         array(&self.catalog["rows"])
     }
     pub fn apps(&self) -> Vec<Value> {
-        self.visible_apps.iter().map(model::application).collect()
+        self.visible_apps
+            .iter()
+            .map(|app| model::application(app))
+            .collect()
     }
     // Keep the frozen row constructor's named fields visible at each provider.
     #[allow(clippy::too_many_arguments)]
