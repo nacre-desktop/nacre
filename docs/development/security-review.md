@@ -214,3 +214,12 @@ new lock/power policy. Session evidence uses a private directory and files befor
 writing, repairs existing private modes, and rejects linked, foreign-owned and
 hard-linked destinations. Explicit tests leave linked targets unchanged; real
 private D-Bus/socket tests cover resume/hotplug and subscription cleanup.
+The daemon reuses those evidence-file guards and display policy. Its async
+login1 connection observes signals without acquiring a privileged operation.
+Method validation rejects unknown parameters and arbitrary destination paths;
+UI-provider failures after dispatch cannot trigger a legacy replay. Internal
+notices are bounded to 256 small events, with explicit resync for larger/lost
+events. Neither the compatibility service nor this fold-in enables daemon units.
+Oversized window/snapshot resync notices cannot trigger display restoration;
+only fixed-size output notices or ring overflow reconcile displays. A real
+private-stream case preserves the evidence file through a 4-KiB title update.

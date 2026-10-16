@@ -25,12 +25,22 @@ impl Drop for Process {
         let _ = self.0.wait();
     }
 }
+struct Wallet;
+#[zbus::interface(name = "org.freedesktop.Secret.Collection")]
+impl Wallet {
+    #[zbus(property)]
+    fn locked(&self) -> bool {
+        false
+    }
+}
 struct Source {
     path: PathBuf,
     stop: Arc<AtomicBool>,
     sockets: Arc<Mutex<Vec<UnixStream>>>,
     accept: Option<thread::JoinHandle<()>>,
     workers: Arc<Mutex<Vec<thread::JoinHandle<()>>>>,
+    event_sockets: Arc<Mutex<Vec<UnixStream>>>,
+    outputs: Arc<Mutex<Value>>,
 }
 fn headers() -> Vec<Value> {
     vec![
@@ -45,6 +55,12 @@ impl Source {
         let stop = Arc::new(AtomicBool::new(false));
         let sockets = Arc::new(Mutex::new(Vec::<UnixStream>::new()));
         let workers = Arc::new(Mutex::new(Vec::new()));
+        let event_sockets = Arc::new(Mutex::new(Vec::<UnixStream>::new()));
+        let outputs = Arc::new(Mutex::new(
+            json!({"fixture":{"name":"fixture","modes":[{"width":1280,"height":720,"refresh_rate":60000}],"current_mode":0,"logical":{"x":0,"y":0,"width":1280,"height":720,"scale":1,"transform":"Normal"}}}),
+        ));
+        let fixture_outputs = outputs.clone();
+        let event_streams = event_sockets.clone();
         let (done, streams, children) = (stop.clone(), sockets.clone(), workers.clone());
         let accept = thread::spawn(move || {
             while let Ok((stream, _)) = listener.accept() {
@@ -52,6 +68,8 @@ impl Source {
                     break;
                 }
                 streams.lock().unwrap().push(stream.try_clone().unwrap());
+                let fixture_outputs = fixture_outputs.clone();
+                let event_streams = event_streams.clone();
                 children.lock().unwrap().push(thread::spawn(move|| {
                     let mut reader=BufReader::new(stream);let mut line=String::new();
                     while reader.read_line(&mut line).is_ok_and(|n|n>0) {
@@ -59,10 +77,14 @@ impl Source {
                         if request=="EventStream" || request=="NacreOverviewHoverStream" {
                             writeln!(reader.get_mut(),"{}",json!({"Ok":"Handled"})).unwrap();
                             for event in headers() {writeln!(reader.get_mut(),"{event}").unwrap();}
+                            event_streams.lock().unwrap().push(reader.get_ref().try_clone().unwrap());
                             let mut byte=[0];let _=reader.read(&mut byte);break;
                         }
-                        let outputs=json!({"fixture":{"name":"fixture","modes":[{"width":1280,"height":720,"refresh_rate":60000}],"current_mode":0,"logical":{"x":0,"y":0,"width":1280,"height":720,"scale":1,"transform":"Normal"}}});
-                        let response=if request=="Outputs"{json!({"Ok":{"Outputs":outputs}})}else{json!({"Err":"Unsupported fixture request"})};
+                        let outputs=fixture_outputs.lock().unwrap().clone();
+                        let response=if request=="Outputs"{json!({"Ok":{"Outputs":outputs}})}
+                            else if request=="Workspaces"{json!({"Ok":{"Workspaces":headers()[0]["WorkspacesChanged"]["workspaces"]}})}
+                            else if request=="Windows"{json!({"Ok":{"Windows":headers()[1]["WindowsChanged"]["windows"]}})}
+                            else{json!({"Err":"Unsupported fixture request"})};
                         if writeln!(reader.get_mut(),"{response}").is_err(){break;}
                     }
                 }));
@@ -74,6 +96,8 @@ impl Source {
             sockets,
             accept: Some(accept),
             workers,
+            event_sockets,
+            outputs,
         })
     }
 }
@@ -255,6 +279,217 @@ fn actual_daemon_ready_native_client_restart_safe_mode_and_cleanup() -> Result<(
     drop(watcher);
     Ok(())
 }
+#[test]
+fn session_policy_uses_private_bus_shared_transport_and_existing_cli_records() -> Result<()> {
+    let home = tempfile::Builder::new().prefix("ds-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let source = Source::new(source_path.clone())?;
+    let config = home.path().join("bus.xml");
+    fs::write(&config,format!("<busconfig><type>session</type><listen>unix:path={}</listen><auth>EXTERNAL</auth><policy context=\"default\"><allow own=\"*\"/><allow send_destination=\"*\"/><allow receive_sender=\"*\"/></policy></busconfig>",home.path().join("bus").display()))?;
+    let mut bus = Process(
+        Command::new("/usr/bin/dbus-daemon")
+            .args(["--nofork", "--print-address", "--config-file"])
+            .arg(&config)
+            .env_clear()
+            .env("HOME", home.path())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    let mut address = String::new();
+    BufReader::new(bus.0.stdout.take().ok_or("Missing private bus")?).read_line(&mut address)?;
+    let server = zbus::blocking::connection::Builder::address(address.trim())?
+        .name("org.freedesktop.login1")?
+        .name("org.freedesktop.secrets")?
+        .serve_at("/org/freedesktop/secrets/aliases/default", Wallet)?
+        .build()?;
+    let qs = home.path().join(".local/share/nacre/shell/bin/qs");
+    fs::create_dir_all(qs.parent().ok_or("Missing private bin")?)?;
+    let marker = home.path().join("legacy-ui-ran");
+    fs::write(
+        &qs,
+        format!(
+            "#!/bin/sh\n: > '{}'\nprintf '%s\\n' '{{\"launcherMode\":\"apps\"}}'\n",
+            marker.display()
+        ),
+    )?;
+    fs::set_permissions(&qs, fs::Permissions::from_mode(0o700))?;
+    let endpoint = home.path().join("daemon.sock");
+    let notify = UnixDatagram::bind(home.path().join("notify"))?;
+    notify.set_read_timeout(Some(Duration::from_secs(10)))?;
+    let mut launch = command(home.path(), &source_path, &endpoint);
+    launch
+        .arg("daemon")
+        .env("NOTIFY_SOCKET", home.path().join("notify"))
+        .env("DBUS_SESSION_BUS_ADDRESS", address.trim())
+        .env("DBUS_SYSTEM_BUS_ADDRESS", address.trim())
+        .stdout(Stdio::null())
+        .stderr(fs::File::create(home.path().join("daemon.log"))?);
+    let daemon = Process(launch.spawn()?);
+    let mut bytes = [0; 256];
+    notify.recv(&mut bytes)?;
+    let stream = UnixStream::connect(&endpoint)?;
+    stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+    let control = stream.try_clone()?;
+    let mut provider = BufReader::new(stream);
+    writeln!(
+        provider.get_mut(),
+        "{}",
+        json!({"t":"hello","proto":1,"min":1,"client":"session-policy-test"})
+    )?;
+    let mut line = String::new();
+    provider.read_line(&mut line)?;
+    assert_eq!(serde_json::from_str::<Value>(&line)?["t"], "welcome");
+    writeln!(
+        provider.get_mut(),
+        "{}",
+        json!({"t":"register","provider":"ui","methods":{"ui.dispatch":1}})
+    )?;
+    let state_provider = thread::spawn(move || -> Result<()> {
+        loop {
+            let mut line = String::new();
+            match provider.read_line(&mut line) {
+                Ok(0) => return Ok(()),
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                    ) =>
+                {
+                    continue
+                }
+                Err(_) => return Ok(()),
+                Ok(_) => {}
+            }
+            let message: Value = serde_json::from_str(&line)?;
+            if message["t"] == "call" {
+                assert_eq!(message["m"], "ui.dispatch");
+                assert_eq!(message["p"]["target"], "nacre");
+                assert_eq!(message["p"]["method"], "state");
+                writeln!(
+                    provider.get_mut(),
+                    "{}",
+                    json!({"t":"ret","id":message["id"],"ok":{"launcherMode":"apps"}})
+                )?;
+            }
+        }
+    });
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        if status(home.path(), &source_path, &endpoint)?["services"]["session-watch"]["status"]
+            == "running"
+        {
+            break;
+        }
+        if Instant::now() > deadline {
+            return Err("Session service did not start".into());
+        }
+        thread::sleep(Duration::from_millis(20));
+    }
+    if marker.exists() {
+        fs::remove_file(&marker)?;
+    }
+    let mut request = command(home.path(), &source_path, &endpoint);
+    request
+        .env("DBUS_SESSION_BUS_ADDRESS", address.trim())
+        .env("DBUS_SYSTEM_BUS_ADDRESS", address.trim());
+    let result = request
+        .args(["session-watch", "check", "--event", "compatibility"])
+        .output()?;
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let record: Value = serde_json::from_slice(&result.stdout)?;
+    assert_eq!(record["event"], "compatibility");
+    assert_eq!(record["wallet"], "unlocked");
+    assert_eq!(record["desktopReady"], true);
+    assert!(record["monitors"].is_array());
+    assert_eq!(record["monitors"][0]["name"], "fixture");
+    assert!(!marker.exists());
+    let ready = command(home.path(), &source_path, &endpoint)
+        .args(["session-watch", "ready"])
+        .output()?;
+    assert!(ready.status.success());
+    let ready: Value = serde_json::from_slice(&ready.stdout)?;
+    assert_eq!(ready["event"], "startup-readiness");
+    assert_eq!(ready["desktopReady"], true);
+    let latest = home.path().join("state/nacre/session/latest.json");
+    let wait = |event: &str| -> Result<()> {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            if fs::read(&latest)
+                .ok()
+                .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+                .is_some_and(|value| value["event"] == event)
+            {
+                return Ok(());
+            }
+            if Instant::now() > deadline {
+                return Err("Session policy event was not recorded".into());
+            }
+            thread::sleep(Duration::from_millis(20));
+        }
+    };
+    server.emit_signal(
+        None::<&str>,
+        "/org/freedesktop/login1",
+        "org.freedesktop.login1.Manager",
+        "PrepareForSleep",
+        &(true,),
+    )?;
+    wait("before-sleep")?;
+    let resumed = Instant::now();
+    server.emit_signal(
+        None::<&str>,
+        "/org/freedesktop/login1",
+        "org.freedesktop.login1.Manager",
+        "PrepareForSleep",
+        &(false,),
+    )?;
+    wait("resume")?;
+    assert!(resumed.elapsed() >= Duration::from_millis(500));
+    {
+        let mut outputs = source.outputs.lock().unwrap();
+        outputs["fixture"]["modes"][0]["width"] = json!(1600);
+        outputs["fixture"]["logical"]["width"] = json!(1600);
+    }
+    let hotplug = Instant::now();
+    for socket in source.event_sockets.lock().unwrap().iter_mut() {
+        writeln!(socket, "{}", headers()[0])?;
+    }
+    wait("display-hotplug")?;
+    assert!(hotplug.elapsed() >= Duration::from_millis(300));
+    let record: Value = serde_json::from_slice(&fs::read(&latest)?)?;
+    assert_eq!(record["monitors"][0]["width"], 1600);
+    assert_eq!(source.sockets.lock().unwrap().len(), 2);
+    let output = command(home.path(), &source_path, &endpoint)
+        .args(["session-watch", "watch"])
+        .output()?;
+    assert!(output.status.success());
+    assert!(output.stdout.is_empty());
+    // A large window event requests compositor resync, never display restore.
+    let unchanged = fs::read(&latest)?;
+    let mut large_window = headers()[1].clone();
+    large_window["WindowsChanged"]["windows"][0]["title"] = json!("x".repeat(4096));
+    for socket in source.event_sockets.lock().unwrap().iter_mut() {
+        writeln!(socket, "{large_window}")?;
+    }
+    // The existing bounded pool retires after30s. Both D-Bus connections must
+    // stay on the daemon runtime, without blocking API/executor worker threads.
+    thread::sleep(Duration::from_secs(35));
+    assert_eq!(fs::read(&latest)?, unchanged);
+    assert_eq!(
+        fs::read_dir(format!("/proc/{}/task", daemon.0.id()))?.count(),
+        1
+    );
+    control.shutdown(std::net::Shutdown::Both)?;
+    state_provider.join().map_err(|_| "UI fixture failed")??;
+    Ok(())
+}
+
 #[test]
 fn native_niri_event_clients_share_daemon_stream_and_shutdown_without_a_timer() -> Result<()> {
     let home = tempfile::Builder::new().prefix("ne-").tempdir()?;

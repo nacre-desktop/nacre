@@ -207,6 +207,27 @@ socket. A missing default daemon or an older daemon without this advertised lane
 uses the existing direct runtime; an explicit override or a session mismatch
 never falls back. Disconnection retains the command's existing exit/restart policy.
 
+`session` v1 has `available`, a last-good `record`, and an optional service error.
+The record keeps the existing event, time, readiness, wallet, Brain-window count
+and configuration-error fields. Its monitors are keyed by name with a separate
+`order`. `session.check {event?}` writes fresh evidence; `session.ready {}` keeps
+the existing fifteen-second readiness policy; `session.watch {}` acknowledges the
+daemon-owned observer. The compatibility `session-watch` command restores its
+old JSON shape and files. Its `watch` mode exits after acknowledgement instead
+of keeping another process alive; the on-failure compatibility unit remains for
+one release. A missing default/older daemon uses the direct runtime; explicit
+overrides never fall back, and safe mode never starts a second observer.
+These are intended lifecycle differences. Resume and output settling delays
+remain 500 and 300 ms, respectively, using the same policy as direct mode.
+The service reads login1 and Secret Service asynchronously, consumes the existing
+compositor event stream and shares its native request transport. UI state goes
+through the registered provider, with the same before-dispatch legacy fallback.
+Its bounded internal event ring reports overflow/resync instead of adding a
+polling loop. Session methods are advertised only when that service is declared.
+Zbus uses the daemon's existing Tokio runtime. Legacy blocking helpers default
+their process-local fallback pool to one worker; explicit caller settings and
+the shell supervisor's exported environment are preserved.
+
 `daemon.status` returns boot, safe-mode, client and service status.
 `daemon.ping` returns null without outside work. `daemon` is the service-health
 topic; safe mode also exposes one stable record on `daemon.notice`.

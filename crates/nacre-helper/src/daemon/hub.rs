@@ -10,12 +10,25 @@ use std::{
     rc::Rc,
     time::{Duration, Instant},
 };
-use tokio::sync::{oneshot, Notify};
+use tokio::sync::{broadcast, oneshot, Notify};
 
 const QUEUE_BYTES: usize = 2 * 1024 * 1024;
 const BASELINE_BYTES: usize = 8 * 1024 * 1024;
 const TOPIC_BYTES: usize = 32 * 1024 * 1024;
 pub type Shared = Rc<std::cell::RefCell<Hub>>;
+#[derive(Clone, Debug)]
+pub enum Notice {
+    Changed {
+        topic: String,
+        available: Option<bool>,
+    },
+    Event {
+        topic: String,
+        name: String,
+        data: Value,
+    },
+    Resync(String),
+}
 pub fn failure(code: ErrorCode, message: &str, retry: bool) -> Failure {
     Failure::new(code, message, retry)
 }
@@ -63,9 +76,12 @@ pub struct Hub {
     provider: Option<(u64, BTreeMap<String, u16>)>,
     routes: BTreeMap<Id, (u64, oneshot::Sender<Reply>)>,
     next_route: u64,
+    internal: broadcast::Sender<Notice>,
+    pub session: Option<super::session_policy::Requests>,
 }
 impl Hub {
     pub fn new(boot: String, safe: bool, frame: Duration) -> Self {
+        let (internal, _) = broadcast::channel(MAX_EVENTS);
         Self {
             boot,
             safe,
@@ -78,10 +94,20 @@ impl Hub {
             provider: None,
             routes: BTreeMap::new(),
             next_route: 0,
+            internal,
+            session: None,
         }
     }
     pub fn shared(self) -> Shared {
         Rc::new(std::cell::RefCell::new(self))
+    }
+    pub fn observe(&self) -> broadcast::Receiver<Notice> {
+        self.internal.subscribe()
+    }
+    fn notify(&self, notice: Notice) {
+        if self.internal.receiver_count() > 0 && self.internal.send(notice).is_err() {
+            tracing::debug!("Internal topic observers ended");
+        }
     }
     pub fn snapshot(&self, name: &str) -> Option<Value> {
         self.topics.get(name).map(|topic| topic.data.clone())
@@ -149,6 +175,10 @@ impl Hub {
                 client.wake.notify_one();
             }
         }
+        self.notify(Notice::Changed {
+            topic: topic.into(),
+            available: self.topics[topic].data["available"].as_bool(),
+        });
         Ok(())
     }
     pub fn add_client(&mut self) -> Result<(u64, Rc<Notify>), Failure> {
@@ -188,9 +218,16 @@ impl Hub {
     pub fn has_client(&self, id: u64) -> bool {
         self.clients.contains_key(&id)
     }
+    fn fixed_methods(&self) -> BTreeMap<String, Method> {
+        let mut methods = nacre_protocol::core_methods();
+        if !self.safe && self.services.contains_key("session-watch") {
+            methods.extend(super::session_policy::methods());
+        }
+        methods
+    }
     pub fn methods(&self) -> BTreeMap<String, Method> {
         use nacre_protocol::Capability;
-        let mut methods = nacre_protocol::core_methods();
+        let mut methods = self.fixed_methods();
         if let Some((_, provider)) = &self.provider {
             for (name, version) in provider {
                 methods.insert(
@@ -385,6 +422,22 @@ impl Hub {
         };
         let bytes = nacre_protocol::framing::encode(&message)?.len();
         self.event_seq.insert(topic.into(), seq);
+        if let Message::Ev {
+            topic, name, data, ..
+        } = &message
+        {
+            // Internal observers receive small deltas, or an explicit resync
+            // marker for large events. The 256-slot ring stays byte-bounded.
+            if bytes <= 1024 {
+                self.notify(Notice::Event {
+                    topic: topic.clone(),
+                    name: name.clone(),
+                    data: data.clone(),
+                });
+            } else {
+                self.notify(Notice::Resync(topic.clone()));
+            }
+        }
         for client in self
             .clients
             .values_mut()
@@ -529,7 +582,8 @@ impl Hub {
             methods: methods.clone(),
         }
         .validate()?;
-        if nacre_protocol::core_methods()
+        if self
+            .fixed_methods()
             .keys()
             .chain(methods.keys())
             .collect::<BTreeSet<_>>()
@@ -615,6 +669,39 @@ impl Hub {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn internal_observers_get_changes_and_bounded_events_without_client_slots() {
+        let mut hub = Hub::new("fixture".into(), false, Duration::from_millis(16));
+        let mut observer = hub.observe();
+        hub.publish("compositor", json!({"available":true}))
+            .unwrap();
+        assert!(matches!(
+            observer.try_recv().unwrap(),
+            Notice::Changed {
+                available: Some(true),
+                ..
+            }
+        ));
+        hub.event("compositor", "outputs-changed", json!({}))
+            .unwrap();
+        assert!(
+            matches!(observer.try_recv().unwrap(),Notice::Event{ref name,..} if name=="outputs-changed")
+        );
+        hub.event("compositor", "large", json!({"value":"x".repeat(2048)}))
+            .unwrap();
+        assert!(
+            matches!(observer.try_recv().unwrap(),Notice::Resync(ref name) if name=="compositor")
+        );
+        assert_eq!(hub.status()["clients"], 0);
+        for version in 0..300 {
+            hub.publish("compositor", json!({"available":true,"revision":version}))
+                .unwrap();
+        }
+        assert!(matches!(
+            observer.try_recv(),
+            Err(broadcast::error::TryRecvError::Lagged(_))
+        ));
+    }
     fn fixture() -> (Hub, u64, Instant) {
         let mut hub = Hub::new("fixture".into(), false, Duration::from_millis(16));
         hub.publish("x", json!({"v":0})).unwrap();

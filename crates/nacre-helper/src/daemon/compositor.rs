@@ -1,8 +1,7 @@
 //! Read-only topic adapter. The existing compositor reducers and transports own semantics.
-use super::hub::Shared;
+use super::{compositor_control::Control, hub::Shared};
 use crate::{
-    compositor::{backend, hyprland, hyprland_runtime, niri_events, niri_state, niri_transport},
-    paths::Paths,
+    compositor::{backend, hyprland, hyprland_runtime, niri_events, niri_state},
     Result,
 };
 use serde_json::{json, Map, Value};
@@ -187,18 +186,24 @@ async fn line<R: AsyncBufRead + Unpin>(
         }
     }
 }
-async fn outputs(
-    mut connection: niri_transport::Connection,
-) -> Result<(niri_transport::Connection, Map<String, Value>)> {
-    tokio::task::spawn_blocking(move || {
-        let value = connection.response("Outputs", Duration::from_secs(10), MAXIMUM)?;
-        let outputs = value
-            .as_object()
-            .cloned()
-            .ok_or("Invalid compositor output reply")?;
-        Ok((connection, outputs))
-    })
-    .await?
+async fn outputs(control: &Control) -> Result<Map<String, Value>> {
+    control
+        .with(|backend| {
+            let backend::Backend::Niri(backend) = backend else {
+                return Err("Expected niri request transport".into());
+            };
+            let value =
+                backend
+                    .actions
+                    .transport
+                    .response("Outputs", Duration::from_secs(10), MAXIMUM)?;
+            let outputs = value
+                .as_object()
+                .cloned()
+                .ok_or("Invalid compositor output reply")?;
+            Ok(outputs)
+        })
+        .await
 }
 fn schedule(due: &mut Option<tokio::time::Instant>, last: tokio::time::Instant, title_only: bool) {
     let now = tokio::time::Instant::now();
@@ -306,7 +311,12 @@ fn flush_niri(
     }
     Ok(())
 }
-async fn niri(hub: Shared, environment: BTreeMap<String, String>, ready: Ready) -> Result<()> {
+async fn niri(
+    hub: Shared,
+    control: Control,
+    environment: BTreeMap<String, String>,
+    ready: Ready,
+) -> Result<()> {
     let path = PathBuf::from(
         environment
             .get("NIRI_SOCKET")
@@ -327,7 +337,7 @@ async fn niri(hub: Shared, environment: BTreeMap<String, String>, ready: Ready) 
     let stream = reader.into_inner();
     stream.set_nonblocking(true)?;
     let mut reader = BufReader::new(Cursor::new(prefix).chain(UnixStream::from_std(stream)?));
-    let (mut connection, initial) = outputs(niri_transport::Connection::new(path)).await?;
+    let initial = outputs(&control).await?;
     let mut state = niri_state::State::new(initial);
     let mut partial = Vec::new();
     let mut keyboard = json!({"names":[],"currentIndex":null,"activeName":""});
@@ -342,7 +352,7 @@ async fn niri(hub: Shared, environment: BTreeMap<String, String>, ready: Ready) 
                 let normalized=state.apply(&event)?;
                 let refresh=event.get("WorkspacesChanged").is_some()||event.get("ConfigLoaded").is_some();
                 let mut outputs_changed=false;
-                if refresh {let updated=outputs(connection).await?;connection=updated.0;outputs_changed=state.outputs!=updated.1;state.outputs=updated.1;}
+                if refresh {let updated=outputs(&control).await?;outputs_changed=state.outputs!=updated;state.outputs=updated;}
                 if state.ready.contains("window") && state.ready.contains("workspace") && (normalized["type"]!="other" || keyboard_changed || refresh) {
                     if normalized["type"]!="other" {
                         let mut next=vec![normalized.clone()];
@@ -401,23 +411,20 @@ fn hypr_keyboard(devices: &Value) -> Value {
     }
     keyboard
 }
-async fn hyprland(
-    hub: Shared,
-    paths: Paths,
-    environment: BTreeMap<String, String>,
-    ready: Ready,
-) -> Result<()> {
-    let (mut backend, events, initial, initial_keyboard) =
-        tokio::task::spawn_blocking(move || -> Result<_> {
-            let mut backend = hyprland_runtime::Backend::new(paths, environment)?;
+async fn hyprland(hub: Shared, control: Control, ready: Ready) -> Result<()> {
+    let (events, initial, initial_keyboard) = control
+        .with(move |backend| -> Result<_> {
+            let backend::Backend::Hyprland(backend) = backend else {
+                return Err("Expected Hyprland request transport".into());
+            };
             let mut events = backend.events()?;
             let initial = events
                 .next_value()?
                 .ok_or("Missing initial compositor snapshot")?;
-            let keyboard = hypr_keyboard(&devices(&mut backend)?);
-            Ok((backend, events.into_stream(), initial, keyboard))
+            let keyboard = hypr_keyboard(&devices(backend)?);
+            Ok((events.into_stream(), initial, keyboard))
         })
-        .await??;
+        .await?;
     let prefix = events.buffer().to_vec();
     let stream = events.into_inner();
     stream.set_nonblocking(true)?;
@@ -428,22 +435,30 @@ async fn hyprland(
     let mut due = None;
     let mut last = tokio::time::Instant::now();
     let mut keyboard_changed = false;
+    let mut outputs_pending = 0;
     loop {
         tokio::select! {
             bytes=line(&mut reader,&mut partial)=>{
                 let bytes=bytes?.ok_or("Compositor event stream ended")?;
                 let raw=std::str::from_utf8(&bytes)?.trim_end();let event=hyprland::parse_event(raw);
+                if event["type"]=="outputs-changed" {
+                    outputs_pending+=1;
+                    if outputs_pending>nacre_protocol::MAX_EVENTS {return Err("Compositor output event burst exceeds its limit".into());}
+                }
                 let layout=raw.starts_with("activelayout>>");
                 if event["type"]!="other" || layout {keyboard_changed|=layout;schedule(&mut due,last,event["type"]=="window-title");}
             },
             _=wait_due(due)=>{
-                let updated=tokio::task::spawn_blocking(move||->Result<_>{
+                let updated=control.with(move|backend|->Result<_>{
+                    let backend::Backend::Hyprland(backend)=backend else {return Err("Expected Hyprland request transport".into());};
                     let snapshot=json!({"type":"snapshot","monitors":backend.actions.query("monitors",10.0,None)?,"workspaces":backend.actions.query("workspaces",10.0,None)?,"windows":backend.actions.query("windows",10.0,None)?,"activeWindow":backend.actions.query("active_window",10.0,None)?});
-                    let keyboard=if keyboard_changed{Some(hypr_keyboard(&devices(&mut backend)?))}else{None};
-                    Ok((backend,snapshot,keyboard))
-                }).await??;
-                backend=updated.0;if let Some(updated)=updated.2 {keyboard=updated;}
-                publish(&hub,&updated.1,"hyprland",&keyboard,&ready)?;
+                    let keyboard=if keyboard_changed{Some(hypr_keyboard(&devices(backend)?))}else{None};
+                    Ok((snapshot,keyboard))
+                }).await?;
+                if let Some(updated)=updated.1 {keyboard=updated;}
+                publish(&hub,&updated.0,"hyprland",&keyboard,&ready)?;
+                for _ in 0..outputs_pending {hub.borrow_mut().event("compositor","outputs-changed",json!({}))?;}
+                outputs_pending=0;
                 keyboard_changed=false;last=tokio::time::Instant::now();due=None;
             },
         }
@@ -452,13 +467,13 @@ async fn hyprland(
 
 pub async fn run(
     hub: Shared,
-    paths: Paths,
+    control: Control,
     environment: BTreeMap<String, String>,
     ready: Ready,
 ) -> Result<()> {
     let result = match backend::select(&environment)? {
-        "niri" => niri(hub.clone(), environment, ready).await,
-        _ => hyprland(hub.clone(), paths, environment, ready).await,
+        "niri" => niri(hub.clone(), control, environment, ready).await,
+        _ => hyprland(hub.clone(), control, ready).await,
     };
     if result.is_err() {
         let mut last = hub

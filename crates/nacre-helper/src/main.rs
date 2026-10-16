@@ -20,6 +20,18 @@ fn run() -> Result<i32> {
         _ => arguments.next().ok_or("Expected a helper command")?,
     };
     let mut arguments: Vec<String> = arguments.collect();
+    if !matches!(
+        tool.as_str(),
+        "shell-supervisor" | "shell-environment" | "ctl"
+    ) && std::env::var_os("TOKIO_WORKER_THREADS").is_none()
+    {
+        // zbus's blocking compatibility API owns a Tokio runtime when Tokio is
+        // enabled. Bound that fallback pool before any helper threads start;
+        // the daemon itself always uses its explicit current-thread runtime.
+        // The shell's exported environment and an explicit caller setting stay
+        // unchanged.
+        std::env::set_var("TOKIO_WORKER_THREADS", "1");
+    }
     if tool == "ctl" {
         return nacre_helper::daemon::client::run(&arguments);
     }

@@ -178,9 +178,7 @@ pub fn readiness(observer: &mut impl Observer, timeout: Duration) -> Result<Valu
     let deadline = observer.elapsed() + timeout;
     while observer.elapsed() < deadline {
         let record = observer.check("startup-readiness")?;
-        if record["desktopReady"] == true
-            && matches!(record["wallet"].as_str(), Some("unlocked" | "unavailable"))
-        {
+        if is_ready(&record) {
             return Ok(record);
         }
         observer.sleep(Duration::from_millis(500));
@@ -191,6 +189,36 @@ pub enum Event {
     Sleep(bool),
     Outputs,
 }
+pub fn is_ready(record: &Value) -> bool {
+    record["desktopReady"] == true
+        && matches!(record["wallet"].as_str(), Some("unlocked" | "unavailable"))
+}
+#[derive(Clone, Copy)]
+pub enum Effect {
+    Check(&'static str),
+    Restore,
+    Wait(Duration),
+}
+pub fn startup_effects() -> &'static [Effect] {
+    &[Effect::Check("observer-start"), Effect::Restore]
+}
+pub fn effects(event: Event) -> &'static [Effect] {
+    const RESUME: &[Effect] = &[
+        Effect::Wait(Duration::from_millis(500)),
+        Effect::Restore,
+        Effect::Check("resume"),
+    ];
+    const OUTPUTS: &[Effect] = &[
+        Effect::Wait(Duration::from_millis(300)),
+        Effect::Restore,
+        Effect::Check("display-hotplug"),
+    ];
+    match event {
+        Event::Sleep(true) => &[Effect::Check("before-sleep")],
+        Event::Sleep(false) => RESUME,
+        Event::Outputs => OUTPUTS,
+    }
+}
 pub trait Events {
     fn next(&mut self) -> Result<Event>;
     fn close(&mut self) -> Result<()>;
@@ -199,24 +227,25 @@ pub fn observe<O: Observer, E: Events>(
     observer: &mut O,
     connect: impl FnOnce(&mut O) -> Result<E>,
 ) -> Result<()> {
-    observer.check("observer-start")?;
-    observer.restore()?;
+    for effect in startup_effects() {
+        match effect {
+            Effect::Check(event) => {
+                observer.check(event)?;
+            }
+            Effect::Restore => observer.restore()?,
+            Effect::Wait(duration) => observer.sleep(*duration),
+        }
+    }
     let mut events = connect(observer)?;
     let result = (|| -> Result<()> {
         loop {
-            match events.next()? {
-                Event::Sleep(true) => {
-                    observer.check("before-sleep")?;
-                }
-                Event::Sleep(false) => {
-                    observer.sleep(Duration::from_millis(500));
-                    observer.restore()?;
-                    observer.check("resume")?;
-                }
-                Event::Outputs => {
-                    observer.sleep(Duration::from_millis(300));
-                    observer.restore()?;
-                    observer.check("display-hotplug")?;
+            for effect in effects(events.next()?) {
+                match effect {
+                    Effect::Check(event) => {
+                        observer.check(event)?;
+                    }
+                    Effect::Restore => observer.restore()?,
+                    Effect::Wait(duration) => observer.sleep(*duration),
                 }
             }
         }
@@ -516,6 +545,9 @@ pub fn run(args: &[String]) -> Result<i32> {
             "unrecognized arguments: {}",
             unknown.join(" ")
         )));
+    }
+    if let Some(code) = crate::daemon::session_policy::client(action, &event)? {
+        return Ok(code);
     }
     let mut session = Session::new(Paths::environment()?)?;
     if action == "watch" {

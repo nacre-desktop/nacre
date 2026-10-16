@@ -1627,3 +1627,125 @@ private-runtime cleanup encountered a disconnected GVFS FUSE mount; that mount
 was removed only from the recorded disposable runtime. The lab now sets
 `GVFS_DISABLE_FUSE=1`, the [documented GIO control](https://docs.gtk.org/gio/overview.html),
 before launching children. This changes no installed session configuration.
+
+### Frozen Wave 3 desktop-PC A/B/A/B (nested)
+
+The frozen Python baseline `e910ffd7202a332c652ef227ddcf5970c39714bb`
+(Orient `820e199714d9d3a1233db80705e39838e86c49fc`) and Wave 3
+`81d9e520d6f6d0a915018f93e3b6279b716ddc91`
+(Orient `3efe8d1e7fb50200d74a3e0193ad63699cb8ebe8`) were built first on
+the desktop PC with the same toolchain and profile. No compilation ran during
+measurement. Harness `ffe32f36459d3d3c2a7844bf4134da9b225b4cf5` ran each
+compositor's full session and palette presentation sequence in A/B/A/B order,
+using disposable HOME/XDG/D-Bus roots and headless nested compositors. These are
+desktop-PC nested results, not laptop or physical presentation measurements.
+Machine inventory and raw diagnostic reports remain private.
+
+| Action or idle measurement | Hyprland Python | Hyprland native | niri Python | niri native |
+| --- | ---: | ---: | ---: | ---: |
+| Cold launcher frame, two runs (ms) | 98 / 100 | 94 / 100 | 419 / 419 | 459 / 461 |
+| Warm launcher mean / p95 (ms) | 21.80 / 101 | 21.90 / 104 | 363.40 / 415 | 363.95 / 426 |
+| Cold dashboard frame, two runs (ms) | 46 / 41 | 56 / 50 | 363 / 363 | 362 / 363 |
+| Warm dashboard mean / p95 (ms) | 36.50 / 45 | 36.55 / 47 | 364.65 / 381 | 364.10 / 367 |
+| Wallpaper choice to new shell frame, two runs (ms) | 184 / 201 | 94 / 94 | 195 / 196 | 113 / 91 |
+| Closed shell RSS / PSS (MiB) | 650.06 / 527.42 | 637.18 / 514.51 | 645.55 / 525.51 | 640.84 / 520.39 |
+| Closed aggregate RSS / PSS (MiB) | 713.23 / 564.77 | 681.82 / 535.96 | 727.11 / 567.85 | 708.53 / 547.18 |
+| Idle CPU, one-core percent | 0 observed | 0.098 | 0 observed | 0 observed |
+
+Memory and CPU cells average the two per-run medians. Warm action cells pool the
+repeats; cold cells retain each observation. Wallpaper-to-shell presentation
+averages 192.5→94 ms on Hyprland and 195.5→102 ms on niri. Qt, Kitty and the actual
+lock screen also have new-color pixel witnesses. GTK pixel completion remains
+unverified on both sources: there is **no finite whole-desktop completion time**.
+The historical 225/190 ms helper-pair timings use different endpoints; this table
+does not remeasure them. Sampled Python starts were zero in these intervals, a
+sampling lower bound that does not establish zero execs or the five-minute proof.
+
+All measured SwapPss samples were zero. Host counters below are page deltas,
+4,096 bytes/page, in A1/B1/A2/B2 order. All swap-in deltas are below the owner's
+under-1-MiB limit; swap-out alone is not a rejection under that rule.
+
+| Capture | Host swap-in pages | Host swap-out pages |
+| --- | --- | --- |
+| Hyprland full | 4 / 5 / 5 / 0 | 5398 / 26903 / 26306 / 0 |
+| Hyprland palette | 17 / 0 / 9 / 0 | 0 / 0 / 0 / 0 |
+| niri full | 1 / 0 / 4 / 6 | 0 / 0 / 9214 / 4174 |
+| niri palette | 12 / 0 / 10 / 0 | 0 / 0 / 0 / 0 |
+
+The Hyprland cold-dashboard increase of 9–10 ms did not persist in one focused
+phase-controlled A/B/A/B repeat: delaying the input probe by another 7 ms gave
+33/30→32/32 ms, with data ready in 30/27→29/18 ms. A separate 100-call owner-request
+probe had p95 1 ms on all four runs, its clock resolution. Dashboard QML and
+controller logic are unchanged. This indicates presentation-phase sensitivity;
+the original observations remain above. No product behavior or timeout changed.
+The niri cold-launcher increase of 40/42 ms persists after one focused control.
+Removing the inactive software preview Loader only from disposable fixture QML
+on both sources gave A/B/A/B cold frames 414/470/411/460 ms. Synchronous work was
+73/69/71/69 ms. All four control runs had measured SwapPss zero and host swap-in
+zero; swap-out page deltas were 4042/3721/0/0. The control does not explain or fix
+the extra presentation delay. Product QML, frozen sources, fixtures and timeouts
+remain unchanged. Further ports wait for the owner's priority decision under
+the quiet-regression stop rule; this gate is not cleared. Private control archive:
+`2d55a8809c601790b6e30f6ab4f7a032375361c9164008ef1908e009f09990c1`.
+
+Sanitized summary SHA-256:
+`71c52e2b5e5bc3d4619af1916c10f02a7344764c8a8f08c8029cb521d438f89d`.
+Invalid prerequisite, unknown-memory, coverage and excess-swap attempts are
+retained separately and excluded, never repaired or overwritten. The early
+foundation snapshot `33a0a897` has not yet completed its separate Wave 3/current
+comparison; it must not be reported as a completed Wave 4 comparison.
+
+### Foundation F2 session observer consolidation (desktop-PC, nested)
+
+The parent `ffe32f36459d3d3c2a7844bf4134da9b225b4cf5` and the session-service
+candidate were release-built with the same laptop toolchain/profile, then copied
+to the desktop PC. Neither compiled during capture. A private wrapper reused
+`benchmark-daemon.py`'s nested lifecycle and `performance.py`'s accounting, adding
+private login1/Secret Service fixtures and the existing UI-state reply. A ran
+the daemon plus standalone `session-watch watch`; B ran its async daemon task.
+The fixture bus/provider, compositor and UI are outside this helper-group scope.
+Each A/B/A/B interval settled for 35 seconds and sampled idle for 60 seconds.
+Cells average the two per-run medians.
+
+| Helper-group measurement | niri direct | niri daemon | Hyprland direct | Hyprland daemon |
+| --- | ---: | ---: | ---: | ---: |
+| Combined RSS (MiB) | 39.26 | 20.62 | 38.41 | 20.34 |
+| Combined PSS (MiB) | 21.43 | 16.62 | 21.47 | 16.29 |
+| Processes / settled threads per process | 2 / 1+7 | 1 / 1 | 2 / 1+7 | 1 / 1 |
+| CPU per process, each 60-second run at 100 Hz | 0 observed ticks | 0 observed ticks | 0 observed ticks | 0 observed ticks |
+| Main-thread voluntary switches, two runs | 17+0 / 17+0 | 16 / 17 | 17+0 / 18+0 | 17 / 17 |
+
+Both paired comparisons improve PSS on each compositor. All measured SwapPss
+samples were zero. Host swap-in page deltas in A/B/A/B order were 0/0/0/1 on
+niri and 0/0/0/0 on Hyprland, at 4,096 bytes/page; swap-out was zero throughout.
+All eight intervals pass the agreed paging rule. Voluntary switches are a
+sleep/wake proxy, not a direct kernel wakeup counter; zero observed CPU ticks is
+not exact zero CPU. Python execs were not traced in this native/native comparison.
+
+Parent ELF SHA-256:
+`14e96517638d6df6180ecfdffce1522923292d61f195c92b76bfb4df6d9b2dea`.
+Captured candidate ELF:
+`cd4141c5d445070d0b6caa11a543eec5b209d831ef73e7f598ced8108eeafc09`.
+Private evidence archive SHA-256:
+`6e44bf4cb37b1813b6d08819ae51031a0c197b725a2777db91ba4b684b50527c`.
+The paired candidate precedes the oversized-window resync guard. A separate
+one-B final-binary recheck per compositor passed: RSS/PSS 20.47/16.45 MiB on niri
+and 20.38/16.30 MiB on Hyprland, one process/thread each, zero observed CPU ticks,
+zero measured SwapPss and zero host swap-in/out. Both final intervals had 18
+main-thread voluntary switches in 60 seconds; the paired observations above
+remain separate and are not rewritten. This proxy is not an exact wakeup count.
+Final ELF: `10a7b4ad1e88410b66e2e0ad9e22f643d1a33efc6e0b139e33661942af41a416`.
+Final evidence archive:
+`2b9cd1a124a4a6c6530ff91a0429a9f77ea54f4ac1683227682b1118accba282`.
+The final wrapper inherited the paired method label; an accompanying method
+receipt identifies the actual one-B run arrays and preserves the raw reports.
+
+The direct and daemon paths share readiness/effect rules: 500 ms resume and
+300 ms display settling, saved connected-display recovery and private evidence
+files remain. The compatibility watch now acknowledges ownership and exits;
+its on-failure unit remains one release. Default missing/older daemons retain
+direct fallback, explicit endpoints do not fall back, and safe mode never starts
+a duplicate watcher. A private bus/socket test exercises readiness, resume and
+real output changes over one shared request and event connection, UI-provider
+routing, cancellation cleanup, and a 4-KiB window title without display recovery.
+No live units or session configuration were enabled or changed.

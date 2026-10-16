@@ -26,7 +26,7 @@ chrono = "0.4"
 chrono-tz = "0.10"
 walkdir = "2"
 wait-timeout = "0.2"
-zbus = { version = "5", features = ["blocking-api"] }
+zbus = { version = "5", features = ["blocking-api", "tokio"] }
 zvariant = { version = "5", features = ["gvariant"] }
 async-io = "2"
 futures-lite = "2"

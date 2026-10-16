@@ -8,13 +8,13 @@ Keep public commands, QML appearance, user data, privilege and session policy.
 | 0 Orient decoder | Complete | 49 inputs / 55 frames, 160 palettes exact, including JPEG; notices retained. |
 | 1 Frequent helpers | Complete; CI green | 13 ports; busy service RSS 26.95 → 10.21 MiB; absolute XDG roots follow QML. |
 | 2 Compositor / pearls | Complete; CI green | Preview CPU 52.58 → 1.26 ms; RSS 21.54 → 7.30 MiB; native IPC/session runtime. |
-| 3 Wallpaper / colors | ports complete, quiet A/B/A/B pending (desktop reachable again) | Builds/probes ready; invalid baselines retained; sampler/lifecycle fix passes30 tests. |
-| 4 Remaining shell tools | redirected: foundation F1–F4 first | F1/follow-up CI green; F2 events306 Rust/534 parity; component PSS21.04→17.70MiB; CI pending. |
+| 3 Wallpaper / colors | ports complete; desktop A/B/A/B captured, regression review open | Shell frame192.5→94ms Hypr/195.5→102ms niri; GTK endpoint missing; niri cold launcher+40/42ms repeats after control; owner priority decision pending. |
+| 4 Remaining shell tools | redirected: foundation F1–F4 first | F2 events33a0a897 CI green; session-watch local311 Rust/929 repo/534 parity; PSS21.43→16.62/21.47→16.29MiB; final guard recheck passes; unpublished pending decision. |
 | 5 AI | Pending | Claude stream-json; existing permissions/history; sidebar-chat, composer and AI controller belong here. |
 | 6 Brain | Pending | Same bge-small model; cosine ≥ 0.9999 or backed-up automatic reindex. |
 | 7 Installer / proof | Pending | install*.py/login-install.py deferred here; packaging owned separately. |
 
-Frozen sources for the deferred desktop-PC comparison (never substitute latest main):
+Frozen sources for the desktop-PC comparison (never substitute latest main):
 - Python baseline: e910ffd7202a332c652ef227ddcf5970c39714bb.
 - Baseline Orient: 820e199714d9d3a1233db80705e39838e86c49fc.
 - Wave 3: 81d9e520d6f6d0a915018f93e3b6279b716ddc91.
@@ -76,5 +76,5 @@ Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hosts
 UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-Next: 33a0a897 CI green, publish lab fix; short preflight, frozen A/B/A/B, F2 session-watch.
+Next: owner decision on persistent quiet niri cold-launcher regression; session port ready locally, hold more ports.
 No live desktop/config/network changes, tags, releases or package publication.

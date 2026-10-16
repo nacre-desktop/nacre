@@ -27,9 +27,9 @@ impl Drop for Client {
         self.hub.borrow_mut().remove_client(self.id);
     }
 }
-struct Route {
-    hub: Shared,
-    id: Id,
+pub(super) struct Route {
+    pub(super) hub: Shared,
+    pub(super) id: Id,
 }
 impl Drop for Route {
     fn drop(&mut self) {
@@ -46,6 +46,9 @@ async fn dispatch(
     match method.as_str() {
         "daemon.ping" => Ok(Value::Null),
         "daemon.status" => Ok(hub.borrow().status()),
+        method @ ("session.check" | "session.ready" | "session.watch") if !hub.borrow().safe => {
+            super::session_policy::dispatch(hub, method, params).await
+        }
         method if method.starts_with("ui.") => {
             let (id, receiver) = hub.borrow_mut().forward(method, params, timeout)?;
             let _route = Route { hub, id };
@@ -67,7 +70,12 @@ async fn call(
     params: Value,
     timeout: Option<u32>,
 ) -> (Id, Reply) {
-    let ms = timeout.unwrap_or(1000);
+    let ms = timeout.unwrap_or_else(|| {
+        hub.borrow()
+            .methods()
+            .get(&method)
+            .map_or(1000, |m| m.timeout)
+    });
     let ui = method.starts_with("ui.");
     let future = AssertUnwindSafe(dispatch(hub, method, params, timeout)).catch_unwind();
     let result = match tokio::time::timeout(Duration::from_millis(u64::from(ms)), future).await {

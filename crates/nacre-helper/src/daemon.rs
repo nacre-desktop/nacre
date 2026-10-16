@@ -1,11 +1,13 @@
 //! The persistent desktop service. Tasks run on one current-thread runtime.
 pub mod client;
 pub mod compositor;
+pub mod compositor_control;
 pub mod crashes;
 pub mod hub;
 pub mod niri_events;
 pub mod notify;
 pub mod session;
+pub mod session_policy;
 pub mod socket;
 pub mod supervisor;
 pub mod workers;
@@ -26,6 +28,9 @@ async fn serve(
     hub.borrow_mut().publish("daemon", status)?;
     let paths = Paths::environment()?;
     let environment: std::collections::BTreeMap<String, String> = std::env::vars().collect();
+    let control = compositor_control::Control::new(paths.clone(), environment.clone());
+    let session_control = control.clone();
+    let session_paths = paths.clone();
     if matches!(crate::compositor::backend::select(&environment), Ok("niri")) {
         hub.borrow_mut().publish(
             niri_events::TOPIC,
@@ -41,11 +46,31 @@ async fn serve(
         tokio::task::spawn_local(supervisor::run("compositor", service_hub, move || {
             compositor::run(
                 factory_hub.clone(),
-                paths.clone(),
+                control.clone(),
                 environment.clone(),
                 ready.clone(),
             )
         }));
+    let session_service = if !counter.safe {
+        hub.borrow_mut().service("session-watch", "starting", 0)?;
+        hub.borrow_mut()
+            .publish("session", json!({"available":false,"record":null}))?;
+        let service_hub = hub.clone();
+        let factory_hub = hub.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "session-watch",
+            service_hub,
+            move || {
+                session_policy::run(
+                    factory_hub.clone(),
+                    session_paths.clone(),
+                    session_control.clone(),
+                )
+            },
+        )))
+    } else {
+        None
+    };
     let workers = workers::Workers::default();
     let mut notice_worker = None;
     if counter.safe {
@@ -94,6 +119,14 @@ async fn serve(
     clients.abort_all();
     while clients.join_next().await.is_some() {}
     compositor_service.abort();
+    if let Some(service) = session_service {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Session supervisor failed during shutdown");
+            }
+        }
+    }
     if let Err(error) = compositor_service.await {
         if !error.is_cancelled() {
             tracing::error!("Compositor supervisor failed during shutdown");
