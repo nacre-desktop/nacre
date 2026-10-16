@@ -241,3 +241,12 @@ private topic carries monitor availability and a bounded generation only, with
 sanitized failure text. Explicit missing endpoints fail closed, and an accepted
 stream cannot fall back after daemon/service loss. Private-bus tests cover these
 boundaries, shared clients, exact frozen lines and closed-pipe exit.
+
+Wallpaper-watch daemon fold: clients cannot register arbitrary paths or request
+file writes through the topic. Source IDs hash the exact watched paths without
+following an engine alias; the daemon retains the original directory-link and
+file-event filters. Failures publish sanitized availability errors. Explicit
+missing or mismatched sources fail before creating client directories; accepted
+streams never fall back after disconnect. Private integration checks cover shared
+inotify ownership, engine separation, frozen lines, linked directories, closed
+pipes and daemon loss. Custom sources may run directly before source acceptance.

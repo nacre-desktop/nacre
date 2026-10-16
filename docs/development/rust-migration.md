@@ -76,5 +76,5 @@ Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hosts
 UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-Next: network-watch351 Rust/938 repo/534 parity pass; settled PSS38.03→37.61 niri/37.90→36.69 Hypr, cold449/462→460/424ms overlaps; full CI before wallpaper→F3→F4STOP.
+Next: network6a737629 CI38965942859 full green (351 Rust/938 repo/534 parity); wallpaper-watch ready to publish:355 Rust/938 repo/534 parity;8 settled cells valid/PSS overlaps/idle unchanged; cold471/441→424/441ms overlaps; then F3→F4STOP. Settled PSS38.03→37.61 niri/37.90→36.69 Hypr; cold449/462→460/424ms overlaps.
 No live desktop/config/network changes, tags, releases or package publication.

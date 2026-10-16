@@ -1503,3 +1503,219 @@ fn network_watch_shares_signals_preserves_frozen_lines_and_fails_without_replay(
     }
     Ok(())
 }
+
+#[test]
+fn wallpaper_watch_shares_inotify_preserves_frozen_lines_and_never_replays_after_disconnect(
+) -> Result<()> {
+    let home = tempfile::Builder::new().prefix("ww-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let endpoint = home.path().join("daemon.sock");
+    let notify = UnixDatagram::bind(home.path().join("notify.sock"))?;
+    notify.set_read_timeout(Some(Duration::from_secs(10)))?;
+    let config = home.path().join("config/nacre");
+    let installed = home
+        .path()
+        .join(".local/share/nacre/shell/tools/nacre-helper");
+    let bridge = home.path().join(".local/share/nacre/shell/bin/nacre_shell");
+    for path in [
+        config.as_path(),
+        installed.parent().unwrap(),
+        bridge.parent().unwrap(),
+    ] {
+        fs::create_dir_all(path)?;
+    }
+    fs::write(&installed, "fixture helper")?;
+    fs::write(&bridge, "fixture bridge")?;
+    let log = home.path().join("daemon.log");
+    let start_daemon = || -> Result<Process> {
+        let process = Process(
+            command(home.path(), &source_path, &endpoint)
+                .arg("daemon")
+                .env("NOTIFY_SOCKET", home.path().join("notify.sock"))
+                .stderr(
+                    fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(&log)?,
+                )
+                .spawn()?,
+        );
+        notify.recv(&mut [0; 256])?;
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while status(home.path(), &source_path, &endpoint)?["services"]["wallpaper-watch"]["status"]
+            != "running"
+        {
+            if Instant::now() >= deadline {
+                return Err("Wallpaper source did not become ready".into());
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        Ok(process)
+    };
+    let mut daemon = start_daemon()?;
+    let start_watch = |engine: Option<&Path>| -> Result<(Process, BufReader<ChildStdout>)> {
+        let mut cmd = command(home.path(), &source_path, &endpoint);
+        cmd.arg("wallpaper-watch");
+        if let Some(engine) = engine {
+            cmd.arg("--engine").arg(engine);
+        }
+        let mut child = Process(cmd.stdout(Stdio::piped()).stderr(Stdio::null()).spawn()?);
+        let reader = BufReader::new(child.0.stdout.take().ok_or("Missing wallpaper output")?);
+        Ok((child, reader))
+    };
+    let (mut first, mut first_read) = start_watch(None)?;
+    let (mut second, mut second_read) = start_watch(Some(&installed))?;
+    let quiet = |reader: &BufReader<ChildStdout>| -> Result<()> {
+        assert!(
+            reader.buffer().is_empty(),
+            "Unexpected buffered wallpaper line"
+        );
+        let mut fds = [rustix::event::PollFd::new(
+            reader.get_ref(),
+            rustix::event::PollFlags::IN,
+        )];
+        assert_eq!(
+            rustix::event::poll(
+                &mut fds,
+                Some(&rustix::event::Timespec {
+                    tv_sec: 0,
+                    tv_nsec: 800_000_000
+                })
+            )?,
+            0,
+            "Unexpected wallpaper line"
+        );
+        Ok(())
+    };
+    quiet(&first_read)?;
+    quiet(&second_read)?;
+    // A thin client has no inotify descriptor; only the daemon owns subscriptions.
+    for child in [&first, &second] {
+        for entry in fs::read_dir(format!("/proc/{}/fdinfo", child.0.id()))? {
+            assert!(!fs::read_to_string(entry?.path())?
+                .lines()
+                .any(|line| line.starts_with("inotify ")));
+        }
+    }
+    let reference: Value =
+        serde_json::from_str(include_str!("fixtures/wallpaper-watch-reference.json"))?;
+    let expected = |name: &str| -> Result<Vec<u8>> {
+        Ok(reference["dialogue"]["steps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|step| step["name"] == name)
+            .ok_or("Missing frozen step")?["stdout"]
+            .as_str()
+            .unwrap()
+            .as_bytes()
+            .to_vec())
+    };
+    let root = home.path().join("Pictures/Wallpapers");
+    let scheme = home.path().join("state/nacre/scheme.json");
+    fs::write(root.join("ignored.txt"), "ignored")?;
+    fs::write(&scheme, r#"{"mode":"dark","colours":{}}"#)?;
+    quiet(&first_read)?;
+    quiet(&second_read)?;
+    fs::write(&scheme, r#"{"mode":"light"}"#)?;
+    assert_eq!(next_line(&mut first_read)?, expected("changed-mode")?);
+    assert_eq!(next_line(&mut second_read)?, expected("changed-mode")?);
+    fs::write(
+        &scheme,
+        r#"{"mode":"light","colours":{"primary":"ffffff"}}"#,
+    )?;
+    quiet(&first_read)?;
+    quiet(&second_read)?;
+    fs::write(config.join("wallpaper-picker.json"), "{}")?;
+    assert_eq!(next_line(&mut first_read)?, expected("picker-preference")?);
+    assert_eq!(next_line(&mut second_read)?, expected("picker-preference")?);
+    fs::write(&bridge, "bridge replacement")?;
+    assert_eq!(next_line(&mut first_read)?, expected("engine-replacement")?);
+    quiet(&second_read)?;
+    fs::write(&installed, "helper replacement")?;
+    assert_eq!(
+        next_line(&mut second_read)?,
+        expected("engine-replacement")?
+    );
+    quiet(&first_read)?;
+    let nested = root.join("collection");
+    fs::create_dir(&nested)?;
+    // Match the frozen dialogue: wait for the new directory subscription before
+    // creating its file. IN_CREATE itself deliberately does not emit a change.
+    use std::os::unix::fs::MetadataExt;
+    let inode = fs::metadata(&nested)?.ino();
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let mut watched = false;
+        for entry in fs::read_dir(format!("/proc/{}/fdinfo", daemon.0.id()))? {
+            let info = match fs::read_to_string(entry?.path()) {
+                Ok(info) => info,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(error) => return Err(error.into()),
+            };
+            watched |= info
+                .lines()
+                .filter(|line| line.starts_with("inotify "))
+                .flat_map(str::split_whitespace)
+                .filter_map(|field| field.strip_prefix("ino:"))
+                .any(|hex| u64::from_str_radix(hex, 16).ok() == Some(inode));
+        }
+        if watched {
+            break;
+        }
+        if Instant::now() >= deadline {
+            return Err("Nested wallpaper subscription timed out".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    for text in ["first", "second", "final"] {
+        fs::write(nested.join("scene.PNG"), text)?;
+    }
+    assert_eq!(next_line(&mut first_read)?, expected("nested-burst")?);
+    assert_eq!(next_line(&mut second_read)?, expected("nested-burst")?);
+    quiet(&first_read)?;
+    quiet(&second_read)?;
+    let outside = home.path().join("outside");
+    fs::create_dir(&outside)?;
+    symlink(&outside, root.join("alias"))?;
+    fs::write(outside.join("scene.jpg"), "not followed")?;
+    quiet(&first_read)?;
+    quiet(&second_read)?;
+    let invalid_root = home.path().join("must-not-create");
+    let mut rejected = Process(
+        command(home.path(), &source_path, &endpoint)
+            .arg("wallpaper-watch")
+            .arg("--root")
+            .arg(&invalid_root)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    assert!(!rejected
+        .0
+        .wait_timeout(Duration::from_secs(3))?
+        .ok_or("Mismatched explicit source stayed alive")?
+        .success());
+    assert!(!invalid_root.exists());
+    daemon.0.kill()?;
+    daemon.0.wait()?;
+    for child in [&mut first, &mut second] {
+        assert!(!child
+            .0
+            .wait_timeout(Duration::from_secs(5))?
+            .ok_or("Disconnected wallpaper client stayed alive")?
+            .success());
+    }
+    let _restarted = start_daemon()?;
+    let (mut closed, closed_read) = start_watch(None)?;
+    drop(closed_read);
+    assert!(closed
+        .0
+        .wait_timeout(Duration::from_secs(5))?
+        .ok_or("Closed wallpaper pipe stayed alive")?
+        .success());
+    assert!(!fs::read_to_string(log)?.contains("DO_NOT_LOG_WINDOW_TITLE"));
+    Ok(())
+}

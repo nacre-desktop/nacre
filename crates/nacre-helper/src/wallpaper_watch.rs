@@ -2,7 +2,7 @@
 use crate::{json, paths::Paths, wallpaper_media, Result};
 use rustix::{
     event::{poll, PollFd, PollFlags, Timespec},
-    fd::OwnedFd,
+    fd::{AsFd, OwnedFd},
     fs::inotify,
     io::Errno,
 };
@@ -71,7 +71,7 @@ fn parent(path: &Path) -> PathBuf {
 struct Watcher {
     root: PathBuf,
     scheme: PathBuf,
-    engine: PathBuf,
+    engines: Vec<PathBuf>,
     config: PathBuf,
     fd: OwnedFd,
     paths: BTreeMap<i32, PathBuf>,
@@ -81,10 +81,10 @@ impl Watcher {
         let mut wanted = BTreeSet::from([
             self.root.clone(),
             parent(&self.scheme),
-            parent(&self.engine),
             parent(&self.root),
             self.config.clone(),
         ]);
+        wanted.extend(self.engines.iter().map(|engine| parent(engine)));
         if self.root.is_dir() {
             for entry in walkdir::WalkDir::new(&self.root).follow_links(false) {
                 let entry = entry?;
@@ -120,6 +120,98 @@ impl Watcher {
         }
         Ok(())
     }
+    fn read_events(
+        fd: &OwnedFd,
+        buffer: &mut [MaybeUninit<u8>],
+    ) -> std::io::Result<Vec<(i32, u32, OsString)>> {
+        let events = {
+            let mut reader = inotify::Reader::new(fd, buffer);
+            let mut events = Vec::new();
+            loop {
+                let event = reader.next().map_err(std::io::Error::from)?;
+                let name = OsString::from(Path::new(std::ffi::OsStr::from_bytes(
+                    event
+                        .file_name()
+                        .map_or(b"".as_slice(), |name| name.to_bytes()),
+                )));
+                events.push((event.wd(), event.events().bits(), name));
+                if reader.is_buffer_empty() {
+                    break;
+                }
+            }
+            events
+        };
+        Ok(events)
+    }
+    fn apply(
+        &mut self,
+        events: Vec<(i32, u32, OsString)>,
+        previous: &mut [Value; 3],
+    ) -> Result<u8> {
+        let mut dirty = 0;
+        let all = (1u8 << self.engines.len()) - 1;
+        for (wd, mask, name) in events {
+            if mask & 0x4000 != 0 {
+                eprintln!("Wallpaper event queue overflow; rebuilding subscriptions");
+                dirty |= all;
+                continue;
+            }
+            if mask & IGNORED != 0 {
+                self.paths.remove(&wd);
+                continue;
+            }
+            let Some(path) = self.paths.get(&wd).cloned() else {
+                continue;
+            };
+            if self.engines.iter().any(|engine| path == parent(engine)) {
+                for (index, engine) in self.engines.iter().enumerate() {
+                    if path == parent(engine) && Some(name.as_os_str()) == engine.file_name() {
+                        dirty |= 1 << index;
+                    }
+                }
+            } else if path == parent(&self.scheme) {
+                if Some(name.as_os_str()) == self.scheme.file_name()
+                    && mask & (0x8 | 0x40 | 0x80 | 0x200 | 0x400 | 0x800) != 0
+                {
+                    // IN_CREATE precedes the writer's content. Read only
+                    // after close/move/delete, so valid writes are never
+                    // reported as malformed while still in progress.
+                    let current = flavour(&self.scheme)?;
+                    if current != *previous {
+                        dirty |= all;
+                    }
+                    *previous = current;
+                }
+            } else if path == self.config {
+                if name == "cli.json" || name == "wallpaper-picker.json" {
+                    dirty |= all;
+                }
+            } else if path == parent(&self.root) {
+                if Some(name.as_os_str()) == self.root.file_name() {
+                    dirty |= all;
+                    self.rescan()?;
+                }
+            } else {
+                let suffix = Path::new(&name)
+                    .extension()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_lowercase();
+                if mask & ISDIR != 0
+                    || wallpaper_media::IMAGES.contains(&suffix.as_str())
+                    || wallpaper_media::VIDEOS.contains(&suffix.as_str())
+                {
+                    if mask & ISDIR != 0 {
+                        self.rescan()?;
+                    }
+                    if mask & (0x8 | 0x40 | 0x80 | 0x200 | 0x400 | 0x800) != 0 {
+                        dirty |= all;
+                    }
+                }
+            }
+        }
+        Ok(dirty)
+    }
     fn run(&mut self) -> Result<()> {
         self.rescan()?;
         let mut previous = flavour(&self.scheme)?;
@@ -144,77 +236,9 @@ impl Watcher {
                 return Err("Wallpaper notification descriptor closed".into());
             }
             if fds[0].revents().contains(PollFlags::IN) {
-                let events = {
-                    let mut reader = inotify::Reader::new(&self.fd, &mut buffer);
-                    let mut events = Vec::new();
-                    loop {
-                        let event = reader.next()?;
-                        let name = OsString::from(Path::new(std::ffi::OsStr::from_bytes(
-                            event
-                                .file_name()
-                                .map_or(b"".as_slice(), |name| name.to_bytes()),
-                        )));
-                        events.push((event.wd(), event.events().bits(), name));
-                        if reader.is_buffer_empty() {
-                            break;
-                        }
-                    }
-                    events
-                };
-                let mut dirty = false;
-                for (wd, mask, name) in events {
-                    if mask & 0x4000 != 0 {
-                        eprintln!("Wallpaper event queue overflow; rebuilding subscriptions");
-                        dirty = true;
-                        continue;
-                    }
-                    if mask & IGNORED != 0 {
-                        self.paths.remove(&wd);
-                        continue;
-                    }
-                    let Some(path) = self.paths.get(&wd).cloned() else {
-                        continue;
-                    };
-                    if path == parent(&self.engine) {
-                        dirty |= Some(name.as_os_str()) == self.engine.file_name();
-                    } else if path == parent(&self.scheme) {
-                        if Some(name.as_os_str()) == self.scheme.file_name()
-                            && mask & (0x8 | 0x40 | 0x80 | 0x200 | 0x400 | 0x800) != 0
-                        {
-                            // IN_CREATE precedes the writer's content. Read only
-                            // after close/move/delete, so valid writes are never
-                            // reported as malformed while still in progress.
-                            let current = flavour(&self.scheme)?;
-                            dirty |= current != previous;
-                            previous = current;
-                        }
-                    } else if path == self.config {
-                        dirty |= name == "cli.json" || name == "wallpaper-picker.json";
-                    } else if path == parent(&self.root) {
-                        if Some(name.as_os_str()) == self.root.file_name() {
-                            dirty = true;
-                            self.rescan()?;
-                        }
-                    } else {
-                        let suffix = Path::new(&name)
-                            .extension()
-                            .unwrap_or_default()
-                            .to_string_lossy()
-                            .to_lowercase();
-                        if mask & ISDIR != 0
-                            || wallpaper_media::IMAGES.contains(&suffix.as_str())
-                            || wallpaper_media::VIDEOS.contains(&suffix.as_str())
-                        {
-                            if mask & ISDIR != 0 {
-                                self.rescan()?;
-                            }
-                            if mask & (0x8 | 0x40 | 0x80 | 0x200 | 0x400 | 0x800) != 0 {
-                                dirty = true;
-                            }
-                        }
-                    }
-                }
-                if dirty {
+                let events = Self::read_events(&self.fd, &mut buffer)?;
+                let dirty = self.apply(events, &mut previous)?;
+                if dirty != 0 {
                     deadline = Some(Instant::now() + Duration::from_millis(500));
                 }
             }
@@ -224,6 +248,78 @@ impl Watcher {
                 output.flush()?;
                 deadline = None;
             }
+        }
+    }
+}
+/// Same event parser/filter as the standalone command, registered on the daemon
+/// runtime. Distinct engine paths have independent debounce deadlines; common
+/// library/scheme changes notify every source. No timer is armed while idle.
+#[allow(unsafe_code)]
+pub(crate) async fn observe(
+    paths: &Paths,
+    engines: Vec<PathBuf>,
+    mut publish: impl FnMut(Option<u8>) -> Result<()>,
+) -> Result<()> {
+    if engines.is_empty() || engines.len() > 3 {
+        return Err("Invalid wallpaper source count".into());
+    }
+    let root = paths.home.join("Pictures/Wallpapers");
+    let scheme = paths.state.join("scheme.json");
+    fs::create_dir_all(&root)?;
+    fs::create_dir_all(parent(&scheme))?;
+    let mut watcher = Watcher {
+        root,
+        scheme,
+        engines,
+        config: paths.config.clone(),
+        fd: inotify::init(inotify::CreateFlags::NONBLOCK | inotify::CreateFlags::CLOEXEC)?,
+        paths: BTreeMap::new(),
+    };
+    watcher.rescan()?;
+    let mut previous = flavour(&watcher.scheme)?;
+    // The duplicate refers to the same inotify source. Only this task reads it;
+    // Watcher retains its original descriptor for add/remove operations.
+    let descriptor = watcher.fd.as_fd().try_clone_to_owned()?;
+    // SAFETY: AsyncFd owns this descriptor throughout its registration.
+    let descriptor = unsafe { tokio::io::unix::AsyncFd::register(descriptor) }?;
+    let mut buffer = vec![MaybeUninit::uninit(); 262144];
+    let mut deadlines = vec![None; watcher.engines.len()];
+    publish(None)?;
+    loop {
+        let next = deadlines.iter().flatten().copied().min();
+        let timeout = async {
+            match next {
+                Some(next) => tokio::time::sleep_until(next).await,
+                None => std::future::pending::<()>().await,
+            }
+        };
+        tokio::select! {
+            ready = descriptor.readable() => {
+                let mut ready = ready?;
+                let events = match ready.try_io(|fd| Watcher::read_events(fd.get_ref(), &mut buffer)) {
+                    Ok(events) => events?,
+                    Err(_) => continue,
+                };
+                drop(ready);
+                let dirty = watcher.apply(events, &mut previous)?;
+                for (index, deadline) in deadlines.iter_mut().enumerate() {
+                    if dirty & (1 << index) != 0 {
+                        *deadline = Some(tokio::time::Instant::now() + Duration::from_millis(500));
+                    }
+                }
+            },
+            _ = timeout => {
+                let now = tokio::time::Instant::now();
+                let mut changed = 0;
+                for (index, deadline) in deadlines.iter_mut().enumerate() {
+                    if deadline.is_some_and(|deadline| deadline <= now) {
+                        *deadline = None;
+                        changed |= 1 << index;
+                    }
+                }
+                watcher.rescan()?;
+                publish(Some(changed))?;
+            },
         }
     }
 }
@@ -307,12 +403,15 @@ pub fn run(args: &[String]) -> Result<i32> {
         );
         return Ok(2);
     }
+    if let Some(code) = crate::daemon::wallpaper::watch(&paths, &root, &scheme, &engine)? {
+        return Ok(code);
+    }
     fs::create_dir_all(&root)?;
     fs::create_dir_all(parent(&scheme))?;
     Watcher {
         root,
         scheme,
-        engine,
+        engines: vec![engine],
         config: paths.config,
         fd: inotify::init(inotify::CreateFlags::NONBLOCK | inotify::CreateFlags::CLOEXEC)?,
         paths: BTreeMap::new(),

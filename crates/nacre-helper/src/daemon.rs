@@ -15,6 +15,7 @@ pub mod session;
 pub mod session_policy;
 pub mod socket;
 pub mod supervisor;
+pub mod wallpaper;
 pub mod widths;
 pub mod workers;
 
@@ -93,6 +94,27 @@ async fn serve(
             "network-watch",
             service_hub,
             move || network::run(factory_hub.clone(), generation.clone()),
+        )))
+    } else {
+        None
+    };
+    let wallpaper_service = if !counter.safe {
+        let generations = Rc::new(RefCell::new(std::collections::BTreeMap::new()));
+        wallpaper::publish(&hub, &generations, false, None)?;
+        hub.borrow_mut().service("wallpaper-watch", "starting", 0)?;
+        let service_hub = hub.clone();
+        let factory_hub = hub.clone();
+        let wallpaper_paths = paths.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "wallpaper-watch",
+            service_hub,
+            move || {
+                wallpaper::run(
+                    factory_hub.clone(),
+                    wallpaper_paths.clone(),
+                    generations.clone(),
+                )
+            },
         )))
     } else {
         None
@@ -209,6 +231,14 @@ async fn serve(
         if let Err(error) = service.await {
             if !error.is_cancelled() {
                 tracing::error!("Network supervisor failed during shutdown");
+            }
+        }
+    }
+    if let Some(service) = wallpaper_service {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Wallpaper supervisor failed during shutdown");
             }
         }
     }

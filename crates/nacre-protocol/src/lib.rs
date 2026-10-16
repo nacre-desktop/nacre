@@ -6,6 +6,7 @@ pub mod helpers;
 pub mod menu;
 pub mod network;
 pub mod patch;
+pub mod wallpaper;
 pub mod widths;
 
 use schemars::JsonSchema;

@@ -2483,3 +2483,82 @@ Private diagnostic, settled-resource and cold-frame evidence archive SHA-256:
 `be077edff7de75e633eb757f83c0084fe5171f1eecb5c5e9fe43bb4a5f5aa44b`.
 The archive is verified on both hosts. A final command-line/environment audit
 found zero surviving private capture processes; the isolated lab is retained.
+
+### Foundation wallpaper-watch fold (desktop-PC nested, 2026-10-16)
+
+This moves the existing native filesystem watcher into the daemon. It does not
+change image decoding, palette publication or the 500 ms debounce. The baseline
+is `6a737629` with helper SHA-256
+`1f2bc758236c3e485bb31427def1db3cad0f6e3bcd9f503b2bc1b40b6eb77e90`;
+the candidate source archive is
+`6467a1475c81870c1169f4de9d74e980cd86cb77c6f68ab1dc5c674aaaf3134c`,
+and its release helper is
+`d8f77affca7b9f2263ed85752c8343d013163788cdc8608aa5335b9b1776b8d6`.
+All 391 crate/protocol source hashes match on the editing and measurement hosts.
+
+Each compositor runs A/B/A/B with the same 320-app fixture, exactly seven warm
+catalog queries, 35 seconds for worker retirement, and 20 debounced changes.
+Each change consists of three quick image-file writes and must produce one exact
+legacy JSON line. Normal memory policy is unchanged. At least 180 seconds of
+additional settlement and 90 seconds of stable anonymous PSS/huge-page counts
+precede each 60-second idle sample. One Hyprland baseline needed 200 seconds;
+the other seven cells needed 180. No builds, tests or other captures ran alongside.
+All eight cells are valid on their first attempt.
+
+| Settled comparison, A1/A2 or B1/B2 | Before | Candidate |
+| --- | ---: | ---: |
+| niri combined RSS MiB | 49.48 / 47.79 | 49.63 / 49.86 |
+| niri combined PSS MiB | 37.76 / 36.48 | 37.03 / 37.46 |
+| Hyprland combined RSS MiB | 49.06 / 49.15 | 48.82 / 51.06 |
+| Hyprland combined PSS MiB | 37.30 / 37.19 | 36.06 / 38.34 |
+| Helpers / resident threads, both compositors | 2 / 2 | 2 / 2 |
+| All-thread voluntary switches / 60 s, every cell | 0 | 0 |
+| Observed CPU ticks / 60 s, 100 Hz, every cell | 0 | 0 |
+| niri helper CPU ms/debounced change | 0.10603 / 0.11436 | 0.23199 / 0.23796 |
+| Hyprland helper CPU ms/debounced change | 0.09818 / 0.10238 | 0.22639 / 0.23349 |
+| Python launches on this already-native path | 0 | 0 |
+
+Combined PSS ranges overlap on both compositors: two-run medians are
+37.12 → 37.25 MiB on niri and 37.25 → 37.20 MiB on Hyprland. These runs do
+not establish a memory improvement or a persistent PSS increase. Combined RSS
+medians are higher by 1.11/0.84 MiB respectively; RSS counts shared pages in each
+process, whereas PSS apportions them. Both totals are retained above rather than
+presenting daemon-only memory as the cost of the whole path. No growing idle
+activity reproduces. Zero observed ticks are limited by the 100 Hz resolution;
+this is neither a battery nor a three-hour measurement.
+
+The new publication/compatibility path adds about 0.12–0.13 ms of helper CPU per
+debounced change. This synthetic probe measures event handling, not decoding,
+palette application or a displayed frame. One compatibility client remains until
+the shared QML connection replaces it in F3, so this step alone does not reduce
+the two-process count. The baseline already uses native code and inotify.
+
+Measured SwapPss is zero in all idle and change probes. Idle host swap-in
+A1/B1/A2/B2 is 2/7/4/5 pages on niri and 1/2/37/5 on Hyprland. Change-probe
+swap-in is 0/0/2/0 and 0/0/0/0 respectively; all swap-out is zero, at
+4,096 bytes/page. Every measured helper runs at nice 10 without idle provider
+children. Frozen watcher outputs remain unchanged. Correctness passes:
+355 Rust, 938 repository cases, 534 immutable parity cases, formatting,
+Clippy and committed-schema freshness.
+
+The cold niri follow-up uses the same frozen `75157fd3` QML/harness and exact
+helper binaries, in A/B/A/B order. Its boundary is Qt key-handler receipt to
+the settled `frameSwapped` signal, excluding compositor presentation.
+
+| Panel frame ms, A1/A2 or B1/B2 | Before | Candidate |
+| --- | ---: | ---: |
+| Cold launcher | 471 / 441 | 424 / 441 |
+| Reopened launcher | 367 / 357 | 358 / 362 |
+| Cold dashboard | 362 / 362 | 362 / 362 |
+| Reopened dashboard | 362 / 362 | 362 / 362 |
+
+The launcher ranges meet at 441 ms; two-run medians of 456 → 432.5 ms do not
+establish a speedup. No growing cold-launcher regression reproduces. All four
+captures have measured SwapPss zero and no paging-gate failures. Host swap-in
+A1/B1/A2/B2 is 5/101/0/1 pages, all swap-out zero, at 4,096 bytes/page. No
+physical-desktop presentation, GTK endpoint or battery claim is added.
+
+Private resource/cold/correctness evidence archive SHA-256:
+`9477126532b7a879b31dd8c3d275c6fb0c1359bc9da97e7e151848181c333559`.
+Its 57 files are archived and checksum-verified on both hosts. A final scoped
+process/environment audit finds zero surviving private capture processes.

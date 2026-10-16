@@ -400,3 +400,31 @@ existing standalone reader. An explicit missing endpoint or safe mode fails
 closed. Closing the output pipe releases the idle adapter without polling.
 These are added transport/lifecycle protections; frozen normal change lines stay
 exact. Full network device snapshots/actions and other bar services remain deferred.
+
+## Wallpaper filesystem monitoring
+
+`wallpaper.watch` v1 is `{available,generations,error?}`. It reports debounced
+filesystem changes, not wallpaper selection, decode or palette publication.
+`generations` maps opaque 64-character lowercase SHA-256 source IDs to nonnegative
+safe integers; at most 32 entries. IDs delimit the raw absolute root, scheme,
+configuration and engine path bytes. They preserve symlink identity and avoid
+publishing personal path strings. Unknown optional fields remain ignorable.
+Errors are sanitized and at most 256 bytes. See `wallpaper-watch.json`,
+`wallpaper.d.luau` and `wallpaper.jsonl`.
+
+One inotify source reuses the standalone filter, recursive subscriptions without
+following directory links, and 500 ms debounce. It observes the running helper,
+installed helper and legacy bridge as distinct engine paths where needed. Common
+library/scheme/preferences changes advance all relevant counters; engine changes
+advance only their own counter. Counters survive a service restart within a boot.
+No timer runs while idle. New directories are subscribed before their later file
+events; creation alone does not produce a notification.
+
+The one-release `wallpaper-watch` client emits no initial line, then the exact
+legacy `{"changed": true}` line per generation increment, including increments
+covered by a coalesced patch. Missing default/older non-safe daemons fall back
+before accepting a source. Custom watch paths without a matching default-daemon
+source retain standalone behavior. An explicit socket or safe mode fails closed
+for missing capabilities or mismatched sources. Once accepted, source failure or
+connection loss ends the client with an error; it never replays through a second
+watcher. Closing the output pipe exits without an idle polling timer.
