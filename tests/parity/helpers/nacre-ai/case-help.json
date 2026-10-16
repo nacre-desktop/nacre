@@ -4,5 +4,6 @@
     "--help"
   ],
   "command": "python3 bin/nacre-ai",
-  "stdout": "text"
+  "stdout": "text",
+  "account_help": "shared-codex-history-v1"
 }

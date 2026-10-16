@@ -192,3 +192,13 @@ state is rejected and existing private modes are repaired. The unobserved
 `latest.next` scratch write is omitted; final published bytes/modes are exact.
 The current Python watch path fails on the retired `event_socket` bridge method;
 native observation uses direct sockets and D-Bus, without changing session policy.
+
+## Shared-account help extensions
+
+Intended difference: `nacre-ai/help` describes shared Codex chats with separate logins.
+Intended difference: `nacre-ai-chat/help` exposes `--all-accounts` and `--history-home`.
+
+The `account_help: "shared-codex-history-v1"` rule asserts only these exact text
+extensions from the account-sharing change. Every other byte, exit status and
+file observation remains exact. Original frozen outputs stay unchanged and cannot
+be re-recorded through this rule; unknown helpers, actions or rule versions fail.

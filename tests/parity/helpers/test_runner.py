@@ -19,6 +19,67 @@ spec.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
+    def test_account_help_extensions_are_exact_and_preserve_other_observations(self):
+        for helper in ("nacre-ai", "nacre-ai-chat"):
+            case = json.loads((HERE / helper / "case-help.json").read_text())
+            frozen = json.loads((HERE / helper / "expected-help.json").read_text())
+            original = copy.deepcopy(frozen)
+            expected = runner.account_help_reference(frozen, case)
+            self.assertEqual(frozen, original)
+            if helper == "nacre-ai":
+                self.assertIn("Codex accounts share chats", expected["stdout"])
+            else:
+                self.assertIn("  --all-accounts\n", expected["stdout"])
+                self.assertIn("  --history-home HISTORY_HOME\n", expected["stdout"])
+            for key, value in [
+                ("stdout", expected["stdout"] + "extra\n"),
+                ("exit", 1),
+                ("files", {"unexpected": {}}),
+            ]:
+                changed = {**expected, key: value}
+                self.assertNotEqual(
+                    runner.account_help_reference(frozen, case), changed
+                )
+            self.assertEqual(
+                runner.account_help_reference(frozen, {"helper": helper}), frozen
+            )
+
+    def test_account_help_frozen_outputs_cannot_be_re_recorded(self):
+        for helper in ("nacre-ai", "nacre-ai-chat"):
+            reference = HERE / helper / "expected-help.json"
+            before = reference.read_bytes()
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(HERE / "run.py"),
+                    "--record",
+                    "--case",
+                    helper + "/help",
+                ],
+                text=True,
+                capture_output=True,
+                timeout=5,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn(
+                "Frozen account-help cases cannot be re-recorded", result.stderr
+            )
+            self.assertEqual(reference.read_bytes(), before)
+
+    def test_account_help_rule_rejects_wrong_scope_and_changed_reference(self):
+        case = json.loads((HERE / "nacre-ai" / "case-help.json").read_text())
+        frozen = json.loads((HERE / "nacre-ai" / "expected-help.json").read_text())
+        for changed in [
+            {**case, "helper": "other"},
+            {**case, "args": ["new"]},
+            {**case, "account_help": "anything"},
+            {**case, "stdout": "json"},
+        ]:
+            with self.assertRaisesRegex(ValueError, "Unsupported account-help"):
+                runner.account_help_reference(frozen, changed)
+        with self.assertRaisesRegex(ValueError, "Frozen account-help"):
+            runner.account_help_reference({**frozen, "stdout": "unexpected"}, case)
+
     def test_historical_catalog_assets_do_not_mask_current_bundle_inputs(self):
         case = {"helper": "wallpaper-media", "args": ["catalog"]}
         self.assertEqual(

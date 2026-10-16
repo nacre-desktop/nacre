@@ -924,6 +924,48 @@ def engine_provenance_reference(expected, actual, case):
     return result
 
 
+def account_help_reference(expected, case):
+    """Two exact upstream help extensions; never normalize arbitrary CLI text."""
+    rule = case.get("account_help")
+    if rule is None:
+        return expected
+    helper = case.get("helper")
+    if (
+        rule != "shared-codex-history-v1"
+        or helper not in ("nacre-ai", "nacre-ai-chat")
+        or case.get("args") != ["--help"]
+        or case.get("stdout") != "text"
+    ):
+        raise ValueError("Unsupported account-help difference")
+    replacements = {
+        "nacre-ai": [
+            (
+                "  --account ACCOUNT     Account profile override for this invocation;\n"
+                "                        providers keep separate logins and histories\n",
+                "  --account ACCOUNT     Account profile override; Codex accounts share chats\n"
+                "                        and keep separate logins\n",
+            )
+        ],
+        "nacre-ai-chat": [
+            (
+                "                     [--path PATH] [--chat-directory] [--account ACCOUNT]\n",
+                "                     [--path PATH] [--chat-directory] [--account ACCOUNT]\n"
+                "                     [--all-accounts] [--history-home HISTORY_HOME]\n",
+            ),
+            (
+                "  --account ACCOUNT\n",
+                "  --account ACCOUNT\n  --all-accounts\n  --history-home HISTORY_HOME\n",
+            ),
+        ],
+    }
+    result = copy.deepcopy(expected)
+    for old, new in replacements[helper]:
+        if result["stdout"].count(old) != 1:
+            raise ValueError("Frozen account-help text differs from declared contract")
+        result["stdout"] = result["stdout"].replace(old, new, 1)
+    return result
+
+
 def native_exception_reference(expected, actual, case):
     """Only enumerated retired tracebacks become exact class/message lines."""
     rule = case.get("native_exception")
@@ -1122,6 +1164,8 @@ def main():
             case = json.loads(path.read_text())
             if args.record and case.get("engine_provenance"):
                 parser.error("Frozen engine-provenance cases cannot be re-recorded")
+            if args.record and case.get("account_help"):
+                parser.error("Frozen account-help cases cannot be re-recorded")
             command = native_registry.command(case, args.command)
             fixture = args.service_fixture
             if command and case.get("native_service_fixture") and fixture is None:
@@ -1141,6 +1185,7 @@ def main():
                 reference.write_text(rendered)
             else:
                 expected = json.loads(reference.read_text())
+                expected = account_help_reference(expected, case)
                 expected = engine_provenance_reference(expected, actual, case)
                 expected = native_exception_reference(expected, actual, case)
                 expected = compatible_files(recovery_reference(expected, case), case)
