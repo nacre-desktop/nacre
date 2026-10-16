@@ -19,3 +19,12 @@ instance can select `NACRE_BRAIN_PORT` rather than collide with an existing serv
 Both applications can be reopened from the launcher. Optional setup pages explain
 missing components instead of making the base desktop depend on them. Your
 accounts and memory remain yours when you update or remove application code.
+
+Codex accounts share local chats. Switching the selected account changes the
+login used to continue a saved chat, while preserving its title, identity and
+workspace. Credentials stay in separate account homes. New account homes point
+Codex's supported `sqlite_home` setting at the default chat store; existing
+profile histories remain discoverable in place, without copying databases or
+credentials. A chat in an older private store resumes with that store and the
+selected login in a separate Codex process. Running remote workers retain their
+original account until they exit. Claude Code histories remain account-specific.

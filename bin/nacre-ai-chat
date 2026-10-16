@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import fcntl
 import nacre_state as _state
 import os
 from pathlib import Path
@@ -35,10 +36,55 @@ def account_env(account):
     return env
 
 
+def shared_history_home():
+    import tomllib
+
+    home = Path.home() / ".codex"
+    config = home / "config.toml"
+    data = tomllib.loads(config.read_text()) if config.exists() else {}
+    return Path(data.get("sqlite_home", str(home))).expanduser().resolve()
+
+
+def account_homes():
+    result = [("", Path.home() / ".codex")]
+    root = Path.home() / ".local/share/nacre/ai/accounts"
+    if root.is_dir():
+        for home in sorted(root.iterdir()):
+            if (
+                home.is_dir()
+                and not home.is_symlink()
+                and re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,47}", home.name)
+            ):
+                result.append((home.name, home.resolve()))
+    return result
+
+
+def history_sources():
+    """Keep old stores readable in place; never copy or merge live databases."""
+    shared = shared_history_home()
+    result = [("", shared)]
+    seen = {shared}
+    for account, home in account_homes():
+        candidates = [home]
+        registry = home / "nacre-history-sources.json"
+        if registry.is_file():
+            candidates.extend(Path(p) for p in json.loads(registry.read_text()))
+        for candidate in candidates:
+            candidate = candidate.expanduser().resolve()
+            if candidate not in seen and any(candidate.glob("state_*.sqlite")):
+                result.append((account, candidate))
+                seen.add(candidate)
+    return result
+
+
 class Codex:
-    def __init__(self, env):
+    def __init__(self, env, history_home=None):
+        argv = [str(Path.home() / ".local/bin/codex")]
+        history_home = history_home or env.get("NACRE_AI_HISTORY_HOME")
+        if history_home:
+            argv += ["-c", "sqlite_home=" + json.dumps(str(history_home))]
         self.process = subprocess.Popen(
-            [str(Path.home() / ".local/bin/codex"), "app-server", "--stdio"],
+            [*argv, "app-server", "--stdio"],
             env=env,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -441,6 +487,14 @@ def serve(env):
 
 
 def configure(env):
+    home = Path(env.get("CODEX_HOME", str(Path.home() / ".codex")))
+    home.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (home / "nacre-config.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return configure_locked(env)
+
+
+def configure_locked(env):
     import tomllib
 
     home = Path(env.get("CODEX_HOME", str(Path.home() / ".codex")))
@@ -459,6 +513,53 @@ def configure(env):
         + top
         + tables
     )
+    if (
+        home.resolve().parent == Path.home() / ".local/share/nacre/ai/accounts"
+        and re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,47}", home.name)
+    ):
+        shared = shared_history_home()
+        first_table = re.search(r"^\s*\[", updated, re.MULTILINE)
+        boundary = first_table.start() if first_table else len(updated)
+        updated = (
+            "sqlite_home = "
+            + json.dumps(str(shared))
+            + "\n"
+            + re.sub(
+                r"^sqlite_home\s*=.*(?:\n|$)",
+                "",
+                updated[:boundary],
+                flags=re.MULTILINE,
+            )
+            + updated[boundary:]
+        )
+        # Preserve the prior configuration privately before the first transition.
+        if tomllib.loads(text).get("sqlite_home") != str(shared):
+            import datetime as dt
+            import shutil
+
+            backup = (
+                Path.home()
+                / ".local/state/nacre/ai/backups"
+                / dt.datetime.now(dt.timezone.utc).strftime(
+                    "shared-chats-%Y%m%dT%H%M%S%fZ"
+                )
+                / home.name
+            )
+            if config.exists():
+                backup.mkdir(parents=True, mode=0o700)
+                shutil.copy2(config, backup / "config.toml")
+                (backup / "config.toml").chmod(0o600)
+            previous = tomllib.loads(text).get("sqlite_home")
+            if previous:
+                registry = home / "nacre-history-sources.json"
+                sources = json.loads(registry.read_text()) if registry.exists() else []
+                previous = str(Path(previous).expanduser().resolve())
+                if previous not in sources:
+                    sources.append(previous)
+                    pending = registry.with_suffix(".json.tmp")
+                    pending.write_text(json.dumps(sources) + "\n")
+                    pending.chmod(0o600)
+                    pending.replace(registry)
     if updated != text:
         temporary = config.with_suffix(".toml.tmp")
         temporary.write_text(updated)
@@ -531,6 +632,63 @@ def history_paths(path, chat_directory=False):
     ]
 
 
+def list_threads(env, paths, history_home=None):
+    threads = []
+    cursor = None
+    with Codex(env, history_home) as codex:
+        while True:
+            data = codex.call(
+                "thread/list",
+                {
+                    "cwd": paths,
+                    "limit": 100,
+                    "cursor": cursor,
+                    "sortKey": "updated_at",
+                    "modelProviders": [],
+                    "useStateDbOnly": True,
+                },
+            )
+            threads.extend(data["data"])
+            next_cursor = data.get("nextCursor")
+            if not next_cursor:
+                return threads
+            if next_cursor == cursor:
+                raise ValueError("Codex returned a repeated history cursor")
+            cursor = next_cursor
+
+
+def shared_chat_records(env, paths, project):
+    threads = {}
+    origins = {}
+    shared = shared_history_home()
+    for account, home in history_sources():
+        source_env = account_env(account)
+        for thread in list_threads(source_env, paths, home):
+            key = thread["id"]
+            previous = threads.get(key)
+            if previous is None or thread.get("updatedAt", 0) > previous.get(
+                "updatedAt", 0
+            ):
+                threads[key] = thread
+                origins[key] = dict(
+                    account=account,
+                    history_home=str(home),
+                    shared_history=home == shared,
+                )
+    sessions = {}
+    owners = {}
+    for account, _ in account_homes():
+        current = running_sessions(project, account)
+        sessions.update(current)
+        owners.update(dict.fromkeys(current, account))
+    records = chat_records(threads.values(), sessions)
+    for item in records:
+        item.update(origins.get(item["id"], {}))
+        if item["session"]:
+            item["account"] = owners[item["session"]]
+    return records
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("command", choices=["title", "list", "resume", "serve", "configure"])
@@ -540,6 +698,8 @@ def main():
     p.add_argument("--path")
     p.add_argument("--chat-directory", action="store_true")
     p.add_argument("--account", default="")
+    p.add_argument("--all-accounts", action="store_true")
+    p.add_argument("--history-home")
     a = p.parse_args()
     env = account_env(a.account)
     if a.command == "serve":
@@ -564,12 +724,35 @@ def main():
             "--add-dir",
             str(Path.home() / "Documents/Nacre-Brain"),
         ]
+        if a.history_home:
+            argv += ["--no-daemon", "-c", "sqlite_home=" + json.dumps(a.history_home)]
+            env["NACRE_AI_HISTORY_HOME"] = a.history_home
         # tmux may predate this account selection; pass its home to the new child explicitly.
-        if env.get("CODEX_HOME"):
-            argv = ["env", "CODEX_HOME=" + env["CODEX_HOME"], *argv]
+        assignments = [
+            key + "=" + env[key]
+            for key in ("CODEX_HOME", "NACRE_AI_HISTORY_HOME")
+            if env.get(key)
+        ]
+        if assignments:
+            argv = ["env", *assignments, *argv]
         os.execvpe(
             "tmux", ["tmux", "new-session", "-A", "-s", session, shlex.join(argv)], env
         )
+    if a.command == "list":
+        if not a.path or not a.project:
+            raise ValueError("Project ID and path are required")
+        paths = history_paths(a.path, a.chat_directory)
+        records = []
+        if paths:
+            records = (
+                shared_chat_records(env, paths, a.project)
+                if a.all_accounts
+                else chat_records(
+                    list_threads(env, paths), running_sessions(a.project, a.account)
+                )
+            )
+        print(json.dumps(records))
+        return
     with Codex(env) as codex:
         if a.command == "title":
             name = label(a.name or "")
@@ -580,35 +763,6 @@ def main():
             codex.call("thread/name/set", {"threadId": a.thread_id, "name": name})
             cache_named_thread(codex, a.thread_id, name)
             print("Chat title saved")
-        else:
-            if not a.path or not a.project:
-                raise ValueError("Project ID and path are required")
-            paths = history_paths(a.path, a.chat_directory)
-            if not paths:
-                print("[]")
-                return
-            threads = []
-            cursor = None
-            for _ in range(5):
-                data = codex.call(
-                    "thread/list",
-                    {
-                        "cwd": paths,
-                        "limit": 100,
-                        "cursor": cursor,
-                        "sortKey": "updated_at",
-                        "useStateDbOnly": True,
-                    },
-                )
-                threads.extend(data["data"])
-                cursor = data.get("nextCursor")
-                if not cursor:
-                    break
-            print(
-                json.dumps(
-                    chat_records(threads, running_sessions(a.project, a.account))
-                )
-            )
 
 
 if __name__ == "__main__":

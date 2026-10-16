@@ -9,8 +9,10 @@ The desktop launcher is conversation-first: **New chat**, **Resume latest chat**
 **Load chat**, **Open brain**, **Settings**, **Close**. New chat uses the default
 assistant (Codex initially) and selected account, with no project/provider prompt.
 Settings changes the default assistant, accounts, usage and project registry.
-Existing chats resume in their original assistant/account/workspace; switching the
-default never converts chats or interrupts workers.
+Existing chats retain their assistant and workspace. Saved Codex chats resume
+with the selected Codex login; all Codex accounts share the chat list. Running
+remote workers retain their original login. Switching the default never converts
+chats or interrupts workers.
 
 Start in a neutral private chat folder. Answer questions normally; a mention of a
 project does not authorize editing. When asked to work, resolve relevant project
@@ -44,7 +46,10 @@ under `$HOME/.local/share/nacre/ai/worktrees`; remove only clean, idle ones afte
 the project has finished using them.
 
 `nacre-ai --account NAME login` creates a separate local Codex home. Login
-still requires the user's own authentication. Never interpret a Codex config
+still requires the user's own authentication. Codex chat state is shared through
+the supported `sqlite_home` setting; credentials remain separate. Older private
+histories stay discoverable in place and resume through an explicit storage
+override without restarting peers. Never copy or merge live databases, interpret a Codex config
 profile as an account or copy auth.json to imitate switching accounts.
 
 Name new chats automatically once the request is understood:
@@ -63,8 +68,8 @@ For Claude titles, use native session names or /rename; do not call the Codex
 set_chat_title tool for a Claude session.
 
 Settings provides independent Codex/Claude account selectors, named sign-ins,
-a default assistant choice, and a setup status check. Load chat combines only the
-selected accounts' histories and labels assistant/account. Switching accounts
+a default assistant choice, and a setup status check. Load chat combines all
+Codex histories and the selected Claude account's history. Switching accounts
 does not alter running sessions. Both assistants use the same private brain.
 
 ## Durable task checkpoints

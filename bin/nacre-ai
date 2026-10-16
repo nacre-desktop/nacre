@@ -1029,6 +1029,7 @@ def project_for(identifier, include_general=False):
 def local_environment(account):
     account = effective_account("codex", account)
     env = dict(os.environ, CODEX_HOME=str(Path.home() / ".codex"))
+    env.pop("NACRE_AI_HISTORY_HOME", None)
     if account:
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,47}", account):
             raise ValueError("Invalid account profile name")
@@ -1081,6 +1082,7 @@ def source_chats(project, account):
         project["path"],
         "--account",
         account or "",
+        "--all-accounts",
     ]
     if project.get("chat_directory"):
         argv.append("--chat-directory")
@@ -1101,6 +1103,18 @@ def source_chats(project, account):
     listing = subprocess.run(
         command, env=env, text=True, capture_output=True, timeout=30
     )
+    if (
+        project.get("host")
+        and listing.returncode
+        and "unrecognized arguments: --all-accounts" in listing.stderr
+    ):
+        # Remote helpers can be upgraded independently; keep their existing
+        # account-scoped history working until that host has shared history.
+        argv.remove("--all-accounts")
+        command[-1] = '"$HOME/.local/bin/nacre-ai-chat" ' + shlex.join(argv)
+        listing = subprocess.run(
+            command, env=env, text=True, capture_output=True, timeout=30
+        )
     if listing.returncode:
         raise ValueError(
             project.get("label", project["id"])
@@ -1108,7 +1122,7 @@ def source_chats(project, account):
             + (listing.stderr.strip() or "Cannot read tasks")
         )
     return [
-        dict(item, project=project, agent="codex", account=account)
+        dict(item, project=project, agent="codex", account=item.get("account", account))
         for item in json.loads(listing.stdout)
     ]
 
@@ -1243,6 +1257,13 @@ def load_task(args):
             account,
             item["id"],
         )
+    # Authentication follows the selected Codex account; chat identity and
+    # storage follow the saved record. Running remote workers retain their login.
+    if "shared_history" in item:
+        account = effective_account("codex", args.account)
+    history_home = (
+        item.get("history_home") if item.get("shared_history") is False else None
+    )
     if project.get("host"):
         if item.get("session"):
             command = shlex.join(
@@ -1258,6 +1279,7 @@ def load_task(args):
                     project["id"],
                     "--account",
                     account or "",
+                    *(["--history-home", history_home] if history_home else []),
                 ]
             )
         return ssh_exec(project["host"], command)
@@ -1275,6 +1297,11 @@ def load_task(args):
         "--add-dir",
         os.environ.get("NACRE_BRAIN", str(Path.home() / "Documents/Nacre-Brain")),
     ]
+    if history_home:
+        # An older account may still own an independent store. Use Codex's
+        # supported path override without restarting a peer's shared daemon.
+        argv += ["--no-daemon", "-c", "sqlite_home=" + json.dumps(history_home)]
+        env["NACRE_AI_HISTORY_HOME"] = history_home
     exec_local_codex(argv, env)
 
 
@@ -1330,7 +1357,8 @@ def prepare_local_codex(executable, env):
 
 
 def exec_local_codex(argv, env):
-    prepare_local_codex(argv[0], env)
+    if "--no-daemon" not in argv:
+        prepare_local_codex(argv[0], env)
     os.execvpe(argv[0], argv, env)
 
 
@@ -1525,7 +1553,7 @@ def main():
     )
     parser.add_argument(
         "--account",
-        help="Account profile override for this invocation; providers keep separate logins and histories",
+        help="Account profile override; Codex accounts share chats and keep separate logins",
     )
     args = parser.parse_args()
     args.agent = args.agent or default_assistant()

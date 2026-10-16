@@ -47,6 +47,26 @@ def install_launcher(repo, home, apply=False, name="nacre-ai"):
     backup = home / ".local/state/nacre/ai/backups" / stamp
     backup.mkdir(parents=True, mode=0o700)
     shutil.copy2(target, backup / name)
+    # Older conversation runtimes predate the shared state reader. Install the
+    # exact controller dependencies beside the private copy, without replacing
+    # the desktop's modules or touching account data.
+    if b"import nacre_state" in source.read_bytes():
+        for dependency in ("nacre_state.py", "nacre-state-files.json"):
+            destination = target.parent / dependency
+            payload = (repo / "nacre/shell-tools" / dependency).read_bytes()
+            if destination.exists() and destination.read_bytes() == payload:
+                continue
+            if destination.is_symlink():
+                raise RuntimeError(
+                    "Linked controller dependency preserved: " + str(destination)
+                )
+            if destination.exists():
+                shutil.copy2(destination, backup / dependency)
+            with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as out:
+                out.write(payload)
+                pending_dependency = Path(out.name)
+            pending_dependency.chmod(0o644)
+            pending_dependency.replace(destination)
     old = target.read_bytes()
     with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as out:
         out.write(source.read_bytes())
