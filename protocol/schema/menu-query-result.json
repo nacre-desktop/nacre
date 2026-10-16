@@ -43,6 +43,24 @@
       ],
       "format": "uint32",
       "minimum": 0
+    },
+    "conversion": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MenuConversion"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "message": {
+      "description": "Nonfatal provider guidance, such as installing a missing search tool.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4096
     }
   },
   "required": [
@@ -140,6 +158,39 @@
       "required": [
         "name",
         "kind"
+      ]
+    },
+    "MenuConversion": {
+      "description": "Unit-conversion payload from the existing calculator provider.",
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2048
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        }
+      },
+      "required": [
+        "ok"
       ]
     }
   }

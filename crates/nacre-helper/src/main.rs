@@ -20,9 +20,10 @@ fn run() -> Result<i32> {
         _ => arguments.next().ok_or("Expected a helper command")?,
     };
     let mut arguments: Vec<String> = arguments.collect();
+    let inherited_tokio_threads = std::env::var_os("TOKIO_WORKER_THREADS").is_some();
     if !matches!(
         tool.as_str(),
-        "shell-supervisor" | "shell-environment" | "ctl"
+        "shell-supervisor" | "shell-environment" | "ctl" | "daemon"
     ) && std::env::var_os("TOKIO_WORKER_THREADS").is_none()
     {
         // zbus's blocking compatibility API owns a Tokio runtime when Tokio is
@@ -37,6 +38,9 @@ fn run() -> Result<i32> {
     }
     if tool == "daemon" {
         return nacre_helper::daemon::run(&arguments);
+    }
+    if tool == "daemon-menu-worker" {
+        return nacre_helper::daemon::menu_worker::run(&arguments, inherited_tokio_threads);
     }
     if tool == "daemon-notice" {
         return nacre_helper::daemon::workers::notice(&arguments);

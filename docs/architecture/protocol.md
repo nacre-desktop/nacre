@@ -231,8 +231,8 @@ the shell supervisor's exported environment are preserved.
 `daemon.status` returns boot, safe-mode, client and service status.
 `daemon.ping` returns null without outside work. `daemon` is the service-health
 topic; safe mode also exposes one stable record on `daemon.notice`.
-Settings and other desktop services arrive in F2–F4; `menu.query` follows F2 and
-notification hosting remains deferred. Wire schemas cover structural shapes/ranges;
+Settings and other desktop services arrive in F2–F4; the launcher engine now
+precedes the remaining F2 fold-ins. Notification hosting remains deferred. Wire schemas cover structural shapes/ranges;
 the decoder also enforces UTF-8 byte bounds and cross-field constraints.
 
 The same ELF dispatches `nacre-helper daemon` / `nacre-daemon`, and
@@ -250,13 +250,18 @@ User units are staged; enabling/starting them requires the owner's decision.
 method; advertise these descriptors only when the engine actually serves them.
 The existing wire version, core registry and seven envelope transcripts do not
 change. New schemas, separate Luau definitions and four method transcripts are
-committed from the Rust types, including a populated320-app result.
+committed from the Rust types, including a populated320-app result. A fifth
+transcript exercises optional conversion results and provider guidance; the older
+method and envelope transcripts remain byte-identical.
 
 Queries carry raw query text plus mode/optional route/limit. Prefix interpretation,
 catalog loading, filtering, ranking, provider work and history belong to Nacre's
 engine. Results echo query/mode/route and catalog_rev; clients drop superseded
 query replies. items is a stable-ID-keyed object and order is authoritative.
 Kinds/modes are open strings; older clients ignore unknown optional fields.
+Wire keys use the existing stable/favorite ID function; navigation routes retain
+the original menu IDs. Missing or duplicate result IDs fail visibly instead of
+silently dropping records from the entity map.
 Display fields are name/kind plus optional description/breadcrumb/icon/emoji/
 brand/status/checked/reason/disabled. Icons are theme names or local paths; no image/base64 payload.
 
@@ -269,4 +274,40 @@ stale_revision/unavailable errors retain their normal wire meanings.
 
 The migration owner reviewed this additive contract; engine availability is
 advertised through the welcome method registry when implemented.
-It implements no helper/daemon/menu behavior and makes no latency acceptance claim.
+The daemon advertises these methods when its launcher service is hosted. Safe
+mode leaves the launcher off. `menu` publishes availability, catalog revision,
+indexed entry count and diagnostics; a successful query proves its own completed
+result count. Empty `route: "apps"` returns the application catalog; empty
+`route: "home"` returns saved favorites. Clients must not rank or filter results.
+
+The implementation retains the original JavaScript ranking/provider model in
+`nacre-menu`; the UI fallback stays until F3. Application directories are indexed
+from absolute XDG data roots and watched with inotify, including newly created
+roots and directory replacement. No-op scans preserve the revision. Invalid hand
+edits keep the last good index; writes to corrupt preferences fail visibly.
+Registry locks do not trigger index refreshes.
+
+`menu.preferences` accepts `{action:"load"}` or
+`{action:"favorite"|"hide"|"record",value:{id,enabled}}` and returns the existing
+store shape. Legacy CLI/serve calls use this owner when present; an absent default
+endpoint retains standalone behavior. An explicit endpoint never falls back.
+F4 will bring this writer under the common settings registry.
+
+Applications activate through a bounded native worker and the user manager's
+`StartTransientUnit`, preserving literal argv, working directory, terminal wrapper,
+clean launch environment and existing history. Intended difference: the former
+`systemd-run --scope` path becomes a transient `Type=exec` user service. No shell
+or `systemd-run` process participates. Other existing actions temporarily forward
+the daemon-selected row to `ui.menu.activate`; that registered provider preserves
+the existing confirmation/polkit flow and replies with `MenuActivated`. Clients
+cannot supply a command or a confirmation bypass through the activation payload.
+
+Files, packages, unit conversions, CLDR emoji and catalog discovery reuse native
+providers in at most two nice-10 workers with a ten-second response deadline and
+30-second idle exit. Cancelled worker I/O closes that worker instead of reusing a
+partial response. Conversion results and nonfatal guidance are optional result
+fields. Dynamic desktop inputs follow their F2/F3 service moves; absent inputs
+retain the model's disabled/unavailable state. This does not claim all desktop
+services have moved, nor establish a UI-frame or physical-desktop latency budget.
+The initial service uses English IDs/fallbacks; locale and pseudo-language
+adaptation must be complete before the F3 client cutover.

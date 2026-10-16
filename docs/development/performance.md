@@ -1833,3 +1833,103 @@ inside the Cargo target. No system package or production dependency is pinned.
 Intended difference: system font-renderer upgrades follow Pillow on the same
 FreeType; immutable pixel references use their compatible test renderer. No
 installed Rust/QML code or frozen output was changed for this CI repair.
+
+### Foundation launcher engine (desktop-PC nested, 2026-10-16)
+
+The native library ports ranking and providers from the JavaScript/QML at
+`83a9a9a493dcdc53f8fe42c94f01ac2553694035`. Its 991 immutable reference cases
+cover ordered results and complete row values: 394 JavaScript, 544 provider,
+18 configuration, 2 legacy-action, 31 emoji and 2 Quickshell desktop-catalog
+cases. The indexed and original paths run against the same frozen expectations;
+expected outputs have not been regenerated. Additional tests cover live index
+invalidation, concurrent preferences, invalid edits, opaque activation tickets,
+private systemd-manager activation and worker retirement.
+
+`tools/benchmark-menu.py` reuses the existing private nested-session harness,
+with synthetic 320/1,000/2,000-entry catalogs on each compositor. All binaries
+are built before capture. Each size warms 100 requests, then measures 2,000
+sequential requests across nine queries. Wall time is client send to the matching
+completed reply, including client JSON decoding; CPU is daemon and worker
+user+system ticks divided by calls, not wall time. This is a desktop-PC helper
+microbenchmark, labelled "busy machine" in the raw reports, not a UI frame,
+physical presentation or battery measurement. CPU and helper memory are component
+evidence; the round-trip diagnostics are not whole-shell action latency.
+The QML launcher is unchanged until F3.
+
+Initial 320-entry smoke profiling found repeated provider-row preparation:
+17.1 ms daemon CPU/query. Cached generations and pre-normalized ranking lowered
+it to 0.9 ms in a separate 100-call smoke. These exploratory captures are not
+accepted before/after UI timings. Catalog generation preparation runs on the
+bounded blocking pool; focus/geometry events do not invalidate ranking inputs.
+The async service continues to own catalog, tickets and preferences.
+
+The initial indexed capture (before the retention fix) used helper SHA-256
+`dce1187541f7774f02b23a46c826345485b588a7ea69803ade06e0844db82ef9`.
+It produced the following accepted component results; these remain separate
+from the final build rather than being rewritten after optimization.
+
+| Compositor / apps | Daemon CPU/query (ms) | Worker CPU/query (ms) | Round trip p50 / p99 (ms) | Settled idle PSS (MiB) |
+| --- | ---: | ---: | ---: | ---: |
+| niri / 320 | 0.825 | 0.235 | 0.966 / 2.066 | 39.06 |
+| niri / 1,000 | 0.935 | 0.240 | 1.048 / 2.462 | 58.30 |
+| niri / 2,000 | 1.010 | 0.245 | 1.126 / 2.600 | 81.77 |
+| Hyprland / 320 | 0.835 | 0.240 | 0.983 / 2.299 | 38.94 |
+| Hyprland / 1,000 | 0.920 | 0.240 | 1.032 / 2.448 | 58.15 |
+| Hyprland / 2,000 | 1.000 | 0.240 | 1.131 / 2.561 | 81.73 |
+
+All six query/idle pairs pass the paging rule. At 4,096 bytes/page, query
+host swap-in deltas were 0/0/0 (niri) and 0/0/1 (Hyprland); idle deltas were
+15/22/102 and 2/1/2 respectively. Swap-out and measured SwapPss were zero
+throughout. All six 60-second idle samples had one process/thread and zero
+observed CPU ticks or main-thread voluntary switches. These counters are
+quantized CPU and a sleep/wake proxy, not exact zero CPU or kernel wakeups.
+The tick quantum is 10 ms, or 0.005 ms/query at 2,000 calls.
+
+Hyprland uses a headless GLES2-rendered parent; niri uses Pixman. The first
+Hyprland Pixman-parent attempt failed backend creation before measurement and
+supplies no numbers. No live compositor, units or desktop configuration changed.
+The earlier 16.45-MiB daemon-only capture had no launcher index: it is not a
+matched combined-memory comparison. F3 must measure the UI and daemon together
+when QML stops maintaining its own ranking state. Three-hour stability and
+physical UI/8-ms integrated keystroke acceptance remain unverified.
+
+A focused retention fix keeps activation records as their existing encoded bytes,
+rather than duplicate JSON trees, and returns unused GNU allocator pages on the
+existing worker-retirement event. It adds no polling or per-query trim. Matching
+2,000-call niri captures at 320/2,000 apps reduce settled PSS
+39.06 → 34.86 / 81.77 → 63.32 MiB. One process/thread and zero observed CPU ticks
+or voluntary switches remain. The source/installed English catalog lookup was
+also aligned before this final capture; no golden output was regenerated.
+The retained native index is still substantial. It is not a demonstrated
+combined UI/daemon regression or improvement until the F3 client cutover is
+measured; no comparison against an empty daemon can establish that result.
+
+Final retention build (same 2,000-call method; 320 and 2,000 apps):
+
+| Compositor / apps | Daemon CPU/query (ms) | Worker CPU/query (ms) | Round trip p50 / p99 (ms) | Settled RSS / PSS (MiB) |
+| --- | ---: | ---: | ---: | ---: |
+| niri / 320 | 0.820 | 0.235 | 0.983 / 2.074 | 38.48 / 34.86 |
+| niri / 2,000 | 1.020 | 0.250 | 1.128 / 2.631 | 66.79 / 63.32 |
+| Hyprland / 320 | 0.825 | 0.230 | 0.969 / 2.073 | 37.41 / 33.79 |
+| Hyprland / 2,000 | 1.020 | 0.245 | 1.118 / 2.623 | 66.32 / 62.80 |
+
+During queries the two-process group has RSS/PSS 75.92/59.38 and
+116.93/100.11 MiB on niri (320/2,000 apps), 76.01/59.63 and 116.13/99.63 MiB
+on Hyprland. After the 35-second settling period all four captures have one
+process/thread and zero observed CPU ticks/main-thread voluntary switches over
+60 seconds. Final host swap-in query/idle page deltas are niri 0/1, 0/0;
+Hyprland 0/19, 0/33. Host swap-out and measured SwapPss are zero; all pass.
+The 320-app combined CPU is 1.055 ms/query on both compositors; at 2,000 it is
+1.270/1.265 ms. The under-1-ms CPU aspiration is not established for the whole
+query, and the separate 1-ms transport budget excludes this work. No integrated
+8-ms UI-keystroke acceptance follows. Python execs were not traced: launch count
+is unmeasured, not zero; empty-PATH and worker-lifecycle tests are separate proof.
+
+Final helper SHA-256:
+`58014d70a97cfe9f64d4ca6fefb25f84f88d933eb56735d91e8e135aed70b18d`.
+Private accepted evidence archive SHA-256:
+`c019662e3de94fe2a8e32774ae5b86b8b6ea35f7acfbad0911e74b6befc77251`.
+Validation: fmt/clippy, 332 Rust tests, protocol freshness, 991 immutable launcher
+cases, 929 repository tests (three existing skips), and 534 helper replay cases
+pass. Local Node syntax passes; optional local Prettier was unavailable. CI
+formatting and full desktop/fresh-install checks remain the publication gate.

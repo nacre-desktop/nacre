@@ -139,6 +139,12 @@ pub fn change(path: &Path, action: &str, value: &Value) -> Result<Value> {
     Ok(data)
 }
 pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Value>> {
+    if let Some(value) = crate::daemon::menu::preferences_client(arguments, input.clone())? {
+        return Ok(Some(value));
+    }
+    execute_direct(arguments, input)
+}
+pub fn execute_direct(arguments: &[String], input: Option<Value>) -> Result<Option<Value>> {
     let path = Paths::environment()?.config.join("launcher.json");
     match arguments {
         [action] if action == "load" && input.is_none() => Ok(Some(initialize(&path)?)),

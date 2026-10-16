@@ -1,0 +1,639 @@
+{
+  "emoji": [
+    {
+      "value": "😀",
+      "nameId": "ui.nacremenucontext.name.grinning-face",
+      "name": "Grinning face"
+    },
+    {
+      "value": "😂",
+      "nameId": "ui.nacremenucontext.name.laughing",
+      "name": "Laughing"
+    },
+    {
+      "value": "🥹",
+      "nameId": "ui.nacremenucontext.name.holding-back-tears",
+      "name": "Holding back tears"
+    },
+    {
+      "value": "😊",
+      "nameId": "ui.nacremenucontext.name.smiling",
+      "name": "Smiling"
+    },
+    {
+      "value": "😍",
+      "nameId": "ui.nacremenucontext.name.heart-eyes",
+      "name": "Heart eyes"
+    },
+    {
+      "value": "🤔",
+      "nameId": "ui.nacremenucontext.name.thinking",
+      "name": "Thinking"
+    },
+    {
+      "value": "😎",
+      "nameId": "ui.nacremenucontext.name.cool",
+      "name": "Cool"
+    },
+    {
+      "value": "😭",
+      "nameId": "ui.nacremenucontext.name.crying",
+      "name": "Crying"
+    },
+    {
+      "value": "😅",
+      "nameId": "ui.nacremenucontext.name.nervous-laugh",
+      "name": "Nervous laugh"
+    },
+    {
+      "value": "😴",
+      "nameId": "ui.nacremenucontext.name.sleeping",
+      "name": "Sleeping"
+    },
+    {
+      "value": "👍",
+      "nameId": "ui.nacremenucontext.name.thumbs-up",
+      "name": "Thumbs up"
+    },
+    {
+      "value": "👎",
+      "nameId": "ui.nacremenucontext.name.thumbs-down",
+      "name": "Thumbs down"
+    },
+    {
+      "value": "👏",
+      "nameId": "ui.nacremenucontext.name.clapping",
+      "name": "Clapping"
+    },
+    {
+      "value": "🙏",
+      "nameId": "ui.nacremenucontext.name.thank-you",
+      "name": "Thank you"
+    },
+    {
+      "value": "💪",
+      "nameId": "ui.nacremenucontext.name.strong",
+      "name": "Strong"
+    },
+    {
+      "value": "👋",
+      "nameId": "ui.nacremenucontext.name.wave",
+      "name": "Wave"
+    },
+    {
+      "value": "❤️",
+      "nameId": "ui.nacremenucontext.name.heart",
+      "name": "Heart"
+    },
+    {
+      "value": "💜",
+      "nameId": "ui.nacremenucontext.name.purple-heart",
+      "name": "Purple heart"
+    },
+    {
+      "value": "💙",
+      "nameId": "ui.nacremenucontext.name.blue-heart",
+      "name": "Blue heart"
+    },
+    {
+      "value": "💚",
+      "nameId": "ui.nacremenucontext.name.green-heart",
+      "name": "Green heart"
+    },
+    {
+      "value": "🔥",
+      "nameId": "ui.nacremenucontext.name.fire",
+      "name": "Fire"
+    },
+    {
+      "value": "✨",
+      "nameId": "ui.nacremenucontext.name.sparkles",
+      "name": "Sparkles"
+    },
+    {
+      "value": "🎉",
+      "nameId": "ui.nacremenucontext.name.celebrate",
+      "name": "Celebrate"
+    },
+    {
+      "value": "✅",
+      "nameId": "ui.nacremenucontext.name.done",
+      "name": "Done"
+    },
+    {
+      "value": "❌",
+      "nameId": "ui.nacremenucontext.name.no",
+      "name": "No"
+    },
+    {
+      "value": "⚠️",
+      "nameId": "ui.nacremenucontext.name.warning",
+      "name": "Warning"
+    },
+    {
+      "value": "🚀",
+      "nameId": "ui.nacremenucontext.name.rocket",
+      "name": "Rocket"
+    },
+    {
+      "value": "🐚",
+      "nameId": "ui.nacremenucontext.name.shell",
+      "name": "Shell"
+    },
+    {
+      "value": "🫧",
+      "nameId": "ui.nacremenucontext.name.bubbles",
+      "name": "Bubbles"
+    },
+    {
+      "value": "🌊",
+      "nameId": "ui.nacremenucontext.name.wave-ocean",
+      "name": "Wave ocean"
+    },
+    {
+      "value": "☕",
+      "nameId": "ui.nacremenucontext.name.coffee",
+      "name": "Coffee"
+    },
+    {
+      "value": "💻",
+      "nameId": "ui.nacremenucontext.name.laptop",
+      "name": "Laptop"
+    },
+    {
+      "value": "🧠",
+      "nameId": "ui.nacremenucontext.name.brain",
+      "name": "Brain"
+    },
+    {
+      "value": "🌙",
+      "nameId": "ui.nacremenucontext.name.moon",
+      "name": "Moon"
+    },
+    {
+      "value": "🌈",
+      "nameId": "ui.nacremenucontext.name.rainbow",
+      "name": "Rainbow"
+    },
+    {
+      "value": "💡",
+      "nameId": "ui.nacremenucontext.name.idea",
+      "name": "Idea"
+    },
+    {
+      "value": "🛠️",
+      "nameId": "ui.nacremenucontext.name.tools",
+      "name": "Tools"
+    },
+    {
+      "value": "📌",
+      "nameId": "ui.nacremenucontext.name.pinned",
+      "name": "Pinned"
+    },
+    {
+      "value": "📷",
+      "nameId": "ui.nacremenucontext.name.camera",
+      "name": "Camera"
+    },
+    {
+      "value": "🎵",
+      "nameId": "ui.nacremenucontext.name.music",
+      "name": "Music"
+    }
+  ],
+  "categories": [
+    {
+      "value": "all",
+      "label": "All apps",
+      "labelId": "software.category.all"
+    },
+    {
+      "value": "ai",
+      "label": "AI",
+      "labelId": "software.category.ai"
+    },
+    {
+      "value": "browsers",
+      "label": "Browsers",
+      "labelId": "software.category.browsers"
+    },
+    {
+      "value": "communication",
+      "label": "Communication",
+      "labelId": "software.category.communication"
+    },
+    {
+      "value": "games",
+      "label": "Games",
+      "labelId": "software.category.games"
+    },
+    {
+      "value": "creative",
+      "label": "Creative",
+      "labelId": "software.category.creative"
+    },
+    {
+      "value": "office",
+      "label": "Office and reading",
+      "labelId": "software.category.office"
+    },
+    {
+      "value": "development",
+      "label": "Development",
+      "labelId": "software.category.development"
+    },
+    {
+      "value": "network",
+      "label": "Network",
+      "labelId": "software.category.network"
+    },
+    {
+      "value": "utilities",
+      "label": "Utilities",
+      "labelId": "software.category.utilities"
+    }
+  ],
+  "legacyActions": [
+    {
+      "name": "Open wallpaper picker",
+      "description": "Choose a wallpaper from your collection",
+      "icon": "wallpaper",
+      "action": "wallpaper",
+      "aliases": [
+        "wallpapers",
+        "background",
+        "wall"
+      ],
+      "nameId": "ui.desktop-actions.name.open-wallpaper-picker",
+      "descriptionId": "ui.desktop-actions.description.choose-a-wallpaper-from-your-collection"
+    },
+    {
+      "name": "Calculator",
+      "description": "Calculate here; Enter copies the answer",
+      "icon": "calculate",
+      "action": "calculator",
+      "aliases": [
+        "calc",
+        "math",
+        "maths"
+      ],
+      "nameId": "ui.desktop-actions.name.calculator",
+      "descriptionId": "ui.desktop-actions.description.calculate-here-enter-copies-the-answer"
+    },
+    {
+      "name": "Open Nacre Colors",
+      "description": "Preview, compare and export wallpaper palettes",
+      "icon": "palette",
+      "action": "colors",
+      "brand": "colors",
+      "aliases": [
+        "colors",
+        "colours",
+        "orient",
+        "palette"
+      ],
+      "nameId": "ui.desktop-actions.name.open-nacre-colors",
+      "descriptionId": "ui.desktop-actions.description.preview-compare-and-export-wallpaper-palettes"
+    },
+    {
+      "name": "Open Nacre Settings",
+      "description": "Desktop, displays, sound and preferences",
+      "icon": "settings",
+      "action": "settings",
+      "brand": "settings",
+      "nameId": "ui.desktop-actions.name.open-nacre-settings",
+      "descriptionId": "ui.desktop-actions.description.desktop-displays-sound-and-preferences"
+    },
+    {
+      "name": "Open Nacre AI",
+      "description": "Open your assistant workspace and conversations",
+      "icon": "neurology",
+      "action": "tasks",
+      "brand": "ai",
+      "aliases": [
+        "ai",
+        "assistant",
+        "ai workspace"
+      ],
+      "nameId": "ui.desktop-actions.name.open-nacre-ai",
+      "descriptionId": "ui.desktop-actions.description.open-your-assistant-workspace-and-conversations"
+    },
+    {
+      "name": "Open Nacre Brain",
+      "description": "Browse your notes and knowledge map",
+      "icon": "neurology",
+      "action": "brain",
+      "brand": "brain",
+      "aliases": [
+        "brain",
+        "notes",
+        "knowledge"
+      ],
+      "nameId": "ui.desktop-actions.name.open-nacre-brain",
+      "descriptionId": "ui.desktop-actions.description.browse-your-notes-and-knowledge-map"
+    },
+    {
+      "name": "Open files",
+      "description": "Browse folders and archives in your file manager",
+      "icon": "folder_open",
+      "action": "files",
+      "aliases": [
+        "files",
+        "file manager",
+        "dolphin"
+      ],
+      "nameId": "ui.desktop-actions.name.open-files",
+      "descriptionId": "ui.desktop-actions.description.browse-folders-and-archives-in-your-file-manager"
+    },
+    {
+      "name": "Open terminal",
+      "description": "Start a new terminal window",
+      "icon": "terminal",
+      "action": "terminal",
+      "aliases": [
+        "terminal",
+        "kitty"
+      ],
+      "nameId": "ui.desktop-actions.name.open-terminal",
+      "descriptionId": "ui.desktop-actions.description.start-a-new-terminal-window"
+    },
+    {
+      "name": "Clipboard history",
+      "description": "Find and reuse copied text or images",
+      "icon": "content_paste",
+      "action": "clipboard",
+      "aliases": [
+        "clipboard",
+        "paste"
+      ],
+      "nameId": "ui.desktop-actions.name.clipboard-history",
+      "descriptionId": "ui.desktop-actions.description.find-and-reuse-copied-text-or-images"
+    },
+    {
+      "name": "Window overview",
+      "description": "Find and focus an open window",
+      "icon": "view_quilt",
+      "action": "overview",
+      "aliases": [
+        "windows",
+        "workspaces"
+      ],
+      "nameId": "ui.desktop-actions.name.window-overview",
+      "descriptionId": "ui.desktop-actions.description.find-and-focus-an-open-window"
+    },
+    {
+      "name": "Keyboard shortcuts",
+      "description": "Browse your current key bindings",
+      "icon": "keyboard",
+      "action": "keys",
+      "aliases": [
+        "shortcuts",
+        "keybinds",
+        "keys"
+      ],
+      "nameId": "ui.desktop-actions.name.keyboard-shortcuts",
+      "descriptionId": "ui.desktop-actions.description.browse-your-current-key-bindings"
+    },
+    {
+      "name": "Open apps",
+      "description": "Browse installed applications",
+      "icon": "apps",
+      "action": "apps",
+      "aliases": [
+        "apps",
+        "applications",
+        "launcher"
+      ],
+      "nameId": "ui.desktop-actions.name.open-apps",
+      "descriptionId": "ui.desktop-actions.description.browse-installed-applications"
+    },
+    {
+      "name": "Open Nacre Welcome",
+      "description": "Revisit the desktop tour",
+      "icon": "waving_hand",
+      "action": "welcome",
+      "brand": "welcome",
+      "aliases": [
+        "welcome",
+        "tour",
+        "help"
+      ],
+      "nameId": "ui.desktop-actions.name.open-nacre-welcome",
+      "descriptionId": "ui.desktop-actions.description.revisit-the-desktop-tour"
+    },
+    {
+      "name": "Nacre AI: New chat",
+      "description": "Start a conversation with your default assistant",
+      "icon": "add_comment",
+      "action": "new",
+      "brand": "ai",
+      "aliases": [
+        "new chat",
+        "ai chat",
+        "chat"
+      ],
+      "nameId": "ui.desktop-actions.name.nacre-ai-new-chat",
+      "descriptionId": "ui.desktop-actions.description.start-a-conversation-with-your-default-assistant"
+    },
+    {
+      "name": "Nacre AI: Resume chat",
+      "description": "Continue your latest assistant conversation",
+      "icon": "history",
+      "action": "resume",
+      "brand": "ai",
+      "aliases": [
+        "resume",
+        "continue chat"
+      ],
+      "nameId": "ui.desktop-actions.name.nacre-ai-resume-chat",
+      "descriptionId": "ui.desktop-actions.description.continue-your-latest-assistant-conversation"
+    },
+    {
+      "name": "Nacre AI: Browse chats",
+      "description": "Choose a saved conversation to continue",
+      "icon": "forum",
+      "action": "load",
+      "brand": "ai",
+      "aliases": [
+        "saved chats",
+        "load chat",
+        "chat history"
+      ],
+      "nameId": "ui.desktop-actions.name.nacre-ai-browse-chats",
+      "descriptionId": "ui.desktop-actions.description.choose-a-saved-conversation-to-continue"
+    },
+    {
+      "name": "Nacre Brain: Capture note",
+      "description": "Save a thought to your private knowledge base",
+      "icon": "edit_note",
+      "action": "capture",
+      "brand": "brain",
+      "aliases": [
+        "capture",
+        "save note",
+        "new note"
+      ],
+      "nameId": "ui.desktop-actions.name.nacre-brain-capture-note",
+      "descriptionId": "ui.desktop-actions.description.save-a-thought-to-your-private-knowledge-base"
+    },
+    {
+      "name": "Wi-Fi settings",
+      "description": "Manage wireless connections in Nacre Settings",
+      "icon": "wifi",
+      "action": "wifi",
+      "aliases": [
+        "wifi",
+        "network",
+        "wireless"
+      ],
+      "nameId": "ui.desktop-actions.name.wi-fi-settings",
+      "descriptionId": "ui.desktop-actions.description.manage-wireless-connections-in-nacre-settings"
+    },
+    {
+      "name": "Bluetooth settings",
+      "description": "Pair and manage devices in Nacre Settings",
+      "icon": "bluetooth",
+      "action": "bluetooth",
+      "nameId": "ui.desktop-actions.name.bluetooth-settings",
+      "descriptionId": "ui.desktop-actions.description.pair-and-manage-devices-in-nacre-settings"
+    },
+    {
+      "name": "Sound settings",
+      "description": "Choose audio devices and volumes in Nacre Settings",
+      "icon": "volume_up",
+      "action": "sound",
+      "aliases": [
+        "audio",
+        "volume",
+        "sound"
+      ],
+      "nameId": "ui.desktop-actions.name.sound-settings",
+      "descriptionId": "ui.desktop-actions.description.choose-audio-devices-and-volumes-in-nacre-settings"
+    },
+    {
+      "name": "Do not disturb",
+      "description": "Toggle notification popups",
+      "icon": "notifications_off",
+      "action": "dnd",
+      "aliases": [
+        "dnd",
+        "notifications"
+      ],
+      "nameId": "ui.desktop-actions.name.do-not-disturb",
+      "descriptionId": "ui.desktop-actions.description.toggle-notification-popups"
+    },
+    {
+      "name": "Search Nacre Brain",
+      "description": "Search notes in the sidebar",
+      "icon": "neurology",
+      "action": "left",
+      "brand": "brain",
+      "launcher": false,
+      "nameId": "ui.desktop-actions.name.search-nacre-brain",
+      "descriptionId": "ui.desktop-actions.description.search-notes-in-the-sidebar"
+    },
+    {
+      "name": "Power menu",
+      "description": "Lock, log out, restart or power off",
+      "icon": "power_settings_new",
+      "action": "power",
+      "launcher": false,
+      "nameId": "ui.desktop-actions.name.power-menu",
+      "descriptionId": "ui.desktop-actions.description.lock-log-out-restart-or-power-off"
+    },
+    {
+      "name": "Normal desktop",
+      "description": "Apply your saved desktop profile",
+      "icon": "desktop_windows",
+      "action": "preset",
+      "value": "normal",
+      "launcher": false,
+      "nameId": "ui.desktop-actions.name.normal-desktop",
+      "descriptionId": "ui.desktop-actions.description.apply-your-saved-desktop-profile"
+    },
+    {
+      "name": "Focused desktop",
+      "description": "Apply your saved desktop profile",
+      "icon": "center_focus_strong",
+      "action": "preset",
+      "value": "focused",
+      "launcher": false,
+      "nameId": "ui.desktop-actions.name.focused-desktop",
+      "descriptionId": "ui.desktop-actions.description.apply-your-saved-desktop-profile"
+    },
+    {
+      "name": "Presentation desktop",
+      "description": "Apply your saved desktop profile",
+      "icon": "present_to_all",
+      "action": "preset",
+      "value": "presentation",
+      "launcher": false,
+      "nameId": "ui.desktop-actions.name.presentation-desktop",
+      "descriptionId": "ui.desktop-actions.description.apply-your-saved-desktop-profile"
+    },
+    {
+      "name": "Minimal desktop",
+      "description": "Apply your saved desktop profile",
+      "icon": "crop_square",
+      "action": "preset",
+      "value": "minimal",
+      "launcher": false,
+      "nameId": "ui.desktop-actions.name.minimal-desktop",
+      "descriptionId": "ui.desktop-actions.description.apply-your-saved-desktop-profile"
+    },
+    {
+      "name": "Light theme",
+      "description": "Apply light wallpaper colors",
+      "icon": "light_mode",
+      "action": "light",
+      "launcher": false,
+      "nameId": "ui.desktop-actions.name.light-theme",
+      "descriptionId": "ui.desktop-actions.description.apply-light-wallpaper-colors"
+    },
+    {
+      "name": "Dark theme",
+      "description": "Apply dark wallpaper colors",
+      "icon": "dark_mode",
+      "action": "dark",
+      "launcher": false,
+      "nameId": "ui.desktop-actions.name.dark-theme",
+      "descriptionId": "ui.desktop-actions.description.apply-dark-wallpaper-colors"
+    },
+    {
+      "name": "Disable animations",
+      "description": "Change desktop animations",
+      "icon": "animation",
+      "action": "toggle-setting",
+      "value": "animations",
+      "launcher": false,
+      "nameId": "ui.desktop-actions.name.disable-animations",
+      "descriptionId": "ui.desktop-actions.description.change-desktop-animations",
+      "disabledName": "Enable animations",
+      "disabledNameId": "ui.desktop-actions.name.enable-animations"
+    },
+    {
+      "name": "Disable blur",
+      "description": "Change desktop blur",
+      "icon": "blur_on",
+      "action": "toggle-setting",
+      "value": "blur",
+      "launcher": false,
+      "nameId": "ui.desktop-actions.name.disable-blur",
+      "descriptionId": "ui.desktop-actions.description.change-desktop-blur",
+      "disabledName": "Enable blur",
+      "disabledNameId": "ui.desktop-actions.name.enable-blur"
+    },
+    {
+      "name": "Disable shadows",
+      "description": "Change desktop shadows",
+      "icon": "shadow",
+      "action": "toggle-setting",
+      "value": "shadow",
+      "launcher": false,
+      "nameId": "ui.desktop-actions.name.disable-shadows",
+      "descriptionId": "ui.desktop-actions.description.change-desktop-shadows",
+      "disabledName": "Enable shadows",
+      "disabledNameId": "ui.desktop-actions.name.enable-shadows"
+    }
+  ]
+}

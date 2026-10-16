@@ -46,6 +46,9 @@ async fn dispatch(
     match method.as_str() {
         "daemon.ping" => Ok(Value::Null),
         "daemon.status" => Ok(hub.borrow().status()),
+        method @ ("menu.query" | "menu.activate" | "menu.preferences") if !hub.borrow().safe => {
+            super::menu::dispatch(hub, method, params, timeout).await
+        }
         method @ ("session.check" | "session.ready" | "session.watch") if !hub.borrow().safe => {
             super::session_policy::dispatch(hub, method, params).await
         }

@@ -1,0 +1,21 @@
+[package]
+name = "nacre-menu"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json = "1"
+unicode-normalization = "=0.1.24"
+icu_collator = "=2.1.1"
+icu_locale_core = "=2.1.1"
+md5 = "0.7"
+chrono = "0.4"
+
+[dev-dependencies]
+flate2 = "1"
+sha2 = "0.10"
+tempfile = "3"

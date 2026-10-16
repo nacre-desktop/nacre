@@ -322,6 +322,7 @@ fn session_policy_uses_private_bus_shared_transport_and_existing_cli_records() -
     launch
         .arg("daemon")
         .env("NOTIFY_SOCKET", home.path().join("notify"))
+        .env("RUST_LOG", "nacre_helper=debug")
         .env("DBUS_SESSION_BUS_ADDRESS", address.trim())
         .env("DBUS_SYSTEM_BUS_ADDRESS", address.trim())
         .stdout(Stdio::null())
@@ -481,9 +482,30 @@ fn session_policy_uses_private_bus_shared_transport_and_existing_cli_records() -
     // stay on the daemon runtime, without blocking API/executor worker threads.
     thread::sleep(Duration::from_secs(35));
     assert_eq!(fs::read(&latest)?, unchanged);
+    let tasks = fs::read_dir(format!("/proc/{}/task", daemon.0.id()))?
+        .collect::<std::io::Result<Vec<_>>>()?;
+    let names = tasks
+        .iter()
+        .map(|task| {
+            (
+                fs::read_to_string(task.path().join("comm")).unwrap_or_default(),
+                fs::read_to_string(task.path().join("wchan")).unwrap_or_default(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let log = fs::read_to_string(home.path().join("daemon.log"))?;
     assert_eq!(
-        fs::read_dir(format!("/proc/{}/task", daemon.0.id()))?.count(),
-        1
+        tasks.len(),
+        1,
+        "Remaining threads: {names:?}; log tail: {}",
+        log.lines()
+            .rev()
+            .take(16)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect::<Vec<_>>()
+            .join("\n")
     );
     control.shutdown(std::net::Shutdown::Both)?;
     state_provider.join().map_err(|_| "UI fixture failed")??;
@@ -521,6 +543,33 @@ fn native_niri_event_clients_share_daemon_stream_and_shutdown_without_a_timer() 
             })
         })
         .collect();
+    // The fixture emits its window only at compositor startup. Catalog indexing
+    // must seed that snapshot, even when no subsequent event ever arrives.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let output = command(home.path(), &source_path, &endpoint)
+            .args([
+                "ctl",
+                "call",
+                "menu.query",
+                r#"{"query":"DO_NOT_LOG_WINDOW_TITLE","mode":"apps"}"#,
+            ])
+            .output()?;
+        if output.status.success() {
+            let result: Value = serde_json::from_slice(&output.stdout)?;
+            if result["items"].as_object().is_some_and(|items| {
+                items
+                    .values()
+                    .any(|row| row["name"] == "DO_NOT_LOG_WINDOW_TITLE")
+            }) {
+                break;
+            }
+        }
+        if Instant::now() > deadline {
+            return Err("Launcher missed the initial compositor window snapshot".into());
+        }
+        thread::sleep(Duration::from_millis(20));
+    }
     let mut first = nacre_helper::daemon::niri_events::Source::connect(&environment, &source_path)?
         .ok_or("Missing event proxy")?;
     let backend = nacre_helper::compositor::niri::Backend::new(

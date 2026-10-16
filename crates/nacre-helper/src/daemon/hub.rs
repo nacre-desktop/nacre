@@ -78,6 +78,7 @@ pub struct Hub {
     next_route: u64,
     internal: broadcast::Sender<Notice>,
     pub session: Option<super::session_policy::Requests>,
+    pub menu: Option<super::menu::Requests>,
 }
 impl Hub {
     pub fn new(boot: String, safe: bool, frame: Duration) -> Self {
@@ -96,6 +97,7 @@ impl Hub {
             next_route: 0,
             internal,
             session: None,
+            menu: None,
         }
     }
     pub fn shared(self) -> Shared {
@@ -222,6 +224,9 @@ impl Hub {
         let mut methods = nacre_protocol::core_methods();
         if !self.safe && self.services.contains_key("session-watch") {
             methods.extend(super::session_policy::methods());
+        }
+        if !self.safe && self.services.contains_key("menu") {
+            methods.extend(super::menu::methods());
         }
         methods
     }

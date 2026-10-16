@@ -1,0 +1,2921 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "home",
+      "kind": "group",
+      "label": "Home",
+      "icon": "home",
+      "description": "Favorites and recent destinations",
+      "labelId": "launcher.catalog.home.label",
+      "descriptionId": "launcher.catalog.home.description"
+    },
+    {
+      "id": "apps",
+      "kind": "group",
+      "label": "All apps",
+      "icon": "apps",
+      "description": "Your installed applications",
+      "provider": "apps",
+      "labelId": "launcher.catalog.apps.label",
+      "descriptionId": "launcher.catalog.apps.description"
+    },
+    {
+      "id": "actions",
+      "kind": "group",
+      "label": "Actions",
+      "icon": "bolt",
+      "description": "Capture, tools and quick controls",
+      "labelId": "launcher.catalog.actions.label",
+      "descriptionId": "launcher.catalog.actions.description"
+    },
+    {
+      "id": "style",
+      "kind": "group",
+      "label": "Style",
+      "icon": "palette",
+      "description": "Wallpapers, Orient and appearance",
+      "labelId": "launcher.catalog.style.label",
+      "descriptionId": "launcher.catalog.style.description"
+    },
+    {
+      "id": "setup",
+      "kind": "group",
+      "label": "Setup",
+      "icon": "tune",
+      "description": "Devices and desktop preferences",
+      "labelId": "launcher.catalog.setup.label",
+      "descriptionId": "launcher.catalog.setup.description"
+    },
+    {
+      "id": "software",
+      "kind": "group",
+      "label": "Software",
+      "icon": "download",
+      "description": "Discover and manage software",
+      "labelId": "launcher.catalog.software.label",
+      "descriptionId": "launcher.catalog.software.description"
+    },
+    {
+      "id": "health",
+      "kind": "group",
+      "label": "Health",
+      "icon": "build",
+      "description": "Updates, checks and recovery",
+      "labelId": "launcher.catalog.health.label",
+      "descriptionId": "launcher.catalog.health.description"
+    },
+    {
+      "id": "learn",
+      "kind": "group",
+      "label": "Learn",
+      "icon": "help",
+      "description": "Shortcuts, the tour and guides",
+      "labelId": "launcher.catalog.learn.label",
+      "descriptionId": "launcher.catalog.learn.description"
+    },
+    {
+      "id": "power",
+      "kind": "group",
+      "label": "Power",
+      "icon": "power_settings_new",
+      "description": "Lock and session controls",
+      "labelId": "launcher.catalog.power.label",
+      "descriptionId": "launcher.catalog.power.description"
+    },
+    {
+      "id": "actions.capture",
+      "kind": "group",
+      "label": "Capture",
+      "icon": "screenshot",
+      "description": "Screenshots, recording and reading the screen",
+      "labelId": "launcher.catalog.actions.capture.label",
+      "descriptionId": "launcher.catalog.actions.capture.description"
+    },
+    {
+      "id": "actions.capture.area",
+      "kind": "action",
+      "label": "Screenshot area",
+      "icon": "crop_free",
+      "operation": "tool",
+      "value": "capture-area",
+      "description": "Save in Pictures/Screenshots",
+      "capability": "capture",
+      "labelId": "launcher.catalog.actions.capture.area.label",
+      "descriptionId": "launcher.catalog.actions.capture.area.description"
+    },
+    {
+      "id": "actions.capture.screen",
+      "kind": "action",
+      "label": "Screenshot screen",
+      "icon": "screenshot_monitor",
+      "operation": "tool",
+      "value": "capture-screen",
+      "description": "Save in Pictures/Screenshots",
+      "capability": "capture",
+      "labelId": "launcher.catalog.actions.capture.screen.label",
+      "descriptionId": "launcher.catalog.actions.capture.screen.description"
+    },
+    {
+      "id": "actions.capture.window",
+      "kind": "action",
+      "label": "Screenshot window",
+      "icon": "window",
+      "operation": "tool",
+      "value": "capture-window",
+      "description": "Save in Pictures/Screenshots",
+      "capability": "capture",
+      "labelId": "launcher.catalog.actions.capture.window.label",
+      "descriptionId": "launcher.catalog.actions.capture.window.description"
+    },
+    {
+      "id": "actions.capture.record",
+      "kind": "action",
+      "label": "Record an area",
+      "icon": "videocam",
+      "operation": "tool",
+      "value": "record-start",
+      "description": "Record to Videos/Recordings",
+      "capability": "record",
+      "labelId": "launcher.catalog.actions.capture.record.label",
+      "descriptionId": "launcher.catalog.actions.capture.record.description"
+    },
+    {
+      "id": "actions.capture.record-screen",
+      "kind": "action",
+      "label": "Record screen",
+      "icon": "screen_share",
+      "operation": "tool",
+      "value": "record-screen",
+      "description": "Record the entire focused screen to Videos/Recordings",
+      "capability": "record",
+      "labelId": "launcher.catalog.actions.capture.record-screen.label",
+      "descriptionId": "launcher.catalog.actions.capture.record-screen.description"
+    },
+    {
+      "id": "actions.capture.stop",
+      "kind": "action",
+      "label": "Stop recording",
+      "icon": "stop_circle",
+      "operation": "tool",
+      "value": "record-stop",
+      "description": "Record to Videos/Recordings",
+      "capability": "record",
+      "labelId": "launcher.catalog.actions.capture.stop.label",
+      "descriptionId": "launcher.catalog.actions.capture.stop.description"
+    },
+    {
+      "id": "actions.capture.text",
+      "kind": "action",
+      "label": "Read text from screen",
+      "icon": "text_fields",
+      "operation": "tool",
+      "value": "capture-text",
+      "description": "Copy the result",
+      "capability": "ocr",
+      "labelId": "launcher.catalog.actions.capture.text.label",
+      "descriptionId": "launcher.catalog.actions.capture.text.description"
+    },
+    {
+      "id": "actions.capture.qr",
+      "kind": "action",
+      "label": "Read a QR code",
+      "icon": "qr_code",
+      "operation": "tool",
+      "value": "capture-qr",
+      "description": "Copy the result",
+      "capability": "qr",
+      "labelId": "launcher.catalog.actions.capture.qr.label",
+      "descriptionId": "launcher.catalog.actions.capture.qr.description"
+    },
+    {
+      "id": "actions.capture.color",
+      "kind": "action",
+      "label": "Pick a screen color",
+      "icon": "colorize",
+      "operation": "tool",
+      "value": "color-picker",
+      "description": "Copy the result",
+      "capability": "color-picker",
+      "labelId": "launcher.catalog.actions.capture.color.label",
+      "descriptionId": "launcher.catalog.actions.capture.color.description"
+    },
+    {
+      "id": "actions.clipboard",
+      "kind": "group",
+      "label": "Clipboard history",
+      "icon": "content_paste",
+      "description": "Reuse copied text and images",
+      "provider": "clipboard",
+      "labelId": "launcher.catalog.actions.clipboard.label",
+      "descriptionId": "launcher.catalog.actions.clipboard.description"
+    },
+    {
+      "id": "actions.emoji",
+      "kind": "group",
+      "label": "Emoji",
+      "icon": "mood",
+      "description": "Choose an emoji and copy it",
+      "provider": "emoji",
+      "labelId": "launcher.catalog.actions.emoji.label",
+      "descriptionId": "launcher.catalog.actions.emoji.description"
+    },
+    {
+      "id": "actions.calculator",
+      "kind": "action",
+      "label": "Calculator",
+      "icon": "calculate",
+      "operation": "calculator",
+      "value": "",
+      "description": "Type = followed by an expression",
+      "labelId": "launcher.catalog.actions.calculator.label",
+      "descriptionId": "launcher.catalog.actions.calculator.description"
+    },
+    {
+      "id": "actions.windows",
+      "kind": "group",
+      "label": "Windows",
+      "icon": "view_quilt",
+      "description": "Focus an open window",
+      "provider": "windows",
+      "labelId": "launcher.catalog.actions.windows.label",
+      "descriptionId": "launcher.catalog.actions.windows.description"
+    },
+    {
+      "id": "actions.reminders",
+      "kind": "group",
+      "label": "Reminders",
+      "icon": "timer",
+      "description": "Small timers and reminders",
+      "provider": "timers",
+      "labelId": "launcher.catalog.actions.reminders.label",
+      "descriptionId": "launcher.catalog.actions.reminders.description"
+    },
+    {
+      "id": "actions.reminders.new",
+      "kind": "action",
+      "label": "Set a reminder",
+      "icon": "add_alarm",
+      "operation": "form",
+      "value": "reminder",
+      "description": "Choose a duration and message",
+      "labelId": "launcher.catalog.actions.reminders.new.label",
+      "descriptionId": "launcher.catalog.actions.reminders.new.description"
+    },
+    {
+      "id": "actions.reminders.focus",
+      "kind": "action",
+      "label": "Focus for 25 minutes",
+      "icon": "hourglass_top",
+      "operation": "tool",
+      "value": "focus-timer",
+      "description": "A reminder when it is time for a break",
+      "labelId": "launcher.catalog.actions.reminders.focus.label",
+      "descriptionId": "launcher.catalog.actions.reminders.focus.description"
+    },
+    {
+      "id": "actions.assistant",
+      "kind": "group",
+      "label": "Nacre AI and Brain",
+      "icon": "neurology",
+      "description": "Your assistant and private knowledge",
+      "labelId": "launcher.catalog.actions.assistant.label",
+      "descriptionId": "launcher.catalog.actions.assistant.description"
+    },
+    {
+      "id": "actions.assistant.ai",
+      "kind": "action",
+      "label": "Nacre AI",
+      "icon": "neurology",
+      "operation": "legacy",
+      "value": "tasks",
+      "description": "Open your assistant workspace",
+      "brand": "ai",
+      "capability": "ai",
+      "aliases": [
+        "ai",
+        "assistant",
+        "ai workspace"
+      ],
+      "labelId": "launcher.catalog.actions.assistant.ai.label",
+      "descriptionId": "launcher.catalog.actions.assistant.ai.description"
+    },
+    {
+      "id": "actions.assistant.new",
+      "kind": "action",
+      "label": "Nacre AI: New chat",
+      "icon": "neurology",
+      "operation": "legacy",
+      "value": "new",
+      "description": "Start a conversation",
+      "brand": "ai",
+      "capability": "ai",
+      "labelId": "launcher.catalog.actions.assistant.new.label",
+      "descriptionId": "launcher.catalog.actions.assistant.new.description"
+    },
+    {
+      "id": "actions.assistant.resume",
+      "kind": "action",
+      "label": "Nacre AI: Resume chat",
+      "icon": "neurology",
+      "operation": "legacy",
+      "value": "resume",
+      "description": "Continue the latest conversation",
+      "brand": "ai",
+      "capability": "ai",
+      "labelId": "launcher.catalog.actions.assistant.resume.label",
+      "descriptionId": "launcher.catalog.actions.assistant.resume.description"
+    },
+    {
+      "id": "actions.assistant.chats",
+      "kind": "action",
+      "label": "Nacre AI: Browse chats",
+      "icon": "neurology",
+      "operation": "legacy",
+      "value": "load",
+      "description": "Choose a saved conversation",
+      "brand": "ai",
+      "capability": "ai",
+      "labelId": "launcher.catalog.actions.assistant.chats.label",
+      "descriptionId": "launcher.catalog.actions.assistant.chats.description"
+    },
+    {
+      "id": "actions.assistant.brain",
+      "kind": "action",
+      "label": "Nacre Brain",
+      "icon": "edit_note",
+      "operation": "legacy",
+      "value": "brain",
+      "description": "Browse your private knowledge",
+      "brand": "brain",
+      "capability": "brain",
+      "aliases": [
+        "brain",
+        "notes",
+        "knowledge"
+      ],
+      "labelId": "launcher.catalog.actions.assistant.brain.label",
+      "descriptionId": "launcher.catalog.actions.assistant.brain.description"
+    },
+    {
+      "id": "actions.assistant.capture",
+      "kind": "action",
+      "label": "Nacre Brain: Capture note",
+      "icon": "edit_note",
+      "operation": "legacy",
+      "value": "capture",
+      "description": "Save a thought",
+      "brand": "brain",
+      "capability": "brain",
+      "labelId": "launcher.catalog.actions.assistant.capture.label",
+      "descriptionId": "launcher.catalog.actions.assistant.capture.description"
+    },
+    {
+      "id": "actions.assistant.search",
+      "kind": "action",
+      "label": "Search Nacre Brain",
+      "icon": "search",
+      "operation": "scope",
+      "value": "# ",
+      "description": "Search private notes",
+      "brand": "brain",
+      "capability": "brain",
+      "labelId": "launcher.catalog.actions.assistant.search.label",
+      "descriptionId": "launcher.catalog.actions.assistant.search.description"
+    },
+    {
+      "id": "actions.assistant.ask",
+      "kind": "action",
+      "label": "Ask Nacre AI",
+      "icon": "chat",
+      "operation": "scope",
+      "value": "? ",
+      "description": "Compose an explicit question",
+      "brand": "ai",
+      "capability": "ai",
+      "labelId": "launcher.catalog.actions.assistant.ask.label",
+      "descriptionId": "launcher.catalog.actions.assistant.ask.description"
+    },
+    {
+      "id": "actions.controls",
+      "kind": "group",
+      "label": "Quick controls",
+      "icon": "toggle_on",
+      "description": "Live desktop controls",
+      "labelId": "launcher.catalog.actions.controls.label",
+      "descriptionId": "launcher.catalog.actions.controls.description"
+    },
+    {
+      "id": "actions.controls.dnd",
+      "kind": "action",
+      "label": "Do not disturb",
+      "icon": "notifications_off",
+      "operation": "toggle",
+      "value": "dnd",
+      "description": "Change it without leaving the launcher",
+      "state": "dnd",
+      "labelId": "launcher.catalog.actions.controls.dnd.label",
+      "descriptionId": "launcher.catalog.actions.controls.dnd.description"
+    },
+    {
+      "id": "actions.controls.night-light",
+      "kind": "action",
+      "label": "Night light",
+      "icon": "bedtime",
+      "operation": "toggle",
+      "value": "night-light",
+      "description": "Change it without leaving the launcher",
+      "state": "night-light",
+      "labelId": "launcher.catalog.actions.controls.night-light.label",
+      "descriptionId": "launcher.catalog.actions.controls.night-light.description"
+    },
+    {
+      "id": "actions.controls.stay-awake",
+      "kind": "action",
+      "label": "Stay awake",
+      "icon": "coffee",
+      "operation": "toggle",
+      "value": "stay-awake",
+      "description": "Change it without leaving the launcher",
+      "state": "stay-awake",
+      "labelId": "launcher.catalog.actions.controls.stay-awake.label",
+      "descriptionId": "launcher.catalog.actions.controls.stay-awake.description"
+    },
+    {
+      "id": "actions.controls.mute",
+      "kind": "action",
+      "label": "Mute speakers",
+      "icon": "volume_off",
+      "operation": "toggle",
+      "value": "mute",
+      "description": "Change it without leaving the launcher",
+      "state": "mute",
+      "labelId": "launcher.catalog.actions.controls.mute.label",
+      "descriptionId": "launcher.catalog.actions.controls.mute.description"
+    },
+    {
+      "id": "actions.controls.mic-mute",
+      "kind": "action",
+      "label": "Mute microphone",
+      "icon": "mic_off",
+      "operation": "toggle",
+      "value": "mic-mute",
+      "description": "Change it without leaving the launcher",
+      "state": "mic-mute",
+      "labelId": "launcher.catalog.actions.controls.mic-mute.label",
+      "descriptionId": "launcher.catalog.actions.controls.mic-mute.description"
+    },
+    {
+      "id": "actions.controls.wifi",
+      "kind": "action",
+      "label": "Wi-Fi",
+      "icon": "wifi",
+      "operation": "toggle",
+      "value": "wifi",
+      "description": "Change it without leaving the launcher",
+      "state": "wifi",
+      "labelId": "launcher.catalog.actions.controls.wifi.label",
+      "descriptionId": "launcher.catalog.actions.controls.wifi.description"
+    },
+    {
+      "id": "actions.controls.bluetooth",
+      "kind": "action",
+      "label": "Bluetooth",
+      "icon": "bluetooth",
+      "operation": "toggle",
+      "value": "bluetooth",
+      "description": "Change it without leaving the launcher",
+      "state": "bluetooth",
+      "labelId": "launcher.catalog.actions.controls.bluetooth.label",
+      "descriptionId": "launcher.catalog.actions.controls.bluetooth.description"
+    },
+    {
+      "id": "style.wallpapers",
+      "kind": "group",
+      "label": "Wallpapers",
+      "icon": "wallpaper",
+      "description": "Preview and choose from your collection",
+      "provider": "wallpapers",
+      "labelId": "launcher.catalog.style.wallpapers.label",
+      "descriptionId": "launcher.catalog.style.wallpapers.description"
+    },
+    {
+      "id": "style.wallpapers.picker",
+      "kind": "action",
+      "label": "Wallpaper picker",
+      "icon": "wallpaper",
+      "operation": "route",
+      "value": "wallpaper",
+      "description": "Open the full wallpaper view",
+      "labelId": "launcher.catalog.style.wallpapers.picker.label",
+      "descriptionId": "launcher.catalog.style.wallpapers.picker.description"
+    },
+    {
+      "id": "style.wallpapers.next",
+      "kind": "action",
+      "label": "Next wallpaper",
+      "icon": "skip_next",
+      "operation": "next-wallpaper",
+      "value": "",
+      "description": "Move to the next image in your collection",
+      "labelId": "launcher.catalog.style.wallpapers.next.label",
+      "descriptionId": "launcher.catalog.style.wallpapers.next.description"
+    },
+    {
+      "id": "style.personality",
+      "kind": "group",
+      "label": "Orient personality",
+      "icon": "palette",
+      "description": "How Nacre uses the wallpaper colors",
+      "labelId": "launcher.catalog.style.personality.label",
+      "descriptionId": "launcher.catalog.style.personality.description"
+    },
+    {
+      "id": "style.personality.natural",
+      "kind": "action",
+      "label": "Natural",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "natural",
+      "description": "The original balance of wallpaper colors",
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.natural.label",
+      "descriptionId": "launcher.catalog.style.personality.natural.description"
+    },
+    {
+      "id": "style.personality.pigment",
+      "kind": "action",
+      "label": "Pigment",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "pigment",
+      "description": "Coverage-weighted color families",
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.pigment.label",
+      "descriptionId": "launcher.catalog.style.personality.pigment.description"
+    },
+    {
+      "id": "style.personality.harmony",
+      "kind": "action",
+      "label": "Harmony",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "harmony",
+      "description": "Related supporting accents",
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.harmony.label",
+      "descriptionId": "launcher.catalog.style.personality.harmony.description"
+    },
+    {
+      "id": "style.personality.pop",
+      "kind": "action",
+      "label": "Pop",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "pop",
+      "description": "A striking contrasting detail",
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.pop.label",
+      "descriptionId": "launcher.catalog.style.personality.pop.description"
+    },
+    {
+      "id": "style.personality.mist",
+      "kind": "action",
+      "label": "Mist",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "mist",
+      "description": "Soft, quiet colors",
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.mist.label",
+      "descriptionId": "launcher.catalog.style.personality.mist.description"
+    },
+    {
+      "id": "style.personality.vivid",
+      "kind": "action",
+      "label": "Vivid",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "vivid",
+      "description": "Stronger wallpaper colors",
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.vivid.label",
+      "descriptionId": "launcher.catalog.style.personality.vivid.description"
+    },
+    {
+      "id": "style.personality.pearl",
+      "kind": "action",
+      "label": "Pearl",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "pearl",
+      "description": "Nacre mother-of-pearl tones",
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.pearl.label",
+      "descriptionId": "launcher.catalog.style.personality.pearl.description"
+    },
+    {
+      "id": "style.personality.tide",
+      "kind": "action",
+      "label": "Tide",
+      "icon": "palette",
+      "operation": "personality",
+      "value": "tide",
+      "description": "Colors that shift with the time of day",
+      "state": "personality",
+      "labelId": "launcher.catalog.style.personality.tide.label",
+      "descriptionId": "launcher.catalog.style.personality.tide.description"
+    },
+    {
+      "id": "style.background",
+      "kind": "group",
+      "label": "Background tint",
+      "icon": "gradient",
+      "description": "Choose where panel background colors come from",
+      "labelId": "launcher.catalog.style.background.label",
+      "descriptionId": "launcher.catalog.style.background.description"
+    },
+    {
+      "id": "style.background.accent",
+      "kind": "action",
+      "label": "Accent tint",
+      "icon": "palette",
+      "operation": "background",
+      "value": "accent",
+      "description": "Subtle tint from the main accent",
+      "state": "background",
+      "labelId": "launcher.catalog.style.background.accent.label",
+      "descriptionId": "launcher.catalog.style.background.accent.description"
+    },
+    {
+      "id": "style.background.wallpaper",
+      "kind": "action",
+      "label": "Wallpaper shadows",
+      "icon": "image",
+      "operation": "background",
+      "value": "wallpaper",
+      "description": "Tint from the image’s own tones",
+      "state": "background",
+      "labelId": "launcher.catalog.style.background.wallpaper.label",
+      "descriptionId": "launcher.catalog.style.background.wallpaper.description"
+    },
+    {
+      "id": "style.appearance",
+      "kind": "group",
+      "label": "Light and dark",
+      "icon": "contrast",
+      "description": "Desktop brightness",
+      "labelId": "launcher.catalog.style.appearance.label",
+      "descriptionId": "launcher.catalog.style.appearance.description"
+    },
+    {
+      "id": "style.appearance.dark",
+      "kind": "action",
+      "label": "Dark",
+      "icon": "dark_mode",
+      "operation": "palette-mode",
+      "value": "dark",
+      "description": "",
+      "state": "palette-mode",
+      "labelId": "launcher.catalog.style.appearance.dark.label"
+    },
+    {
+      "id": "style.appearance.light",
+      "kind": "action",
+      "label": "Light",
+      "icon": "light_mode",
+      "operation": "palette-mode",
+      "value": "light",
+      "description": "",
+      "state": "palette-mode",
+      "labelId": "launcher.catalog.style.appearance.light.label"
+    },
+    {
+      "id": "style.appearance.auto",
+      "kind": "action",
+      "label": "Auto",
+      "icon": "light_mode",
+      "operation": "palette-mode",
+      "value": "auto",
+      "description": "",
+      "state": "palette-mode",
+      "labelId": "launcher.catalog.style.appearance.auto.label"
+    },
+    {
+      "id": "style.accents",
+      "kind": "group",
+      "label": "Accent choice",
+      "icon": "color_lens",
+      "description": "Choose a color family from this wallpaper",
+      "provider": "accents",
+      "labelId": "launcher.catalog.style.accents.label",
+      "descriptionId": "launcher.catalog.style.accents.description"
+    },
+    {
+      "id": "style.fonts",
+      "kind": "group",
+      "label": "Interface font",
+      "icon": "text_fields",
+      "description": "Preview installed font families",
+      "provider": "fonts",
+      "labelId": "launcher.catalog.style.fonts.label",
+      "descriptionId": "launcher.catalog.style.fonts.description"
+    },
+    {
+      "id": "style.mono-fonts",
+      "kind": "group",
+      "label": "Terminal font",
+      "icon": "terminal",
+      "description": "Choose fonts for Kitty and Nacre monospace text",
+      "provider": "fonts",
+      "labelId": "software.fonts.mono-title",
+      "descriptionId": "software.fonts.mono-description"
+    },
+    {
+      "id": "style.animations",
+      "kind": "action",
+      "label": "Animations",
+      "icon": "animation",
+      "operation": "setting-toggle",
+      "value": "animations",
+      "description": "",
+      "state": "setting",
+      "labelId": "launcher.catalog.style.animations.label"
+    },
+    {
+      "id": "style.blur",
+      "kind": "action",
+      "label": "Background blur",
+      "icon": "blur_on",
+      "operation": "setting-toggle",
+      "value": "blur",
+      "description": "",
+      "state": "setting",
+      "labelId": "launcher.catalog.style.blur.label"
+    },
+    {
+      "id": "style.shadow",
+      "kind": "action",
+      "label": "Window shadows",
+      "icon": "shadow",
+      "operation": "setting-toggle",
+      "value": "shadow",
+      "description": "",
+      "state": "setting",
+      "labelId": "launcher.catalog.style.shadow.label"
+    },
+    {
+      "id": "style.colors",
+      "kind": "action",
+      "label": "Nacre Colors",
+      "icon": "palette",
+      "operation": "legacy",
+      "value": "colors",
+      "description": "Preview, fine-tune and export themes",
+      "brand": "colors",
+      "aliases": [
+        "colors",
+        "colours",
+        "orient"
+      ],
+      "labelId": "launcher.catalog.style.colors.label",
+      "descriptionId": "launcher.catalog.style.colors.description"
+    },
+    {
+      "id": "setup.appearance",
+      "kind": "action",
+      "label": "Appearance",
+      "icon": "palette",
+      "operation": "settings",
+      "value": "appearance",
+      "description": "Wallpaper, colors and frame",
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.appearance.label",
+      "descriptionId": "launcher.catalog.setup.appearance.description"
+    },
+    {
+      "id": "setup.desktop",
+      "kind": "action",
+      "label": "Desktop and input",
+      "icon": "desktop_windows",
+      "operation": "settings",
+      "value": "desktop",
+      "description": "Layout and desktop controls",
+      "brand": "settings",
+      "aliases": [
+        "input",
+        "keyboard",
+        "mouse",
+        "desktop settings"
+      ],
+      "labelId": "launcher.catalog.setup.desktop.label",
+      "descriptionId": "launcher.catalog.setup.desktop.description"
+    },
+    {
+      "id": "setup.displays",
+      "kind": "action",
+      "label": "Displays",
+      "icon": "monitor",
+      "operation": "settings",
+      "value": "displays",
+      "description": "Resolution, scaling and arrangement",
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.displays.label",
+      "descriptionId": "launcher.catalog.setup.displays.description"
+    },
+    {
+      "id": "setup.sound",
+      "kind": "action",
+      "label": "Sound",
+      "icon": "volume_up",
+      "operation": "settings",
+      "value": "sound",
+      "description": "Speakers, microphones and apps",
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.sound.label",
+      "descriptionId": "launcher.catalog.setup.sound.description"
+    },
+    {
+      "id": "setup.network",
+      "kind": "action",
+      "label": "Network",
+      "icon": "wifi",
+      "operation": "settings",
+      "value": "network",
+      "description": "Wi-Fi and connections",
+      "brand": "settings",
+      "aliases": [
+        "wifi",
+        "wireless",
+        "network settings"
+      ],
+      "labelId": "launcher.catalog.setup.network.label",
+      "descriptionId": "launcher.catalog.setup.network.description"
+    },
+    {
+      "id": "setup.bluetooth",
+      "kind": "action",
+      "label": "Bluetooth",
+      "icon": "bluetooth",
+      "operation": "settings",
+      "value": "bluetooth",
+      "description": "Pair and manage devices",
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.bluetooth.label",
+      "descriptionId": "launcher.catalog.setup.bluetooth.description"
+    },
+    {
+      "id": "setup.notifications",
+      "kind": "action",
+      "label": "Notifications",
+      "icon": "notifications",
+      "operation": "settings",
+      "value": "notifications",
+      "description": "Messages and quiet mode",
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.notifications.label",
+      "descriptionId": "launcher.catalog.setup.notifications.description"
+    },
+    {
+      "id": "setup.workflows",
+      "kind": "action",
+      "label": "Workspaces and apps",
+      "icon": "workspaces",
+      "operation": "settings",
+      "value": "workflows",
+      "description": "Application routes and workspace roles",
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.workflows.label",
+      "descriptionId": "launcher.catalog.setup.workflows.description"
+    },
+    {
+      "id": "setup.lock",
+      "kind": "action",
+      "label": "Lock screen and idle",
+      "icon": "lock",
+      "operation": "settings",
+      "value": "lock",
+      "description": "Appearance and idle behavior",
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.lock.label",
+      "descriptionId": "launcher.catalog.setup.lock.description"
+    },
+    {
+      "id": "setup.time",
+      "kind": "action",
+      "label": "Date and time",
+      "icon": "schedule",
+      "operation": "settings",
+      "value": "time",
+      "description": "Time zone and travel",
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.time.label",
+      "descriptionId": "launcher.catalog.setup.time.description"
+    },
+    {
+      "id": "setup.ai",
+      "kind": "action",
+      "label": "Nacre AI preferences",
+      "icon": "neurology",
+      "operation": "settings",
+      "value": "ai",
+      "description": "Assistant integration",
+      "brand": "settings",
+      "labelId": "launcher.catalog.setup.ai.label",
+      "descriptionId": "launcher.catalog.setup.ai.description"
+    },
+    {
+      "id": "setup.wifi-networks",
+      "kind": "group",
+      "label": "Wi-Fi networks",
+      "icon": "wifi",
+      "description": "Nearby connections",
+      "provider": "wifi",
+      "labelId": "launcher.catalog.setup.wifi-networks.label",
+      "descriptionId": "launcher.catalog.setup.wifi-networks.description"
+    },
+    {
+      "id": "setup.bluetooth-devices",
+      "kind": "group",
+      "label": "Bluetooth devices",
+      "icon": "bluetooth",
+      "description": "Paired and nearby devices",
+      "provider": "bluetooth",
+      "labelId": "launcher.catalog.setup.bluetooth-devices.label",
+      "descriptionId": "launcher.catalog.setup.bluetooth-devices.description"
+    },
+    {
+      "id": "setup.shortcuts",
+      "kind": "action",
+      "label": "Edit personal shortcuts",
+      "icon": "keyboard",
+      "operation": "config",
+      "value": "shortcuts",
+      "description": "Open your private Hyprland override",
+      "labelId": "launcher.catalog.setup.shortcuts.label",
+      "descriptionId": "launcher.catalog.setup.shortcuts.description"
+    },
+    {
+      "id": "setup.defaults",
+      "kind": "action",
+      "label": "Default applications",
+      "icon": "apps",
+      "operation": "config",
+      "value": "defaults",
+      "description": "Choose the apps used by Nacre",
+      "labelId": "launcher.catalog.setup.defaults.label",
+      "descriptionId": "launcher.catalog.setup.defaults.description"
+    },
+    {
+      "id": "software.discover",
+      "kind": "group",
+      "label": "Apps",
+      "icon": "apps",
+      "description": "Discover and manage apps",
+      "provider": "software",
+      "labelId": "launcher.catalog.software.discover.label",
+      "descriptionId": "launcher.catalog.software.discover.description",
+      "aliases": [
+        "software.apps"
+      ]
+    },
+    {
+      "id": "software.packages",
+      "kind": "group",
+      "label": "Search packages",
+      "icon": "search",
+      "description": "Search official and community repositories",
+      "provider": "packages",
+      "labelId": "launcher.catalog.software.packages.label",
+      "descriptionId": "launcher.catalog.software.packages.description"
+    },
+    {
+      "id": "software.installed",
+      "kind": "group",
+      "label": "Installed packages",
+      "icon": "inventory_2",
+      "description": "Search installed software and remove it",
+      "provider": "installed",
+      "labelId": "launcher.catalog.software.installed.label",
+      "descriptionId": "launcher.catalog.software.installed.description"
+    },
+    {
+      "id": "software.development",
+      "kind": "group",
+      "label": "Developer environments",
+      "icon": "code",
+      "description": "Runtimes and local databases",
+      "provider": "environments",
+      "labelId": "launcher.catalog.software.development.label",
+      "descriptionId": "launcher.catalog.software.development.description"
+    },
+    {
+      "id": "software.development.mise",
+      "kind": "action",
+      "label": "Install mise",
+      "icon": "download",
+      "operation": "tool",
+      "value": "install-mise",
+      "capability": "packages",
+      "description": "Development tool manager",
+      "labelId": "launcher.catalog.software.development.mise.label",
+      "descriptionId": "launcher.catalog.software.development.mise.description",
+      "confirm": "Open a terminal to install mise? The package manager may ask for administrator permission.",
+      "confirmId": "launcher.catalog.software.development.mise.confirm"
+    },
+    {
+      "id": "software.tui",
+      "kind": "group",
+      "label": "Terminal apps",
+      "icon": "terminal",
+      "description": "Manage command-line applications",
+      "provider": "tui-apps",
+      "labelId": "launcher.catalog.software.tui.label",
+      "descriptionId": "launcher.catalog.software.tui.description"
+    },
+    {
+      "id": "software.tui.new",
+      "kind": "action",
+      "label": "Create a TUI app",
+      "icon": "add",
+      "operation": "form",
+      "value": "tui",
+      "description": "Name a command and choose its terminal",
+      "labelId": "launcher.catalog.software.tui.new.label",
+      "descriptionId": "launcher.catalog.software.tui.new.description"
+    },
+    {
+      "id": "software.webapps",
+      "kind": "group",
+      "label": "Web apps",
+      "icon": "public",
+      "description": "Your website shortcuts",
+      "provider": "webapps",
+      "labelId": "launcher.catalog.software.webapps.label",
+      "descriptionId": "launcher.catalog.software.webapps.description"
+    },
+    {
+      "id": "software.webapps.new",
+      "kind": "action",
+      "label": "Create a web app",
+      "icon": "add",
+      "operation": "form",
+      "value": "webapp",
+      "description": "Add a website to the application launcher",
+      "labelId": "launcher.catalog.software.webapps.new.label",
+      "descriptionId": "launcher.catalog.software.webapps.new.description"
+    },
+    {
+      "id": "health.updates",
+      "kind": "action",
+      "label": "System updates",
+      "icon": "system_update",
+      "operation": "tool",
+      "value": "updates",
+      "description": "Review and install available updates",
+      "state": "updates",
+      "labelId": "launcher.catalog.health.updates.label",
+      "descriptionId": "launcher.catalog.health.updates.description"
+    },
+    {
+      "id": "health.nacre",
+      "kind": "action",
+      "label": "Nacre maintenance",
+      "icon": "build",
+      "operation": "settings",
+      "value": "maintenance",
+      "description": "Desktop releases, checks and rollback",
+      "brand": "settings",
+      "labelId": "launcher.catalog.health.nacre.label",
+      "descriptionId": "launcher.catalog.health.nacre.description"
+    },
+    {
+      "id": "health.check",
+      "kind": "action",
+      "label": "Check the desktop",
+      "icon": "health_and_safety",
+      "operation": "maintenance",
+      "value": "check",
+      "description": "Run the existing desktop health checks",
+      "labelId": "launcher.catalog.health.check.label",
+      "descriptionId": "launcher.catalog.health.check.description"
+    },
+    {
+      "id": "health.status",
+      "kind": "action",
+      "label": "Current health",
+      "icon": "monitor_heart",
+      "operation": "info",
+      "value": "health",
+      "description": "Show the current services and release",
+      "labelId": "launcher.catalog.health.status.label",
+      "descriptionId": "launcher.catalog.health.status.description"
+    },
+    {
+      "id": "health.support-report",
+      "kind": "action",
+      "label": "Copy support report",
+      "icon": "content_copy",
+      "operation": "tool",
+      "value": "support-report",
+      "description": "Copy redacted hardware, software and recent errors",
+      "labelId": "launcher.catalog.health.support-report.label",
+      "descriptionId": "launcher.catalog.health.support-report.description"
+    },
+    {
+      "id": "health.logs",
+      "kind": "action",
+      "label": "Desktop logs",
+      "icon": "article",
+      "operation": "tool",
+      "value": "logs",
+      "description": "Open the recent shell log",
+      "labelId": "launcher.catalog.health.logs.label",
+      "descriptionId": "launcher.catalog.health.logs.description"
+    },
+    {
+      "id": "health.restart",
+      "kind": "action",
+      "label": "Restart the desktop shell",
+      "icon": "restart_alt",
+      "operation": "maintenance",
+      "value": "restart",
+      "description": "Reload shell software; apps remain running",
+      "confirm": "Restart the Nacre shell?",
+      "labelId": "launcher.catalog.health.restart.label",
+      "descriptionId": "launcher.catalog.health.restart.description",
+      "confirmId": "launcher.catalog.health.restart.confirm"
+    },
+    {
+      "id": "health.rollback",
+      "kind": "action",
+      "label": "Review a rollback",
+      "icon": "restore",
+      "operation": "settings",
+      "value": "maintenance",
+      "description": "Review the saved release before restoring it",
+      "brand": "settings",
+      "labelId": "launcher.catalog.health.rollback.label",
+      "descriptionId": "launcher.catalog.health.rollback.description"
+    },
+    {
+      "id": "learn.shortcuts",
+      "kind": "group",
+      "label": "Keyboard shortcuts",
+      "icon": "keyboard",
+      "description": "Read your actual current bindings",
+      "provider": "keys",
+      "labelId": "launcher.catalog.learn.shortcuts.label",
+      "descriptionId": "launcher.catalog.learn.shortcuts.description"
+    },
+    {
+      "id": "learn.welcome",
+      "kind": "action",
+      "label": "Nacre Welcome",
+      "icon": "waving_hand",
+      "operation": "legacy",
+      "value": "welcome",
+      "description": "Revisit the desktop tour",
+      "brand": "welcome",
+      "labelId": "launcher.catalog.learn.welcome.label",
+      "descriptionId": "launcher.catalog.learn.welcome.description"
+    },
+    {
+      "id": "learn.nacre",
+      "kind": "action",
+      "label": "Nacre guide",
+      "icon": "help",
+      "operation": "info",
+      "value": "guide",
+      "description": "Getting around the universal launcher",
+      "labelId": "launcher.catalog.learn.nacre.label",
+      "descriptionId": "launcher.catalog.learn.nacre.description"
+    },
+    {
+      "id": "learn.hyprland",
+      "kind": "action",
+      "label": "Hyprland manual",
+      "icon": "public",
+      "operation": "url",
+      "value": "https://wiki.hypr.land/",
+      "description": "",
+      "labelId": "launcher.catalog.learn.hyprland.label"
+    },
+    {
+      "id": "learn.arch",
+      "kind": "action",
+      "label": "Arch Linux guide",
+      "icon": "public",
+      "operation": "url",
+      "value": "https://wiki.archlinux.org/",
+      "description": "",
+      "labelId": "launcher.catalog.learn.arch.label"
+    },
+    {
+      "id": "learn.quickshell",
+      "kind": "action",
+      "label": "Quickshell documentation",
+      "icon": "public",
+      "operation": "url",
+      "value": "https://quickshell.org/docs/",
+      "description": "",
+      "labelId": "launcher.catalog.learn.quickshell.label"
+    },
+    {
+      "id": "learn.news",
+      "kind": "action",
+      "label": "Nacre project",
+      "icon": "public",
+      "operation": "url",
+      "value": "https://github.com/nacre-desktop/nacre",
+      "description": "",
+      "labelId": "launcher.catalog.learn.news.label"
+    },
+    {
+      "id": "power.lock",
+      "kind": "action",
+      "label": "Lock the desktop",
+      "icon": "lock",
+      "operation": "power",
+      "value": "lock",
+      "description": "Keep your apps running",
+      "labelId": "launcher.catalog.power.lock.label",
+      "descriptionId": "launcher.catalog.power.lock.description"
+    },
+    {
+      "id": "power.suspend",
+      "kind": "action",
+      "label": "Sleep",
+      "icon": "bedtime",
+      "operation": "power",
+      "value": "suspend",
+      "description": "Suspend and resume later",
+      "confirm": "Sleep?",
+      "labelId": "launcher.catalog.power.suspend.label",
+      "descriptionId": "launcher.catalog.power.suspend.description",
+      "confirmId": "launcher.catalog.power.suspend.confirm"
+    },
+    {
+      "id": "power.logout",
+      "kind": "action",
+      "label": "Log out",
+      "icon": "logout",
+      "operation": "power",
+      "value": "logout",
+      "description": "Close this desktop session",
+      "confirm": "Log out?",
+      "labelId": "launcher.catalog.power.logout.label",
+      "descriptionId": "launcher.catalog.power.logout.description",
+      "confirmId": "launcher.catalog.power.logout.confirm"
+    },
+    {
+      "id": "power.reboot",
+      "kind": "action",
+      "label": "Restart",
+      "icon": "restart_alt",
+      "operation": "power",
+      "value": "reboot",
+      "description": "Close apps and restart",
+      "confirm": "Restart?",
+      "labelId": "launcher.catalog.power.reboot.label",
+      "descriptionId": "launcher.catalog.power.reboot.description",
+      "confirmId": "launcher.catalog.power.reboot.confirm"
+    },
+    {
+      "id": "power.poweroff",
+      "kind": "action",
+      "label": "Shut down",
+      "icon": "power_settings_new",
+      "operation": "power",
+      "value": "poweroff",
+      "description": "Close apps and turn off",
+      "confirm": "Shut down?",
+      "labelId": "launcher.catalog.power.poweroff.label",
+      "descriptionId": "launcher.catalog.power.poweroff.description",
+      "confirmId": "launcher.catalog.power.poweroff.confirm"
+    },
+    {
+      "id": "actions.files",
+      "kind": "action",
+      "label": "Files",
+      "icon": "folder_open",
+      "operation": "legacy",
+      "value": "files",
+      "description": "Browse folders and archives",
+      "aliases": [
+        "files",
+        "file manager",
+        "dolphin"
+      ],
+      "labelId": "launcher.catalog.actions.files.label",
+      "descriptionId": "launcher.catalog.actions.files.description"
+    },
+    {
+      "id": "actions.terminal",
+      "kind": "action",
+      "label": "Terminal",
+      "icon": "terminal",
+      "operation": "legacy",
+      "value": "terminal",
+      "description": "Open a new terminal",
+      "aliases": [
+        "terminal",
+        "kitty"
+      ],
+      "labelId": "launcher.catalog.actions.terminal.label",
+      "descriptionId": "launcher.catalog.actions.terminal.description"
+    },
+    {
+      "id": "actions.apps",
+      "kind": "action",
+      "label": "All apps",
+      "icon": "apps",
+      "operation": "route",
+      "value": "apps",
+      "description": "Browse installed applications",
+      "labelId": "launcher.catalog.actions.apps.label",
+      "descriptionId": "launcher.catalog.actions.apps.description"
+    },
+    {
+      "id": "actions.controls.profile",
+      "kind": "group",
+      "label": "Power profile",
+      "icon": "battery_full",
+      "description": "Choose battery life or responsiveness",
+      "labelId": "launcher.catalog.actions.controls.profile.label",
+      "descriptionId": "launcher.catalog.actions.controls.profile.description"
+    },
+    {
+      "id": "actions.controls.profile.power-saver",
+      "kind": "action",
+      "label": "Power saver",
+      "icon": "battery_full",
+      "operation": "power-profile",
+      "value": "power-saver",
+      "state": "power-profile",
+      "labelId": "launcher.catalog.actions.controls.profile.power-saver.label"
+    },
+    {
+      "id": "actions.controls.profile.balanced",
+      "kind": "action",
+      "label": "Balanced",
+      "icon": "battery_full",
+      "operation": "power-profile",
+      "value": "balanced",
+      "state": "power-profile",
+      "labelId": "launcher.catalog.actions.controls.profile.balanced.label"
+    },
+    {
+      "id": "actions.controls.profile.performance",
+      "kind": "action",
+      "label": "Performance",
+      "icon": "battery_full",
+      "operation": "power-profile",
+      "value": "performance",
+      "state": "power-profile",
+      "labelId": "launcher.catalog.actions.controls.profile.performance.label"
+    },
+    {
+      "id": "actions.media",
+      "kind": "group",
+      "label": "Media and audio",
+      "description": "Playback and output devices",
+      "icon": "volume_up",
+      "provider": "audio",
+      "labelId": "launcher.catalog.actions.media.label",
+      "descriptionId": "launcher.catalog.actions.media.description"
+    },
+    {
+      "id": "actions.media.play-pause",
+      "kind": "action",
+      "label": "Play or pause",
+      "description": "Control the current player",
+      "icon": "play_arrow",
+      "operation": "media",
+      "value": "playPause",
+      "labelId": "launcher.catalog.actions.media.play-pause.label",
+      "descriptionId": "launcher.catalog.actions.media.play-pause.description"
+    },
+    {
+      "id": "actions.media.next",
+      "kind": "action",
+      "label": "Next track",
+      "description": "Control the current player",
+      "icon": "skip_next",
+      "operation": "media",
+      "value": "next",
+      "labelId": "launcher.catalog.actions.media.next.label",
+      "descriptionId": "launcher.catalog.actions.media.next.description"
+    },
+    {
+      "id": "actions.media.previous",
+      "kind": "action",
+      "label": "Previous track",
+      "description": "Control the current player",
+      "icon": "skip_previous",
+      "operation": "media",
+      "value": "previous",
+      "labelId": "launcher.catalog.actions.media.previous.label",
+      "descriptionId": "launcher.catalog.actions.media.previous.description"
+    },
+    {
+      "id": "actions.find-files",
+      "kind": "action",
+      "label": "Find files",
+      "description": "Search Documents, Downloads, Pictures, Desktop and Projects",
+      "icon": "folder",
+      "operation": "scope",
+      "value": ": ",
+      "labelId": "launcher.catalog.actions.find-files.label",
+      "descriptionId": "launcher.catalog.actions.find-files.description"
+    },
+    {
+      "id": "actions.saved",
+      "kind": "group",
+      "label": "Saved launcher items",
+      "labelId": "launcher.catalog.saved",
+      "icon": "bookmark",
+      "description": "Actions, snippets, searches and project workspaces",
+      "descriptionId": "launcher.catalog.saved-description"
+    },
+    {
+      "id": "actions.saved.add-action",
+      "kind": "action",
+      "label": "Add launcher action",
+      "labelId": "launcher.catalog.add-action",
+      "icon": "terminal",
+      "operation": "form",
+      "value": "action"
+    },
+    {
+      "id": "actions.saved.add-snippet",
+      "kind": "action",
+      "label": "Save text snippet",
+      "labelId": "launcher.catalog.add-snippet",
+      "icon": "content_paste",
+      "operation": "form",
+      "value": "snippet"
+    },
+    {
+      "id": "actions.saved.add-search",
+      "kind": "action",
+      "label": "Add named web search",
+      "labelId": "launcher.catalog.add-search",
+      "icon": "public",
+      "operation": "form",
+      "value": "search"
+    },
+    {
+      "id": "actions.saved.add-bookmark",
+      "kind": "action",
+      "label": "Save bookmark",
+      "labelId": "launcher.catalog.add-bookmark",
+      "icon": "bookmark",
+      "operation": "form",
+      "value": "bookmark"
+    },
+    {
+      "id": "actions.saved.add-workspace",
+      "kind": "action",
+      "label": "Save workspace recipe",
+      "labelId": "launcher.catalog.add-workspace",
+      "icon": "workspaces",
+      "operation": "form",
+      "value": "workspace"
+    },
+    {
+      "id": "actions.saved.add-roots",
+      "kind": "action",
+      "label": "Choose file search folders",
+      "labelId": "launcher.catalog.add-roots",
+      "icon": "folder",
+      "operation": "form",
+      "value": "roots"
+    },
+    {
+      "id": "actions.dictation",
+      "kind": "group",
+      "label": "Voice typing",
+      "labelId": "launcher.catalog.dictation",
+      "icon": "mic",
+      "description": "Optional dictation with your configured Voxtype service",
+      "descriptionId": "launcher.catalog.dictation-description"
+    },
+    {
+      "id": "actions.dictation.toggle",
+      "kind": "action",
+      "label": "Start or stop voice typing",
+      "labelId": "launcher.catalog.dictation-toggle",
+      "icon": "mic",
+      "operation": "command",
+      "arguments": [
+        "voxtype",
+        "record",
+        "toggle"
+      ],
+      "capability": "dictation"
+    },
+    {
+      "id": "actions.dictation.setup",
+      "kind": "action",
+      "label": "Configure voice typing",
+      "labelId": "launcher.catalog.dictation-setup",
+      "icon": "settings_voice",
+      "operation": "command",
+      "arguments": [
+        "kitty",
+        "--",
+        "voxtype",
+        "configure"
+      ],
+      "capability": "dictation"
+    },
+    {
+      "id": "actions.share",
+      "kind": "action",
+      "label": "Send or receive with LocalSend",
+      "labelId": "launcher.catalog.share",
+      "icon": "share",
+      "operation": "command",
+      "arguments": [
+        "localsend"
+      ],
+      "capability": "share"
+    },
+    {
+      "id": "software.themes",
+      "kind": "group",
+      "label": "Themes",
+      "icon": "palette",
+      "description": "Preview and apply desktop palettes",
+      "provider": "software-themes",
+      "labelId": "software.catalog.themes.label",
+      "descriptionId": "software.catalog.themes.description"
+    },
+    {
+      "id": "software.themes.import",
+      "kind": "action",
+      "label": "Import a theme",
+      "icon": "download",
+      "description": "Add a Nacre theme manifest from a local file",
+      "operation": "form",
+      "value": "software-theme-import",
+      "labelId": "software.catalog.themes.import.label",
+      "descriptionId": "software.catalog.themes.import.description"
+    },
+    {
+      "id": "software.themes.create",
+      "kind": "action",
+      "label": "Create a theme",
+      "icon": "palette",
+      "description": "Fine-tune and save a palette in Nacre Colors",
+      "operation": "settings",
+      "value": "colors",
+      "labelId": "software.catalog.themes.create.label",
+      "descriptionId": "software.catalog.themes.create.description"
+    },
+    {
+      "id": "software.extensions",
+      "kind": "group",
+      "label": "Extensions",
+      "icon": "extension",
+      "description": "Add launcher packs, themes and independent panels",
+      "provider": "software-extensions",
+      "labelId": "software.catalog.extensions.label",
+      "descriptionId": "software.catalog.extensions.description"
+    },
+    {
+      "id": "software.extensions.import",
+      "kind": "action",
+      "label": "Add an extension",
+      "icon": "add",
+      "description": "Import a Nacre extension from an HTTPS Git repository",
+      "operation": "form",
+      "value": "software-extension-import",
+      "labelId": "software.catalog.extensions.import.label",
+      "descriptionId": "software.catalog.extensions.import.description"
+    },
+    {
+      "id": "software.discover.ai",
+      "kind": "group",
+      "label": "AI",
+      "icon": "smart_toy",
+      "description": "Local models and assistants",
+      "provider": "software-ai",
+      "labelId": "launcher.catalog.software.discover.ai.label",
+      "descriptionId": "launcher.catalog.software.discover.ai.description"
+    },
+    {
+      "id": "health.fixits",
+      "kind": "group",
+      "label": "Fix a problem",
+      "icon": "build",
+      "description": "Review maintenance and repair actions",
+      "provider": "health-fixits",
+      "labelId": "launcher.catalog.health.fixits.label",
+      "descriptionId": "launcher.catalog.health.fixits.description"
+    },
+    {
+      "id": "setup.system",
+      "kind": "group",
+      "label": "System setup",
+      "icon": "settings_suggest",
+      "description": "Devices, networking and input",
+      "provider": "system-setup",
+      "labelId": "launcher.catalog.setup.system.label",
+      "descriptionId": "launcher.catalog.setup.system.description"
+    },
+    {
+      "id": "setup.hardware",
+      "kind": "group",
+      "label": "Hardware controls",
+      "icon": "devices",
+      "description": "Supported input, display and power controls",
+      "provider": "system-hardware",
+      "labelId": "launcher.catalog.setup.hardware.label",
+      "descriptionId": "launcher.catalog.setup.hardware.description"
+    },
+    {
+      "id": "health.speed",
+      "kind": "group",
+      "label": "Speed tests",
+      "icon": "speed",
+      "description": "Check network and disk throughput",
+      "provider": "system-speed",
+      "labelId": "launcher.catalog.health.speed.label",
+      "descriptionId": "launcher.catalog.health.speed.description"
+    },
+    {
+      "id": "software.packages.review-policy",
+      "kind": "action",
+      "label": "AUR package review policy",
+      "description": "Choose recipe review and inspect its profile provenance",
+      "icon": "policy",
+      "operation": "settings",
+      "value": "system",
+      "labelId": "software.aur.launcher",
+      "descriptionId": "software.aur.launcher-description"
+    },
+    {
+      "id": "actions.bring-visitors",
+      "kind": "action",
+      "label": "Bring visitors here",
+      "description": "Keep visiting windows on this monitor after reconnect",
+      "icon": "workspaces",
+      "operation": "bring-visitors",
+      "aliases": [
+        "merge monitors",
+        "undock",
+        "visiting workspaces"
+      ],
+      "capability": "niriWorkspaces",
+      "labelId": "launcher.catalog.bring-visitors.label",
+      "descriptionId": "launcher.catalog.bring-visitors.description"
+    }
+  ],
+  "software": [
+    {
+      "package": "firefox",
+      "label": "Firefox",
+      "description": "Web browser",
+      "labelId": "launcher.catalog.firefox.label",
+      "descriptionId": "launcher.catalog.firefox.description",
+      "repository": "extra",
+      "category": "browsers",
+      "website": "https://www.firefox.com/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org.mozilla.firefox-stable/752x423/org.mozilla.firefox-af5d1ae7c121ea4864b3c5a1098f8f9c.png",
+        "https://dl.flathub.org/media/org.mozilla.firefox-stable/752x423/org.mozilla.firefox-c6f98b38b8b28b113a75a6b34037b759.png",
+        "https://dl.flathub.org/media/org.mozilla.firefox-stable/752x423/org.mozilla.firefox-60e855c1f4180607e40c9762a0fb9fa6.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.mozilla.firefox",
+      "appId": "org.mozilla.firefox"
+    },
+    {
+      "package": "chromium",
+      "label": "Chromium",
+      "description": "Web browser",
+      "labelId": "launcher.catalog.chromium.label",
+      "descriptionId": "launcher.catalog.chromium.description",
+      "repository": "extra",
+      "category": "browsers",
+      "website": "https://www.chromium.org/Home",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/chromium/Chromium/f7ea274f83f1b61455f300ecf1c01ec2/screenshots/image-1_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.chromium.Chromium",
+      "appId": "org.chromium.Chromium"
+    },
+    {
+      "package": "zen-browser-bin",
+      "label": "Zen",
+      "description": "Web browser",
+      "labelId": "launcher.catalog.zen-browser-bin.label",
+      "descriptionId": "launcher.catalog.zen-browser-bin.description",
+      "repository": "AUR",
+      "category": "browsers",
+      "website": "https://github.com/zen-browser/desktop"
+    },
+    {
+      "package": "code",
+      "label": "Visual Studio Code",
+      "description": "Code editor",
+      "labelId": "launcher.catalog.code.label",
+      "descriptionId": "launcher.catalog.code.description",
+      "aliases": [
+        "vscode",
+        "vs code",
+        "code editor"
+      ],
+      "repository": "extra",
+      "category": "development",
+      "website": "https://github.com/microsoft/vscode",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/visualstudio/code/929ab57f09f2d5a5bc7cea0648c9a332/screenshots/image-1_752x408@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.visualstudio.code",
+      "appId": "com.visualstudio.code"
+    },
+    {
+      "package": "neovim",
+      "label": "Neovim",
+      "description": "Terminal editor",
+      "labelId": "launcher.catalog.neovim.label",
+      "descriptionId": "launcher.catalog.neovim.description",
+      "repository": "extra",
+      "category": "development",
+      "website": "https://neovim.io"
+    },
+    {
+      "package": "helix",
+      "label": "Helix",
+      "description": "Terminal editor",
+      "labelId": "launcher.catalog.helix.label",
+      "descriptionId": "launcher.catalog.helix.description",
+      "repository": "extra",
+      "category": "development",
+      "website": "https://helix-editor.com"
+    },
+    {
+      "package": "btop",
+      "label": "btop",
+      "description": "System monitor",
+      "labelId": "launcher.catalog.btop.label",
+      "descriptionId": "launcher.catalog.btop.description",
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://github.com/aristocratos/btop"
+    },
+    {
+      "package": "tmux",
+      "label": "tmux",
+      "description": "Terminal sessions",
+      "labelId": "launcher.catalog.tmux.label",
+      "descriptionId": "launcher.catalog.tmux.description",
+      "repository": "extra",
+      "category": "development",
+      "website": "https://github.com/tmux/tmux/wiki"
+    },
+    {
+      "package": "ripgrep",
+      "label": "ripgrep",
+      "description": "Search files",
+      "labelId": "launcher.catalog.ripgrep.label",
+      "descriptionId": "launcher.catalog.ripgrep.description",
+      "repository": "extra",
+      "category": "development",
+      "website": "https://github.com/BurntSushi/ripgrep"
+    },
+    {
+      "package": "fd",
+      "label": "fd",
+      "description": "Find files",
+      "labelId": "launcher.catalog.fd.label",
+      "descriptionId": "launcher.catalog.fd.description",
+      "repository": "extra",
+      "category": "development",
+      "website": "https://github.com/sharkdp/fd"
+    },
+    {
+      "package": "bat",
+      "label": "bat",
+      "description": "Read files",
+      "labelId": "launcher.catalog.bat.label",
+      "descriptionId": "launcher.catalog.bat.description",
+      "repository": "extra",
+      "category": "development",
+      "website": "https://github.com/sharkdp/bat"
+    },
+    {
+      "package": "obs-studio",
+      "label": "OBS Studio",
+      "description": "Capture and stream",
+      "labelId": "launcher.catalog.obs-studio.label",
+      "descriptionId": "launcher.catalog.obs-studio.description",
+      "aliases": [
+        "obs",
+        "open broadcaster"
+      ],
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://obsproject.com",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/obsproject/Studio/b24d8f7f7f9672e48342e70759b01e5e/screenshots/image-1_752x526@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.obsproject.Studio",
+      "appId": "com.obsproject.Studio"
+    },
+    {
+      "package": "vlc",
+      "label": "VLC",
+      "description": "Media player",
+      "labelId": "launcher.catalog.vlc.label",
+      "descriptionId": "launcher.catalog.vlc.description",
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://www.videolan.org/vlc/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/videolan/VLC/34e7c2b6a026c5c290606225a84582d3/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/org/videolan/VLC/34e7c2b6a026c5c290606225a84582d3/screenshots/image-2_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.videolan.VLC",
+      "appId": "org.videolan.VLC"
+    },
+    {
+      "package": "mpv",
+      "label": "mpv",
+      "description": "Media player",
+      "labelId": "launcher.catalog.mpv.label",
+      "descriptionId": "launcher.catalog.mpv.description",
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://mpv.io/"
+    },
+    {
+      "package": "spotify",
+      "label": "Spotify",
+      "description": "Music",
+      "labelId": "launcher.catalog.spotify.label",
+      "descriptionId": "launcher.catalog.spotify.description",
+      "repository": "AUR",
+      "category": "utilities",
+      "website": "https://www.spotify.com",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/spotify/Client/2be38d678bbcc0e04cec0c19c60a80fe/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/com/spotify/Client/2be38d678bbcc0e04cec0c19c60a80fe/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/com/spotify/Client/2be38d678bbcc0e04cec0c19c60a80fe/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.spotify.Client",
+      "appId": "com.spotify.Client"
+    },
+    {
+      "package": "gimp",
+      "label": "GIMP",
+      "description": "Image editor",
+      "labelId": "launcher.catalog.gimp.label",
+      "descriptionId": "launcher.catalog.gimp.description",
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://www.gimp.org/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/gimp/GIMP/95e6d7d59d33a0f9364535dbe023d807/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/org/gimp/GIMP/95e6d7d59d33a0f9364535dbe023d807/screenshots/image-2_752x410@1.png",
+        "https://dl.flathub.org/media/org/gimp/GIMP/95e6d7d59d33a0f9364535dbe023d807/screenshots/image-3_752x410@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.gimp.GIMP",
+      "appId": "org.gimp.GIMP"
+    },
+    {
+      "package": "krita",
+      "label": "Krita",
+      "description": "Painting",
+      "labelId": "launcher.catalog.krita.label",
+      "descriptionId": "launcher.catalog.krita.description",
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://krita.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/kde/krita/1348962dcc0842250c4ce6876acc36cc/screenshots/image-1_752x408@1.png",
+        "https://dl.flathub.org/media/org/kde/krita/1348962dcc0842250c4ce6876acc36cc/screenshots/image-2_752x408@1.png",
+        "https://dl.flathub.org/media/org/kde/krita/1348962dcc0842250c4ce6876acc36cc/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.kde.krita",
+      "appId": "org.kde.krita"
+    },
+    {
+      "package": "inkscape",
+      "label": "Inkscape",
+      "description": "Vector graphics",
+      "labelId": "launcher.catalog.inkscape.label",
+      "descriptionId": "launcher.catalog.inkscape.description",
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://inkscape.org/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/inkscape/Inkscape/d06b79da7ad6df73032683fbcf8c4d56/screenshots/image-1_752x462@1.png",
+        "https://dl.flathub.org/media/org/inkscape/Inkscape/d06b79da7ad6df73032683fbcf8c4d56/screenshots/image-2_752x461@1.png",
+        "https://dl.flathub.org/media/org/inkscape/Inkscape/d06b79da7ad6df73032683fbcf8c4d56/screenshots/image-3_752x460@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.inkscape.Inkscape",
+      "appId": "org.inkscape.Inkscape"
+    },
+    {
+      "package": "steam",
+      "label": "Steam",
+      "description": "Games",
+      "labelId": "launcher.catalog.steam.label",
+      "descriptionId": "launcher.catalog.steam.description",
+      "repository": "multilib",
+      "category": "games",
+      "website": "https://steampowered.com/",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/valvesoftware/Steam/71bd4338705ac5f74c133bfbaacaa3d8/screenshots/image-1_752x642@1.png",
+        "https://dl.flathub.org/media/com/valvesoftware/Steam/71bd4338705ac5f74c133bfbaacaa3d8/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/com/valvesoftware/Steam/71bd4338705ac5f74c133bfbaacaa3d8/screenshots/image-3_752x364@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.valvesoftware.Steam",
+      "appId": "com.valvesoftware.Steam"
+    },
+    {
+      "package": "lutris",
+      "label": "Lutris",
+      "description": "Game library",
+      "labelId": "launcher.catalog.lutris.label",
+      "descriptionId": "launcher.catalog.lutris.description",
+      "repository": "extra",
+      "category": "games",
+      "website": "https://lutris.net",
+      "screenshots": [
+        "https://dl.flathub.org/media/net/lutris/Lutris/3cc8d32fd68604816f0a5f6872bf91b5/screenshots/image-1_752x486@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/net.lutris.Lutris",
+      "appId": "net.lutris.Lutris"
+    },
+    {
+      "package": "heroic-games-launcher-bin",
+      "label": "Heroic",
+      "description": "Game launcher",
+      "labelId": "launcher.catalog.heroic-games-launcher-bin.label",
+      "descriptionId": "launcher.catalog.heroic-games-launcher-bin.description",
+      "aliases": [
+        "epic games",
+        "gog"
+      ],
+      "repository": "AUR",
+      "category": "games",
+      "website": "https://heroicgameslauncher.com/",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/heroicgameslauncher/hgl/d6d41679a8e80808f6cf60bb082b9f37/screenshots/image-1_752x526@1.png",
+        "https://dl.flathub.org/media/com/heroicgameslauncher/hgl/d6d41679a8e80808f6cf60bb082b9f37/screenshots/image-2_752x526@1.png",
+        "https://dl.flathub.org/media/com/heroicgameslauncher/hgl/d6d41679a8e80808f6cf60bb082b9f37/screenshots/image-3_752x526@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.heroicgameslauncher.hgl",
+      "appId": "com.heroicgameslauncher.hgl"
+    },
+    {
+      "package": "localsend",
+      "label": "LocalSend",
+      "description": "Share files locally",
+      "labelId": "launcher.catalog.localsend.label",
+      "descriptionId": "launcher.catalog.localsend.description",
+      "repository": "AUR",
+      "category": "utilities",
+      "website": "https://github.com/localsend/localsend",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/localsend/localsend_app/e1bb6e9a29b498c0a48de1a5683c652a/screenshots/image-1_752x551@1.png",
+        "https://dl.flathub.org/media/org/localsend/localsend_app/e1bb6e9a29b498c0a48de1a5683c652a/screenshots/image-2_752x551@1.png",
+        "https://dl.flathub.org/media/org/localsend/localsend_app/e1bb6e9a29b498c0a48de1a5683c652a/screenshots/image-3_752x551@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.localsend.localsend_app",
+      "appId": "org.localsend.localsend_app"
+    },
+    {
+      "package": "tailscale",
+      "label": "Tailscale",
+      "description": "Private network",
+      "labelId": "launcher.catalog.tailscale.label",
+      "descriptionId": "launcher.catalog.tailscale.description",
+      "repository": "extra",
+      "category": "network",
+      "website": "https://tailscale.com"
+    },
+    {
+      "package": "keepassxc",
+      "label": "KeePassXC",
+      "description": "Password manager",
+      "labelId": "launcher.catalog.keepassxc.label",
+      "descriptionId": "launcher.catalog.keepassxc.description",
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://keepassxc.org/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/keepassxc/KeePassXC.desktop/4c36ed73b0a57050b7fda2be02da09f1/screenshots/image-1_752x571@1.png",
+        "https://dl.flathub.org/media/org/keepassxc/KeePassXC.desktop/4c36ed73b0a57050b7fda2be02da09f1/screenshots/image-2_752x535@1.png",
+        "https://dl.flathub.org/media/org/keepassxc/KeePassXC.desktop/4c36ed73b0a57050b7fda2be02da09f1/screenshots/image-3_752x536@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.keepassxc.KeePassXC",
+      "appId": "org.keepassxc.KeePassXC"
+    },
+    {
+      "package": "wf-recorder",
+      "label": "Screen recording",
+      "description": "Record Wayland screens",
+      "labelId": "launcher.catalog.wf-recorder.label",
+      "descriptionId": "launcher.catalog.wf-recorder.description",
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://github.com/ammen99/wf-recorder"
+    },
+    {
+      "package": "tesseract",
+      "label": "Screen text recognition",
+      "description": "Read text in screenshots",
+      "labelId": "launcher.catalog.tesseract.label",
+      "descriptionId": "launcher.catalog.tesseract.description",
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://github.com/tesseract-ocr/tesseract"
+    },
+    {
+      "package": "zbar",
+      "label": "QR recognition",
+      "description": "Read QR codes",
+      "labelId": "launcher.catalog.zbar.label",
+      "descriptionId": "launcher.catalog.zbar.description",
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://github.com/mchehab/zbar"
+    },
+    {
+      "package": "hyprpicker",
+      "label": "Screen color picker",
+      "description": "Copy a color from the screen",
+      "labelId": "launcher.catalog.hyprpicker.label",
+      "descriptionId": "launcher.catalog.hyprpicker.description",
+      "repository": "extra",
+      "category": "utilities",
+      "website": "https://github.com/hyprwm/hyprpicker"
+    },
+    {
+      "package": "satty",
+      "label": "Screenshot annotation",
+      "description": "Draw and write on screenshots",
+      "labelId": "launcher.catalog.optional-satty",
+      "descriptionId": "launcher.catalog.optional-satty-description",
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://github.com/gabm/satty"
+    },
+    {
+      "package": "ffmpeg",
+      "label": "Media conversion",
+      "description": "Compress videos and convert media files",
+      "labelId": "launcher.catalog.optional-ffmpeg",
+      "descriptionId": "launcher.catalog.optional-ffmpeg-description",
+      "repository": "extra",
+      "category": "creative",
+      "website": "https://ffmpeg.org"
+    },
+    {
+      "package": "voxtype-bin",
+      "label": "Voice typing",
+      "description": "Optional dictation; configure your model and service before use",
+      "labelId": "launcher.catalog.optional-voxtype-bin",
+      "descriptionId": "launcher.catalog.optional-voxtype-bin-description",
+      "repository": "AUR",
+      "category": "utilities",
+      "website": "https://voxtype.io"
+    },
+    {
+      "package": "discord",
+      "label": "Discord",
+      "description": "Voice and text chat",
+      "repository": "extra",
+      "labelId": "launcher.catalog.discord.label",
+      "descriptionId": "launcher.catalog.discord.description",
+      "category": "communication",
+      "website": "https://discord.com",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/discordapp/Discord/54df1825f8e41c063a8e94978db804df/screenshots/image-1_752x577@1.png",
+        "https://dl.flathub.org/media/com/discordapp/Discord/54df1825f8e41c063a8e94978db804df/screenshots/image-2_752x577@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.discordapp.Discord",
+      "appId": "com.discordapp.Discord"
+    },
+    {
+      "package": "google-chrome",
+      "label": "Google Chrome",
+      "description": "Web browser",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.google-chrome.label",
+      "descriptionId": "launcher.catalog.google-chrome.description",
+      "category": "browsers",
+      "website": "https://www.google.com/chrome",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/google/Chrome/c98e8834585bfc78fada8796976bf768/screenshots/image-1_752x438@1.png",
+        "https://dl.flathub.org/media/com/google/Chrome/c98e8834585bfc78fada8796976bf768/screenshots/image-2_752x438@1.png",
+        "https://dl.flathub.org/media/com/google/Chrome/c98e8834585bfc78fada8796976bf768/screenshots/image-3_752x438@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.google.Chrome",
+      "appId": "com.google.Chrome"
+    },
+    {
+      "package": "brave-bin",
+      "label": "Brave",
+      "description": "Web browser",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.brave-bin.label",
+      "descriptionId": "launcher.catalog.brave-bin.description",
+      "category": "browsers",
+      "website": "https://brave.com",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/brave/Browser/1f9e30f4dddffcb63e107f3a04f9d000/screenshots/image-1_752x528@1.png",
+        "https://dl.flathub.org/media/com/brave/Browser/1f9e30f4dddffcb63e107f3a04f9d000/screenshots/image-2_752x475@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.brave.Browser",
+      "appId": "com.brave.Browser"
+    },
+    {
+      "package": "vivaldi",
+      "label": "Vivaldi",
+      "description": "Web browser",
+      "repository": "extra",
+      "labelId": "launcher.catalog.vivaldi.label",
+      "descriptionId": "launcher.catalog.vivaldi.description",
+      "category": "browsers",
+      "website": "https://vivaldi.com"
+    },
+    {
+      "package": "torbrowser-launcher",
+      "label": "Tor Browser",
+      "description": "Privacy browser",
+      "repository": "extra",
+      "labelId": "launcher.catalog.torbrowser-launcher.label",
+      "descriptionId": "launcher.catalog.torbrowser-launcher.description",
+      "category": "browsers",
+      "website": "https://github.com/torproject/torbrowser-launcher"
+    },
+    {
+      "package": "thunderbird",
+      "label": "Thunderbird",
+      "description": "Email and calendar",
+      "repository": "extra",
+      "labelId": "launcher.catalog.thunderbird.label",
+      "descriptionId": "launcher.catalog.thunderbird.description",
+      "category": "communication",
+      "website": "https://www.thunderbird.net/"
+    },
+    {
+      "package": "telegram-desktop",
+      "label": "Telegram",
+      "description": "Messaging",
+      "repository": "extra",
+      "labelId": "launcher.catalog.telegram-desktop.label",
+      "descriptionId": "launcher.catalog.telegram-desktop.description",
+      "category": "communication",
+      "website": "https://desktop.telegram.org/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/telegram/desktop/0477faef98bba31f7de7ec0031eb1e57/screenshots/image-1_752x519@1.png",
+        "https://dl.flathub.org/media/org/telegram/desktop/0477faef98bba31f7de7ec0031eb1e57/screenshots/image-2_752x470@1.png",
+        "https://dl.flathub.org/media/org/telegram/desktop/0477faef98bba31f7de7ec0031eb1e57/screenshots/image-3_752x470@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.telegram.desktop",
+      "appId": "org.telegram.desktop"
+    },
+    {
+      "package": "signal-desktop",
+      "label": "Signal",
+      "description": "Private messaging",
+      "repository": "extra",
+      "labelId": "launcher.catalog.signal-desktop.label",
+      "descriptionId": "launcher.catalog.signal-desktop.description",
+      "category": "communication",
+      "website": "https://signal.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/signal/Signal/9b9ec85132f9b02718c7ad45f509bfc0/screenshots/image-1_752x458@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.signal.Signal",
+      "appId": "org.signal.Signal"
+    },
+    {
+      "package": "element-desktop",
+      "label": "Element",
+      "description": "Matrix messaging",
+      "repository": "extra",
+      "labelId": "launcher.catalog.element-desktop.label",
+      "descriptionId": "launcher.catalog.element-desktop.description",
+      "category": "communication",
+      "website": "https://element.io",
+      "screenshots": [
+        "https://dl.flathub.org/media/im/riot/Riot/5b69dc50d129dec06a4fe293caf32ce1/screenshots/image-1_752x409@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/im.riot.Riot",
+      "appId": "im.riot.Riot"
+    },
+    {
+      "package": "slack-desktop",
+      "label": "Slack",
+      "description": "Team messaging",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.slack-desktop.label",
+      "descriptionId": "launcher.catalog.slack-desktop.description",
+      "category": "communication",
+      "website": "https://slack.com/downloads"
+    },
+    {
+      "package": "vesktop-bin",
+      "label": "Vesktop",
+      "description": "Discord client",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.vesktop-bin.label",
+      "descriptionId": "launcher.catalog.vesktop-bin.description",
+      "category": "communication",
+      "website": "https://vesktop.dev/",
+      "screenshots": [
+        "https://dl.flathub.org/media/dev/vencord/Vesktop/34c98d1300f4807d83af629811965394/screenshots/image-1_752x507@1.png",
+        "https://dl.flathub.org/media/dev/vencord/Vesktop/34c98d1300f4807d83af629811965394/screenshots/image-2_752x507@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/dev.vencord.Vesktop",
+      "appId": "dev.vencord.Vesktop"
+    },
+    {
+      "package": "zoom",
+      "label": "Zoom",
+      "description": "Video meetings",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.zoom.label",
+      "descriptionId": "launcher.catalog.zoom.description",
+      "category": "communication",
+      "website": "https://zoom.us/"
+    },
+    {
+      "package": "libreoffice-fresh",
+      "label": "LibreOffice",
+      "description": "Documents, spreadsheets and presentations",
+      "repository": "extra",
+      "labelId": "launcher.catalog.libreoffice-fresh.label",
+      "descriptionId": "launcher.catalog.libreoffice-fresh.description",
+      "category": "office",
+      "website": "https://www.libreoffice.org/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/libreoffice/LibreOffice/6a06e0ec2876ffc989b0e2a1340d3331/screenshots/image-1_752x526@1.png",
+        "https://dl.flathub.org/media/org/libreoffice/LibreOffice/6a06e0ec2876ffc989b0e2a1340d3331/screenshots/image-2_752x436@1.png",
+        "https://dl.flathub.org/media/org/libreoffice/LibreOffice/6a06e0ec2876ffc989b0e2a1340d3331/screenshots/image-3_752x546@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.libreoffice.LibreOffice",
+      "appId": "org.libreoffice.LibreOffice"
+    },
+    {
+      "package": "joplin-desktop",
+      "label": "Joplin",
+      "description": "Notes and notebooks",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.joplin-desktop.label",
+      "descriptionId": "launcher.catalog.joplin-desktop.description",
+      "category": "office",
+      "website": "https://joplinapp.org/"
+    },
+    {
+      "package": "foliate",
+      "label": "Foliate",
+      "description": "E-book reader",
+      "repository": "extra",
+      "labelId": "launcher.catalog.foliate.label",
+      "descriptionId": "launcher.catalog.foliate.description",
+      "category": "office",
+      "website": "https://johnfactotum.github.io/foliate/",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/github/johnfactotum.Foliate/50c58d8da7fe3fa08d1fbf5174369d7d/screenshots/image-1_752x478@1.png",
+        "https://dl.flathub.org/media/com/github/johnfactotum.Foliate/50c58d8da7fe3fa08d1fbf5174369d7d/screenshots/image-2_752x478@1.png",
+        "https://dl.flathub.org/media/com/github/johnfactotum.Foliate/50c58d8da7fe3fa08d1fbf5174369d7d/screenshots/image-3_752x478@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.github.johnfactotum.Foliate",
+      "appId": "com.github.johnfactotum.Foliate"
+    },
+    {
+      "package": "shotcut",
+      "label": "Shotcut",
+      "description": "Video editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.shotcut.label",
+      "descriptionId": "launcher.catalog.shotcut.description",
+      "category": "creative",
+      "website": "https://www.shotcut.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/shotcut/Shotcut/6740996b9caf645b4d2d71211d68fd3f/screenshots/image-1_752x464@1.png",
+        "https://dl.flathub.org/media/org/shotcut/Shotcut/6740996b9caf645b4d2d71211d68fd3f/screenshots/image-2_orig.png",
+        "https://dl.flathub.org/media/org/shotcut/Shotcut/6740996b9caf645b4d2d71211d68fd3f/screenshots/image-3_752x629@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.shotcut.Shotcut",
+      "appId": "org.shotcut.Shotcut"
+    },
+    {
+      "package": "rawtherapee",
+      "label": "RawTherapee",
+      "description": "Photo editing",
+      "repository": "extra",
+      "labelId": "launcher.catalog.rawtherapee.label",
+      "descriptionId": "launcher.catalog.rawtherapee.description",
+      "category": "creative",
+      "website": "https://www.rawtherapee.com/"
+    },
+    {
+      "package": "vscodium-bin",
+      "label": "VSCodium",
+      "description": "Code editor",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.vscodium-bin.label",
+      "descriptionId": "launcher.catalog.vscodium-bin.description",
+      "category": "development",
+      "website": "https://github.com/VSCodium/vscodium"
+    },
+    {
+      "package": "android-studio",
+      "label": "Android Studio",
+      "description": "Android development",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.android-studio.label",
+      "descriptionId": "launcher.catalog.android-studio.description",
+      "category": "development",
+      "website": "https://developer.android.com/"
+    },
+    {
+      "package": "bottles",
+      "label": "Bottles",
+      "description": "Run Windows applications",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.bottles.label",
+      "descriptionId": "launcher.catalog.bottles.description",
+      "category": "games",
+      "website": "https://github.com/bottlesdevs/Bottles",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/usebottles/bottles/9d262585bbb7e779072f16bec4824a7e/screenshots/image-1_752x586@1.png",
+        "https://dl.flathub.org/media/com/usebottles/bottles/9d262585bbb7e779072f16bec4824a7e/screenshots/image-2_752x586@1.png",
+        "https://dl.flathub.org/media/com/usebottles/bottles/9d262585bbb7e779072f16bec4824a7e/screenshots/image-3_752x586@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.usebottles.bottles",
+      "appId": "com.usebottles.bottles"
+    },
+    {
+      "package": "protonup-qt",
+      "label": "ProtonUp-Qt",
+      "description": "Manage game compatibility tools",
+      "repository": "AUR",
+      "labelId": "launcher.catalog.protonup-qt.label",
+      "descriptionId": "launcher.catalog.protonup-qt.description",
+      "category": "games",
+      "website": "https://davidotek.github.io/protonup-qt"
+    },
+    {
+      "package": "obsidian",
+      "label": "Obsidian",
+      "description": "Notes and knowledge",
+      "repository": "extra",
+      "labelId": "launcher.catalog.obsidian.label",
+      "descriptionId": "launcher.catalog.obsidian.description",
+      "category": "office",
+      "website": "https://obsidian.md",
+      "screenshots": [
+        "https://dl.flathub.org/media/md/obsidian/Obsidian/4902fe5d9fec13519c5524761123cdeb/screenshots/image-1_752x398@1.png",
+        "https://dl.flathub.org/media/md/obsidian/Obsidian/4902fe5d9fec13519c5524761123cdeb/screenshots/image-2_752x863@1.png",
+        "https://dl.flathub.org/media/md/obsidian/Obsidian/4902fe5d9fec13519c5524761123cdeb/screenshots/image-3_752x526@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/md.obsidian.Obsidian",
+      "appId": "md.obsidian.Obsidian"
+    },
+    {
+      "package": "calibre",
+      "label": "Calibre",
+      "description": "E-book library",
+      "repository": "extra",
+      "labelId": "launcher.catalog.calibre.label",
+      "descriptionId": "launcher.catalog.calibre.description",
+      "category": "office",
+      "website": "https://calibre-ebook.com",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/calibre_ebook/calibre/42df4cc1fa6830a00f75081dbbda07cd/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/com/calibre_ebook/calibre/42df4cc1fa6830a00f75081dbbda07cd/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/com/calibre_ebook/calibre/42df4cc1fa6830a00f75081dbbda07cd/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.calibre_ebook.calibre",
+      "appId": "com.calibre_ebook.calibre"
+    },
+    {
+      "package": "okular",
+      "label": "Okular",
+      "description": "PDF reader",
+      "repository": "extra",
+      "labelId": "launcher.catalog.okular.label",
+      "descriptionId": "launcher.catalog.okular.description",
+      "category": "office",
+      "website": "https://apps.kde.org/okular/"
+    },
+    {
+      "package": "blender",
+      "label": "Blender",
+      "description": "3D modeling and animation",
+      "repository": "extra",
+      "labelId": "launcher.catalog.blender.label",
+      "descriptionId": "launcher.catalog.blender.description",
+      "category": "creative",
+      "website": "https://www.blender.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/blender/Blender/c6b07403115901571923d99f1b725b0e/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/org/blender/Blender/c6b07403115901571923d99f1b725b0e/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/org/blender/Blender/c6b07403115901571923d99f1b725b0e/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.blender.Blender",
+      "appId": "org.blender.Blender"
+    },
+    {
+      "package": "kdenlive",
+      "label": "Kdenlive",
+      "description": "Video editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.kdenlive.label",
+      "descriptionId": "launcher.catalog.kdenlive.description",
+      "category": "creative",
+      "website": "https://apps.kde.org/kdenlive/",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/kde/kdenlive.desktop/ed746a0f36b42446cedf1605b1c4f0cb/screenshots/image-1_752x445@1.png",
+        "https://dl.flathub.org/media/org/kde/kdenlive.desktop/ed746a0f36b42446cedf1605b1c4f0cb/screenshots/image-2_752x429@1.png",
+        "https://dl.flathub.org/media/org/kde/kdenlive.desktop/ed746a0f36b42446cedf1605b1c4f0cb/screenshots/image-3_752x431@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.kde.kdenlive",
+      "appId": "org.kde.kdenlive"
+    },
+    {
+      "package": "audacity",
+      "label": "Audacity",
+      "description": "Audio editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.audacity.label",
+      "descriptionId": "launcher.catalog.audacity.description",
+      "category": "creative",
+      "website": "https://audacityteam.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/audacityteam/Audacity/0ad4a24524b6c06220649dc83a08ae81/screenshots/image-1_752x473@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.audacityteam.Audacity",
+      "appId": "org.audacityteam.Audacity"
+    },
+    {
+      "package": "ardour",
+      "label": "Ardour",
+      "description": "Music recording and production",
+      "repository": "extra",
+      "labelId": "launcher.catalog.ardour.label",
+      "descriptionId": "launcher.catalog.ardour.description",
+      "category": "creative",
+      "website": "https://ardour.org/"
+    },
+    {
+      "package": "darktable",
+      "label": "Darktable",
+      "description": "Photo editing",
+      "repository": "extra",
+      "labelId": "launcher.catalog.darktable.label",
+      "descriptionId": "launcher.catalog.darktable.description",
+      "category": "creative",
+      "website": "https://darktable.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/darktable/Darktable/1b5cfd7af8bcd84fc939759726f1ba7d/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/org/darktable/Darktable/1b5cfd7af8bcd84fc939759726f1ba7d/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/org/darktable/Darktable/1b5cfd7af8bcd84fc939759726f1ba7d/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.darktable.Darktable",
+      "appId": "org.darktable.Darktable"
+    },
+    {
+      "package": "handbrake",
+      "label": "HandBrake",
+      "description": "Video conversion",
+      "repository": "extra",
+      "labelId": "launcher.catalog.handbrake.label",
+      "descriptionId": "launcher.catalog.handbrake.description",
+      "category": "creative",
+      "website": "https://handbrake.fr/",
+      "screenshots": [
+        "https://dl.flathub.org/media/fr/handbrake/ghb/ba64e7a37b2b3270d6065fdca313dfa3/screenshots/image-1_orig.png",
+        "https://dl.flathub.org/media/fr/handbrake/ghb/ba64e7a37b2b3270d6065fdca313dfa3/screenshots/image-2_orig.png",
+        "https://dl.flathub.org/media/fr/handbrake/ghb/ba64e7a37b2b3270d6065fdca313dfa3/screenshots/image-3_orig.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/fr.handbrake.ghb",
+      "appId": "fr.handbrake.ghb"
+    },
+    {
+      "package": "qbittorrent",
+      "label": "qBittorrent",
+      "description": "Torrent downloads",
+      "repository": "extra",
+      "labelId": "launcher.catalog.qbittorrent.label",
+      "descriptionId": "launcher.catalog.qbittorrent.description",
+      "category": "network",
+      "website": "https://www.qbittorrent.org"
+    },
+    {
+      "package": "transmission-gtk",
+      "label": "Transmission",
+      "description": "Torrent downloads",
+      "repository": "extra",
+      "labelId": "launcher.catalog.transmission-gtk.label",
+      "descriptionId": "launcher.catalog.transmission-gtk.description",
+      "category": "network"
+    },
+    {
+      "package": "filezilla",
+      "label": "FileZilla",
+      "description": "File transfer",
+      "repository": "extra",
+      "labelId": "launcher.catalog.filezilla.label",
+      "descriptionId": "launcher.catalog.filezilla.description",
+      "category": "network",
+      "website": "https://filezilla-project.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/filezillaproject/Filezilla/5160b88ed6c01ce752c9e46f86093d6e/screenshots/image-1_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.filezillaproject.Filezilla",
+      "appId": "org.filezillaproject.Filezilla"
+    },
+    {
+      "package": "nextcloud-client",
+      "label": "Nextcloud",
+      "description": "File synchronization",
+      "repository": "extra",
+      "labelId": "launcher.catalog.nextcloud-client.label",
+      "descriptionId": "launcher.catalog.nextcloud-client.description",
+      "category": "network",
+      "website": "https://nextcloud.com/"
+    },
+    {
+      "package": "syncthing",
+      "label": "Syncthing",
+      "description": "File synchronization",
+      "repository": "extra",
+      "labelId": "launcher.catalog.syncthing.label",
+      "descriptionId": "launcher.catalog.syncthing.description",
+      "category": "network",
+      "website": "https://syncthing.net/"
+    },
+    {
+      "package": "bitwarden",
+      "label": "Bitwarden",
+      "description": "Password manager",
+      "repository": "extra",
+      "labelId": "launcher.catalog.bitwarden.label",
+      "descriptionId": "launcher.catalog.bitwarden.description",
+      "category": "utilities",
+      "website": "https://github.com/bitwarden/clients/tree/main/apps/desktop",
+      "screenshots": [
+        "https://dl.flathub.org/media/com/bitwarden/desktop/c3c69a622a87154439c45280aebce2a8/screenshots/image-1_752x451@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/com.bitwarden.desktop",
+      "appId": "com.bitwarden.desktop"
+    },
+    {
+      "package": "zed",
+      "label": "Zed",
+      "description": "Code editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.zed.label",
+      "descriptionId": "launcher.catalog.zed.description",
+      "category": "development",
+      "website": "https://zed.dev"
+    },
+    {
+      "package": "kate",
+      "label": "Kate",
+      "description": "Text editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.kate.label",
+      "descriptionId": "launcher.catalog.kate.description",
+      "category": "development",
+      "website": "https://apps.kde.org/kate/"
+    },
+    {
+      "package": "geany",
+      "label": "Geany",
+      "description": "Code editor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.geany.label",
+      "descriptionId": "launcher.catalog.geany.description",
+      "category": "development",
+      "website": "https://www.geany.org/"
+    },
+    {
+      "package": "dbeaver",
+      "label": "DBeaver",
+      "description": "Database client",
+      "repository": "extra",
+      "labelId": "launcher.catalog.dbeaver.label",
+      "descriptionId": "launcher.catalog.dbeaver.description",
+      "category": "development",
+      "website": "https://dbeaver.io/"
+    },
+    {
+      "package": "wireshark-qt",
+      "label": "Wireshark",
+      "description": "Network inspection",
+      "repository": "extra",
+      "labelId": "launcher.catalog.wireshark-qt.label",
+      "descriptionId": "launcher.catalog.wireshark-qt.description",
+      "category": "network",
+      "website": "https://www.wireshark.org/"
+    },
+    {
+      "package": "remmina",
+      "label": "Remmina",
+      "description": "Remote desktop",
+      "repository": "extra",
+      "labelId": "launcher.catalog.remmina.label",
+      "descriptionId": "launcher.catalog.remmina.description",
+      "category": "network",
+      "website": "https://www.remmina.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/remmina/Remmina/25c1e58ee7a9bb3b88dbb89f0083eab8/screenshots/image-1_752x423@1.png",
+        "https://dl.flathub.org/media/org/remmina/Remmina/25c1e58ee7a9bb3b88dbb89f0083eab8/screenshots/image-2_752x423@1.png",
+        "https://dl.flathub.org/media/org/remmina/Remmina/25c1e58ee7a9bb3b88dbb89f0083eab8/screenshots/image-3_752x423@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.remmina.Remmina",
+      "appId": "org.remmina.Remmina"
+    },
+    {
+      "package": "virtualbox",
+      "label": "VirtualBox",
+      "description": "Virtual machines",
+      "repository": "extra",
+      "labelId": "launcher.catalog.virtualbox.label",
+      "descriptionId": "launcher.catalog.virtualbox.description",
+      "category": "utilities",
+      "website": "https://virtualbox.org/"
+    },
+    {
+      "package": "virt-manager",
+      "label": "Virtual Machine Manager",
+      "description": "Virtual machines",
+      "repository": "extra",
+      "labelId": "launcher.catalog.virt-manager.label",
+      "descriptionId": "launcher.catalog.virt-manager.description",
+      "category": "utilities",
+      "website": "https://virt-manager.org/"
+    },
+    {
+      "package": "prismlauncher",
+      "label": "Prism Launcher",
+      "description": "Minecraft launcher",
+      "repository": "extra",
+      "labelId": "launcher.catalog.prismlauncher.label",
+      "descriptionId": "launcher.catalog.prismlauncher.description",
+      "category": "games",
+      "website": "https://prismlauncher.org",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/prismlauncher/PrismLauncher/61a6268120825540bced2adcb8e6b734/screenshots/image-1_752x557@1.png",
+        "https://dl.flathub.org/media/org/prismlauncher/PrismLauncher/61a6268120825540bced2adcb8e6b734/screenshots/image-2_752x567@1.png",
+        "https://dl.flathub.org/media/org/prismlauncher/PrismLauncher/61a6268120825540bced2adcb8e6b734/screenshots/image-3_752x547@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.prismlauncher.PrismLauncher",
+      "appId": "org.prismlauncher.PrismLauncher"
+    },
+    {
+      "package": "retroarch",
+      "label": "RetroArch",
+      "description": "Retro games",
+      "repository": "extra",
+      "labelId": "launcher.catalog.retroarch.label",
+      "descriptionId": "launcher.catalog.retroarch.description",
+      "category": "games",
+      "screenshots": [
+        "https://dl.flathub.org/media/org/libretro/RetroArch/0f9e059f4695b7116bab0d3d1cae1936/screenshots/image-1_752x413@1.png",
+        "https://dl.flathub.org/media/org/libretro/RetroArch/0f9e059f4695b7116bab0d3d1cae1936/screenshots/image-2_752x658@1.png",
+        "https://dl.flathub.org/media/org/libretro/RetroArch/0f9e059f4695b7116bab0d3d1cae1936/screenshots/image-3_752x563@1.png"
+      ],
+      "screenshotSource": "https://flathub.org/api/v2/appstream/org.libretro.RetroArch",
+      "appId": "org.libretro.RetroArch"
+    },
+    {
+      "package": "gamescope",
+      "label": "Gamescope",
+      "description": "Game display compositor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.gamescope.label",
+      "descriptionId": "launcher.catalog.gamescope.description",
+      "category": "games",
+      "website": "https://github.com/ValveSoftware/gamescope"
+    },
+    {
+      "package": "mangohud",
+      "label": "MangoHud",
+      "description": "Game performance overlay",
+      "repository": "extra",
+      "labelId": "launcher.catalog.mangohud.label",
+      "descriptionId": "launcher.catalog.mangohud.description",
+      "category": "games",
+      "website": "https://github.com/flightlessmango/MangoHud"
+    },
+    {
+      "package": "pavucontrol",
+      "label": "PulseAudio Volume Control",
+      "description": "Sound settings",
+      "repository": "extra",
+      "labelId": "launcher.catalog.pavucontrol.label",
+      "descriptionId": "launcher.catalog.pavucontrol.description",
+      "category": "utilities",
+      "website": "https://freedesktop.org/software/pulseaudio/pavucontrol/"
+    },
+    {
+      "package": "gparted",
+      "label": "GParted",
+      "description": "Disk partitions",
+      "repository": "extra",
+      "labelId": "launcher.catalog.gparted.label",
+      "descriptionId": "launcher.catalog.gparted.description",
+      "category": "utilities",
+      "website": "https://gparted.org/"
+    },
+    {
+      "package": "baobab",
+      "label": "Disk Usage Analyzer",
+      "description": "Find large files",
+      "repository": "extra",
+      "labelId": "launcher.catalog.baobab.label",
+      "descriptionId": "launcher.catalog.baobab.description",
+      "category": "utilities",
+      "website": "https://apps.gnome.org/Baobab"
+    },
+    {
+      "package": "mission-center",
+      "label": "Mission Center",
+      "description": "System monitor",
+      "repository": "extra",
+      "labelId": "launcher.catalog.mission-center.label",
+      "descriptionId": "launcher.catalog.mission-center.description",
+      "category": "utilities",
+      "website": "https://missioncenter.io"
+    },
+    {
+      "package": "ollama",
+      "label": "Ollama",
+      "description": "Run local AI models",
+      "category": "ai",
+      "repository": "extra",
+      "website": "https://ollama.com/",
+      "appId": "ollama",
+      "terminalCommand": [
+        "ollama",
+        "list"
+      ],
+      "packageAlternatives": [
+        "ollama-cuda",
+        "ollama-rocm",
+        "ollama-vulkan"
+      ],
+      "labelId": "launcher.catalog.ollama.label",
+      "descriptionId": "launcher.catalog.ollama.description"
+    },
+    {
+      "package": "lmstudio-bin",
+      "label": "LM Studio",
+      "description": "Explore local language models",
+      "category": "ai",
+      "repository": "AUR",
+      "website": "https://lmstudio.ai/",
+      "appId": "lmstudio",
+      "aliases": [
+        "LMStudio"
+      ],
+      "labelId": "launcher.catalog.lmstudio-bin.label",
+      "descriptionId": "launcher.catalog.lmstudio-bin.description"
+    },
+    {
+      "package": "claude-desktop",
+      "label": "Claude",
+      "description": "Claude desktop and web assistant",
+      "category": "ai",
+      "repository": "AUR",
+      "website": "https://claude.com/download",
+      "appId": "claude-desktop",
+      "webUrl": "https://claude.ai/",
+      "labelId": "launcher.catalog.claude-desktop.label",
+      "descriptionId": "launcher.catalog.claude-desktop.description"
+    },
+    {
+      "package": "chatgpt",
+      "label": "ChatGPT",
+      "description": "ChatGPT desktop and web assistant",
+      "category": "ai",
+      "repository": "OpenAI",
+      "website": "https://learn.chatgpt.com/docs/linux/linux-app",
+      "appId": "chatgpt",
+      "webUrl": "https://chatgpt.com/",
+      "labelId": "launcher.catalog.chatgpt.label",
+      "descriptionId": "launcher.catalog.chatgpt.description"
+    }
+  ],
+  "fonts": [
+    {
+      "name": "JetBrains Mono",
+      "package": "ttf-jetbrains-mono",
+      "repository": "extra",
+      "families": [
+        "JetBrains Mono"
+      ]
+    },
+    {
+      "name": "JetBrains Mono Nerd",
+      "package": "ttf-jetbrains-mono-nerd",
+      "repository": "extra",
+      "families": [
+        "JetBrainsMono Nerd Font",
+        "JetBrainsMono NF"
+      ]
+    },
+    {
+      "name": "Fira Code",
+      "package": "ttf-fira-code",
+      "repository": "extra",
+      "families": [
+        "Fira Code"
+      ]
+    },
+    {
+      "name": "Fira Code Nerd",
+      "package": "ttf-firacode-nerd",
+      "repository": "extra",
+      "families": [
+        "FiraCode Nerd Font",
+        "FiraCode NF"
+      ]
+    },
+    {
+      "name": "Cascadia Code",
+      "package": "ttf-cascadia-code",
+      "repository": "extra",
+      "families": [
+        "Cascadia Code"
+      ]
+    },
+    {
+      "name": "Cascadia Code Nerd",
+      "package": "ttf-cascadia-code-nerd",
+      "repository": "extra",
+      "families": [
+        "CaskaydiaCove Nerd Font",
+        "CaskaydiaCove NF"
+      ]
+    },
+    {
+      "name": "Iosevka",
+      "package": "ttf-iosevka",
+      "repository": "AUR",
+      "families": [
+        "Iosevka"
+      ]
+    },
+    {
+      "name": "Iosevka Nerd",
+      "package": "ttf-iosevka-nerd",
+      "repository": "extra",
+      "families": [
+        "Iosevka Nerd Font",
+        "Iosevka NF"
+      ]
+    },
+    {
+      "name": "Victor Mono",
+      "package": "ttf-victor-mono",
+      "repository": "AUR",
+      "families": [
+        "Victor Mono"
+      ]
+    },
+    {
+      "name": "Victor Mono Nerd",
+      "package": "ttf-victor-mono-nerd",
+      "repository": "extra",
+      "families": [
+        "VictorMono Nerd Font",
+        "VictorMono NF"
+      ]
+    },
+    {
+      "name": "Meslo",
+      "package": "ttf-meslo",
+      "repository": "AUR",
+      "families": [
+        "Meslo LG S",
+        "Meslo LG M",
+        "Meslo LG L"
+      ]
+    },
+    {
+      "name": "Meslo Nerd",
+      "package": "ttf-meslo-nerd",
+      "repository": "extra",
+      "families": [
+        "MesloLGS Nerd Font",
+        "MesloLGM Nerd Font",
+        "MesloLGL Nerd Font"
+      ]
+    }
+  ]
+}

@@ -4,6 +4,8 @@ pub mod compositor;
 pub mod compositor_control;
 pub mod crashes;
 pub mod hub;
+pub mod menu;
+pub mod menu_worker;
 pub mod niri_events;
 pub mod notify;
 pub mod session;
@@ -71,6 +73,19 @@ async fn serve(
     } else {
         None
     };
+    let menu_service = if !counter.safe {
+        let service_hub = hub.clone();
+        let factory_hub = hub.clone();
+        let menu_paths = paths.clone();
+        hub.borrow_mut().service("menu", "starting", 0)?;
+        Some(tokio::task::spawn_local(supervisor::run(
+            "menu",
+            service_hub,
+            move || menu::run(factory_hub.clone(), menu_paths.clone()),
+        )))
+    } else {
+        None
+    };
     let workers = workers::Workers::default();
     let mut notice_worker = None;
     if counter.safe {
@@ -119,6 +134,14 @@ async fn serve(
     clients.abort_all();
     while clients.join_next().await.is_some() {}
     compositor_service.abort();
+    if let Some(service) = menu_service {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Launcher supervisor failed during shutdown");
+            }
+        }
+    }
     if let Some(service) = session_service {
         service.abort();
         if let Err(error) = service.await {
@@ -182,7 +205,7 @@ pub fn run(arguments: &[String]) -> Result<i32> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .max_blocking_threads(2)
-        .thread_keep_alive(Duration::from_secs(30))
+        .thread_keep_alive(Duration::from_secs(1))
         .build()?;
     let result = tokio::task::LocalSet::new().block_on(
         &runtime,

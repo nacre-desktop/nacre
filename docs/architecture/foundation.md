@@ -130,8 +130,8 @@ PipeWire/tray now, build a native lock, use D-Bus/Varlink/gRPC/binary encoding f
 the private link, or move nacre-shell mid-feature.
 
 F0 records this charter and protocol. F1 builds the daemon/link and read-only
-compositor service. F2 folds in always-on helpers, one commit each. The launcher
-engine step below follows F2. F3 adds the QML client, launcher query client and
+compositor service. F2 folds in always-on helpers, one commit each. After the first events/session
+folds, the launcher engine precedes the remaining F2 services. F3 adds the QML client, launcher query client and
 repository-default keybindings. F4 makes settings single-writer
 and then stops for a report. CI must be green before each next step.
 
@@ -146,6 +146,10 @@ with one writer, and reuse menu-backend's special searches as providers. Add
 `menu.activate` only if needed. Measure daemon CPU/query and p50/p99 at realistic
 catalog sizes, aiming well below 1 ms per keystroke. F3 switches the QML launcher
 behind the same fallback setting; its JavaScript path stays for one release.
+
+Owner sequencing update, 2026-10-16: after the exact-step launcher audit, move
+`menu.query` and its frozen JavaScript port ahead of the remaining F2 services,
+because Bead's launcher client depends on it. Then finish F2, F3 and F4 and stop.
 
 Bead proceeds independently with F5 headless services, deterministic testing,
 crash safety, data sources and compositor blur. Hosting its notification server

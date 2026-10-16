@@ -9,7 +9,7 @@ Keep public commands, QML appearance, user data, privilege and session policy.
 | 1 Frequent helpers | Complete; CI green | 13 ports; busy service RSS 26.95 → 10.21 MiB; absolute XDG roots follow QML. |
 | 2 Compositor / pearls | Complete; CI green | Preview CPU 52.58 → 1.26 ms; RSS 21.54 → 7.30 MiB; native IPC/session runtime. |
 | 3 Wallpaper / colors | ports complete; desktop A/B/A/B captured, regression review open | Shell frame192.5→94ms Hypr/195.5→102ms niri; GTK endpoint missing; niri cold launcher+40/42ms repeats after control; Oct16 exact33a/84ce:439→460ms median, ranges423–454/440–472; noise by owner spread rule; historical gap tracked. |
-| 4 Remaining shell tools | redirected: foundation F1–F4 first | F2 events33a0a897 CI green; session-watch local311 Rust/929 repo/534 parity; PSS21.43→16.62/21.47→16.29MiB; final guard recheck passes; 84ce session/9585 audit on main; exact-step noise; font repair315 Rust/fmt/clippy pass; repo/parity and CI pending. |
+| 4 Remaining shell tools | redirected: foundation F1–F4 first | Events/session published, CI green. Launcher local: 991 frozen/332 Rust pass; niri CPU0.820–1.020ms +worker0.235–0.250ms; PSS34.86/63.32MiB (320/2000 apps). 929 repo (3 skips)/534 helper parity pass; publication/CI next. |
 | 5 AI | Pending | Claude stream-json; existing permissions/history; sidebar-chat, composer and AI controller belong here. |
 | 6 Brain | Pending | Same bge-small model; cosine ≥ 0.9999 or backed-up automatic reindex. |
 | 7 Installer / proof | Pending | install*.py/login-install.py deferred here; packaging owned separately. |
@@ -76,5 +76,5 @@ Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hosts
 UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-Next: green CI via compatible frozen-font/current-Pillow matrix; freeze JS and port engine; then remaining F2/F3/F4.
+Next: publish launcher engine and verify CI; remaining F2 → F3 (combined memory/i18n/cold-open review) → F4.
 No live desktop/config/network changes, tags, releases or package publication.

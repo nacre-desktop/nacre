@@ -68,6 +68,21 @@ pub struct MenuItem {
     pub activation: Option<String>,
 }
 
+/// Unit-conversion payload from the existing calculator provider.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct MenuConversion {
+    pub ok: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 2048))]
+    pub value: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 4096))]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 4096))]
+    pub error: Option<String>,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct MenuQueryResult {
     #[schemars(length(max = 65536))]
@@ -85,6 +100,12 @@ pub struct MenuQueryResult {
     pub order: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub total: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversion: Option<MenuConversion>,
+    /// Nonfatal provider guidance, such as installing a missing search tool.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 4096))]
+    pub message: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -148,6 +169,15 @@ impl MenuQueryResult {
             limit: None,
         };
         request.validate()?;
+        if self.message.as_ref().is_some_and(|s| !text(s, 4096, true))
+            || self.conversion.as_ref().is_some_and(|v| {
+                v.value.as_ref().is_some_and(|s| !text(s, 2048, true))
+                    || v.description.as_ref().is_some_and(|s| !text(s, 4096, true))
+                    || v.error.as_ref().is_some_and(|s| !text(s, 4096, true))
+            })
+        {
+            return Err(invalid());
+        }
         if self.catalog_rev > MAX_SAFE_INTEGER
             || self.items.len() > MAX_ITEMS
             || self.order.len() != self.items.len()

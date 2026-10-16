@@ -228,6 +228,8 @@ pub fn menu_transcripts() -> BTreeMap<String, String> {
         order: items.keys().cloned().collect(),
         items,
         total: Some(320),
+        conversion: None,
+        message: None,
     };
     let query = MenuQuery {
         query: "".into(),
@@ -250,6 +252,8 @@ pub fn menu_transcripts() -> BTreeMap<String, String> {
         items: BTreeMap::new(),
         order: vec![],
         total: Some(0),
+        conversion: None,
+        message: None,
     };
     cases.push((
         "menu-empty",
@@ -285,6 +289,8 @@ pub fn menu_transcripts() -> BTreeMap<String, String> {
             items: BTreeMap::from([(id.clone(), entry)]),
             order: vec![id],
             total: Some(1),
+            conversion: None,
+            message: None,
         };
         steps.push(
             json!({"t":"call","id":10+i,"m":"menu.query","p":{"query":query,"mode":"search"}}),
@@ -306,6 +312,12 @@ pub fn menu_transcripts() -> BTreeMap<String, String> {
         }),
     };
     cases.push(("menu-activation",vec![json!({"t":"call","id":30,"m":"menu.activate","p":activate,"timeout":3000}),json!({"t":"ret","id":30,"ok":MenuActivated::default()}),json!({"t":"call","id":31,"m":"menu.activate","p":{"id":"group.fixture","activation":"fixture-group","catalog_rev":1}}),json!({"t":"ret","id":31,"ok":navigation}),json!({"t":"call","id":32,"m":"menu.activate","p":{"id":"app-0000","activation":"fixture-app","catalog_rev":0}}),json!({"t":"ret","id":32,"err":{"code":"stale_revision","message":"Catalog changed; query again","retry":true}}),json!({"t":"call","id":33,"m":"menu.query","p":{"query":"fixture unavailable","mode":"search"}}),json!({"t":"ret","id":33,"err":{"code":"unavailable","message":"Launcher service unavailable","retry":true}})]));
+    cases.push(("menu-conversion",vec![
+        json!({"t":"call","id":40,"m":"menu.query","p":{"query":"= 10 km to miles","mode":"search"}}),
+        json!({"t":"ret","id":40,"ok":{"query":"= 10 km to miles","mode":"search","route":"home","catalog_rev":1,"items":{},"order":[],"total":0,"conversion":{"ok":true,"value":"10 km = 6.213711922 mi","description":"Enter to copy"}}}),
+        json!({"t":"call","id":41,"m":"menu.query","p":{"query":": fixture","mode":"search"}}),
+        json!({"t":"ret","id":41,"ok":{"query":": fixture","mode":"search","route":"home","catalog_rev":1,"items":{},"order":[],"total":0,"message":"Install fd to search files"}}),
+    ]));
     cases
         .into_iter()
         .map(|(name, steps)| {
