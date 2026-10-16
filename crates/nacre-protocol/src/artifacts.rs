@@ -422,15 +422,75 @@ pub fn menu_transcripts() -> BTreeMap<String, String> {
         .collect()
 }
 
+/// New provider examples supplement, and never replace, the original menu goldens.
+pub fn menu_action_transcripts() -> BTreeMap<String, String> {
+    use crate::menu::{MenuUiActivate, UI_ACTIVATE};
+    let selected = |row: Value| {
+        let params = json!({"row":row,"catalog_rev":7});
+        serde_json::from_value::<MenuUiActivate>(params.clone())
+            .expect("typed selected action")
+            .validate()
+            .expect("bounded selected action");
+        params
+    };
+    let copy = selected(
+        json!({"id":"calculation","kind":"calculation","name":"2","operation":"copy","value":"2","disabled":false,"icon":"calculate"}),
+    );
+    let confirm = selected(
+        json!({"id":"power.reboot","kind":"action","name":"Restart","operation":"power","value":"reboot","disabled":false,"confirm":"Restart the computer?"}),
+    );
+    let clipboard = selected(
+        json!({"id":"actions.clipboard.fixture","kind":"clipboard","name":"Public clip","operation":"copy-clip","value":"fixture-image-1","disabled":false}),
+    );
+    let command = selected(
+        json!({"id":"actions.fixture-command","kind":"action","name":"Literal arguments","operation":"command","arguments":["fixture-app","space & literal","$(literal)"],"directory":"/fixture","disabled":false}),
+    );
+    let unknown = selected(
+        json!({"id":"actions.future","kind":"action","name":"Future operation","operation":"future.fixture","value":"fixture","disabled":false}),
+    );
+    let frames = vec![
+        json!({"t":"register","provider":"ui","methods":{"ui.dispatch":1,"ui.menu.activate":1}}),
+        json!({"t":"call","id":70,"m":"menu.query","p":{"query":"=1+1","mode":"search"}}),
+        json!({"t":"ret","id":70,"ok":{"query":"=1+1","mode":"search","route":"home","catalog_rev":7,"items":{"nacre-menu:calculation":{"name":"2","kind":"calculation","description":"Enter to copy the result","disabled":false,"activation":"fixture-calculation-7"}},"order":["nacre-menu:calculation"],"total":1,"conversion":{"ok":true,"value":"2","error":""}}}),
+        json!({"t":"call","id":71,"m":"menu.activate","p":{"id":"nacre-menu:calculation","activation":"fixture-calculation-7","catalog_rev":7}}),
+        json!({"t":"call","id":"provider-1","m":UI_ACTIVATE,"p":copy}),
+        json!({"t":"ret","id":"provider-1","ok":{"keep_open":false}}),
+        json!({"t":"ret","id":71,"ok":{"keep_open":false}}),
+        json!({"t":"call","id":72,"m":UI_ACTIVATE,"p":command}),
+        json!({"t":"ret","id":72,"err":{"code":"permission_denied","message":"Use menu.activate with an engine-issued ticket","retry":false,"dispatched":false}}),
+        json!({"t":"call","id":73,"m":"menu.activate","p":{"id":"nacre-menu:power.reboot","activation":"fixture-power-7","catalog_rev":7,"confirmed":true,"row":{"operation":"copy","value":"Untrusted replacement"}}}),
+        json!({"t":"call","id":"provider-2","m":UI_ACTIVATE,"p":confirm}),
+        json!({"t":"ret","id":"provider-2","ok":{"keep_open":true}}),
+        json!({"t":"ret","id":73,"ok":{"keep_open":true}}),
+        json!({"t":"call","id":"provider-3","m":UI_ACTIVATE,"p":clipboard}),
+        json!({"t":"ret","id":"provider-3","ok":{"keep_open":false}}),
+        json!({"t":"call","id":"provider-4","m":UI_ACTIVATE,"p":command}),
+        json!({"t":"ret","id":"provider-4","ok":{"keep_open":false}}),
+        json!({"t":"call","id":"provider-5","m":UI_ACTIVATE,"p":unknown}),
+        json!({"t":"ret","id":"provider-5","err":{"code":"unavailable","message":"Launcher action is not supported by this UI","retry":false}}),
+    ];
+    let trace = frames
+        .iter()
+        .map(|frame| {
+            let bytes = serde_json::to_vec(frame).expect("finite action golden");
+            crate::framing::decode(&bytes).expect("bounded action golden");
+            String::from_utf8(bytes).expect("JSON UTF8") + "\n"
+        })
+        .collect();
+    BTreeMap::from([("protocol/fixtures/menu-ui-actions.jsonl".into(), trace)])
+}
+
 fn menu_exports() -> BTreeMap<String, String> {
-    use crate::menu::{MenuActivate, MenuActivated, MenuQuery, MenuQueryResult};
+    use crate::menu::{MenuActivate, MenuActivated, MenuQuery, MenuQueryResult, MenuUiActivate};
     let schemas = [
         ("MenuQuery", schemars::schema_for!(MenuQuery)),
         ("MenuQueryResult", schemars::schema_for!(MenuQueryResult)),
         ("MenuActivate", schemars::schema_for!(MenuActivate)),
         ("MenuActivated", schemars::schema_for!(MenuActivated)),
+        ("MenuUiActivate", schemars::schema_for!(MenuUiActivate)),
     ];
     let mut out = menu_transcripts();
+    out.extend(menu_action_transcripts());
     let mut definitions = BTreeMap::new();
     let mut roots = vec![];
     for (name, schema) in schemas {
@@ -444,6 +504,7 @@ fn menu_exports() -> BTreeMap<String, String> {
             "MenuQuery" => "menu-query",
             "MenuQueryResult" => "menu-query-result",
             "MenuActivate" => "menu-activate",
+            "MenuUiActivate" => "menu-ui-activate",
             _ => "menu-activated",
         };
         out.insert(

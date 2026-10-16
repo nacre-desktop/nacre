@@ -6,7 +6,10 @@ use nacre_menu::{
     desktop, model, sources, text,
 };
 use nacre_protocol::{
-    menu::{MenuActivate, MenuActivated, MenuItem, MenuQuery, MenuQueryResult, MenuView},
+    menu::{
+        MenuActivate, MenuActivated, MenuItem, MenuQuery, MenuQueryResult, MenuUiActivate,
+        MenuView, UI_ACTIVATE,
+    },
     Capability, ErrorCode, Failure, Method,
 };
 use rustix::fs::inotify;
@@ -103,11 +106,19 @@ pub async fn dispatch(hub: Shared, method: &str, params: Value, timeout: Option<
     // Existing view-owned actions retain their confirmation/polkit UI. The client
     // supplied only an opaque ticket; this row was selected and checked by the owner.
     if method == "menu.activate" && result.get("uiRow").is_some() {
-        let (id, receiver) = hub.borrow_mut().forward(
-            "ui.menu.activate",
-            json!({"row":result["uiRow"],"catalog_rev":result["catalog_rev"]}),
-            timeout,
-        )?;
+        let params = json!({"row":result["uiRow"],"catalog_rev":result["catalog_rev"]});
+        serde_json::from_value::<MenuUiActivate>(params.clone())
+            .map_err(|_| ())
+            .and_then(|selected| selected.validate().map_err(|_| ()))
+            .map_err(|_| {
+                failure(
+                    ErrorCode::Internal,
+                    "Invalid selected launcher action",
+                    false,
+                )
+                .dispatch_state(false)
+            })?;
+        let (id, receiver) = hub.borrow_mut().forward(UI_ACTIVATE, params, timeout)?;
         let _route = super::session::Route { hub, id };
         return match receiver.await.map_err(|_| {
             failure(ErrorCode::Unavailable, "UI provider disconnected", true).dispatch_state(true)
@@ -1158,6 +1169,61 @@ pub fn preferences_client(arguments: &[String], input: Option<Value>) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn selected_action_type_accepts_the_frozen_enabled_non_app_provider_rows() -> Result<()> {
+        let mut bytes = Vec::new();
+        flate2::read::GzDecoder::new(
+            include_bytes!("../../../nacre-menu/tests/fixtures/providers.json.gz").as_slice(),
+        )
+        .read_to_end(&mut bytes)?;
+        let reference: Value = serde_json::from_slice(&bytes)?;
+        fn visit(value: &Value, count: &mut usize, failures: &mut Vec<String>) {
+            match value {
+                Value::Array(values) => {
+                    for value in values {
+                        visit(value, count, failures);
+                    }
+                }
+                Value::Object(values) => {
+                    if values.contains_key("operation")
+                        && values.contains_key("kind")
+                        && value["kind"] != "group"
+                        && value["operation"] != "app"
+                        && value["disabled"] != true
+                    {
+                        *count += 1;
+                        let result = serde_json::from_value::<MenuUiActivate>(
+                            json!({"row":value,"catalog_rev":1}),
+                        )
+                        .map_err(|error| error.to_string())
+                        .and_then(|selected| {
+                            selected.validate().map_err(|error| error.to_string())
+                        });
+                        if let Err(error) = result {
+                            failures.push(format!("{}: {error}", text::field(value, "id")));
+                        }
+                    }
+                    for value in values.values() {
+                        visit(value, count, failures);
+                    }
+                }
+                _ => {}
+            }
+        }
+        let mut count = 0;
+        let mut failures = Vec::new();
+        for case in array(&reference["cases"]) {
+            visit(&case["result"], &mut count, &mut failures);
+        }
+        assert!(count > 100, "No representative selected rows checked");
+        assert!(
+            failures.is_empty(),
+            "Rejected frozen rows: {:?}",
+            &failures[..failures.len().min(12)]
+        );
+        Ok(())
+    }
     fn engine() -> Result<Engine> {
         let catalog =
             nacre_menu::config::merge(BASE, "").map_err(|e| -> crate::Error { e.into() })?;
@@ -1255,6 +1321,32 @@ mod tests {
             engine.activate(request).unwrap_err().code,
             ErrorCode::Unavailable
         );
+        Ok(())
+    }
+    #[test]
+    fn activation_ignores_supplied_rows_and_confirmation_claims() -> Result<()> {
+        let mut engine = engine()?;
+        let query = engine.query(serde_json::from_value(
+            json!({"query":"","mode":"search","route":"power"}),
+        )?)?;
+        let id = "nacre-menu:power.reboot";
+        let token = query["items"][id]["activation"]
+            .as_str()
+            .ok_or("Missing confirmation fixture ticket")?;
+        let original: Value = serde_json::from_slice(&engine.tickets[token].row)?;
+        let request: MenuActivate = serde_json::from_value(json!({
+            "id":id,"activation":token,"catalog_rev":engine.rev,
+            "confirmed":true,"row":{"operation":"command","arguments":["fixture-forged"]}
+        }))?;
+        let answer = engine.activate(request)?;
+        assert_eq!(answer["uiRow"], original);
+        assert_eq!(answer["uiRow"]["operation"], "power");
+        assert_eq!(answer["uiRow"]["value"], "reboot");
+        assert!(answer["uiRow"].get("confirmed").is_none());
+        serde_json::from_value::<MenuUiActivate>(
+            json!({"row":answer["uiRow"],"catalog_rev":engine.rev}),
+        )?
+        .validate()?;
         Ok(())
     }
     #[test]

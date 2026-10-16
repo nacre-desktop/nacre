@@ -59,6 +59,12 @@ async fn dispatch(
             super::session_policy::dispatch(hub, method, params).await
         }
         "niri.widths.configure" if !hub.borrow().safe => super::widths::dispatch(hub, params).await,
+        nacre_protocol::menu::UI_ACTIVATE => Err(failure(
+            ErrorCode::PermissionDenied,
+            "Use menu.activate with an engine-issued ticket",
+            false,
+        )
+        .dispatch_state(false)),
         method if method.starts_with("ui.") => {
             let (id, receiver) = hub.borrow_mut().forward(method, params, timeout)?;
             let _route = Route { hub, id };
@@ -288,6 +294,65 @@ mod tests {
             .unwrap();
         assert_eq!(receive(&mut read).await, transcript("handshake")[1]);
         (write, read, task)
+    }
+    #[tokio::test(flavor = "current_thread")]
+    async fn selected_menu_rows_cannot_be_supplied_by_a_public_caller() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let hub = fixture();
+                let (mut caller, mut reader, caller_task) = connect(hub.clone()).await;
+                let (provider, _) = hub.borrow_mut().add_client().unwrap();
+                hub.borrow_mut()
+                    .register(
+                        provider,
+                        std::collections::BTreeMap::from([
+                            ("ui.dispatch".into(), 1),
+                            (nacre_protocol::menu::UI_ACTIVATE.into(), 1),
+                        ]),
+                    )
+                    .unwrap();
+                assert!(hub.borrow().methods().contains_key("ui.dispatch"));
+                assert!(!hub
+                    .borrow()
+                    .methods()
+                    .contains_key(nacre_protocol::menu::UI_ACTIVATE));
+                let selected = json!({"row":{"id":"fixture","kind":"action","name":"Fixture","operation":"command","arguments":["fixture-app","$(literal)"],"disabled":false},"catalog_rev":7});
+                framing::write(
+                    &mut caller,
+                    &Message::Call {
+                        id: Id::Integer(88),
+                        m: nacre_protocol::menu::UI_ACTIVATE.into(),
+                        p: selected.clone(),
+                        timeout: Some(1000),
+                    },
+                )
+                .await
+                .unwrap();
+                let Message::Ret { id, reply: Reply::Err { err } } = receive(&mut reader).await else {
+                    panic!("Direct selected-row call was not refused");
+                };
+                assert_eq!(id, Id::Integer(88));
+                assert_eq!(err.code, ErrorCode::PermissionDenied);
+                assert_eq!(err.dispatched, Some(false));
+                assert!(!err.retry);
+                assert!(hub.borrow_mut().next(provider, Instant::now()).0.is_none());
+                // The same route remains usable internally after engine ticket
+                // validation. The provider ACK is independent of caller I/O.
+                let (route, reply) = hub
+                    .borrow_mut()
+                    .forward(nacre_protocol::menu::UI_ACTIVATE, selected.clone(), None)
+                    .unwrap();
+                let packet = hub.borrow_mut().next(provider, Instant::now()).0.unwrap();
+                assert!(matches!(packet.message,Message::Call{ref id,ref m,ref p,..}
+                    if id==&route && m==nacre_protocol::menu::UI_ACTIVATE && p==&selected));
+                hub.borrow_mut()
+                    .answer(provider, &route, Reply::Ok { ok: json!({"keep_open":false}) })
+                    .unwrap();
+                assert!(matches!(reply.await.unwrap(), Reply::Ok { .. }));
+                caller.shutdown().await.unwrap();
+                caller_task.abort();
+            })
+            .await;
     }
     #[tokio::test(flavor = "current_thread")]
     async fn actual_session_replays_hello_pipeline_calls_and_resync_without_losing_read_ahead() {

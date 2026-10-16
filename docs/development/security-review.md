@@ -250,3 +250,11 @@ missing or mismatched sources fail before creating client directories; accepted
 streams never fall back after disconnect. Private integration checks cover shared
 inotify ownership, engine separation, frozen lines, linked directories, closed
 pipes and daemon loss. Custom sources may run directly before source acceptance.
+
+Launcher provider contract: `ui.menu.activate` is daemon-internal and excluded
+from public method advertisement. A direct call is refused before reaching the
+provider; public callers can submit only an engine-issued ticket to `menu.activate`.
+The selected row is type/bounds checked before forwarding. Existing literal argv,
+clipboard IDs, confirmation and capability/polkit handling remain distinct;
+unknown operations must fail without execution. Wire-session and frozen-provider
+cases cover the boundary. No UI provider or live keybinding is enabled here.

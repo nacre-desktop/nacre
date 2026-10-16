@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub const VERSION: u16 = 1;
 pub const MAX_ITEMS: usize = 2048;
+pub const UI_ACTIVATE: &str = "ui.menu.activate";
 fn apps() -> String {
     "apps".into()
 }
@@ -137,6 +138,97 @@ pub struct MenuActivated {
     pub view: Option<MenuView>,
 }
 
+/// A selected row's literal operand; never a shell expression or an RPC method.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum MenuActionValue {
+    Text(#[schemars(length(max = 65536))] String),
+    Integer(#[schemars(range(min = -9007199254740991_i64, max = 9007199254740991_i64))] i64),
+}
+
+/// Existing view-owned action data, selected by the engine after ticket checks.
+/// Unknown operations must be refused, never interpreted as executable text.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MenuUiRow {
+    #[schemars(length(min = 1, max = 256))]
+    pub id: String,
+    #[schemars(length(min = 1, max = 128))]
+    pub kind: String,
+    #[schemars(length(max = 4096))]
+    pub name: String,
+    #[schemars(length(min = 1, max = 128))]
+    pub operation: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<MenuActionValue>,
+    #[serde(default)]
+    pub disabled: bool,
+    /// A prompt, not evidence that the owner has confirmed an action.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 4096))]
+    pub confirm: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 4096))]
+    pub label: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 16384))]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 4096))]
+    pub icon: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 4096))]
+    pub reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 4096))]
+    pub action: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 32))]
+    pub arguments: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 16384))]
+    pub directory: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 128))]
+    pub environment_operation: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 64))]
+    pub terminal_command: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 65536))]
+    pub web_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 65536))]
+    pub search_query: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 128))]
+    pub bundle_scope: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 128))]
+    pub theme_mode: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 128))]
+    pub extension_action: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 128))]
+    pub source_extension: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 128))]
+    pub theme_preset: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transient: Option<bool>,
+}
+
+/// Daemon-to-provider only. Public clients must use MenuActivate's opaque ticket.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct MenuUiActivate {
+    pub row: MenuUiRow,
+    #[schemars(range(max = 9007199254740991_u64))]
+    pub catalog_rev: u64,
+}
+
 fn invalid() -> Failure {
     Failure::new(
         ErrorCode::InvalidRequest,
@@ -240,6 +332,65 @@ impl MenuActivated {
             {
                 return Err(invalid());
             }
+        }
+        Ok(())
+    }
+}
+
+impl MenuUiActivate {
+    pub fn validate(&self) -> Result<(), Failure> {
+        let row = &self.row;
+        if self.catalog_rev > MAX_SAFE_INTEGER
+            || !text(&row.id, 256, false)
+            || !text(&row.kind, 128, false)
+            || !text(&row.name, 4096, true)
+            || !text(&row.operation, 128, false)
+        {
+            return Err(invalid());
+        }
+        for (value, limit) in [
+            (&row.confirm, 4096),
+            (&row.label, 4096),
+            (&row.description, 16384),
+            (&row.icon, 4096),
+            (&row.reason, 4096),
+            (&row.action, 4096),
+            (&row.directory, 16384),
+            (&row.environment_operation, 128),
+            (&row.web_url, 65536),
+            (&row.search_query, 65536),
+            (&row.bundle_scope, 128),
+            (&row.theme_mode, 128),
+            (&row.extension_action, 128),
+            (&row.source_extension, 128),
+            (&row.theme_preset, 128),
+        ] {
+            if value.as_ref().is_some_and(|s| !text(s, limit, true)) {
+                return Err(invalid());
+            }
+        }
+        for (values, limit) in [(&row.arguments, 32), (&row.terminal_command, 64)] {
+            if values.as_ref().is_some_and(|args| {
+                args.len() > limit || args.iter().any(|s| !text(s, 16384, false))
+            }) {
+                return Err(invalid());
+            }
+        }
+        match &row.value {
+            Some(MenuActionValue::Text(value)) if !text(value, 65536, true) => {
+                return Err(invalid())
+            }
+            Some(MenuActionValue::Integer(value)) if value.unsigned_abs() > MAX_SAFE_INTEGER => {
+                return Err(invalid());
+            }
+            _ => {}
+        }
+        if row.operation == "copy" && !matches!(row.value.as_ref(), Some(MenuActionValue::Text(_)))
+        {
+            return Err(invalid());
+        }
+        if row.operation == "command" && row.arguments.as_ref().is_none_or(Vec::is_empty) {
+            return Err(invalid());
         }
         Ok(())
     }

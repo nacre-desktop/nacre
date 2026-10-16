@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MenuUiActivate",
+  "description": "Daemon-to-provider only. Public clients must use MenuActivate's opaque ticket.",
+  "type": "object",
+  "properties": {
+    "row": {
+      "$ref": "#/$defs/MenuUiRow"
+    },
+    "catalog_rev": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "row",
+    "catalog_rev"
+  ],
+  "$defs": {
+    "MenuUiRow": {
+      "description": "Existing view-owned action data, selected by the engine after ticket checks.\nUnknown operations must be refused, never interpreted as executable text.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MenuActionValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "confirm": {
+          "description": "A prompt, not evidence that the owner has confirmed an action.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 16384
+        },
+        "icon": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "action": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "arguments": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32
+        },
+        "directory": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 16384
+        },
+        "environmentOperation": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "terminalCommand": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64
+        },
+        "webUrl": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 65536
+        },
+        "searchQuery": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 65536
+        },
+        "bundle": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "bundleScope": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "themeMode": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "extensionAction": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "sourceExtension": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "themePreset": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "transient": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "operation"
+      ]
+    },
+    "MenuActionValue": {
+      "description": "A selected row's literal operand; never a shell expression or an RPC method.",
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 65536
+        },
+        {
+          "type": "integer",
+          "format": "int64",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      ]
+    }
+  }
+}

@@ -253,6 +253,11 @@ impl Hub {
         let mut methods = self.fixed_methods();
         if let Some((_, provider)) = &self.provider {
             for (name, version) in provider {
+                // Selected action rows travel only from menu.activate to the
+                // provider; this is not a public arbitrary-row execution API.
+                if name == nacre_protocol::menu::UI_ACTIVATE {
+                    continue;
+                }
                 methods.insert(
                     name.clone(),
                     Method {

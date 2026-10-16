@@ -317,6 +317,32 @@ the daemon-selected row to `ui.menu.activate`; that registered provider preserve
 the existing confirmation/polkit flow and replies with `MenuActivated`. Clients
 cannot supply a command or a confirmation bypass through the activation payload.
 
+`MenuUiActivate` in `menu-ui-activate.json` defines this **daemon-to-provider**
+payload: `{row,catalog_rev}`. A provider registers `ui.menu.activate:1`, but that
+route is not advertised as a public method. Direct client calls are refused with
+`permission_denied`, `retry:false`, `dispatched:false`; only the engine's checked
+ticket path can forward a selected row. `ui.dispatch` remains public. This adds
+no generic command execution API.
+
+The row keeps the existing `id`, `kind`, `name`, `operation` and optional literal
+`value` (text or a safe integer), `disabled`, display fields and action-specific
+fields. `copy` requires literal text; `copy-clip` identifies the existing clipboard
+entry, including images, and must not copy its display label. Command arguments
+and working directory remain literal daemon-selected data. Open operation names
+allow newer clients, but an unknown operation returns `unavailable` without doing
+anything. Fields are bounded, and unknown optional fields are ignored. There is
+no caller-supplied `confirmed` field: the existing UI still owns confirmation,
+capability checks and polkit. Its acknowledgement may mean the existing dialog
+accepted the action; `keep_open:true` retains that view while confirmation waits.
+The inbound provider handler must not await the outbound `menu.activate` call,
+or the two directions would deadlock.
+
+`menu-ui-actions.jsonl` supplements the original immutable menu transcripts with
+calculator-copy tickets, clipboard IDs, confirmation, literal argv, refusal of
+public row injection and an unsupported operation. The calculator row is a wire
+example; the current QML arithmetic grammar still needs its frozen Rust port
+before the F3 launcher switches. Existing conversion payloads remain readable.
+
 Files, packages, unit conversions, CLDR emoji and catalog discovery reuse native
 providers in at most two nice-10 workers with a ten-second response deadline and
 30-second idle exit. Cancelled worker I/O closes that worker instead of reusing a
