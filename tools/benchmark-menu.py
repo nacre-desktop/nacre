@@ -65,9 +65,15 @@ def measure(tools, env, options, output):
         for path in apps.glob("*.desktop"):
             path.unlink()
         for number in range(count):
-            (apps / f"fixture-{number:04}.desktop").write_text(
-                f"[Desktop Entry]\nType=Application\nName=Application {number:04}\nGenericName=Fixture tool\nComment=Synthetic application catalog\nExec=fixture-command {number}\nIcon=fixture\nCategories=Utility;\nKeywords=fixture;app;\n"
-            )
+            if MENU_CATALOG_STYLE == "alpha":
+                name = "Alpha" if number < count // 2 else "Application"
+                text = (
+                    f"[Desktop Entry]\nType=Application\nName={name} {number:04}\n"
+                    "Comment=Synthetic application\nExec=bead-fixture-never-activate\nIcon=fixture\nCategories=Utility;\n"
+                )
+            else:
+                text = f"[Desktop Entry]\nType=Application\nName=Application {number:04}\nGenericName=Fixture tool\nComment=Synthetic application catalog\nExec=fixture-command {number}\nIcon=fixture\nCategories=Utility;\nKeywords=fixture;app;\n"
+            (apps / f"fixture-{number:04}.desktop").write_text(text)
         log = output.parent / f"{output.stem}-menu-{count}.log"
         with log.open("wb") as errors:
             daemon = subprocess.Popen(
@@ -114,17 +120,7 @@ def measure(tools, env, options, output):
                     or initial["order"][-1] != f"fixture-{count - 1:04}"
                 ):
                     raise RuntimeError("Indexed catalog order mismatch")
-                queries = [
-                    "a",
-                    "ap",
-                    "app",
-                    "appl",
-                    "application",
-                    "application 0",
-                    "fixture",
-                    "tool",
-                    "zzzz",
-                ]
+                queries = MENU_QUERIES
                 for sequence in range(100):
                     call(
                         link,
@@ -260,6 +256,8 @@ def measure(tools, env, options, output):
                 and options.daemon_idle >= 60
                 and options.daemon_settle >= 31
                 else "functional-smoke",
+                queries=MENU_QUERIES,
+                catalog_style=MENU_CATALOG_STYLE,
                 page_size=os.sysconf("SC_PAGE_SIZE"),
                 backend=env["NACRE_COMPOSITOR"],
                 helper_sha256=hashlib.sha256(helper.read_bytes()).hexdigest(),
@@ -278,14 +276,38 @@ def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--menu-calls", type=int, default=2000)
     parser.add_argument("--menu-catalogs", default="320,1000,2000")
+    parser.add_argument(
+        "--menu-queries",
+        type=json.loads,
+        default=[
+            "a",
+            "ap",
+            "app",
+            "appl",
+            "application",
+            "application 0",
+            "fixture",
+            "tool",
+            "zzzz",
+        ],
+        help="JSON list of query strings; recorded with the results",
+    )
+    parser.add_argument(
+        "--menu-catalog-style", choices=("application", "alpha"), default="application"
+    )
     args, remaining = parser.parse_known_args()
-    global MENU_CALLS, MENU_SIZES
+    global MENU_CALLS, MENU_SIZES, MENU_QUERIES, MENU_CATALOG_STYLE
+    MENU_CATALOG_STYLE = args.menu_catalog_style
+    MENU_QUERIES = args.menu_queries
     MENU_CALLS = args.menu_calls
     MENU_SIZES = [int(value) for value in args.menu_catalogs.split(",")]
     if (
         MENU_CALLS < 100
         or not MENU_SIZES
         or any(value < 1 or value > 2048 for value in MENU_SIZES)
+        or not isinstance(MENU_QUERIES, list)
+        or not MENU_QUERIES
+        or any(not isinstance(q, str) or len(q) > 4096 for q in MENU_QUERIES)
     ):
         parser.error("Invalid menu count or catalog sizes")
     sys.argv = [sys.argv[0], *remaining]

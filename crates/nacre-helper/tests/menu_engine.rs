@@ -27,6 +27,9 @@ impl Lab {
         Self::with_bus(None)
     }
     fn with_bus(bus: Option<&str>) -> Result<Self> {
+        Self::with_fonts(bus, false)
+    }
+    fn with_fonts(bus: Option<&str>, blocked: bool) -> Result<Self> {
         let home = tempfile::tempdir()?;
         let root = home.path();
         for path in [
@@ -47,9 +50,27 @@ impl Lab {
         fs::create_dir(root.join("working"))?;
         fs::write(root.join("data/applications/fixture-0000.desktop"),format!("[Desktop Entry]\nType=Application\nName=Application 0000\nExec=/bin/true '$HOME;$(touch forbidden)'\nPath={}\n",root.join("working").display()))?;
         let socket = root.join("runtime/private/daemon.sock");
-        let mut command = Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
+        let binary = std::env::var_os("NACRE_MENU_TEST_BINARY")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(env!("CARGO_BIN_EXE_nacre-helper")));
+        let mut command = Command::new(binary);
         environment(&mut command, root, &socket);
         command.env("QML_IMPORT_PATH", "private-test-no-import");
+        if blocked {
+            let bin = root.join("bin");
+            fs::create_dir(&bin)?;
+            let script = bin.join("fc-list");
+            fs::write(
+                &script,
+                r#"#!/bin/sh
+printf 'start\n' >> "$HOME/fonts-started"
+while [ -d "$HOME" ] && [ ! -f "$HOME/release-fonts" ]; do /bin/sleep 0.01; done
+printf 'Fixture Font\n'
+"#,
+            )?;
+            fs::set_permissions(&script, fs::Permissions::from_mode(0o755))?;
+            command.env("PATH", bin);
+        }
         if let Some(bus) = bus {
             command.env("DBUS_SESSION_BUS_ADDRESS", bus);
         }
@@ -400,5 +421,72 @@ fn app_activation_uses_private_manager_literal_argv_clean_environment_and_existi
     assert_eq!(history["ok"]["recent"][0], "fixture-0000");
     assert_eq!(history["ok"]["usage"]["fixture-0000"]["count"], 1);
     assert!(!lab.home.path().join("working/forbidden").exists());
+    Ok(())
+}
+
+#[test]
+fn catalog_refresh_preserves_interactive_capacity_and_notifies_menu_clients() -> Result<()> {
+    let lab = Lab::with_fonts(None, true)?;
+    let mut client = lab.client()?;
+    let mut observer = lab.client()?;
+    observer.send(json!({"t":"sub","topics":["menu"]}))?;
+    let initial = observer.next()?;
+    assert_eq!(initial["t"], "snap");
+    let revision = initial["data"]["catalog_rev"].as_u64().unwrap();
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while !lab.home.path().join("fonts-started").exists() {
+        if Instant::now() > deadline {
+            return Err("Private font provider did not start".into());
+        }
+        thread::sleep(Duration::from_millis(5));
+    }
+    // Keep initial metadata busy until after an application refresh is observed.
+    // A second background load must not take the lane needed by this UI query.
+    let entry = lab
+        .home
+        .path()
+        .join("data/applications/fixture-0001.desktop");
+    let mut text = fs::read_to_string(&entry)?;
+    text.push_str("\nComment=Changed fixture catalog\n");
+    fs::write(&entry, text)?;
+    loop {
+        let result = client.call(
+            1,
+            "menu.query",
+            json!({"query":"","mode":"apps","route":"apps"}),
+        )?;
+        if result["ok"]["catalog_rev"]
+            .as_u64()
+            .is_some_and(|r| r > revision)
+        {
+            break;
+        }
+        if Instant::now() > deadline {
+            return Err("Changed application catalog was not indexed".into());
+        }
+        thread::sleep(Duration::from_millis(5));
+    }
+    let result = client.call(
+        2,
+        "menu.query",
+        json!({"query":"happy","mode":"apps","route":"apps"}),
+    )?;
+    // Always release the private fixture, including before reporting a failure.
+    fs::write(lab.home.path().join("release-fonts"), "ready")?;
+    assert!(
+        result.get("ok").is_some(),
+        "Interactive query starved by background refresh: {}",
+        result["err"]
+    );
+    loop {
+        let update = observer.next()?;
+        let revision = &update["data"]["providers_rev"];
+        if revision.as_u64().is_some_and(|r| r > 0) {
+            break;
+        }
+        if Instant::now() > deadline {
+            return Err("Provider readiness did not notify menu subscribers".into());
+        }
+    }
     Ok(())
 }

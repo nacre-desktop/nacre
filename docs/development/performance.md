@@ -1933,3 +1933,48 @@ Validation: fmt/clippy, 332 Rust tests, protocol freshness, 991 immutable launch
 cases, 929 repository tests (three existing skips), and 534 helper replay cases
 pass. Local Node syntax passes; optional local Prettier was unavailable. CI
 formatting and full desktop/fresh-install checks remain the publication gate.
+
+The legacy one-shot emoji path was checked separately with the retained original
+Rust implementation (`c44ad814f68b5bc6320e4eff5bf6986752fc5fc153f4e8d96aaede04159119cb`)
+and the final helper above. Five alternating A/B groups of eight fresh calls
+use four synthetic queries; all outputs agree. `benchmark-helpers.py` child
+user+system accounting gives median group-mean CPU 63.02 → 13.15 ms/call,
+group ranges 62.86–77.17 → 11.65–13.49 ms. Median per-helper peak RSS from
+`wait4` is 29.62 → 26.81 MiB. This is a desktop-PC busy-machine component check,
+not Python-versus-Rust timing, steady RSS, wall-clock latency or an exec trace.
+
+Bead's catalog-refresh test found overlapping background metadata loads could
+occupy both provider workers. The follow-up coalesces these loads and avoids
+scheduling them for no-op scans. A private blocked-font fixture reproduces the
+interactive `busy` failure with the published helper and passes with the fix,
+including provider-ready notification on the `menu` topic. Client retry remains
+bounded to idempotent latest queries; activation is not retried.
+
+Follow-up helper SHA-256:
+`f7edacd2015ea984261379069e0af2805bf647278ef6035d18a1e80b349fa054`.
+With the unchanged nine-query workload at 320 apps, accepted niri repeat/Hyprland
+captures give daemon CPU 0.840/0.840 ms plus worker 0.235/0.240 ms/query;
+round-trip p50 0.976/0.975 ms and p99 2.208/2.110 ms. Settled RSS/PSS is
+37.17/33.57 and 36.32/32.78 MiB, one process/thread, zero observed ticks or
+voluntary switches over 60 seconds. Query/idle host swap-in is 148/12 pages on
+niri, 47/129 on Hyprland; swap-out and measured SwapPss are zero. Page size is
+4,096 bytes. An earlier niri idle interval had 741 swap-in pages (SwapPss zero);
+its memory evidence is discarded and retained, not replaced by zeros.
+These are spot rechecks, not an interleaved causal speedup comparison.
+
+`--menu-queries` records explicit workloads; `--menu-catalog-style alpha` matches
+Bead's synthetic split Alpha/Application catalog without generic-name/keyword
+fields. At 320 apps and 2,000 repeated requests per prefix on desktop-PC nested
+niri, `a` costs 1.595 ms daemon + 0.320 ms worker CPU (round-trip p50/p99
+1.995/2.416 ms); `ap` costs 1.465 + 0.310 ms (1.890/2.125 ms).
+These broad-prefix results are distinct from the nine-query mixture, and do not
+establish another host's UI budget. Both query and idle intervals pass: host
+swap-in query/idle is 40/139 pages for `a`, 0/4 for `ap`; swap-out and measured
+SwapPss are zero. CPU remains averaged over the 2,000 calls, quantum 0.005 ms.
+
+Follow-up validation: fmt/clippy, 333 Rust tests including all four native engine
+tests, 991 unchanged reference cases, schema freshness, 929 repository tests
+(three existing skips) and 534 helper parity cases pass. The old helper fails the
+new gated-provider starvation test; the new helper passes. Existing golden
+outputs remain unchanged. Private follow-up evidence archive SHA-256:
+`4c653b505a18f2b27879dd64394919d184dc54889e0e2ed00415845dbc6d1881`.

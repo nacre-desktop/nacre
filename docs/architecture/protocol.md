@@ -287,6 +287,15 @@ roots and directory replacement. No-op scans preserve the revision. Invalid hand
 edits keep the last good index; writes to corrupt preferences fail visibly.
 Registry locks do not trigger index refreshes.
 
+No-op scans queue no metadata work. Metadata refreshes coalesce to one in flight
+plus one pending latest refresh, sharing the existing two-worker cap and ten-second
+deadline. `menu.providers_rev` starts at zero and advances after a completed
+metadata load; the `menu` topic then notifies subscribers even if `catalog_rev`
+is unchanged. Clients can refresh the current query on this notification.
+Concurrent calls can still return `busy` with `retry:true`: keep the old view and
+retry only the latest idempotent query within its original deadline. Activation
+is never automatically retried.
+
 `menu.preferences` accepts `{action:"load"}` or
 `{action:"favorite"|"hide"|"record",value:{id,enabled}}` and returns the existing
 store shape. Legacy CLI/serve calls use this owner when present; an absent default

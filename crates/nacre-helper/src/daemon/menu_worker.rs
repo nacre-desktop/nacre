@@ -85,7 +85,7 @@ impl Pool {
         }
     }
     pub async fn request(&self, action: &str, query: &str) -> std::result::Result<Value, Failure> {
-        let mut slot = self
+        let slot = self
             .slots
             .iter()
             .find_map(|s| s.try_lock().ok())
@@ -96,6 +96,30 @@ impl Pool {
                     true,
                 )
             })?;
+        self.request_in(slot, action, query).await
+    }
+    /// One coalesced metadata refresh waits for its lane instead of taking both
+    /// worker slots away from interactive queries. Its whole deadline includes waiting.
+    pub async fn refresh(&self) -> std::result::Result<Value, Failure> {
+        tokio::time::timeout(Duration::from_secs(10), async {
+            let slot = self.slots[0].lock().await;
+            self.request_in(slot, "load", "").await
+        })
+        .await
+        .map_err(|_| {
+            failure(
+                ErrorCode::Timeout,
+                "Launcher metadata refresh timed out",
+                true,
+            )
+        })?
+    }
+    async fn request_in(
+        &self,
+        mut slot: tokio::sync::MutexGuard<'_, Option<Worker>>,
+        action: &str,
+        query: &str,
+    ) -> std::result::Result<Value, Failure> {
         if let Some(worker) = slot.as_mut() {
             if worker
                 .child

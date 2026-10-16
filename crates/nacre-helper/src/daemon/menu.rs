@@ -481,6 +481,7 @@ struct Ticket {
 struct Engine {
     loaded: Loaded,
     rev: u64,
+    providers_rev: u64,
     tickets: BTreeMap<String, Ticket>,
     order: VecDeque<String>,
     bytes: usize,
@@ -704,7 +705,7 @@ impl Engine {
         Ok(json!({"uiRow":row,"catalog_rev":self.rev}))
     }
     fn status(&self) -> Value {
-        json!({"available":true,"catalog_rev":self.rev,"applications":self.loaded.entries.len(),"warnings":self.loaded.warnings,"error":self.loaded.context.catalog["error"]})
+        json!({"available":true,"catalog_rev":self.rev,"providers_rev":self.providers_rev,"applications":self.loaded.entries.len(),"warnings":self.loaded.warnings,"error":self.loaded.context.catalog["error"]})
     }
 }
 struct Registration(Shared);
@@ -765,6 +766,7 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
     let mut engine = Engine {
         loaded,
         rev: 1,
+        providers_rev: 0,
         tickets: BTreeMap::new(),
         order: VecDeque::new(),
         bytes: 0,
@@ -777,13 +779,15 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
     hub.borrow_mut().publish("menu", engine.status())?;
     let pool = super::menu_worker::Pool::default();
     let mut jobs = tokio::task::JoinSet::new();
+    let mut refreshing = true;
+    let mut refresh_again = false;
     let initial_pool = pool.clone();
     jobs.spawn_local(async move {
         (
             None,
             "load".to_owned(),
             String::new(),
-            initial_pool.request("load", "").await,
+            initial_pool.refresh().await,
         )
     });
     loop {
@@ -857,9 +861,16 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
                     }};
                     if request.reply.send(result).is_err(){tracing::debug!("Launcher provider caller ended");}
                 } else {
+                    refreshing = false;
                     match result {
-                        Ok(value)=>{apply_provider(&mut engine.loaded.context,&action,&term,&value);engine.prepare_queries().await?;hub.borrow_mut().service("menu","running",0)?;hub.borrow_mut().publish("menu.providers",json!({"available":true,"error":""}))?;},
+                        Ok(value)=>{apply_provider(&mut engine.loaded.context,&action,&term,&value);engine.prepare_queries().await?;engine.providers_rev=engine.providers_rev.checked_add(1).filter(|v|*v<=nacre_protocol::MAX_SAFE_INTEGER).ok_or("Launcher provider revision exhausted")?;hub.borrow_mut().service("menu","running",0)?;hub.borrow_mut().publish("menu.providers",json!({"available":true,"error":""}))?;hub.borrow_mut().publish("menu",engine.status())?;},
                         Err(error)=>{tracing::warn!(code=?error.code,"Launcher provider unavailable");hub.borrow_mut().service("menu","degraded",0)?;hub.borrow_mut().publish("menu.providers",json!({"available":false,"error":error.message}))?;},
+                    }
+                    if refresh_again {
+                        refresh_again = false;
+                        refreshing = true;
+                        let pool = pool.clone();
+                        jobs.spawn_local(async move {(None, "load".into(), String::new(), pool.refresh().await)});
                     }
                 }
             },
@@ -888,8 +899,14 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
                     Ok(mut loaded)=>{
                         watches.add(loaded.directories.iter().cloned().chain(roots.iter().cloned()))?;
                         loaded.context.snapshot=engine.loaded.context.snapshot.clone();loaded.context.library=engine.loaded.context.library.clone();loaded.context.workflows=engine.loaded.context.workflows.clone();loaded.context.compositor=engine.loaded.context.compositor.clone();
+                        let changed = engine.loaded.fingerprint != loaded.fingerprint;
                         engine.replace(loaded)?;engine.prepare_queries().await?;hub.borrow_mut().publish("menu",engine.status())?;
-                        if jobs.len()<16 {let pool=pool.clone();jobs.spawn_local(async move{(None,"load".into(),String::new(),pool.request("load", "").await)});}
+                        if changed {
+                            if refreshing {refresh_again=true;} else {
+                                refreshing=true;
+                                let pool=pool.clone();jobs.spawn_local(async move{(None,"load".into(),String::new(),pool.refresh().await)});
+                            }
+                        }
                     },
                     Err(_)=>{tracing::warn!("Launcher input rejected; retaining the last valid index");hub.borrow_mut().publish("menu",json!({"available":true,"catalog_rev":engine.rev,"applications":engine.loaded.entries.len(),"error":"Launcher input rejected; last valid index retained"}))?;},
                 }
@@ -1153,6 +1170,7 @@ mod tests {
                 auxiliary: String::new(),
             },
             rev: 7,
+            providers_rev: 0,
             tickets: BTreeMap::new(),
             order: VecDeque::new(),
             bytes: 0,
