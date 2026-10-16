@@ -1684,8 +1684,8 @@ on both sources gave A/B/A/B cold frames 414/470/411/460 ms. Synchronous work wa
 73/69/71/69 ms. All four control runs had measured SwapPss zero and host swap-in
 zero; swap-out page deltas were 4042/3721/0/0. The control does not explain or fix
 the extra presentation delay. Product QML, frozen sources, fixtures and timeouts
-remain unchanged. Further ports wait for the owner's priority decision under
-the quiet-regression stop rule; this gate is not cleared. Private control archive:
+remain unchanged. At this checkpoint ports waited for the owner's decision;
+the subsequent exact-step audit below supersedes that hold. Private control archive:
 `2d55a8809c601790b6e30f6ab4f7a032375361c9164008ef1908e009f09990c1`.
 
 Sanitized summary SHA-256:
@@ -1749,3 +1749,59 @@ a duplicate watcher. A private bus/socket test exercises readiness, resume and
 real output changes over one shared request and event connection, UI-provider
 routing, cancellation cleanup, and a 4-KiB window title without display recovery.
 No live units or session configuration were enabled or changed.
+
+### Exact session-step cold launcher audit (desktop-PC nested niri, 2026-10-16)
+
+The owner requested a two-hour investigation of **33a0a897** versus **84ce30ff**,
+starting with at least five alternating before/candidate runs. These are distinct
+from the older Python/Wave 3 sources above. Both exact clean revisions and pinned
+Orient `3efe8d1e` were release-built with the same desktop toolchain/profile before
+measurement. No compilation ran during capture. The existing `performance-session.py`
+probe at `ffe32f36` measured the first launcher open after shell startup settling:
+Qt key handler to `frameSwapped` after geometry/images settle, excluding compositor
+presentation. A private wrapper omitted only subsequent video scenarios, recorded
+process roles before input and retained the existing QML probe and 0.2-second delay.
+
+| Alternating pair | Before 33a cold frame | Candidate 84ce cold frame | Paired change |
+| --- | ---: | ---: | ---: |
+| 1 | 454 ms | 462 ms | +8 ms |
+| 2 | 439 ms | 440 ms | +1 ms |
+| 3 | 423 ms | 456 ms | +33 ms |
+| 4 | 454 ms | 472 ms | +18 ms |
+| 5 | 426 ms | 460 ms | +34 ms |
+| Median | 439 ms | 460 ms | +18 ms paired median |
+| Min–max / inclusive IQR | 423–454 / 28 ms | 440–472 / 6 ms | 1–34 / 25 ms |
+
+The difference between medians is 21 ms, inside the 31/32 ms per-side ranges and
+the 28 ms baseline IQR. Per the owner's explicit spread rule it is classified as
+noise for landing this step, not proof of identical performance. All paired
+increases remain recorded. Synchronous open medians are both 69 ms; warm frame
+medians are 357/363 ms, ranges 357–366/357–365 ms. The older two-pair frozen-source
+40–56 ms observation is not evidence that this session step caused it.
+
+All ten runs have complete measured-process SwapPss coverage, every sample zero.
+Host swap-in page deltas in A/B order were 73/20, 20/49, 82/55, 22/153, 69/173 at
+4,096 bytes/page; swap-out was zero. All pass the under-1-MiB rule. Three earlier
+pairs with fresh SSH observations failed on candidate swap-in 270/2551/1042 pages;
+all were discarded and retained. The accepted sequence used one SSH log connection
+established before capture and no additional SSH commands during measurement.
+This removes an observation confound without proving what caused those page-ins.
+
+The installed QML and shell-tool sources are identical between these revisions;
+the prepared instrumented QML digest also matches across all ten runs. Every
+before-input process audit shows no daemon/session-watch process and no private
+daemon socket. The harness starts no user units. Consequently this run cannot
+contain daemon startup contention, duplicate old/new session observers, socket
+activation, hello or initial daemon snapshots. The QML opener changes view state;
+it does not synchronously call the daemon. The optional Niri event client checks
+the absent socket once during its own startup and takes the existing direct path.
+No production fix or UI change was made for this audit. Continue with the launcher
+engine before remaining F2 folds; retain cold-open monitoring after each fold and
+review the separate historical observation before F3.
+
+Before ELF: `16ab5d038bec6c0853981291ce3c365f865c54262afc8a4a28b08e27400b2795`.
+Candidate ELF: `b5da6024910a5a10ac5fd82a5fffd6d1b135fde545c065070e012f1c3506858e`.
+Private summary: `e6328aee4d69b622e31419ac59857dfe498da20a2dd196510b9a2fce0a4fb18e`.
+Archive: `f943ef0a30afc0fbbe9c7955d6c514e95f9129a61b0f27c5be3a316d8b882f5d`.
+Raw reports, rejected attempts, executed-wrapper receipts and machine inventory
+remain private. Sources and frozen parity outputs were not regenerated.

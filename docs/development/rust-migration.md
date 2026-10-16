@@ -8,8 +8,8 @@ Keep public commands, QML appearance, user data, privilege and session policy.
 | 0 Orient decoder | Complete | 49 inputs / 55 frames, 160 palettes exact, including JPEG; notices retained. |
 | 1 Frequent helpers | Complete; CI green | 13 ports; busy service RSS 26.95 → 10.21 MiB; absolute XDG roots follow QML. |
 | 2 Compositor / pearls | Complete; CI green | Preview CPU 52.58 → 1.26 ms; RSS 21.54 → 7.30 MiB; native IPC/session runtime. |
-| 3 Wallpaper / colors | ports complete; desktop A/B/A/B captured, regression review open | Shell frame192.5→94ms Hypr/195.5→102ms niri; GTK endpoint missing; niri cold launcher+40/42ms repeats after control; owner priority decision pending. |
-| 4 Remaining shell tools | redirected: foundation F1–F4 first | F2 events33a0a897 CI green; session-watch local311 Rust/929 repo/534 parity; PSS21.43→16.62/21.47→16.29MiB; final guard recheck passes; unpublished pending decision. |
+| 3 Wallpaper / colors | ports complete; desktop A/B/A/B captured, regression review open | Shell frame192.5→94ms Hypr/195.5→102ms niri; GTK endpoint missing; niri cold launcher+40/42ms repeats after control; Oct16 exact33a/84ce:439→460ms median, ranges423–454/440–472; noise by owner spread rule; historical gap tracked. |
+| 4 Remaining shell tools | redirected: foundation F1–F4 first | F2 events33a0a897 CI green; session-watch local311 Rust/929 repo/534 parity; PSS21.43→16.62/21.47→16.29MiB; final guard recheck passes; 84ce session ready; five exact-step pairs pass paging; landing/CI next. |
 | 5 AI | Pending | Claude stream-json; existing permissions/history; sidebar-chat, composer and AI controller belong here. |
 | 6 Brain | Pending | Same bge-small model; cosine ≥ 0.9999 or backed-up automatic reindex. |
 | 7 Installer / proof | Pending | install*.py/login-install.py deferred here; packaging owned separately. |
@@ -49,13 +49,13 @@ Direct pinned Orient libraries own paired publication; no Orient process/RPC.
 Custom absolute XDG paths and direct D-Bus/socket transports are intended differences.
 Reference outputs are immutable; security additions use explicit new cases.
 
-Foundation: F0 → F1 daemon/link → F2 fold-ins (one commit each) → launcher engine
-(schema first, immutable JS parity, indexed providers) → F3 QML → F4 settings; stop after F4.
+Foundation: F0 → F1 → F2 events/session → launcher engine → remaining F2 → F3 → F4; stop.
+Oct16 order: schema/transcripts first, immutable JS ranking/provider parity, indexed catalog.
 Long-running or frequently called work → daemon service; rare/heavy/risky → worker.
 Settings' unpublished controller port is parked for F4, not a standalone landing.
 Bead owns its ADR/F5 framework work; protocol changes coordinate across agents.
 No live daemon units, notification ownership or keybindings without owner approval.
-Nightly fuzz/soak, Bead hosting and remaining Wave4 ports deferred; menu.query now follows F2.
+Nightly fuzz/soak, Bead hosting and remaining Wave4 ports deferred; menu.query now precedes remaining F2.
 Apply docs/development/security-review.md cases where relevant, preserving privileges.
 Never alter deliberate AI permissions or paru -Syu --skipreview.
 Media response trim moved after cleanup: matched native RSS29.19→27.80MiB;
@@ -76,5 +76,5 @@ Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hosts
 UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-Next: owner decision on persistent quiet niri cold-launcher regression; session port ready locally, hold more ports.
+Next: session push/CI; canonical menu.query schema then frozen JS engine, remaining F2; monitor cold opens per fold.
 No live desktop/config/network changes, tags, releases or package publication.
