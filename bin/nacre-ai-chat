@@ -595,7 +595,9 @@ def configure_locked(env):
                 + json.dumps(str(home.resolve()))
                 + "\n"
             )
-    elif server_env.get("CODEX_HOME") != str(home.resolve()):
+    elif (
+        Path(server_env.get("CODEX_HOME", "")).expanduser().resolve() != home.resolve()
+    ):
         raise ValueError(
             "Workflow tool points to another account home; preserving config"
         )

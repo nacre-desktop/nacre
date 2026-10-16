@@ -12,6 +12,22 @@ from test_workflow import module
 
 
 class SharedChatTests(unittest.TestCase):
+    def test_workflow_home_alias_resolving_to_same_account_is_preserved(self):
+        chat = module("nacre-ai-chat")
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, HOME=temp):
+            home = Path(temp) / ".local/share/nacre/ai/accounts/work"
+            chat.configure({"CODEX_HOME": str(home)})
+            alias = Path(temp) / "old-account-home"
+            alias.symlink_to(home, target_is_directory=True)
+            config = home / "config.toml"
+            text = config.read_text().replace(
+                "CODEX_HOME = " + __import__("json").dumps(str(home)),
+                "CODEX_HOME = " + __import__("json").dumps(str(alias)),
+            )
+            config.write_text(text)
+            chat.configure({"CODEX_HOME": str(home)})
+            self.assertEqual(config.read_text(), text)
+
     def test_custom_previous_store_remains_discoverable_after_configuration(self):
         chat = module("nacre-ai-chat")
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, HOME=temp):
