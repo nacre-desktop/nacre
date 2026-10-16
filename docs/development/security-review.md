@@ -223,3 +223,13 @@ events. Neither the compatibility service nor this fold-in enables daemon units.
 Oversized window/snapshot resync notices cannot trigger display restoration;
 only fixed-size output notices or ring overflow reconcile displays. A real
 private-stream case preserves the evidence file through a 4-KiB title update.
+
+The hosted helper bridge exposes only the existing six-tool operation allowlist,
+not generic process execution. Large packets use connection-leased 0700 folders;
+regular-file descriptors are opened with `O_NOFOLLOW` and checked for exact UID,
+0600 mode, one link and bounded length. Requests cannot name arbitrary paths.
+Disconnect removes the lease. Startup cleanup runs after the exclusive endpoint
+lock and uses an endpoint-specific prefix, leaving other daemons' leases alone;
+unsafe stale entries fail visibly. Tests preserve linked/hard-linked targets.
+A lost response never authorizes replay; launcher mutations join the existing
+writer, and provider concurrency stays shared and bounded to two.

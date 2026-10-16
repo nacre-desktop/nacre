@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HelperRequest",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "tool": {
+      "type": "string"
+    },
+    "arguments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8
+    },
+    "input": true
+  },
+  "required": [
+    "id",
+    "tool",
+    "arguments"
+  ]
+}

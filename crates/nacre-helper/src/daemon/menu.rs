@@ -786,7 +786,7 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
     }
     engine.prepare_queries().await?;
     hub.borrow_mut().publish("menu", engine.status())?;
-    let pool = super::menu_worker::Pool::default();
+    let pool = hub.borrow().providers.clone();
     let mut jobs = tokio::task::JoinSet::new();
     let mut refreshing = true;
     let mut refresh_again = false;
@@ -840,7 +840,7 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
                                     if request.reply.send(Err(failure(ErrorCode::Busy,"Launcher activation queue is full",true))).is_err(){tracing::debug!("Launcher caller ended");}
                                 }else{
                                     // Retain existing history: a selected app is recorded before launch.
-                                    let recorded=preference(&paths,&mut engine,json!({"action":"record","value":{"id":activation.id,"enabled":true}})).await;
+                                    let recorded=preference(&paths,&mut engine,json!({"action":"record","value":{"id":activation.id,"enabled":true}}),false).await;
                                     if let Err(error)=recorded {if request.reply.send(Err(error)).is_err(){tracing::debug!("Launcher caller ended");}continue;}
                                     engine.prepare_queries().await?;
                                     hub.borrow_mut().publish("menu",engine.status())?;
@@ -855,10 +855,11 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
                 let result=match request.method.as_str() {
                     "menu.query"=>match serde_json::from_value::<MenuQuery>(request.params){Ok(q)=>engine.query(q),Err(_)=>Err(failure(ErrorCode::InvalidRequest,"Invalid launcher query",false))},
                     "menu.activate"=>match serde_json::from_value::<MenuActivate>(request.params){Ok(q)=>engine.activate(q),Err(_)=>Err(failure(ErrorCode::InvalidRequest,"Invalid launcher activation",false))},
-                    "menu.preferences"=>preference(&paths,&mut engine,request.params).await,
+                    "menu.preferences"=>preference(&paths,&mut engine,request.params,false).await,
+                    "helper.preferences"=>preference(&paths,&mut engine,request.params,true).await,
                     _=>Err(failure(ErrorCode::UnknownMethod,"Unknown launcher method",false)),
                 };
-                if request.method=="menu.preferences" && result.is_ok(){engine.prepare_queries().await?;hub.borrow_mut().publish("menu",engine.status())?;}
+                if matches!(request.method.as_str(), "menu.preferences"|"helper.preferences") && result.is_ok(){engine.prepare_queries().await?;hub.borrow_mut().publish("menu",engine.status())?;}
                 if request.reply.send(result).is_err(){tracing::debug!("Launcher caller ended before its reply");}
             },
             job=jobs.join_next(),if !jobs.is_empty()=>{
@@ -924,7 +925,7 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
         }
     }
 }
-async fn preference(paths: &Paths, engine: &mut Engine, params: Value) -> Response {
+async fn preference(paths: &Paths, engine: &mut Engine, params: Value, legacy: bool) -> Response {
     if params
         .as_object()
         .is_none_or(|p| p.keys().any(|key| key != "action" && key != "value"))
@@ -969,12 +970,13 @@ async fn preference(paths: &Paths, engine: &mut Engine, params: Value) -> Respon
             false,
         )
     })?
-    .map_err(|_| {
-        failure(
-            ErrorCode::Validation,
-            "Launcher preference was not saved",
-            false,
-        )
+    .map_err(|error| {
+        let message = if legacy {
+            error.to_string()
+        } else {
+            "Launcher preference was not saved".into()
+        };
+        failure(ErrorCode::Validation, &message, false)
     })?;
     if engine.loaded.context.preferences == result {
         return Ok(result);

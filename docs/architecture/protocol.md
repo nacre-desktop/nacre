@@ -351,3 +351,30 @@ the daemon owns policy lifetime and restores saved hints when its service stops.
 Height and maximum-size hints, later application sizing, and the single 150-ms
 opening correction retain the frozen policy rules. Compatibility units remain
 for one release and are not enabled or started by this development step.
+
+## Hosted helper lanes v1
+
+`helper.execute` retains the six legacy `serve` tools and their arguments,
+operation status and stdout string. Inline parameters are
+`{request:{id,tool,arguments,input}}`; the result is `{code,output}`.
+The compatibility command retains the legacy ready packet, IDs, per-tool FIFO,
+64 pending requests, 4 MiB request and 8 MiB response limits. It uses one link;
+it never replays an action after a lost response. An absent default endpoint
+or an older daemon permits the standalone command. An explicit endpoint or
+safe mode fails closed.
+
+`helper.transfer {}` returns `{directory}`: a private directory leased to that
+connection. Large calls use `{file:"packet-..."}` instead of `request`, and large
+results use `{file:"packet-..."}` instead of `code/output`. These basenames refer
+only to that lease; no arbitrary path is accepted. Files are same-UID regular
+files, mode 0600, without links. The lease is removed on disconnect; an exclusive
+endpoint owner cleans its own stale leases after a crash. Normal packets remain
+below the private link's 1 MiB limit. Types, schemas and examples are generated
+alongside the other protocol artifacts.
+
+Launcher preferences join the engine's existing writer. Other heavy operations
+share its two bounded, nice-10, idle-exiting provider workers. Intended transport
+difference: a worker operation has a ten-second deadline and the compatibility
+call has a 120-second deadline including queueing; failures are returned rather
+than retried. A running daemon retains its last good launcher preferences after
+an invalid hand edit, as required by the sole-writer policy.

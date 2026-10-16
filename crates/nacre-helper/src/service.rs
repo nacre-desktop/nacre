@@ -16,13 +16,7 @@ pub const TOOLS: [&str; 6] = [
     "notification-history",
     "network-state",
 ];
-#[derive(Clone, Debug)]
-pub struct Request {
-    pub id: u64,
-    pub tool: String,
-    pub arguments: Vec<String>,
-    pub input: Option<Value>,
-}
+pub use nacre_protocol::helpers::{HelperRequest as Request, HelperResult};
 #[derive(Clone, Copy)]
 pub struct Limits {
     pub request: u64,
@@ -78,11 +72,11 @@ pub fn validate(value: &Value) -> Result<Request> {
         input: (!data["input"].is_null()).then(|| data["input"].clone()),
     })
 }
-fn error_output(message: &str) -> String {
+pub(crate) fn error_output(message: &str) -> String {
     crate::json::encode(&json!({"error":message.chars().take(240).collect::<String>()}))
         .expect("finite protocol error")
 }
-fn send<W: Write>(output: &Mutex<W>, value: Value, limit: usize) -> Result<()> {
+pub(crate) fn send<W: Write>(output: &Mutex<W>, value: Value, limit: usize) -> Result<()> {
     let mut packet = crate::json::encode(&value)?;
     if packet.len() > limit {
         packet = crate::json::encode(
@@ -95,7 +89,7 @@ fn send<W: Write>(output: &Mutex<W>, value: Value, limit: usize) -> Result<()> {
     Ok(())
 }
 
-fn parse_error(error: serde_json::Error, bytes: &[u8]) -> String {
+pub(crate) fn parse_error(error: serde_json::Error, bytes: &[u8]) -> String {
     let text = String::from_utf8_lossy(bytes);
     let mut quoted = false;
     let mut escaped = false;
@@ -242,4 +236,65 @@ where
         worker.join().map_err(|_| "Helper worker failed")??;
     }
     Ok(status)
+}
+
+/// Shared implementation for direct service lanes and daemon-owned workers.
+pub fn execute(request: &Request) -> Result<String> {
+    let value = match request.tool.as_str() {
+        "notification-history"
+            if request.arguments.len() == 1
+                && ((request.arguments[0] == "load" && request.input.is_none())
+                    || (request.arguments[0] == "save"
+                        && request.input.as_ref().is_some_and(Value::is_array))) =>
+        {
+            crate::notification_history::execute(&request.arguments, request.input.clone())?
+        }
+        "launcher-preferences"
+            if request.arguments.len() == 1
+                && ((request.arguments[0] == "load" && request.input.is_none())
+                    || (["favorite", "hide", "record"]
+                        .contains(&request.arguments[0].as_str())
+                        && request.input.as_ref().is_some_and(Value::is_object))) =>
+        {
+            crate::launcher_preferences::execute(&request.arguments, request.input.clone())?
+        }
+        "dashboard-data"
+            if (1..=2).contains(&request.arguments.len()) && request.input.is_none() =>
+        {
+            crate::dashboard_data::execute(&request.arguments, None)?
+        }
+        "network-state" if request.arguments.is_empty() && request.input.is_none() => {
+            crate::network_state::execute(&request.arguments, None)?
+        }
+        "menu-backend"
+            if request.input.is_none()
+                && ((request.arguments.len() == 1 && request.arguments[0] == "state")
+                    || (request.arguments.len() == 2
+                        && ((request.arguments[0] == "state"
+                            && request.arguments[1] == "--force")
+                            || ["files", "convert", "packages", "ownership"]
+                                .contains(&request.arguments[0].as_str())))) =>
+        {
+            crate::menu::execute(&request.arguments, None)?
+        }
+        "dashboard-media" if request.arguments.len() == 1 && request.input.is_none() => {
+            crate::dashboard_media::execute(&request.arguments, None)?
+        }
+        _ => return Err("Unsupported helper operation".into()),
+    };
+    match value {
+        Some(value) => Ok(format!("{}\n", crate::json::encode(&value)?)),
+        None => Ok(String::new()),
+    }
+}
+
+/// Encode operation failures exactly as the legacy JSON-lines service does.
+pub fn result(request: &Request) -> HelperResult {
+    match execute(request) {
+        Ok(output) => HelperResult { code: 0, output },
+        Err(error) => HelperResult {
+            code: 1,
+            output: error_output(&error.to_string()),
+        },
+    }
 }

@@ -995,3 +995,322 @@ fn watch_exits_when_its_output_is_closed_instead_of_reconnecting_forever() -> Re
     server.join().map_err(|_| "Private watch fixture failed")?;
     Ok(())
 }
+
+#[test]
+fn daemon_serve_replays_frozen_dialogue_and_large_packets_without_an_interpreter() -> Result<()> {
+    let home = tempfile::Builder::new().prefix("ns-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let endpoint = home.path().join("daemon.sock");
+    let notify = UnixDatagram::bind(home.path().join("notify"))?;
+    notify.set_read_timeout(Some(Duration::from_secs(10)))?;
+    let mut launch = command(home.path(), &source_path, &endpoint);
+    let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
+    launch
+        .arg("daemon")
+        .env("NACRE_HELPER_TOOLS", &tools)
+        .env("NOTIFY_SOCKET", home.path().join("notify"))
+        .stdout(Stdio::null())
+        .stderr(fs::File::create(home.path().join("daemon.log"))?);
+    let mut daemon = Process(launch.spawn()?);
+    let mut bytes = [0; 256];
+    notify.recv(&mut bytes)?;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let output = command(home.path(), &source_path, &endpoint)
+            .args(["ctl", "call", "menu.preferences", "{\"action\":\"load\"}"])
+            .output()?;
+        if output.status.success() {
+            break;
+        }
+        if Instant::now() > deadline {
+            return Err("Launcher writer did not initialize".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    let mut bridge = Process(
+        command(home.path(), &source_path, &endpoint)
+            .arg("serve")
+            .env("NACRE_HELPER_TOOLS", &tools)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(fs::File::create(home.path().join("bridge.log"))?)
+            .spawn()?,
+    );
+    let mut input = bridge.0.stdin.take().ok_or("Missing bridge input")?;
+    let output = bridge.0.stdout.take().ok_or("Missing bridge output")?;
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let reader = thread::spawn(move || {
+        for line in BufReader::new(output).lines() {
+            if sender.send(line).is_err() {
+                break;
+            }
+        }
+    });
+    let receive = || -> Result<Value> {
+        Ok(serde_json::from_str(
+            &receiver
+                .recv_timeout(Duration::from_secs(15))
+                .map_err(|error| {
+                    format!(
+                        "Bridge response {error}: {}",
+                        fs::read_to_string(home.path().join("bridge.log")).unwrap_or_default()
+                    )
+                })??,
+        )?)
+    };
+    let fixtures =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/parity/helpers/helper-service");
+    let case: Value =
+        serde_json::from_slice(&fs::read(fixtures.join("case-all-hosted-operations.json"))?)?;
+    let expected: Value = serde_json::from_slice(&fs::read(
+        fixtures.join("expected-all-hosted-operations.json"),
+    )?)?;
+    assert_eq!(receive()?, expected["stdout"][0]);
+    for (index, step) in case["dialogue"]
+        .as_array()
+        .ok_or("Missing frozen dialogue")?
+        .iter()
+        .skip(1)
+        .enumerate()
+    {
+        input.write_all(
+            step["send"]
+                .as_str()
+                .ok_or("Missing frozen request")?
+                .as_bytes(),
+        )?;
+        input.flush()?;
+        assert_eq!(receive()?, expected["stdout"][index + 1]);
+    }
+    // Both directions exceed the inline threshold, while retaining the old
+    // history format and large payload limits. No frozen output is regenerated.
+    let summary = "L".repeat(600_000);
+    writeln!(
+        input,
+        "{}",
+        json!({"id":20,"tool":"notification-history","arguments":["save"],"input":[{"summary":summary}]})
+    )?;
+    writeln!(
+        input,
+        "{}",
+        json!({"id":21,"tool":"notification-history","arguments":["load"],"input":null})
+    )?;
+    input.flush()?;
+    let saved = receive()?;
+    assert_eq!(saved, json!({"id":20,"code":0,"output":""}));
+    let loaded = receive()?;
+    assert_eq!(loaded["id"], 21);
+    assert_eq!(loaded["code"], 0);
+    assert_eq!(
+        serde_json::from_str::<Value>(loaded["output"].as_str().ok_or("Missing history output")?)?,
+        json!([{"summary":summary}])
+    );
+    // Unsupported operations retain the legacy error packet on all six lanes.
+    for (index, tool) in nacre_helper::service::TOOLS.iter().enumerate() {
+        let id = 30 + index;
+        writeln!(
+            input,
+            "{}",
+            json!({"id":id,"tool":tool,"arguments":[],"input":false})
+        )?;
+        input.flush()?;
+        assert_eq!(
+            receive()?,
+            json!({"id":id,"code":1,"output":"{\"error\": \"Unsupported helper operation\"}"})
+        );
+    }
+    // A real tool subprocess gates one lane. Other lanes must run before it is
+    // released; further requests in the gated lane preserve FIFO.
+    let brain = home.path().join(".local/bin/nacre-brain");
+    fs::create_dir_all(brain.parent().ok_or("Missing private tools")?)?;
+    fs::write(
+        &brain,
+        r#"#!/bin/sh
+if [ "$1" = note ];then
+ /bin/cat >/dev/null
+ if [ "$5" = crash ];then kill -KILL "$PPID";exit 0;fi
+ printf '%s\n' "$5" >> "$HOME/started"
+ while [ ! -f "$HOME/release" ];do /bin/sleep 0.01;done
+fi
+printf '{}\n'
+"#,
+    )?;
+    fs::set_permissions(&brain, fs::Permissions::from_mode(0o700))?;
+    for id in 40..44 {
+        writeln!(
+            input,
+            "{}",
+            json!({"id":id,"tool":"dashboard-data","arguments":["capture",id.to_string()],"input":null})
+        )?;
+    }
+    input.flush()?;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !home.path().join("started").exists() {
+        if Instant::now() > deadline {
+            return Err("Gated worker did not start".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    writeln!(
+        input,
+        "{}",
+        json!({"id":49,"tool":"notification-history","arguments":["load"],"input":null})
+    )?;
+    input.flush()?;
+    let independent = receive()?;
+    assert_eq!(independent["id"], 49);
+    assert_eq!(independent["code"], 0);
+    fs::write(home.path().join("release"), b"go")?;
+    for id in 40..44 {
+        let result = receive()?;
+        assert_eq!(result["id"], id);
+        assert_eq!(result["code"], 0);
+    }
+    assert_eq!(
+        fs::read_to_string(home.path().join("started"))?,
+        "40\n41\n42\n43\n"
+    );
+    // Kill only the fixture's own provider parent. The shared daemon survives,
+    // reports failure and can service the next request without any replay.
+    writeln!(
+        input,
+        "{}",
+        json!({"id":60,"tool":"dashboard-data","arguments":["capture","crash"],"input":null})
+    )?;
+    input.flush()?;
+    let crashed = receive()?;
+    assert_eq!(crashed["id"], 60);
+    assert_eq!(crashed["code"], 1);
+    writeln!(
+        input,
+        "{}",
+        json!({"id":61,"tool":"notification-history","arguments":["load"],"input":null})
+    )?;
+    input.flush()?;
+    let recovered = receive()?;
+    assert_eq!(recovered["id"], 61);
+    assert_eq!(recovered["code"], 0);
+    let raw = UnixStream::connect(&endpoint)?;
+    raw.set_read_timeout(Some(Duration::from_secs(15)))?;
+    let mut raw = BufReader::new(raw);
+    let mut line = String::new();
+    writeln!(
+        raw.get_mut(),
+        "{}",
+        json!({"t":"hello","proto":1,"client":"helper-crash-policy"})
+    )?;
+    raw.read_line(&mut line)?;
+    assert_eq!(serde_json::from_str::<Value>(&line)?["t"], "welcome");
+    writeln!(
+        raw.get_mut(),
+        "{}",
+        json!({"t":"call","id":90,"m":"helper.execute","p":{"request":{"id":90,"tool":"dashboard-data","arguments":["capture","crash"],"input":null}}})
+    )?;
+    line.clear();
+    raw.read_line(&mut line)?;
+    let failed: Value = serde_json::from_str(&line)?;
+    assert_eq!(failed["id"], 90);
+    assert_eq!(failed["err"]["retry"], false);
+    assert_eq!(failed["err"]["dispatched"], true);
+    // Publishing can fail after work finished too; a full file lease must not
+    // advertise that the operation is safe to replay.
+    writeln!(
+        raw.get_mut(),
+        "{}",
+        json!({"t":"call","id":91,"m":"helper.transfer","p":{}})
+    )?;
+    line.clear();
+    raw.read_line(&mut line)?;
+    let lease: Value = serde_json::from_str(&line)?;
+    let directory = Path::new(
+        lease["ok"]["directory"]
+            .as_str()
+            .ok_or("Missing transfer lease")?,
+    );
+    for index in 0..128 {
+        let path = directory.join(format!("packet-fixture-{index}"));
+        fs::write(&path, b"{}")?;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+    }
+    writeln!(
+        raw.get_mut(),
+        "{}",
+        json!({"t":"call","id":92,"m":"helper.execute","p":{"request":{"id":92,"tool":"notification-history","arguments":["load"],"input":null}}})
+    )?;
+    line.clear();
+    raw.read_line(&mut line)?;
+    let failed: Value = serde_json::from_str(&line)?;
+    assert_eq!(failed["id"], 92);
+    assert_eq!(failed["err"]["message"], "Cannot publish helper response");
+    assert_eq!(failed["err"]["retry"], false);
+    assert_eq!(failed["err"]["dispatched"], true);
+    drop(raw);
+    drop(input);
+    assert!(bridge
+        .0
+        .wait_timeout(Duration::from_secs(5))?
+        .ok_or("Bridge did not drain EOF")?
+        .success());
+    reader.join().map_err(|_| "Bridge reader failed")?;
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let remains = fs::read_dir(home.path())?.filter_map(|e| e.ok()).any(|e| {
+            e.file_name()
+                .to_string_lossy()
+                .starts_with("helper-packets-")
+        });
+        if !remains {
+            break;
+        }
+        if Instant::now() > deadline {
+            return Err("Disconnected bridge leaked its transfer lease".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    // A live stdin cannot keep a disconnected bridge alive or cause a
+    // standalone replay. Restart also removes the killed daemon's stale lease.
+    let mut connected = Process(
+        command(home.path(), &source_path, &endpoint)
+            .arg("serve")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    let _held_input = connected
+        .0
+        .stdin
+        .take()
+        .ok_or("Missing held bridge input")?;
+    let mut connected_output = BufReader::new(
+        connected
+            .0
+            .stdout
+            .take()
+            .ok_or("Missing connected output")?,
+    );
+    let mut ready = String::new();
+    connected_output.read_line(&mut ready)?;
+    assert_eq!(
+        serde_json::from_str::<Value>(&ready)?,
+        json!({"ready":true,"version":1})
+    );
+    daemon.0.kill()?;
+    daemon.0.wait()?;
+    assert!(!connected
+        .0
+        .wait_timeout(Duration::from_secs(5))?
+        .ok_or("Disconnected bridge stayed alive with stdin open")?
+        .success());
+    ready.clear();
+    assert_eq!(connected_output.read_line(&mut ready)?, 0);
+    let _restarted = Process(launch.spawn()?);
+    notify.recv(&mut bytes)?;
+    assert!(!fs::read_dir(home.path())?.filter_map(|e| e.ok()).any(|e| e
+        .file_name()
+        .to_string_lossy()
+        .starts_with("helper-packets-")));
+    Ok(())
+}

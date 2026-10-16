@@ -80,6 +80,8 @@ pub struct Hub {
     pub session: Option<super::session_policy::Requests>,
     pub menu: Option<super::menu::Requests>,
     pub widths: Option<super::widths::Requests>,
+    pub providers: super::menu_worker::Pool,
+    pub helper_lanes: [Rc<tokio::sync::Mutex<()>>; 6],
     pub niri_width_source: super::widths::Source,
 }
 impl Hub {
@@ -101,6 +103,8 @@ impl Hub {
             session: None,
             menu: None,
             widths: None,
+            providers: super::menu_worker::Pool::default(),
+            helper_lanes: std::array::from_fn(|_| Rc::new(tokio::sync::Mutex::new(()))),
             niri_width_source: super::widths::Source::default(),
         }
     }
@@ -232,6 +236,9 @@ impl Hub {
         let mut methods = nacre_protocol::core_methods();
         if !self.safe && self.services.contains_key("session-watch") {
             methods.extend(super::session_policy::methods());
+        }
+        if !self.safe && self.services.contains_key("helper-lanes") {
+            methods.extend(super::helpers::methods());
         }
         if !self.safe && self.services.contains_key("menu") {
             methods.extend(super::menu::methods());

@@ -3,11 +3,13 @@ pub mod client;
 pub mod compositor;
 pub mod compositor_control;
 pub mod crashes;
+pub mod helpers;
 pub mod hub;
 pub mod menu;
 pub mod menu_worker;
 pub mod niri_events;
 pub mod notify;
+pub mod serve_bridge;
 pub mod session;
 pub mod session_policy;
 pub mod socket;
@@ -25,6 +27,7 @@ async fn serve(
     frame: Duration,
 ) -> Result<()> {
     let listener_socket = tokio::net::UnixListener::from_std(listener.take()?)?;
+    helpers::cleanup()?;
     let hub = hub::Hub::new(uuid::Uuid::new_v4().to_string(), counter.safe, frame).shared();
     hub.borrow_mut().publish("compositor",json!({"available":false,"error":"Connecting to compositor","outputs":{},"outputOrder":[],"workspaces":{},"workspaceOrder":[],"windows":{},"windowOrder":[]}))?;
     let status = hub.borrow().status();
@@ -76,6 +79,9 @@ async fn serve(
     } else {
         None
     };
+    if !counter.safe {
+        hub.borrow_mut().service("helper-lanes", "running", 0)?;
+    }
     let menu_service = if !counter.safe {
         let service_hub = hub.clone();
         let factory_hub = hub.clone();

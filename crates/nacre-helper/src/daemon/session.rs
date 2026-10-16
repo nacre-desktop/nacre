@@ -42,9 +42,15 @@ async fn dispatch(
     method: String,
     params: Value,
     timeout: Option<u32>,
+    transfer: super::helpers::Transfer,
 ) -> Result<Value, Failure> {
     match method.as_str() {
         "daemon.ping" => Ok(Value::Null),
+        method @ ("helper.execute" | "helper.transfer")
+            if !hub.borrow().safe && hub.borrow().services.contains_key("helper-lanes") =>
+        {
+            super::helpers::dispatch(hub, transfer, method, params).await
+        }
         "daemon.status" => Ok(hub.borrow().status()),
         method @ ("menu.query" | "menu.activate" | "menu.preferences") if !hub.borrow().safe => {
             super::menu::dispatch(hub, method, params, timeout).await
@@ -73,6 +79,7 @@ async fn call(
     method: String,
     params: Value,
     timeout: Option<u32>,
+    transfer: super::helpers::Transfer,
 ) -> (Id, Reply) {
     let ms = timeout.unwrap_or_else(|| {
         hub.borrow()
@@ -81,14 +88,21 @@ async fn call(
             .map_or(1000, |m| m.timeout)
     });
     let ui = method.starts_with("ui.");
-    let future = AssertUnwindSafe(dispatch(hub, method, params, timeout)).catch_unwind();
+    let helper = method == "helper.execute";
+    let future = AssertUnwindSafe(dispatch(hub, method, params, timeout, transfer)).catch_unwind();
     let result = match tokio::time::timeout(Duration::from_millis(u64::from(ms)), future).await {
         Ok(Ok(result)) => result,
         Ok(Err(_)) => {
             tracing::error!("Call handler panicked");
-            Err(failure(ErrorCode::Internal, "Call handler failed", false))
+            Err(if helper {
+                failure(ErrorCode::Internal, "Call handler failed", false).dispatch_state(true)
+            } else {
+                failure(ErrorCode::Internal, "Call handler failed", false)
+            })
         }
-        Err(_) => Err(if ui {
+        Err(_) => Err(if helper {
+            failure(ErrorCode::Timeout, "Call deadline reached", false).dispatch_state(true)
+        } else if ui {
             failure(ErrorCode::Timeout, "Call deadline reached", true).dispatch_state(true)
         } else {
             failure(ErrorCode::Timeout, "Call deadline reached", true)
@@ -105,6 +119,7 @@ async fn call(
 async fn reader(stream: BufReader<OwnedReadHalf>, hub: Shared, id: u64) -> Result<(), Failure> {
     let mut reader = framing::Reader::new(stream);
     let mut calls = JoinSet::new();
+    let transfer = super::helpers::Transfer::default();
     loop {
         tokio::select! {
             result=calls.join_next(),if !calls.is_empty()=>{
@@ -124,7 +139,7 @@ async fn reader(stream: BufReader<OwnedReadHalf>, hub: Shared, id: u64) -> Resul
                     Message::Call {id:call_id,m,p,timeout}=>{
                         let result=hub.borrow_mut().begin_call(id,&call_id);
                         match result {
-                            Ok(())=>{calls.spawn_local(call(hub.clone(),call_id,m,p,timeout));Ok(())},
+                            Ok(())=>{calls.spawn_local(call(hub.clone(),call_id,m,p,timeout,transfer.clone()));Ok(())},
                             Err(err) if err.code==ErrorCode::Busy=>hub.borrow_mut().enqueue(id,Message::Ret {id:call_id,reply:Reply::Err {err}}),
                             Err(err)=>Err(err),
                         }

@@ -2178,3 +2178,134 @@ kill/restart/reconnect without opening a standalone event stream. No live deskto
 or unit activation was needed.
 Private widths evidence archive SHA-256:
 `6461b07b16008a10a850f6383a3dd1c7579886a979850d4371a8131d1a2feb07`.
+
+
+### Foundation hosted-lane prototype (desktop-PC nested, 2026-10-16)
+
+The unpublished serve prototype uses published `1e920ea4` as its before build
+(helper `801ebe7ae474129291bc85431a8755fa9432ca96d194dac94825856ab1f6b970`).
+Prototype helper SHA-256 is
+`c0035df10b081b38caa7ab8ab9ccf4191f557cec4f3aa5ab0cce1042c2f53cf4`.
+Two alternating niri pairs use 320 fixture apps, two warm six-tool rounds,
+ten calls per lane, 35 seconds settling and 60 seconds idle. The combined group
+includes the daemon and retained `serve` compatibility process; providers must
+have exited before idle. Private D-Bus has no NetworkManager: that lane measures
+the exact unavailable error, not a successful network lookup. No live bus or
+network is queried. This is not the `menu.query` keystroke benchmark.
+
+| Prototype comparison, two runs | Before | Prototype |
+| --- | ---: | ---: |
+| Combined PSS MiB | 38.53 / 38.25 | 34.28 / 35.93 |
+| Resident helper threads | 9 / 9 | 3 / 3 |
+| Observed CPU ticks / 60 s | 0 / 0 | 0 / 0 |
+| All-thread voluntary switches / 60 s | 0 / 0 | 0 / 0 |
+| Full catalog reply median ms | 0.81 / 0.85 | 1.82 / 1.75 |
+| Full catalog helper-tree CPU ms/call | 0.645 / 0.702 | 1.707 / 1.611 |
+
+Prototype measured SwapPss and host swap-out are zero in all four runs.
+At 4,096 bytes/page, warm host swap-in is zero; idle A/B pages are 2/0
+and 60/0. All intervals meet the revised paging gate.
+
+The catalog response slowdown repeats outside the observed spread. A separate
+100-call warm profile of the same 62,249-byte stdout measures 0.619 → 1.585 ms
+helper-tree CPU: prototype daemon 0.605, bridge 0.397 and worker 0.583 ms/call.
+This justified one focused encoding attempt: avoid throwaway full encodes for
+small replies, retain exact size checks near the limits, and emit legacy JSON
+spacing/ASCII escapes during serialization. The revised artifact is
+`d9ddfd69905129c7463fabf723fa200a5393872a1da5e07685925c1d755c86a0`;
+its 348 Rust, 929 repository (three existing skips), 534 immutable helper parity,
+format/lint and schema-freshness gates pass. Matched 100-call profiles after the
+focused attempt measure niri CPU 0.652 → 1.156 ms and median round-trip
+0.804 → 1.261 ms; Hyprland CPU 0.621 → 1.114 ms and median round-trip
+0.759 → 1.254 ms. All measured SwapPss and host swap-in are zero, with actual
+owned-process nice 10 recorded. The fix reduces prototype CPU, but the roughly
+0.5-ms overhead still repeats. The owner performance stop rule initially held the fold. After the owner said
+"continue" in response to the measured hold, the compatibility-path overhead is
+accepted for this step and remains tracked. Two revised niri A/B idle pairs are
+complete; Hyprland idle remains unmeasured. The cold-frame follow-up is below.
+This is no evidence of a `menu.query` typing improvement.
+The first prototype Hyprland attempt failed during nested backend creation and
+produced no measurement. A GLES parent is required for its repeat; no live
+session, driver, package or host policy was changed.
+
+The host's active process-priority policy can override inherited shell priority.
+The revised private probes explicitly set and record actual helper nice values
+before CPU sampling. Missing assets and the expected private-network error were
+corrected in the private fixture before any accepted prototype capture. Frozen
+reference outputs remain unchanged. Whole-shell action, physical-display and
+battery results are not supplied by this component comparison.
+
+
+The focused candidate's two niri A/B pairs retain the same settling/idle method:
+
+| Revised combined group, two runs | Before | Focused candidate |
+| --- | ---: | ---: |
+| RSS MiB | 53.78 / 53.96 | 46.91 / 48.03 |
+| PSS MiB | 38.26 / 38.16 | 33.78 / 34.84 |
+| Helpers / resident threads | 2 / 9 | 2 / 3 |
+| Observed CPU ticks / 60 s | 0 / 0 | 0 / 0 |
+| All-thread voluntary switches / 60 s | 0 / 0 | 0 / 0 |
+
+PSS pair differences are −4.48 and −3.32 MiB. All four revised intervals are valid:
+measured SwapPss and swap-out zero; warm host swap-in zero; idle host A/B swap-in
+6/2 and 7/1 pages at 4,096 bytes/page. Providers retire before idle. The remaining
+compatibility process is intentional for one release; this is not the final
+one-process UI configuration, three-hour flatness or a battery measurement.
+
+The same revised niri 100-call profile gives the full six-lane comparison:
+
+| Helper operation | CPU ms/call before → after | Median round-trip ms before → after |
+| --- | ---: | ---: |
+| menu-backend state | 0.652 → 1.156 | 0.804 → 1.261 |
+| dashboard-data read | 0.044 → 0.087 | 0.048 → 0.091 |
+| dashboard-media empty selection | 0.017 → 0.061 | 0.027 → 0.068 |
+| launcher-preferences load | 0.231 → 0.035 | 0.218 → 0.039 |
+| notification-history load | 0.017 → 0.060 | 0.029 → 0.068 |
+| network-state unavailable | 0.019 → 0.066 | 0.032 → 0.075 |
+
+CPU includes daemon, bridge and provider processes. These are warm helper calls,
+not UI actions or cold worker starts. Preferences benefit from joining the existing
+in-memory writer. Other lanes gain a bounded worker and socket hop; the catalog
+carries the largest response. The focused code removes redundant encodes but
+retains that transport cost. No additional Python launch reduction is claimed:
+these six operations were already native before the foundation fold.
+
+The fold's measured compatibility overhead is retained after the owner continuation;
+integration still waits for the main CI repair and the fold's own green CI.
+Private evidence archive SHA-256:
+`d2a9fa68770e6f1a91a128a9953d307a0c610fec889a3266d3e36fcf24042c89`.
+Revised source manifest/archive SHA-256:
+`97fb5f6aa2f93ae5246ea7358315fd5f983e78cec3b720523527cc394c4473fe`.
+No reference fixture was regenerated. After stopping the capture, the scoped
+private-HOME/runtime audit found no remaining lab processes. Main advanced
+independently after tested base `1e920ea4`; the two account-help differences now
+have exact declared comparison rules without modifying frozen outputs. Main's
+repair is `2893a96f`; Source CI38931641268 is fully green (desktop and
+fresh-install). This fold's own published CI remains the next gate.
+The integrated source recheck passes all 938 repository cases (three existing
+skips), native workflow references and 534 helper cases, including the two exact
+account-help extensions; the original frozen expected files are unchanged.
+Private integrated-check evidence SHA-256:
+`98f7cd0cf3f6a63e33943d8cbd48301ba2aa2330031f1873d74de8de0a526aa5`.
+
+
+The accepted follow-up uses the existing cold/reopen Qt frame probe, unchanged
+staged `75157fd3` QML on both sides, the helper hashes above, nested niri and a
+private Xvfb. Daemon and width observer/client are warmed before shell startup.
+No builds run during capture. This is frame presentation in a nested compositor,
+not physical display latency or a `menu.query` per-key measurement.
+
+| Frame time ms, A/B/A/B | Before | Focused candidate |
+| --- | ---: | ---: |
+| Cold launcher | 483 / 460 | 438 / 471 |
+| Reopened launcher | 360 / 360 | 362 / 362 |
+| Cold dashboard | 362 / 361 | 363 / 362 |
+| Reopened dashboard | 362 / 362 | 362 / 363 |
+
+The cold-launcher ranges overlap; no repeatable cold slowdown or reliable speedup
+is established by these pairs. All four paging gates pass, measured-process
+SwapPss is zero. At 4,096 bytes/page, host swap-in A1/B1/A2/B2 is 0/0/2/1 pages;
+swap-out is 0/0/51/8 pages. The owner gate constrains measured SwapPss and host
+swap-in, so those swap-out counts are retained rather than silently omitted.
+Cold evidence archive SHA-256:
+`bb76629d6af13e26cab769e9d225247a3e2737ff936e708e23ba461c97f2dea8`.

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HelperReply",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "output": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "output"
+      ],
+      "not": {
+        "required": [
+          "file"
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "code"
+            ]
+          },
+          {
+            "required": [
+              "output"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

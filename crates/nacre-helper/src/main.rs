@@ -540,62 +540,14 @@ fn run() -> Result<i32> {
         return light_devices::run(&arguments);
     }
     if (tool == "serve" || tool == "helper-service") && arguments.is_empty() {
+        if let Some(code) = nacre_helper::daemon::serve_bridge::run()? {
+            return Ok(code);
+        }
         return service::serve(
             io::stdin().lock(),
             io::stdout(),
             service::Limits::default(),
-            |request| {
-                let value = match request.tool.as_str() {
-                    "notification-history"
-                        if request.arguments.len() == 1
-                            && ((request.arguments[0] == "load" && request.input.is_none())
-                                || (request.arguments[0] == "save"
-                                    && request.input.as_ref().is_some_and(Value::is_array))) =>
-                    {
-                        notification_history::execute(&request.arguments, request.input.clone())?
-                    }
-                    "launcher-preferences"
-                        if request.arguments.len() == 1
-                            && ((request.arguments[0] == "load" && request.input.is_none())
-                                || (["favorite", "hide", "record"]
-                                    .contains(&request.arguments[0].as_str())
-                                    && request.input.as_ref().is_some_and(Value::is_object))) =>
-                    {
-                        launcher_preferences::execute(&request.arguments, request.input.clone())?
-                    }
-                    "dashboard-data"
-                        if (1..=2).contains(&request.arguments.len())
-                            && request.input.is_none() =>
-                    {
-                        dashboard_data::execute(&request.arguments, None)?
-                    }
-                    "network-state" if request.arguments.is_empty() && request.input.is_none() => {
-                        network_state::execute(&request.arguments, None)?
-                    }
-                    "menu-backend"
-                        if request.input.is_none()
-                            && ((request.arguments.len() == 1
-                                && request.arguments[0] == "state")
-                                || (request.arguments.len() == 2
-                                    && ((request.arguments[0] == "state"
-                                        && request.arguments[1] == "--force")
-                                        || ["files", "convert", "packages", "ownership"]
-                                            .contains(&request.arguments[0].as_str())))) =>
-                    {
-                        menu::execute(&request.arguments, None)?
-                    }
-                    "dashboard-media"
-                        if request.arguments.len() == 1 && request.input.is_none() =>
-                    {
-                        dashboard_media::execute(&request.arguments, None)?
-                    }
-                    _ => return Err("Unsupported helper operation".into()),
-                };
-                match value {
-                    Some(value) => Ok(format!("{}\n", json::encode(&value)?)),
-                    None => Ok(String::new()),
-                }
-            },
+            service::execute,
         );
     }
     if tool == "menu-backend"

@@ -1,36 +1,62 @@
 //! Python-compatible JSON spacing and ASCII escaping for existing file contracts.
 use crate::Result;
 use serde::Serialize;
-pub fn encode<T: Serialize>(value: &T) -> Result<String> {
-    let text = serde_json::to_string(value)?;
-    let mut result = String::with_capacity(text.len());
-    let mut quoted = false;
-    let mut escaped = false;
-    for ch in text.chars() {
-        if ch as u32 >= 127 {
-            for unit in ch.encode_utf16(&mut [0; 2]).iter() {
-                result.push_str(&format!("\\u{unit:04x}"));
-            }
-            escaped = false;
-            continue;
-        }
-        result.push(ch);
-        if escaped {
-            escaped = false;
-            continue;
-        }
-        if ch == '\\' && quoted {
-            escaped = true;
-            continue;
-        }
-        if ch == '"' {
-            quoted = !quoted;
-        }
-        if !quoted && [':', ','].contains(&ch) {
-            result.push(' ');
+struct LegacyFormatter;
+impl serde_json::ser::Formatter for LegacyFormatter {
+    fn begin_array_value<W: ?Sized + std::io::Write>(
+        &mut self,
+        writer: &mut W,
+        first: bool,
+    ) -> std::io::Result<()> {
+        if first {
+            Ok(())
+        } else {
+            writer.write_all(b", ")
         }
     }
-    Ok(result)
+    fn begin_object_key<W: ?Sized + std::io::Write>(
+        &mut self,
+        writer: &mut W,
+        first: bool,
+    ) -> std::io::Result<()> {
+        if first {
+            Ok(())
+        } else {
+            writer.write_all(b", ")
+        }
+    }
+    fn begin_object_value<W: ?Sized + std::io::Write>(
+        &mut self,
+        writer: &mut W,
+    ) -> std::io::Result<()> {
+        writer.write_all(b": ")
+    }
+    fn write_string_fragment<W: ?Sized + std::io::Write>(
+        &mut self,
+        writer: &mut W,
+        fragment: &str,
+    ) -> std::io::Result<()> {
+        if fragment.bytes().all(|byte| byte < 127) {
+            return writer.write_all(fragment.as_bytes());
+        }
+        let mut start = 0;
+        for (offset, character) in fragment.char_indices() {
+            if character as u32 >= 127 {
+                writer.write_all(&fragment.as_bytes()[start..offset])?;
+                for unit in character.encode_utf16(&mut [0; 2]).iter() {
+                    write!(writer, "\\u{unit:04x}")?;
+                }
+                start = offset + character.len_utf8();
+            }
+        }
+        writer.write_all(&fragment.as_bytes()[start..])
+    }
+}
+pub fn encode<T: Serialize>(value: &T) -> Result<String> {
+    let mut bytes = Vec::new();
+    let mut serializer = serde_json::Serializer::with_formatter(&mut bytes, LegacyFormatter);
+    value.serialize(&mut serializer)?;
+    Ok(String::from_utf8(bytes)?)
 }
 
 /// Preserve the common Python diagnostic when a JSON input has no value token.
@@ -258,5 +284,17 @@ pub fn parse_legacy_value(text: &str) -> Result<serde_json::Value> {
             Err(format!("Expecting property name enclosed in double quotes: line {line} column {character_column} (char {})",prefix+character_column-1).into())
         }
         Err(_) => parse_value(text),
+    }
+}
+
+#[cfg(test)]
+mod encoding_tests {
+    #[test]
+    fn legacy_formatter_preserves_spacing_controls_and_utf16_surrogates() {
+        let value = serde_json::json!({"é":[":,", "\u{7f}A😀", "\0\u{8}\u{c}\n\r\t\"\\"]});
+        assert_eq!(
+            super::encode(&value).unwrap(),
+            r#"{"\u00e9": [":,", "\u007fA\ud83d\ude00", "\u0000\b\f\n\r\t\"\\"]}"#
+        );
     }
 }

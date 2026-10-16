@@ -1,0 +1,4 @@
+{"t":"call","id":70,"m":"helper.execute","p":{"request":{"id":1,"tool":"notification-history","arguments":["load"],"input":null}}}
+{"t":"ret","id":70,"ok":{"code":0,"output":"[]\n"}}
+{"t":"call","id":71,"m":"helper.execute","p":{"file":"packet-fixture"}}
+{"t":"ret","id":71,"ok":{"file":"packet-response"}}

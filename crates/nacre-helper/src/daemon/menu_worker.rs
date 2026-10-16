@@ -13,7 +13,8 @@ use tokio::{
     process::{Child, ChildStdin, ChildStdout, Command},
     sync::Mutex,
 };
-const LIMIT: usize = 1024 * 1024;
+// Legacy hosted responses are 8 MiB and their JSON string needs escaping.
+const LIMIT: usize = 16 * 1024 * 1024;
 struct Worker {
     child: Child,
     input: ChildStdin,
@@ -97,6 +98,20 @@ impl Pool {
                 )
             })?;
         self.request_in(slot, action, query).await
+    }
+    /// Hosted lanes queue fairly behind the same two providers as menu queries.
+    pub async fn hosted(
+        &self,
+        request: &crate::service::Request,
+    ) -> std::result::Result<Value, Failure> {
+        let slot = if let Some(slot) = self.slots.iter().find_map(|s| s.try_lock().ok()) {
+            slot
+        } else {
+            tokio::select! { slot=self.slots[0].lock()=>slot, slot=self.slots[1].lock()=>slot }
+        };
+        let request = serde_json::to_string(request)
+            .map_err(|_| failure(ErrorCode::InvalidRequest, "Invalid helper request", false))?;
+        self.request_in(slot, "helper", &request).await
     }
     /// One coalesced metadata refresh waits for its lane instead of taking both
     /// worker slots away from interactive queries. Its whole deadline includes waiting.
@@ -214,6 +229,15 @@ impl Pool {
 }
 fn execute(action: &str, query: &str, inherited_tokio_threads: bool) -> Result<Value> {
     match action {
+        "helper" => {
+            let request = crate::service::validate(&serde_json::from_str(query)?)?;
+            // Preferences are routed to the engine by the parent, never recursively
+            // connected back to the daemon from this worker.
+            if request.tool == "launcher-preferences" {
+                return Err("Preferences must use the daemon writer".into());
+            }
+            Ok(serde_json::to_value(crate::service::result(&request))?)
+        }
         "launch" => launch_application(&serde_json::from_str(query)?, inherited_tokio_threads),
         "load" => Ok(
             json!({"snapshot":crate::menu::snapshot(false)?,"library":crate::software_library::execute(&["load".into()],None)?,"workflows":crate::launcher_workflows::execute(&["load".into()],None)?}),
