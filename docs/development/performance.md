@@ -1805,3 +1805,31 @@ Private summary: `e6328aee4d69b622e31419ac59857dfe498da20a2dd196510b9a2fce0a4fb1
 Archive: `f943ef0a30afc0fbbe9c7955d6c514e95f9129a61b0f27c5be3a316d8b882f5d`.
 Raw reports, rejected attempts, executed-wrapper receipts and machine inventory
 remain private. Sources and frozen parity outputs were not regenerated.
+
+### Frozen font renderer compatibility (2026-10-16)
+
+Source CI for `95853713` and the additive protocol `3042f3f2` installed FreeType
+2.15.0. Its unchanged lock-font tests found 21 differing text-mask samples and
+96 differing panel pixels. A private same-font Pillow comparison reproduces the
+cause: all 56 cases match the frozen outputs on FreeType 2.14.3; six differ on
+2.15.0, including the same 21 samples in the first failing case. The upstream
+[release notes](https://sourceforge.net/projects/freetype/files/freetype2/2.15.0/)
+describe changes to the v40 TrueType interpreter.
+
+The test-only compatibility harness retains the original masks, font files,
+offsets, advances and full PNG byte assertions. The two frozen font tests select
+a checksum-pinned compatible renderer in a child process when needed, with a
+fail-closed version check and proof that exactly one test ran. A separate test
+compares all 56 Rust masks/metrics with live Pillow on the current process's
+FreeType. Both five-test runs pass with 2.14.3 and 2.15.0. Formatting, Clippy and all
+315 Rust tests pass; a wrong-renderer negative control fails as required.
+The repository/parity run and published CI remain acceptance gates.
+Clean validation also requires building the existing developer examples before
+the publication fixture test. CI now places that existing build step before
+`cargo test`, rather than depending on a restored unversioned example binary.
+The source bootstrap lives in the uninstalled test tree and builds with `make -j2`
+inside the Cargo target. No system package or production dependency is pinned.
+
+Intended difference: system font-renderer upgrades follow Pillow on the same
+FreeType; immutable pixel references use their compatible test renderer. No
+installed Rust/QML code or frozen output was changed for this CI repair.

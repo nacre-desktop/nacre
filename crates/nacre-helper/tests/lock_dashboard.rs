@@ -1,7 +1,72 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use nacre_helper::{image_text::Font, Result};
 use serde_json::Value;
-use std::{io::Read, path::Path};
+use std::{
+    io::{Read, Write},
+    path::Path,
+    process::{Command, Stdio},
+};
+
+fn freetype_version() -> Result<(i32, i32, i32)> {
+    unsafe extern "C" {
+        fn FT_Library_Version(
+            library: freetype::ffi::FT_Library,
+            major: *mut i32,
+            minor: *mut i32,
+            patch: *mut i32,
+        );
+    }
+    let library = freetype::Library::init()?;
+    let (mut major, mut minor, mut patch) = (0, 0, 0);
+    // SAFETY: the library stays live and the three output pointers are valid
+    // distinct FT_Int values for this stable public FreeType query.
+    unsafe { FT_Library_Version(library.raw(), &mut major, &mut minor, &mut patch) };
+    Ok((major, minor, patch))
+}
+
+// FreeType 2.15 intentionally changed v40 hinting. Keep the immutable masks on
+// their compatible renderer, while the separate live parity test checks the
+// current system renderer. No installed code uses this test-only bootstrap.
+fn frozen_renderer(name: &str) -> Result<bool> {
+    let spec: Value = serde_json::from_str(include_str!("support/font-renderer.json"))?;
+    let expected: Vec<i32> = serde_json::from_value(spec["version"].clone())?;
+    let actual = freetype_version()?;
+    if expected == [actual.0, actual.1, actual.2] {
+        return Ok(false);
+    }
+    if std::env::var_os("NACRE_FROZEN_FONT_CHILD").is_some() {
+        return Err("Frozen font child did not load the reference renderer".into());
+    }
+    let setup = Command::new("python3")
+        .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/support/prepare_freetype.py"))
+        .output()?;
+    if !setup.status.success() {
+        return Err(format!(
+            "Frozen font setup failed: {}",
+            String::from_utf8_lossy(&setup.stderr)
+        )
+        .into());
+    }
+    let libdir = String::from_utf8(setup.stdout)?.trim().to_owned();
+    let mut paths = vec![std::path::PathBuf::from(libdir)];
+    if let Some(existing) = std::env::var_os("LD_LIBRARY_PATH") {
+        paths.extend(std::env::split_paths(&existing));
+    }
+    let result = Command::new(std::env::current_exe()?)
+        .args(["--exact", name, "--nocapture", "--color=never"])
+        .env("NACRE_FROZEN_FONT_CHILD", "1")
+        .env("LD_LIBRARY_PATH", std::env::join_paths(paths)?)
+        .output()?;
+    let output = String::from_utf8(result.stdout)?;
+    if !result.status.success() || !output.contains("1 passed; 0 failed") {
+        return Err(format!(
+            "Frozen font child failed: {output}\n{}",
+            String::from_utf8_lossy(&result.stderr)
+        )
+        .into());
+    }
+    Ok(true)
+}
 fn reference() -> Result<Value> {
     let mut bytes = Vec::new();
     flate2::read::GzDecoder::new(
@@ -12,6 +77,9 @@ fn reference() -> Result<Value> {
 }
 #[test]
 fn text_masks_offsets_and_advances_match_frozen_pillow() -> Result<()> {
+    if frozen_renderer("text_masks_offsets_and_advances_match_frozen_pillow")? {
+        return Ok(());
+    }
     let reference = reference()?;
     let fonts = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/lock-fonts");
     for case in reference["text_cases"]
@@ -50,6 +118,103 @@ fn text_masks_offsets_and_advances_match_frozen_pillow() -> Result<()> {
             actual == expected,
             "Text mask differs {name} {size} {text}: {} samples",
             actual.iter().zip(&expected).filter(|(a, b)| a != b).count()
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn current_system_text_masks_match_pillow_with_the_same_freetype() -> Result<()> {
+    let reference = reference()?;
+    let fonts = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/lock-fonts");
+    let cases = reference["text_cases"]
+        .as_array()
+        .ok_or("Missing text cases")?;
+    let input: Vec<Value> = cases
+        .iter()
+        .map(|case| {
+            serde_json::json!({
+                "font": fonts.join(case["font"].as_str().unwrap()),
+                "size": case["size"], "text": case["text"]
+            })
+        })
+        .collect();
+    // PyPI wheels can carry their own FreeType. Compare the two algorithms on
+    // the *same* loaded engine rather than silently comparing different versions.
+    let library = std::fs::read_to_string("/proc/self/maps")?
+        .lines()
+        .filter_map(|line| line.split_whitespace().nth(5))
+        .find(|path| {
+            Path::new(path)
+                .file_name()
+                .is_some_and(|name| name.to_string_lossy().starts_with("libfreetype.so"))
+        })
+        .ok_or("Cannot identify the system FreeType for live Pillow parity")?
+        .replace("\\040", " ")
+        .replace("\\011", "\t")
+        .replace("\\134", "\\");
+    let script = r#"
+import base64, json, sys
+from PIL import ImageFont
+result = []
+for case in json.load(sys.stdin):
+    font = ImageFont.truetype(case['font'], case['size'])
+    mask, offset = font.getmask2(case['text'], mode='L')
+    result.append({'advance':font.getlength(case['text']), 'offset':offset,
+        'size':mask.size, 'pixels':base64.b64encode(bytes(mask)).decode()})
+print(json.dumps({'version':ImageFont.core.freetype2_version, 'cases':result}))
+"#;
+    let mut child = Command::new("python3")
+        .args(["-c", script])
+        .env("LD_PRELOAD", library)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    child
+        .stdin
+        .take()
+        .ok_or("Missing Pillow input pipe")?
+        .write_all(&serde_json::to_vec(&input)?)?;
+    let result = child.wait_with_output()?;
+    if !result.status.success() {
+        return Err(format!(
+            "Live Pillow parity failed: {}",
+            String::from_utf8_lossy(&result.stderr)
+        )
+        .into());
+    }
+    let expected: Value = serde_json::from_slice(&result.stdout)?;
+    let version = freetype_version()?;
+    assert_eq!(
+        expected["version"],
+        format!("{}.{}.{}", version.0, version.1, version.2)
+    );
+    let rows = expected["cases"]
+        .as_array()
+        .ok_or("Missing live Pillow masks")?;
+    assert_eq!(rows.len(), cases.len());
+    for (case, want) in cases.iter().zip(rows) {
+        let mut font = Font::open(
+            &fonts.join(case["font"].as_str().unwrap()),
+            case["size"].as_u64().unwrap() as u32,
+        )?;
+        let mask = font.mask(case["text"].as_str().unwrap())?;
+        assert_eq!(mask.advance, want["advance"].as_f64().unwrap());
+        assert_eq!(
+            serde_json::json!([mask.offset.0, mask.offset.1]),
+            want["offset"]
+        );
+        assert_eq!(
+            serde_json::json!([mask.pixels.width(), mask.pixels.height()]),
+            want["size"]
+        );
+        assert!(
+            mask.pixels.into_raw() == STANDARD.decode(want["pixels"].as_str().unwrap())?,
+            "Current Pillow pixels differ for {} {} {}",
+            case["font"],
+            case["size"],
+            case["text"]
         );
     }
     Ok(())
@@ -99,6 +264,9 @@ fn integer_ellipse_rounding_and_avatar_geometry_match_frozen_pillow() -> Result<
 
 #[test]
 fn complete_cold_panels_match_frozen_python_pixels_and_png_bytes() -> Result<()> {
+    if frozen_renderer("complete_cold_panels_match_frozen_python_pixels_and_png_bytes")? {
+        return Ok(());
+    }
     use nacre_helper::{image_text::FontBook, lock_dashboard as dashboard, paths::Paths};
     let reference = reference()?;
     let fonts = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/lock-fonts");

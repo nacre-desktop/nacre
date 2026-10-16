@@ -74,10 +74,10 @@ jobs:
         run: |
           cargo fmt --check
           cargo clippy -j2 --all-targets -- -D warnings
+          cargo build -j2 --locked --examples
           cargo test -j2 --quiet
           cargo run -j2 --locked --manifest-path crates/nacre-protocol/tests/minimal-consumer/Cargo.toml --target-dir target
           cargo build -j2 --locked --release -p nacre-helper --bin nacre-helper
-          cargo build -j2 --locked --examples
       - name: Candidate helper for fresh-install tests
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
