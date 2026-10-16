@@ -52,6 +52,7 @@ async fn dispatch(
         method @ ("session.check" | "session.ready" | "session.watch") if !hub.borrow().safe => {
             super::session_policy::dispatch(hub, method, params).await
         }
+        "niri.widths.configure" if !hub.borrow().safe => super::widths::dispatch(hub, params).await,
         method if method.starts_with("ui.") => {
             let (id, receiver) = hub.borrow_mut().forward(method, params, timeout)?;
             let _route = Route { hub, id };

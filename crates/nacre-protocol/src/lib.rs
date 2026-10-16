@@ -4,6 +4,7 @@ pub mod artifacts;
 pub mod framing;
 pub mod menu;
 pub mod patch;
+pub mod widths;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

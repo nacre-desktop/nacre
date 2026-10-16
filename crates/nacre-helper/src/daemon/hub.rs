@@ -79,6 +79,8 @@ pub struct Hub {
     internal: broadcast::Sender<Notice>,
     pub session: Option<super::session_policy::Requests>,
     pub menu: Option<super::menu::Requests>,
+    pub widths: Option<super::widths::Requests>,
+    pub niri_width_source: super::widths::Source,
 }
 impl Hub {
     pub fn new(boot: String, safe: bool, frame: Duration) -> Self {
@@ -98,6 +100,8 @@ impl Hub {
             internal,
             session: None,
             menu: None,
+            widths: None,
+            niri_width_source: super::widths::Source::default(),
         }
     }
     pub fn shared(self) -> Shared {
@@ -113,6 +117,10 @@ impl Hub {
     }
     pub fn snapshot(&self, name: &str) -> Option<Value> {
         self.topics.get(name).map(|topic| topic.data.clone())
+    }
+    /// Synchronous service checks should not copy an entire desktop snapshot.
+    pub(crate) fn snapshot_ref(&self, name: &str) -> Option<&Value> {
+        self.topics.get(name).map(|topic| &topic.data)
     }
     pub fn publish(&mut self, topic: &str, data: Value) -> Result<(), Failure> {
         if !self.topics.contains_key(topic) && self.topics.len() >= MAX_SUBSCRIPTIONS {
@@ -227,6 +235,9 @@ impl Hub {
         }
         if !self.safe && self.services.contains_key("menu") {
             methods.extend(super::menu::methods());
+        }
+        if !self.safe && self.services.contains_key("niri-widths") {
+            methods.extend(super::widths::methods());
         }
         methods
     }

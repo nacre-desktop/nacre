@@ -9,7 +9,7 @@ Keep public commands, QML appearance, user data, privilege and session policy.
 | 1 Frequent helpers | Complete; CI green | 13 ports; busy service RSS 26.95 → 10.21 MiB; absolute XDG roots follow QML. |
 | 2 Compositor / pearls | Complete; CI green | Preview CPU 52.58 → 1.26 ms; RSS 21.54 → 7.30 MiB; native IPC/session runtime. |
 | 3 Wallpaper / colors | ports complete; desktop A/B/A/B captured, regression review open | Shell frame192.5→94ms Hypr/195.5→102ms niri; GTK endpoint missing; niri cold launcher+40/42ms repeats after control; Oct16 exact33a/84ce:439→460ms median, ranges423–454/440–472; noise by owner spread rule; historical gap tracked. |
-| 4 Remaining shell tools | redirected: foundation F1–F4 first | Events/session/launcher published;9374 CI38883651768 green. CPU/memory audit local:320 combinedCPU1.885→1.028ms;2000 PSS58.34→48.85MiB;320 memory spread overlaps. 335 Rust/991 refs/929 repo(3 skips)/534 parity pass; audit publishing/CI next; no new F2 fold yet. |
+| 4 Remaining shell tools | redirected: foundation F1–F4 first | Events/session/launcher published;9374 CI38883651768 green. CPU/memory audit local:320 combinedCPU1.885→1.028ms;2000 PSS58.34→48.85MiB;320 memory spread overlaps. 335 Rust/991 refs/929 repo(3 skips)/534 parity pass; 75157fd3 published; CI38892933475 green; widths local ready:340 Rust/66 frozen policy+CLI+Xlib/929 repo/534 parity pass; five pairs PSS32.81→32.56MiB overlaps,threads3→2; cold ranges overlap; publishing/CI next. |
 | 5 AI | Pending | Claude stream-json; existing permissions/history; sidebar-chat, composer and AI controller belong here. |
 | 6 Brain | Pending | Same bge-small model; cosine ≥ 0.9999 or backed-up automatic reindex. |
 | 7 Installer / proof | Pending | install*.py/login-install.py deferred here; packaging owned separately. |
@@ -76,5 +76,5 @@ Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hosts
 UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-Next: audit CI, then F2 widths/serve/network/wallpaper → F3 (i18n/cold-open) → F4.
+Next: widths publish/CI, then serve/network/wallpaper → F3 (copy/arithmetic/i18n) → F4.
 No live desktop/config/network changes, tags, releases or package publication.

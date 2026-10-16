@@ -12,6 +12,7 @@ pub mod session;
 pub mod session_policy;
 pub mod socket;
 pub mod supervisor;
+pub mod widths;
 pub mod workers;
 
 use crate::{paths::Paths, Result};
@@ -33,6 +34,8 @@ async fn serve(
     let control = compositor_control::Control::new(paths.clone(), environment.clone());
     let session_control = control.clone();
     let session_paths = paths.clone();
+    let width_environment = environment.clone();
+    let width_control = control.clone();
     if matches!(crate::compositor::backend::select(&environment), Ok("niri")) {
         hub.borrow_mut().publish(
             niri_events::TOPIC,
@@ -87,6 +90,41 @@ async fn serve(
         None
     };
     let workers = workers::Workers::default();
+    let width_shutdown = widths::Shutdown::default();
+    let width_service = if !counter.safe
+        && matches!(
+            crate::compositor::backend::select(&width_environment),
+            Ok("niri")
+        )
+        && width_environment
+            .get("DISPLAY")
+            .is_some_and(|v| !v.is_empty())
+    {
+        hub.borrow_mut().service("niri-widths", "starting", 0)?;
+        hub.borrow_mut().publish(
+            widths::TOPIC,
+            json!({"available":false,"opening_width":50.0,"relaxed":0}),
+        )?;
+        let service_hub = hub.clone();
+        let factory_hub = hub.clone();
+        let stop = width_shutdown.clone();
+        let opening = Rc::new(std::cell::Cell::new(50.0));
+        Some(tokio::task::spawn_local(supervisor::run(
+            "niri-widths",
+            service_hub,
+            move || {
+                widths::run(
+                    factory_hub.clone(),
+                    width_control.clone(),
+                    width_environment.clone(),
+                    opening.clone(),
+                    stop.clone(),
+                )
+            },
+        )))
+    } else {
+        None
+    };
     let mut notice_worker = None;
     if counter.safe {
         let notice = json!({"id":"daemon-safe-mode","summary":"Nacre safe mode","body":"Some desktop services are paused after repeated crashes."});
@@ -133,6 +171,17 @@ async fn serve(
     }
     clients.abort_all();
     while clients.join_next().await.is_some() {}
+    if let Some(service) = width_service {
+        if width_shutdown.finish().await.is_err() {
+            tracing::warn!("Width observer did not confirm hint restoration before shutdown");
+        }
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Width supervisor failed during shutdown");
+            }
+        }
+    }
     compositor_service.abort();
     if let Some(service) = menu_service {
         service.abort();

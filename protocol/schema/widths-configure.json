@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WidthsConfigure",
+  "type": "object",
+  "properties": {
+    "connection_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "display": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "opening_width": {
+      "type": "number",
+      "format": "double",
+      "minimum": 0.0,
+      "maximum": 100.0
+    }
+  },
+  "required": [
+    "connection_id",
+    "display",
+    "opening_width"
+  ]
+}

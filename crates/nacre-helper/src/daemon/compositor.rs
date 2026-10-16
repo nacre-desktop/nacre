@@ -350,6 +350,9 @@ async fn niri(
                 let event:Value=serde_json::from_slice(&bytes?.ok_or("Compositor event stream ended")?)?;
                 let keyboard_changed=niri_keyboard(&event,&mut keyboard)?;
                 let normalized=state.apply(&event)?;
+                if hub.borrow().services.contains_key("niri-widths") {
+                    hub.borrow_mut().niri_width_source.update(&state.windows,&event)?;
+                }
                 let refresh=event.get("WorkspacesChanged").is_some()||event.get("ConfigLoaded").is_some();
                 let mut outputs_changed=false;
                 if refresh {let updated=outputs(&control).await?;outputs_changed=state.outputs!=updated;state.outputs=updated;}

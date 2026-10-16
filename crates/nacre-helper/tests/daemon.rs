@@ -594,6 +594,222 @@ fn native_niri_event_clients_share_daemon_stream_and_shutdown_without_a_timer() 
 }
 
 #[test]
+fn native_width_clients_share_stream_scope_and_reconnect() -> Result<()> {
+    if std::env::var_os("NACRE_WIDTHS_CLIENT_XVFB_CHILD").is_none() {
+        let output = match Command::new("xvfb-run")
+            .arg("-a")
+            .arg(std::env::current_exe()?)
+            .args([
+                "--exact",
+                "native_width_clients_share_stream_scope_and_reconnect",
+                "--nocapture",
+            ])
+            .env_remove("DISPLAY")
+            .env_remove("WAYLAND_DISPLAY")
+            .env("NACRE_WIDTHS_CLIENT_XVFB_CHILD", "1")
+            .output()
+        {
+            Ok(output) => output,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                eprintln!(
+                    "native widths client check skipped: xvfb-run unavailable; CI installs it"
+                );
+                return Ok(());
+            }
+            Err(error) => return Err(error.into()),
+        };
+        assert!(
+            output.status.success(),
+            "native widths client check failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return Ok(());
+    }
+    let display = std::env::var("DISPLAY")?;
+    let authority = std::env::var("XAUTHORITY")?;
+    assert!(
+        authority.starts_with("/tmp/xvfb-run."),
+        "Refusing a non-lab X11 display"
+    );
+    let home = tempfile::Builder::new().prefix("nw-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let source = Source::new(source_path.clone())?;
+    let endpoint = home.path().join("daemon.sock");
+    let log = home.path().join("daemon.log");
+    let start = || -> Result<Process> {
+        let mut cmd = command(home.path(), &source_path, &endpoint);
+        cmd.arg("daemon")
+            .env("DISPLAY", &display)
+            .env("XAUTHORITY", &authority)
+            .stdout(Stdio::null())
+            .stderr(
+                fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&log)?,
+            );
+        Ok(Process(cmd.spawn()?))
+    };
+    let mut daemon = start()?;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        if endpoint.exists() && status(home.path(), &source_path, &endpoint).is_ok() {
+            break;
+        }
+        assert!(daemon.0.try_wait()?.is_none());
+        if Instant::now() > deadline {
+            return Err("Width daemon startup timed out".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    let mut watch = Process(
+        command(home.path(), &source_path, &endpoint)
+            .args(["ctl", "watch", "niri.widths"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    let mut reader = BufReader::new(watch.0.stdout.take().ok_or("Missing watch output")?);
+    let mut mirror = nacre_protocol::Mirror::default();
+    let legacy = |width: &str| -> Result<Process> {
+        Ok(Process(
+            command(home.path(), &source_path, &endpoint)
+                .args(["niri_widths", "--opening-width", width])
+                .env("DISPLAY", &display)
+                .env("XAUTHORITY", &authority)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()?,
+        ))
+    };
+    let wait_width = |reader: &mut BufReader<ChildStdout>,
+                      mirror: &mut nacre_protocol::Mirror,
+                      width: f64|
+     -> Result<()> {
+        loop {
+            let message = next_message(reader)?;
+            mirror.receive(&message);
+            if mirror.topics.get("niri.widths").is_some_and(|(_, data)| {
+                data["available"] == true && data["opening_width"].as_f64() == Some(width)
+            }) {
+                return Ok(());
+            }
+        }
+    };
+    let mut first = legacy("52.5")?;
+    wait_width(&mut reader, &mut mirror, 52.5)?;
+    let mut second = legacy("44.5")?;
+    wait_width(&mut reader, &mut mirror, 44.5)?;
+    assert_eq!(
+        source.sockets.lock().unwrap().len(),
+        2,
+        "Compatibility widths clients opened compositor sockets"
+    );
+    let other_path = home.path().join("other-niri.sock");
+    let other = Source::new(other_path.clone())?;
+    // A manually launched legacy observer still works when there is no default
+    // runtime directory/broker at all. It must use only its explicit Niri socket.
+    let standalone_path = home.path().join("standalone-niri.sock");
+    let standalone = Source::new(standalone_path.clone())?;
+    let mut direct = Process(
+        command(home.path(), &standalone_path, &endpoint)
+            .arg("niri_widths")
+            .env_remove("NACRE_DAEMON_SOCKET")
+            .env_remove("XDG_RUNTIME_DIR")
+            .env("DISPLAY", &display)
+            .env("XAUTHORITY", &authority)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while standalone.event_sockets.lock().unwrap().is_empty() {
+        assert!(
+            direct.0.try_wait()?.is_none(),
+            "Legacy observer required a daemon/runtime directory"
+        );
+        if Instant::now() > deadline {
+            return Err("Standalone width observer did not connect".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    nix::sys::signal::kill(
+        nix::unistd::Pid::from_raw(direct.0.id() as i32),
+        nix::sys::signal::Signal::SIGTERM,
+    )?;
+    assert!(direct
+        .0
+        .wait_timeout(Duration::from_secs(3))?
+        .ok_or("Standalone observer did not stop")?
+        .success());
+    assert_eq!(standalone.sockets.lock().unwrap().len(), 1);
+    let wrong = command(home.path(), &other_path, &endpoint)
+        .arg("niri_widths")
+        .env("DISPLAY", &display)
+        .env("XAUTHORITY", &authority)
+        .output()?;
+    assert!(!wrong.status.success());
+    assert!(
+        other.sockets.lock().unwrap().is_empty(),
+        "Explicit session mismatch fell back to another compositor"
+    );
+    let wrong_display = command(home.path(), &source_path, &endpoint)
+        .arg("niri_widths")
+        .env("DISPLAY", "unrelated-display")
+        .env("XAUTHORITY", &authority)
+        .output()?;
+    assert!(!wrong_display.status.success());
+    assert_eq!(source.sockets.lock().unwrap().len(), 2);
+    daemon.0.kill()?;
+    daemon.0.wait()?;
+    thread::sleep(Duration::from_millis(250));
+    assert!(first.0.try_wait()?.is_none() && second.0.try_wait()?.is_none());
+    assert_eq!(
+        source.sockets.lock().unwrap().len(),
+        2,
+        "Disconnected client opened a standalone compositor stream"
+    );
+    daemon = start()?;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        if status(home.path(), &source_path, &endpoint)
+            .is_ok_and(|v| v["services"]["niri-widths"]["status"] == "running")
+            && source.sockets.lock().unwrap().len() == 4
+        {
+            break;
+        }
+        assert!(daemon.0.try_wait()?.is_none());
+        if Instant::now() > deadline {
+            return Err("Width daemon restart timed out".into());
+        }
+        thread::sleep(Duration::from_millis(20));
+    }
+    for client in [&mut first, &mut second] {
+        nix::sys::signal::kill(
+            nix::unistd::Pid::from_raw(client.0.id() as i32),
+            nix::sys::signal::Signal::SIGTERM,
+        )?;
+        assert!(client
+            .0
+            .wait_timeout(Duration::from_secs(3))?
+            .ok_or("Width client did not stop")?
+            .success());
+    }
+    nix::sys::signal::kill(
+        nix::unistd::Pid::from_raw(daemon.0.id() as i32),
+        nix::sys::signal::Signal::SIGTERM,
+    )?;
+    assert!(daemon
+        .0
+        .wait_timeout(Duration::from_secs(6))?
+        .ok_or("Width daemon did not restore and stop")?
+        .success());
+    assert!(!fs::read_to_string(log)?.contains("DO_NOT_LOG_WINDOW_TITLE"));
+    Ok(())
+}
+
+#[test]
 fn native_aliases_dispatch_without_python_and_explicit_private_socket_never_falls_back(
 ) -> Result<()> {
     let home = tempfile::Builder::new().prefix("nc-").tempdir()?;

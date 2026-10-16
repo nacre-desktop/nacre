@@ -2106,3 +2106,75 @@ failure; five focused baseline runs, five candidate runs and the unchanged full
 repeat passed. No test deadline, expected output or production curses code changed.
 Private audit evidence archive SHA-256:
 `7de916c7d183219d5736e6a047e2ad77f7bc99c0c98df43c497bdd976ec94feb`.
+
+### Foundation niri-widths fold-in (desktop-PC nested, 2026-10-16)
+
+Before is `75157fd3`, helper
+`c803fe026a935049c1f19eda85c828d7ae3d081b24b9176a94ea6a790e39cd18`;
+the final widths helper is
+`801ebe7ae474129291bc85431a8755fa9432ca96d194dac94825856ab1f6b970`.
+Five alternating A/B pairs use nested niri and a dedicated authenticated Xvfb,
+320 fixture apps, 35 seconds settling and 60 seconds idle. No broad query or
+CLDR worker runs during these samples. All binaries are built before capture.
+This measures idle observers; real X11 hint I/O and the exact proportional request
+are tested separately with private Xvfb and a controlled niri transport.
+
+| Combined daemon + legacy observer/client | Before median (range) | After median (range) |
+| --- | ---: | ---: |
+| RSS MiB | 45.05 (44.76–46.96) | 45.35 (45.04–49.54) |
+| PSS MiB | 32.81 (32.43–34.79) | 32.56 (32.10–36.55) |
+| Helper processes | 2 | 2 |
+| Idle threads | 3 | 2 |
+| Observed CPU ticks / 60 s | 0 | 0 |
+| Voluntary switches / 60 s | 0 | 0 |
+
+PSS pair differences are −0.52, −2.08, +4.13, +0.18 and −2.22 MiB. The ranges
+overlap: this does not establish a memory saving or a reproducible increase.
+The high candidate boot remains in the comparison. There is no observed idle
+wakeup regression at this resolution, not a three-hour flat-memory claim. The
+stateful observer moved into the daemon; the small foreground compatibility
+client stays for one release. Native entry-point tests prove it opens no extra
+niri event/request sockets, including while disconnected and reconnecting.
+
+Measured SwapPss and host swap-out are zero in every run. At 4,096 bytes/page,
+host swap-in pages for A/B are 7/41, 3/4, 3/2, 3/7 and 20/3. All intervals meet
+the measured-process-zero / host-in-under-1-MiB gate.
+
+The first prototype had mixed PSS differences (−0.19 and +2.00 MiB). The focused
+follow-up avoids cloning full desktop snapshots for connection checks, drops
+unused client handshake metadata and trims it once on connection. It also keeps
+standalone compatibility without XDG_RUNTIME_DIR. Prototype reports were retained;
+only the final helper above supplies the five-pair table.
+
+The existing Qt cold/reopen frame probe also ran A/B/A/B with the same staged
+`75157fd3` QML on both sides and only the helper binary changed. Daemon and width
+observer/client are warmed before UI startup, both included in process/paging
+audits; the dedicated private Xvfb is not the owner's display. Later video cases
+are omitted exactly as in the earlier step audit. This is nested frame latency,
+not physical display latency or an in-process launcher-engine benchmark.
+
+| Frame time ms, two runs | Before | After |
+| --- | ---: | ---: |
+| Cold launcher | 480 / 455 | 423 / 462 |
+| Reopened launcher | 357 / 342 | 352 / 357 |
+| Cold dashboard | 363 / 362 | 363 / 363 |
+| Reopened dashboard | 362 / 363 | 362 / 362 |
+
+The ranges overlap; neither a reliable launcher speedup nor a repeatable slowdown
+is established. This does not explain the older Python-to-Wave-3 cold-launcher
+interval. The process audit confirms daemon, widths command and production
+supervisor before input on both sides. Measured-process SwapPss is zero; host
+swap-in for A1/B1/A2/B2 is 55/1/0/0 pages (4,096 bytes), swap-out zero. Every run
+passes the revised gate. Wallpaper/palette timing endpoints are unchanged by
+this fold and were not remeasured here.
+
+Validation: fmt/clippy and schema freshness, 340 Rust tests, 991 unchanged launcher
+references, 929 repository tests (three existing skips), and 534 helper parity
+cases pass. The existing 22 CLI, 25 width-policy and 19 Xlib reference cases stay
+byte-exact. New tests cover raw-event order/nulls/gaps, real private X11 hint
+restoration and one-shot requests, actual native clients sharing connections,
+explicit-session rejection, standalone fallback without a runtime directory, and
+kill/restart/reconnect without opening a standalone event stream. No live desktop
+or unit activation was needed.
+Private widths evidence archive SHA-256:
+`6461b07b16008a10a850f6383a3dd1c7579886a979850d4371a8131d1a2feb07`.

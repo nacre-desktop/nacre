@@ -114,6 +114,9 @@ pub fn run(args: &[String]) -> Result<i32> {
         return Ok(i32::from(!supported));
     }
     if supported {
+        if let Some(code) = crate::daemon::widths::observe_if_daemon(opening_width, &environment)? {
+            return Ok(code);
+        }
         super::runtime::observe(
             Path::new(
                 environment

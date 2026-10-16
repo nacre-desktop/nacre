@@ -1,0 +1,3 @@
+{"t":"call","id":60,"m":"niri.widths.configure","p":{"connection_id":"fixture-compositor","display":":99","opening_width":50.0}}
+{"t":"ret","id":60,"ok":{"available":true,"opening_width":50.0,"relaxed":0}}
+{"t":"snap","topic":"niri.widths","seq":0,"data":{"available":true,"opening_width":50.0,"relaxed":0}}

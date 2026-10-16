@@ -326,3 +326,28 @@ retain the model's disabled/unavailable state. This does not claim all desktop
 services have moved, nor establish a UI-frame or physical-desktop latency budget.
 The initial service uses English IDs/fallbacks; locale and pseudo-language
 adaptation must be complete before the F3 client cutover.
+
+## Shared niri width policy
+
+`niri.widths` v1 publishes `{available, opening_width, relaxed}`. The service uses
+the existing width policy and X11 property driver. Native niri window events come
+from the compositor owner's bounded internal tap, preserving nullable title and
+floating fields; the public compositor snapshot and legacy event output keep
+their existing shapes. There is one niri event stream and one shared persistent
+request connection regardless of compatibility observers.
+
+`niri.widths.configure` v1 accepts the generated `WidthsConfigure` payload:
+`{connection_id, display, opening_width}`. The compositor socket identity and X11
+display must match the daemon's session before the percentage changes. Percentages
+must be finite, greater than zero and at most 100. Mismatches fail closed without
+opening a second compositor connection. The result is a `WidthsStatus` snapshot.
+
+The legacy `niri_widths` command keeps its options, help, session check and silent
+foreground behavior. An absent default broker or an older default daemon without
+this service retains the standalone implementation; an explicit endpoint never
+falls back. Connected observers reconfigure and resubscribe after a restart.
+Intended lifetime difference: stopping a compatibility client stops that view;
+the daemon owns policy lifetime and restores saved hints when its service stops.
+Height and maximum-size hints, later application sizing, and the single 150-ms
+opening correction retain the frozen policy rules. Compatibility units remain
+for one release and are not enabled or started by this development step.
