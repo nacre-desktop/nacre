@@ -3413,5 +3413,21 @@
   "settings.workspaces.mode.primary-dynamic": "Monitor workspace policy, Settings and visitor merge action.",
   "launcher.catalog.bring-visitors.label": "Monitor workspace policy, Settings and visitor merge action.",
   "launcher.catalog.bring-visitors.description": "Monitor workspace policy, Settings and visitor merge action.",
-  "workspaces.requires-niri": "Disabled visitor workspace launcher action on Hyprland."
+  "workspaces.requires-niri": "Disabled visitor workspace launcher action on Hyprland.",
+  "ui.daemon.error.call-timed-out": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.daemon.error.connection-write-failed": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.daemon.error.disconnected": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.daemon.error.disconnected-after-dispatch": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.daemon.error.invalid-response": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.daemon.error.ui-provider-failed": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.daemon.error.ui-provider-unavailable": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.helpers.error.invalid-response": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.helpers.error.private-packet-write-failed": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.helpers.error.service-disconnected": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.menu-query.error.catalog-changed": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.menu-query.error.invalid-response": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.shell-ipc.error.launcher-view-busy": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.shell-ipc.error.launcher-view-unavailable": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.shell-ipc.error.ui-method-unavailable": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.shell-ipc.error.unsupported-launcher-action": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged."
 }

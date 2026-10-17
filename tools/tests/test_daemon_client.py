@@ -129,11 +129,10 @@ class DaemonClientTests(unittest.TestCase):
             services.mkdir()
             for name in ("NacreDaemon.qml", "daemon-state.js"):
                 shutil.copy2(ROOT / "nacre/shell/services" / name, services / name)
-            if compositor or helpers:
-                # Translation is outside these private consumer/link tests.
-                (services / "NacreI18n.qml").write_text(
-                    "pragma Singleton\nimport QtQuick\nQtObject { function tr(key, text, args) { return text; } }\n"
-                )
+            # Translation is outside these private consumer/link tests.
+            (services / "NacreI18n.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject { function tr(key, text, args) { return text; } }\n"
+            )
             if helpers:
                 for name in ("NacreHelpers.qml", "NacreHelperTask.qml"):
                     shutil.copy2(ROOT / "nacre/shell/services" / name, services / name)

@@ -59,7 +59,7 @@ Singleton {
     function submit(task, input) {
         if (daemonMode && !ready) {
             Qt.callLater(() => task.complete(1, 0, JSON.stringify({
-                    error: "Helper service is disconnected; try again"
+                    error: NacreI18n.tr("ui.helpers.error.service-disconnected", "Helper service is disconnected; try again")
                 })));
             return 0;
         }
@@ -138,7 +138,7 @@ Singleton {
             cancel(record.request.id);
             if (failure || !value || ![0, 1].includes(value.code) || typeof value.output !== "string")
                 record.task.complete(1, 0, JSON.stringify({
-                    error: failure?.message || "Invalid helper response"
+                    error: failure?.message || NacreI18n.tr("ui.helpers.error.invalid-response", "Invalid helper response")
                 }));
             else
                 record.task.complete(value.code, 0, value.output);
@@ -189,7 +189,7 @@ Singleton {
             packetIo(directory + "/" + value.file, text, (ignored, failed) => {
                 if (failed)
                     finish(null, {
-                        message: "Cannot write private helper packet"
+                        message: NacreI18n.tr("ui.helpers.error.private-packet-write-failed", "Cannot write private helper packet")
                     });
                 else
                     execute({

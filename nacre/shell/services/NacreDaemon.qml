@@ -142,7 +142,7 @@ Singleton {
             bridge.write(JSON.stringify(value) + "\n");
             return true;
         } catch (failure) {
-            error = "Daemon connection write failed";
+            error = NacreI18n.tr("ui.daemon.error.connection-write-failed", "Daemon connection write failed");
             bridge.running = false;
             return false;
         }
@@ -170,7 +170,7 @@ Singleton {
     }
     function call(method, params, callback, timeout = 0) {
         if (!enabled || !connected)
-            return reject(callback, "unavailable", "Daemon is disconnected", false);
+            return reject(callback, "unavailable", NacreI18n.tr("ui.daemon.error.disconnected", "Daemon is disconnected"), false);
         const descriptor = Object.prototype.hasOwnProperty.call(methods, method) ? methods[method] : null;
         if (!descriptor)
             return reject(callback, "unknown_method", "Daemon method is unavailable", false);
@@ -215,7 +215,7 @@ Singleton {
                 delete pending[id];
                 complete(record.callback, null, {
                     code: "timeout",
-                    message: "Daemon call timed out; the action may already have completed",
+                    message: NacreI18n.tr("ui.daemon.error.call-timed-out", "Daemon call timed out; the action may already have completed"),
                     retry: true
                 });
             } else
@@ -322,7 +322,7 @@ Singleton {
                     response = uiHandler ? uiHandler(message.m, message.p) : {
                         err: {
                             code: "unavailable",
-                            message: "UI provider is unavailable",
+                            message: NacreI18n.tr("ui.daemon.error.ui-provider-unavailable", "UI provider is unavailable"),
                             retry: true
                         }
                     };
@@ -330,7 +330,7 @@ Singleton {
                     response = {
                         err: {
                             code: "internal",
-                            message: "UI provider failed",
+                            message: NacreI18n.tr("ui.daemon.error.ui-provider-failed", "UI provider failed"),
                             retry: false
                         }
                     };
@@ -350,7 +350,7 @@ Singleton {
                     bridge.running = false;
             }
         } catch (failure) {
-            error = "Invalid daemon response";
+            error = NacreI18n.tr("ui.daemon.error.invalid-response", "Invalid daemon response");
             bridge.running = false;
         }
     }
@@ -365,7 +365,7 @@ Singleton {
         for (const record of records)
             complete(record.callback, null, {
                 code: "unavailable",
-                message: "Daemon disconnected; the action may already have completed",
+                message: NacreI18n.tr("ui.daemon.error.disconnected-after-dispatch", "Daemon disconnected; the action may already have completed"),
                 retry: true
             });
         for (const value of Object.values(topics)) {
@@ -423,7 +423,7 @@ Singleton {
         })
         onExited: {
             if (!root.error)
-                root.error = stderr.text.trim() || "Daemon is disconnected";
+                root.error = stderr.text.trim() || NacreI18n.tr("ui.daemon.error.disconnected", "Daemon is disconnected");
             root.disconnected();
         }
     }

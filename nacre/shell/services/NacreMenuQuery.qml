@@ -92,7 +92,7 @@ QtObject {
             if (root.enabled && root.active && root.key === wanted && NacreDaemon.boot === boot) {
                 if (!failure && (!value || !Array.isArray(value.order) || !value.items || value.order.length > 2048 || value.order.some(id => typeof id !== "string" || !Object.prototype.hasOwnProperty.call(value.items, id))))
                     failure = {
-                        message: "Invalid launcher response"
+                        message: NacreI18n.tr("ui.menu-query.error.invalid-response", "Invalid launcher response")
                     };
                 root.error = failure?.message || "";
                 if (!failure) {
@@ -109,7 +109,7 @@ QtObject {
         if (!current || entry.daemonQueryKey !== resultKey || !entry.daemonTicket) {
             callback(null, {
                 code: "stale_revision",
-                message: "Launcher changed; query again",
+                message: NacreI18n.tr("ui.menu-query.error.catalog-changed", "Launcher changed; query again"),
                 retry: true,
                 dispatched: false
             });

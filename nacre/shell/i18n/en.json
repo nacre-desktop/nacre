@@ -3359,5 +3359,21 @@
   "settings.workspaces.mode.primary-dynamic": "Primary fixed, other monitors dynamic",
   "launcher.catalog.bring-visitors.label": "Bring visitors here",
   "launcher.catalog.bring-visitors.description": "Keep visiting windows on this monitor after reconnect",
-  "workspaces.requires-niri": "Available on Niri only."
+  "workspaces.requires-niri": "Available on Niri only.",
+  "ui.daemon.error.call-timed-out": "Daemon call timed out; the action may already have completed",
+  "ui.daemon.error.connection-write-failed": "Daemon connection write failed",
+  "ui.daemon.error.disconnected": "Daemon is disconnected",
+  "ui.daemon.error.disconnected-after-dispatch": "Daemon disconnected; the action may already have completed",
+  "ui.daemon.error.invalid-response": "Invalid daemon response",
+  "ui.daemon.error.ui-provider-failed": "UI provider failed",
+  "ui.daemon.error.ui-provider-unavailable": "UI provider is unavailable",
+  "ui.helpers.error.invalid-response": "Invalid helper response",
+  "ui.helpers.error.private-packet-write-failed": "Cannot write private helper packet",
+  "ui.helpers.error.service-disconnected": "Helper service is disconnected; try again",
+  "ui.menu-query.error.catalog-changed": "Launcher changed; query again",
+  "ui.menu-query.error.invalid-response": "Invalid launcher response",
+  "ui.shell-ipc.error.launcher-view-busy": "Launcher view is busy",
+  "ui.shell-ipc.error.launcher-view-unavailable": "Launcher view is unavailable",
+  "ui.shell-ipc.error.ui-method-unavailable": "UI method is unavailable",
+  "ui.shell-ipc.error.unsupported-launcher-action": "Unsupported launcher action"
 }

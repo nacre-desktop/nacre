@@ -13,7 +13,7 @@ Scope {
             return {
                 err: {
                     code: "unknown_method",
-                    message: "UI method is unavailable",
+                    message: NacreI18n.tr("ui.shell-ipc.error.ui-method-unavailable", "UI method is unavailable"),
                     retry: false
                 }
             };
@@ -22,7 +22,7 @@ Scope {
             return {
                 err: {
                     code: "validation",
-                    message: "Unsupported launcher action",
+                    message: NacreI18n.tr("ui.shell-ipc.error.unsupported-launcher-action", "Unsupported launcher action"),
                     retry: false
                 }
             };
@@ -31,7 +31,7 @@ Scope {
             return {
                 err: {
                     code: "unavailable",
-                    message: "Launcher view is unavailable",
+                    message: NacreI18n.tr("ui.shell-ipc.error.launcher-view-unavailable", "Launcher view is unavailable"),
                     retry: true
                 }
             };
@@ -39,7 +39,7 @@ Scope {
             return {
                 err: {
                     code: "busy",
-                    message: "Launcher view is busy",
+                    message: NacreI18n.tr("ui.shell-ipc.error.launcher-view-busy", "Launcher view is busy"),
                     retry: true
                 }
             };
