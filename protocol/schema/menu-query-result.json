@@ -153,6 +153,9 @@
           ],
           "minLength": 1,
           "maxLength": 512
+        },
+        "presentation": {
+          "description": "Display/context metadata only. Activation must still echo the opaque ticket."
         }
       },
       "required": [

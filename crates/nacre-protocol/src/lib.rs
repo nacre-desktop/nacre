@@ -1,6 +1,7 @@
 //! Private, versioned desktop link. No UI toolkit or global runtime ownership.
 #![deny(unsafe_code)]
 pub mod artifacts;
+pub mod compositor;
 mod core_artifacts;
 pub mod core_services;
 pub mod framing;

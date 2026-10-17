@@ -38,6 +38,18 @@ pub enum HelperReply {
 pub struct HelperTransfer {
     /// Private directory leased to this connection, removed when it disconnects.
     pub directory: String,
+    /// A newly reserved owner-only input packet, when requested.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct HelperTransferRequest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reserve: Option<bool>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[schemars(length(max = 128))]
+    pub release: Vec<String>,
 }
 
 impl JsonSchema for HelperCall {

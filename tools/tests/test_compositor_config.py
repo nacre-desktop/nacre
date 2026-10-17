@@ -37,17 +37,34 @@ class CompositorConfigTests(unittest.TestCase):
         defaults = json.loads(
             (ROOT / "tools/tests/fixtures/keybindings-defaults.json").read_text()
         )
-        for path, expected in baseline.items():
-            with self.subTest(path=path):
-                actual = capture(ROOT / path, "declarations")
-                if path in defaults:
-                    self.assertEqual(
-                        [row["value"] for row in actual if row["kind"] == "binding"],
-                        defaults[path],
-                    )
-                    actual = [row for row in actual if row["kind"] != "binding"]
-                    expected = [row for row in expected if row["kind"] != "binding"]
-                self.assertEqual(actual, expected)
+        # Historical outputs retain their original neutral input. Current
+        # defaults deliberately change UI transport and are checked separately.
+        contract = json.loads(
+            (
+                ROOT
+                / "crates/nacre-helper/tests/fixtures/compositor-contract-before-foundation.json"
+            ).read_text()
+        )
+        generated = config.render(contract)
+        with tempfile.TemporaryDirectory() as directory:
+            for path, expected in baseline.items():
+                with self.subTest(path=path):
+                    source = Path(directory) / path
+                    source.parent.mkdir(parents=True, exist_ok=True)
+                    source.write_text(generated[path])
+                    actual = capture(source, "declarations")
+                    if path in defaults:
+                        self.assertEqual(
+                            [
+                                row["value"]
+                                for row in actual
+                                if row["kind"] == "binding"
+                            ],
+                            defaults[path],
+                        )
+                        actual = [row for row in actual if row["kind"] != "binding"]
+                        expected = [row for row in expected if row["kind"] != "binding"]
+                    self.assertEqual(actual, expected)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua unavailable")
     def test_editing_neutral_source_changes_binding_and_window_rule(self):

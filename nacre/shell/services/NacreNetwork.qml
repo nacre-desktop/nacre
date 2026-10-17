@@ -18,6 +18,48 @@ Singleton {
     property bool received: false
     property int snapshotReads: 0
     property int retrySeconds: 2
+    readonly property bool daemonMode: NacreDaemon.enabled
+    readonly property var daemonWatch: NacreDaemon.topic("network.watch")
+    property bool daemonSubscribed: false
+    function daemonMonitoring() {
+        if (daemonMode && !daemonSubscribed) {
+            daemonSubscribed = true;
+            NacreDaemon.subscribe("network.watch");
+            retry.stop();
+            stable.stop();
+        } else if (!daemonMode && daemonSubscribed) {
+            daemonSubscribed = false;
+            NacreDaemon.unsubscribe("network.watch");
+        }
+        monitor.running = !daemonMode;
+        daemonHealth();
+    }
+    function daemonHealth() {
+        if (daemonMode)
+            monitorError = NacreDaemon.connected && daemonWatch.fresh && daemonWatch.data.available ? "" : NacreI18n.tr("ui.network.monitorError.network-monitoring-paused-retrying-shortly", "Network monitoring paused; retrying shortly.");
+    }
+    onDaemonModeChanged: daemonMonitoring()
+    Connections {
+        target: root.daemonWatch
+        function onDataChanged() {
+            root.daemonHealth();
+            if (root.daemonMode && root.daemonWatch.fresh && root.daemonWatch.data.available)
+                root.scheduleRefresh();
+        }
+        function onFreshChanged() {
+            root.daemonHealth();
+            if (root.daemonMode && root.daemonWatch.fresh && root.daemonWatch.data.available)
+                root.scheduleRefresh();
+        }
+    }
+    Connections {
+        target: NacreDaemon
+        function onConnectedChanged() {
+            root.daemonHealth();
+        }
+    }
+    Component.onDestruction: if (daemonSubscribed)
+        NacreDaemon.unsubscribe("network.watch")
     property var wiredDevices: []
     property bool wiredPending: false
     readonly property bool wiredConnected: wiredDevices.length > 0
@@ -79,7 +121,10 @@ Singleton {
     function scheduleRefresh() {
         debounce.restart();
     }
-    Component.onCompleted: refresh()
+    Component.onCompleted: {
+        daemonMonitoring();
+        refresh();
+    }
     function publishWired(text) {
         if (text.length > 65536)
             return false;
@@ -131,7 +176,7 @@ Singleton {
         environment: ({
                 LC_ALL: "C"
             })
-        running: true
+        running: !root.daemonMode
         stdout: SplitParser {
             onRead: {
                 root.monitorError = "";
@@ -141,6 +186,8 @@ Singleton {
         onStarted: stable.start()
         onExited: {
             stable.stop();
+            if (root.daemonMode)
+                return;
             root.monitorError = NacreI18n.tr("ui.network.monitorError.network-monitoring-paused-retrying-shortly", "Network monitoring paused; retrying shortly.");
             retry.interval = root.retrySeconds * 1000;
             root.retrySeconds = Math.min(60, root.retrySeconds * 2);
@@ -157,7 +204,8 @@ Singleton {
     }
     Timer {
         id: retry
-        onTriggered: monitor.running = true
+        onTriggered: if (!root.daemonMode)
+            monitor.running = true
     }
     IpcHandler {
         target: "networkStatus"
@@ -170,7 +218,7 @@ Singleton {
                 connectedRow: root.visibleNetworks.some(point => point.active && point.ssid === root.active?.ssid),
                 busy: root.busy,
                 error: root.error,
-                monitorRunning: monitor.running,
+                monitorRunning: root.daemonMode ? NacreDaemon.connected && root.daemonWatch.fresh && root.daemonWatch.data.available === true : monitor.running,
                 monitorError: root.monitorError,
                 snapshotReads: root.snapshotReads
             });

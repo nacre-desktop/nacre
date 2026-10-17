@@ -21,17 +21,6 @@ pub fn yes(value: &Value) -> bool {
 pub fn hash(value: &str) -> String {
     format!("{:x}", md5::compute(value))
 }
-fn replace(mut text: String, args: &Value) -> String {
-    if let Some(values) = args.as_object() {
-        for (name, value) in values {
-            if !value.is_null() {
-                text = text.replace(&format!("{{{name}}}"), &text::literal(value));
-            }
-        }
-    }
-    text
-}
-
 pub struct Context {
     pub(crate) queries: std::sync::OnceLock<crate::index::QueryCache>,
     pub catalog: Value,
@@ -54,6 +43,7 @@ pub struct Context {
     pub legacy_actions: Vec<Value>,
     pub source_options: Value,
     pub translations: Value,
+    pub language: String,
     pub constants: Value,
     pub all_apps: Vec<std::sync::Arc<Value>>,
     pub visible_apps: Vec<std::sync::Arc<Value>>,
@@ -100,6 +90,7 @@ impl Context {
             legacy_actions: Vec::new(),
             source_options: sources::defaults(),
             translations: json!({}),
+            language: "en".into(),
             all_apps: Vec::new(),
             visible_apps: Vec::new(),
             emoji_entries,
@@ -122,13 +113,7 @@ impl Context {
         self.queries = std::sync::OnceLock::new();
     }
     pub fn tr(&self, id: &str, fallback: &str, args: Value) -> String {
-        replace(
-            self.translations[id]
-                .as_str()
-                .unwrap_or(fallback)
-                .to_owned(),
-            &args,
-        )
+        nacre_i18n::translate(&self.translations, &self.language, id, fallback, &args)
     }
     pub fn rows(&self) -> &[Value] {
         array(&self.catalog["rows"])

@@ -551,7 +551,7 @@ fn which(name: &str) -> bool {
 }
 
 // Python shlex.split(comments=False): these words are argv, never shell code.
-fn editor_words(value: &str) -> Result<Vec<String>> {
+pub(crate) fn editor_words(value: &str) -> Result<Vec<String>> {
     let mut words = Vec::new();
     let mut word = String::new();
     let mut quote = None;

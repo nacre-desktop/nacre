@@ -163,6 +163,36 @@ fn read_text(path: &Path) -> Result<String> {
 fn local_icon(value: &str) -> bool {
     value.starts_with('/') || !value.contains(':')
 }
+fn presentation(row: &Value) -> Value {
+    // The full application record and search fields stay in the engine. The
+    // view already receives the common display fields in MenuItem.
+    Value::Object(
+        row.as_object()
+            .into_iter()
+            .flat_map(|row| row.iter())
+            .filter(|(key, _)| {
+                !matches!(
+                    key.as_str(),
+                    "app"
+                        | "aliases"
+                        | "name"
+                        | "kind"
+                        | "description"
+                        | "breadcrumb"
+                        | "icon"
+                        | "emoji"
+                        | "brand"
+                        | "status"
+                        | "checked"
+                        | "reason"
+                        | "disabled"
+                ) && !(key.as_str() == "label" && row["label"] == row["name"])
+                    && !(key.as_str() == "id" && row["kind"] == "app")
+            })
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect(),
+    )
+}
 fn read_json(path: &Path) -> Result<Value> {
     let s = read_text(path)?;
     if s.is_empty() {
@@ -212,8 +242,64 @@ struct Loaded {
     fingerprint: String,
     auxiliary: String,
 }
+fn language_tag(value: &str) -> bool {
+    let mut parts = value.split(['-', '_']);
+    parts.next().is_some_and(|base| {
+        (2..=3).contains(&base.len()) && base.bytes().all(|byte| byte.is_ascii_lowercase())
+    }) && parts
+        .all(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_alphanumeric()))
+}
+fn translations(paths: &Paths, language: &str) -> Result<Value> {
+    if let Some(parent) = paths.assets().parent() {
+        for name in ["source/i18n", "shell/i18n"] {
+            let directory = parent.join(name);
+            if directory.join("en.json").is_file() {
+                return translations_in(&directory, language);
+            }
+        }
+    }
+    Ok(json!({}))
+}
+fn translations_in(directory: &Path, language: &str) -> Result<Value> {
+    let mut messages = read_json(&directory.join("en.json"))?;
+    if language != "pseudo" && language != "en" && language_tag(language) {
+        let path = directory.join(format!("{language}.json"));
+        if path.is_file() {
+            match read_json(&path) {
+                Ok(Value::Object(translated)) => messages
+                    .as_object_mut()
+                    .ok_or("Invalid English translation catalog")?
+                    .extend(translated),
+                _ => tracing::warn!("Launcher translation catalog is invalid; using English"),
+            }
+        }
+    }
+    Ok(messages)
+}
 fn load(paths: &Paths, roots: &[PathBuf], preferences: Value) -> Result<Loaded> {
-    let language = locale();
+    let settings = read_json(&paths.config.join("desktop.json"))?;
+    let requested = std::env::var("NACRE_LANGUAGE")
+        .ok()
+        .filter(|value| !value.is_empty())
+        .or_else(|| settings["language"].as_str().map(str::to_owned))
+        .unwrap_or_else(|| "system".into());
+    let language = if matches!(requested.as_str(), "system" | "pseudo") {
+        locale()
+    } else if language_tag(&requested) {
+        requested.clone()
+    } else {
+        "en".into()
+    };
+    let message_language = if requested == "pseudo" {
+        "pseudo"
+    } else if requested == "system" {
+        language.split('_').next().unwrap_or("en")
+    } else if language_tag(&requested) {
+        &requested
+    } else {
+        "en"
+    };
+    let translations = translations(paths, message_language)?;
     let entries = desktop::scan(roots, &language)?;
     let mut warnings: usize = entries
         .values()
@@ -224,6 +310,7 @@ fn load(paths: &Paths, roots: &[PathBuf], preferences: Value) -> Result<Loaded> 
     let catalog =
         nacre_menu::config::merge(BASE, &read_text(&paths.config.join("launcher-menu.json"))?)
             .map_err(|e| -> crate::Error { e.into() })?;
+    let catalog = nacre_i18n::localize(&catalog, &translations, message_language);
     let mut context = Context::new(
         catalog,
         serde_json::from_str(DEFAULTS)?,
@@ -238,21 +325,13 @@ fn load(paths: &Paths, roots: &[PathBuf], preferences: Value) -> Result<Loaded> 
         .filter(|e| !array(&context.preferences["hidden"]).contains(&e["id"]))
         .cloned()
         .collect();
-    context.settings = read_json(&paths.config.join("desktop.json"))?;
+    context.settings = settings;
     context.source_options =
         sources::decode(&read_text(&paths.config.join("launcher-sources.json"))?);
     context.wallpapers =
         json!({"appearancePreferences":read_json(&paths.config.join("wallpaper-picker.json"))?});
-    // Use the same committed English IDs as the existing shell/helper layer.
-    if let Some(parent) = paths.assets().parent() {
-        for name in ["source/i18n/en.json", "shell/i18n/en.json"] {
-            let path = parent.join(name);
-            if path.is_file() {
-                context.translations = read_json(&path)?;
-                break;
-            }
-        }
-    }
+    context.translations = translations;
+    context.language = message_language.into();
     context.legacy_actions = nacre_menu::browser::default_actions(&context);
     if warnings > 0 {
         tracing::warn!(
@@ -590,7 +669,12 @@ impl Engine {
         } else {
             self.loaded
                 .context
-                .indexed_content(&route, &request.query, "all", "all")
+                .indexed_content(
+                    &route,
+                    &request.query,
+                    request.filter.as_deref().unwrap_or("all"),
+                    request.category.as_deref().unwrap_or("all"),
+                )
                 .map_err(|_| failure(ErrorCode::Internal, "Launcher ranking failed", false))?
         };
         let total = rows.len().min(u32::MAX as usize) as u32;
@@ -634,6 +718,7 @@ impl Engine {
                 reason: string("reason"),
                 disabled: row["disabled"] == true,
                 activation: Some(token.clone()),
+                presentation: (request.presentation == Some(true)).then(|| presentation(&row)),
             };
             if !self.tickets.contains_key(&token) {
                 let bytes = encoded.len();
@@ -1232,6 +1317,73 @@ pub fn preferences_client(arguments: &[String], input: Option<Value>) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn qml_presentation_keeps_context_fields_without_shipping_the_application_index() -> Result<()>
+    {
+        let mut state = engine()?;
+        state.loaded.context.all_apps = (0..2000).map(|index| std::sync::Arc::new(json!({
+            "id":format!("fixture-{index:04}.desktop"),"name":format!("Application {index:04}"),
+            "comment":"Public desktop entry used to exercise the two-thousand application view.",
+            "icon":"application-x-executable","keywords":["query-only","search-only"],
+            "command":["fixture","literal argument"],"runInTerminal":false
+        }))).collect();
+        state.loaded.context.visible_apps = state.loaded.context.all_apps.clone();
+        state.loaded.context.inputs_changed();
+        let value = state.query(serde_json::from_value(
+            json!({"query":"","route":"apps","presentation":true}),
+        )?)?;
+        assert_eq!(array(&value["order"]).len(), 2000);
+        for row in value["items"]
+            .as_object()
+            .ok_or("Missing result rows")?
+            .values()
+        {
+            assert_eq!(row["presentation"], json!({"operation":"app"}));
+        }
+        let message = nacre_protocol::Message::Ret {
+            id: nacre_protocol::Id::Integer(1),
+            reply: nacre_protocol::Reply::Ok { ok: value },
+        };
+        assert!(nacre_protocol::framing::encode(&message)?.len() <= nacre_protocol::MAX_FRAME + 1);
+        let view = presentation(
+            &json!({"id":"file-1","kind":"file","name":"Public file","label":"Public file","file":true,"filePath":"/public/fixture.txt","operation":"open-file","value":"/public/fixture.txt","app":{"command":["never ship"]},"aliases":["search only"]}),
+        );
+        assert_eq!(
+            view,
+            json!({"id":"file-1","file":true,"filePath":"/public/fixture.txt","operation":"open-file","value":"/public/fixture.txt"})
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn catalog_translations_follow_ui_languages_and_reject_path_like_language_tags() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let directory = home.path().join("i18n");
+        fs::create_dir_all(&directory)?;
+        fs::write(directory.join("en.json"), br#"{"fixture":"English label"}"#)?;
+        fs::write(
+            directory.join("tr.json"),
+            br#"{"fixture":"Translated label"}"#,
+        )?;
+        assert_eq!(
+            translations_in(&directory, "tr")?["fixture"],
+            "Translated label"
+        );
+        assert_eq!(
+            translations_in(&directory, "missing")?["fixture"],
+            "English label"
+        );
+        for language in ["../tr", "tr/../../secret", "/private/fixture", "tr\0"] {
+            assert!(!language_tag(language));
+        }
+        fs::write(directory.join("tr.json"), b"{")?;
+        assert_eq!(
+            translations_in(&directory, "tr")?["fixture"],
+            "English label"
+        );
+        Ok(())
+    }
 
     #[test]
     fn selected_action_type_accepts_the_frozen_enabled_non_app_provider_rows() -> Result<()> {

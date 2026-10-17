@@ -258,3 +258,19 @@ The selected row is type/bounds checked before forwarding. Existing literal argv
 clipboard IDs, confirmation and capability/polkit handling remain distinct;
 unknown operations must fail without execution. Wire-session and frozen-provider
 cases cover the boundary. No UI provider or live keybinding is enabled here.
+
+QML transport: `nacrectl attach` checks raw frames in both directions before Qt
+can replace invalid UTF-8 or buffer an oversized unfinished line. It preserves
+unknown optional fields, verifies the existing socket/UID policy, bounds output
+writes and exits on closed UI pipes. A lost daemon reply never reconnects or
+falls back inside the bridge. Private native tests cover invalid bytes, duplicate
+keys, unsafe IDs, oversized partial lines, pipe closure and lost replies.
+
+F3 follow-up cases: compositor socket aliases must identify the same socket;
+a different/replaced socket and non-action argv are refused. QML helper inputs
+remain0600 through FileView replacement; consumed input/output packets are
+released under the original ownership/link/size guards. Lost helper mutations
+fail once without replay. UI dispatch invokes only registered typed handlers,
+rejecting prototype/method-name injection and invalid numeric arguments. Launcher
+presentation metadata cannot replace opaque tickets or authorize raw-row calls;
+existing confirmation and privilege checks remain in the selected-row UI path.

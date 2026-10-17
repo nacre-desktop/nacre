@@ -82,7 +82,7 @@
         "keys": "XF86MonBrightnessDown",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell brightness down"
+          "command": "nacrectl ui brightness step down"
         },
         "options": {
           "description": "Nacre:brightness-down"
@@ -93,7 +93,7 @@
         "keys": "XF86MonBrightnessUp",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell brightness up"
+          "command": "nacrectl ui brightness step up"
         },
         "options": {
           "description": "Nacre:brightness-up"
@@ -104,7 +104,7 @@
         "keys": "XF86KbdBrightnessUp",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell keyboard-light up"
+          "command": "nacrectl ui keyboardLight step up"
         },
         "options": {
           "description": "Nacre:keyboard-up"
@@ -115,7 +115,7 @@
         "keys": "XF86KbdBrightnessDown",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell keyboard-light down"
+          "command": "nacrectl ui keyboardLight step down"
         },
         "options": {
           "description": "Nacre:keyboard-down"
@@ -126,7 +126,7 @@
         "keys": "SUPER + period",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-menu actions.emoji"
+          "command": "nacrectl ui nacre menu actions.emoji ''"
         },
         "options": {
           "description": "Nacre:emoji"
@@ -137,7 +137,7 @@
         "keys": "SUPER + CTRL + E",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-menu actions.emoji"
+          "command": "nacrectl ui nacre menu actions.emoji ''"
         },
         "options": {
           "description": "Nacre:emoji"
@@ -967,7 +967,7 @@
         "keys": "SUPER + SPACE",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell launcher"
+          "command": "nacrectl ui nacre launcher ''"
         },
         "options": {
           "description": "Nacre:launcher"
@@ -978,7 +978,7 @@
         "keys": "SUPER + TAB",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell overview"
+          "command": "nacrectl ui nacre mode overview"
         },
         "options": {
           "description": "Nacre:overview"
@@ -989,7 +989,7 @@
         "keys": "SUPER + V",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell clipboard"
+          "command": "nacrectl ui nacre clipboard"
         },
         "options": {
           "description": "Nacre:clipboard"
@@ -1000,7 +1000,7 @@
         "keys": "SUPER + W",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell wallpaper"
+          "command": "nacrectl ui nacre launcher '>wallpaper '"
         },
         "options": {
           "description": "Nacre:wallpaper"
@@ -1011,7 +1011,7 @@
         "keys": "SUPER + Z",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell hide"
+          "command": "nacrectl ui nacre hide"
         },
         "options": {}
       },
@@ -1020,7 +1020,7 @@
         "keys": "SUPER + O",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell toggle"
+          "command": "nacrectl ui drawers toggle dashboard"
         },
         "options": {}
       },
@@ -1040,7 +1040,7 @@
         "keys": "SUPER + CTRL + C",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-menu actions.capture"
+          "command": "nacrectl ui nacre menu actions.capture ''"
         },
         "options": {}
       },
@@ -1049,7 +1049,7 @@
         "keys": "SUPER + X",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-menu power"
+          "command": "nacrectl ui nacre menu power ''"
         },
         "options": {
           "description": "Nacre:power"
@@ -1060,7 +1060,7 @@
         "keys": "SUPER + ESCAPE",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-menu power"
+          "command": "nacrectl ui nacre menu power ''"
         },
         "options": {
           "description": "Nacre:power"
@@ -1378,7 +1378,7 @@
         "keys": "SUPER + CTRL + SPACE",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell palette"
+          "command": "nacrectl ui nacre mode palette"
         },
         "options": {
           "description": "Nacre:palette"
@@ -1389,7 +1389,7 @@
         "keys": "SUPER + K",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-menu learn.shortcuts"
+          "command": "nacrectl ui nacre menu learn.shortcuts ''"
         },
         "options": {
           "description": "Nacre:shortcuts"
@@ -1400,7 +1400,7 @@
         "keys": "SUPER + F1",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-menu learn.shortcuts"
+          "command": "nacrectl ui nacre menu learn.shortcuts ''"
         },
         "options": {
           "description": "Nacre:shortcuts"
@@ -1411,7 +1411,7 @@
         "keys": "SUPER + A",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell left"
+          "command": "nacrectl ui nacre left"
         },
         "options": {
           "description": "Nacre:ai-sidebar"

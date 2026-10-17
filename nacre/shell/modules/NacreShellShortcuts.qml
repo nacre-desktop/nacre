@@ -84,6 +84,12 @@ Scope {
         onPressed: root.launcherInterrupt()
     }
     IpcHandler {
+        id: drawersIpc
+        Component.onCompleted: NacreDaemon.registerIpc("drawers", drawersIpc, {
+            "toggle": ["s"],
+            "list": []
+        })
+        Component.onDestruction: NacreDaemon.unregisterIpc("drawers", drawersIpc)
         target: "drawers"
         function toggle(drawer: string): void {
             root.toggle(drawer);

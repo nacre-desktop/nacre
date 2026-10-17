@@ -50,7 +50,10 @@ COMMAND_LABELS = {
     "window-minimize.sh restore-current": "Restore hidden windows on this workspace",
     "nacre-shell hide": "Hide or show the shell frame and panels",
     "nacre-shell toggle": "Toggle the main panel",
+    "nacrectl ui nacre hide": "Hide or show the shell frame and panels",
+    "nacrectl ui drawers toggle dashboard": "Toggle the main panel",
     "nacre-menu actions.capture": "Capture menu",
+    "nacrectl ui nacre menu actions.capture ''": "Capture menu",
     "nacre-brain open": "Optional Brain",
     "nacre-brain capture": "Capture a note in optional Brain",
 }

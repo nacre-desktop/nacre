@@ -19,6 +19,24 @@ spec.loader.exec_module(docs)
 
 
 class UsageKeybindingsTests(unittest.TestCase):
+    def test_native_ui_transport_keeps_existing_labels(self):
+        for command, text in (
+            ("nacrectl ui nacre hide", "Hide or show the shell frame and panels"),
+            ("nacrectl ui drawers toggle dashboard", "Toggle the main panel"),
+            ("nacrectl ui nacre menu actions.capture ''", "Capture menu"),
+        ):
+            self.assertEqual(
+                docs.label(
+                    {
+                        "keys": "SUPER + Z",
+                        "action": "application.launch",
+                        "parameters": {"command": command},
+                    },
+                    "niri",
+                ),
+                text,
+            )
+
     def test_backend_differences_and_opt_in(self):
         text = docs.generate(docs.load())
         hyprland, rest = text.split("## Niri shortcuts")

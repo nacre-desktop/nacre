@@ -1,0 +1,6 @@
+{"t":"call","id":70,"m":"niri.source","p":{"socket":"/private/niri.sock"}}
+{"t":"ret","id":70,"ok":{"connection_id":"1:2"}}
+{"t":"call","id":71,"m":"niri.action","p":{"connection_id":"1:2","argv":["action","reload"]}}
+{"t":"ret","id":71,"ok":{"id":null,"ok":true}}
+{"t":"call","id":72,"m":"niri.action","p":{"connection_id":"1:old","argv":["action","reload"]}}
+{"t":"ret","id":72,"err":{"code":"permission_denied","message":"Compositor session mismatch","retry":false,"dispatched":false}}

@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 nacre-protocol = { path = "../nacre-protocol" }
 nacre-menu = { path = "../nacre-menu" }
+nacre-i18n = { path = "../nacre-i18n" }
 tokio.workspace = true
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

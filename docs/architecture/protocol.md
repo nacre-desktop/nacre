@@ -135,6 +135,33 @@ uncertain result. An explicit private socket override disables that fallback.
 Malformed/oversized frames, failed handshakes and UID mismatches close the link.
 An ordinary failed call leaves the link usable.
 
+### QML stdio transport
+
+`nacrectl attach` forwards one checked socket connection through stdin/stdout
+pipes. The pinned Quickshell 0.3.2 Socket/SplitParser accepts valid traffic, but
+replaces invalid UTF-8 and buffers an oversized unfinished line before a QML
+callback can reject it. This native bridge enforces the same byte-level framing
+in both directions before forwarding; unknown optional fields remain unchanged.
+It reuses the endpoint/peer checks above and the ten-second output deadline.
+
+Rust readers expose `retained_bytes()` for their line-buffer capacity and
+`trim_idle(max_bytes)` to release a completed or empty buffer above that ceiling.
+Trimming refuses unfinished frames, including cancelled reads; it does not
+change wire data or promise a process RSS reduction. Underlying reader buffers
+and payloads owned by callers are outside that accounting.
+
+The UI sends hello and owns subscriptions, IDs, deadlines and reconnects. Closing
+either UI pipe ends the bridge; daemon loss fails the connection. The bridge
+never reconnects, queues work for a later connection, or falls back to another
+executor. A lost reply leaves dispatch uncertain. No live UI or unit is enabled
+by adding this command.
+
+During foundation validation, `NACRE_DAEMON_CLIENT=1` opts the QML client in;
+unset or `0` retains the legacy paths. Reconnects use 50 ms–2 s backoff, retain
+last snapshots and expose stale state after two seconds without a connection.
+No pending call is replayed. Provider replies use the same connection without
+waiting for the outbound activation they acknowledge.
+
 ## Events, liveness and UI providers
 
 ```json
@@ -460,3 +487,37 @@ source retain standalone behavior. An explicit socket or safe mode fails closed
 for missing capabilities or mismatched sources. Once accepted, source failure or
 connection loss ends the client with an error; it never replays through a second
 watcher. Closing the output pipe exits without an idle polling timer.
+
+## QML compositor, helper packets and launcher views
+
+`niri.source {socket}` returns `connection_id` only when the selected socket has
+exactly the daemon compositor's device/inode identity. `niri.action
+{connection_id,argv}` uses the existing compositor action allowlist and shared
+request connection; it rechecks identity after waiting for that connection.
+A session mismatch is refused before dispatch. A timed-out or lost action reply
+is uncertain and must not be replayed. These methods are advertised only on niri.
+
+`helper.transfer {}` retains its original directory response. Optional
+`reserve:true` additionally returns an empty owner-only `file`; optional
+`release:[names]` removes consumed packets from that same connection's lease.
+Names, ownership, mode0600, regular-file/link count and existing size limits are
+checked for reads and release. Reserve/release retain the128-packet cap; disconnect
+removes the lease. QML uses FileView only with these pre-reserved input files.
+
+`menu.query` additionally accepts optional `filter`, `category`, and
+`presentation`. Omission retains the old response and ranking behavior.
+`presentation:true` adds existing preview/context metadata to each item; it is
+read-only display data, never execution authority. A selection sends only its
+engine-issued activation ticket, item ID and catalog revision. The internal
+selected-row route reuses the UI's existing confirmation and action handlers.
+Unknown provider operations and unregistered UI methods are refused.
+
+Intended text difference: the shared engine keeps its frozen ECMAScript final-sigma
+and U+0085 whitespace behavior; the frozen actual-Qt394 cases differ at161,162,
+211,212,213,216. Both references remain unchanged; the other388 cases agree.
+
+Default UI bindings are generated from the neutral compositor contract. Niri
+emits direct argv for `nacrectl ui` commands; their operands stay literal, including
+empty strings and shell metacharacters. Other generated commands retain their
+existing transport. The old binding fixture is unchanged; its15 intended Hyprland
+UI command swaps are compared explicitly, with all keys and flags still exact.

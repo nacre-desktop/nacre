@@ -28,6 +28,17 @@ pub struct MenuQuery {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(range(min = 1, max = 2048))]
     pub limit: Option<u32>,
+    /// Existing launcher result filter; omitted retains "all".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 128))]
+    pub filter: Option<String>,
+    /// Existing software browser category; omitted retains "all".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 128))]
+    pub category: Option<String>,
+    /// Include existing view metadata for the compatibility QML view.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -67,6 +78,9 @@ pub struct MenuItem {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(length(min = 1, max = 512))]
     pub activation: Option<String>,
+    /// Display/context metadata only. Activation must still echo the opaque ticket.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<serde_json::Value>,
 }
 
 /// Arithmetic result or unit-conversion payload from the existing calculator.
@@ -245,6 +259,8 @@ impl MenuQuery {
             && text(&self.mode, 128, false)
             && self.route.as_ref().is_none_or(|s| text(s, 256, true))
             && self.limit.is_none_or(|n| (1..=2048).contains(&n))
+            && self.filter.as_ref().is_none_or(|s| text(s, 128, true))
+            && self.category.as_ref().is_none_or(|s| text(s, 128, true))
         {
             Ok(())
         } else {
@@ -259,6 +275,9 @@ impl MenuQueryResult {
             mode: self.mode.clone(),
             route: Some(self.route.clone()),
             limit: None,
+            filter: None,
+            category: None,
+            presentation: None,
         };
         request.validate()?;
         if self.message.as_ref().is_some_and(|s| !text(s, 4096, true))

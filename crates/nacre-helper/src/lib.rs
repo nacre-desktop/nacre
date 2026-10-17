@@ -68,6 +68,8 @@ pub mod software_speed;
 pub mod software_tui;
 pub mod state;
 pub mod systemd;
+#[cfg(test)]
+mod test_support;
 pub mod unicode;
 pub mod wallpaper_media;
 pub mod wallpaper_watch;

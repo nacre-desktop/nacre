@@ -1,0 +1,6 @@
+{"t":"call","id":73,"m":"helper.transfer","p":{"reserve":true}}
+{"t":"ret","id":73,"ok":{"directory":"/private/lease","file":"packet-input"}}
+{"t":"call","id":74,"m":"helper.execute","p":{"file":"packet-input"}}
+{"t":"ret","id":74,"ok":{"file":"packet-output"}}
+{"t":"call","id":75,"m":"helper.transfer","p":{"release":["packet-input","packet-output"]}}
+{"t":"ret","id":75,"ok":{"directory":"/private/lease"}}

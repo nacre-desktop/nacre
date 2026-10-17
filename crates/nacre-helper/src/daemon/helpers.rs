@@ -5,7 +5,7 @@ use super::{
 };
 use crate::{service, Result};
 use nacre_protocol::{
-    helpers::{HelperCall, HelperReply, HelperResult, HelperTransfer},
+    helpers::{HelperCall, HelperReply, HelperResult, HelperTransfer, HelperTransferRequest},
     Capability, ErrorCode, Failure, Method,
 };
 use serde_json::{json, Value};
@@ -58,6 +58,9 @@ impl Transfer {
             .into())
     }
     fn open(&self, name: &str) -> Result<File> {
+        self.open_bound(name, service::Limits::default().request)
+    }
+    fn open_bound(&self, name: &str, limit: u64) -> Result<File> {
         if !name.starts_with("packet-")
             || name.len() > 96
             || !name
@@ -75,11 +78,50 @@ impl Transfer {
             || metadata.uid() != nix::unistd::getuid().as_raw()
             || metadata.mode() & 0o777 != 0o600
             || metadata.nlink() != 1
-            || metadata.len() > service::Limits::default().request
+            || metadata.len() > limit
         {
             return Err("Unsafe or oversized helper packet".into());
         }
         Ok(file)
+    }
+    fn transfer(&self, params: HelperTransferRequest) -> Result<HelperTransfer> {
+        if params.release.len() > 128 {
+            return Err("Helper transfer release limit reached".into());
+        }
+        let directory = self.directory()?;
+        for name in params.release {
+            // The same ownership/link/name guards apply to deletion. A response
+            // may be larger than an input packet, up to the existing limit.
+            match self.open_bound(&name, service::Limits::default().response as u64) {
+                Ok(_) => fs::remove_file(directory.join(name))?,
+                Err(error)
+                    if error
+                        .downcast_ref::<std::io::Error>()
+                        .is_some_and(|error| error.kind() == std::io::ErrorKind::NotFound) => {}
+                Err(error) => return Err(error),
+            }
+        }
+        let file = if params.reserve == Some(true) {
+            if fs::read_dir(&directory)?.take(129).count() >= 128 {
+                return Err("Helper transfer queue is full".into());
+            }
+            let file = tempfile::Builder::new()
+                .prefix("packet-")
+                .tempfile_in(&directory)?;
+            let (_, path) = file.keep()?;
+            Some(
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .ok_or("Invalid packet name")?
+                    .into(),
+            )
+        } else {
+            None
+        };
+        Ok(HelperTransfer {
+            directory: directory.to_str().ok_or("Invalid packet directory")?.into(),
+            file,
+        })
     }
     fn request(&self, name: &str) -> Result<service::Request> {
         let mut bytes = Vec::new();
@@ -122,8 +164,14 @@ pub fn methods() -> BTreeMap<String, Method> {
     [
         (
             "helper.transfer",
-            json!({"type":"object","additionalProperties":false}),
-            json!({"type":"object"}),
+            serde_json::from_str(include_str!(
+                "../../../../protocol/schema/helper-transfer-request.json"
+            ))
+            .expect("committed transfer schema"),
+            serde_json::from_str(include_str!(
+                "../../../../protocol/schema/helper-transfer.json"
+            ))
+            .expect("committed transfer schema"),
         ),
         (
             "helper.execute",
@@ -157,20 +205,11 @@ pub async fn dispatch(
     params: Value,
 ) -> std::result::Result<Value, Failure> {
     if method == "helper.transfer" {
-        if params.as_object().is_none_or(|v| !v.is_empty()) {
-            return Err(failure(
-                ErrorCode::Validation,
-                "Expected empty transfer parameters",
-                false,
-            ));
-        }
+        let params: HelperTransferRequest = serde_json::from_value(params)
+            .map_err(|_| failure(ErrorCode::Validation, "Invalid transfer parameters", false))?;
         return transfer
-            .directory()
-            .and_then(|directory| {
-                Ok(serde_json::to_value(HelperTransfer {
-                    directory: directory.to_str().ok_or("Invalid packet directory")?.into(),
-                })?)
-            })
+            .transfer(params)
+            .and_then(|reply| Ok(serde_json::to_value(reply)?))
             .map_err(|_| {
                 failure(
                     ErrorCode::Unavailable,
@@ -362,6 +401,60 @@ mod tests {
     }
     fn lease() -> Result<Transfer> {
         Ok(Transfer(Rc::new(RefCell::new(Some(tempfile::tempdir()?)))))
+    }
+    #[test]
+    fn qml_packets_are_reserved_private_bounded_and_released_without_weakening_guards() -> Result<()>
+    {
+        let transfer = lease()?;
+        let reply = transfer.transfer(HelperTransferRequest {
+            reserve: Some(true),
+            release: vec![],
+        })?;
+        let file = reply.file.ok_or("Missing reserved packet")?;
+        let path = PathBuf::from(&reply.directory).join(&file);
+        assert_eq!(fs::metadata(&path)?.mode() & 0o777, 0o600);
+        fs::write(&path, b"{}")?;
+        assert!(transfer.open(&file).is_ok());
+        assert_eq!(fs::metadata(&path)?.mode() & 0o777, 0o600);
+        transfer.transfer(HelperTransferRequest {
+            reserve: None,
+            release: vec![file.clone()],
+        })?;
+        assert!(!path.exists());
+        transfer.transfer(HelperTransferRequest {
+            reserve: None,
+            release: vec![file],
+        })?;
+        assert!(transfer
+            .transfer(HelperTransferRequest {
+                reserve: None,
+                release: vec!["../outside".into()]
+            })
+            .is_err());
+        let outside = tempfile::NamedTempFile::new()?;
+        let directory = transfer.directory()?;
+        symlink(outside.path(), directory.join("packet-link"))?;
+        assert!(transfer
+            .transfer(HelperTransferRequest {
+                reserve: None,
+                release: vec!["packet-link".into()]
+            })
+            .is_err());
+        assert!(outside.path().exists());
+        fs::remove_file(directory.join("packet-link"))?;
+        for _ in 0..128 {
+            transfer.transfer(HelperTransferRequest {
+                reserve: Some(true),
+                release: vec![],
+            })?;
+        }
+        assert!(transfer
+            .transfer(HelperTransferRequest {
+                reserve: Some(true),
+                release: vec![]
+            })
+            .is_err());
+        Ok(())
     }
     #[test]
     fn file_packets_retain_large_legacy_input_and_cleanup_the_lease() -> Result<()> {

@@ -1344,6 +1344,7 @@ dependencies = [
  "image",
  "include_dir",
  "listenfd",
+ "nacre-i18n",
  "nacre-menu",
  "nacre-protocol",
  "niri-ipc",
@@ -1377,6 +1378,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nacre-i18n"
+version = "0.1.0-dev.2"
+dependencies = [
+ "regex",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "nacre-menu"
 version = "0.1.0-dev.2"
 dependencies = [
@@ -1385,6 +1395,7 @@ dependencies = [
  "icu_collator",
  "icu_locale_core",
  "md5",
+ "nacre-i18n",
  "serde",
  "serde_json",
  "sha2",

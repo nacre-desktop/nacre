@@ -6,12 +6,12 @@ binds {
     XF86AudioRaiseVolume repeat=true allow-when-locked=true hotkey-overlay-title="Nacre:volume-up" { spawn-sh "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"; }
     XF86AudioMicMute repeat=false hotkey-overlay-title="Nacre:mic-mute" { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
     XF86PowerOff repeat=false allow-when-locked=true hotkey-overlay-title="Nacre:lock" { spawn-sh "loginctl lock-session"; }
-    XF86MonBrightnessDown repeat=false hotkey-overlay-title="Nacre:brightness-down" { spawn-sh "~/.local/bin/nacre-shell brightness down"; }
-    XF86MonBrightnessUp repeat=false hotkey-overlay-title="Nacre:brightness-up" { spawn-sh "~/.local/bin/nacre-shell brightness up"; }
-    XF86KbdBrightnessUp repeat=false hotkey-overlay-title="Nacre:keyboard-up" { spawn-sh "~/.local/bin/nacre-shell keyboard-light up"; }
-    XF86KbdBrightnessDown repeat=false hotkey-overlay-title="Nacre:keyboard-down" { spawn-sh "~/.local/bin/nacre-shell keyboard-light down"; }
-    Super+period repeat=false hotkey-overlay-title="Nacre:emoji" { spawn-sh "~/.local/bin/nacre-menu actions.emoji"; }
-    Super+Ctrl+E repeat=false hotkey-overlay-title="Nacre:emoji" { spawn-sh "~/.local/bin/nacre-menu actions.emoji"; }
+    XF86MonBrightnessDown repeat=false hotkey-overlay-title="Nacre:brightness-down" { spawn "nacrectl" "ui" "brightness" "step" "down"; }
+    XF86MonBrightnessUp repeat=false hotkey-overlay-title="Nacre:brightness-up" { spawn "nacrectl" "ui" "brightness" "step" "up"; }
+    XF86KbdBrightnessUp repeat=false hotkey-overlay-title="Nacre:keyboard-up" { spawn "nacrectl" "ui" "keyboardLight" "step" "up"; }
+    XF86KbdBrightnessDown repeat=false hotkey-overlay-title="Nacre:keyboard-down" { spawn "nacrectl" "ui" "keyboardLight" "step" "down"; }
+    Super+period repeat=false hotkey-overlay-title="Nacre:emoji" { spawn "nacrectl" "ui" "nacre" "menu" "actions.emoji" ""; }
+    Super+Ctrl+E repeat=false hotkey-overlay-title="Nacre:emoji" { spawn "nacrectl" "ui" "nacre" "menu" "actions.emoji" ""; }
     Print repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "niri msg action screenshot"; }
     Super+Shift+S repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "niri msg action screenshot"; }
     Super+Print repeat=false hotkey-overlay-title="Nacre:save-screenshot" { spawn-sh "mkdir -p \"$HOME/Pictures/Screenshots\" && niri msg action screenshot-screen --show-pointer false --path \"$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png\""; }
@@ -62,16 +62,16 @@ binds {
     Super+Down repeat=false hotkey-overlay-title="Nacre:focus" { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action focus_direction --direction down"; }
     Super+Shift+Down repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action move_direction --direction down"; }
     Super+Alt+Down repeat=true { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action resize_window --width 0 --height 30 --relative true"; }
-    Super+SPACE repeat=false hotkey-overlay-title="Nacre:launcher" { spawn-sh "~/.local/bin/nacre-shell launcher"; }
+    Super+SPACE repeat=false hotkey-overlay-title="Nacre:launcher" { spawn "nacrectl" "ui" "nacre" "launcher" ""; }
     Super+TAB repeat=false hotkey-overlay-title="Nacre:overview" { spawn-sh "niri msg action toggle-overview"; }
-    Super+V repeat=false hotkey-overlay-title="Nacre:clipboard" { spawn-sh "~/.local/bin/nacre-shell clipboard"; }
-    Super+W repeat=false hotkey-overlay-title="Nacre:wallpaper" { spawn-sh "~/.local/bin/nacre-shell wallpaper"; }
-    Super+Z repeat=false { spawn-sh "~/.local/bin/nacre-shell hide"; }
-    Super+O repeat=false { spawn-sh "~/.local/bin/nacre-shell toggle"; }
+    Super+V repeat=false hotkey-overlay-title="Nacre:clipboard" { spawn "nacrectl" "ui" "nacre" "clipboard"; }
+    Super+W repeat=false hotkey-overlay-title="Nacre:wallpaper" { spawn "nacrectl" "ui" "nacre" "launcher" ">wallpaper "; }
+    Super+Z repeat=false { spawn "nacrectl" "ui" "nacre" "hide"; }
+    Super+O repeat=false { spawn "nacrectl" "ui" "drawers" "toggle" "dashboard"; }
     Super+I repeat=false hotkey-overlay-title="Nacre:settings" { spawn-sh "~/.local/bin/nacre-settings"; }
-    Super+Ctrl+C repeat=false { spawn-sh "~/.local/bin/nacre-menu actions.capture"; }
-    Super+X repeat=false hotkey-overlay-title="Nacre:power" { spawn-sh "~/.local/bin/nacre-menu power"; }
-    Super+ESCAPE repeat=false hotkey-overlay-title="Nacre:power" { spawn-sh "~/.local/bin/nacre-menu power"; }
+    Super+Ctrl+C repeat=false { spawn "nacrectl" "ui" "nacre" "menu" "actions.capture" ""; }
+    Super+X repeat=false hotkey-overlay-title="Nacre:power" { spawn "nacrectl" "ui" "nacre" "menu" "power" ""; }
+    Super+ESCAPE repeat=false hotkey-overlay-title="Nacre:power" { spawn "nacrectl" "ui" "nacre" "menu" "power" ""; }
     Super+L repeat=false hotkey-overlay-title="Nacre:lock" { spawn-sh "loginctl lock-session"; }
     Super+Shift+R repeat=false { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action reload"; }
     Super+RETURN repeat=false hotkey-overlay-title="Nacre:terminal" { spawn-sh "uwsm app -- ~/.local/bin/nacre-app terminal"; }
@@ -79,9 +79,9 @@ binds {
     Super+E repeat=false hotkey-overlay-title="Nacre:files" { spawn-sh "~/.local/bin/nacre-app files"; }
     Super+B repeat=false { spawn-sh "~/.local/bin/nacre-brain open"; }
     Super+N repeat=false { spawn-sh "~/.local/bin/nacre-brain capture"; }
-    Super+Ctrl+SPACE repeat=false hotkey-overlay-title="Nacre:palette" { spawn-sh "~/.local/bin/nacre-shell palette"; }
-    Super+K repeat=false hotkey-overlay-title="Nacre:shortcuts" { spawn-sh "~/.local/bin/nacre-menu learn.shortcuts"; }
-    Super+F1 repeat=false hotkey-overlay-title="Nacre:shortcuts" { spawn-sh "~/.local/bin/nacre-menu learn.shortcuts"; }
-    Super+A repeat=false hotkey-overlay-title="Nacre:ai-sidebar" { spawn-sh "~/.local/bin/nacre-shell left"; }
+    Super+Ctrl+SPACE repeat=false hotkey-overlay-title="Nacre:palette" { spawn "nacrectl" "ui" "nacre" "mode" "palette"; }
+    Super+K repeat=false hotkey-overlay-title="Nacre:shortcuts" { spawn "nacrectl" "ui" "nacre" "menu" "learn.shortcuts" ""; }
+    Super+F1 repeat=false hotkey-overlay-title="Nacre:shortcuts" { spawn "nacrectl" "ui" "nacre" "menu" "learn.shortcuts" ""; }
+    Super+A repeat=false hotkey-overlay-title="Nacre:ai-sidebar" { spawn "nacrectl" "ui" "nacre" "left"; }
     Super+Ctrl+D repeat=false hotkey-overlay-title="Nacre:detach-panel" { spawn-sh "~/.local/bin/nacre-shell detach"; }
 }

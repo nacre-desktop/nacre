@@ -29,6 +29,23 @@ pub(super) fn quoted(value: &Value) -> Result<String> {
     text.push('"');
     Ok(text)
 }
+fn launch(command: &str) -> Result<String> {
+    if !command.starts_with("nacrectl ui ") {
+        return Ok(format!("spawn-sh {}", quoted(&json!(command))?));
+    }
+    let argv = crate::menu_actions::editor_words(command)
+        .map_err(|_| invalid("Invalid native UI arguments"))?;
+    if !(4..=20).contains(&argv.len()) {
+        return Err(invalid("Invalid native UI argument count"));
+    }
+    Ok(format!(
+        "spawn {}",
+        argv.iter()
+            .map(|value| quoted(&json!(value)))
+            .collect::<Result<Vec<_>>>()?
+            .join(" ")
+    ))
+}
 pub(super) fn keys(value: &Value) -> Result<String> {
     let value = value.as_str().ok_or_else(|| invalid("Invalid binding"))?;
     let mut pieces = Vec::new();
@@ -430,7 +447,7 @@ pub(super) fn render(contract: &Value) -> Result<Value> {
                             "repeat={}",
                             options.get("repeating").is_some_and(truthy)
                         )];
-                        let mut body = format!("spawn-sh {}", quoted(&json!(command))?);
+                        let mut body = launch(&command)?;
                         if row["action"] == "window.focus-direction"
                             && row["parameters"]["direction"]
                                 .as_str()
@@ -519,4 +536,24 @@ pub(super) fn render(contract: &Value) -> Result<Value> {
     );
     outputs.insert(NIRI_OUTPUTS[2].into(), json!(unsupported));
     Ok(Value::Object(outputs))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn native_ui_bindings_use_literal_argv_and_legacy_commands_keep_their_shell() -> Result<()> {
+        assert_eq!(
+            launch("nacrectl ui nacre launcher ''")?,
+            r#"spawn "nacrectl" "ui" "nacre" "launcher" """#
+        );
+        assert_eq!(
+            launch("nacrectl ui nacre launcher '$(touch forbidden);$HOME'")?,
+            r#"spawn "nacrectl" "ui" "nacre" "launcher" "$(touch forbidden);$HOME""#
+        );
+        assert_eq!(launch("printf fixture")?, r#"spawn-sh "printf fixture""#);
+        assert!(launch("nacrectl ui nacre").is_err());
+        assert!(launch("nacrectl ui nacre launcher '").is_err());
+        Ok(())
+    }
 }

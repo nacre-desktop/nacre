@@ -165,6 +165,8 @@ Scope {
         }
     }
     function refresh(force = false) {
+        if (NacreDaemon.enabled)
+            return;
         if (shared) {
             shared.refresh(force);
             return;
@@ -183,6 +185,8 @@ Scope {
         NacreControlTools.refresh();
     }
     function prepare(route, query = "", opened = false) {
+        if (NacreDaemon.enabled)
+            return;
         // Reset/query bindings can request this more than once during an open.
         // Coalesce refreshes and let the panel start presenting first.
         if (opened)
@@ -1263,6 +1267,10 @@ Scope {
     }
     function keepOpen(row) {
         return ["toggle", "setting-toggle", "personality", "background", "palette-mode", "accent", "wallpaper", "next-wallpaper", "font", "info", "scope", "form", "timer-cancel", "webapp-remove", "power-profile", "media", "audio-output", "clip-pin", "clip-delete", "file-action", "workflow-remove", "software-theme", "software-extension-toggle", "software-extension-install", "software-extension-update", "software-extension-remove", "software-extension-theme"].includes(row.operation);
+    }
+    function daemonOperationSupported(operation) {
+        // The provider accepts only operations already implemented by this view.
+        return ["accent", "ai-terminal", "ask", "audio-output", "background", "bring-visitors", "calculator", "clip-pin", "clip-delete", "command", "config", "copy", "copy-clip", "environment", "extension-theme", "file-action", "focus", "font", "form", "info", "install", "install-package", "legacy", "legacy-action", "maintenance", "media", "mono-font", "next-wallpaper", "note", "open-file", "palette-mode", "personality", "power", "power-profile", "remove", "remove-package", "route", "scope", "search-web", "setting-toggle", "settings", "software-open", "software-theme", "software-theme-remove", "software-preview", "software-extension-install", "software-extension-open", "software-extension-toggle", "software-extension-update", "software-extension-remove", "software-extension-theme", "system-action", "timer-cancel", "toggle", "tool", "tui-launch", "tui-remove", "url", "wallpaper", "webapp", "webapp-offer", "webapp-remove", "workflow", "workflow-remove"].includes(operation);
     }
     function execute(row, confirmed = false) {
         if (shared)

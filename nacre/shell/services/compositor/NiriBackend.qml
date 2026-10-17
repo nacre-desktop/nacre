@@ -67,6 +67,123 @@ Singleton {
     property int actionSequence: 0
     property var activeAction: null
     property var movingWindows: ({})
+    readonly property bool daemonMode: NacreDaemon.enabled
+    readonly property var daemonState: NacreDaemon.topic("compositor")
+    readonly property var daemonEvents: NacreDaemon.topic("compositor.events")
+    property string daemonConnection: ""
+    property string daemonCheck: ""
+    property int daemonActions: 0
+    property bool daemonSubscribed: false
+    function daemonRefresh() {
+        if (!daemonMode)
+            return;
+        const state = daemonState.data;
+        const source = daemonEvents.data;
+        if (!NacreDaemon.connected || !daemonState.fresh || !daemonEvents.fresh || !state.available || state.backend !== "niri" || !source.available) {
+            connected = false;
+            daemonConnection = "";
+            daemonCheck = "";
+            return;
+        }
+        const key = NacreDaemon.boot + "/" + source.connectionId;
+        if (daemonCheck !== key) {
+            daemonCheck = key;
+            daemonConnection = "";
+            connected = false;
+            NacreDaemon.call("niri.source", {
+                socket: Quickshell.env("NIRI_SOCKET")
+            }, (value, failure) => {
+                if (root.daemonCheck !== key || !NacreDaemon.connected)
+                    return;
+                if (failure || value?.connection_id !== source.connectionId) {
+                    root.daemonCheck = "";
+                    root.error = NacreI18n.tr("ui.niri.error.ipc-unavailable", "Niri IPC is unavailable.");
+                    return;
+                }
+                root.daemonConnection = value.connection_id;
+                root.daemonRefresh();
+            });
+            return;
+        }
+        if (!daemonConnection)
+            return;
+        const ordered = (name, order) => (state[order] || []).map(id => state[name]?.[id]).filter(value => value);
+        accept({
+            type: "snapshot",
+            windows: ordered("windows", "windowOrder"),
+            workspaces: ordered("workspaces", "workspaceOrder"),
+            monitors: ordered("outputs", "outputOrder"),
+            activeWindow: state.windows?.[state.focus?.windowId],
+            activeWorkspace: state.workspaces?.[state.focus?.workspaceId],
+            focusedMonitor: state.outputs?.[state.focus?.outputId],
+            overviewOpen: state.overviewOpen,
+            overviewHoverSupported: state.overviewHoverSupported,
+            overviewHoveredWindowId: state.overviewHoveredWindowId,
+            configFailed: state.configFailed
+        });
+    }
+    function daemonSubscriptions() {
+        if (daemonMode && !daemonSubscribed) {
+            daemonSubscribed = true;
+            reconnect.stop();
+            NacreDaemon.subscribe("compositor");
+            NacreDaemon.subscribe("compositor.events");
+        } else if (!daemonMode && daemonSubscribed) {
+            daemonSubscribed = false;
+            NacreDaemon.unsubscribe("compositor");
+            NacreDaemon.unsubscribe("compositor.events");
+        }
+        stream.running = !daemonMode;
+        if (daemonMode) {
+            pendingActions = [];
+            activeAction = null;
+            worker.running = false;
+        }
+        connected = false;
+        daemonConnection = "";
+        daemonCheck = "";
+        daemonRefresh();
+    }
+    Component.onCompleted: daemonSubscriptions()
+    onDaemonModeChanged: daemonSubscriptions()
+    Component.onDestruction: {
+        if (daemonSubscribed) {
+            NacreDaemon.unsubscribe("compositor");
+            NacreDaemon.unsubscribe("compositor.events");
+        }
+    }
+    Connections {
+        target: root.daemonState
+        function onDataChanged() {
+            root.daemonRefresh();
+        }
+        function onFreshChanged() {
+            root.daemonRefresh();
+        }
+    }
+    Connections {
+        target: root.daemonEvents
+        function onDataChanged() {
+            root.daemonRefresh();
+        }
+        function onFreshChanged() {
+            root.daemonRefresh();
+        }
+    }
+    Connections {
+        target: NacreDaemon
+        function onConnectedChanged() {
+            root.daemonRefresh();
+        }
+        function onEvent(topic, name, data, sequence) {
+            if (root.daemonMode && root.connected && topic === "compositor.events" && name === "niri")
+                root.accept(data);
+        }
+        function onLost(topic) {
+            if (root.daemonMode && topic === "compositor.events")
+                NacreDaemon.resync(root.daemonState);
+        }
+    }
     signal event(var value)
     signal configurationReloaded
     signal panelGesture(string data)
@@ -181,6 +298,11 @@ Singleton {
         return targets.length > 0;
     }
     IpcHandler {
+        id: compositorIpc
+        Component.onCompleted: NacreDaemon.registerIpc("nacreCompositor", compositorIpc, {
+            "shortcut": ["s"]
+        })
+        Component.onDestruction: NacreDaemon.unregisterIpc("nacreCompositor", compositorIpc)
         target: "nacreCompositor"
         function shortcut(name: string): bool {
             return root.triggerShortcut(name);
@@ -189,7 +311,7 @@ Singleton {
     Process {
         id: stream
         objectName: "niriEventStream"
-        running: true
+        running: !root.daemonMode
         environment: ({
                 NACRE_COMPOSITOR: "niri",
                 NACRE_NIRI_WORKSPACE_POLICY: "1"
@@ -206,6 +328,8 @@ Singleton {
             }
         }
         onExited: (exitCode, exitStatus) => {
+            if (root.daemonMode)
+                return;
             root.connected = false;
             root.movingWindows = {};
             root.event({
@@ -227,11 +351,31 @@ Singleton {
         id: reconnect
         interval: Math.min(5000, 250 * Math.pow(2, Math.min(root.reconnectAttempt, 5)))
         onTriggered: {
+            if (root.daemonMode)
+                return;
             root.reconnectAttempt++;
             stream.running = true;
         }
     }
     function action(name, args = []) {
+        if (daemonMode) {
+            if (!connected || !daemonConnection || daemonActions >= 64) {
+                error = connected ? NacreI18n.tr("ui.niri.error.action-queue-full", "Compositor action queue is full.") : NacreI18n.tr("ui.niri.error.ipc-unavailable", "Niri IPC is unavailable.");
+                return false;
+            }
+            daemonActions++;
+            NacreDaemon.call("niri.action", {
+                connection_id: daemonConnection,
+                argv: ["action", name, ...args]
+            }, (value, failure) => {
+                root.daemonActions--;
+                if (failure || value?.ok !== true)
+                    root.error = NacreI18n.tr("ui.niri.error.action-failed", "Niri action failed: {detail}", {
+                        detail: failure?.message || value?.error || "Invalid action response"
+                    });
+            });
+            return true;
+        }
         if (!connected || pendingActions.length >= 64) {
             error = connected ? NacreI18n.tr("ui.niri.error.action-queue-full", "Compositor action queue is full.") : NacreI18n.tr("ui.niri.error.ipc-unavailable", "Niri IPC is unavailable.");
             return false;
@@ -246,6 +390,8 @@ Singleton {
         return true;
     }
     function runNext() {
+        if (daemonMode)
+            return;
         if (!connected || activeAction || !pendingActions.length)
             return;
         if (!worker.running) {
@@ -291,6 +437,8 @@ Singleton {
             }
         }
         onExited: (exitCode, exitStatus) => {
+            if (root.daemonMode)
+                return;
             if (exitCode !== 0 || root.activeAction) {
                 root.error = NacreI18n.tr("ui.niri.error.action-failed", "Niri action failed: {detail}", {
                     detail: stderr.text.trim().split("\n").slice(-1)[0]
@@ -340,6 +488,11 @@ Singleton {
         return rect && [rect.x, rect.y, rect.width, rect.height].every(Number.isFinite) && rect.width > 0 && rect.height > 0 ? windowAction("place_window", id, ["--x", String(Math.round(rect.x)), "--y", String(Math.round(rect.y)), "--width", String(Math.round(rect.width)), "--height", String(Math.round(rect.height))]) : false;
     }
     function refreshState() {
+        if (daemonMode) {
+            NacreDaemon.resync(daemonState);
+            NacreDaemon.resync(daemonEvents);
+            return;
+        }
         // The stream already owns the authoritative cache. Reconnect only if down.
         if (!stream.running && !reconnect.running)
             stream.running = true;

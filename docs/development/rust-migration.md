@@ -49,7 +49,7 @@ Direct pinned Orient libraries own paired publication; no Orient process/RPC.
 Custom absolute XDG paths and direct D-Bus/socket transports are intended differences.
 Reference outputs are immutable; security additions use explicit new cases.
 
-Foundation: F0 → F1 → F2 events/session → launcher engine → remaining F2 → F3 → F4; then owner-approved core controls/weather/updates workers. Publish schema-only contracts before F4; advertise capabilities only when implemented.
+Foundation: F0 → F1 → F2 events/session → launcher engine → remaining F2 → F3 → F4; then owner-approved core-switch services/weather/updates block. Schema-only contracts publish before F4; runtime capabilities stay unadvertised until implemented.
 Oct16 order: schema3042f3f2 published first; immutable JS ranking/provider parity, indexed catalog next.
 Long-running or frequently called work → daemon service; rare/heavy/risky → worker.
 Settings' unpublished controller port is parked for F4, not a standalone landing.
@@ -76,5 +76,5 @@ Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hosts
 UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-Next: Core-service schema-only contracts: 372 Rust/938 repo (1 existing optional skip)/534 immutable parity, fmt/Clippy/schema/examples/minimal pass; 11 reserved topics/15 methods, 12 new transcripts, old fixtures unchanged. No runtime registration, deps/bead pin or service takeover. Publish/full CI before integrating the preserved F3 callers and paired measurements; F4 sole writer follows, then owner-approved core controls/weather/updates workers. Calculator e0a81ce7 CI38994431818 remains green; F3 final performance is pending. Existing privacy, authentication and privilege policy remains.
+Next: Core-service schemas c2b26d98 published, Source CI39010730141 fully green. Preserved F3 local/unpublished: 377 Rust/950 repo (3 existing optional skips)/534 immutable parity, fmt/Clippy/schema/examples/minimal, 11 actual Qt/16 frozen i18n pass; four niri/Hyprland English/pseudo diagnostics retain LKG/stale/modal behavior (~882–887ms restart→fresh). No accepted new performance comparison. F3 replayed onto the green schemas; validate its exact combined build and reader idle-trim API, run exact-source paired CLI latency/combined memory/idle gates, push/full CI; then F4 sole writer and owner-approved core controls/weather/updates workers. Opt-in NACRE_DAEMON_CLIENT=1; legacy default.
 No live desktop/config/network changes, tags, releases or package publication.

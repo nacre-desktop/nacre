@@ -163,6 +163,14 @@ def install_modules(directory):
             )
     if "NacreHelpers" not in entries:
         entries["NacreHelpers"] = (True, STUBS.parent / "fixtures/NacreHelpers.qml")
+    if "NacreDaemon" not in entries:
+        # Legacy component tests use the real, default-disabled link rather
+        # than an incomplete daemon double. Quickshell's fixture environment
+        # has no opt-in, so no socket/process is started by this dependency.
+        entries["NacreDaemon"] = (
+            True,
+            (tree if tree.exists() else SHELL) / "services/NacreDaemon.qml",
+        )
     # Native providers can be overridden by a fixture, while their module stays intact.
     for folder in [imports / "Quickshell", *(imports / "Quickshell").rglob("*")]:
         if not folder.is_dir() or not (folder / "qmldir").exists():

@@ -1,0 +1,364 @@
+{
+  "source_sha256": "d9c43bb838d9c96fc10b26b77b9aa0d6c2c184676d6f1c0259d223a301072906",
+  "runtime": "Quickshell 0.3.2 QV4",
+  "cases": [
+    {
+      "op": "localize",
+      "language": "en",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "value": {
+        "name": "Window",
+        "nameId": "fixture.name",
+        "desktopId": "literal.desktop",
+        "nested": [
+          {
+            "label": "Open",
+            "labelId": "fixture.label"
+          },
+          {
+            "name": "Fallback",
+            "nameId": "missing"
+          }
+        ],
+        "plain": [
+          "Keep literal",
+          1,
+          true
+        ]
+      },
+      "expected": {
+        "name": "Window {count}",
+        "nameId": "fixture.name",
+        "desktopId": "literal.desktop",
+        "nested": [
+          {
+            "label": "<b>Open</b>",
+            "labelId": "fixture.label"
+          },
+          {
+            "name": "Fallback",
+            "nameId": "missing"
+          }
+        ],
+        "plain": [
+          "Keep literal",
+          1,
+          true
+        ]
+      }
+    },
+    {
+      "op": "translate",
+      "language": "en",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": 0
+      },
+      "expected": "0 items"
+    },
+    {
+      "op": "translate",
+      "language": "en",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": 1
+      },
+      "expected": "1 item"
+    },
+    {
+      "op": "translate",
+      "language": "en",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": 2
+      },
+      "expected": "2 items"
+    },
+    {
+      "op": "translate",
+      "language": "en",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": "1"
+      },
+      "expected": "1 item"
+    },
+    {
+      "op": "translate",
+      "language": "en",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": true
+      },
+      "expected": "true item"
+    },
+    {
+      "op": "translate",
+      "language": "en",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": 1
+      },
+      "expected": "1 item"
+    },
+    {
+      "op": "translate",
+      "language": "en",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "missing",
+      "fallback": "<i>ABC xyz</i> {who} {missing} {count}",
+      "args": {
+        "who": "$& café",
+        "count": 12.5
+      },
+      "expected": "<i>ABC xyz</i> $& café {missing} 12.5"
+    },
+    {
+      "op": "localize",
+      "language": "pseudo",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "value": {
+        "name": "Window",
+        "nameId": "fixture.name",
+        "desktopId": "literal.desktop",
+        "nested": [
+          {
+            "label": "Open",
+            "labelId": "fixture.label"
+          },
+          {
+            "name": "Fallback",
+            "nameId": "missing"
+          }
+        ],
+        "plain": [
+          "Keep literal",
+          1,
+          true
+        ]
+      },
+      "expected": {
+        "name": "[Ŵïñďöŵ {count} ~~~]",
+        "nameId": "fixture.name",
+        "desktopId": "literal.desktop",
+        "nested": [
+          {
+            "label": "[<b>Öþëñ</b> ~~]",
+            "labelId": "fixture.label"
+          },
+          {
+            "name": "[Ƒáľľƀáçķ ~~~~]",
+            "nameId": "missing"
+          }
+        ],
+        "plain": [
+          "Keep literal",
+          1,
+          true
+        ]
+      }
+    },
+    {
+      "op": "translate",
+      "language": "pseudo",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": 0
+      },
+      "expected": "[0 ïţëḿš ~~]"
+    },
+    {
+      "op": "translate",
+      "language": "pseudo",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": 1
+      },
+      "expected": "[1 ïţëḿ ~~]"
+    },
+    {
+      "op": "translate",
+      "language": "pseudo",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": 2
+      },
+      "expected": "[2 ïţëḿš ~~]"
+    },
+    {
+      "op": "translate",
+      "language": "pseudo",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": "1"
+      },
+      "expected": "[1 ïţëḿ ~~]"
+    },
+    {
+      "op": "translate",
+      "language": "pseudo",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": true
+      },
+      "expected": "[true ïţëḿ ~~]"
+    },
+    {
+      "op": "translate",
+      "language": "pseudo",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "fixture.plural",
+      "fallback": "fallback",
+      "args": {
+        "count": 1
+      },
+      "expected": "[1 ïţëḿ ~~]"
+    },
+    {
+      "op": "translate",
+      "language": "pseudo",
+      "messages": {
+        "fixture.name": "Window {count}",
+        "fixture.label": "<b>Open</b>",
+        "fixture.plural": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "id": "missing",
+      "fallback": "<i>ABC xyz</i> {who} {missing} {count}",
+      "args": {
+        "who": "$& café",
+        "count": 12.5
+      },
+      "expected": "[<i>ÁɃÇ ẋÿž</i> $& café {missing} 12.5 ~~~]"
+    }
+  ]
+}

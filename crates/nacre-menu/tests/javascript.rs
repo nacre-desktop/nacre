@@ -14,6 +14,51 @@ fn reference() -> Result<Value> {
     Ok(serde_json::from_slice(&bytes)?)
 }
 #[test]
+fn actual_qt_reference_has_only_the_six_documented_ecmascript_differences() -> Result<()> {
+    let node = reference()?;
+    let mut bytes = Vec::new();
+    flate2::read::GzDecoder::new(include_bytes!("fixtures/javascript-qt.json.gz").as_slice())
+        .read_to_end(&mut bytes)?;
+    assert_eq!(
+        format!("{:x}", Sha256::digest(&bytes)),
+        "ed6fd1ecf5c6613a4cfc1a718693f134fa971dd8ea71e92c72d3a3add484c07a"
+    );
+    let qt: Value = serde_json::from_slice(&bytes)?;
+    let sources = qt["sources"]
+        .as_object()
+        .ok_or("Missing Qt source hashes")?;
+    assert_eq!(sources.len(), 4);
+    for (path, hash) in sources {
+        assert_eq!(hash, &node["sources"][path]);
+    }
+    assert_eq!(qt["catalogs"], node["catalogs"]);
+    let qt = qt["cases"].as_array().ok_or("Missing Qt cases")?;
+    let node = node["cases"].as_array().ok_or("Missing Node cases")?;
+    assert_eq!(qt.len(), 394);
+    assert_eq!(node.len(), qt.len());
+    let mut differences = Vec::new();
+    for (qt, node) in qt.iter().zip(node) {
+        let mut inputs = qt.clone();
+        inputs
+            .as_object_mut()
+            .ok_or("Invalid Qt case")?
+            .remove("expected");
+        let mut original = node.clone();
+        original
+            .as_object_mut()
+            .ok_or("Invalid Node case")?
+            .remove("expected");
+        assert_eq!(inputs, original);
+        if qt["expected"] != node["expected"] {
+            differences.push(qt["id"].as_u64().ok_or("Missing case ID")?);
+        }
+    }
+    // Keep standard ECMAScript final sigma and whitespace in the shared engine;
+    // the old Qt runtime differs here. Neither frozen output is rewritten.
+    assert_eq!(differences, [161, 162, 211, 212, 213, 216]);
+    Ok(())
+}
+#[test]
 fn frozen_current_javascript_outputs_are_exact() -> Result<()> {
     let reference = reference()?;
     let ordering = OrderingRules::new("en-US")?;

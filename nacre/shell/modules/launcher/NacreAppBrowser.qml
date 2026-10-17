@@ -32,6 +32,14 @@ NacreSurface {
     property var form: null
     property bool formPending: false
     property var activePrompt: null
+    NacreMenuQuery {
+        id: nativeQuery
+        active: root.visibilities.launcher && !root.picker
+        query: root.query
+        route: root.route
+        resultFilter: root.resultFilter
+        category: root.softwareCategory
+    }
     readonly property string query: search?.text || ""
     readonly property var scope: Menu.scope(query)
     readonly property bool calculation: scope.kind === "calculator" && root.menu.sourceOptions.calculator
@@ -39,6 +47,12 @@ NacreSurface {
     readonly property var calculationResult: {
         if (!calculation)
             return {
+                ok: false
+            };
+        if (NacreDaemon.enabled)
+            return nativeQuery.current ? nativeQuery.result.conversion || {
+                ok: false
+            } : {
                 ok: false
             };
         const basic = Calculator.evaluate(scope.text);
@@ -62,6 +76,8 @@ NacreSurface {
                     operation: "choice",
                     icon: entry.icon || "chevron_right"
                 })), query);
+        if (NacreDaemon.enabled)
+            return nativeQuery.entries;
         if (calculation)
             return calculationResult.ok ? [
                 {
@@ -425,6 +441,26 @@ NacreSurface {
         }
         if (entry.hidden && !query) {
             LauncherPreferences.update("hide", entry.id, false);
+            return;
+        }
+        // Presentation data does not authorize activation. Context actions with
+        // a changed row ID cannot inherit the original row's engine ticket.
+        if (NacreDaemon.enabled && entry.daemonTicket && entry.id === entry.daemonRowId && entry.operation === entry.daemonOperation) {
+            nativeQuery.activate(entry, (value, failure) => {
+                if (failure) {
+                    root.menu.message = failure.message;
+                    return;
+                }
+                if (value.view?.route !== undefined)
+                    root.navigate(value.view.route);
+                if (value.view?.query !== undefined)
+                    search.text = value.view.query;
+                if (!value.keep_open && (!root.detached || root.closeAfterLaunch)) {
+                    root.visibilities.launcher = false;
+                    if (root.detached)
+                        root.closeRequested();
+                }
+            });
             return;
         }
         if (entry.operation === "scope") {
@@ -1563,7 +1599,7 @@ NacreSurface {
         x: 20
         y: parent.height - 88
         width: parent.width - 40
-        text: root.menu.catalog.error || root.menu.library.message || root.menu.workflows.message || root.menu.message || (root.calculation ? NacreI18n.tr("launcher.app-browser.text.enter-copies-the-result", "Enter copies the result") : root.picker ? NacreI18n.tr("launcher.app-browser.text.enter-chooses-escape-cancels", "Enter chooses · Escape cancels") : NacreI18n.tr("launcher.app-browser.text.enter-opens-tab-item-actions-ctrl-d-favorite", "Enter opens · Tab item actions · Ctrl+D favorite"))
+        text: (NacreDaemon.enabled && NacreDaemon.stale ? NacreI18n.tr("helper.sidebar-chat.reconnecting", "Reconnecting…") : "") || nativeQuery.error || root.menu.catalog.error || root.menu.library.message || root.menu.workflows.message || root.menu.message || (root.calculation ? NacreI18n.tr("launcher.app-browser.text.enter-copies-the-result", "Enter copies the result") : root.picker ? NacreI18n.tr("launcher.app-browser.text.enter-chooses-escape-cancels", "Enter chooses · Escape cancels") : NacreI18n.tr("launcher.app-browser.text.enter-opens-tab-item-actions-ctrl-d-favorite", "Enter opens · Tab item actions · Ctrl+D favorite"))
         textFormat: Text.PlainText
         font.pointSize: 9
         color: NacreColours.palette.m3onSurfaceVariant

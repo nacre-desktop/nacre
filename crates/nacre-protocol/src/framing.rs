@@ -123,15 +123,40 @@ impl Decoder {
 pub struct Reader<R> {
     reader: R,
     line: Vec<u8>,
+    complete: bool,
 }
 impl<R: AsyncBufRead + Unpin> Reader<R> {
     pub fn new(reader: R) -> Self {
         Self {
             reader,
             line: Vec::new(),
+            complete: false,
         }
     }
-    pub async fn next(&mut self) -> Result<Option<Message>, Failure> {
+    /// Capacity of this reader's line buffer, excluding the underlying reader.
+    pub fn retained_bytes(&self) -> usize {
+        self.line.capacity()
+    }
+    /// Release a completed/empty frame's allocation when above the ceiling.
+    /// A cancelled, unfinished frame is never discarded. Completed raw bytes
+    /// can be released only after their borrow ends. This does not promise an
+    /// allocator or process RSS reduction.
+    pub fn trim_idle(&mut self, max_bytes: usize) -> bool {
+        if !self.complete && !self.line.is_empty() {
+            return false;
+        }
+        if self.line.capacity() <= max_bytes {
+            return false;
+        }
+        self.line = Vec::new();
+        self.complete = false;
+        true
+    }
+    async fn line(&mut self) -> Result<bool, Failure> {
+        if self.complete {
+            self.line.clear();
+            self.complete = false;
+        }
         loop {
             let data = self
                 .reader
@@ -140,7 +165,7 @@ impl<R: AsyncBufRead + Unpin> Reader<R> {
                 .map_err(|_| Failure::new(ErrorCode::Io, "Protocol read failed", true))?;
             if data.is_empty() {
                 return if self.line.is_empty() {
-                    Ok(None)
+                    Ok(false)
                 } else {
                     Err(invalid())
                 };
@@ -154,11 +179,27 @@ impl<R: AsyncBufRead + Unpin> Reader<R> {
             self.line.extend_from_slice(&data[..content]);
             self.reader.consume(used);
             if newline.is_some() {
-                let result = decode(&self.line).map(Some);
-                self.line.clear();
-                return result;
+                self.complete = true;
+                return Ok(true);
             }
         }
+    }
+    pub async fn next(&mut self) -> Result<Option<Message>, Failure> {
+        if self.line().await? {
+            decode(&self.line).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+    /// Validated original bytes, excluding LF. Bridges retain unknown optional
+    /// fields rather than dropping them during typed reserialization. The buffer
+    /// is reused on the next read, including after a cancelled partial read.
+    pub async fn next_raw(&mut self) -> Result<Option<&[u8]>, Failure> {
+        if !self.line().await? {
+            return Ok(None);
+        }
+        decode(&self.line)?;
+        Ok(Some(&self.line))
     }
 }
 /// Convenience for reads that are not resumed after cancellation.

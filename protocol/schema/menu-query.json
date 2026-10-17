@@ -31,6 +31,29 @@
       "format": "uint32",
       "minimum": 1,
       "maximum": 2048
+    },
+    "filter": {
+      "description": "Existing launcher result filter; omitted retains \"all\".",
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "category": {
+      "description": "Existing software browser category; omitted retains \"all\".",
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "presentation": {
+      "description": "Include existing view metadata for the compatibility QML view.",
+      "type": [
+        "boolean",
+        "null"
+      ]
     }
   }
 }

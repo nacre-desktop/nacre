@@ -46,6 +46,9 @@ async fn dispatch(
 ) -> Result<Value, Failure> {
     match method.as_str() {
         "daemon.ping" => Ok(Value::Null),
+        method @ ("niri.source" | "niri.action") => {
+            super::niri_actions::dispatch(hub, method, params).await
+        }
         method @ ("helper.execute" | "helper.transfer")
             if !hub.borrow().safe && hub.borrow().services.contains_key("helper-lanes") =>
         {
@@ -94,7 +97,7 @@ async fn call(
             .map_or(1000, |m| m.timeout)
     });
     let ui = method.starts_with("ui.");
-    let helper = method == "helper.execute";
+    let helper = method == "helper.execute" || method == "niri.action";
     let future = AssertUnwindSafe(dispatch(hub, method, params, timeout, transfer)).catch_unwind();
     let result = match tokio::time::timeout(Duration::from_millis(u64::from(ms)), future).await {
         Ok(Ok(result)) => result,

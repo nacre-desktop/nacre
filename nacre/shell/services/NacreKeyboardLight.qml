@@ -43,6 +43,13 @@ Singleton {
         onTriggered: root.readNative()
     }
     IpcHandler {
+        id: keyboardLightIpc
+        Component.onCompleted: NacreDaemon.registerIpc("keyboardLight", keyboardLightIpc, {
+            "step": ["s"],
+            "set": ["r"],
+            "state": []
+        })
+        Component.onDestruction: NacreDaemon.unregisterIpc("keyboardLight", keyboardLightIpc)
         target: "keyboardLight"
         function step(direction: string): void {
             root.step(direction);

@@ -146,6 +146,13 @@ Singleton {
         onPressed: root.decreaseBrightness()
     }
     IpcHandler {
+        id: brightnessIpc
+        Component.onCompleted: NacreDaemon.registerIpc("brightness", brightnessIpc, {
+            "step": ["s"],
+            "set": ["r"],
+            "state": []
+        })
+        Component.onDestruction: NacreDaemon.unregisterIpc("brightness", brightnessIpc)
         target: "brightness"
         function step(direction: string): void {
             root.step(direction);

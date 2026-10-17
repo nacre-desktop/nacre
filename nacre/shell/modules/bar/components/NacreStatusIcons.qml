@@ -24,6 +24,18 @@ Item {
     signal activated(string name, var item, bool pointerOwned)
     signal peekRequested(string name, var item, bool hovered)
     signal interactionStarted
+    NacreIcon {
+        objectName: "nacreDaemonReconnecting"
+        visible: NacreDaemon.enabled && NacreDaemon.stale
+        anchors.top: parent.top
+        anchors.right: parent.right
+        width: 12
+        height: 12
+        font.pointSize: 8
+        text: "sync_problem"
+        color: NacreColours.palette.m3error
+        Accessible.name: NacreI18n.tr("helper.sidebar-chat.reconnecting", "Reconnecting…")
+    }
     function quickToggle(name) {
         if (name === "audio" && NacreAudio.available !== false)
             NacreAudio.toggleMute();

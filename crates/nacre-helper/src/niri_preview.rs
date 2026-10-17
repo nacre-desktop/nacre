@@ -729,9 +729,8 @@ mod tests {
         let reference: Value = serde_json::from_str(include_str!(
             "../tests/fixtures/niri-preview-preparation-reference.json"
         ))?;
-        let backend = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../..")
-            .canonicalize()?;
+        let frozen_backend = crate::test_support::legacy_compositor_backend()?;
+        let backend = frozen_backend.path().canonicalize()?;
         for case in reference["cases"]
             .as_array()
             .ok_or("Missing preparation cases")?

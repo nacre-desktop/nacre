@@ -83,6 +83,7 @@ pub struct Hub {
     pub providers: super::menu_worker::Pool,
     pub helper_lanes: [Rc<tokio::sync::Mutex<()>>; 6],
     pub niri_width_source: super::widths::Source,
+    pub compositor: Option<super::compositor_control::Control>,
 }
 impl Hub {
     pub fn new(boot: String, safe: bool, frame: Duration) -> Self {
@@ -106,6 +107,7 @@ impl Hub {
             providers: super::menu_worker::Pool::default(),
             helper_lanes: std::array::from_fn(|_| Rc::new(tokio::sync::Mutex::new(()))),
             niri_width_source: super::widths::Source::default(),
+            compositor: None,
         }
     }
     pub fn shared(self) -> Shared {
@@ -234,6 +236,9 @@ impl Hub {
     }
     fn fixed_methods(&self) -> BTreeMap<String, Method> {
         let mut methods = nacre_protocol::core_methods();
+        if self.compositor.is_some() && self.topics.contains_key(super::niri_events::TOPIC) {
+            methods.extend(super::niri_actions::methods());
+        }
         if !self.safe && self.services.contains_key("session-watch") {
             methods.extend(super::session_policy::methods());
         }

@@ -38,6 +38,101 @@ fn framing_bounds_types_duplicates_and_unknown_optional_fields() {
     maximum.push(b' ');
     assert!(framing::decode(&maximum).is_err());
 }
+#[tokio::test(flavor = "current_thread")]
+async fn raw_bridge_frames_keep_unknown_fields_whitespace_and_cancelled_bytes() {
+    use tokio::io::{AsyncWriteExt, BufReader};
+    let (mut write, read) = tokio::io::duplex(4096);
+    let wire = b" {\"t\":\"ping\", \"id\":\"fixture\",\"future\":{\"label\":\"caf\xc3\xa9\"}}\r\n";
+    let split = wire.len() - 6;
+    write.write_all(&wire[..split]).await.unwrap();
+    let mut reader = framing::Reader::new(BufReader::new(read));
+    tokio::select! {
+        result = reader.next_raw() => panic!("Incomplete raw frame returned {result:?}"),
+        _ = tokio::task::yield_now() => {},
+    }
+    write.write_all(&wire[split..]).await.unwrap();
+    write
+        .write_all(b"{\"t\":\"ping\",\"id\":2}\n")
+        .await
+        .unwrap();
+    assert_eq!(
+        reader.next_raw().await.unwrap().unwrap(),
+        &wire[..wire.len() - 1]
+    );
+    assert_eq!(
+        reader.next().await.unwrap(),
+        Some(Message::Ping { id: Id::Integer(2) })
+    );
+    drop(write);
+    assert!(reader.next_raw().await.unwrap().is_none());
+}
+#[tokio::test(flavor = "current_thread")]
+async fn idle_trim_releases_completed_frames_and_preserves_pipelined_input() {
+    use tokio::io::{AsyncWriteExt, BufReader};
+    for raw in [false, true] {
+        let (mut writer, stream) = tokio::io::duplex(MAX_FRAME + 128);
+        let first = Message::Ping { id: Id::Integer(1) };
+        let second = Message::Ping { id: Id::Integer(2) };
+        let mut wire = framing::encode(&first).unwrap();
+        assert_eq!(wire.pop(), Some(b'\n'));
+        wire.resize(MAX_FRAME, b' ');
+        wire.push(b'\n');
+        wire.extend(framing::encode(&second).unwrap());
+        writer.write_all(&wire).await.unwrap();
+        drop(writer);
+        let mut reader = framing::Reader::new(BufReader::new(stream));
+        assert_eq!(reader.retained_bytes(), 0);
+        assert!(!reader.trim_idle(0));
+        if raw {
+            assert_eq!(reader.next_raw().await.unwrap().unwrap().len(), MAX_FRAME);
+        } else {
+            assert_eq!(reader.next().await.unwrap(), Some(first));
+        }
+        assert!(reader.retained_bytes() >= MAX_FRAME);
+        let capacity = reader.retained_bytes();
+        assert!(!reader.trim_idle(capacity));
+        assert_eq!(reader.retained_bytes(), capacity);
+        assert!(reader.trim_idle(4096));
+        assert_eq!(reader.retained_bytes(), 0);
+        assert_eq!(reader.next().await.unwrap(), Some(second));
+        assert!(reader.trim_idle(0));
+        assert_eq!(reader.retained_bytes(), 0);
+        assert!(reader.next_raw().await.unwrap().is_none());
+        assert!(!reader.trim_idle(0));
+    }
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn idle_trim_refuses_cancelled_partial_frames() {
+    use std::time::Duration;
+    use tokio::io::{AsyncWriteExt, BufReader};
+    for raw in [false, true] {
+        let (mut writer, stream) = tokio::io::duplex(4096);
+        let expected = Message::Ping { id: Id::Integer(7) };
+        let wire = framing::encode(&expected).unwrap();
+        let split = wire.len() / 2;
+        writer.write_all(&wire[..split]).await.unwrap();
+        let mut reader = framing::Reader::new(BufReader::new(stream));
+        let timed_out = if raw {
+            tokio::time::timeout(Duration::from_millis(10), reader.next_raw())
+                .await
+                .is_err()
+        } else {
+            tokio::time::timeout(Duration::from_millis(10), reader.next())
+                .await
+                .is_err()
+        };
+        assert!(timed_out);
+        let capacity = reader.retained_bytes();
+        assert!(capacity >= split);
+        assert!(!reader.trim_idle(0));
+        assert_eq!(reader.retained_bytes(), capacity);
+        writer.write_all(&wire[split..]).await.unwrap();
+        assert_eq!(reader.next().await.unwrap(), Some(expected));
+        assert!(reader.trim_idle(0));
+    }
+}
+
 #[test]
 fn coalesced_sequences_and_gaps_replay_without_mutating_last_good_value() {
     let trace = artifacts::transcripts()

@@ -6,6 +6,13 @@
     "directory": {
       "description": "Private directory leased to this connection, removed when it disconnects.",
       "type": "string"
+    },
+    "file": {
+      "description": "A newly reserved owner-only input packet, when requested.",
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "required": [

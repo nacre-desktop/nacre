@@ -49,39 +49,7 @@ pub(crate) async fn connect_at(
     path: &std::path::Path,
     name: &str,
 ) -> std::result::Result<Client, ConnectError> {
-    if let Err(error) = socket::validate_endpoint(path) {
-        return Err(if error.downcast_ref::<io::Error>().is_some_and(absent) {
-            ConnectError::Absent
-        } else {
-            ConnectError::Failed(error)
-        });
-    }
-    let stream = tokio::time::timeout(Duration::from_secs(2), UnixStream::connect(path))
-        .await
-        .map_err(|_| {
-            ConnectError::Failed(
-                nacre_protocol::Failure::new(
-                    ErrorCode::Timeout,
-                    "Daemon connection timed out",
-                    true,
-                )
-                .into(),
-            )
-        })?
-        .map_err(|error| {
-            if absent(&error) {
-                ConnectError::Absent
-            } else {
-                ConnectError::Failed(error.into())
-            }
-        })?;
-    socket::check_uid(
-        stream
-            .peer_cred()
-            .map_err(|error| ConnectError::Failed(error.into()))?
-            .uid(),
-    )
-    .map_err(ConnectError::Failed)?;
+    let stream = transport(path).await?;
     let (read, mut writer) = stream.into_split();
     let mut reader = framing::Reader::new(BufReader::new(read));
     let hello = Message::Hello {
@@ -121,6 +89,46 @@ pub(crate) async fn connect_at(
         welcome,
         methods,
     })
+}
+/// Checked transport without a handshake, for the persistent UI stdio bridge.
+/// The UI owns hello, subscriptions, call IDs and reconnect state.
+pub(crate) async fn transport(
+    path: &std::path::Path,
+) -> std::result::Result<UnixStream, ConnectError> {
+    if let Err(error) = socket::validate_endpoint(path) {
+        return Err(if error.downcast_ref::<io::Error>().is_some_and(absent) {
+            ConnectError::Absent
+        } else {
+            ConnectError::Failed(error)
+        });
+    }
+    let stream = tokio::time::timeout(Duration::from_secs(2), UnixStream::connect(path))
+        .await
+        .map_err(|_| {
+            ConnectError::Failed(
+                nacre_protocol::Failure::new(
+                    ErrorCode::Timeout,
+                    "Daemon connection timed out",
+                    true,
+                )
+                .into(),
+            )
+        })?
+        .map_err(|error| {
+            if absent(&error) {
+                ConnectError::Absent
+            } else {
+                ConnectError::Failed(error.into())
+            }
+        })?;
+    socket::check_uid(
+        stream
+            .peer_cred()
+            .map_err(|error| ConnectError::Failed(error.into()))?
+            .uid(),
+    )
+    .map_err(ConnectError::Failed)?;
+    Ok(stream)
 }
 impl Client {
     pub(crate) fn control(&self) -> Result<std::os::unix::net::UnixStream> {
@@ -283,7 +291,7 @@ fn legacy_ui(arguments: &[String]) -> Result<i32> {
         .into())
 }
 fn usage() -> i32 {
-    println!("nacrectl status\nnacrectl call [--timeout MS] METHOD [JSON]\nnacrectl call --list\nnacrectl watch TOPIC\nnacrectl ui TARGET METHOD [ARGS...]");
+    println!("nacrectl status\nnacrectl call [--timeout MS] METHOD [JSON]\nnacrectl call --list\nnacrectl watch TOPIC\nnacrectl attach\nnacrectl ui TARGET METHOD [ARGS...]");
     0
 }
 pub fn run(arguments: &[String]) -> Result<i32> {
@@ -295,6 +303,9 @@ pub fn run(arguments: &[String]) -> Result<i32> {
         .enable_all()
         .max_blocking_threads(2)
         .build()?;
+    if matches!(arguments, [command] if command == "attach") {
+        return runtime.block_on(super::attach::run());
+    }
     if let [command, topic] = arguments {
         if command == "watch" {
             let probe = Message::Sub {
@@ -331,7 +342,7 @@ pub fn run(arguments: &[String]) -> Result<i32> {
                 _ => return Err("Expected call METHOD [JSON]".into()),
             }
         }
-        _ => return Err("Expected status, call, watch or ui; use nacrectl --help".into()),
+        _ => return Err("Expected status, call, watch, attach or ui; use nacrectl --help".into()),
     };
     if !list {
         Message::Call {

@@ -84,6 +84,7 @@ impl Source {
                         let response=if request=="Outputs"{json!({"Ok":{"Outputs":outputs}})}
                             else if request=="Workspaces"{json!({"Ok":{"Workspaces":headers()[0]["WorkspacesChanged"]["workspaces"]}})}
                             else if request=="Windows"{json!({"Ok":{"Windows":headers()[1]["WindowsChanged"]["windows"]}})}
+                            else if request==json!({"Action":{"FocusColumnRight":{}}}){json!({"Ok":"Handled"})}
                             else{json!({"Err":"Unsupported fixture request"})};
                         if writeln!(reader.get_mut(),"{response}").is_err(){break;}
                     }
@@ -585,6 +586,66 @@ fn native_niri_event_clients_share_daemon_stream_and_shutdown_without_a_timer() 
     assert_eq!(snapshot["type"], "snapshot");
     assert_eq!(snapshot["windows"][0]["title"], "DO_NOT_LOG_WINDOW_TITLE");
     assert_eq!(snapshot, second.next_value()?);
+    let rpc = |method: &str, params: Value| -> Result<std::process::Output> {
+        Ok(command(home.path(), &source_path, &endpoint)
+            .args(["ctl", "call", method, &params.to_string()])
+            .output()?)
+    };
+    let binding = rpc("niri.source", json!({"socket":source_path}))?;
+    assert!(
+        binding.status.success(),
+        "{}",
+        String::from_utf8_lossy(&binding.stderr)
+    );
+    let binding: Value = serde_json::from_slice(&binding.stdout)?;
+    let identity = &binding["connection_id"];
+    assert_eq!(
+        identity.as_str(),
+        Some(nacre_helper::daemon::niri_events::identity(&source_path)?.as_str())
+    );
+    let alias = home.path().join("same-session.sock");
+    symlink(&source_path, &alias)?;
+    assert!(rpc("niri.source", json!({"socket":alias}))?
+        .status
+        .success());
+    let wrong = home.path().join("other-session.sock");
+    let _wrong = UnixListener::bind(&wrong)?;
+    assert!(!rpc("niri.source", json!({"socket":wrong}))?
+        .status
+        .success());
+    for params in [
+        json!({"connection_id":"wrong","argv":["action","reload"]}),
+        json!({"connection_id":identity,"argv":["query","windows"]}),
+        json!({"connection_id":identity,"argv":["action","exec","--command","false"]}),
+    ] {
+        assert!(!rpc("niri.action", params)?.status.success());
+    }
+    let action = rpc(
+        "niri.action",
+        json!({"connection_id":identity,"argv":["action","focus_direction","--direction","right"]}),
+    )?;
+    assert!(
+        action.status.success(),
+        "{}",
+        String::from_utf8_lossy(&action.stderr)
+    );
+    assert_eq!(serde_json::from_slice::<Value>(&action.stdout)?["ok"], true);
+    // Rebinding the same pathname cannot silently authorize the new session.
+    let original = home.path().join("original.sock");
+    fs::rename(&source_path, &original)?;
+    let replacement = UnixListener::bind(&source_path)?;
+    assert!(!rpc("niri.source", json!({"socket":source_path}))?
+        .status
+        .success());
+    assert!(!rpc(
+        "niri.action",
+        json!({"connection_id":identity,"argv":["action","reload"]})
+    )?
+    .status
+    .success());
+    drop(replacement);
+    fs::remove_file(&source_path)?;
+    fs::rename(&original, &source_path)?;
     // One event stream and one persistent request connection, regardless of consumers.
     assert_eq!(source.sockets.lock().unwrap().len(), 2);
     let control = first.control()?;

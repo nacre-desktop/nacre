@@ -25,6 +25,29 @@ Item {
     property bool detached: false
     property bool closeAfterLaunch: false
     property var menuContext: NacreMenu
+    property var pendingDaemonRow: null
+    function activateFromDaemon(row) {
+        if (pendingDaemonRow || (visibilities.launcher && !canDetach) || !menuContext.daemonOperationSupported(row.operation))
+            return false;
+        pendingDaemonRow = row;
+        if (!visibilities.launcher || mode !== "apps")
+            NacrePanelState.openMode("apps", "", false);
+        Qt.callLater(flushDaemonActivation);
+        return true;
+    }
+    function flushDaemonActivation() {
+        if (!pendingDaemonRow || mode !== "apps" || !page.item?.run)
+            return;
+        const row = pendingDaemonRow;
+        pendingDaemonRow = null;
+        page.item.run(row);
+    }
+    Connections {
+        target: page
+        function onItemChanged() {
+            Qt.callLater(root.flushDaemonActivation);
+        }
+    }
     signal closeRequested
     signal uiChanged
     readonly property string mode: visibilities.launcherMode || "apps"

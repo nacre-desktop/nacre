@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/nacre-helper", "crates/nacre-protocol", "crates/nacre-menu"]
+members = ["crates/nacre-helper", "crates/nacre-protocol", "crates/nacre-menu", "crates/nacre-i18n"]
 exclude = ["deps/orient", "fuzz"]
 resolver = "2"
 

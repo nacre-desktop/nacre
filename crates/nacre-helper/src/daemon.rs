@@ -1,4 +1,5 @@
 //! The persistent desktop service. Tasks run on one current-thread runtime.
+pub mod attach;
 pub mod client;
 pub mod compositor;
 pub mod compositor_control;
@@ -8,6 +9,7 @@ pub mod hub;
 pub mod menu;
 pub mod menu_worker;
 pub mod network;
+pub mod niri_actions;
 pub mod niri_events;
 pub mod notify;
 pub mod serve_bridge;
@@ -37,6 +39,7 @@ async fn serve(
     let paths = Paths::environment()?;
     let environment: std::collections::BTreeMap<String, String> = std::env::vars().collect();
     let control = compositor_control::Control::new(paths.clone(), environment.clone());
+    hub.borrow_mut().compositor = Some(control.clone());
     let session_control = control.clone();
     let session_paths = paths.clone();
     let width_environment = environment.clone();

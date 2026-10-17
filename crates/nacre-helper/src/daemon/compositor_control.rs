@@ -10,6 +10,48 @@ pub struct Control {
     environment: BTreeMap<String, String>,
 }
 impl Control {
+    pub async fn niri_action(
+        &self,
+        identity: String,
+        argv: Vec<String>,
+    ) -> Result<serde_json::Value> {
+        let path = self
+            .environment
+            .get("NIRI_SOCKET")
+            .cloned()
+            .ok_or("Missing Niri socket")?;
+        self.with(move |backend| {
+            // Check again after waiting for the shared request connection.
+            if super::niri_events::identity(std::path::Path::new(&path))? != identity {
+                return Err("Compositor session mismatch".into());
+            }
+            Ok(crate::compositor::cli::action_response(
+                backend,
+                &serde_json::json!({"argv":argv}),
+            ))
+        })
+        .await
+    }
+    /// Verify both socket identities without opening another compositor connection.
+    pub async fn niri_identity(&self, selected: Option<String>) -> Result<String> {
+        let environment = self.environment.clone();
+        tokio::task::spawn_blocking(move || {
+            if crate::compositor::backend::select(&environment)? != "niri" {
+                return Err("Selected compositor is not niri".into());
+            }
+            let path = environment
+                .get("NIRI_SOCKET")
+                .ok_or("Missing Niri socket")?;
+            let identity = super::niri_events::identity(std::path::Path::new(path))?;
+            if let Some(selected) = selected {
+                if super::niri_events::identity(std::path::Path::new(&selected))? != identity {
+                    return Err("Compositor session mismatch".into());
+                }
+            }
+            Ok(identity)
+        })
+        .await?
+    }
     pub fn new(paths: Paths, environment: BTreeMap<String, String>) -> Self {
         Self {
             backend: Arc::new(Mutex::new(None)),

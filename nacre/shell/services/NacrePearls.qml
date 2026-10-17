@@ -628,6 +628,16 @@ Singleton {
                 })[kind], name);
     }
     IpcHandler {
+        id: pearlsIpc
+        Component.onCompleted: NacreDaemon.registerIpc("pearls", pearlsIpc, {
+            "open": ["s"],
+            "detach": [],
+            "dock": ["s"],
+            "close": ["s"],
+            "gesture": [],
+            "state": []
+        })
+        Component.onDestruction: NacreDaemon.unregisterIpc("pearls", pearlsIpc)
         target: "pearls"
         function open(kind: string): void {
             if (!root.enabled)

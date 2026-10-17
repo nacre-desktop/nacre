@@ -220,6 +220,9 @@ class OrientPublicCommandTests(unittest.TestCase):
                 path = binary / name
                 path.write_text('#!/bin/sh\nprintf "%s\\n" "' + label + '" "$@"\n')
                 path.chmod(0o755)
+            client = home / ".local/bin/nacrectl"
+            client.parent.mkdir(parents=True)
+            client.symlink_to(binary / "qs")
             control = Path(__file__).parents[1] / "control.sh"
             for args, label in (
                 (("scheme", "set", "-m", "dark"), "bridge"),

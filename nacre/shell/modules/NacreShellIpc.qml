@@ -6,6 +6,52 @@ import qs.services
 Scope {
     id: root
     property var pendingDashboard: null
+    function daemonCall(method, params) {
+        if (method === "ui.dispatch")
+            return NacreDaemon.dispatchIpc(params);
+        if (method !== "ui.menu.activate")
+            return {
+                err: {
+                    code: "unknown_method",
+                    message: "UI method is unavailable",
+                    retry: false
+                }
+            };
+        const row = params?.row;
+        if (!row || typeof row.id !== "string" || typeof row.operation !== "string" || row.disabled || !NacreMenu.daemonOperationSupported(row.operation))
+            return {
+                err: {
+                    code: "validation",
+                    message: "Unsupported launcher action",
+                    retry: false
+                }
+            };
+        const panel = root.activePanel();
+        if (!panel?.launcher)
+            return {
+                err: {
+                    code: "unavailable",
+                    message: "Launcher view is unavailable",
+                    retry: true
+                }
+            };
+        if (!panel.launcher.activateFromDaemon(row))
+            return {
+                err: {
+                    code: "busy",
+                    message: "Launcher view is busy",
+                    retry: true
+                }
+            };
+        return {
+            ok: {
+                keep_open: true
+            }
+        };
+    }
+    Component.onCompleted: if (!NacreDaemon.registerUi(root, root.daemonCall))
+        console.warn("NacreShellIpc: UI provider is already registered")
+    Component.onDestruction: NacreDaemon.unregisterUi(root)
     function activePanel() {
         return NacrePanelState.panels[NacrePanelState.activeName()] || null;
     }
@@ -144,6 +190,12 @@ Scope {
         view.previewOnly = false;
     }
     IpcHandler {
+        id: leftDrawerIpc
+        Component.onCompleted: NacreDaemon.registerIpc("leftDrawer", leftDrawerIpc, {
+            "section": ["s"],
+            "state": []
+        })
+        Component.onDestruction: NacreDaemon.unregisterIpc("leftDrawer", leftDrawerIpc)
         target: "leftDrawer"
         function section(name: string): void {
             const panel = root.activePanel();
@@ -160,6 +212,33 @@ Scope {
         }
     }
     IpcHandler {
+        id: nacreIpc
+        Component.onCompleted: NacreDaemon.registerIpc("nacre", nacreIpc, {
+            "state": [],
+            "restoreViews": ["s"],
+            "preview": ["s"],
+            "previewDashboard": ["i"],
+            "controls": ["s"],
+            "previewFeedback": ["s"],
+            "previewSliders": [],
+            "previewLeft": [],
+            "mode": ["s"],
+            "menu": ["s", "s"],
+            "settings": [],
+            "left": [],
+            "hide": [],
+            "launcher": ["s"],
+            "clipboard": [],
+            "session": [],
+            "popout": ["s", "r"],
+            "close": [],
+            "popupState": [],
+            "galleryStep": ["i"],
+            "galleryState": [],
+            "workspace": ["i"],
+            "tab": ["i"]
+        })
+        Component.onDestruction: NacreDaemon.unregisterIpc("nacre", nacreIpc)
         target: "nacre"
         function state(): string {
             return JSON.stringify(root.stateData());
@@ -203,6 +282,12 @@ Scope {
         }
         function launcher(query: string): void {
             NacrePanelState.openMode(query.startsWith(">wallpaper") ? "wallpaper" : "apps", query, false);
+        }
+        function clipboard(): void {
+            if (DesktopSettings.data.nativeClipboard !== false)
+                NacrePanelState.openMode("clipboard");
+            else
+                NacrePanelState.openMenu("actions.clipboard", "", false);
         }
         function session(): void {
             NacrePanelState.toggleSession();

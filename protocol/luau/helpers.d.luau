@@ -3,5 +3,6 @@ export type HelperRequest = { ["id"]: number, ["tool"]: string, ["arguments"]: {
 export type HelperResult = { ["code"]: number, ["output"]: string }
 export type HelperCall = ({ ["request"]: HelperRequest }) | ({ ["file"]: string })
 export type HelperReply = ({ ["code"]: number, ["output"]: string }) | ({ ["file"]: string })
-export type HelperTransfer = { ["directory"]: string }
+export type HelperTransfer = { ["directory"]: string, ["file"]: (string | nil)? }
+export type HelperTransferRequest = { ["reserve"]: (boolean | nil)?, ["release"]: ({string})? }
 return {}

@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import shlex
 import shutil
 import sys
 import tempfile
@@ -23,9 +24,37 @@ class BindingContractTests(unittest.TestCase):
         def normalize(rows):
             return sorted(json.dumps(row, sort_keys=True) for row in rows)
 
-        self.assertEqual(
-            normalize(actual), normalize(expected["hypr/conf/keybinding.lua"])
-        )
+        # The frozen default actions/flags remain the reference. Only their
+        # explicitly migrated UI transport changes; never rewrite that fixture.
+        migrated = json.loads(json.dumps(expected["hypr/conf/keybinding.lua"]))
+        shell_ui = {
+            "launcher": ["nacre", "launcher", ""],
+            "overview": ["nacre", "mode", "overview"],
+            "palette": ["nacre", "mode", "palette"],
+            "wallpaper": ["nacre", "launcher", ">wallpaper "],
+            "clipboard": ["nacre", "clipboard"],
+            "hide": ["nacre", "hide"],
+            "toggle": ["drawers", "toggle", "dashboard"],
+            "brightness down": ["brightness", "step", "down"],
+            "brightness up": ["brightness", "step", "up"],
+            "keyboard-light down": ["keyboardLight", "step", "down"],
+            "keyboard-light up": ["keyboardLight", "step", "up"],
+        }
+        changed = 0
+        for row in migrated:
+            if row["action"]["method"] != "exec_cmd":
+                continue
+            command = row["action"]["args"][0]
+            arguments = None
+            if command.startswith("~/.local/bin/nacre-menu "):
+                arguments = ["nacre", "menu", command.split(" ", 1)[1], ""]
+            elif command.startswith("~/.local/bin/nacre-shell "):
+                arguments = shell_ui.get(command.split(" ", 1)[1])
+            if arguments is not None:
+                row["action"]["args"][0] = "nacrectl ui " + shlex.join(arguments)
+                changed += 1
+        self.assertEqual(changed, 15)
+        self.assertEqual(normalize(actual), normalize(migrated))
         self.assertEqual(len(actual), 93)
 
     def test_defaults_have_no_conflicts_or_personal_app_commands(self):
