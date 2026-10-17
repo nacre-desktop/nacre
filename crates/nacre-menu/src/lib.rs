@@ -1,6 +1,7 @@
 //! The desktop launcher model, independent of any UI or transport.
 #![deny(unsafe_code)]
 pub mod browser;
+pub mod calculator;
 pub mod config;
 mod content;
 pub mod context;

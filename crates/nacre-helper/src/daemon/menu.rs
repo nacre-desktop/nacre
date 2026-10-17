@@ -2,13 +2,14 @@
 use super::hub::{failure, Shared};
 use crate::{launcher_preferences, paths::Paths, Result};
 use nacre_menu::{
+    calculator,
     context::{array, Context},
     desktop, model, sources, text,
 };
 use nacre_protocol::{
     menu::{
-        MenuActivate, MenuActivated, MenuItem, MenuQuery, MenuQueryResult, MenuUiActivate,
-        MenuView, UI_ACTIVATE,
+        MenuActivate, MenuActivated, MenuConversion, MenuItem, MenuQuery, MenuQueryResult,
+        MenuUiActivate, MenuView, UI_ACTIVATE,
     },
     Capability, ErrorCode, Failure, Method,
 };
@@ -554,11 +555,44 @@ impl Engine {
         });
         let route = model::resolve(&route, self.loaded.context.rows());
         self.loaded.context.now = clock();
-        let rows = self
-            .loaded
-            .context
-            .indexed_content(&route, &request.query, "all", "all")
-            .map_err(|_| failure(ErrorCode::Internal, "Launcher ranking failed", false))?;
+        let scoped = model::scope(&request.query);
+        let conversion = self.calculation_result(&scoped)?;
+        let rows = if let Some(result) = &conversion {
+            if result.ok {
+                let value = result
+                    .value
+                    .as_deref()
+                    .filter(|v| !v.is_empty())
+                    .ok_or_else(|| {
+                        failure(
+                            ErrorCode::Internal,
+                            "Invalid calculator provider result",
+                            false,
+                        )
+                    })?;
+                let description = result
+                    .description
+                    .clone()
+                    .filter(|v| !v.is_empty())
+                    .unwrap_or_else(|| {
+                        self.loaded.context.tr(
+                            "launcher.app-browser.description.enter-to-copy-the-result",
+                            "Enter to copy the result",
+                            json!({}),
+                        )
+                    });
+                vec![
+                    json!({"id":"calculation","kind":"calculation","name":value,"label":value,"description":description,"icon":"calculate","operation":"copy","value":value,"disabled":false}),
+                ]
+            } else {
+                Vec::new()
+            }
+        } else {
+            self.loaded
+                .context
+                .indexed_content(&route, &request.query, "all", "all")
+                .map_err(|_| failure(ErrorCode::Internal, "Launcher ranking failed", false))?
+        };
         let total = rows.len().min(u32::MAX as usize) as u32;
         let mut items = BTreeMap::new();
         let mut order = Vec::new();
@@ -624,23 +658,6 @@ impl Engine {
             order.push(id.clone());
             items.insert(id, item);
         }
-        let scoped = model::scope(&request.query);
-        let conversion = if scoped["kind"] == "calculator"
-            && self.loaded.context.source_options["calculator"] != false
-        {
-            Some(
-                serde_json::from_value(self.loaded.context.previews["conversion"].clone())
-                    .map_err(|_| {
-                        failure(
-                            ErrorCode::Internal,
-                            "Invalid calculator provider result",
-                            false,
-                        )
-                    })?,
-            )
-        } else {
-            None
-        };
         let message = self.loaded.context.previews["providerMessages"]
             [scoped["text"].as_str().unwrap_or("")]
         .as_str()
@@ -664,6 +681,47 @@ impl Engine {
                 false,
             )
         })
+    }
+    fn calculation_result(
+        &self,
+        scoped: &Value,
+    ) -> std::result::Result<Option<MenuConversion>, Failure> {
+        if scoped["kind"] != "calculator"
+            || self.loaded.context.source_options["calculator"] == false
+        {
+            return Ok(None);
+        }
+        let term = scoped["text"].as_str().unwrap_or("");
+        let basic = calculator::evaluate(term);
+        if basic.ok || !conversion_query(term) {
+            return Ok(Some(MenuConversion {
+                ok: basic.ok,
+                value: basic.value,
+                description: None,
+                error: Some(basic.error),
+            }));
+        }
+        if self.loaded.context.previews["conversionQuery"] != term {
+            return Ok(Some(MenuConversion {
+                ok: false,
+                value: None,
+                description: None,
+                error: Some(self.loaded.context.tr(
+                    "launcher.app-browser.error.converting",
+                    "Converting…",
+                    json!({}),
+                )),
+            }));
+        }
+        serde_json::from_value(self.loaded.context.previews["conversion"].clone())
+            .map(Some)
+            .map_err(|_| {
+                failure(
+                    ErrorCode::Internal,
+                    "Invalid calculator provider result",
+                    false,
+                )
+            })
     }
     fn activate(&self, request: MenuActivate) -> Response {
         request.validate()?;
@@ -1036,6 +1094,11 @@ fn compositor_inputs(context: &mut Context, snapshot: &Value) {
         context.compositor = next;
     }
 }
+// The existing view requests conversion only for lowercase whole words to/in.
+fn conversion_query(term: &str) -> bool {
+    term.split(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+        .any(|word| matches!(word, "to" | "in"))
+}
 fn provider_request(context: &Context, request: &MenuQuery) -> Option<(String, String)> {
     let scope = model::scope(&request.query);
     let kind = scope["kind"].as_str().unwrap_or("all");
@@ -1043,7 +1106,7 @@ fn provider_request(context: &Context, request: &MenuQuery) -> Option<(String, S
     let enabled = |key| context.source_options[key] != false;
     let action = match kind {
         "files" if enabled("files") => "files",
-        "calculator" if enabled("calculator") => "convert",
+        "calculator" if enabled("calculator") && conversion_query(&term) => "convert",
         "all" if request.route.as_deref() == Some("software.packages") && !term.is_empty() => {
             "packages"
         }
@@ -1254,6 +1317,104 @@ mod tests {
             bytes: 0,
             secret: "fixture-secret".into(),
         })
+    }
+    #[test]
+    fn native_arithmetic_query_issues_only_the_calculated_literal_copy_ticket() -> Result<()> {
+        let mut state = engine()?;
+        let request: MenuQuery =
+            serde_json::from_value(json!({"query":"= 1 + 1","mode":"search"}))?;
+        assert!(provider_request(&state.loaded.context, &request).is_none());
+        let answer = state.query(request)?;
+        assert_eq!(
+            answer["conversion"],
+            json!({"ok":true,"value":"2","error":""})
+        );
+        assert_eq!(answer["order"], json!(["nacre-menu:calculation"]));
+        let result = state.activate(serde_json::from_value(json!({
+            "id":"nacre-menu:calculation",
+            "activation":answer["items"]["nacre-menu:calculation"]["activation"],
+            "catalog_rev":state.rev,
+            "row":{"operation":"command","arguments":["forged-command"]}
+        }))?)?;
+        let selected: MenuUiActivate = serde_json::from_value(
+            json!({"row":result["uiRow"],"catalog_rev":result["catalog_rev"]}),
+        )?;
+        selected.validate()?;
+        assert_eq!(selected.row.operation, "copy");
+        assert_eq!(
+            selected.row.value,
+            Some(nacre_protocol::menu::MenuActionValue::Text("2".into()))
+        );
+        let failed = state.query(serde_json::from_value(
+            json!({"query":"= 1 / 0","mode":"search"}),
+        )?)?;
+        assert!(array(&failed["order"]).is_empty());
+        assert_eq!(failed["conversion"]["ok"], false);
+        assert_eq!(
+            failed["conversion"]["error"],
+            "The result is undefined or outside the numeric range"
+        );
+        Ok(())
+    }
+    #[test]
+    fn native_calculator_retains_conversion_word_gate_and_matching_query() -> Result<()> {
+        let mut state = engine()?;
+        for query in [
+            "= 1+1",
+            "= sin(1)",
+            "= 2 IN m",
+            "= to_value(2)",
+            "= invalid",
+        ] {
+            let request: MenuQuery =
+                serde_json::from_value(json!({"query":query,"mode":"search"}))?;
+            assert!(
+                provider_request(&state.loaded.context, &request).is_none(),
+                "{query}"
+            );
+        }
+        for query in ["= 1 kg to g", "= 2 m in cm"] {
+            let request: MenuQuery =
+                serde_json::from_value(json!({"query":query,"mode":"search"}))?;
+            assert_eq!(
+                provider_request(&state.loaded.context, &request).map(|p| p.0),
+                Some("convert".into())
+            );
+        }
+        apply_provider(
+            &mut state.loaded.context,
+            "convert",
+            "1 kg to g",
+            &json!({"ok":true,"value":"1000 g","description":"Mass"}),
+        );
+        let converted = state.query(serde_json::from_value(
+            json!({"query":"= 1 kg to g","mode":"search"}),
+        )?)?;
+        assert_eq!(
+            converted["items"]["nacre-menu:calculation"]["name"],
+            "1000 g"
+        );
+        assert_eq!(
+            converted["items"]["nacre-menu:calculation"]["description"],
+            "Mass"
+        );
+        let pending = state.query(serde_json::from_value(
+            json!({"query":"= 2 kg to g","mode":"search"}),
+        )?)?;
+        assert_eq!(pending["conversion"]["ok"], false);
+        assert_eq!(pending["conversion"]["error"], "Converting…");
+        assert!(array(&pending["order"]).is_empty());
+        state.loaded.context.source_options["calculator"] = json!(false);
+        let request: MenuQuery = serde_json::from_value(json!({"query":"= 1+1","mode":"search"}))?;
+        assert!(provider_request(&state.loaded.context, &request).is_none());
+        let disabled = state.query(request)?;
+        assert!(disabled.get("conversion").is_none());
+        assert_eq!(array(&disabled["order"]).len(), 1);
+        assert_eq!(
+            disabled["items"][disabled["order"][0].as_str().unwrap()]["disabled"],
+            true
+        );
+        Ok(())
     }
     #[test]
     fn no_op_rescans_preserve_shared_app_records() -> Result<()> {

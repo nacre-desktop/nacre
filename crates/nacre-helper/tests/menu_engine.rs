@@ -178,6 +178,53 @@ impl Client {
     }
 }
 #[test]
+fn native_calculator_query_and_ticket_forward_the_exact_literal_result() -> Result<()> {
+    let lab = Lab::new()?;
+    let mut provider = lab.client()?;
+    provider.send(json!({"t":"register","provider":"ui","methods":{"ui.menu.activate":1}}))?;
+    assert!(provider
+        .call(1, "daemon.ping", json!({}))?
+        .get("ok")
+        .is_some());
+    let mut caller = lab.client()?;
+    let answer = caller.call(
+        2,
+        "menu.query",
+        json!({"query":"= .250030517578125","mode":"search"}),
+    )?;
+    assert_eq!(
+        answer["ok"]["conversion"],
+        json!({"ok":true,"value":"0.25003051757813","error":""})
+    );
+    assert_eq!(answer["ok"]["order"], json!(["nacre-menu:calculation"]));
+    caller.send(json!({"t":"call","id":3,"m":"menu.activate","p":{
+        "id":"nacre-menu:calculation",
+        "activation":answer["ok"]["items"]["nacre-menu:calculation"]["activation"],
+        "catalog_rev":answer["ok"]["catalog_rev"],
+        "row":{"operation":"command","arguments":["forged-command"]}
+    }}))?;
+    let selected = provider.next()?;
+    assert_eq!(selected["t"], "call");
+    assert_eq!(selected["m"], "ui.menu.activate");
+    let action: nacre_protocol::menu::MenuUiActivate =
+        serde_json::from_value(selected["p"].clone())?;
+    action.validate()?;
+    assert_eq!(selected["p"]["row"]["operation"], "copy");
+    assert_eq!(selected["p"]["row"]["value"], "0.25003051757813");
+    assert!(selected["p"]["row"].get("arguments").is_none());
+    provider.send(json!({"t":"ret","id":selected["id"],"ok":{"keep_open":false}}))?;
+    let reply = caller.next()?;
+    assert_eq!(reply["id"], 3);
+    assert_eq!(reply["ok"], json!({"keep_open":false}));
+    let failed = caller.call(4, "menu.query", json!({"query":"= 1/0","mode":"search"}))?;
+    assert_eq!(failed["ok"]["order"], json!([]));
+    assert_eq!(
+        failed["ok"]["conversion"]["error"],
+        "The result is undefined or outside the numeric range"
+    );
+    Ok(())
+}
+#[test]
 fn native_queries_inotify_preferences_tickets_and_failure_recovery() -> Result<()> {
     let lab = Lab::new()?;
     let mut client = lab.client()?;

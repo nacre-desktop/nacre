@@ -69,7 +69,7 @@ pub struct MenuItem {
     pub activation: Option<String>,
 }
 
-/// Unit-conversion payload from the existing calculator provider.
+/// Arithmetic result or unit-conversion payload from the existing calculator.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct MenuConversion {
     pub ok: bool,

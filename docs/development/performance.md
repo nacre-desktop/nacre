@@ -2562,3 +2562,76 @@ Private resource/cold/correctness evidence archive SHA-256:
 `9477126532b7a879b31dd8c3d275c6fb0c1359bc9da97e7e151848181c333559`.
 Its 57 files are archived and checksum-verified on both hosts. A final scoped
 process/environment audit finds zero surviving private capture processes.
+
+
+### F3 arithmetic provider (desktop-PC nested, 2026-10-17)
+
+The calculator grammar now runs inside `menu.query`, including its literal-copy
+activation ticket. It preserves 313 immutable outputs captured from actual
+Quickshell 0.3.2: 217 original cases, 33 numeric/whitespace edges and a separately
+frozen 63-case power matrix. That matrix caught native `powf` returning 1 for
+`1 ^ NaN`; the port now keeps JavaScript's undefined-result error. Existing
+helper, ranking and wire expectations were not regenerated. A preview ending
+halfway through a UTF-16 surrogate pair uses U+FFFD to retain valid UTF-8 on the
+private link; this intended difference is documented in the library README.
+
+This is an arithmetic component profile, not the 101-result ranking workload or
+a QML before/after comparison. The QML calculator and ranking fallback are still
+unchanged. `tools/benchmark-menu.py` uses the existing private nested lab, 320 and
+2,000 synthetic applications, 100 warm requests, then 20,000 sequential calls
+cycling four arithmetic queries. CPU is process user+system ticks divided by
+calls; round trip is client send through matching decoded reply. Every binary
+was built before capture, with no concurrent builds or tests. Existing host
+scheduler policy stayed enabled; audits observed the benchmark, native daemon
+and worker at nice 10, while wrapper/compositor priorities followed host rules.
+
+| Compositor / apps | Daemon CPU/query (ms) | Round trip p50 / p99 (ms) | Settled daemon RSS / PSS (MiB) |
+| --- | ---: | ---: | ---: |
+| niri / 320 | 0.0150 | 0.02185 / 0.03004 | 34.31 / 30.74 |
+| niri / 2,000 | 0.0175 | 0.02508 / 0.03127 | 57.99 / 54.43 |
+| Hyprland / 320 | 0.0155 | 0.02353 / 0.02960 | 33.75 / 30.15 |
+| Hyprland / 2,000 | 0.0175 | 0.02561 / 0.03098 | 57.52 / 53.90 |
+
+Provider CPU during the warm query loops was zero observed ticks; the accounting
+quantum is 0.0005 ms/query, not proof of literally zero work. Busy daemon plus
+metadata-worker RSS/PSS was 60.59/44.20 and 82.72/66.67 MiB on niri;
+60.36/44.59 and 81.70/65.74 MiB on Hyprland. After 35 seconds for retirement,
+each 60-second idle capture had one process/thread, zero observed CPU ticks and
+zero main-thread voluntary switches. These are finite counters, not a battery,
+three-hour stability or exact kernel-wakeup claim. The index remains resident;
+no before/after memory saving is established by this current-build profile.
+
+All four query/idle pairs pass: measured SwapPss zero, page size 4,096 bytes.
+Host swap-in query/idle deltas were niri 0/9 and 0/5, Hyprland 0/18 and 0/1;
+host swap-out was zero throughout. Python execs were not traced: launch count
+is unmeasured, not zero. The old calculator already ran in JavaScript; this
+change does not claim to remove a Python launch or establish a UI speed gain.
+
+The separate cold niri A/B/A/B gate uses the unchanged shell/harness at
+`75157fd32fdea26ef8defcfb0430e39be439fd89`, comparing the typed-provider helper
+`ee12053478b17a786b73c11d95915ab3300eddd271e7c537a0f15f96f45ec359`
+with arithmetic helper
+`2d66feef2bc80c8d45c293c2fd9cc193edbcdab1e966612e8d9eb3d17bff1ebb`.
+
+| Frame-ready action (ms) | Before runs | Arithmetic runs |
+| --- | ---: | ---: |
+| Cold launcher | 470 / 439 | 442 / 462 |
+| Reopened launcher | 357 / 358 | 344 / 357 |
+| Cold dashboard | 362 / 363 | 362 / 363 |
+| Reopened dashboard | 362 / 362 | 367 / 362 |
+
+Cold-launcher ranges overlap (439–470 versus 442–462 ms); medians 454.5 → 452 ms
+do not establish a reliable speedup or repeatable regression. These are nested
+frame observations, not physical presentation latency. All four captures have
+measured SwapPss zero; host swap-in A/B/A/B is 47/1/0/1 pages, swap-out zero,
+within the owner's under-1-MiB gate. Original captures remain retained.
+
+Validation: 367 Rust tests, 938 repository tests (three existing skips), all 534
+immutable helper parity cases, fmt/Clippy/schema freshness/examples/minimal
+consumer pass on the same 399-file runtime/protocol manifest. Accepted evidence
+archive SHA-256:
+`3d29f8dc09da99cd948968c89ec87185cedbf97736a7b7d423fd0b11c3c6f784`
+(37 files, 147,757 bytes), copied and SHA-verified on both hosts. Private capture
+process audit is empty; the lab is retained, with no live desktop/configuration,
+units, kernel policy or installed-runtime changes. Published CI remains the
+next gate before the native attach/shared-QML work.

@@ -339,9 +339,13 @@ or the two directions would deadlock.
 
 `menu-ui-actions.jsonl` supplements the original immutable menu transcripts with
 calculator-copy tickets, clipboard IDs, confirmation, literal argv, refusal of
-public row injection and an unsupported operation. The calculator row is a wire
-example; the current QML arithmetic grammar still needs its frozen Rust port
-before the F3 launcher switches. Existing conversion payloads remain readable.
+public row injection and an unsupported operation. Arithmetic now runs directly
+in the Rust engine, matching 217 frozen Quickshell outputs and 96 separately
+frozen numeric/whitespace/power cases. The optional `conversion` field carries either
+arithmetic or unit-conversion results; successful results issue literal-copy
+tickets. Only lowercase whole-word `to`/`in` queries enter the existing conversion
+worker. Invalid arithmetic returns its original error without a worker. The QML
+cutover remains a separate F3 step; its JavaScript fallback stays for one release.
 
 Files, packages, unit conversions, CLDR emoji and catalog discovery reuse native
 providers in at most two nice-10 workers with a ten-second response deadline and

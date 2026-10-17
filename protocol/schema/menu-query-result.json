@@ -161,7 +161,7 @@
       ]
     },
     "MenuConversion": {
-      "description": "Unit-conversion payload from the existing calculator provider.",
+      "description": "Arithmetic result or unit-conversion payload from the existing calculator.",
       "type": "object",
       "properties": {
         "ok": {
