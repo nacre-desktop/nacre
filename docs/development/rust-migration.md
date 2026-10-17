@@ -49,7 +49,7 @@ Direct pinned Orient libraries own paired publication; no Orient process/RPC.
 Custom absolute XDG paths and direct D-Bus/socket transports are intended differences.
 Reference outputs are immutable; security additions use explicit new cases.
 
-Foundation: F0 → F1 → F2 events/session → launcher engine → remaining F2 → F3 → F4; then owner-approved core-switch services/weather/updates block. Schema-only contracts publish before F4; runtime capabilities stay unadvertised until implemented.
+Foundation: F0 → F1 → F2 events/session → launcher engine → remaining F2 → F3 → F4; then approved core-switch services/weather/updates block. Core schemas c2b26d98 are published; additive compatibility fields/new transcripts are required before core implementation. Runtime capabilities stay unadvertised until implemented.
 Oct16 order: schema3042f3f2 published first; immutable JS ranking/provider parity, indexed catalog next.
 Long-running or frequently called work → daemon service; rare/heavy/risky → worker.
 Settings' unpublished controller port is parked for F4, not a standalone landing.
@@ -76,5 +76,5 @@ Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hosts
 UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-Next: Core-service schemas c2b26d98 published, Source CI39010730141 fully green. Preserved F3 local/unpublished: 377 Rust/950 repo (3 existing optional skips)/534 immutable parity, fmt/Clippy/schema/examples/minimal, 11 actual Qt/16 frozen i18n pass; four niri/Hyprland English/pseudo diagnostics retain LKG/stale/modal behavior (~882–887ms restart→fresh). No accepted new performance comparison. F3 replayed onto the green schemas; validate its exact combined build and reader idle-trim API, run exact-source paired CLI latency/combined memory/idle gates, push/full CI; then F4 sole writer and owner-approved core controls/weather/updates workers. Opt-in NACRE_DAEMON_CLIENT=1; legacy default.
+Next: F3 local00d2430b correctness384Rust/950repo/534immutableparity passes; mainc2b26d98 CI39010730141 green. All8 fixed600s+60s cells valid: niri cold457→401ms/PSS561.57→556.97MiB; Hypr cold443→417ms/PSS542.91→552.90MiB (+13.52/+6.47 each pair). F3 BLOCKED by repeated unexplained Hypr memory increase; no waiver/push/F4. GC found no excess live JS/useful fix; exact-source client-off diagnostic PSS540.18MiB/QS500.45 overlaps baseline, supporting active-client cost without allocation attribution. Evidence c5ed7db8/cff6690e/08cfa207 copied+SHA-verified both hosts; SwapPss0/host-in<1MiB. Owner decision needed on further allocation diagnosis or accepting cost. Compatibility seven-scenario draft reviewed, uncompiled/unexported; then F3 full CI, additive contracts, F4 and approved core workers. Legacy remains default.
 No live desktop/config/network changes, tags, releases or package publication.

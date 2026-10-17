@@ -93,7 +93,7 @@ and honor the existing request deadline without logging private payloads.
 
 ## Dashboard compatibility and later workers
 
-Current `dashboard-data` and `dashboard-media` are `helper.run` v1 lanes with
+Current `dashboard-data` and `dashboard-media` are `helper.execute` v1 lanes with
 the original stdout JSON string in `HelperReply`; they are **not** dedicated
 `dashboard.media` or `dashboard.system` topics. `dashboard-system` is currently a
 standalone native helper. `network.watch` is availability/change generation only,

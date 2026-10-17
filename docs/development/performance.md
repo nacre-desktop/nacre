@@ -2635,3 +2635,122 @@ archive SHA-256:
 process audit is empty; the lab is retained, with no live desktop/configuration,
 units, kernel policy or installed-runtime changes. Published CI remains the
 next gate before the native attach/shared-QML work.
+
+
+## Foundation F3 shared QML client: paired gate held, 2026-10-17
+
+Status: correctness passes, but publication is held for a repeated Hyprland
+memory increase. The client is opt-in (`NACRE_DAEMON_CLIENT=1`); the legacy
+path remains the default. No installed runtime or live session was changed.
+
+The frozen before revision is `e0a81ce76758de4831f008b90cb37b54dacc0baf`,
+helper SHA-256
+`2d66feef2bc80c8d45c293c2fd9cc193edbcdab1e966612e8d9eb3d17bff1ebb`.
+The unpushed candidate is `00d2430b381893b6f06acb2f17fb76f696ace854`,
+helper SHA-256
+`58d4f0efa0d8e62648f47a1618800405e05b1270c5a1d5f29e95ba2109195d81`.
+The baseline already contains the earlier native ports; it is not the original
+Python baseline. All 749 baseline and 2,933 candidate source entries matched
+before and after their runs. Nothing compiled during measurement.
+
+Method: nested desktop-PC A/B/A/B on each compositor, with cold actions first,
+then matched ten-minute warmups and complete sixty-second idle windows. The owner
+approved fixed windows after the unchanged baseline also failed the preceding
+2-MiB/90-second settling condition; those rejected captures remain invalid.
+Measured SwapPss must still be zero and host swap-in strictly below 1 MiB.
+Every one of these eight captures passes those checks on its first attempt.
+
+Launcher timing starts immediately before creating the UI command process and
+ends at a ready Qt `frameSwapped`: legacy `bash control.sh`/`qs ipc` versus native
+`nacrectl ui`. It excludes physical input and compositor presentation. Dashboard
+timing retains the frozen F9 Qt-handler boundary and pinning; it must not be
+compared as though it includes command startup.
+
+| Nested action, ms | Before median (range) | Native median (range) |
+| --- | ---: | ---: |
+| Niri cold launcher, two samples | 456.78 (456.07–457.48) | 401.19 (400.47–401.91) |
+| Niri reopened launcher, six samples | 380.72 (366.28–392.57) | 282.56 (281.95–303.27) |
+| Hyprland cold launcher, two samples | 442.68 (437.32–448.04) | 417.32 (414.13–420.51) |
+| Hyprland reopened launcher, six samples | 371.55 (354.48–400.76) | 314.71 (310.03–333.22) |
+| Niri cold dashboard, two samples | 390 (389–391) | 357.5 (357–358) |
+| Niri reopened dashboard, six samples | 377.5 (365–388) | 375.5 (365–392) |
+| Hyprland cold dashboard, two samples | 364 (363–365) | 365 (365–365) |
+| Hyprland reopened dashboard, six samples | 365 (364–365) | 364 (363–366) |
+
+Memory is the combined shell, daemon and remaining helper group. Each reported
+idle value below is the median of two complete-window medians; ranges are the
+two window medians, while peaks include sampled transient update processes.
+CPU is percent of one core, using the median of the two window means.
+
+| Nested resource | Before median (window range); observed peak | Native median (window range); observed peak |
+| --- | ---: | ---: |
+| Niri PSS, MiB | 561.57 (557.59–565.54); 637.42 | 556.97 (556.64–557.30); 621.12 |
+| Niri RSS, MiB | 689.37 (685.11–693.63); 784.22 | 671.02 (670.51–671.53); 753.50 |
+| Hyprland PSS, MiB | 542.91 (540.45–545.36); 624.90 | 552.90 (551.83–553.97); 635.06 |
+| Hyprland RSS, MiB | 658.06 (655.73–660.40); 759.02 | 666.55 (665.21–667.90); 766.60 |
+| Niri CPU, % one core | 0.366 (0.349–0.383); 45.60 | 0.357 (0.348–0.365); 38.72 |
+| Hyprland CPU, % one core | 0.481 (0.431–0.531); 50.94 | 0.591 (0.481–0.702); 58.18 |
+
+Niri has no observed regression. Hyprland PSS increases in both pairs, by
+13.52 and 6.47 MiB; the typical window ranges do not overlap. The increase is
+mainly Quickshell: its per-process medians are 501.67/505.60 before versus
+513.17/513.21 MiB native. Helper medians vary in both directions, by +2.02 and
+−1.18 MiB. This is a measured hold, not an accepted feature cost or an attribution
+to kernel huge pages. A focused private allocation/collection diagnostic is next.
+
+The higher Hyprland sampled CPU comes from existing `pacman` update checks:
+Quickshell's window means are 0.0993/0.0990 before and 0.0825/0.1013% native;
+helper CPU is below the sampler's tick resolution in these windows. Neither
+claim means literally zero helper work. Periodic update processes also explain
+why transient memory peaks exceed typical idle use. Idle process medians are
+7→6 on niri and 5→5 on Hyprland; remaining standalone commands are retained.
+Per-thread context-switch counts are a scheduling proxy, not hardware wakeups.
+
+Host swap-in, A/B/A/B: niri 5/19/3/3 pages; Hyprland 10/6/98/8 pages. Pages are
+4,096 bytes, all swap-out counts are zero, and measured process SwapPss is zero.
+The largest host count is 392 KiB. These are nested frame/resource observations,
+not physical presentation, three-hour stability, battery life, or an exec-traced
+zero-Python claim. Per-helper call latency and fresh Python launch counts were
+not remeasured by this whole-shell comparison.
+
+Correctness on the exact candidate: 384 Rust tests, 950 repository tests (one
+existing optional skip), all 534 immutable helper parity cases, fmt, workspace
+Clippy with warnings denied, schema freshness, independent JSON Schema validation,
+examples and the minimal consumer pass. Original golden outputs were unchanged.
+Correctness evidence SHA-256:
+`7f99fe171dbaa35c07d2725c6e4a4ccb5ab2d595a0228562977329b588fc939c`.
+The eight-run raw comparison archive is 82 files / 386,990 bytes, SHA-256
+`c5ed7db87d5d4970ee4ce7cb14dec5d104a0ff5de9b6744149481de53ddb7c41`,
+copied and SHA-verified on both hosts. Its private capture process audit is empty.
+
+A separate diagnostic pair enabled Qt allocator logging and explicitly collected
+JavaScript after the complete idle window, followed by thirty seconds of sampling.
+It is not replacement acceptance evidence: instrumentation changes allocation
+behavior. Reserved JavaScript memory was 82,514,432 versus 82,384,896 bytes;
+regular live bytes after explicit collection were 18,259,200 versus 18,153,120.
+Neither run released whole chunks. Combined typical PSS changed 546.76→546.15 MiB
+before and 548.95→550.46 MiB native, so adding `gc()` is not a demonstrated fix.
+Both diagnostic runs pass their paging checks (host-in 9/10 pages, out zero).
+The diagnostic archive is 28 files / 100,684 bytes, SHA-256
+`cff6690ebe537d521504d4a8e7c74c73147b2016ed04964ebe642298773948a5`,
+copied and SHA-verified on both hosts.
+
+A normal-logging diagnostic then ran the exact candidate source and helper with
+the daemon client disabled, using the same 600-second warmup and complete
+60-second window. Combined median PSS was 540.18 MiB (observed peak 622.97),
+including Quickshell at 500.45 MiB. These typical values fall within the old
+baseline range. This single diagnostic supports an active-client cost rather
+than the new source alone; it does not identify an allocation or replace the
+normal A/B/A/B gate. Host swap-in was five 4,096-byte pages, swap-out zero, and
+measured SwapPss zero. Its private command permitted the existing default-socket
+fallback because the UI provider was deliberately disabled; its action timings
+are not acceptance measurements. Source and helper hashes matched before and
+after. The diagnostic archive is 13 files / 34,816 bytes, SHA-256
+`08cfa207c1f2e14dfd1844d852e189f836b32e1314bbbf59995f9fcef6d6533c`,
+copied and SHA-verified on both hosts.
+
+The focused investigation found no demonstrated fix. Publication remains blocked
+under the regression stop rule: the repeated normal Hyprland increase remains
+unexplained, and neither forced collection nor this client-disabled diagnostic
+waives it. No product workaround, allocator policy or live configuration changed.
+F4 and core-service implementation have not started.
