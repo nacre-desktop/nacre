@@ -24,6 +24,14 @@ fn validated_map_keys_keep_their_element_types_in_luau() {
     {
         assert!(!line.contains("any"), "Untyped entity map: {line}");
     }
+    let notifications = types
+        .lines()
+        .find(|line| line.starts_with("export type NotificationsState ="))
+        .expect("notification type");
+    assert!(
+        notifications.contains("[\"popup_order\"]: ({EntityId} | nil)?"),
+        "Nullable popup IDs lost their element type"
+    );
 }
 
 #[test]
@@ -31,7 +39,9 @@ fn reserved_transcripts_replay_typed_calls_and_complete_snapshots() {
     let mut topics = 0;
     let mut calls = std::collections::BTreeSet::new();
     for (file, text) in artifacts::generate() {
-        if !file.starts_with("protocol/fixtures/core-") {
+        if !file.starts_with("protocol/fixtures/core-")
+            || file.starts_with("protocol/fixtures/core-compat-")
+        {
             continue;
         }
         let errors = file.ends_with("core-errors.jsonl");
@@ -80,6 +90,245 @@ fn reserved_transcripts_replay_typed_calls_and_complete_snapshots() {
             !nacre_protocol::core_methods().contains_key(&method),
             "Schemas must not advertise {method}"
         );
+    }
+}
+
+fn compatibility_states(name: &str) -> Vec<Value> {
+    let exports = artifacts::generate();
+    let text = &exports[&format!("protocol/fixtures/core-compat-{name}.jsonl")];
+    let mut state = Value::Null;
+    let mut states = Vec::new();
+    for (index, line) in text.lines().enumerate() {
+        match framing::decode(line.as_bytes()).unwrap() {
+            Message::Snap { topic, seq, data } => {
+                assert_eq!(index, 0);
+                assert_eq!(seq, 0);
+                state = data;
+                let typed: CoreSnapshot =
+                    serde_json::from_value(json!({"topic":topic,"data":state})).unwrap();
+                assert!(typed.valid(), "Invalid {name} snapshot");
+            }
+            Message::Patch {
+                topic,
+                seq,
+                base,
+                data,
+            } => {
+                assert_eq!(base, index as u64 - 1);
+                assert_eq!(seq, index as u64);
+                patch::apply(&mut state, &data);
+                let typed: CoreSnapshot =
+                    serde_json::from_value(json!({"topic":topic,"data":state})).unwrap();
+                assert!(typed.valid(), "Invalid {name} patch {seq}");
+            }
+            _ => panic!("Unexpected compatibility frame"),
+        }
+        states.push(state.clone());
+    }
+    states
+}
+
+#[test]
+fn notification_popup_eligibility_is_service_owned_and_history_is_independent() {
+    let states = compatibility_states("notifications-popup-policy");
+    assert_eq!(states.len(), 7);
+    assert_eq!(states[0]["popup_order"], json!(["notice-1"]));
+    assert_eq!(states[1]["inhibited"], true);
+    assert_eq!(states[1]["popup_order"], json!([]));
+    assert_eq!(states[2]["inhibited"], false);
+    assert_eq!(states[2]["popup_order"], json!([]));
+    assert_eq!(states[3]["popup_order"], json!(["notice-2"]));
+    assert_eq!(
+        states[4]["active"]["items"]["notice-2"]["remaining_ms"],
+        3000
+    );
+    assert_eq!(states[5]["active"]["items"]["notice-3"]["timeout_ms"], 0);
+    assert!(states[5]["active"]["items"]["notice-3"]
+        .get("remaining_ms")
+        .is_none());
+    assert!(states[6]["active"]["items"].get("notice-2").is_none());
+    assert_eq!(states[6]["history"]["items"]["notice-2"]["remaining_ms"], 0);
+    let history = compatibility_states("notifications-history-storage");
+    assert_eq!(history.len(), 3);
+    assert_eq!(history[0]["history_count"], 2);
+    assert_eq!(history[1]["history_count"], 5);
+    assert_eq!(history[1]["history"]["order"].as_array().unwrap().len(), 1);
+    assert!(history[1]["history_storage"].get("error").is_none());
+    assert_eq!(history[2]["history_storage"]["writable"], false);
+    for state in history {
+        assert_eq!(state["health"], json!({"available":true,"stale":false}));
+    }
+}
+
+#[test]
+fn explicit_audio_readback_never_substitutes_zero_for_unknown() {
+    let states = compatibility_states("audio-readback");
+    assert_eq!(states.len(), 6);
+    let node = |index: usize| &states[index]["nodes"]["items"]["output-1"];
+    assert_eq!(node(0)["ready"], false);
+    assert_eq!(node(0)["readback"], json!({}));
+    assert_eq!(node(1)["readback"]["linear_volume"], 0.125);
+    assert_eq!(node(1)["readback"]["perceptual_volume"], 0.5);
+    assert_eq!(node(2)["ready"], false);
+    assert_eq!(node(2)["volume"], 0.125); // Retained legacy value is not a reading.
+    assert_eq!(
+        node(2)["readback"],
+        json!({"linear_volume":0.125,"muted":false})
+    );
+    assert_eq!(node(3)["readback"], json!({"muted":false}));
+    assert_eq!(node(4)["readback"], json!({}));
+    assert_eq!(node(5)["readback"], json!({"muted":true}));
+}
+
+#[test]
+fn primary_connection_and_custom_icons_have_explicit_identity() {
+    let network = compatibility_states("network-primary");
+    assert_eq!(network.len(), 3);
+    assert_eq!(
+        network[0]["connections"]["order"].as_array().unwrap().len(),
+        2
+    );
+    assert_eq!(network[0]["primary_connection"], "connection-wired");
+    assert_eq!(network[1]["primary_connection"], "connection-wireless");
+    assert!(network[2].get("primary_connection").is_none());
+    let tray = compatibility_states("tray-custom-icon");
+    assert_eq!(tray.len(), 2);
+    assert_eq!(
+        tray[0]["items"]["items"]["tray-1"]["icon_path"],
+        "/tmp/nacre-fixtures/icons/tray.png"
+    );
+    assert_eq!(
+        tray[1]["items"]["items"]["tray-1"]["icon_path"],
+        "/tmp/nacre-fixtures/icons/tray-attention.png"
+    );
+}
+
+#[test]
+fn battery_is_independent_and_osd_repeats_without_replaying_expired_events() {
+    let battery = compatibility_states("battery");
+    assert_eq!(battery.len(), 4);
+    assert!(battery[0].get("percentage").is_none());
+    assert_eq!(battery[1]["percentage"], 62.5);
+    assert_eq!(battery[2]["charging"], true);
+    assert!(battery[3].get("percentage").is_none());
+    assert!(battery[3].get("charging").is_none());
+    let osd = compatibility_states("osd");
+    assert_eq!(osd.len(), 11);
+    assert!(osd[0].get("current").is_none());
+    assert_eq!(osd[1]["current"]["serial"], 1);
+    assert_eq!(osd[2]["current"]["serial"], 2);
+    assert_eq!(osd[1]["current"]["value"], osd[2]["current"]["value"]);
+    assert_eq!(osd[3]["current"]["channel"], "brightness");
+    assert!(osd[3]["current"].get("muted").is_none());
+    assert_eq!(osd[4]["current"]["channel"], "microphone");
+    assert_eq!(osd[4]["current"]["muted"], true);
+    assert!(osd[4]["current"].get("value").is_none());
+    for index in [5, 7, 10] {
+        assert!(osd[index].get("current").is_none());
+    }
+    assert_eq!(osd[8]["current"], osd[9]["current"]);
+    let exports = artifacts::generate();
+    assert_eq!(
+        exports
+            .keys()
+            .filter(|file| file.starts_with("protocol/fixtures/core-compat-"))
+            .count(),
+        7
+    );
+}
+
+#[test]
+fn compatibility_rejects_foreign_ids_unit_confusion_and_invalid_readings() {
+    let valid = |topic: &str, state: Value| {
+        serde_json::from_value::<CoreSnapshot>(json!({"topic":topic,"data":state}))
+            .is_ok_and(|state| state.valid())
+    };
+    for primary in ["missing", "../connection"] {
+        let mut state = compatibility_states("network-primary")[0].clone();
+        state["primary_connection"] = json!(primary);
+        assert!(!valid("network", state));
+    }
+    let mut inactive = compatibility_states("network-primary")[1].clone();
+    inactive["primary_connection"] = json!("connection-wired");
+    assert!(!valid("network", inactive));
+    for popups in [json!(["missing"]), json!(["notice-1", "notice-1"])] {
+        let mut state = compatibility_states("notifications-popup-policy")[0].clone();
+        state["popup_order"] = popups;
+        assert!(!valid("notifications", state));
+    }
+    let mut count = compatibility_states("notifications-history-storage")[0].clone();
+    count["history_count"] = json!(1); // One stored plus one nontransient active.
+    assert!(!valid("notifications", count));
+    for (linear, perceptual) in [(0.125, 0.125), (-0.1, 0.5), (0.125, -0.5)] {
+        let mut state = compatibility_states("audio-readback")[1].clone();
+        state["nodes"]["items"]["output-1"]["readback"] = json!({
+            "linear_volume":linear,"perceptual_volume":perceptual});
+        assert!(!valid("audio", state));
+    }
+    for percentage in [-0.1, 100.1] {
+        let mut state = compatibility_states("battery")[1].clone();
+        state["percentage"] = json!(percentage);
+        assert!(!valid("battery", state));
+    }
+    for (channel, unit, value) in [
+        ("volume", "fraction", 0.5),
+        ("brightness", "linear", 0.5),
+        ("brightness", "fraction", 1.1),
+        ("capslock", "boolean", 0.5),
+        ("microphone", "linear", -0.1),
+    ] {
+        assert!(!valid(
+            "osd",
+            json!({"health":{"available":true,"stale":false},
+            "current":{"serial":1,"channel":channel,"unit":unit,"value":value,
+                "expires_ms":1800000002000_u64}})
+        ));
+    }
+    for serial in [0, nacre_protocol::MAX_SAFE_INTEGER + 1] {
+        let mut state = compatibility_states("osd")[1].clone();
+        state["current"]["serial"] = json!(serial);
+        assert!(!valid("osd", state));
+    }
+    let mut stale_mute = compatibility_states("osd")[1].clone();
+    patch::apply(
+        &mut stale_mute,
+        &json!({"current":{"serial":3,
+        "channel":"brightness","unit":"fraction","value":0.75}}),
+    );
+    assert!(!valid("osd", stale_mute));
+    for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        let mut audio: CoreSnapshot = serde_json::from_value(json!({"topic":"audio",
+            "data":compatibility_states("audio-readback")[1]}))
+        .unwrap();
+        let CoreSnapshot::Audio(ref mut state) = audio else {
+            unreachable!()
+        };
+        state
+            .nodes
+            .items
+            .get_mut(&EntityId("output-1".into()))
+            .unwrap()
+            .readback
+            .as_mut()
+            .unwrap()
+            .linear_volume = Some(invalid);
+        assert!(!audio.valid());
+        let mut battery: CoreSnapshot = serde_json::from_value(json!({"topic":"battery",
+            "data":compatibility_states("battery")[1]}))
+        .unwrap();
+        let CoreSnapshot::Battery(ref mut state) = battery else {
+            unreachable!()
+        };
+        state.percentage = Some(invalid);
+        assert!(!battery.valid());
+        let mut osd: CoreSnapshot = serde_json::from_value(json!({"topic":"osd",
+            "data":compatibility_states("osd")[1]}))
+        .unwrap();
+        let CoreSnapshot::Osd(ref mut state) = osd else {
+            unreachable!()
+        };
+        state.current.as_mut().unwrap().value = Some(invalid);
+        assert!(!osd.valid());
     }
 }
 

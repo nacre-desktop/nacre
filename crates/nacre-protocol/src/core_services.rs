@@ -91,6 +91,9 @@ pub struct NetworkState {
     pub devices: Entities<Device>,
     pub access_points: Entities<AccessPoint>,
     pub connections: Entities<Connection>,
+    /// The backend's primary active connection; never infer it from map order.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub primary_connection: Option<EntityId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -135,6 +138,31 @@ pub struct PowerProfilesState {
     pub profiles: Entities<PowerProfile>,
 }
 
+/// Battery readback is independent of profile selection. Missing is unknown.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct BatteryState {
+    pub health: Health,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0.0, max = 100.0))]
+    pub percentage: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub charging: Option<bool>,
+}
+
+/// Independently available backend readings. Unknown members are omitted.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AudioReadback {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0.0))]
+    pub linear_volume: Option<f64>,
+    /// Cube root of linear volume, matching the existing Bead slider.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0.0))]
+    pub perceptual_volume: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub muted: Option<bool>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AudioKind {
@@ -153,6 +181,10 @@ pub struct AudioNode {
     pub volume: f64,
     pub muted: bool,
     pub ready: bool,
+    /// Authoritative when present. Legacy volume/muted are readings only when
+    /// ready=true; unavailable readback must never be displayed as zero/false.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub readback: Option<AudioReadback>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
     /// Current target for a playback/capture stream, if known.
@@ -191,6 +223,23 @@ pub struct Notification {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub image_path: Option<String>,
     pub actions: Entities<NotificationAction>,
+    /// Resolved policy timeout; zero means no automatic expiry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub timeout_ms: Option<u64>,
+    /// Remaining lifetime at the last service transition, including hover pause.
+    /// Eligibility/expiry belongs to the service, not a client countdown.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub remaining_ms: Option<u64>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct HistoryStorage {
+    pub ready: bool,
+    pub writable: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<Failure>,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct NotificationsState {
@@ -199,6 +248,100 @@ pub struct NotificationsState {
     pub active: Entities<Notification>,
     /// A bounded window onto the existing history store; no new retention policy.
     pub history: Entities<Notification>,
+    /// Service-selected popup eligibility. Missing is unknown, not all active.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(extend("maxItems" = 128, "uniqueItems" = true))]
+    pub popup_order: Option<Vec<EntityId>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inhibited: Option<bool>,
+    /// Total retained history including nontransient active notices, not window size.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub history_count: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history_storage: Option<HistoryStorage>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OsdChannel {
+    Volume,
+    Brightness,
+    Microphone,
+    Capslock,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OsdUnit {
+    Linear,
+    Perceptual,
+    Fraction,
+    Boolean,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct OsdItem {
+    /// Changes for repeated equal-valued requests; scoped to the daemon boot.
+    #[schemars(range(min = 1, max = 9007199254740991_u64))]
+    pub serial: u64,
+    pub channel: OsdChannel,
+    pub unit: OsdUnit,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0.0))]
+    pub value: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub muted: Option<bool>,
+    /// Absolute same-host Unix milliseconds. Expired snapshots never replay an OSD.
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub expires_ms: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct OsdState {
+    pub health: Health,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current: Option<OsdItem>,
+}
+
+impl AudioReadback {
+    fn valid(&self) -> bool {
+        [self.linear_volume, self.perceptual_volume]
+            .into_iter()
+            .flatten()
+            .all(|value| value.is_finite() && value >= 0.0)
+            && self
+                .linear_volume
+                .zip(self.perceptual_volume)
+                .is_none_or(|(linear, perceptual)| {
+                    (perceptual.powi(3) - linear).abs() <= 0.00001 * linear.max(1.0)
+                })
+    }
+}
+
+impl OsdItem {
+    fn valid(&self) -> bool {
+        self.serial > 0
+            && timestamp_valid(self.serial)
+            && timestamp_valid(self.expires_ms)
+            && self
+                .value
+                .is_none_or(|value| value.is_finite() && value >= 0.0)
+            && match (&self.channel, &self.unit) {
+                (
+                    OsdChannel::Volume | OsdChannel::Microphone,
+                    OsdUnit::Linear | OsdUnit::Perceptual,
+                ) => true,
+                (OsdChannel::Brightness, OsdUnit::Fraction) => {
+                    self.muted.is_none() && self.value.is_none_or(|value| value <= 1.0)
+                }
+                (OsdChannel::Capslock, OsdUnit::Boolean) => {
+                    self.muted.is_none()
+                        && self.value.is_none_or(|value| value == 0.0 || value == 1.0)
+                }
+                _ => false,
+            }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -406,10 +549,14 @@ pub enum CoreSnapshot {
     Bluetooth(BluetoothState),
     #[serde(rename = "power.profiles")]
     PowerProfiles(PowerProfilesState),
+    #[serde(rename = "battery")]
+    Battery(BatteryState),
     #[serde(rename = "audio")]
     Audio(AudioState),
     #[serde(rename = "notifications")]
     Notifications(NotificationsState),
+    #[serde(rename = "osd")]
+    Osd(OsdState),
     #[serde(rename = "tray")]
     Tray(TrayState),
     #[serde(rename = "dashboard.weather")]
@@ -431,6 +578,12 @@ impl CoreSnapshot {
                 s.devices.valid()
                     && s.access_points.valid()
                     && s.connections.valid()
+                    && s.primary_connection.as_ref().is_none_or(|id| {
+                        s.connections
+                            .items
+                            .get(id)
+                            .is_some_and(|connection| connection.active)
+                    })
                     && s.access_points.items.values().all(|ap| {
                         ap.strength <= 100
                             && s.devices.items.contains_key(&ap.device)
@@ -454,6 +607,7 @@ impl CoreSnapshot {
                         .as_ref()
                         .is_none_or(|id| s.profiles.items.contains_key(id))
             }
+            Self::Battery(s) => s.percentage.is_none_or(percent_valid),
             Self::Audio(s) => {
                 s.nodes.valid()
                     && s.default_output.as_ref().is_none_or(|id| {
@@ -471,6 +625,14 @@ impl CoreSnapshot {
                     && s.nodes.items.values().all(|n| {
                         n.volume.is_finite()
                             && n.volume >= 0.0
+                            && n.readback.as_ref().is_none_or(|readback| {
+                                readback.valid()
+                                    && (!n.ready
+                                        || (readback
+                                            .linear_volume
+                                            .is_none_or(|value| value == n.volume)
+                                            && readback.muted.is_none_or(|value| value == n.muted)))
+                            })
                             && n.target.as_ref().is_none_or(|id| {
                                 s.nodes.items.get(id).is_some_and(|target| {
                                     matches!(
@@ -485,18 +647,40 @@ impl CoreSnapshot {
             Self::Notifications(s) => {
                 s.active.valid()
                     && s.history.valid()
+                    && s.popup_order.as_ref().is_none_or(|order| {
+                        order.len() <= 128
+                            && order.iter().all(|id| s.active.items.contains_key(id))
+                            && order
+                                .iter()
+                                .collect::<std::collections::BTreeSet<_>>()
+                                .len()
+                                == order.len()
+                    })
+                    && s.history_count.is_none_or(|count| {
+                        timestamp_valid(count)
+                            && count
+                                >= (s.history.items.len()
+                                    + s.active
+                                        .items
+                                        .values()
+                                        .filter(|notice| !notice.transient)
+                                        .count()) as u64
+                    })
                     && s.active
                         .items
                         .values()
                         .chain(s.history.items.values())
                         .all(|n| {
                             timestamp_valid(n.created_ms)
+                                && n.timeout_ms.is_none_or(timestamp_valid)
+                                && n.remaining_ms.is_none_or(timestamp_valid)
                                 && n.actions.valid()
                                 && n.image_path
                                     .as_ref()
                                     .is_none_or(|p| p.starts_with('/') && !p.contains('\0'))
                         })
             }
+            Self::Osd(s) => s.current.as_ref().is_none_or(OsdItem::valid),
             Self::Tray(s) => {
                 s.items.valid()
                     && s.items.items.values().all(|item| {

@@ -226,6 +226,147 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
         "protocol/fixtures/core-errors.jsonl".into(),
         encode(&errors),
     );
+    out.extend(compatibility_transcripts());
+    out
+}
+
+/// Additive examples are separate so the original frozen scenarios never change.
+fn compatibility_transcripts() -> BTreeMap<String, String> {
+    let health = json!({"available":true,"stale":false});
+    let empty = entities(json!({}));
+    let notice = json!({"app_name":"Fixture app","summary":"Fixture notice",
+        "body":"Public test content","urgency":"normal","resident":false,
+        "transient":false,"created_ms":1800000000000_u64,
+        "actions":empty,"timeout_ms":5000,"remaining_ms":5000});
+    let mut notice_two = notice.clone();
+    notice_two["created_ms"] = json!(1800000002000_u64);
+    let mut notice_three = notice.clone();
+    notice_three["created_ms"] = json!(1800000004000_u64);
+    notice_three["timeout_ms"] = json!(0);
+    notice_three.as_object_mut().unwrap().remove("remaining_ms");
+    let mut expired = notice_two.clone();
+    expired["remaining_ms"] = json!(0);
+    let stored = entities(json!({"stored-1":notice}));
+    let cases = [
+        (
+            "notifications-popup-policy",
+            "notifications",
+            json!({"health":health,"do_not_disturb":false,
+                "active":entities(json!({"notice-1":notice})),"history":empty,
+                "popup_order":["notice-1"],"inhibited":false,"history_count":1,
+                "history_storage":{"ready":true,"writable":true}}),
+            vec![
+                json!({"inhibited":true,"popup_order":[]}),
+                // Ending inhibition never replays older active notifications.
+                json!({"inhibited":false}),
+                json!({"active":{"items":{"notice-2":notice_two},"order":["notice-1","notice-2"]},"popup_order":["notice-2"],"history_count":2}),
+                json!({"active":{"items":{"notice-2":{"remaining_ms":3000}}}}),
+                json!({"active":{"items":{"notice-3":notice_three},"order":["notice-1","notice-2","notice-3"]},"popup_order":["notice-3"],"history_count":3}),
+                json!({"active":{"items":{"notice-2":null},"order":["notice-1","notice-3"]},"history":{"items":{"notice-2":expired},"order":["notice-2"]}}),
+            ],
+        ),
+        (
+            "notifications-history-storage",
+            "notifications",
+            json!({"health":health,"do_not_disturb":false,
+                "active":entities(json!({"notice-1":notice})),"history":stored,
+                "popup_order":[],"inhibited":false,"history_count":2,
+                "history_storage":{"ready":false,"writable":false,
+                    "error":{"code":"unavailable","message":"History storage unavailable","retry":true}}}),
+            vec![
+                json!({"history_count":5,"history_storage":{"ready":true,"writable":true,"error":null}}),
+                json!({"history_storage":{"writable":false,"error":{"code":"permission_denied","message":"History storage is read-only","retry":false}}}),
+            ],
+        ),
+        (
+            "audio-readback",
+            "audio",
+            json!({"health":health,"default_output":"output-1",
+                "nodes":entities(json!({"output-1":{"name":"Speakers","kind":"output",
+                    "volume":0.0,"muted":false,"ready":false,"readback":{}}}))}),
+            vec![
+                json!({"nodes":{"items":{"output-1":{"volume":0.125,"ready":true,
+                    "readback":{"linear_volume":0.125,"perceptual_volume":0.5,"muted":false}}}}}),
+                // Individually known members remain usable with ready=false.
+                json!({"nodes":{"items":{"output-1":{"ready":false,
+                    "readback":{"perceptual_volume":null}}}}}),
+                json!({"nodes":{"items":{"output-1":{
+                    "readback":{"linear_volume":null}}}}}),
+                // Keep the authoritative object when all members become unknown.
+                json!({"nodes":{"items":{"output-1":{"readback":{"muted":null}}}}}),
+                json!({"nodes":{"items":{"output-1":{"readback":{"muted":true}}}}}),
+            ],
+        ),
+        (
+            "network-primary",
+            "network",
+            json!({"health":health,"wireless_enabled":true,"devices":empty,"access_points":empty,
+                "connections":entities(json!({
+                    "connection-wired":{"name":"Wired fixture","kind":"ethernet","active":true},
+                    "connection-wireless":{"name":"Wireless fixture","kind":"wifi","active":true}})),
+                "primary_connection":"connection-wired"}),
+            vec![
+                json!({"primary_connection":"connection-wireless","connections":{"items":{"connection-wired":{"active":false}}}}),
+                json!({"primary_connection":null,"connections":{"items":{"connection-wireless":{"active":false}}}}),
+            ],
+        ),
+        (
+            "tray-custom-icon",
+            "tray",
+            json!({"health":health,"items":entities(json!({"tray-1":{
+                "title":"Fixture tray","visible":true,"item_is_menu":true,"attention":false,
+                "icon":"fixture-custom-theme","icon_path":"/tmp/nacre-fixtures/icons/tray.png","menu":empty}}))}),
+            vec![json!({"items":{"items":{"tray-1":{"attention":true,
+                "icon_path":"/tmp/nacre-fixtures/icons/tray-attention.png"}}}})],
+        ),
+        (
+            "battery",
+            "battery",
+            json!({"health":{"available":false,"stale":false}}),
+            vec![
+                json!({"health":health,"percentage":62.5,"charging":false}),
+                json!({"percentage":63.0,"charging":true}),
+                json!({"health":{"available":false,"stale":true},"percentage":null,"charging":null}),
+            ],
+        ),
+        (
+            "osd",
+            "osd",
+            json!({"health":health}),
+            vec![
+                json!({"current":{"serial":1,"channel":"volume","unit":"perceptual","value":0.5,"muted":false,"expires_ms":1800000002000_u64}}),
+                json!({"current":{"serial":2,"expires_ms":1800000003000_u64}}),
+                // Object patches merge: delete audio-only members on a new channel.
+                json!({"current":{"serial":3,"channel":"brightness","unit":"fraction","value":0.75,"muted":null,"expires_ms":1800000005000_u64}}),
+                json!({"current":{"serial":4,"channel":"microphone","unit":"linear","value":null,"muted":true,"expires_ms":1800000007000_u64}}),
+                json!({"current":null}),
+                json!({"current":{"serial":5,"channel":"capslock","unit":"boolean","value":1.0,"expires_ms":1800000009000_u64}}),
+                json!({"current":null}),
+                json!({"current":{"serial":6,"channel":"volume","unit":"linear","value":0.125,"muted":false,"expires_ms":1800000011000_u64}}),
+                // The same serial/expiry is not another pulse or a fresh timeout.
+                json!({"current":{"serial":6,"expires_ms":1800000011000_u64}}),
+                json!({"current":null}),
+            ],
+        ),
+    ];
+    let mut out = BTreeMap::new();
+    for (name, topic, mut state, changes) in cases {
+        let mut frames = vec![json!({"t":"snap","topic":topic,"seq":0,"data":state})];
+        let typed: CoreSnapshot = serde_json::from_value(json!({"topic":topic,"data":state}))
+            .expect("typed compatibility fixture");
+        assert!(typed.valid(), "Invalid compatibility snapshot {name}");
+        for (base, change) in changes.into_iter().enumerate() {
+            crate::patch::apply(&mut state, &change);
+            let typed: CoreSnapshot = serde_json::from_value(json!({"topic":topic,"data":state}))
+                .expect("typed merged compatibility fixture");
+            assert!(typed.valid(), "Invalid compatibility patch {name}:{base}");
+            frames.push(json!({"t":"patch","topic":topic,"base":base,"seq":base+1,"data":change}));
+        }
+        out.insert(
+            format!("protocol/fixtures/core-compat-{name}.jsonl"),
+            encode(&frames),
+        );
+    }
     out
 }
 

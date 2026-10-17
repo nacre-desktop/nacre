@@ -47,8 +47,10 @@ A failed or ambiguous operation must not update the UI optimistically.
 | `network` | Radio state, devices, access points, saved connections; no secrets | `network.set_wifi {enabled}`; `network.connect {device,target:{kind:"access_point"\|"connection",id}}`; `network.disconnect {device}` |
 | `bluetooth` | Adapters and their power/discovery state; devices with connected/paired/trusted/pairing/battery | `bluetooth.set_power {adapter,powered}`; `bluetooth.connect`, `bluetooth.disconnect`, `bluetooth.pair`, each `{device}` |
 | `power.profiles` | Available profiles, active ID, optional degraded/unavailable reason | `power.set_profile {profile}` |
+| `battery` | Independent optional battery percentage and charging readback | Topic contract only; no profile selection |
 | `audio` | Input/output/playback/capture nodes, default input/output, stream target IDs | `audio.set_default {node}`; `audio.set_volume {node,volume}`; `audio.set_mute {node,muted}`; `audio.route {stream,target}` |
 | `notifications` | Do-not-disturb state, active notifications, bounded history window | Topic contract only in this step |
+| `osd` | Service-selected transient volume, microphone, brightness or Caps Lock display | Topic contract only; no control or permission grant |
 | `tray` | Items, local icons, flattened menu maps and child ID lists | Topic contract only in this step |
 | `dashboard.weather` | Provider, checked time, optional current reading with hourly/daily entities | `dashboard.weather.refresh {}` |
 | `dashboard.updates` | Checked time, optional count, existing status text | `dashboard.updates.refresh {}` |
@@ -65,6 +67,65 @@ default selection accepts only a ready input/output node. Routing connects a
 playback stream to an output, or capture stream to an input, subject to the
 existing PipeWire/WirePlumber policy. It grants no new microphone permission.
 Devices disappearing during an operation are errors, not successful no-ops.
+
+### Additive compatibility readback
+
+`AudioNode.readback`, when present, is authoritative and has independently optional
+`linear_volume`, `perceptual_volume` and `muted`. Missing means unknown, including
+an empty `{}`; never substitute zero volume or an unmuted state. The original
+`volume` and `muted` fields stay required for v1 compatibility, but are readings
+only when `ready` is true. When `ready` is false, those legacy fields may contain
+placeholders or retained values and must not be displayed as live readback.
+If `readback` is absent, an older producer's ready legacy values remain usable.
+Individually known `readback` members remain displayable even when `ready` is
+false; that flag gates the complete legacy tuple, not independently known values.
+Never fall back to legacy fields for a member missing from a present `readback`.
+The perceptual slider value is the cube root of linear volume, matching Bead's
+existing backend; for example, linear `0.125` is perceptual `0.5`. Convert a slider
+value to its cube before calling the unchanged linear `audio.set_volume` setter.
+Both values describe the same max-channel sample, not independent authorities.
+External amplification can make either readback exceed one; the setter's existing
+linear [0,1] limit remains. Removing readings uses RFC 7396 null members, not zeros.
+
+`network.primary_connection`, when present, references an active entry in
+`connections.items`. It is the backend's primary connection, not the first active
+map entry, strongest access point or first device. Omission means no known primary;
+a disconnect patch removes the reference with null. `battery` is independent of
+`power.profiles`, with optional percentage in [0,100] and optional `charging`.
+A battery-less or unavailable backend supplies no fabricated zero-percent reading.
+
+`notifications.popup_order`, when supplied, is the service's ordered selection of
+eligible active IDs; missing means unknown and an empty list means no popups.
+Clients never reconstruct it from `active`, DND or `inhibited`. Clearing inhibition
+does not replay previously suppressed notifications. Optional `timeout_ms` and
+`remaining_ms` describe policy/lifetime at service transitions, including hover
+pauses; the service owns expiry, without per-frame topic updates.
+`remaining_ms` is a value at a transition, not a running client countdown: never
+decrement it locally or infer that a paused hover is running. Its absence means
+unknown/no countdown; zero means no lifetime remains. A resolved `timeout_ms` of
+zero means no automatic expiry, independently of an omitted `remaining_ms`.
+Optional `history_count` is the total stored history plus nontransient active notices,
+not the bounded `history.order` length. `history_storage: {ready,writable,error?}`
+reports storage initialization and persistence independently of notification-bus
+`health`; a read-only history error does not imply the notification backend died.
+
+`osd.current`, when present, has a boot-scoped increasing `serial`, explicit
+`channel`, explicit `unit`, optional `value`/`muted`, and absolute Unix-millisecond
+`expires_ms`. Volume/microphone values use `linear` or `perceptual`; brightness
+uses `fraction` in [0,1]; Caps Lock uses `boolean` (0 or 1). Unknown readback omits
+the value. Repeated equal-valued requests change the serial so clients can restart
+the visual pulse. The service removes `current` on expiry; an expired snapshot
+never replays an OSD. Receiving the same serial again never restarts the pulse or
+expiry. On a direct channel change, patches must explicitly delete inapplicable
+members: changing an object with RFC 7396 merges it rather than replacing it.
+This reserves no arbitrary client-driven OSD method. The schema examples test
+expiry removal and identical serials; they do not claim an implemented UI has
+already passed expired-snapshot or pulse tests.
+
+Seven new `core-compat-*.jsonl` transcripts exercise these optional additions,
+including custom-theme tray `icon_path` materialized as a local cache file.
+The original core transcripts stay byte-for-byte unchanged. All examples are
+schema scenarios, not recordings of implemented services or hardware measurements.
 
 Notifications keep the existing history format, backup and privacy rules. Text
 is display content, never executable markup. Preserve the current safe markup

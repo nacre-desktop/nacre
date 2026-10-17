@@ -42,7 +42,11 @@ pub(crate) fn luau(schema: &Value) -> String {
     if let Some(types) = schema.get("type").and_then(Value::as_array) {
         return types
             .iter()
-            .map(|t| luau(&json!({"type":t})))
+            .map(|kind| {
+                let mut branch = schema.clone();
+                branch["type"] = kind.clone();
+                luau(&branch)
+            })
             .collect::<Vec<_>>()
             .join(" | ");
     }
@@ -96,6 +100,7 @@ pub(crate) fn luau(schema: &Value) -> String {
         _ => "any".into(),
     }
 }
+
 pub fn transcripts() -> BTreeMap<String, String> {
     let boot = "00000000-0000-4000-8000-000000000001";
     let welcome = json!({"t":"welcome","proto":VERSION,"min":MIN_VERSION,"boot":boot,"topics":{"compositor":1},"methods":crate::core_methods(),"frame_ms":16});
@@ -662,4 +667,24 @@ fn helper_exports() -> BTreeMap<String, String> {
             .collect(),
     );
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::luau;
+    use serde_json::json;
+
+    #[test]
+    fn nullable_collections_retain_item_and_property_types() {
+        assert_eq!(
+            luau(&json!({"type":["array","null"],
+                "items":{"$ref":"#/$defs/EntityId"}})),
+            "{EntityId} | nil"
+        );
+        assert_eq!(
+            luau(&json!({"type":["object","null"],
+                "properties":{"ready":{"type":"boolean"}},"required":["ready"]})),
+            "{ [\"ready\"]: boolean } | nil"
+        );
+    }
 }

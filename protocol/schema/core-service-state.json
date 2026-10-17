@@ -56,6 +56,22 @@
       "properties": {
         "topic": {
           "type": "string",
+          "const": "battery"
+        },
+        "data": {
+          "$ref": "#/$defs/BatteryState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
           "const": "audio"
         },
         "data": {
@@ -76,6 +92,22 @@
         },
         "data": {
           "$ref": "#/$defs/NotificationsState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "osd"
+        },
+        "data": {
+          "$ref": "#/$defs/OsdState"
         }
       },
       "required": [
@@ -198,6 +230,17 @@
         },
         "connections": {
           "$ref": "#/$defs/Entities_Connection"
+        },
+        "primary_connection": {
+          "description": "The backend's primary active connection; never infer it from map order.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -662,6 +705,33 @@
         "available"
       ]
     },
+    "BatteryState": {
+      "description": "Battery readback is independent of profile selection. Missing is unknown.",
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "percentage": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 100.0
+        },
+        "charging": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "health"
+      ]
+    },
     "AudioState": {
       "type": "object",
       "properties": {
@@ -746,6 +816,17 @@
         "ready": {
           "type": "boolean"
         },
+        "readback": {
+          "description": "Authoritative when present. Legacy volume/muted are readings only when\nready=true; unavailable readback must never be displayed as zero/false.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AudioReadback"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "icon": {
           "type": [
             "string",
@@ -781,6 +862,35 @@
         "capture"
       ]
     },
+    "AudioReadback": {
+      "description": "Independently available backend readings. Unknown members are omitted.",
+      "type": "object",
+      "properties": {
+        "linear_volume": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": 0.0
+        },
+        "perceptual_volume": {
+          "description": "Cube root of linear volume, matching the existing Bead slider.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": 0.0
+        },
+        "muted": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
     "NotificationsState": {
       "type": "object",
       "properties": {
@@ -796,6 +906,44 @@
         "history": {
           "description": "A bounded window onto the existing history store; no new retention policy.",
           "$ref": "#/$defs/Entities_Notification"
+        },
+        "popup_order": {
+          "description": "Service-selected popup eligibility. Missing is unknown, not all active.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 128,
+          "uniqueItems": true
+        },
+        "inhibited": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "history_count": {
+          "description": "Total retained history including nontransient active notices, not window size.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "history_storage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HistoryStorage"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -877,6 +1025,26 @@
         },
         "actions": {
           "$ref": "#/$defs/Entities_NotificationAction"
+        },
+        "timeout_ms": {
+          "description": "Resolved policy timeout; zero means no automatic expiry.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "remaining_ms": {
+          "description": "Remaining lifetime at the last service transition, including hover pause.\nEligibility/expiry belongs to the service, not a client countdown.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
         }
       },
       "required": [
@@ -927,6 +1095,115 @@
       },
       "required": [
         "label"
+      ]
+    },
+    "HistoryStorage": {
+      "type": "object",
+      "properties": {
+        "ready": {
+          "type": "boolean"
+        },
+        "writable": {
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Failure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "ready",
+        "writable"
+      ]
+    },
+    "OsdState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "current": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OsdItem"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "health"
+      ]
+    },
+    "OsdItem": {
+      "type": "object",
+      "properties": {
+        "serial": {
+          "description": "Changes for repeated equal-valued requests; scoped to the daemon boot.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "channel": {
+          "$ref": "#/$defs/OsdChannel"
+        },
+        "unit": {
+          "$ref": "#/$defs/OsdUnit"
+        },
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": 0.0
+        },
+        "muted": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "expires_ms": {
+          "description": "Absolute same-host Unix milliseconds. Expired snapshots never replay an OSD.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "serial",
+        "channel",
+        "unit",
+        "expires_ms"
+      ]
+    },
+    "OsdChannel": {
+      "type": "string",
+      "enum": [
+        "volume",
+        "brightness",
+        "microphone",
+        "capslock"
+      ]
+    },
+    "OsdUnit": {
+      "type": "string",
+      "enum": [
+        "linear",
+        "perceptual",
+        "fraction",
+        "boolean"
       ]
     },
     "TrayState": {
