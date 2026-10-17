@@ -248,6 +248,19 @@ explicit offline installer boundaries, not generic settings.provider writers.
   installation are migrated/supported. Carry the limitation into protocol /
   migration report and future switch-on checklist. No installer product edits
   or new preflight probe are authorized by this clarification.
+- Explicit classification: tools/manage.py deploy → tools/releases.py deploy()
+  invokes profile-policy.py install in the destination HOME before later cutover.
+  This is a real deployment writer, not staging/import-only, and falls under the
+  offline deployment boundary. Inspecting initially-active services does not prove
+  the destination daemon is stopped or transfer ownership. Record it as requiring
+  an offline destination precondition; this does not itself stop N0001's session
+  audit. Do not run it, probe live services or edit the installer in this spec.
+  It must not be advertised as safe with an active daemon. A future owner-approved
+  deployment must enforce the precondition before profile replacement (including
+  any socket activation/startup race) or use a separately specified handoff.
+  If a session watcher or ordinary UI operation calls deploy automatically, stop
+  N0001 and report that additional runtime caller; explicit CLI deployment alone
+  is not such a caller.
 - Before active-daemon installer use is ever supported, a separate installer spec
   must enforce destination-scoped refusal or a coordinated ownership handoff
   across actual entry points, with startup-race/staging tests. That is deferred
