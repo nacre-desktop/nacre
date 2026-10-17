@@ -92,8 +92,8 @@ ownership expansion, measurements except separately granted N0002 continuation.
 ## Clarification: durable success checks operation-owned values
 
 Added 2026-10-17 after wait_store audit. This is an authorized bounded correctness
-fix in state.rs, owned_settings.rs, daemon/settings_controller.rs, daemon/menu.rs
-and their existing tests; it changes the frozen candidate and requires fresh
+fix in state.rs, owned_settings.rs, daemon/settings_controller.rs, daemon/menu.rs,
+nacre/shell/utils/NacreStateFile.qml and their existing tests; it changes the frozen candidate and requires fresh
 source/binary receipts. Preserve v25 source and measurements as historical evidence.
 
 - Extend wait_store with a caller-supplied expectation of key paths and expected
@@ -144,6 +144,41 @@ cases (equivalent existing tests may be extended):
    use the same expectation checks; existing IO/error tests still fail safely.
 5. settings_controller_receipt_race_is_conflict: another mutation between desktop
    call and get cannot supply the earlier operation's accepted snapshot.
+
+### QML publisher saved() acknowledgement is in scope
+
+NacreStateFile.qml directly dispatches settings.publish and emits saved() after
+observing a clean revision. Include this path in the same fix; it must not falsely
+acknowledge superseded values. NacreSettingsStorage.qml has no durable-success
+callback and is not authorized for unrelated changes by this clarification.
+
+- Before dispatch, capture immutable operation intent from the supplied authorized
+  publisher fields. After the reply, bind expected values to its accepted snapshot
+  (normalization allowed only as defined by the existing publisher). Keep the
+  request's store, connection/boot identity and accepted revision with the pending
+  acknowledgement. Do not rebuild expectations from a later topic snapshot.
+- Emit saved() exactly once only when the same store/connection/boot has a valid,
+  clean, error-free snapshot at rev >= accepted rev and ALL expected owned fields
+  still match. Compare JSON structurally, never JSON.stringify object key order.
+  Apply this to a reply that is already clean as well as subsequent stream data.
+- A superseding clean mismatch, publication error, connection loss or new boot
+  terminates that pending acknowledgement with existing saveFailed/error reporting,
+  clears pending intent, and never emits saved() or replays the dispatched write.
+  Later topic success must not revive the failed acknowledgement. Clear pending
+  intent on both connected-change and newBoot paths, and on destruction/store
+  changes; do not allow an old callback to acknowledge a new connection/store.
+- Keep at most one dispatched operation awaiting durability in this FileView:
+  do not dispatch queuedText while a durable acknowledgement is pending. Existing
+  undispatched latest-value coalescing can remain; the next dispatch uses fresh
+  revision only after prior success. On failure retain existing explicit error
+  recovery semantics, never automatically retry a dispatched mutation. No new
+  framework, timeout policy, signal API, translation/catalog redesign or live UI.
+- Add deterministic fake-client/signal-count QML tests in existing settings/state
+  Qt test coverage: same-field overwrite→saveFailed once/saved zero; unrelated
+  field change→saved once; initially clean success; error then later clean→no
+  saved; disconnect/newBoot and late old callback→no saved/replay; second queued
+  save waits for first durability then uses fresh revision. Include structurally
+  equal objects with different member order. Use private fixture state only.
 
 Run focused relevant tests after the fix; rerun broader required gates only for
 this changed candidate. No frozen fixture regeneration and no capture grant.
