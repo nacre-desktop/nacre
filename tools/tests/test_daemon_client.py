@@ -318,6 +318,45 @@ ShellRoot {
             check(!value.data.windows.w1 && original.windows.w1.id === "w1", "delete without mutation");
         """)
 
+    def test_last_subscriber_releases_cache_but_active_disconnect_keeps_state(self):
+        self.qml("""
+            const value = link.subscribe("fixture");
+            link.subscribe("fixture");
+            const snapshot = {items:{one:{id:"one"}},order:["one"]};
+            value.data = snapshot;
+            value.sequence = 17;
+            value.fresh = true;
+            link.unsubscribe("fixture");
+            check(value.users === 1 && value.data === snapshot, "other view keeps its snapshot");
+            link.disconnected();
+            check(value.data === snapshot && !value.fresh, "active view keeps last good state offline");
+            link.unsubscribe("fixture");
+            check(value.users === 0 && Object.keys(value.data).length === 0 && value.sequence === 0, "last view releases cache offline");
+            link.receive(JSON.stringify({t:"snap",topic:"fixture",seq:18,data:snapshot}));
+            check(Object.keys(value.data).length === 0, "late state cannot repopulate a closed view");
+            link.subscribe("fixture");
+            check(value.users === 1 && !value.fresh && Object.keys(value.data).length === 0, "reopen needs a fresh snapshot");
+        """)
+
+    def test_closed_menu_releases_rows_and_reopens_with_a_fresh_query(self):
+        self.qml(
+            """
+            const component = Qt.createComponent("services/NacreMenuQuery.qml");
+            check(component.status === Component.Ready, component.errorString());
+            const menu = component.createObject(root, {enabled:true,active:true});
+            menu.result = {order:["one"],items:{one:{name:"Fixture",activation:"opaque",presentation:{id:"one",operation:"copy",value:"fixture"}}}};
+            menu.resultKey = menu.key;
+            menu.resultBoot = link.boot;
+            check(menu.entries.length === 1 && link.topic("menu").users === 1, "open menu owns rows and subscription");
+            menu.active = false;
+            check(menu.entries.length === 0 && Object.keys(menu.result).length === 0, "closed menu releases rows");
+            check(!menu.resultKey && !menu.resultBoot && !menu.dirty && link.topic("menu").users === 0, "closed menu releases query identity and subscription");
+            menu.active = true;
+            check(menu.dirty && menu.entries.length === 0 && link.topic("menu").users === 1, "reopen requests fresh rows");
+        """,
+            menu=True,
+        )
+
     def test_disconnected_call_is_refused_before_dispatch(self):
         result = self.qml(
             """

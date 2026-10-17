@@ -111,11 +111,19 @@ Singleton {
         if (!value || value.users <= 0)
             return;
         value.users--;
-        if (connected && value.users === 0)
-            send({
-                t: "unsub",
-                topics: [name]
-            });
+        if (value.users === 0) {
+            if (connected)
+                send({
+                    t: "unsub",
+                    topics: [name]
+                });
+            // A closed view does not need a second cache. Active subscribers
+            // still retain their last good snapshot across disconnection.
+            value.fresh = false;
+            value.resyncing = false;
+            value.sequence = 0;
+            value.data = ({});
+        }
     }
     function resync(value) {
         value.fresh = false;

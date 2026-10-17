@@ -55,6 +55,15 @@ QtObject {
             subscribed = false;
             NacreDaemon.unsubscribe("menu");
         }
+        if (!enabled || !active) {
+            coalesce.stop();
+            dirty = false;
+            result = ({});
+            resultKey = "";
+            resultBoot = "";
+            error = "";
+            return;
+        }
         schedule();
     }
     function run() {
