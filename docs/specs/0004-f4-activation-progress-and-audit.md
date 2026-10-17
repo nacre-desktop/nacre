@@ -3,7 +3,7 @@
 - ID: N0004
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: Ready
+- Status: In progress
 - Depends on: N0001 v7 source-ready submission; preserve unpublished candidate
 - Date: 2026-10-18
 - Size: one focused session, maximum3hours
