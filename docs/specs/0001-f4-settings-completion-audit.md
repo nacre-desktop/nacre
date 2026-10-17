@@ -89,6 +89,65 @@ ownership expansion, measurements except separately granted N0002 continuation.
    correctness fix changes captured bytes, retain old evidence as diagnostic and
    ask spec agent to reissue the capture revision; never relabel old results.
 
+## Clarification: durable success checks operation-owned values
+
+Added 2026-10-17 after wait_store audit. This is an authorized bounded correctness
+fix in state.rs, owned_settings.rs, daemon/settings_controller.rs, daemon/menu.rs
+and their existing tests; it changes the frozen candidate and requires fresh
+source/binary receipts. Preserve v25 source and measurements as historical evidence.
+
+- Extend wait_store with a caller-supplied expectation of key paths and expected
+  JSON values (including explicit absence). Keep boot/connection, target revision,
+  error, timeout and dirty checks. A clean revision >= target is successful only
+  when every expected path still matches. Compare JSON structurally; absent and
+  null differ, arrays and an explicitly set object subtree compare in full.
+  A mismatching clean snapshot returns a visible conflict/superseded error;
+  never retry/replay or fall back. Compare the initial clean accepted snapshot too.
+- settings.set: expectation is the exact requested key path, with its value from
+  the accepted snapshot after validation/normalization. Include no-op requests;
+  do not derive intent only from changed fields.
+- settings.publish: check all authorized fields supplied by this operation,
+  including supplied unchanged values. Do not check unrelated retained fields.
+- settings.provider: check its authorized fields using the existing provider-key /
+  descriptor allowlist. Include owned fields omitted by the replacement request
+  as expected absence, because omission can delete them. Retained unknown fields
+  are not owned. For colors.appThemes, check only its eight known theme keys;
+  preserved unknown members must not cause false conflicts. Reuse existing
+  validation/ownership metadata, not a competing general diff/merge framework.
+- menu.preferences mutators: result already contains the four fields this actor
+  writes: favorites, hidden, recent, usage. Capture expectations from that result,
+  never from a later settings.get that might describe another mutation.
+- desktop controller: the result's rev identifies its admitted store revision.
+  If a follow-up get is needed for accepted data, require get.rev == result.rev;
+  otherwise fail conservatively with conflict rather than treating a later
+  mutation as the caller's acceptance. For explicit set, check the requested key
+  even if unchanged. For other controller actions, check every changed/deleted
+  desktop path between the pre-call store and that exact accepted snapshot;
+  preserve the existing action/transaction semantics. If expected paths cannot
+  be determined safely, stop and report that action before widening the wire API.
+- The wait establishes that the caller's owned values are present at the observed
+  durable snapshot. It cannot promise values will remain unchanged afterwards,
+  or prove intermediate revisions were individually flushed. Do not claim that.
+
+Extend settings_failed_publication_never_acknowledges_success and add focused
+cases (equivalent existing tests may be extended):
+
+1. settings_wait_same_key_superseded_is_conflict: accepted key A is replaced
+   before flush; newer clean/error-free revision must NOT report A as successful.
+2. settings_wait_unrelated_key_change_still_succeeds: later key B changes while A
+   remains; newer durable snapshot succeeds for A. Whole-document equality fails
+   this requirement and must not be used as the general check.
+3. settings_wait_absent_is_not_null: an owned provider deletion is restored or
+   changed to null; neither matches expected absence. Unknown preserved fields
+   and unknown appThemes keys can change without a false conflict.
+4. settings_wait_noop_and_fast_clean_check_intent: no-op and initially clean paths
+   use the same expectation checks; existing IO/error tests still fail safely.
+5. settings_controller_receipt_race_is_conflict: another mutation between desktop
+   call and get cannot supply the earlier operation's accepted snapshot.
+
+Run focused relevant tests after the fix; rerun broader required gates only for
+this changed candidate. No frozen fixture regeneration and no capture grant.
+
 ## Measurements
 
 None newly authorized here. N0002 covers existing fixed-endpoint captures.
