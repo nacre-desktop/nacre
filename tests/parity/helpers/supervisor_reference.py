@@ -105,7 +105,19 @@ exit "${FIXTURE_EXIT:-0}"
                                 raise AssertionError("Private child did not start")
                             time.sleep(0.01)
                     child.send_signal(signal.SIGTERM)
-                stdout, stderr = child.communicate(timeout=8)
+                try:
+                    stdout, stderr = child.communicate(timeout=8)
+                except subprocess.TimeoutExpired as error:
+                    events_path = root / "events"
+                    events = (
+                        events_path.read_text()
+                        if events_path.exists()
+                        else "<no events>"
+                    )
+                    raise AssertionError(
+                        f"Supervisor case {name} timed out after 8 seconds; "
+                        f"parent_exit={child.poll()}; events={events[-4096:]!r}"
+                    ) from error
             finally:
                 if child.poll() is None:
                     child.kill()

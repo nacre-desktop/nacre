@@ -76,5 +76,5 @@ Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hosts
 UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-Next: network6a737629 CI38965942859 full green (351 Rust/938 repo/534 parity); wallpaper54a9e5d6 published/CI38977829763 full green:355 Rust/938 repo/534 parity;8 settled cells valid/PSS overlaps/idle unchanged; cold471/441→424/441ms overlaps; F3 typed action contract:361 Rust/938 repo/534 immutable parity/fmt/Clippy/schema pass, publication/CI next; then shared QML→F4STOP; frozen QML arithmetic217/new launcher runtime394 references retained. Settled PSS38.03→37.61 niri/37.90→36.69 Hypr; cold449/462→460/424ms overlaps.
+Next: F3 contract8be61d34 has361 Rust/938 repo/534 immutable parity locally; CI38984227571 failed an existing supervisor8s timeout (native/938repo/fresh-install passed).153 focused supervisor records/27 harness tests pass; diagnostics keep deadline/goldens, cause unproved. Full green before frozen arithmetic→native attach/shared QML→F4 sole writer→STOP.
 No live desktop/config/network changes, tags, releases or package publication.

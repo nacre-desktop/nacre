@@ -10,7 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("parity_runner", HERE / "run.py")
@@ -19,6 +19,41 @@ spec.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
+    def test_supervisor_timeout_identifies_the_case_and_pipe_or_parent_state(self):
+        from supervisor_reference import capture
+
+        for status in (None, 23):
+            with self.subTest(parent_exit=status):
+                child = Mock()
+                child.poll.return_value = status
+                child.communicate.side_effect = subprocess.TimeoutExpired("fixture", 8)
+
+                def spawn(*args, child=child, **kwargs):
+                    root = Path(kwargs["env"]["HOME"]) / ".local/share/nacre/shell"
+                    (root / "events").write_text("start healthy\nchild-running\n")
+                    return child
+
+                with (
+                    patch("supervisor_reference.subprocess.Popen", side_effect=spawn),
+                    patch.dict(os.environ, NACRE_HELPER_BINARY="/fixture/nacre-helper"),
+                    self.assertRaisesRegex(
+                        AssertionError,
+                        f"Supervisor case clean timed out after 8 seconds; parent_exit={status}",
+                    ) as caught,
+                ):
+                    capture(["fixture"], names=("clean",))
+                self.assertIsInstance(
+                    caught.exception.__cause__, subprocess.TimeoutExpired
+                )
+                self.assertIn("child-running", str(caught.exception))
+                child.communicate.assert_called_once_with(timeout=8)
+                if status is None:
+                    child.kill.assert_called_once_with()
+                    child.wait.assert_called_once_with()
+                else:
+                    child.kill.assert_not_called()
+                    child.wait.assert_not_called()
+
     def test_account_help_extensions_are_exact_and_preserve_other_observations(self):
         for helper in ("nacre-ai", "nacre-ai-chat"):
             case = json.loads((HERE / helper / "case-help.json").read_text())
