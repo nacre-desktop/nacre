@@ -268,6 +268,35 @@ explicit offline installer boundaries, not generic settings.provider writers.
   If normal runtime can invoke profile replacement outside explicit installation,
   this exception does not apply: stop and report the exact path for a bounded fix.
 
+## Correctness environment: reuse the preserved private build worktree
+
+The implementer reports no cargo/rustc/rustup on the editing host and no build_host
+registry entry. Use the task's already-preserved isolated remote Nacre build
+worktree/toolchain for correctness-only gates. This authorizes reuse, not creating
+a perf lab, installing a new host toolchain, editing projects.json or deployment.
+
+1. Reconfirm existing host identity, task branch/worktree ownership and idle state
+   from the preserved receipts. Reuse the existing SSH route/credentials; never
+   copy authentication. If identity, source ownership or availability differs,
+   report the mismatch before writing or building. Preserve other tasks/caches.
+2. Before transfer, archive/hash frozen v25 and its receipts. Transfer only this
+   task's exact revised candidate to its own build worktree; compare the complete
+   source manifest/hash at both ends, including deletions, fixtures, dependencies
+   and pins. Do not test a stale remote tree or overwrite a peer's checkout.
+3. Run focused durability tests first, then applicable required broader correctness
+   checks for the changed candidate using the existing pinned toolchain. Commands
+   nice -n 10; Cargo -j2; long jobs in the existing private task tmux workflow.
+   No measurement job is active/granted now; before starting, still confirm the
+   build host is not reserved for another measurement. An active exclusive
+   capture takes priority; defer builds/tests on that host until release.
+4. Qt/private daemon tests keep private HOME/XDG/socket/D-Bus/compositor endpoints;
+   never attach to installed services, live session or system bus. Test fixtures
+   remain immutable. Record revised source/helper hashes, exact commands, pass /
+   fail/skip counts, toolchain identity and private report locations in Review.
+5. These runs are correctness tests only, not memory/CPU/latency acceptance, and
+   cannot complete N0002. The old423/954/534 receipts remain scoped to v25, not
+   proof of the revised fix. Reuse results only where exact source scope matches.
+
 ## Measurements
 
 None newly authorized here. N0002 covers existing fixed-endpoint captures.
