@@ -6,7 +6,7 @@ must not infer permission from an old roadmap or reserve a measurement slot.
 
 | Order | ID | Assignment | Status | Dependencies |
 | --- | --- | --- | --- | --- |
-| 1 | N0001 | [F4 settings completion audit](0001-f4-settings-completion-audit.md) | Ready | preserve current unpublished F4 |
+| 1 | N0001 | [F4 settings completion audit](0001-f4-settings-completion-audit.md) | In progress | preserve current unpublished F4 |
 | 2 | N0002 | [F4 whole-group acceptance/publication](0002-f4-whole-group-acceptance.md) | Ready | N0001 source-ready; slot grant |
 | 3 | N0003 | [Core network state adapter](0003-core-network-state-adapter.md) | Ready | N0001/N0002 Done; green published F4 |
 
