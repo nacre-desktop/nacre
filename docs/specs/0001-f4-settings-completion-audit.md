@@ -180,6 +180,43 @@ explicit accepted-snapshot semantics; their durable-success wrappers wait.
   completes between admission and waiter registration. Cancellation must leave
   no pending watcher after existing deadline/disconnect cleanup.
 
+### Internal activation frecency must not block the menu actor
+
+The durable wire-reply requirement above applies to menu.preferences mutations.
+menu.activate success describes the existing activation/dispatch outcome; it is
+not a durable-frecency acknowledgement. Preserve its result/error/fallback shape.
+
+- Do not keep the menu actor inline waiting for frecency's150ms flush. Admit its
+  record through the same serialized settings owner, then use the existing bounded
+  JoinSet/waiter machinery to observe persistence while the actor serves queries
+  and other requests. No unbounded detached task, new worker/process or framework.
+  Never move settings/Hub borrows across a wait or bypass the existing bounds.
+- Failure/supersession of ancillary frecency persistence remains observable through
+  existing settings error/reporting; do not silently label it durable. An already
+  dispatched activation must not be reported as an undispatched/retryable failure
+  merely because its later frecency persistence failed. Never replay activation
+  or fall back to another executor for that failure.
+- Preserve the current ordering and effect-admission semantics for activation;
+  only remove persistence waiting from the actor's serial execution path. If
+  existing JoinSet bounds are full, use existing bounded admission/error policy,
+  never launch an extra action to recover. Report any unavoidable contract change.
+- Add activation_frecency_wait_does_not_block_menu_query (hold flush pending,
+  another query completes with correct data), and
+  activation_frecency_failure_never_replays_activation (one dispatch, later IO /
+  supersession observed without second dispatch or false durable claim).
+  No new latency benchmark or measurement grant is implied by these tests.
+
+### launcher-menu registry metadata has no enabled setter
+
+For launcher-menu, settings.access=write alone grants no key. If the audit finds
+no enabled non-planned descriptor or actual writer, report it as registry-write
+metadata with no currently writable Settings keys. Record daemon reads and
+shared-mode FileView behavior; keep generic settings.set denied. This discrepancy
+alone does not block N0001 and authorizes no new descriptor, writer or API.
+Stop only for an actual competing runtime writer or an enabled control lacking
+its required supported write route. Do not conflate19 metadata rows with19
+stores exposing writable keys.
+
 ### QML publisher saved() acknowledgement is in scope
 
 NacreStateFile.qml directly dispatches settings.publish and emits saved() after
