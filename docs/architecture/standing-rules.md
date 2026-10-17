@@ -51,6 +51,9 @@ benchmarks, long builds, memory captures, installed files or desktop configurati
 - Framework crates are MIT OR Apache-2.0 with permissive dependencies; GPL only
   in nacre-shell. Backends are frozen except fixes. No launcher catalog, ranking
   or providers in Bead. Moving nacre-shell between repos is owner-only.
+- Registry note: foundation's65-store count is historical. At5f4c0bf3 there
+  are72 records,19 with Settings metadata. Preserve provider/root boundaries;
+  generic Settings access does not imply authority over every record.
 - Nacre applies [security review](../development/security-review.md) to touched
   paths. Frozen desktop-settings 150 validation / 50 controller cases remain
   the F4 reference; never regenerate expected results to fit a port.

@@ -1,0 +1,107 @@
+# N0002 — F4 whole-group acceptance and publication
+
+- ID: N0002
+- Repo: nacre-desktop/nacre
+- Implementer: NACRE
+- Status: Ready
+- Depends on: N0001 source-ready review; explicit slot confirmation; final Done after N0001 correctness
+- Date: 2026-10-17
+- Size: one focused session, maximum 4 hours
+
+## Goal
+
+Finish the existing F4 whole-group comparison and integrate only a candidate
+that meets the owner's regression rule. Preserve already valid captures and
+passing source checks.
+
+## Context
+
+Published baseline5f4c0bf3; existing F4 receipt44ba7afa/helperabdfc528 is unpublished.
+Reported current gate uses fixed600s warmup +60s idle and has a first niri A/B
+pair; these reports require artifact inspection, not assumed acceptance. Read
+N0001, architecture/standing-rules.md and development/rust-migration.md. Existing
+frozen Wave3 and pending physical desktop A/B/A/B are entirely separate.
+
+## Scope
+
+In: current private F4 captures, whole-group/per-action analysis, docs/report and
+normal integration once correctness/gates pass. Out: product optimization during
+capture, new tooling layers, live deployment, daemon-unit enablement, new services.
+
+## Steps
+
+1. Return exact baseline/candidate source and binary hashes, capture host scope,
+   active controller PID/session, raw evidence path and estimated remaining time.
+   Preserve ongoing valid runs. The spec agent grants exclusive continuation
+   naming these hashes; no new capture can infer approval from this document.
+2. This spec explicitly uses the existing matched A/B/A/B sequence (two A/B
+   pairs per compositor), rather than default five pairs, to preserve the fixed
+   noisy-baseline plan already in progress. Every arm gets600s warmup and a full
+   60s idle window. Complete both Hyprland virtual120Hz and niri nested60Hz at
+   2880×1800/1.5 with identical HOME/catalog/palette/settings script per arm.
+   Do not replace a valid arm merely because its result is disappointing.
+3. Measure QML + daemon + every helper as one group with stable PID membership.
+   Record individual PSS and group sum, peaks, anonymous/file/shared changes,
+   CPU/call and process launches. Include startup/read/set and cold CLI latency
+   as separate paths; do not hide a repeatable cold-launch regression behind
+   lower helper CPU. Last niri553.52→552.46MiB and395.79→429.06ms are preliminary.
+4. Validate every arm: process SwapPss0, host swap-in<1MiB, page size/counter
+   provenance, full windows and exact artifacts, no overlapping build/test job.
+   Exclude invalid runs explicitly and request time for replacements. Report all
+   run values, medians, min/max spreads and peaks, not only deltas.
+5. If cold CLI or another endpoint repeats worse beyond control variation, stop
+   publication and send evidence for a bounded fix spec; no new warmup/threshold
+   trick. If baseline noise remains inconclusive, label unknown and ask spec agent.
+6. On N0001 correctness + this gate PASS, commit as approved identity with
+   [no-publish], integrate directly onto current main using only own task commits,
+   preserve concurrent docs changes, push normally, inspect every applicable CI
+   job. Update report with exact source/artifact/capture-to-commit mapping.
+   Return Review; no live opt-in or install. Release measurement slot explicitly.
+
+## Measurements
+
+Only the above fixed600s+60s two-pair exception. No host pressure/cache drops,
+physical tests or altered immutable baseline. Missing evidence is unknown.
+Restart≤1s private evidence and existing CPU receipts may be reused when their
+source bytes match; no rerun of passing builds without a reason.
+
+## Acceptance criteria
+
+- [ ] Four valid alternating arms/compositor with exact hashes/windows and quiet.
+- [ ] Whole-group total equal/lower and component increases explained, OR total
+  increase strictly<5MiB explained and tracked. Otherwise STOP.
+- [ ] No reproducible endpoint regression outside standing rules; cold CLI repeats
+  explicitly assessed using comparable controls. No performance claim if unknown.
+- [ ] Full F4 correctness/source evidence reviewed, all migrated writers accounted.
+- [ ] Normal main integration; complete published-head CI green; no release/install.
+- [ ] Raw artifacts retained, report concise and slot released with cleanup proof.
+
+## Stop conditions
+
+Incorrect hash, overlapping measurement, quiet failure, repeatable regression,
+missing group member or uncovered Settings writer: stop and report. Do not expand
+sample count/window/scope unilaterally or spend a memory allowance on speculation.
+
+## General rules
+
+Apply the linked standing-rules.md in full. Author and committer use the approved
+GitHub noreply identity; no private paths or inventory. Isolated worktree, direct
+normal push to main, inspect outgoing history, check CI after every push; rebase
+only own commits. Commands nice -n 10; Cargo -j2; private/nested tests only.
+No live desktop/install/config/keybinding/autostart/unit changes, package/tag /
+release publication, permission-policy changes, or paru skipreview changes.
+Stop only owned PIDs; no host pressure/cache drops/kernel changes. Nacre commits
+include [no-publish]. Framework remains permissive, publish=false, backends frozen
+except fixes; no launcher engines in Bead. Preserve immutable fixtures. Extras
+are report-only. Any new security advisory goes to the spec agent; vulnerabilities
+go to the owner. Measurement requires an explicit exclusive slot grant.
+
+## Report format
+
+Send spec ID/status, start and final full commit IDs, changed files, each acceptance
+criterion with PASS/FAIL/NOT RUN and command evidence, published-head CI URLs,
+protocol/artifact hashes where relevant, deviations/blockers and raw private report
+locations (never commit private paths). For captures include per-run numbers,
+medians/min/max/peaks, quiet counters, attribution and owned-PID cleanup. Missing
+is unknown. Ask the spec thread directly; do not improvise or ask the owner for
+routine design. Submit Review, then start the next eligible Ready spec.
