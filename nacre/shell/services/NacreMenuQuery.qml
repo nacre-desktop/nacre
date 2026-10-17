@@ -5,6 +5,7 @@ QtObject {
     id: root
     property bool enabled: NacreDaemon.enabled
     property bool active: true
+    property bool presented: active
     property string query: ""
     property string route: "home"
     property string resultFilter: "all"
@@ -58,13 +59,18 @@ QtObject {
         if (!enabled || !active) {
             coalesce.stop();
             dirty = false;
-            result = ({});
-            resultKey = "";
-            resultBoot = "";
-            error = "";
+            if (!enabled || !presented)
+                releaseResult();
             return;
         }
         schedule();
+    }
+    function releaseResult() {
+        if (Object.keys(result).length)
+            result = ({});
+        resultKey = "";
+        resultBoot = "";
+        error = "";
     }
     function run() {
         if (!dirty || pending || !enabled || !active || !NacreDaemon.connected)
@@ -119,6 +125,8 @@ QtObject {
     onKeyChanged: schedule()
     onEnabledChanged: configure()
     onActiveChanged: configure()
+    onPresentedChanged: if (!presented && !active)
+        releaseResult()
     Component.onCompleted: configure()
     Component.onDestruction: if (subscribed)
         NacreDaemon.unsubscribe("menu")

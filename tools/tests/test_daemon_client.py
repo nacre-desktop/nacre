@@ -343,12 +343,14 @@ ShellRoot {
             """
             const component = Qt.createComponent("services/NacreMenuQuery.qml");
             check(component.status === Component.Ready, component.errorString());
-            const menu = component.createObject(root, {enabled:true,active:true});
+            const menu = component.createObject(root, {enabled:true,active:true,presented:true});
             menu.result = {order:["one"],items:{one:{name:"Fixture",activation:"opaque",presentation:{id:"one",operation:"copy",value:"fixture"}}}};
             menu.resultKey = menu.key;
             menu.resultBoot = link.boot;
             check(menu.entries.length === 1 && link.topic("menu").users === 1, "open menu owns rows and subscription");
             menu.active = false;
+            check(menu.entries.length === 1 && link.topic("menu").users === 0, "closing animation retains rows without subscription");
+            menu.presented = false;
             check(menu.entries.length === 0 && Object.keys(menu.result).length === 0, "closed menu releases rows");
             check(!menu.resultKey && !menu.resultBoot && !menu.dirty && link.topic("menu").users === 0, "closed menu releases query identity and subscription");
             menu.active = true;

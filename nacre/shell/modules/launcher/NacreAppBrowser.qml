@@ -35,6 +35,7 @@ NacreSurface {
     NacreMenuQuery {
         id: nativeQuery
         active: root.visibilities.launcher && !root.picker
+        presented: root.visible && !root.picker
         query: root.query
         route: root.route
         resultFilter: root.resultFilter
