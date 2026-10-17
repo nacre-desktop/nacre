@@ -2639,8 +2639,9 @@ next gate before the native attach/shared-QML work.
 
 ## Foundation F3 shared QML client: paired gate held, 2026-10-17
 
-Status: correctness passes, but publication is held for a repeated Hyprland
-memory increase. The client is opt-in (`NACRE_DAEMON_CLIENT=1`); the legacy
+Historical gate: the original candidate was held for a repeated Hyprland
+memory increase. The expanded whole-group follow-up below clears that hold.
+The client is opt-in (`NACRE_DAEMON_CLIENT=1`); the legacy
 path remains the default. No installed runtime or live session was changed.
 
 The frozen before revision is `e0a81ce76758de4831f008b90cb37b54dacc0baf`,
@@ -2677,10 +2678,14 @@ compared as though it includes command startup.
 | Hyprland cold dashboard, two samples | 364 (363–365) | 365 (365–365) |
 | Hyprland reopened dashboard, six samples | 365 (364–365) | 364 (363–366) |
 
-Memory is the combined shell, daemon and remaining helper group. Each reported
-idle value below is the median of two complete-window medians; ranges are the
-two window medians, while peaks include sampled transient update processes.
-CPU is percent of one core, using the median of the two window means.
+The original memory scope includes the shell, its descendants and the explicitly
+started daemon/widths roots. Follow-up found that it omits the shell supervisor,
+which is a parent process. These resource values remain original-scope evidence;
+the owner's expanded whole-group gate requires a new comparison including that
+parent and private detached helpers. Each idle value below is the median of two
+complete-window medians; ranges are the two window medians, while peaks include
+sampled transient update processes. CPU is percent of one core, using the median
+of the two window means.
 
 | Nested resource | Before median (window range); observed peak | Native median (window range); observed peak |
 | --- | ---: | ---: |
@@ -2754,3 +2759,108 @@ under the regression stop rule: the repeated normal Hyprland increase remains
 unexplained, and neither forced collection nor this client-disabled diagnostic
 waives it. No product workaround, allocator policy or live configuration changed.
 F4 and core-service implementation have not started.
+
+The owner authorized another bounded profiling round, checking whole-group
+coverage, duplicate Hyprland compositor subscriptions, view subscription scope
+and JavaScript churn in that order. Landing requires an explained QML increase
+with equal/lower whole-group memory, or a clearly explained whole-group increase
+below 5 MiB. Larger or unexplained increases stop publication.
+
+An actual private UI audit confirms that Hyprland subscribes to `network.watch`
+and adds `menu` only while the launcher is open; it holds no daemon compositor
+topic. Niri retains compositor topics for its visible workspace/window views.
+Network watching also serves the always-visible status indicator. A closed
+launcher retained about 7 KB of serialized rows. The candidate now releases
+unused topic data after the last unsubscribe and rows after the panel finishes
+closing, retaining active-view last-good state and the existing close animation.
+The paired follow-up below measures this final candidate; the serialized row
+size alone does not establish the cause of the old resident increase.
+
+A separate heaptrack pair records 8,152,132→7,583,208 allocation calls and
+1,575,079→1,502,519 temporary allocations; its reported peak tracked heap is
+150.38M→152.02M. It profiles Quickshell without its supervisor and uses direct
+private IPC, so it is allocation evidence rather than action or whole-group
+acceptance data. The additional tracked heap does not explain the original
+resident increase. No garbage-collection, allocator or kernel workaround ships.
+The 59-file / 584,374-byte analysis receipt has SHA-256
+`7ea1bad7099f8f26fcf76354c0dad9e6beb3878a54ec3d3b288873a1cbb67671`;
+it and both raw profiles are copied and SHA-verified on both hosts. Final-source
+correctness passes (384 Rust, 952 repository and 534 frozen parity cases); the
+revised whole-group comparison is running with no builds or tests active.
+
+### F3 expanded whole-group follow-up: gate passes, 2026-10-17
+
+The final measured feature revision is `7775d7cd299db5413a37fdb67bda90a6a4eaa27f`.
+The baseline remains `e0a81ce76758de4831f008b90cb37b54dacc0baf`; helper hashes
+are unchanged from the preceding table. All eight fixed-window captures pass
+on their first attempt. The expanded scope includes the supervisor parent,
+its private branch, detached native/Python helpers and known daemon/widths roots,
+deduplicated by PID with same-user checks. Unknown/live memory omissions reject
+a run. This replaces the smaller scope for the owner's whole-group decision.
+
+Each cell retains the matched ten-minute warmup, complete sixty-second idle
+window and original action boundaries. The profiling/code-change round ended
+before validation finished; the last scheduled candidate completed separately
+after the batch's conservative start-time cutoff. That scheduling exit is retained;
+no accepted cell was rerun, no window shortened and no memory/paging rule waived.
+No builds, tests or profiling overlapped these captures.
+
+| Nested whole-group resource | Before median (window range); observed peak | Native median (window range); observed peak |
+| --- | ---: | ---: |
+| Niri PSS, MiB | 569.35 (565.45–573.24); 646.13 | 555.87 (552.13–559.61); 634.65 |
+| Niri RSS, MiB | 709.62 (705.67–713.57); 804.83 | 681.01 (677.07–684.95); 777.95 |
+| Niri CPU, % one core | 0.55 (0.50–0.60); 44.16 | 0.42 (0.18–0.65); 57.75 |
+| Hyprland PSS, MiB | 554.87 (554.59–555.14); 637.60 | 540.69 (535.95–545.43); 627.55 |
+| Hyprland RSS, MiB | 682.56 (682.27–682.86); 784.32 | 666.16 (661.34–670.98); 771.98 |
+| Hyprland CPU, % one core | 0.22 (0.10–0.33); 48.96 | 0.72 (0.68–0.77); 59.56 |
+
+Whole-group PSS falls by 13.47 MiB on niri and 14.17 MiB on Hyprland; both
+pairs are lower on each compositor. QML PSS medians also fall: niri
+515.70→505.61 MiB and Hyprland 509.56→494.96 MiB. Median process counts are
+10→9 and 8→8 respectively. These are current nested totals, not the final
+one-daemon process-count target or proof of zero short-lived Python launches.
+
+The Hyprland CPU mean is higher, retained above. Its observed per-process means
+attribute 0/0.250% before versus 0.600/0.666% after to existing periodic `pacman`
+work; QML itself is 0.100/0.083% before versus 0.083/0.100% after. Endpoint
+voluntary context switches are 331/334→329/321 over sixty seconds. Niri gives
+127/133→118/125. These are scheduling proxies, not hardware wakeups or a battery
+claim; complete-window CPU/peaks include the transient processes.
+
+| Nested action, ms | Before median (range) | Native median (range) |
+| --- | ---: | ---: |
+| Niri cold launcher | 460.19 (453.78–466.59) | 395.66 (393.64–397.68) |
+| Niri cold dashboard | 372.50 (357.00–388.00) | 389.00 (388.00–390.00) |
+| Niri reopened launcher | 380.12 (368.05–384.02) | 376.24 (366.85–381.95) |
+| Niri reopened dashboard | 383.50 (355.00–388.00) | 366.50 (355.00–387.00) |
+| Hyprland cold launcher | 443.75 (440.50–447.00) | 413.24 (412.76–413.71) |
+| Hyprland cold dashboard | 365.00 (364.00–366.00) | 365.00 (365.00–365.00) |
+| Hyprland reopened launcher | 380.76 (364.57–387.05) | 397.22 (379.67–415.83) |
+| Hyprland reopened dashboard | 364.50 (364.00–365.00) | 365.00 (363.00–365.00) |
+
+Cold launcher improves in these samples; reopened actions do not show a uniform
+gain. In particular Hyprland reopened launcher is +16.46 ms at the median, with
+overlapping ranges. Keep that tracked for the later physical/longer comparison;
+do not claim all actions are faster. Dashboard boundaries and sample counts
+remain those defined above. No finite whole-desktop wallpaper completion time,
+physical presentation, three-hour bound or battery improvement is established.
+
+Measured SwapPss is zero throughout. Host swap-in pages in A/B/A/B order are
+niri 38/221/84/11 and Hyprland 72/12/27/145; swap-out is zero in all cells.
+At 4,096 bytes/page every run is strictly below 1 MiB; the maximum is 884 KiB.
+
+The small change releases unused topic data and fully hidden menu rows while
+preserving closing presentation and active-view last-good state. No duplicate
+Hyprland compositor subscription was present. The exact allocation responsible
+for the original held capture remains unproved; no collector, allocator or
+kernel workaround ships. The current candidate meets the owner's lower-total
+rule without a QML increase; the original held captures remain retained.
+
+Validation on the exact final feature source: 13 actual Qt tests, 384 Rust
+and 952 repository tests (one existing optional skip), all 534 frozen parity
+cases, fmt, Clippy, schema/independent JSON Schema, examples and minimal consumer.
+The 103-file / 507,373-byte final receipt has SHA-256
+`7d0ceba49afa6ca235fc6a49461ebad91cff144da9c3dbfe9dc25525f9626658`;
+it is copied and SHA-verified on both hosts. Private capture-process audit is zero.
+Live desktop/configuration and installed runtime remain unchanged. Published
+CI must be green before the additive core-schema follow-up or F4.
