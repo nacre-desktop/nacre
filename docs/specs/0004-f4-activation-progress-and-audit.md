@@ -129,3 +129,30 @@ except fixes; no launcher engines in Bead. Preserve immutable fixtures. Extras
 are report-only. Any new security advisory goes to the spec agent; vulnerabilities
 go to the owner. Measurement requires an explicit exclusive slot grant.
 
+
+## Failure visibility and evidence clarification — 2026-10-18
+
+- For ancillary frecency IO failure, retain the settings actor's existing error
+  snapshot/publication path and emit an existing tracing warning carrying only
+  sanitized operation/error code. For supersession, emit a sanitized warning
+  for that operation's failed durability expectation; do not mark a newer valid
+  store revision erroneous or overwrite it. No new wire topic/schema/UI surface.
+- Do not silently discard a failed JoinSet result. Test its handled error outcome
+  and exact dispatch count; existing log capture may assert the warning when
+  available, but do not add a logging framework only for the test. No raw app ID,
+  command line, document payload, private path or credential in the warning.
+- Once activation dispatched, its eventual reply retains the real launch/dispatch
+  result and existing uncertainty flags. Frecency warning is not an undispatched
+  or retryable activation failure; no replay/fallback. If a failure prevents
+  dispatch under existing ordering, report that actual pre-dispatch state safely.
+- Reports must distinguish v25 historical capture44ba7afa/abdfc528, v9 correctness
+  manifest5495c030/helper2f11566a, and newer dirty N0004 source with no validated
+  receipt. Freeze/hash final revised source before its next correctness gate;
+  do not relabel either old receipt as proof for the new edits.
+- The reported SSH host-key rejection blocks remote writes/builds until trusted
+  identity/key provenance is reconciled. Do not disable strict checking, remove
+  the conflicting key, accept a replacement from ssh-keyscan alone, or change
+  credentials/host configuration as part of this spec. Local source work may
+  continue; return the exact non-secret endpoint/expected fingerprint provenance
+  and rejection category for review if the existing trusted route cannot be
+  recovered. No repeated speculative SSH retries or measurement host probes.

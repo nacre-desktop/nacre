@@ -19,11 +19,13 @@ failure semantics so the current candidate is reviewable before publication.
 Published starting commit5f4c0bf3. Existing unpublished F4 has settings.rs,
 settings_controller.rs, settings_validation.rs in crates/nacre-helper/src/daemon,
 desktop_settings.rs, owned_settings.rs, protocol settings.rs, QML/CLI routes,
-fixtures and exporter artifacts. The current reported source receipt is44ba7afa
-and helper SHA prefixabdfc528 (full hashes must come from the agent's receipt).
-Reported423Rust/954repo/534immutable parity/15Qt/50controller are evidence to
-inspect, not new tests for the spec agent to rerun. Existing measurements continue
-only under N0002's grant; do not alter candidate bytes during that capture.
+fixtures and exporter artifacts. Historical v25 source archive44ba7afa/helperabdfc528 and its423Rust/954repo
+receipts describe that earlier revision only. v9 manifest5495c030/helper2f11566a
+has separate436Rust correctness receipts, no performance acceptance. Current
+N0004 edits are newer and have no validated source/helper receipt until rebuilt
+and tested. Never identify the current candidate by a historical receipt. Existing
+partial v25 captures are diagnostic only; no capture grant is active. Retain each
+receipt's full hashes and exact scope; do not rerun passing old revisions.
 Read architecture/{foundation,protocol,standing-rules}.md,
 development/{settings-architecture,security-review,rust-migration}.md.
 Live registry at5f4 has72 records and19 with settings metadata; charter65 is a
