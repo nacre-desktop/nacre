@@ -4,7 +4,7 @@
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
 - Status: Ready
-- Depends on: N0001 source-ready review; explicit slot confirmation; final Done after N0001 correctness
+- Depends on: N0001/N0004 source-ready review; explicit slot confirmation; final Done after correctness
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours
 
@@ -105,3 +105,18 @@ locations (never commit private paths). For captures include per-run numbers,
 medians/min/max/peaks, quiet counters, attribution and owned-PID cleanup. Missing
 is unknown. Ask the spec thread directly; do not improvise or ask the owner for
 routine design. Submit Review, then start the next eligible Ready spec.
+
+## Revised-candidate clarification — 2026-10-18
+
+The v25 candidate and its four valid partial cells are historical evidence only.
+N0001v7 changes runtime and N0004 fixes remain required: NO measurement grant for
+either. The next approved candidate requires a FRESH complete eight-cell batch
+(A/B/A/B per compositor), each arm600s+60s as already specified. Do not combine
+v25 cells with a revised candidate or treat old partials as acceptance.
+
+Retain runtime baseline5f4c0bf3025d5f2944b50ff5546ed7f8a3dcfe57 and candidate
+based on it for now: current upstream delta at review is docs-only. No dirty-tree
+rebase solely to add docs. The exact revised manifest/helper and baseline helper
+hashes plus private host scope/controller/time window are still required before
+explicit grant. If upstream gains runtime changes before final review/integration,
+report them and obtain a compatibility/measurement ruling; no silent substitution.

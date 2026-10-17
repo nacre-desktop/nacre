@@ -3,7 +3,7 @@
 - ID: N0001
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: In progress
+- Status: Review
 - Depends on: published5f4c0bf3; preserve current unpublished F4 and active captures
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours
@@ -379,3 +379,10 @@ locations (never commit private paths). For captures include per-run numbers,
 medians/min/max/peaks, quiet counters, attribution and owned-PID cleanup. Missing
 is unknown. Ask the spec thread directly; do not improvise or ask the owner for
 routine design. Submit Review, then start the next eligible Ready spec.
+
+## Review disposition — 2026-10-18
+
+v7 is not yet accepted source-ready. See N0004 for the demonstrated serial
+activation-persistence wait, missing activation progress proofs, and ownership
+report corrections. Frozen150/50/rollback hashes match local review. No capture
+grant exists for v7; retain existing correctness evidence with its exact scope.
