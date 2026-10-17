@@ -218,6 +218,43 @@ callback and is not authorized for unrelated changes by this clarification.
 Run focused relevant tests after the fix; rerun broader required gates only for
 this changed candidate. No frozen fixture regeneration and no capture grant.
 
+## Ownership boundary: offline installer profile replacement
+
+The profile record is Settings-writable for aurReview only; planned profile keys
+remain unavailable. profile-policy.install and installer/staging publication are
+explicit offline installer boundaries, not generic settings.provider writers.
+
+- In the72-row audit classify profile as split by operation: daemon owns the
+  enabled aurReview mutation during its session; installer owns whole-profile
+  replacement only while the daemon owning THAT destination is stopped.
+  Read-only startup-apps is not a competing writer. Hand edits remain external
+  edits covered by the existing last-good/inotify/fingerprint behavior.
+- Do not route a whole profile through settings.set/provider or widen settings
+  ownership to components, AI permissions, startup/routes or planned fields.
+  Do not change aurReview or paru behavior while enforcing ownership.
+- Active-daemon setup/install/profile replacement is UNSUPPORTED in this F4
+  stage. Stop such an invocation before profile replacement; do not stop/enable
+  daemon units, install anything, exercise a real installer, or claim an installer
+  guard has been implemented/tested by this audit. Existing inotify/fingerprint
+  checks limit data loss but are not proof of exclusive ownership.
+- Record every actual direct writer path and its destination/precondition in the
+  report. tools/prepare.py writes a separate empty staging destination directly;
+  classify that as staging, not a call to profile-policy.install. Likewise verify
+  tools/setup.py, tools/releases.py and shell-tools/install.py individually;
+  module imports/readers alone are not writers. Do not probe the owner's daemon
+  or system bus to establish this inventory.
+- N0001 may satisfy its session-Settings ownership criterion with this explicit
+  offline-installer limitation. It must not claim all72 records or active-session
+  installation are migrated/supported. Carry the limitation into protocol /
+  migration report and future switch-on checklist. No installer product edits
+  or new preflight probe are authorized by this clarification.
+- Before active-daemon installer use is ever supported, a separate installer spec
+  must enforce destination-scoped refusal or a coordinated ownership handoff
+  across actual entry points, with startup-race/staging tests. That is deferred
+  to installer work, not a priority change or permission for that work now.
+  If normal runtime can invoke profile replacement outside explicit installation,
+  this exception does not apply: stop and report the exact path for a bounded fix.
+
 ## Measurements
 
 None newly authorized here. N0002 covers existing fixed-endpoint captures.
