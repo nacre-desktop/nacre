@@ -1,0 +1,417 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CoreCall",
+  "description": "Reserved method payloads embedded in call.m / call.p. No backend is registered.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "network.set_wifi"
+        },
+        "p": {
+          "$ref": "#/$defs/WifiPower"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "network.connect"
+        },
+        "p": {
+          "$ref": "#/$defs/NetworkConnect"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "network.disconnect"
+        },
+        "p": {
+          "$ref": "#/$defs/DeviceTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "bluetooth.set_power"
+        },
+        "p": {
+          "$ref": "#/$defs/BluetoothPower"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "bluetooth.connect"
+        },
+        "p": {
+          "$ref": "#/$defs/DeviceTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "bluetooth.disconnect"
+        },
+        "p": {
+          "$ref": "#/$defs/DeviceTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "bluetooth.pair"
+        },
+        "p": {
+          "$ref": "#/$defs/DeviceTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "power.set_profile"
+        },
+        "p": {
+          "$ref": "#/$defs/ProfileTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "audio.set_default"
+        },
+        "p": {
+          "$ref": "#/$defs/AudioTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "audio.set_volume"
+        },
+        "p": {
+          "$ref": "#/$defs/AudioVolume"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "audio.set_mute"
+        },
+        "p": {
+          "$ref": "#/$defs/AudioMute"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "audio.route"
+        },
+        "p": {
+          "$ref": "#/$defs/AudioRoute"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "dashboard.weather.refresh"
+        },
+        "p": {
+          "$ref": "#/$defs/Refresh"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "dashboard.updates.refresh"
+        },
+        "p": {
+          "$ref": "#/$defs/Refresh"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "dashboard.calendar.refresh"
+        },
+        "p": {
+          "$ref": "#/$defs/Refresh"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    }
+  ],
+  "$defs": {
+    "WifiPower": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
+    "NetworkConnect": {
+      "type": "object",
+      "properties": {
+        "device": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "target": {
+          "$ref": "#/$defs/NetworkTarget"
+        }
+      },
+      "required": [
+        "device",
+        "target"
+      ]
+    },
+    "EntityId": {
+      "description": "Opaque daemon-issued identifier. Never interpret as a path, address or command.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])"
+    },
+    "NetworkTarget": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "access_point"
+            },
+            "id": {
+              "$ref": "#/$defs/EntityId"
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "connection"
+            },
+            "id": {
+              "$ref": "#/$defs/EntityId"
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ]
+        }
+      ]
+    },
+    "DeviceTarget": {
+      "type": "object",
+      "properties": {
+        "device": {
+          "$ref": "#/$defs/EntityId"
+        }
+      },
+      "required": [
+        "device"
+      ]
+    },
+    "BluetoothPower": {
+      "type": "object",
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "powered": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "adapter",
+        "powered"
+      ]
+    },
+    "ProfileTarget": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/EntityId"
+        }
+      },
+      "required": [
+        "profile"
+      ]
+    },
+    "AudioTarget": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/$defs/EntityId"
+        }
+      },
+      "required": [
+        "node"
+      ]
+    },
+    "AudioVolume": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "volume": {
+          "type": "number",
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 1.0
+        }
+      },
+      "required": [
+        "node",
+        "volume"
+      ]
+    },
+    "AudioMute": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "muted": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "node",
+        "muted"
+      ]
+    },
+    "AudioRoute": {
+      "type": "object",
+      "properties": {
+        "stream": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "target": {
+          "$ref": "#/$defs/EntityId"
+        }
+      },
+      "required": [
+        "stream",
+        "target"
+      ]
+    },
+    "Refresh": {
+      "type": "object"
+    }
+  }
+}

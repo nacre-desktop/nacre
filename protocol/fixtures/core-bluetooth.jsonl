@@ -1,0 +1,12 @@
+{"t":"snap","topic":"bluetooth","seq":0,"data":{"health":{"available":true,"stale":false},"adapters":{"items":{"adapter-1":{"name":"Bluetooth","powered":false,"discovering":false}},"order":["adapter-1"]},"devices":{"items":{"device-1":{"adapter":"adapter-1","name":"Fixture headphones","connected":false,"paired":false,"trusted":false,"pairing":false,"battery":80}},"order":["device-1"]}}}
+{"t":"call","id":0,"m":"bluetooth.set_power","p":{"adapter":"adapter-1","powered":true},"timeout":10000}
+{"t":"ret","id":0,"ok":{"changed":true}}
+{"t":"call","id":1,"m":"bluetooth.pair","p":{"device":"device-1"},"timeout":10000}
+{"t":"ret","id":1,"ok":{"changed":true}}
+{"t":"call","id":2,"m":"bluetooth.connect","p":{"device":"device-1"},"timeout":10000}
+{"t":"ret","id":2,"ok":{"changed":true}}
+{"t":"call","id":3,"m":"bluetooth.disconnect","p":{"device":"device-1"},"timeout":10000}
+{"t":"ret","id":3,"ok":{"changed":true}}
+{"t":"call","id":4,"m":"bluetooth.set_power","p":{"adapter":"adapter-1","powered":false},"timeout":10000}
+{"t":"ret","id":4,"ok":{"changed":true}}
+{"t":"patch","topic":"bluetooth","base":0,"seq":1,"data":{"health":{"available":false,"stale":true,"error":{"code":"unavailable","message":"Service unavailable","retry":true}}}}

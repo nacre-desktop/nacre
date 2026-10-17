@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CoreResult",
+  "description": "Success means the backend acknowledged the operation; topic state is authoritative.\nNo optimistic UI mutation and no automatic replay after a lost reply.",
+  "type": "object",
+  "properties": {
+    "changed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "changed"
+  ]
+}

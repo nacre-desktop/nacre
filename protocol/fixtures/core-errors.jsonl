@@ -1,0 +1,8 @@
+{"t":"call","id":"policy","m":"network.set_wifi","p":{"enabled":true}}
+{"t":"ret","id":"policy","err":{"code":"permission_denied","message":"System policy denied the operation","retry":false}}
+{"t":"call","id":"cancelled","m":"bluetooth.pair","p":{"device":"device-1"}}
+{"t":"ret","id":"cancelled","err":{"code":"permission_denied","message":"Authentication was cancelled","retry":false}}
+{"t":"call","id":"stale","m":"audio.set_volume","p":{"node":"old-node","volume":0.5}}
+{"t":"ret","id":"stale","err":{"code":"stale_revision","message":"Device changed; refresh state","retry":true}}
+{"t":"call","id":"invalid","m":"audio.set_volume","p":{"node":"output-1","volume":1.5}}
+{"t":"ret","id":"invalid","err":{"code":"validation","message":"Volume must be between 0 and 1","retry":false}}

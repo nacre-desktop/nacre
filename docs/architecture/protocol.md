@@ -3,6 +3,8 @@
 Contract for nacre-protocol and all Nacre clients. See
 [foundation.md](foundation.md). Committed schemas, Luau definitions and transcripts
 live under `protocol/`; the daemon and native client share the Rust wire types.
+Reserved, schema-only device and hosted-service contracts are documented in
+[core-services.md](core-services.md). They are not runtime capability claims.
 
 ## Transport and bounds
 

@@ -1,0 +1,1717 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CoreSnapshot",
+  "description": "Payload alternatives embedded in the existing snap message, not a new frame.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "network"
+        },
+        "data": {
+          "$ref": "#/$defs/NetworkState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "bluetooth"
+        },
+        "data": {
+          "$ref": "#/$defs/BluetoothState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "power.profiles"
+        },
+        "data": {
+          "$ref": "#/$defs/PowerProfilesState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "audio"
+        },
+        "data": {
+          "$ref": "#/$defs/AudioState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "notifications"
+        },
+        "data": {
+          "$ref": "#/$defs/NotificationsState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "tray"
+        },
+        "data": {
+          "$ref": "#/$defs/TrayState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "dashboard.weather"
+        },
+        "data": {
+          "$ref": "#/$defs/WeatherState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "dashboard.updates"
+        },
+        "data": {
+          "$ref": "#/$defs/UpdatesState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "dashboard.calendar"
+        },
+        "data": {
+          "$ref": "#/$defs/CalendarState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "dashboard.media"
+        },
+        "data": {
+          "$ref": "#/$defs/DashboardMediaState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "dashboard.system"
+        },
+        "data": {
+          "$ref": "#/$defs/DashboardSystemState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    }
+  ],
+  "$defs": {
+    "NetworkState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "wireless_enabled": {
+          "type": "boolean"
+        },
+        "devices": {
+          "$ref": "#/$defs/Entities_Device"
+        },
+        "access_points": {
+          "$ref": "#/$defs/Entities_AccessPoint"
+        },
+        "connections": {
+          "$ref": "#/$defs/Entities_Connection"
+        }
+      },
+      "required": [
+        "health",
+        "wireless_enabled",
+        "devices",
+        "access_points",
+        "connections"
+      ]
+    },
+    "Health": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "stale": {
+          "description": "Retained last-good data may be displayed but is visibly stale.",
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Failure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "available",
+        "stale"
+      ]
+    },
+    "Failure": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retry": {
+          "type": "boolean"
+        },
+        "dispatched": {
+          "description": "False only when the daemon proves no UI provider received the call.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retry"
+      ]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "invalid_request",
+        "unsupported_version",
+        "too_large",
+        "permission_denied",
+        "unknown_topic",
+        "unknown_method",
+        "unavailable",
+        "busy",
+        "timeout",
+        "stale_revision",
+        "validation",
+        "io",
+        "internal"
+      ]
+    },
+    "Entities_Device": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/Device"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "Device": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "connected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "connected"
+      ]
+    },
+    "EntityId": {
+      "description": "Opaque daemon-issued identifier. Never interpret as a path, address or command.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])"
+    },
+    "Entities_AccessPoint": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/AccessPoint"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "AccessPoint": {
+      "type": "object",
+      "properties": {
+        "device": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "name": {
+          "description": "Display text only. SSID bytes and credentials stay with NetworkManager.",
+          "type": "string"
+        },
+        "strength": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "secured": {
+          "type": "boolean"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "connection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "device",
+        "name",
+        "strength",
+        "secured",
+        "active"
+      ]
+    },
+    "Entities_Connection": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/Connection"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "Connection": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "active": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "active"
+      ]
+    },
+    "BluetoothState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "adapters": {
+          "$ref": "#/$defs/Entities_BluetoothAdapter"
+        },
+        "devices": {
+          "$ref": "#/$defs/Entities_BluetoothDevice"
+        }
+      },
+      "required": [
+        "health",
+        "adapters",
+        "devices"
+      ]
+    },
+    "Entities_BluetoothAdapter": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/BluetoothAdapter"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "BluetoothAdapter": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "powered": {
+          "type": "boolean"
+        },
+        "discovering": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "powered",
+        "discovering"
+      ]
+    },
+    "Entities_BluetoothDevice": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/BluetoothDevice"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "BluetoothDevice": {
+      "type": "object",
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "name": {
+          "type": "string"
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "paired": {
+          "type": "boolean"
+        },
+        "trusted": {
+          "type": "boolean"
+        },
+        "pairing": {
+          "type": "boolean"
+        },
+        "battery": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "icon": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "adapter",
+        "name",
+        "connected",
+        "paired",
+        "trusted",
+        "pairing"
+      ]
+    },
+    "PowerProfilesState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "active": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profiles": {
+          "$ref": "#/$defs/Entities_PowerProfile"
+        }
+      },
+      "required": [
+        "health",
+        "profiles"
+      ]
+    },
+    "Entities_PowerProfile": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/PowerProfile"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "PowerProfile": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "available"
+      ]
+    },
+    "AudioState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "nodes": {
+          "$ref": "#/$defs/Entities_AudioNode"
+        },
+        "default_output": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "default_input": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "health",
+        "nodes"
+      ]
+    },
+    "Entities_AudioNode": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/AudioNode"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "AudioNode": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/AudioKind"
+        },
+        "volume": {
+          "description": "Actual linear backend volume, 0=silent, 1=100%; may exceed 1 externally.\nThe Nacre setter separately retains its existing 0..1 policy.",
+          "type": "number",
+          "format": "double",
+          "minimum": 0.0
+        },
+        "muted": {
+          "type": "boolean"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "icon": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target": {
+          "description": "Current target for a playback/capture stream, if known.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "volume",
+        "muted",
+        "ready"
+      ]
+    },
+    "AudioKind": {
+      "type": "string",
+      "enum": [
+        "output",
+        "input",
+        "playback",
+        "capture"
+      ]
+    },
+    "NotificationsState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "do_not_disturb": {
+          "type": "boolean"
+        },
+        "active": {
+          "$ref": "#/$defs/Entities_Notification"
+        },
+        "history": {
+          "description": "A bounded window onto the existing history store; no new retention policy.",
+          "$ref": "#/$defs/Entities_Notification"
+        }
+      },
+      "required": [
+        "health",
+        "do_not_disturb",
+        "active",
+        "history"
+      ]
+    },
+    "Entities_Notification": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/Notification"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "Notification": {
+      "type": "object",
+      "properties": {
+        "app_name": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "body": {
+          "description": "Display content, never evaluated as code; existing markup policy applies.",
+          "type": "string"
+        },
+        "urgency": {
+          "type": "string"
+        },
+        "resident": {
+          "type": "boolean"
+        },
+        "transient": {
+          "type": "boolean"
+        },
+        "created_ms": {
+          "description": "Unix milliseconds; no clock formatting in the service.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "icon": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "image_path": {
+          "description": "Local cached file only, no remote URL or inline image payload.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "actions": {
+          "$ref": "#/$defs/Entities_NotificationAction"
+        }
+      },
+      "required": [
+        "app_name",
+        "summary",
+        "body",
+        "urgency",
+        "resident",
+        "transient",
+        "created_ms",
+        "actions"
+      ]
+    },
+    "Entities_NotificationAction": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/NotificationAction"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "NotificationAction": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "label"
+      ]
+    },
+    "TrayState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "items": {
+          "$ref": "#/$defs/Entities_TrayItem"
+        }
+      },
+      "required": [
+        "health",
+        "items"
+      ]
+    },
+    "Entities_TrayItem": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/TrayItem"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "TrayItem": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "item_is_menu": {
+          "type": "boolean"
+        },
+        "attention": {
+          "type": "boolean"
+        },
+        "icon": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "icon_path": {
+          "description": "Decoded pixmaps stay in a worker/cache. Never publish pixel arrays.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "menu": {
+          "$ref": "#/$defs/Entities_TrayMenuEntry"
+        }
+      },
+      "required": [
+        "title",
+        "visible",
+        "item_is_menu",
+        "attention",
+        "menu"
+      ]
+    },
+    "Entities_TrayMenuEntry": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/TrayMenuEntry"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "TrayMenuEntry": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "separator": {
+          "type": "boolean"
+        },
+        "checked": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "children": {
+          "description": "Child IDs into the same menu map, not nested entity arrays.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          }
+        }
+      },
+      "required": [
+        "label",
+        "enabled",
+        "visible",
+        "separator",
+        "children"
+      ]
+    },
+    "WeatherState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "checked": {
+          "description": "Unix seconds, matching the existing helper's checked field.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 9007199254740991.0
+        },
+        "provider": {
+          "type": "string"
+        },
+        "current": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WeatherCurrent"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "health",
+        "provider"
+      ]
+    },
+    "WeatherCurrent": {
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "local_time": {
+          "type": "string"
+        },
+        "wmo": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "description": {
+          "type": "string"
+        },
+        "temperature": {
+          "description": "Temperatures in degrees Celsius, wind in km/h, pressure in hPa.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "feels_like": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "high": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "low": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "humidity": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 100.0
+        },
+        "wind": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "direction": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "pressure": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "aqi": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "is_day": {
+          "type": "boolean"
+        },
+        "hours": {
+          "$ref": "#/$defs/Entities_WeatherHour"
+        },
+        "days": {
+          "$ref": "#/$defs/Entities_WeatherDay"
+        }
+      },
+      "required": [
+        "location",
+        "timezone",
+        "local_time",
+        "description",
+        "is_day",
+        "hours",
+        "days"
+      ]
+    },
+    "Entities_WeatherHour": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/WeatherHour"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "WeatherHour": {
+      "type": "object",
+      "properties": {
+        "time": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "wmo": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "rain": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 100.0
+        }
+      },
+      "required": [
+        "time"
+      ]
+    },
+    "Entities_WeatherDay": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/WeatherDay"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "WeatherDay": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string"
+        },
+        "high": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "low": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "wmo": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "rain": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 100.0
+        },
+        "sunrise": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sunset": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uv": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        }
+      },
+      "required": [
+        "date"
+      ]
+    },
+    "UpdatesState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "checked": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 9007199254740991.0
+        },
+        "count": {
+          "description": "None means unknown, including a failed refresh; never treat as zero.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "health",
+        "text"
+      ]
+    },
+    "CalendarState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "configured": {
+          "type": "boolean"
+        },
+        "events": {
+          "$ref": "#/$defs/Entities_CalendarEvent"
+        }
+      },
+      "required": [
+        "health",
+        "configured",
+        "events"
+      ]
+    },
+    "Entities_CalendarEvent": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/CalendarEvent"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "CalendarEvent": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "start": {
+          "description": "Unix seconds; day labels are interpreted in the configured local timezone.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "time": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "start",
+        "time",
+        "date"
+      ]
+    },
+    "DashboardMediaState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "key": {
+          "type": "string"
+        },
+        "lines": {
+          "$ref": "#/$defs/Entities_LyricLine"
+        },
+        "plain": {
+          "type": "string"
+        },
+        "palette": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "lyrics_message": {
+          "type": "string"
+        },
+        "cache_seconds": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "health",
+        "key",
+        "lines",
+        "plain",
+        "palette",
+        "lyrics_message",
+        "cache_seconds"
+      ]
+    },
+    "Entities_LyricLine": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/LyricLine"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "LyricLine": {
+      "description": "Existing dashboard-media enrichment result; not a new playback-control API.",
+      "type": "object",
+      "properties": {
+        "time": {
+          "type": "number",
+          "format": "double"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "time",
+        "text"
+      ]
+    },
+    "DashboardSystemState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "processes": {
+          "$ref": "#/$defs/Entities_SystemProcess"
+        },
+        "disks": {
+          "$ref": "#/$defs/Entities_SystemDisk"
+        }
+      },
+      "required": [
+        "health",
+        "processes",
+        "disks"
+      ]
+    },
+    "Entities_SystemProcess": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/SystemProcess"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "SystemProcess": {
+      "type": "object",
+      "properties": {
+        "pid": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "name": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "memory": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "cpu_seconds": {
+          "type": "number",
+          "format": "double"
+        },
+        "parent": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "pid",
+        "name",
+        "start",
+        "uid",
+        "memory",
+        "cpu_seconds",
+        "parent"
+      ]
+    },
+    "Entities_SystemDisk": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/SystemDisk"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "SystemDisk": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "used": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "path",
+        "total",
+        "used"
+      ]
+    }
+  }
+}

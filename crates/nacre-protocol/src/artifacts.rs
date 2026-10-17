@@ -3,7 +3,7 @@ use crate::{Message, MIN_VERSION, VERSION};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
-fn luau(schema: &Value) -> String {
+pub(crate) fn luau(schema: &Value) -> String {
     if let Some(reference) = schema.get("$ref").and_then(Value::as_str) {
         return reference.rsplit('/').next().unwrap_or("any").into();
     }
@@ -77,8 +77,15 @@ fn luau(schema: &Value) -> String {
                     ));
                 }
             }
+            let mut values = Vec::new();
             if let Some(additional) = schema.get("additionalProperties").filter(|v| v.is_object()) {
-                fields.push(format!("[string]: {}", luau(additional)));
+                values.push(luau(additional));
+            }
+            if let Some(patterns) = schema.get("patternProperties").and_then(Value::as_object) {
+                values.extend(patterns.values().map(luau));
+            }
+            if !values.is_empty() {
+                fields.push(format!("[string]: {}", values.join(" | ")));
             }
             if fields.is_empty() {
                 "{[string]: any}".into()
@@ -196,6 +203,7 @@ pub fn generate() -> BTreeMap<String, String> {
     out.extend(helper_exports());
     out.extend(network_exports());
     out.extend(wallpaper_exports());
+    out.extend(crate::core_artifacts::generate());
     out
 }
 

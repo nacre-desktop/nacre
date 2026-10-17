@@ -1,0 +1,708 @@
+//! Reserved service-v1 contracts, not a runtime capability registry.
+//! Implementations advertise these only after their backend and policy gates pass.
+use crate::{Failure, MAX_SAFE_INTEGER};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+
+/// Opaque daemon-issued identifier. Never interpret as a path, address or command.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
+pub struct EntityId(
+    #[schemars(
+        length(min = 1, max = 128),
+        regex(pattern = "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])")
+    )]
+    pub String,
+);
+
+impl EntityId {
+    pub fn valid(&self) -> bool {
+        !self.0.is_empty()
+            && self.0.len() <= 128
+            && self
+                .0
+                .bytes()
+                .all(|c| c.is_ascii_alphanumeric() || b"_.:-".contains(&c))
+    }
+}
+
+/// Collections use stable IDs and explicit ordering; never arrays of entities.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[schemars(rename = "Entities_{T}")]
+pub struct Entities<T> {
+    #[schemars(extend("maxProperties" = 2048))]
+    pub items: BTreeMap<EntityId, T>,
+    #[schemars(extend("maxItems" = 2048, "uniqueItems" = true))]
+    pub order: Vec<EntityId>,
+}
+
+impl<T> Entities<T> {
+    pub fn valid(&self) -> bool {
+        self.items.len() <= 2048
+            && self.items.len() == self.order.len()
+            && self.items.keys().all(EntityId::valid)
+            && self.order.iter().all(|id| self.items.contains_key(id))
+            && self
+                .order
+                .iter()
+                .collect::<std::collections::BTreeSet<_>>()
+                .len()
+                == self.order.len()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct Health {
+    pub available: bool,
+    /// Retained last-good data may be displayed but is visibly stale.
+    pub stale: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<Failure>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct Device {
+    pub name: String,
+    pub kind: String,
+    pub connected: bool,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AccessPoint {
+    pub device: EntityId,
+    /// Display text only. SSID bytes and credentials stay with NetworkManager.
+    pub name: String,
+    #[schemars(range(min = 0, max = 100))]
+    pub strength: u8,
+    pub secured: bool,
+    pub active: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<EntityId>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct Connection {
+    pub name: String,
+    pub kind: String,
+    pub active: bool,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct NetworkState {
+    pub health: Health,
+    pub wireless_enabled: bool,
+    pub devices: Entities<Device>,
+    pub access_points: Entities<AccessPoint>,
+    pub connections: Entities<Connection>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct BluetoothAdapter {
+    pub name: String,
+    pub powered: bool,
+    pub discovering: bool,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct BluetoothDevice {
+    pub adapter: EntityId,
+    pub name: String,
+    pub connected: bool,
+    pub paired: bool,
+    pub trusted: bool,
+    pub pairing: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 100))]
+    pub battery: Option<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct BluetoothState {
+    pub health: Health,
+    pub adapters: Entities<BluetoothAdapter>,
+    pub devices: Entities<BluetoothDevice>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct PowerProfile {
+    pub name: String,
+    pub available: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct PowerProfilesState {
+    pub health: Health,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active: Option<EntityId>,
+    pub profiles: Entities<PowerProfile>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AudioKind {
+    Output,
+    Input,
+    Playback,
+    Capture,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AudioNode {
+    pub name: String,
+    pub kind: AudioKind,
+    /// Actual linear backend volume, 0=silent, 1=100%; may exceed 1 externally.
+    /// The Nacre setter separately retains its existing 0..1 policy.
+    #[schemars(range(min = 0.0))]
+    pub volume: f64,
+    pub muted: bool,
+    pub ready: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+    /// Current target for a playback/capture stream, if known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<EntityId>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AudioState {
+    pub health: Health,
+    pub nodes: Entities<AudioNode>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_output: Option<EntityId>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_input: Option<EntityId>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct NotificationAction {
+    pub label: String,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct Notification {
+    pub app_name: String,
+    pub summary: String,
+    /// Display content, never evaluated as code; existing markup policy applies.
+    pub body: String,
+    pub urgency: String,
+    pub resident: bool,
+    pub transient: bool,
+    /// Unix milliseconds; no clock formatting in the service.
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub created_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+    /// Local cached file only, no remote URL or inline image payload.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image_path: Option<String>,
+    pub actions: Entities<NotificationAction>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct NotificationsState {
+    pub health: Health,
+    pub do_not_disturb: bool,
+    pub active: Entities<Notification>,
+    /// A bounded window onto the existing history store; no new retention policy.
+    pub history: Entities<Notification>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct TrayMenuEntry {
+    pub label: String,
+    pub enabled: bool,
+    pub visible: bool,
+    pub separator: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub checked: Option<bool>,
+    /// Child IDs into the same menu map, not nested entity arrays.
+    pub children: Vec<EntityId>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct TrayItem {
+    pub title: String,
+    pub visible: bool,
+    pub item_is_menu: bool,
+    pub attention: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+    /// Decoded pixmaps stay in a worker/cache. Never publish pixel arrays.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_path: Option<String>,
+    pub menu: Entities<TrayMenuEntry>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct TrayState {
+    pub health: Health,
+    pub items: Entities<TrayItem>,
+}
+
+impl TrayItem {
+    fn valid_menu(&self) -> bool {
+        if !self.menu.valid() {
+            return false;
+        }
+        let mut children = std::collections::BTreeSet::new();
+        if !self
+            .menu
+            .items
+            .values()
+            .all(|entry| entry.children.iter().all(|id| children.insert(id)))
+        {
+            return false;
+        }
+        for start in self.menu.items.keys() {
+            let mut pending = vec![(start, Vec::new())];
+            while let Some((id, mut ancestors)) = pending.pop() {
+                if ancestors.len() >= 16 || ancestors.contains(&id) {
+                    return false;
+                }
+                let Some(entry) = self.menu.items.get(id) else {
+                    return false;
+                };
+                if entry
+                    .children
+                    .iter()
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .len()
+                    != entry.children.len()
+                {
+                    return false;
+                }
+                ancestors.push(id);
+                pending.extend(
+                    entry
+                        .children
+                        .iter()
+                        .map(|child| (child, ancestors.clone())),
+                );
+            }
+        }
+        true
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct WeatherHour {
+    pub time: String,
+    pub temperature: Option<f64>,
+    pub wmo: Option<u16>,
+    #[schemars(range(min = 0.0, max = 100.0))]
+    pub rain: Option<f64>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct WeatherDay {
+    pub date: String,
+    pub high: Option<f64>,
+    pub low: Option<f64>,
+    pub wmo: Option<u16>,
+    #[schemars(range(min = 0.0, max = 100.0))]
+    pub rain: Option<f64>,
+    pub sunrise: Option<String>,
+    pub sunset: Option<String>,
+    pub uv: Option<f64>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct WeatherCurrent {
+    pub location: String,
+    pub timezone: String,
+    pub local_time: String,
+    pub wmo: Option<u16>,
+    pub description: String,
+    /// Temperatures in degrees Celsius, wind in km/h, pressure in hPa.
+    pub temperature: Option<f64>,
+    pub feels_like: Option<f64>,
+    pub high: Option<f64>,
+    pub low: Option<f64>,
+    #[schemars(range(min = 0.0, max = 100.0))]
+    pub humidity: Option<f64>,
+    pub wind: Option<f64>,
+    pub direction: Option<f64>,
+    pub pressure: Option<f64>,
+    pub aqi: Option<f64>,
+    pub is_day: bool,
+    pub hours: Entities<WeatherHour>,
+    pub days: Entities<WeatherDay>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct WeatherState {
+    pub health: Health,
+    /// Unix seconds, matching the existing helper's checked field.
+    #[schemars(range(min = 0.0, max = 9007199254740991.0))]
+    pub checked: Option<f64>,
+    pub provider: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current: Option<WeatherCurrent>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct UpdatesState {
+    pub health: Health,
+    #[schemars(range(min = 0.0, max = 9007199254740991.0))]
+    pub checked: Option<f64>,
+    /// None means unknown, including a failed refresh; never treat as zero.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<u32>,
+    pub text: String,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct CalendarEvent {
+    pub title: String,
+    /// Unix seconds; day labels are interpreted in the configured local timezone.
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub start: u64,
+    pub time: String,
+    pub date: String,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct CalendarState {
+    pub health: Health,
+    pub configured: bool,
+    pub events: Entities<CalendarEvent>,
+}
+
+/// Existing dashboard-media enrichment result; not a new playback-control API.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct LyricLine {
+    pub time: f64,
+    pub text: String,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct DashboardMediaState {
+    pub health: Health,
+    pub key: String,
+    pub lines: Entities<LyricLine>,
+    pub plain: String,
+    pub palette: BTreeMap<String, String>,
+    pub lyrics_message: String,
+    pub cache_seconds: u32,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct SystemProcess {
+    pub pid: u32,
+    pub name: String,
+    pub start: String,
+    pub uid: u32,
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub memory: u64,
+    pub cpu_seconds: f64,
+    pub parent: u32,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct SystemDisk {
+    pub path: String,
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub total: u64,
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub used: u64,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct DashboardSystemState {
+    pub health: Health,
+    pub processes: Entities<SystemProcess>,
+    pub disks: Entities<SystemDisk>,
+}
+
+/// Payload alternatives embedded in the existing snap message, not a new frame.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "topic", content = "data")]
+pub enum CoreSnapshot {
+    #[serde(rename = "network")]
+    Network(NetworkState),
+    #[serde(rename = "bluetooth")]
+    Bluetooth(BluetoothState),
+    #[serde(rename = "power.profiles")]
+    PowerProfiles(PowerProfilesState),
+    #[serde(rename = "audio")]
+    Audio(AudioState),
+    #[serde(rename = "notifications")]
+    Notifications(NotificationsState),
+    #[serde(rename = "tray")]
+    Tray(TrayState),
+    #[serde(rename = "dashboard.weather")]
+    Weather(Box<WeatherState>),
+    #[serde(rename = "dashboard.updates")]
+    Updates(UpdatesState),
+    #[serde(rename = "dashboard.calendar")]
+    Calendar(CalendarState),
+    #[serde(rename = "dashboard.media")]
+    Media(DashboardMediaState),
+    #[serde(rename = "dashboard.system")]
+    System(DashboardSystemState),
+}
+
+impl CoreSnapshot {
+    pub fn valid(&self) -> bool {
+        match self {
+            Self::Network(s) => {
+                s.devices.valid()
+                    && s.access_points.valid()
+                    && s.connections.valid()
+                    && s.access_points.items.values().all(|ap| {
+                        ap.strength <= 100
+                            && s.devices.items.contains_key(&ap.device)
+                            && ap
+                                .connection
+                                .as_ref()
+                                .is_none_or(|id| s.connections.items.contains_key(id))
+                    })
+            }
+            Self::Bluetooth(s) => {
+                s.adapters.valid()
+                    && s.devices.valid()
+                    && s.devices.items.values().all(|d| {
+                        s.adapters.items.contains_key(&d.adapter)
+                            && d.battery.is_none_or(|b| b <= 100)
+                    })
+            }
+            Self::PowerProfiles(s) => {
+                s.profiles.valid()
+                    && s.active
+                        .as_ref()
+                        .is_none_or(|id| s.profiles.items.contains_key(id))
+            }
+            Self::Audio(s) => {
+                s.nodes.valid()
+                    && s.default_output.as_ref().is_none_or(|id| {
+                        s.nodes
+                            .items
+                            .get(id)
+                            .is_some_and(|n| n.kind == AudioKind::Output)
+                    })
+                    && s.default_input.as_ref().is_none_or(|id| {
+                        s.nodes
+                            .items
+                            .get(id)
+                            .is_some_and(|n| n.kind == AudioKind::Input)
+                    })
+                    && s.nodes.items.values().all(|n| {
+                        n.volume.is_finite()
+                            && n.volume >= 0.0
+                            && n.target.as_ref().is_none_or(|id| {
+                                s.nodes.items.get(id).is_some_and(|target| {
+                                    matches!(
+                                        (&n.kind, &target.kind),
+                                        (AudioKind::Playback, AudioKind::Output)
+                                            | (AudioKind::Capture, AudioKind::Input)
+                                    )
+                                })
+                            })
+                    })
+            }
+            Self::Notifications(s) => {
+                s.active.valid()
+                    && s.history.valid()
+                    && s.active
+                        .items
+                        .values()
+                        .chain(s.history.items.values())
+                        .all(|n| {
+                            timestamp_valid(n.created_ms)
+                                && n.actions.valid()
+                                && n.image_path
+                                    .as_ref()
+                                    .is_none_or(|p| p.starts_with('/') && !p.contains('\0'))
+                        })
+            }
+            Self::Tray(s) => {
+                s.items.valid()
+                    && s.items.items.values().all(|item| {
+                        item.valid_menu()
+                            && item
+                                .icon_path
+                                .as_ref()
+                                .is_none_or(|p| p.starts_with('/') && !p.contains('\0'))
+                            && item.menu.items.values().all(|e| {
+                                e.children.iter().all(|id| item.menu.items.contains_key(id))
+                            })
+                    })
+            }
+            Self::Weather(s) => {
+                s.checked.is_none_or(timestamp_seconds_valid)
+                    && s.current.as_ref().is_none_or(|c| {
+                        c.hours.valid()
+                            && c.days.valid()
+                            && c.hours.items.len() <= 24
+                            && c.days.items.len() <= 10
+                            && [
+                                c.temperature,
+                                c.feels_like,
+                                c.high,
+                                c.low,
+                                c.humidity,
+                                c.wind,
+                                c.direction,
+                                c.pressure,
+                                c.aqi,
+                            ]
+                            .into_iter()
+                            .flatten()
+                            .all(f64::is_finite)
+                            && c.humidity.is_none_or(percent_valid)
+                            && c.hours.items.values().all(|h| {
+                                h.temperature.is_none_or(f64::is_finite)
+                                    && h.rain.is_none_or(percent_valid)
+                            })
+                            && c.days.items.values().all(|d| {
+                                d.high.is_none_or(f64::is_finite)
+                                    && d.low.is_none_or(f64::is_finite)
+                                    && d.rain.is_none_or(percent_valid)
+                                    && d.uv.is_none_or(f64::is_finite)
+                            })
+                    })
+            }
+            Self::Updates(s) => s.checked.is_none_or(timestamp_seconds_valid),
+            Self::Calendar(s) => {
+                s.events.valid() && s.events.items.values().all(|e| timestamp_valid(e.start))
+            }
+            Self::Media(s) => {
+                s.lines.valid()
+                    && s.lines
+                        .items
+                        .values()
+                        .all(|l| l.time.is_finite() && l.time >= 0.0)
+            }
+            Self::System(s) => {
+                s.processes.valid()
+                    && s.disks.valid()
+                    && s.processes.items.values().all(|p| {
+                        p.cpu_seconds.is_finite()
+                            && p.cpu_seconds >= 0.0
+                            && timestamp_valid(p.memory)
+                    })
+                    && s.disks
+                        .items
+                        .values()
+                        .all(|d| timestamp_valid(d.total) && d.used <= d.total)
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct WifiPower {
+    pub enabled: bool,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "kind", content = "id", rename_all = "snake_case")]
+pub enum NetworkTarget {
+    AccessPoint(EntityId),
+    Connection(EntityId),
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct NetworkConnect {
+    pub device: EntityId,
+    pub target: NetworkTarget,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct DeviceTarget {
+    pub device: EntityId,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct BluetoothPower {
+    pub adapter: EntityId,
+    pub powered: bool,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct ProfileTarget {
+    pub profile: EntityId,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AudioTarget {
+    pub node: EntityId,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AudioVolume {
+    pub node: EntityId,
+    #[schemars(range(min = 0.0, max = 1.0))]
+    pub volume: f64,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AudioMute {
+    pub node: EntityId,
+    pub muted: bool,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AudioRoute {
+    pub stream: EntityId,
+    pub target: EntityId,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct Refresh {}
+
+/// Reserved method payloads embedded in call.m / call.p. No backend is registered.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "m", content = "p")]
+pub enum CoreCall {
+    #[serde(rename = "network.set_wifi")]
+    WifiPower(WifiPower),
+    #[serde(rename = "network.connect")]
+    NetworkConnect(NetworkConnect),
+    #[serde(rename = "network.disconnect")]
+    NetworkDisconnect(DeviceTarget),
+    #[serde(rename = "bluetooth.set_power")]
+    BluetoothPower(BluetoothPower),
+    #[serde(rename = "bluetooth.connect")]
+    BluetoothConnect(DeviceTarget),
+    #[serde(rename = "bluetooth.disconnect")]
+    BluetoothDisconnect(DeviceTarget),
+    #[serde(rename = "bluetooth.pair")]
+    BluetoothPair(DeviceTarget),
+    #[serde(rename = "power.set_profile")]
+    PowerProfile(ProfileTarget),
+    #[serde(rename = "audio.set_default")]
+    AudioDefault(AudioTarget),
+    #[serde(rename = "audio.set_volume")]
+    AudioVolume(AudioVolume),
+    #[serde(rename = "audio.set_mute")]
+    AudioMute(AudioMute),
+    #[serde(rename = "audio.route")]
+    AudioRoute(AudioRoute),
+    #[serde(rename = "dashboard.weather.refresh")]
+    WeatherRefresh(Refresh),
+    #[serde(rename = "dashboard.updates.refresh")]
+    UpdatesRefresh(Refresh),
+    #[serde(rename = "dashboard.calendar.refresh")]
+    CalendarRefresh(Refresh),
+}
+
+impl CoreCall {
+    pub fn valid(&self) -> bool {
+        match self {
+            Self::WifiPower(_)
+            | Self::WeatherRefresh(_)
+            | Self::UpdatesRefresh(_)
+            | Self::CalendarRefresh(_) => true,
+            Self::NetworkConnect(p) => {
+                p.device.valid()
+                    && match &p.target {
+                        NetworkTarget::AccessPoint(id) | NetworkTarget::Connection(id) => {
+                            id.valid()
+                        }
+                    }
+            }
+            Self::NetworkDisconnect(p)
+            | Self::BluetoothConnect(p)
+            | Self::BluetoothDisconnect(p)
+            | Self::BluetoothPair(p) => p.device.valid(),
+            Self::BluetoothPower(p) => p.adapter.valid(),
+            Self::PowerProfile(p) => p.profile.valid(),
+            Self::AudioDefault(p) => p.node.valid(),
+            Self::AudioVolume(p) => {
+                p.node.valid() && p.volume.is_finite() && (0.0..=1.0).contains(&p.volume)
+            }
+            Self::AudioMute(p) => p.node.valid(),
+            Self::AudioRoute(p) => p.stream.valid() && p.target.valid(),
+        }
+    }
+}
+
+/// Success means the backend acknowledged the operation; topic state is authoritative.
+/// No optimistic UI mutation and no automatic replay after a lost reply.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct CoreResult {
+    pub changed: bool,
+}
+
+pub fn timestamp_valid(value: u64) -> bool {
+    value <= MAX_SAFE_INTEGER
+}
+fn timestamp_seconds_valid(value: f64) -> bool {
+    value.is_finite() && (0.0..=MAX_SAFE_INTEGER as f64).contains(&value)
+}
+fn percent_valid(value: f64) -> bool {
+    value.is_finite() && (0.0..=100.0).contains(&value)
+}

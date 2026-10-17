@@ -49,7 +49,7 @@ Direct pinned Orient libraries own paired publication; no Orient process/RPC.
 Custom absolute XDG paths and direct D-Bus/socket transports are intended differences.
 Reference outputs are immutable; security additions use explicit new cases.
 
-Foundation: F0 → F1 → F2 events/session → launcher engine → remaining F2 → F3 → F4; stop.
+Foundation: F0 → F1 → F2 events/session → launcher engine → remaining F2 → F3 → F4; then owner-approved core controls/weather/updates workers. Publish schema-only contracts before F4; advertise capabilities only when implemented.
 Oct16 order: schema3042f3f2 published first; immutable JS ranking/provider parity, indexed catalog next.
 Long-running or frequently called work → daemon service; rare/heavy/risky → worker.
 Settings' unpublished controller port is parked for F4, not a standalone landing.
@@ -76,5 +76,5 @@ Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hosts
 UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-Next: F3 contract8be61d34/diagnostic1e2d6755 CI38987923786 FULL GREEN:361 Rust/938 repo/534 immutable parity/27 guards. Calculator local:313 frozen Qt cases exact;367 Rust/938 repo/534 parity/all gates pass on399 hashes. Arithmetic CPU.015–.0175ms/query; cold470/439→442/462ms overlaps, all paging valid. Release2d66feef/evidence3d29f8dc→own push/full CI→native attach/shared QML→F4 sole writer→STOP.
+Next: Core-service schema-only contracts: 372 Rust/938 repo (1 existing optional skip)/534 immutable parity, fmt/Clippy/schema/examples/minimal pass; 11 reserved topics/15 methods, 12 new transcripts, old fixtures unchanged. No runtime registration, deps/bead pin or service takeover. Publish/full CI before integrating the preserved F3 callers and paired measurements; F4 sole writer follows, then owner-approved core controls/weather/updates workers. Calculator e0a81ce7 CI38994431818 remains green; F3 final performance is pending. Existing privacy, authentication and privilege policy remains.
 No live desktop/config/network changes, tags, releases or package publication.
