@@ -145,6 +145,41 @@ cases (equivalent existing tests may be extended):
 5. settings_controller_receipt_race_is_conflict: another mutation between desktop
    call and get cannot supply the earlier operation's accepted snapshot.
 
+### menu.preferences mutation replies preserve durable success
+
+The daemon's menu.preferences favorite/hide/record mutation reply is a legacy
+success boundary, not a newly documented accepted-only reply. Require durability
+before returning its successful result to ANY caller, not only the native CLI.
+The load action remains read-only. settings.set/publish/provider may retain their
+explicit accepted-snapshot semantics; their durable-success wrappers wait.
+
+- Capture accepted revision and the exact favorites/hidden/recent/usage values
+  from the actor admission atomically under its current serialization. Await
+  clean/error-free matching durability for those four fields before sending the
+  existing successful menu.preferences result. Do not build expectations from
+  a later settings.get. Return original result shape; no extra wire fields.
+- Implement the wait inside the daemon using existing settings change/notify
+  infrastructure, not a self-RPC/socket/helper. Release the store lock and all
+  mutable Hub borrows before waiting. The actor, flush task, external edits and
+  other requests must continue to run. Check current state before awaiting each
+  notification using a lost-wakeup-safe pattern; no busy loop/new poll timer.
+- A newer revision is acceptable only while those four expected values match.
+  Superseded values return a visible stale_revision conflict, publication IO /
+  validation failure returns the existing sanitized error, and deadline expiry
+  remains uncertain (no replay/fallback). Preserve existing call deadlines and
+  bounded cancellation cleanup; no indefinite wait or orphan watcher/task.
+- The native menu CLI must not take a later snapshot as a new admission after
+  this durable reply. Avoid a redundant second durability wait; preserve support
+  for older daemons that already replied after synchronous persistence.
+- Add menu_preferences_reply_waits_for_flush (no success before150ms quiet, success
+  after actual clean publication), menu_preferences_superseded_returns_conflict,
+  menu_preferences_flush_failure_returns_error, and
+  menu_preferences_wait_releases_actor (another request and flush both complete
+  while first waiter is pending). Test controlled notifications/clock and owned
+  private state, never actual daemon/system files. Assert no lost wakeup if flush
+  completes between admission and waiter registration. Cancellation must leave
+  no pending watcher after existing deadline/disconnect cleanup.
+
 ### QML publisher saved() acknowledgement is in scope
 
 NacreStateFile.qml directly dispatches settings.publish and emits saved() after
