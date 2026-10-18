@@ -1325,6 +1325,12 @@ mod core_tests {
             .await?)
     }
 
+    async fn fixture_owner(connection: &zbus::Connection) -> Result<String> {
+        network_manager_owner(connection)
+            .await
+            .map_err(|_| "Private fixture owner lookup failed".into())
+    }
+
     struct FixtureSupervisor {
         hub: Shared,
         generation: Rc<Cell<u64>>,
@@ -1400,7 +1406,7 @@ mod core_tests {
             .run_until(async {
                 let old_server = owner_fixture(&address).await?;
                 let client = fixture_client(&address).await?;
-                let old_owner = network_manager_owner(&client).await?;
+                let old_owner = fixture_owner(&client).await?;
                 let hub = super::super::hub::Hub::new(
                     "owner-replacement-test".into(),
                     false,
@@ -1422,7 +1428,7 @@ mod core_tests {
 
                 let new_server = owner_fixture(&address).await?;
                 let new_client = fixture_client(&address).await?;
-                let new_owner = network_manager_owner(&new_client).await?;
+                let new_owner = fixture_owner(&new_client).await?;
                 assert_ne!(old_owner, new_owner);
                 let new_task = supervisor.start(new_client, ObserveHooks::default());
                 let new_state = wait_for_core_health(&hub, &mut notices, true, false).await;
@@ -1449,7 +1455,7 @@ mod core_tests {
             .run_until(async {
                 let old_server = owner_fixture(&address).await?;
                 let client = fixture_client(&address).await?;
-                let old_owner = network_manager_owner(&client).await?;
+                let old_owner = fixture_owner(&client).await?;
                 let (last_good, _) =
                     read_snapshot_candidate(&client, &IdentityTable::new(99))
                         .await
@@ -1490,7 +1496,7 @@ mod core_tests {
                 assert!(old_server.release_name(NM_SERVICE).await?);
                 let replacement = owner_fixture(&address).await?;
                 let replacement_client = fixture_client(&address).await?;
-                let replacement_owner = network_manager_owner(&replacement_client).await?;
+                let replacement_owner = fixture_owner(&replacement_client).await?;
                 assert_ne!(old_owner, replacement_owner);
                 assert_eq!(
                     read_events_rx.recv().await,
@@ -1516,10 +1522,10 @@ mod core_tests {
                     },
                 );
                 publish_started_rx.await?;
-                let second_owner = network_manager_owner(&replacement_client).await?;
+                let second_owner = fixture_owner(&replacement_client).await?;
                 assert!(replacement.release_name(NM_SERVICE).await?);
                 let next_server = owner_fixture(&address).await?;
-                let latest_owner = network_manager_owner(&fixture_client(&address).await?).await?;
+                let latest_owner = fixture_owner(&fixture_client(&address).await?).await?;
                 assert_ne!(second_owner, latest_owner);
                 publish_release_tx.send(()).map_err(|_| "publish gate was dropped")?;
                 assert!(replacement_task.await?.is_err());
