@@ -73,6 +73,8 @@ impl IdentityTable {
 struct NetworkProjection {
     ids: IdentityTable,
     last_good: Option<NetworkState>,
+    #[cfg(test)]
+    publication_witness: Option<tokio::sync::mpsc::UnboundedSender<NetworkState>>,
 }
 
 impl NetworkProjection {
@@ -80,13 +82,19 @@ impl NetworkProjection {
         Self {
             ids: IdentityTable::new(generation),
             last_good,
+            #[cfg(test)]
+            publication_witness: None,
         }
     }
 
     fn publish_failure(&mut self, hub: &Shared, error: CoreError) -> Result<()> {
         let state = unavailable_state(self.last_good.clone(), error);
         hub.borrow_mut()
-            .publish(CORE_TOPIC, serde_json::to_value(state)?)?;
+            .publish(CORE_TOPIC, serde_json::to_value(state.clone())?)?;
+        #[cfg(test)]
+        if let Some(witness) = &self.publication_witness {
+            let _ = witness.send(state);
+        }
         Ok(())
     }
 }
@@ -774,7 +782,7 @@ async fn observe(
     generation: Rc<Cell<u64>>,
     identity_generation: Rc<Cell<u64>>,
 ) -> Result<()> {
-    let projection = new_projection(&hub, &identity_generation)?;
+    let mut projection = new_projection(&hub, &identity_generation)?;
     let builder = match zbus::connection::Builder::system() {
         Ok(builder) => builder.method_timeout(Duration::from_secs(5)),
         Err(_) => {
@@ -813,6 +821,8 @@ struct ObserveHooks {
     #[cfg(test)]
     before_publish_gate:
         Option<(tokio::sync::oneshot::Sender<()>, tokio::sync::oneshot::Receiver<()>)>,
+    #[cfg(test)]
+    publication_witness: Option<tokio::sync::mpsc::UnboundedSender<NetworkState>>,
 }
 
 #[cfg(test)]
@@ -865,6 +875,10 @@ async fn observe_on_connection(
     connection: zbus::Connection,
     mut hooks: ObserveHooks,
 ) -> Result<()> {
+    #[cfg(test)]
+    {
+        projection.publication_witness = hooks.publication_witness.take();
+    }
     let expected_owner = match network_manager_owner(&connection).await {
         Ok(owner) => owner,
         Err(error) => {
@@ -1028,6 +1042,10 @@ async fn observe_on_connection(
                     continue;
                 }
                 return Err(error.into());
+            }
+            #[cfg(test)]
+            if let Some(witness) = &projection.publication_witness {
+                let _ = witness.send(state.clone());
             }
             projection.ids = candidate_ids;
             projection.last_good = Some(state);
@@ -1402,8 +1420,9 @@ mod core_tests {
     #[tokio::test(flavor = "current_thread")]
     async fn core_network_owner_replacement_retires_same_path_ids() -> Result<()> {
         let (_home, _bus, address) = private_bus()?;
-        tokio::task::LocalSet::new()
-            .run_until(async {
+        tokio::time::timeout(
+            Duration::from_secs(20),
+            tokio::task::LocalSet::new().run_until(async {
                 let old_server = owner_fixture(&address).await?;
                 let client = fixture_client(&address).await?;
                 let old_owner = fixture_owner(&client).await?;
@@ -1443,16 +1462,19 @@ mod core_tests {
                 let _ = wait_for_core_health(&hub, &mut notices, false, true).await;
                 assert!(new_task.await?.is_err());
                 Ok::<(), crate::Error>(())
-            })
-            .await?;
+            }),
+        )
+        .await
+        .map_err(|_| "N5 private network lifecycle fixture timed out")??;
         Ok(())
     }
 
     #[tokio::test(flavor = "current_thread")]
     async fn core_network_old_owner_snapshot_never_publishes_after_replacement() -> Result<()> {
         let (_home, _bus, address) = private_bus()?;
-        tokio::task::LocalSet::new()
-            .run_until(async {
+        tokio::time::timeout(
+            Duration::from_secs(20),
+            tokio::task::LocalSet::new().run_until(async {
                 let old_server = owner_fixture(&address).await?;
                 let client = fixture_client(&address).await?;
                 let old_owner = fixture_owner(&client).await?;
@@ -1475,6 +1497,8 @@ mod core_tests {
                 let (read_resumed_tx, read_resumed_rx) = tokio::sync::oneshot::channel();
                 let (read_events_tx, mut read_events_rx) =
                     tokio::sync::mpsc::unbounded_channel();
+                let (published_tx, mut published_rx) =
+                    tokio::sync::mpsc::unbounded_channel();
                 let hooks = ObserveHooks {
                     snapshot_gate: Some(SnapshotReadGate {
                         started: read_started_tx,
@@ -1482,6 +1506,7 @@ mod core_tests {
                         resumed: read_resumed_tx,
                     }),
                     watcher_events: Some(read_events_tx),
+                    publication_witness: Some(published_tx),
                     ..ObserveHooks::default()
                 };
                 let old_task = supervisor.start(client, hooks);
@@ -1508,6 +1533,18 @@ mod core_tests {
                 assert!(old_task.await?.is_err());
                 assert_eq!(stale.connections.order, last_good.connections.order);
                 assert!(!stale.health.available);
+                let witnessed: Vec<_> =
+                    std::iter::from_fn(|| published_rx.try_recv().ok()).collect();
+                assert!(
+                    witnessed
+                        .iter()
+                        .any(|state| !state.health.available && state.health.stale),
+                    "owner loss publishes stale health"
+                );
+                assert!(
+                    witnessed.iter().all(|state| !state.health.available),
+                    "old-owner candidate never publishes as healthy"
+                );
 
                 // Start a replacement generation and hold its freshly read
                 // candidate immediately before the final synchronous publish.
@@ -1535,28 +1572,21 @@ mod core_tests {
                 assert!(!stale.health.available);
                 assert!(stale.health.stale);
                 assert_eq!(stale.connections.order, last_good.connections.order);
-                let published_after_boundary = std::iter::from_fn(|| notices.try_recv().ok()).any(
-                    |notice| {
-                        matches!(
-                            notice,
-                            super::super::hub::Notice::Changed { ref topic, .. }
-                                if topic == CORE_TOPIC
-                        )
-                    },
-                );
-                assert!(!published_after_boundary);
                 drop(next_server);
                 Ok::<(), crate::Error>(())
-            })
-            .await?;
+            }),
+        )
+        .await
+        .map_err(|_| "N5 private network lifecycle fixture timed out")??;
         Ok(())
     }
 
     #[tokio::test(flavor = "current_thread")]
     async fn core_network_service_exit_drops_signal_watcher() -> Result<()> {
         let (_home, _bus, address) = private_bus()?;
-        tokio::task::LocalSet::new()
-            .run_until(async {
+        tokio::time::timeout(
+            Duration::from_secs(20),
+            tokio::task::LocalSet::new().run_until(async {
                 let server = owner_fixture(&address).await?;
                 let client = fixture_client(&address).await?;
                 let hub = super::super::hub::Hub::new(
@@ -1618,7 +1648,11 @@ mod core_tests {
                     .as_u64()
                     .expect("network watch generation");
                 cancel_task.abort();
-                assert!(cancel_task.await?.is_cancelled());
+                let cancellation = match cancel_task.await {
+                    Err(error) => error,
+                    Ok(_) => panic!("cancelled observer unexpectedly returned normally"),
+                };
+                assert!(cancellation.is_cancelled());
                 cancel_dropped_rx.await?;
                 server
                     .emit_signal(
@@ -1647,8 +1681,10 @@ mod core_tests {
                     .expect("network watch generation");
                 assert_eq!(before, after, "cancelled observer left no live watcher");
                 Ok::<(), crate::Error>(())
-            })
-            .await?;
+            }),
+        )
+        .await
+        .map_err(|_| "N5 private network lifecycle fixture timed out")??;
         Ok(())
     }
 
