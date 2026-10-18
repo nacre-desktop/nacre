@@ -31,12 +31,21 @@ def report():
             {"processes": [{"swap_pss_mib": 0}]},
             {"processes": [{"swap_pss_mib": 0}]},
         ],
+        "paging_window": {
+            "start": {"pswpin": 100, "pswpout": 200},
+            "end": {"pswpin": 100, "pswpout": 200},
+            "page_size_bytes": 4096,
+            "elapsed_s": 60.0,
+            "delta_pages": 0,
+            "delta_bytes": 0,
+        },
         "cpu_percent_one_core": {"shell": {"mean": 0.1}},
     }
     timing = {"frame_ms": {"p95": 400}, "synchronous_ms": {"p95": 80}, "samples": [{}]}
     return {
         "paging_start": {"pswpin": 100, "pswpout": 200},
         "paging_end": {"pswpin": 100, "pswpout": 200},
+        "page_size_bytes": 4096,
         "scenarios": {name: copy.deepcopy(sample) for name in BUDGETS["ci_pss_mib"]},
         "latency": {
             label: {
@@ -48,6 +57,88 @@ def report():
 
 
 class BudgetTests(unittest.TestCase):
+    def test_all_three_idle_phases_observe_full_sixty_seconds(self):
+        self.assertEqual(
+            [
+                session.idle_sample_duration(name, 1, 1)
+                for name in session.FULL_IDLE_PHASES
+            ],
+            [60.0, 60.0, 60.0],
+        )
+        self.assertEqual(session.idle_sample_duration("video", 1, 1), 1)
+
+    def test_paging_windows_keep_warmup_and_idle_separate(self):
+        calls = []
+        counters = iter(
+            (
+                {"pswpin": 120, "pswpout": 4},
+                {"pswpin": 123, "pswpout": 4},
+            )
+        )
+        clock = iter((600.0, 660.0))
+        result = report()
+        whole_arm_start = copy.deepcopy(result["paging_start"])
+        whole_arm_end = copy.deepcopy(result["paging_end"])
+        data = session.observe_idle_phase(
+            "fresh_static",
+            60,
+            lambda duration: calls.append(duration) or {"samples": []},
+            lambda: next(counters),
+            lambda: next(clock),
+            4096,
+        )
+        result["scenarios"]["fresh_static"].update(data)
+        self.assertEqual(calls, [60])
+        self.assertEqual(data["paging_window"]["start"]["pswpin"], 120)
+        self.assertEqual(data["paging_window"]["end"]["pswpin"], 123)
+        self.assertEqual(data["paging_window"]["elapsed_s"], 60)
+        self.assertEqual(result["paging_start"], whole_arm_start)
+        self.assertEqual(result["paging_end"], whole_arm_end)
+
+    def test_paging_delta_uses_recorded_page_size(self):
+        counters = iter(
+            (
+                {"pswpin": 10, "pswpout": 2},
+                {"pswpin": 13, "pswpout": 2},
+            )
+        )
+        clock = iter((5.0, 65.0))
+        data = session.observe_idle_phase(
+            "all_panels_closed",
+            60,
+            lambda _duration: {"samples": []},
+            lambda: next(counters),
+            lambda: next(clock),
+            8192,
+        )
+        self.assertEqual(data["paging_window"]["delta_pages"], 3)
+        self.assertEqual(data["paging_window"]["delta_bytes"], 24576)
+
+    def test_whole_arm_paging_failure_remains_invalid(self):
+        data = report()
+        data["page_size_bytes"] = 4096
+        data["paging_end"]["pswpin"] += 256
+        self.assertTrue(
+            any(
+                "1 MiB" in error for error in session.quiet_window_failures(data)
+            )
+        )
+
+    def test_incomplete_idle_or_counter_reset_is_invalid(self):
+        data = report()
+        del data["scenarios"]["fresh_static"]["paging_window"]
+        self.assertTrue(
+            any(
+                "missing full idle" in error
+                for error in session.quiet_window_failures(data)
+            )
+        )
+        data = report()
+        data["scenarios"]["all_panels_closed"]["paging_window"]["end"]["pswpin"] = 99
+        self.assertTrue(
+            any("counter reset" in error for error in session.quiet_window_failures(data))
+        )
+
     def test_first_nested_process_uses_private_bus_and_cannot_start_user_manager(self):
         class StopBeforeLaunch(Exception):
             pass

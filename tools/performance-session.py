@@ -4,6 +4,7 @@
 import argparse
 import collections
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -179,6 +180,87 @@ def paging():
     return {key: int(fields[key]) for key in ("pswpin", "pswpout")}
 
 
+FULL_IDLE_PHASES = ("fresh_static", "all_panels_closed", "static_after_latency")
+
+
+def idle_sample_duration(name, sample_seconds, idle_seconds):
+    """Keep each N0002 static observation open for at least a full minute."""
+    if name == "static_after_latency":
+        requested = idle_seconds
+    else:
+        requested = sample_seconds
+    if name in FULL_IDLE_PHASES:
+        return max(60.0, requested)
+    return requested
+
+
+def observe_idle_phase(name, duration, idle, paging_reader, clock, page_size_bytes):
+    """Attach isolated host-counter evidence to a named idle observation."""
+    if name not in FULL_IDLE_PHASES:
+        return idle(duration)
+
+    start = paging_reader()
+    started_at = clock()
+    data = idle(duration)
+    end = paging_reader()
+    elapsed_s = clock() - started_at
+    delta_pages = end["pswpin"] - start["pswpin"]
+    data["paging_window"] = {
+        "start": start,
+        "end": end,
+        "page_size_bytes": page_size_bytes,
+        "elapsed_s": elapsed_s,
+        "delta_pages": delta_pages,
+        "delta_bytes": delta_pages * page_size_bytes,
+    }
+    return data
+
+
+def idle_phase_failures(report):
+    """Reject incomplete named windows without changing the whole-arm limit."""
+    if "wallpaper_frame_smoke" in report:
+        return []
+    failures = []
+    scenarios = report.get("scenarios", {})
+    for name in FULL_IDLE_PHASES:
+        window = scenarios.get(name, {}).get("paging_window")
+        if not isinstance(window, dict):
+            failures.append(name + ": missing full idle paging window")
+            continue
+        start, end = window.get("start"), window.get("end")
+        page_size = window.get("page_size_bytes")
+        elapsed = window.get("elapsed_s")
+        if (
+            not isinstance(start, dict)
+            or not isinstance(end, dict)
+            or any(
+                not isinstance(counter, int) or isinstance(counter, bool)
+                for counters in (start, end)
+                for counter in (counters.get("pswpin"), counters.get("pswpout"))
+            )
+            or not isinstance(page_size, int)
+            or isinstance(page_size, bool)
+            or page_size <= 0
+            or not isinstance(elapsed, (int, float))
+            or isinstance(elapsed, bool)
+            or not math.isfinite(elapsed)
+        ):
+            failures.append(name + ": incomplete idle paging counters or timing")
+            continue
+        delta_pages = end["pswpin"] - start["pswpin"]
+        if delta_pages < 0 or end["pswpout"] < start["pswpout"]:
+            failures.append(name + ": idle paging counter reset")
+            continue
+        if (
+            window.get("delta_pages") != delta_pages
+            or window.get("delta_bytes") != delta_pages * page_size
+        ):
+            failures.append(name + ": inconsistent idle paging deltas")
+        if elapsed < 60:
+            failures.append(name + ": idle paging window shorter than 60 seconds")
+    return failures
+
+
 def machine_metadata(proc=Path("/proc"), sysroot=Path("/sys"), etc=Path("/etc")):
     """Read the requested machine facts without hostnames or configuration changes."""
     errors = []
@@ -279,12 +361,14 @@ def quiet_window_failures(report):
     start, end = report.get("paging_start"), report.get("paging_end")
     page_size = report.get("page_size_bytes")
     if not start or not end or not isinstance(page_size, int) or page_size <= 0:
-        return ["missing host paging counters or page size"]
-    pages = end["pswpin"] - start["pswpin"]
-    if pages < 0:
-        failures.append("host paging counter reset during capture")
-    elif pages * page_size >= 1048576:
-        failures.append("host swap-in reached the 1 MiB limit")
+        failures.append("missing host paging counters or page size")
+    else:
+        failures.extend(idle_phase_failures(report))
+        pages = end["pswpin"] - start["pswpin"]
+        if pages < 0:
+            failures.append("host paging counter reset during capture")
+        elif pages * page_size >= 1048576:
+            failures.append("host swap-in reached the 1 MiB limit")
     for name, scenario in report.get("scenarios", {}).items():
         count = len(scenario.get("samples", []))
         coverage = (
@@ -873,13 +957,17 @@ def run(args, directory):
                 else None
             )
             sampled_at = time.monotonic()
-            data = performance.idle(
-                pid,
-                args.idle_seconds
-                if name == "static_after_latency"
-                else args.sample_seconds,
-                0.25,
-                detached=False,
+            data = observe_idle_phase(
+                name,
+                idle_sample_duration(
+                    name, args.sample_seconds, args.idle_seconds
+                ),
+                lambda duration: performance.idle(
+                    pid, duration, 0.25, detached=False
+                ),
+                paging,
+                time.monotonic,
+                report["page_size_bytes"],
             )
             if video_before:
                 video_after = state(
