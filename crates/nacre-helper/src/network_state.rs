@@ -459,6 +459,20 @@ pub(crate) async fn watch_events(
     connection: &zbus::Connection,
     mut emit: impl FnMut() -> Result<bool>,
 ) -> Result<i32> {
+    watch_events_tagged(connection, |_| emit()).await
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum NetworkEvent {
+    Initial,
+    Changed,
+    OwnerChanged,
+}
+
+pub(crate) async fn watch_events_tagged(
+    connection: &zbus::Connection,
+    mut emit: impl FnMut(NetworkEvent) -> Result<bool>,
+) -> Result<i32> {
     use futures_lite::StreamExt;
     let events = zbus::MatchRule::builder()
         .msg_type(zbus::message::Type::Signal)
@@ -472,19 +486,31 @@ pub(crate) async fn watch_events(
         .member("NameOwnerChanged")?
         .arg(0, SERVICE)?
         .build();
-    let changes = zbus::MessageStream::for_match_rule(events, connection, Some(256)).await?;
-    let owners = zbus::MessageStream::for_match_rule(owner, connection, Some(16)).await?;
-    let mut events = futures_lite::stream::or(changes, owners);
-    if !emit()? {
+    let mut changes = zbus::MessageStream::for_match_rule(events, connection, Some(256)).await?;
+    let mut owners = zbus::MessageStream::for_match_rule(owner, connection, Some(16)).await?;
+    if !emit(NetworkEvent::Initial)? {
         return Ok(0);
     }
-    while let Some(event) = events.next().await {
-        event?;
-        if !emit()? {
-            return Ok(0);
+    loop {
+        tokio::select! {
+            event = changes.next() => {
+                event.ok_or("NetworkManager event stream closed")??;
+                if !emit(NetworkEvent::Changed)? {
+                    return Ok(0);
+                }
+            }
+            event = owners.next() => {
+                let message = event.ok_or("NetworkManager owner stream closed")??;
+                let (_name, old_owner, new_owner): (String, String, String) = message
+                    .body()
+                    .deserialize()
+                    .map_err(|_| "Malformed NetworkManager owner-change signal")?;
+                if old_owner != new_owner && !emit(NetworkEvent::OwnerChanged)? {
+                    return Ok(0);
+                }
+            }
         }
     }
-    Err("NetworkManager monitoring connection closed".into())
 }
 
 #[cfg(test)]
@@ -574,5 +600,78 @@ mod watch_tests {
             assert_eq!(count, 2);
             Ok::<(), crate::Error>(())
         })
+    }
+
+    #[test]
+    fn tagged_monitor_reports_network_manager_owner_replacement() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let mut bus = Bus(Command::new("dbus-daemon")
+            .args([
+                "--session",
+                "--nofork",
+                "--print-address",
+                &format!("--address=unix:path={}", home.path().join("bus").display()),
+            ])
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?);
+        let mut address = String::new();
+        BufReader::new(bus.0.stdout.take().ok_or("Missing private bus address")?)
+            .read_line(&mut address)?;
+        async_io::block_on(async {
+            let server = zbus::connection::Builder::address(address.trim())?
+                .name(SERVICE)?
+                .build()
+                .await?;
+            let client = zbus::connection::Builder::address(address.trim())?
+                .build()
+                .await?;
+            let observed = std::rc::Rc::new(std::cell::Cell::new(None));
+            let wake = std::rc::Rc::new(std::cell::RefCell::new(None::<std::task::Waker>));
+            let event_state = observed.clone();
+            let event_wake = wake.clone();
+            let watch = watch_events_tagged(&client, move |event| {
+                event_state.set(Some(event));
+                if let Some(waker) = event_wake.borrow_mut().take() {
+                    waker.wake();
+                }
+                Ok(event != NetworkEvent::OwnerChanged)
+            });
+            let replace = async move {
+                futures_lite::future::poll_fn(|context| {
+                    if observed.get() == Some(NetworkEvent::Initial) {
+                        std::task::Poll::Ready(())
+                    } else {
+                        *wake.borrow_mut() = Some(context.waker().clone());
+                        std::task::Poll::Pending
+                    }
+                })
+                .await;
+                observed.set(None);
+                drop(server);
+                let replacement = zbus::connection::Builder::address(address.trim())?
+                    .name(SERVICE)?
+                    .build()
+                    .await?;
+                futures_lite::future::poll_fn(|context| {
+                    if observed.get() == Some(NetworkEvent::OwnerChanged) {
+                        std::task::Poll::Ready(())
+                    } else {
+                        *wake.borrow_mut() = Some(context.waker().clone());
+                        std::task::Poll::Pending
+                    }
+                })
+                .await;
+                drop(replacement);
+                Ok::<(), crate::Error>(())
+            };
+            let (watched, replaced) = futures_lite::future::zip(watch, replace).await;
+            replaced?;
+            assert_eq!(watched?, 0);
+            Ok::<(), crate::Error>(())
+        })?;
+        drop(bus);
+        Ok(())
     }
 }
