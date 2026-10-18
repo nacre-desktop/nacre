@@ -441,3 +441,39 @@ all8fresh v9 arms without further permission, within19:27–23:30UTC. No other
 heavy jobs; peersIDLE. No runtime rebuild or old-cell reuse; existing guard,
 whole-wrapper quiet and full600+3x60 timing gates unchanged. First invalid cell
 stops batch; Review and DONE/IDLE/RELEASED required before another heavy job.
+
+
+## Current v10 grant — 2026-10-18 19:50 through Oct19 00:00 UTC
+
+Supersedes earlier windows. V9 readiness stopped for a real QML startup Python
+child that exited before its first memory read; no batch or accepted evidence.
+Exact saved command was the NacreIcons platform-name query, not root failure.
+V10 uses an explicitly sequential, completed snapshot round: enumerate owned
+identities, read memory, reconcile final live inventory, and verify critical
+roots before/after and terminal. Every final LIVE identity requires its own
+valid PID/start memory read. Exact-confirmed departed identities are retained
+as NOT_LIVE_AT_CUTOFF, with historical memory or null/UNKNOWN if never sampled;
+they are not concurrent live PSS and are never assigned fabricated zero.
+New/unread final live identities, unresolved exits, read errors and identity
+reuse without the new identity's read reject. Any observed positive SwapPss
+rejects even if that process exits or the original sampler drops its row.
+No sampling or arm retries, sleeps, process exclusions or shortened windows.
+Sampling is non-atomic; inter-snapshot/action lifetimes and PSS peaks UNKNOWN.
+
+Sol+Terra independently ACCEPT v10 package
+sol-n2-completed-snapshot-v10-20261018: driver
+129ab4ed05b895662d69e238ae84e15836b5c9ccd4e059acfb213fc9329b5785; census
+49ab5d728a3bee590a5fde9e4e85a27c98cace1a5524c9247ee2d4a6c7ff8aa8; validator
+31c793049336c25aad4d9298ab5817c97f19107f246fa4e750f45b3524172ba0.
+All37 manifest/27plan pins,28snapshot+6smoke+11original mocks pass.
+Read exact remaining identities and argv directly from that reviewed manifest
+and plan; do not manually transcribe expected hash tables. Frozen runtime,
+helper,Orient and base collector unchanged; report executed patch from plan.
+
+Luna soleheavy grant effective19:50UTC through2026-10-19 00:00UTC. First ONE
+reviewed <=120s actual readiness smoke (same45s/85s bounds), then on PASS and
+confirmed cleanup announce CAPTURE_START and start all8fresh arms without
+further permission. TwelveGiB cap/swap0,host4GiB start/2GiB abort, independent
+guard, strict whole-wrapper paging and full600+3x60 windows unchanged.
+Failure stops without retry. Previous evidence remains invalid and preserved.
+All peersIDLE. No runtime rebuild/push/install; final Review/DONE release.

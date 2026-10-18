@@ -149,12 +149,13 @@ All other workers IDLE. F4 reviewed integration d3622384 remains local pending
 valid capture then published exact-head CI. B0011Done/green; N6 blockers remain.
 
 
-### Active execution — 2026-10-18 19:27 UTC
+### Active execution — 2026-10-18 19:50 UTC
 
-N2v8 stopped before measurement: supervisor selector also matched D-Bus wrapper.
-V9 full-argv/PID-start fix independently ACCEPT Sol+Terra; no runtime changes.
-Luna soleheavy19:27–23:30UTC: first ONE<=120s reviewed real launch/census smoke;
-ifPASSandcleanupconfirmed proceedfresh8arm batch without furtherpermission.
-No accepted historical cells, no reuse/compression;12GiB/hostabort2GiB unchanged.
-AllotherworkersIDLE. F4 local reviewed merge d3622384 still awaits valid N2 then
-published-head CI. OwnerVisibility saved in global skill; lead waits workers.
+N2 priorarms/readinessinvalid; preserved,zeroaccepted. V10 reconciles sequential
+snapshot live/departed identities without inventing zero memory; allfinal-live
+ownedprocesses mustmeasured, rootsstable, observedSwaprejects. Sol+TerraACCEPT,
+37manifest/27planpins and45mocks pass. Built-in Luna soleheavy now through
+Oct19 00:00UTC: ONE<=120s readiness smoke,ifPASSfresh8arm batch uncompressed.
+12GiBcap/hostabort2GiB/strictwholewrapperpaging/full600+3x60 unchanged.
+AllotherworkersIDLE; F4reviewed localmerge d3622384 waitsvalidN2 thenpublished
+exact-headCI. B0011Donegreen. N6 blockersremain; nolive/packageaction.
