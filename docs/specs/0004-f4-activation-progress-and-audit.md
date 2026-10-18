@@ -188,3 +188,10 @@ consumed the completed JoinSet result/warning branch before teardown cancelled i
 
 Return N0004 Review after deterministic completion proof. No N0002/grant until
 it passes; the fixed600s+60s fresh8cell plan/baseline5f4 remain unchanged.
+
+
+## Restart safety
+
+No measurements are authorized by this spec. Any later measurement must follow
+the standing capture-safety rules: peer pause, MemAvailable >=4GiB before start,
+abort below2GiB, private memory-limited scope, and explicit spec-agent grant.

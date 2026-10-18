@@ -77,6 +77,43 @@ build/test jobs on the measurement host. Never preempt an existing measurement.
 - Frozen parity references and Wave 3 sources / pending desktop A/B/A/B stay
   exactly as recorded in rust-migration.md. Never substitute latest main.
 
+## Capture safety — restart rule, 2026-10-18
+
+This section supersedes earlier capture windows. No capture starts until incident
+review is reported to the owner and the spec agent issues the replacement grant.
+An unexplained simultaneous agent shutdown is not proof of OOM or a safe retry.
+
+- “Stop other jobs” means pausing your own builds and asking the other implementer
+  to pause theirs. Never kill a process you did not start. Never signal or restart
+  Codex/app-server processes. An expired window is not proof of host idleness;
+  require explicit DONE/IDLE/RELEASED before another task starts.
+- Before each arm: no builds running, peer pause acknowledged, and MemAvailable
+  at least 4 GiB (4,194,304 KiB in /proc/meminfo). Record the value. During the
+  entire warmup and capture sample MemAvailable at least once per second; abort
+  and invalidate the arm if below 2 GiB (2,097,152 KiB), or if monitoring fails.
+- Run the harness and all measured descendants (private compositor, UI, daemon,
+  helpers and input driver) inside one new private systemd user scope. Set an
+  explicit MemoryMax well above expected peak: 2 GiB for the existing nested
+  lanes, expected below 1 GiB. Verify the effective cgroup limit before any arm;
+  no unlimited fallback. If expected peak cannot fit with generous headroom,
+  stop for spec-agent sizing instead of silently raising it. Scope setup is
+  transient and task-private, not a live unit/configuration change.
+- Keep the lightweight memory watchdog outside that measured scope, but task-owned.
+  On low memory, scope OOM, unexpected exit or lost watchdog, invalidate the arm
+  and stop only the recorded owned scope/descendants. Preserve partial logs,
+  cgroup memory.events/peak and the reason; never retry automatically or count
+  aborted samples as a valid cell. Do not include Codex/app-server in the scope.
+- Verify containment and watchdog behavior with a bounded mocked check before
+  measurement; do not deliberately exhaust RAM or induce host memory pressure.
+  Fold the small guard and regression tests into the measurement spec, not a new
+  tooling project. Report scope name, limit, start/minimum MemAvailable, guard
+  result, exact artifact identities and owned cleanup with ordinary gate evidence.
+- Inspect kernel and user journals from 2026-10-18 02:30 with explicit timezone
+  and retained-boot coverage. Report OOM/kills, agent/app-server exits and the last
+  owned job without touching those processes. If evidence points to another
+  cause, fix it and tell the owner before re-granting. Missing old journals mean
+  unknown, not no OOM. Never change global OOM policy, swap, sysctl or caches.
+
 ## Memory and typing decisions
 
 - Bead: every close <= own bar + 5 MiB; settled UI <= 25 MiB. Stop at 24.5 MiB.

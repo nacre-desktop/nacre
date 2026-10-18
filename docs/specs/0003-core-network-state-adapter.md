@@ -132,3 +132,10 @@ F4. Before that integration reconcile daemon/hub wiring with the actual F4 head.
 No build/test on Bead's active capture host; run only on an independent verified
 existing environment, or keep source/test implementation ready for host release.
 Do not start a new lab/toolchain/deployment to work around the slot.
+
+
+## Restart safety
+
+No measurements are authorized by this spec. Any later measurement must follow
+the standing capture-safety rules: peer pause, MemAvailable >=4GiB before start,
+abort below2GiB, private memory-limited scope, and explicit spec-agent grant.

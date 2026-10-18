@@ -388,3 +388,10 @@ v7 is not yet accepted source-ready. See N0004 for the demonstrated serial
 activation-persistence wait, missing activation progress proofs, and ownership
 report corrections. Frozen150/50/rollback hashes match local review. No capture
 grant exists for v7; retain existing correctness evidence with its exact scope.
+
+
+## Restart safety
+
+No measurements are authorized by this spec. Any later measurement must follow
+the standing capture-safety rules: peer pause, MemAvailable >=4GiB before start,
+abort below2GiB, private memory-limited scope, and explicit spec-agent grant.
