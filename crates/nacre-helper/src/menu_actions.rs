@@ -628,8 +628,11 @@ fn configuration_command(
     let path = paths.config.join(name);
     if route == "defaults" {
         let schema = crate::state::by_id("apps")?;
-        if !path.exists() {
-            let defaults = json!({"terminal":["kitty"],"browser":["google-chrome-stable"],"files":["nacre-shell","dolphin"],"mail":["google-chrome-stable","--app=https://mail.google.com/"],"emoji":["nacre-menu","actions.emoji"]});
+        let defaults = json!({"terminal":["kitty"],"browser":["google-chrome-stable"],"files":["nacre-shell","dolphin"],"mail":["google-chrome-stable","--app=https://mail.google.com/"],"emoji":["nacre-menu","actions.emoji"]});
+        let mut document = crate::owned_settings::Document::open(&path, "apps", defaults.clone())?;
+        if document.is_hosted() {
+            document.save(&document.data.clone())?;
+        } else if !path.exists() {
             crate::state::write_as(&path, Some(schema), &defaults)?;
         } else {
             // Validate before launching an editor; migrate legacy data with backup.

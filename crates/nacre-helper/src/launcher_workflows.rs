@@ -27,7 +27,13 @@ fn emoji_search(query: &str) -> Result<Value> {
     nacre_menu::emoji::bundled().search(query)
 }
 fn configuration(paths: &Paths) -> Result<Value> {
-    let value = read(&paths.config.join("launcher-workflows.json"), defaults())?;
+    configuration_value(crate::owned_settings::read(
+        &paths.config.join("launcher-workflows.json"),
+        "launcher-workflows",
+        defaults(),
+    )?)
+}
+fn configuration_value(value: Value) -> Result<Value> {
     if value["version"] != 1 || !value["entries"].is_array() || !value["roots"].is_array() {
         return Err("Unsupported launcher workflows format".into());
     }
@@ -79,7 +85,7 @@ fn valid_url(url: &str) -> bool {
         && !url.chars().any(char::is_control)
         && url.len() <= 4096
 }
-fn validate(entry: &Value) -> Result<()> {
+pub(crate) fn validate(entry: &Value) -> Result<()> {
     text(entry, "id", 100, true)?;
     text(entry, "label", 100, true)?;
     text(entry, "icon", 80, false)?;
@@ -235,7 +241,12 @@ fn preview(paths: &Paths, value: &str) -> Result<Value> {
 }
 fn save(paths: &Paths, kind: &str, data: &Value) -> Result<Value> {
     let _guard = menu_registry::registry_lock(paths, "launcher-workflows")?;
-    let mut config = configuration(paths)?;
+    let mut document = crate::owned_settings::Document::open(
+        &paths.config.join("launcher-workflows.json"),
+        "launcher-workflows",
+        defaults(),
+    )?;
+    let mut config = configuration_value(document.data.clone())?;
     if kind == "roots" {
         let roots = parse_arguments(text(data, "roots", 16384, false)?)?;
         let entries = roots
@@ -286,7 +297,9 @@ fn save(paths: &Paths, kind: &str, data: &Value) -> Result<Value> {
     if crate::json::encode(&config)?.len() > 2_097_152 {
         return Err("Launcher data is too large; remove an item before adding more".into());
     }
-    files::json_write(&paths.config.join("launcher-workflows.json"), &config)?;
+    if !document.save(&config)? {
+        files::json_write(&paths.config.join("launcher-workflows.json"), &config)?;
+    }
     Ok(json!({"message":"Saved"}))
 }
 fn load(paths: &Paths) -> Result<Value> {
@@ -322,12 +335,19 @@ fn load(paths: &Paths) -> Result<Value> {
 }
 fn remove(paths: &Paths, id: &str) -> Result<Value> {
     let _guard = menu_registry::registry_lock(paths, "launcher-workflows")?;
-    let mut config = configuration(paths)?;
+    let mut document = crate::owned_settings::Document::open(
+        &paths.config.join("launcher-workflows.json"),
+        "launcher-workflows",
+        defaults(),
+    )?;
+    let mut config = configuration_value(document.data.clone())?;
     config["entries"]
         .as_array_mut()
         .unwrap()
         .retain(|e| e["id"] != id);
-    files::json_write(&paths.config.join("launcher-workflows.json"), &config)?;
+    if !document.save(&config)? {
+        files::json_write(&paths.config.join("launcher-workflows.json"), &config)?;
+    }
     Ok(json!({"message":"Removed"}))
 }
 fn executable_available(name: &str, cwd: Option<&Path>) -> bool {

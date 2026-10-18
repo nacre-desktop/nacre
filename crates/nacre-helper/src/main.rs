@@ -165,6 +165,9 @@ fn run() -> Result<i32> {
         nacre_helper::terminal_font::publish(&nacre_helper::paths::Paths::environment()?, family)?;
         return Ok(0);
     }
+    if tool == "desktop-settings" {
+        return nacre_helper::desktop_settings::run(&arguments);
+    }
     if tool == "terminal-branding" {
         return nacre_helper::terminal_branding::run(&arguments);
     }

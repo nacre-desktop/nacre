@@ -122,8 +122,14 @@ impl Colors {
             .unwrap_or_else(|| chrono::Utc::now().timestamp_millis())
     }
     pub fn stored(&self) -> Result<Value> {
+        Self::stored_values(crate::owned_settings::read(
+            &self.store_path(),
+            "colors",
+            json!({}),
+        )?)
+    }
+    fn stored_values(saved: Value) -> Result<Value> {
         let mut values = json!({"version":1,"wallpapers":{},"favorites":[],"history":[]});
-        let saved = state::read(&self.store_path(), json!({}))?;
         for (key, value) in saved.as_object().ok_or("Invalid saved color choices")? {
             values[key] = value.clone();
         }
@@ -478,7 +484,9 @@ impl Colors {
         };
         let value = json!({"id":identity,"name":name,"modes":modes,"palette":data["palette"],"swatches":[data["palette"]["colours"]["primary"],data["palette"]["colours"]["secondary"],data["palette"]["colours"]["tertiary"]]});
         let _guard = self.store_lock()?;
-        let mut stored = self.stored()?;
+        let mut document =
+            crate::owned_settings::Document::open(&self.store_path(), "colors", json!({}))?;
+        let mut stored = Self::stored_values(document.data.clone())?;
         let mut favorites = vec![value];
         favorites.extend(
             stored["favorites"]
@@ -490,12 +498,16 @@ impl Colors {
         );
         favorites.truncate(64);
         stored["favorites"] = json!(favorites);
-        wallpaper_media::atomic(&self.store_path(), &stored)?;
+        if !document.save(&stored)? {
+            wallpaper_media::atomic(&self.store_path(), &stored)?;
+        }
         Ok(json!({"saved":name}))
     }
     pub fn delete(&self, identity: &Value) -> Result<Value> {
         let _guard = self.store_lock()?;
-        let mut values = self.stored()?;
+        let mut document =
+            crate::owned_settings::Document::open(&self.store_path(), "colors", json!({}))?;
+        let mut values = Self::stored_values(document.data.clone())?;
         values["favorites"] = json!(values["favorites"]
             .as_array()
             .ok_or("Invalid saved palettes")?
@@ -503,7 +515,9 @@ impl Colors {
             .filter(|favorite| favorite["id"] != *identity)
             .cloned()
             .collect::<Vec<_>>());
-        wallpaper_media::atomic(&self.store_path(), &values)?;
+        if !document.save(&values)? {
+            wallpaper_media::atomic(&self.store_path(), &values)?;
+        }
         Ok(json!({"deleted":true}))
     }
 }
@@ -716,7 +730,9 @@ impl Colors {
         }
         let guard = crate::classic_state::publication_lock(&self.paths)?;
         let _store = self.store_lock()?;
-        let mut values = self.stored()?;
+        let mut document =
+            crate::owned_settings::Document::open(&self.store_path(), "colors", json!({}))?;
+        let mut values = Self::stored_values(document.data.clone())?;
         let previous_values = values.clone();
         let previous_preferences = self.media.settings()?;
         let mut choice = Map::new();
@@ -747,7 +763,9 @@ impl Colors {
         values["wallpapers"][crate::paths::weak_canonical(&poster)?
             .to_string_lossy()
             .as_ref()] = json!(choice);
-        wallpaper_media::atomic(&self.store_path(), &values)?;
+        if !document.save(&values)? {
+            wallpaper_media::atomic(&self.store_path(), &values)?;
+        }
         let patch = json!({"palettePreset":if json::truthy(&request["favoriteId"]){format!("favorite:{}",request["favoriteId"].as_str().ok_or("Invalid saved palette identity")?)}else{"wallpaper".into()},"paletteMode":palette["mode"],"paletteHarmony":request["personality"]=="harmony","palettePersonality":request["personality"],"paletteBackgroundFromWallpaper":request["backgroundFromWallpaper"]});
         let applied = (|| -> Result<()> {
             self.media.preference(&patch)?;
@@ -761,7 +779,9 @@ impl Colors {
             wallpaper_media::atomic(&self.media.wallpaper_state().join("media.json"), &item)
         })();
         if let Err(error) = applied {
-            wallpaper_media::atomic(&self.store_path(), &previous_values)?;
+            if !document.save(&previous_values)? {
+                wallpaper_media::atomic(&self.store_path(), &previous_values)?;
+            }
             let previous: Map<_, _> = patch
                 .as_object()
                 .unwrap()
@@ -785,7 +805,9 @@ impl Colors {
         );
         rows.truncate(20);
         values["history"] = json!(rows);
-        wallpaper_media::atomic(&self.store_path(), &values)?;
+        if !document.save(&values)? {
+            wallpaper_media::atomic(&self.store_path(), &values)?;
+        }
         Ok(json!({"applied":true,"name":item["name"]}))
     }
     pub fn output_folder(&self, identity: &Value) -> Result<PathBuf> {

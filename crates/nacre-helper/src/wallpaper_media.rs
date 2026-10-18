@@ -324,8 +324,12 @@ impl Media {
     }
     pub fn settings(&self) -> Result<Value> {
         let prefs = self.preferences_path();
+        let saved = crate::owned_settings::read(&prefs, "wallpaper-picker", json!({}))?;
+        self.settings_with(saved)
+    }
+    fn settings_with(&self, saved: Value) -> Result<Value> {
+        let prefs = self.preferences_path();
         let mut result = json!({"kind":"static","layout":"carousel","paused":false,"motionMode":"full","pauseCovered":true,"rotationEnabled":false,"rotationMinutes":30,"rotationKind":"all","rotationShuffle":true,"palettePreset":"wallpaper","paletteMode":"dark","paletteAutoMode":false,"paletteHarmony":false,"palettePersonality":"natural"});
-        let saved = state::read(&prefs, json!({}))?;
         for (key, value) in saved.as_object().ok_or("Invalid picker preferences")? {
             result[key] = value.clone();
         }
@@ -358,7 +362,11 @@ impl Media {
     }
     pub fn palette_presets(&self) -> Result<Value> {
         let mut presets = state::read(&self.assets.join("palette-presets.json"), json!([]))?;
-        let stored = state::read(&self.paths.config.join("colors.json"), json!({}))?;
+        let stored = crate::owned_settings::read(
+            &self.paths.config.join("colors.json"),
+            "colors",
+            json!({}),
+        )?;
         let id = regex::Regex::new(r"^[0-9a-f]{16}$")?;
         if let Some(favorites) = stored["favorites"].as_array() {
             for favorite in favorites {
@@ -474,7 +482,9 @@ impl Media {
         let prefs = self.preferences_path();
         fs::create_dir_all(prefs.parent().ok_or("Missing preference directory")?)?;
         let _guard = crate::files::lock(&prefs.with_extension("lock"))?;
-        let mut result = self.settings()?;
+        let mut document =
+            crate::owned_settings::Document::open(&prefs, "wallpaper-picker", json!({}))?;
+        let mut result = self.settings_with(document.data.clone())?;
         let previous = result.clone();
         for (key, value) in object {
             result[key] = value.clone();
@@ -488,7 +498,9 @@ impl Media {
                 .now_ms
                 .unwrap_or_else(|| chrono::Utc::now().timestamp_millis()));
         }
-        atomic(&prefs, &result)?;
+        if !document.save(&result)? {
+            atomic(&prefs, &result)?;
+        }
         Ok(result)
     }
     pub fn preview_key(poster: &Path) -> Result<String> {
@@ -1511,7 +1523,11 @@ impl Media {
         let scheme = state::read(&self.paths.state.join("scheme.json"), json!({}))?;
         let config = state::read(&self.paths.config.join("cli.json"), json!({}))?;
         let settings = self.settings()?;
-        let saved = state::read(&self.paths.config.join("colors.json"), json!({}))?;
+        let saved = crate::owned_settings::read(
+            &self.paths.config.join("colors.json"),
+            "colors",
+            json!({}),
+        )?;
         let absolute = crate::paths::weak_canonical(poster)?;
         let choice = saved["wallpapers"]
             .get(absolute.to_string_lossy().as_ref())

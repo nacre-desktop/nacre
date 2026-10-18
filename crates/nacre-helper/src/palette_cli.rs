@@ -444,7 +444,11 @@ impl Cli {
         if let Some(harmony) = args.harmony {
             return Ok(json!(if harmony { "harmony" } else { "natural" }));
         }
-        let preferences = state::read(&self.paths.config.join("wallpaper-picker.json"), json!({}))?;
+        let preferences = crate::owned_settings::read(
+            &self.paths.config.join("wallpaper-picker.json"),
+            "wallpaper-picker",
+            json!({}),
+        )?;
         Ok(preferences
             .get("palettePersonality")
             .filter(|v| json::truthy(v))
@@ -460,7 +464,11 @@ impl Cli {
     fn image_settings(&self, path: &Path, args: &Arguments) -> Result<Value> {
         use chrono::Timelike;
         let path = crate::paths::weak_canonical(path)?;
-        let saved = state::read(&self.paths.config.join("colors.json"), json!({}))?;
+        let saved = crate::owned_settings::read(
+            &self.paths.config.join("colors.json"),
+            "colors",
+            json!({}),
+        )?;
         let choice = saved["wallpapers"]
             .get(path.to_string_lossy().as_ref())
             .cloned()
@@ -472,7 +480,11 @@ impl Cli {
                 .ok_or("Invalid saved accent overrides")?
                 .shift_remove("primary");
         }
-        let preferences = state::read(&self.paths.config.join("wallpaper-picker.json"), json!({}))?;
+        let preferences = crate::owned_settings::read(
+            &self.paths.config.join("wallpaper-picker.json"),
+            "wallpaper-picker",
+            json!({}),
+        )?;
         let background = args.background.map(|v| json!(v)).unwrap_or_else(|| {
             choice
                 .get("backgroundFromWallpaper")
@@ -514,7 +526,11 @@ impl Cli {
         let config = state::read(&self.paths.config.join("cli.json"), json!({}))?;
         let key = crate::paths::weak_canonical(path)?;
         let key = key.to_string_lossy();
-        let saved = state::read(&self.paths.config.join("colors.json"), json!({}))?;
+        let saved = crate::owned_settings::read(
+            &self.paths.config.join("colors.json"),
+            "colors",
+            json!({}),
+        )?;
         let choice = saved["wallpapers"]
             .get(key.as_ref())
             .cloned()
@@ -630,7 +646,9 @@ impl Cli {
             let resolved = crate::paths::weak_canonical(path)?;
             let resolved = resolved.to_string_lossy();
             let config_path = self.paths.config.join("cli.json");
-            let mut config = state::read(&config_path, json!({}))?;
+            let mut config_document =
+                crate::owned_settings::Document::open(&config_path, "cli", json!({}))?;
+            let mut config = config_document.data.clone();
             let mut accents = config["orient"]
                 .get("accents")
                 .cloned()
@@ -656,10 +674,14 @@ impl Cli {
                 let mut orient = config.get("orient").cloned().unwrap_or(json!({}));
                 orient["accents"] = accents;
                 config["orient"] = orient;
-                self.write_json(&config_path, &config)?;
+                if !config_document.save(&config)? {
+                    self.write_json(&config_path, &config)?;
+                }
                 let choices_path = self.paths.config.join("colors.json");
                 if choices_path.exists() {
-                    let mut saved = state::read(&choices_path, json!({}))?;
+                    let mut document =
+                        crate::owned_settings::Document::open(&choices_path, "colors", json!({}))?;
+                    let mut saved = document.data.clone();
                     if let Some(choices) = saved["wallpapers"].as_object_mut() {
                         for (key, choice) in choices {
                             if key == resolved.as_ref()
@@ -681,7 +703,9 @@ impl Cli {
                             }
                         }
                     }
-                    self.write_json(&choices_path, &saved)?;
+                    if !document.save(&saved)? {
+                        self.write_json(&choices_path, &saved)?;
+                    }
                 }
             }
             generated
@@ -798,7 +822,11 @@ impl Cli {
         let data = self.current()?;
         let mut generated = self.options(&path, args, &data)?;
         let config = state::read(&self.paths.config.join("cli.json"), json!({}))?;
-        let preferences = state::read(&self.paths.config.join("wallpaper-picker.json"), json!({}))?;
+        let preferences = crate::owned_settings::read(
+            &self.paths.config.join("wallpaper-picker.json"),
+            "wallpaper-picker",
+            json!({}),
+        )?;
         if !args.flag("no-smart")
             && args.value("mode").is_none()
             && !matches!(preferences["paletteMode"].as_str(), Some("light" | "dark"))

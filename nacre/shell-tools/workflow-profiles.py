@@ -103,3 +103,28 @@ def apply(name):
                     stderr=subprocess.DEVNULL,
                     start_new_session=True,
                 )
+
+
+# Temporary internal bridge for the earlier desktop-settings port. The library's
+# existing API remains canonical until its own Wave 4 port deletes this file.
+if __name__ == "__main__":
+    import sys
+
+    if sys.argv[1:] == ["--native-controller-bridge"]:
+        try:
+            raw = sys.stdin.buffer.read(1024 * 1024 + 1)
+            if len(raw) > 1024 * 1024:
+                raise ValueError("Workflow request is too large")
+            request = json.loads(raw)
+            if not isinstance(request, dict):
+                raise ValueError("Expected a workflow request object")
+            if request.get("action") == "apply":
+                apply(request["name"])
+            elif request.get("action") == "save":
+                save(request["name"], request["roles"])
+            else:
+                raise ValueError("Unknown workflow action")
+            print(json.dumps({"ok": True}))
+        except Exception as error:  # noqa: BLE001 — Return the original library failure to the native settings error UI.
+            print(json.dumps({"error": str(error)}))
+            sys.exit(1)

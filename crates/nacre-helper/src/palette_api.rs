@@ -409,31 +409,7 @@ pub fn call(module: &str, operation: &str, request: &Request) -> Result<Value> {
                 paths.clone(),
                 std::env::vars().collect(),
             )?;
-            let monitors = lock_config::monitor_layout(&paths, &mut backend)?;
-            let scheme = crate::state::read(&paths.state.join("scheme.json"), json!({}))?;
-            let preferences = crate::state::read(&paths.config.join("desktop.json"), json!({}))?;
-            let image = match std::fs::read_to_string(paths.state.join("wallpaper/last.txt")) {
-                Ok(v) => v.trim().into(),
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
-                Err(e) => return Err(e.into()),
-            };
-            let body = lock_config::prepare_config(
-                &paths,
-                &assets,
-                scheme["colours"].as_object().ok_or("Missing lock colors")?,
-                Path::new(&image),
-                &preferences,
-                &paths.tools().join("nacre-helper"),
-                &monitors,
-            )?;
-            crate::files::atomic(
-                &paths
-                    .config
-                    .parent()
-                    .ok_or("Invalid lock root")?
-                    .join("hypr/hyprlock.conf"),
-                body.as_bytes(),
-            )?;
+            lock_config::publish(&paths, &mut backend, None)?;
             Ok(Value::Null)
         }
         ("lock-dashboard", "publish") => lock_dashboard::publish(

@@ -18,7 +18,11 @@ fn now() -> f64 {
         .as_secs_f64()
 }
 fn read(path: &Path, fallback: Value) -> Result<Value> {
-    crate::state::read(path, fallback)
+    if path == Paths::environment()?.config.join("dashboard.json") {
+        crate::owned_settings::read(path, "dashboard", fallback)
+    } else {
+        crate::state::read(path, fallback)
+    }
 }
 
 fn expanded(path: &str, paths: &Paths) -> PathBuf {
@@ -423,7 +427,11 @@ pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Valu
     let _guard = nix::fcntl::Flock::lock(file, nix::fcntl::FlockArg::LockExclusive)
         .map_err(|(_, error)| error)?;
     if action == "preferences" {
-        files::json_write(&config, &validate(&crate::json::parse_value(value)?)?)?;
+        let value = validate(&crate::json::parse_value(value)?)?;
+        let mut document = crate::owned_settings::Document::open(&config, "dashboard", json!({}))?;
+        if !document.save(&value)? {
+            files::json_write(&config, &value)?;
+        }
     } else if let Some(kind) = action.strip_prefix("focus-") {
         let data: Value = serde_json::from_str(if value.is_empty() { "{}" } else { value })?;
         focus_action(

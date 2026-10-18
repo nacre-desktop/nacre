@@ -25,6 +25,10 @@ fn invalid() -> crate::Error {
 }
 pub fn load(path: &Path) -> Result<Value> {
     let data = crate::state::read_as(path, Some(crate::state::by_id("launcher")?), json!({}))?;
+    normalized(&data)
+}
+
+pub fn normalized(data: &Value) -> Result<Value> {
     let data = data.as_object().ok_or_else(invalid)?;
     let mut result = serde_json::Map::new();
     for key in ["favorites", "hidden", "recent"] {
@@ -83,6 +87,14 @@ pub fn initialize(path: &Path) -> Result<Value> {
     load(path)
 }
 pub fn change(path: &Path, action: &str, value: &Value) -> Result<Value> {
+    change_request(action, value)?;
+    let _guard = files::lock(&path.with_extension("lock"))?;
+    let data = changed(load(path)?, action, value)?;
+    crate::state::write_as(path, Some(crate::state::by_id("launcher")?), &data)?;
+    Ok(data)
+}
+
+fn change_request<'a>(action: &str, value: &'a Value) -> Result<(&'static str, &'a str, bool)> {
     let key = match action {
         "favorite" => "favorites",
         "hide" => "hidden",
@@ -102,8 +114,12 @@ pub fn change(path: &Path, action: &str, value: &Value) -> Result<Value> {
     }
     let id = id.unwrap();
     let enabled = enabled.unwrap();
-    let _guard = files::lock(&path.with_extension("lock"))?;
-    let mut data = load(path)?;
+    Ok((key, id, enabled))
+}
+
+/// The same preference mutation with persistence owned by the daemon service.
+pub fn changed(mut data: Value, action: &str, value: &Value) -> Result<Value> {
+    let (key, id, enabled) = change_request(action, value)?;
     let items = data[key].as_array_mut().unwrap();
     items.retain(|value| value.as_str() != Some(id));
     if enabled {
@@ -135,7 +151,6 @@ pub fn change(path: &Path, action: &str, value: &Value) -> Result<Value> {
             items.push(json!(id));
         }
     }
-    crate::state::write_as(path, Some(crate::state::by_id("launcher")?), &data)?;
     Ok(data)
 }
 pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Value>> {

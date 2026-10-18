@@ -140,13 +140,20 @@ fn theme_remove(paths: &Paths, id: &str) -> Result<Value> {
         .append(true)
         .open(path.with_extension("lock"))?;
     let _guard = Flock::lock(lock, FlockArg::LockExclusive).map_err(|(_, error)| error)?;
-    let mut saved = read(&path, Value::Null)?;
+    let mut document = crate::owned_settings::Document::open(&path, "colors", Value::Null)?;
+    let mut saved = if document.is_hosted() {
+        document.data.clone()
+    } else {
+        read(&path, Value::Null)?
+    };
     let favorites = saved["favorites"].as_array_mut().ok_or(tr(
         "helper.software-library.invalid-saved-themes-original-file-preserved",
         "Invalid saved themes; original file preserved",
     ))?;
     favorites.retain(|f| f["id"] != id.trim_start_matches("favorite:"));
-    write(&path, &saved)?;
+    if !document.save(&saved)? {
+        write(&path, &saved)?;
+    }
     Ok(json!({"message":tr("helper.software-library.saved-theme-removed", "Saved theme removed")}))
 }
 fn theme_export(paths: &Paths, id: &str, input: &Value) -> Result<Value> {
@@ -899,10 +906,13 @@ fn theme_import(paths: &Paths, input: &str) -> Result<Value> {
         .append(true)
         .open(path.with_extension("lock"))?;
     let _guard = Flock::lock(lock, FlockArg::LockExclusive).map_err(|(_, error)| error)?;
-    let mut saved = read(
-        &path,
-        json!({"version":1,"favorites":[],"wallpapers":{},"history":[]}),
-    )?;
+    let fallback = json!({"version":1,"favorites":[],"wallpapers":{},"history":[]});
+    let mut document = crate::owned_settings::Document::open(&path, "colors", fallback.clone())?;
+    let mut saved = if document.is_hosted() {
+        document.data.clone()
+    } else {
+        read(&path, fallback)?
+    };
     let favorites = saved["favorites"].as_array_mut().ok_or(tr(
         "helper.software-library.invalid-saved-themes-original-file-preserved",
         "Invalid saved themes; original file preserved",
@@ -922,7 +932,9 @@ fn theme_import(paths: &Paths, input: &str) -> Result<Value> {
     let favorite = json!({"id":id,"name":data["name"],"modes":modes,"palette":{"colours":modes["dark"]},"swatches":[modes["dark"]["primary"],modes["dark"]["secondary"],modes["dark"]["tertiary"]]});
     favorites.retain(|f| f["id"] != id);
     favorites.insert(0, favorite);
-    write(&path, &saved)?;
+    if !document.save(&saved)? {
+        write(&path, &saved)?;
+    }
     Ok(
         json!({"message":tr("helper.software-library.theme-imported", "Theme imported"),"preset":format!("favorite:{id}")}),
     )

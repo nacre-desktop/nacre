@@ -90,3 +90,7 @@ pub mod login_appearance;
 pub mod lock_info;
 
 pub mod lock_prepare;
+
+pub mod desktop_settings;
+
+pub mod owned_settings;

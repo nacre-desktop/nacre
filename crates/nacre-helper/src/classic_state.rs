@@ -234,7 +234,8 @@ pub fn theme_target_key(id: &str) -> &str {
     }
 }
 pub fn theme_target_enabled(paths: &Paths, id: &str) -> Result<bool> {
-    let prefs = state::read(&paths.config.join("colors.json"), json!({}))?;
+    let prefs =
+        crate::owned_settings::read(&paths.config.join("colors.json"), "colors", json!({}))?;
     Ok(prefs["appThemes"][theme_target_key(id)] != false)
 }
 pub fn publish_terminal_colors(
@@ -383,7 +384,8 @@ pub fn publish_presentation(
     if changed == 0 {
         changed = now;
     }
-    let stored = state::read(&paths.config.join("colors.json"), json!({}))?;
+    let stored =
+        crate::owned_settings::read(&paths.config.join("colors.json"), "colors", json!({}))?;
     let input = |key: &str, preference: &str, fallback: Value| {
         data["input"]
             .get(key)
@@ -731,17 +733,31 @@ impl Publisher {
         let key = theme_target_key(id);
         let path = self.paths.config.join("colors.json");
         let schema = state::schema(&path).ok_or("Missing colors store schema")?;
-        let previous = state::read(&path, json!({}))?["appThemes"][key].clone();
-        state::update_as(&path, schema, |mut prefs| {
+        let mut document = crate::owned_settings::Document::open(&path, "colors", json!({}))?;
+        let previous_document = document.data.clone();
+        let previous = previous_document["appThemes"][key].clone();
+        if document.is_hosted() {
+            let mut prefs = previous_document.clone();
             if prefs["appThemes"].is_null() {
                 prefs["appThemes"] = json!({});
             }
-            if !prefs["appThemes"].is_object() {
-                return Err("Invalid application theme preferences".into());
-            }
-            prefs["appThemes"][key] = json!(enabled);
-            Ok(prefs)
-        })?;
+            prefs["appThemes"]
+                .as_object_mut()
+                .ok_or("Invalid application theme preferences")?
+                .insert(key.into(), json!(enabled));
+            document.save(&prefs)?;
+        } else {
+            state::update_as(&path, schema, |mut prefs| {
+                if prefs["appThemes"].is_null() {
+                    prefs["appThemes"] = json!({});
+                }
+                if !prefs["appThemes"].is_object() {
+                    return Err("Invalid application theme preferences".into());
+                }
+                prefs["appThemes"][key] = json!(enabled);
+                Ok(prefs)
+            })?;
+        }
         let result = (|| -> Result<()> {
             if enabled {
                 let data = state::read(&self.paths.state.join("scheme.json"), Value::Null)?;
@@ -782,17 +798,21 @@ impl Publisher {
             self.publish_target_manifest()
         })();
         if result.is_err() {
-            state::update_as(&path, schema, |mut prefs| {
-                if previous.is_null() {
-                    prefs["appThemes"]
-                        .as_object_mut()
-                        .ok_or("Invalid theme preferences")?
-                        .remove(key);
-                } else {
-                    prefs["appThemes"][key] = previous;
-                }
-                Ok(prefs)
-            })?;
+            if document.is_hosted() {
+                document.save(&previous_document)?;
+            } else {
+                state::update_as(&path, schema, |mut prefs| {
+                    if previous.is_null() {
+                        prefs["appThemes"]
+                            .as_object_mut()
+                            .ok_or("Invalid theme preferences")?
+                            .remove(key);
+                    } else {
+                        prefs["appThemes"][key] = previous;
+                    }
+                    Ok(prefs)
+                })?;
+            }
         }
         result
     }
@@ -815,24 +835,17 @@ impl Publisher {
         }
     }
     pub fn publish_compositor_palette(&self, colors: &Map<String, Value>) -> Result<String> {
-        let mut values = colors.clone();
         let preferences = state::read(&self.paths.config.join("desktop.json"), json!({}))?;
-        if preferences["interfaceGradients"] == false {
-            values.insert("secondary".into(), values["primary"].clone());
-        }
-        let text = render_template(
-            &self.assets,
-            self.backend.name(),
-            "compositor-palette",
-            &values,
-        )?;
-        atomic_write(&self.backend.config_path("palette")?, &text)?;
-        Ok(text)
+        publish_compositor_palette_with(&self.assets, &self.backend, colors, &preferences)
     }
     fn apply_locked(&mut self, wallpaper: Option<&Path>, live: bool) -> Result<()> {
         let paths = &self.paths;
         let mut data = state::read(&paths.state.join("scheme.json"), Value::Null)?;
-        let options = state::read(&paths.config.join("wallpaper-picker.json"), json!({}))?;
+        let options = crate::owned_settings::read(
+            &paths.config.join("wallpaper-picker.json"),
+            "wallpaper-picker",
+            json!({}),
+        )?;
         let preset = options
             .get("palettePreset")
             .and_then(Value::as_str)
@@ -848,7 +861,11 @@ impl Publisher {
                     .ok_or("Invalid bundles")?
                     .clone(),
             );
-            let stored = state::read(&paths.config.join("colors.json"), json!({}))?;
+            let stored = crate::owned_settings::read(
+                &paths.config.join("colors.json"),
+                "colors",
+                json!({}),
+            )?;
             if let Some(favorites) = stored["favorites"].as_array() {
                 for favorite in favorites {
                     let mut favorite = favorite.clone();
@@ -1253,6 +1270,9 @@ impl Publisher {
         }
         let _guard = publication_lock(&self.paths)?;
         let pref_path = self.paths.config.join("wallpaper-picker.json");
+        let mut preference_document =
+            crate::owned_settings::Document::open(&pref_path, "wallpaper-picker", json!({}))?;
+        let original_preferences = preference_document.data.clone();
         let state = &self.paths.state;
         let files = [
             pref_path.clone(),
@@ -1290,7 +1310,11 @@ impl Publisher {
                 }
             })
             .collect::<Result<Vec<_>>>()?;
-        let mut options: Value = serde_json::from_str(previous[0].as_deref().unwrap_or("{}"))?;
+        let mut options: Value = if preference_document.is_hosted() {
+            original_preferences.clone()
+        } else {
+            serde_json::from_str(previous[0].as_deref().unwrap_or("{}"))?
+        };
         let object = options
             .as_object_mut()
             .ok_or("Invalid picker preferences")?;
@@ -1301,7 +1325,9 @@ impl Publisher {
             object.insert(key.clone(), value.clone());
         }
         let outcome = (|| -> Result<()> {
-            atomic_write(&pref_path, &encoded(&options)?)?;
+            if !preference_document.save(&options)? {
+                atomic_write(&pref_path, &encoded(&options)?)?;
+            }
             atomic_write(&self.paths.state.join("scheme.json"), &encoded(data)?)?;
             atomic_write(
                 &self.paths.state.join("wallpaper/media.json"),
@@ -1322,7 +1348,13 @@ impl Publisher {
             publish(self, Some(poster), live)
         })();
         if let Err(error) = outcome {
+            if preference_document.is_hosted() {
+                preference_document.save(&original_preferences)?;
+            }
             for (path, text) in files.iter().zip(&previous) {
+                if path == &pref_path && preference_document.is_hosted() {
+                    continue;
+                }
                 if let Some(text) = text {
                     atomic_write(path, text)?;
                 } else {
@@ -1375,4 +1407,19 @@ impl Publisher {
         }
         self.apply_locked(wallpaper, live)
     }
+}
+
+pub(crate) fn publish_compositor_palette_with(
+    assets: &Path,
+    backend: &crate::compositor::backend::Backend,
+    colors: &Map<String, Value>,
+    preferences: &Value,
+) -> Result<String> {
+    let mut values = colors.clone();
+    if preferences["interfaceGradients"] == false {
+        values.insert("secondary".into(), values["primary"].clone());
+    }
+    let text = render_template(assets, backend.name(), "compositor-palette", &values)?;
+    atomic_write(&backend.config_path("palette")?, &text)?;
+    Ok(text)
 }

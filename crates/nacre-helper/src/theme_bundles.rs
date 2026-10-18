@@ -285,7 +285,18 @@ pub fn apply_with(
     let guard = classic_state::publication_lock(&paths)?;
     let _preference_guard = files::lock(&paths.config.join("wallpaper-picker.lock"))?;
     // Strict registry reads refuse future versions instead of overwriting them.
-    let mut prefs = state::read_strict(&paths.config.join("wallpaper-picker.json"), json!({}))?;
+    let legacy_prefs = state::read_strict(&paths.config.join("wallpaper-picker.json"), json!({}))?;
+    let mut preference_document = crate::owned_settings::Document::open(
+        &paths.config.join("wallpaper-picker.json"),
+        "wallpaper-picker",
+        legacy_prefs.clone(),
+    )?;
+    let original_preferences = preference_document.data.clone();
+    let mut prefs = if preference_document.is_hosted() {
+        original_preferences.clone()
+    } else {
+        legacy_prefs
+    };
     let previous = state::read_strict(&paths.state.join("scheme.json"), json!({}))?;
     let old_image = fs::read_to_string(paths.state.join("wallpaper/last.txt"))
         .ok()
@@ -395,7 +406,7 @@ pub fn apply_with(
             prefs["paletteMode"] = json!(mode);
             prefs["paletteAutoMode"] = json!(false);
         }
-        if scope != "wallpaper" {
+        if scope != "wallpaper" && !preference_document.save(&prefs)? {
             state::write(&paths.config.join("wallpaper-picker.json"), &prefs)?;
         }
         let mut scheme = if scope == "wallpaper" {
@@ -432,7 +443,15 @@ pub fn apply_with(
         )
     })();
     if let Err(error) = result {
+        if preference_document.is_hosted() {
+            preference_document.save(&original_preferences)?;
+        }
         for (path, value) in &saved {
+            if preference_document.is_hosted()
+                && path == &paths.config.join("wallpaper-picker.json")
+            {
+                continue;
+            }
             restore(path, value)?;
         }
         // Restore live consumers too; if unavailable, exact persisted selections still survive.
@@ -442,6 +461,11 @@ pub fn apply_with(
             None
         };
         for (path, value) in &saved {
+            if preference_document.is_hosted()
+                && path == &paths.config.join("wallpaper-picker.json")
+            {
+                continue;
+            }
             restore(path, value)?;
         }
         return Err(format!(

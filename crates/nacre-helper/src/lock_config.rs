@@ -434,3 +434,44 @@ pub fn prepare_config(
         Some(&artwork),
     )
 }
+
+/// Render a lock projection from the accepted desktop snapshot when hosted.
+/// Standalone callers retain the established disk-read behavior.
+pub(crate) fn publish(
+    paths: &Paths,
+    backend: &mut crate::compositor::backend::Backend,
+    preferences: Option<&Value>,
+) -> Result<()> {
+    let monitors = monitor_layout(paths, backend)?;
+    let scheme = crate::state::read(&paths.state.join("scheme.json"), json!({}))?;
+    let saved;
+    let preferences = if let Some(preferences) = preferences {
+        preferences
+    } else {
+        saved = crate::state::read(&paths.config.join("desktop.json"), json!({}))?;
+        &saved
+    };
+    let image = match std::fs::read_to_string(paths.state.join("wallpaper/last.txt")) {
+        Ok(v) => v.trim().into(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(e) => return Err(e.into()),
+    };
+    let body = prepare_config(
+        paths,
+        &paths.assets(),
+        scheme["colours"].as_object().ok_or("Missing lock colors")?,
+        Path::new(&image),
+        preferences,
+        &paths.tools().join("nacre-helper"),
+        &monitors,
+    )?;
+    crate::files::atomic(
+        &paths
+            .config
+            .parent()
+            .ok_or("Invalid lock root")?
+            .join("hypr/hyprlock.conf"),
+        body.as_bytes(),
+    )?;
+    Ok(())
+}
