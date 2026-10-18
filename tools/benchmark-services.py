@@ -65,13 +65,18 @@ def benchmark(services, tools, count, helper_binary=None):
             "NacreDashboardRegistry",
             "NacreHelpers",
             "NacreHelperTask",
+            "NacreDaemon",
         ):
             source = services / (name + ".qml")
             if source.exists():
                 shutil.copy2(source, target)
+        daemon_state = services / "daemon-state.js"
+        if daemon_state.exists():
+            shutil.copy2(daemon_state, target)
         for name, body in {
             "DesktopSettings": "property var data:({dnd:false});function set(key,value){}",
-            "NacrePanelState": "property bool hidden:false;property var providerViews:[]",
+            "NacrePanelState": "property bool hidden:false;property bool settingsVisible:false;property var providerViews:[]",
+            "NacreI18n": "function tr(key,text,args){return text}",
         }.items():
             (target / (name + ".qml")).write_text(
                 "pragma Singleton\nimport QtQuick\nQtObject{" + body + "}\n"
@@ -115,6 +120,9 @@ ShellRoot {
             "QT_LOGGING_RULES": "*.debug=false\nqml.debug=true",
             "PATH": str(Path(sys.executable).parent) + os.pathsep + os.environ["PATH"],
             "NACRE_OWNER_COUNT": str(count),
+            # This benchmark compares the existing standalone helper lane.
+            # Daemon-backed ownership is measured separately in nested sessions.
+            "NACRE_DAEMON_CLIENT": "0",
         }
         environment.pop("NACRE_DASHBOARD_TOOLS", None)
         for name in (

@@ -291,7 +291,8 @@ class CoverageTests(unittest.TestCase):
         from unittest.mock import patch
 
         spec = importlib.util.spec_from_file_location(
-            "translation_settings", ROOT / "nacre/shell-tools/desktop-settings.py"
+            "translation_settings",
+            ROOT / "nacre/shell-tools/tests/native_desktop_settings.py",
         )
         settings = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(settings)

@@ -24,7 +24,7 @@ def load(name, path):
 import native_niri_daily as niri
 
 controls = load("daily_controls", "control-tools.py")
-desktop = load("daily_desktop", "desktop-settings.py")
+desktop = load("daily_desktop", "tests/native_desktop_settings.py")
 
 
 class NiriDailyDriverTests(unittest.TestCase):

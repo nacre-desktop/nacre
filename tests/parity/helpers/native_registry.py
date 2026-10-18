@@ -14,6 +14,7 @@ MIGRATED = frozenset(
         "dashboard-data",
         "dashboard-media",
         "dashboard-system",
+        "desktop-settings",
         "diagnostics",
         "helper-service",
         "kde-palette",

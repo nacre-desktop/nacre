@@ -450,8 +450,8 @@ def probe(repo, backend, output):
                     result = json.loads(
                         run(
                             [
-                                "python3",
-                                str(repo / "nacre/shell-tools/desktop-settings.py"),
+                                str(repo / "target/release/nacre-helper"),
+                                "desktop-settings",
                                 "set",
                                 key,
                                 json.dumps(value),

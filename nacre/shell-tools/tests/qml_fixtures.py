@@ -140,7 +140,7 @@ def install_modules(directory):
     lines = manifest.read_text().splitlines() if manifest.exists() else []
     state_file = imports / "NacreStateFile.qml"
     state_file.write_text(
-        "import Quickshell.Io\nFileView {function saveText(value) {setText(value)}}\n"
+        'import Quickshell.Io\nFileView {property var daemonClient:null; property string storeId:""; property string sourcePath:""; readonly property bool daemonMode:false; path:sourcePath; signal stateReceived(string value, bool missing); signal stateUnavailable(string message); function saveText(value) {setText(value)}}\n'
     )
     entries = {"NacreStateFile": (False, state_file)}
     for line in lines:

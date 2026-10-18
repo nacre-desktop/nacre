@@ -23,7 +23,7 @@ class PearlFocusTests(unittest.TestCase):
             fixtures.mkdir()
             definitions = {
                 "Environment": 'property var commands:[];function env(name){return "/tmp";}function execDetached(command){commands=[...commands,command];}',
-                "NacrePanelState": "property var screens:({});readonly property var providerViews:Object.values(screens);property bool hidden:false",
+                "NacrePanelState": "property var screens:({});readonly property var providerViews:Object.values(screens);property bool hidden:false;property bool settingsVisible:false",
                 "DesktopSettings": "property var data:({dnd:false});property var writes:[];function set(key,value){writes=[...writes,{key:key,value:value}];data=Object.assign({},data,{[key]:value});}",
             }
             for name, body in definitions.items():

@@ -121,6 +121,8 @@ class DaemonClientTests(unittest.TestCase):
         helpers=False,
         network=False,
         menu=False,
+        settings=False,
+        publisher=False,
     ):
         helpers = helpers or network
         with tempfile.TemporaryDirectory(prefix="nacre-daemon-client-") as folder:
@@ -140,6 +142,18 @@ class DaemonClientTests(unittest.TestCase):
                 shutil.copy2(ROOT / "nacre/shell/services/NacreNetwork.qml", services)
             if menu:
                 shutil.copy2(ROOT / "nacre/shell/services/NacreMenuQuery.qml", services)
+            if settings:
+                for name in ("DesktopSettings.qml", "NacreSettingsStorage.qml"):
+                    shutil.copy2(ROOT / "nacre/shell/services" / name, services)
+                (services / "NacrePanelState.qml").write_text(
+                    "pragma Singleton\nimport QtQuick\nQtObject {property bool settingsVisible:false}\n"
+                )
+                (services / "NacreCompositor.qml").write_text(
+                    'pragma Singleton\nimport QtQuick\nQtObject {property string backendName:"hyprland";property var monitors:({values:[]})}\n'
+                )
+                tools = root / "home/.local/share/nacre/shell/tools"
+                tools.mkdir(parents=True)
+                shutil.copy2(ROOT / "nacre/shell-tools/nacre-state-files.json", tools)
             if compositor:
                 folder = services / "compositor"
                 folder.mkdir()
@@ -153,6 +167,8 @@ class DaemonClientTests(unittest.TestCase):
             utils = root / "utils"
             utils.mkdir()
             shutil.copy2(ROOT / "nacre/shell/utils/NacrePaths.qml", utils)
+            if publisher:
+                shutil.copy2(ROOT / "nacre/shell/utils/NacreStateFile.qml", utils)
             runtime = root / "runtime"
             runtime.mkdir(mode=0o700)
             documents = {
@@ -192,6 +208,10 @@ ShellRoot {
             source = source.replace("FIXTURES", json.dumps(documents)).replace(
                 "BODY", body
             )
+            if publisher:
+                source = source.replace(
+                    "import qs.services", "import qs.services\nimport qs.utils"
+                )
             if compositor:
                 source = source.replace(
                     "import qs.services",
@@ -240,7 +260,7 @@ ShellRoot {
                         "Native helper unavailable; CI provides the candidate binary"
                     )
                 installed = root / "home/.local/share/nacre/shell/tools/nacre-helper"
-                installed.parent.mkdir(parents=True)
+                installed.parent.mkdir(parents=True, exist_ok=True)
                 installed.symlink_to(helper.resolve())
                 server = PrivateDaemon(runtime / "daemon.sock", wire)
                 environment.update(
@@ -357,6 +377,129 @@ ShellRoot {
         """,
             menu=True,
         )
+
+    def test_settings_use_revisioned_calls_preserve_desired_values_and_scope_subscriptions(
+        self,
+    ):
+        registry = json.loads(
+            (ROOT / "nacre/shell-tools/nacre-state-files.json").read_text()
+        )
+        ids = [entry["id"] for entry in registry["files"] if entry.get("settings")]
+
+        def scenario(server):
+            with server.accept() as stream:
+                self.assertEqual(server.read(stream)["t"], "hello")
+                server.send(
+                    stream,
+                    {
+                        "t": "welcome",
+                        "proto": 1,
+                        "min": 1,
+                        "boot": "settings-test",
+                        "topics": dict.fromkeys(
+                            ["settings.desktop"]
+                            + ["settings.store." + id for id in ids],
+                            1,
+                        ),
+                        "methods": {
+                            name: {
+                                "v": 1,
+                                "class": "desktop",
+                                "timeout": 30000,
+                                "params": {},
+                                "result": {},
+                            }
+                            for name in [
+                                "settings.get",
+                                "settings.set",
+                                "settings.desktop",
+                            ]
+                        },
+                    },
+                )
+                desktop = {"dnd": False}
+                revisions = dict.fromkeys(ids, 0)
+                while not server.stop.is_set():
+                    request = server.read(stream)
+                    if request is None:
+                        break
+                    if request["t"] != "call":
+                        continue
+                    method, params = request["m"], request["p"]
+                    if method == "settings.desktop":
+                        argv = params["arguments"]
+                        if argv[0] == "set":
+                            self.assertEqual(params["rev"], revisions["desktop"])
+                            desktop[argv[1]] = json.loads(argv[2])
+                            revisions["desktop"] += 1
+                            server.observed["desktop_writes"] = (
+                                server.observed.get("desktop_writes", 0) + 1
+                            )
+                        result = {
+                            "available": True,
+                            "data": desktop,
+                            "monitors": [],
+                            "pending": False,
+                            "rev": revisions["desktop"],
+                        }
+                    else:
+                        store = params["store"]
+                        if method == "settings.set":
+                            self.assertEqual(store, "power")
+                            self.assertEqual(params["rev"], revisions[store])
+                            self.assertEqual(params["key"], ["enabled"])
+                            revisions[store] += 1
+                            server.observed["power_writes"] = (
+                                server.observed.get("power_writes", 0) + 1
+                            )
+                        result = {
+                            "store": store,
+                            "rev": revisions[store],
+                            "exists": True,
+                            "data": desktop
+                            if store == "desktop"
+                            else {"enabled": revisions[store] > 0},
+                            "dirty": False,
+                        }
+                    server.send(stream, {"t": "ret", "id": request["id"], "ok": result})
+
+        result, observed = self.qml(
+            """
+            const storage = NacreSettingsStorage, desktop = DesktopSettings;
+            let phase = 0;
+            const timer = Qt.createQmlObject('import QtQuick; Timer {interval:20;repeat:true}', root);
+            timer.triggered.connect(() => {
+                try {
+                    if (phase === 0 && link.connected && storage.present.power && desktop.remoteRevision >= 0 && !desktop.busy) {
+                        desktop.set("dnd", true);
+                        check(desktop.data.dnd === true && desktop.busy, "desired value is immediate and serializes input writes");
+                        storage.request("power", ["enabled"], true);
+                        phase = 1;
+                    } else if (phase === 1 && !desktop.busy && desktop.data.dnd === true && storage.documents.power?.enabled === true) {
+                        check(Object.keys(desktop.desired).length === 0 && desktop.remoteRevision === 1, "ack clears only the matching desired revision");
+                        NacrePanelState.settingsVisible = true;
+                        phase = 2;
+                    } else if (phase === 2 && link.topic("settings.store.colors").users === 1) {
+                        NacrePanelState.settingsVisible = false;
+                        phase = 3;
+                    } else if (phase === 3 && link.topic("settings.store.colors").users === 0) {
+                        check(link.topic("settings.store.power").users === 1, "power policy retains its live preference source");
+                        timer.stop();finish({desktopRevision:desktop.remoteRevision,powerRevision:storage.revisions.power});
+                    }
+                } catch (error) {
+                    console.log("DAEMON_CLIENT_RESULT " + JSON.stringify({ok:false,error:String(error)}));Qt.quit();
+                }
+            });
+            timer.start();
+        """,
+            asynchronous=True,
+            wire=scenario,
+            settings=True,
+        )
+        self.assertEqual(result["desktopRevision"], 1)
+        self.assertEqual(result["powerRevision"], 1)
+        self.assertEqual(observed["desktop_writes"], 1)
+        self.assertEqual(observed["power_writes"], 1)
 
     def test_disconnected_call_is_refused_before_dispatch(self):
         result = self.qml(
@@ -1088,3 +1231,279 @@ ShellRoot {
         )
         self.assertEqual(observed["queries"], ["first", "latest"])
         self.assertEqual(result["shown"], ["latest"])
+
+    def test_publisher_waits_for_durable_snapshot_and_uses_no_file_process(self):
+        def scenario(server):
+            stream = server.accept()
+            self.assertEqual(server.read(stream)["t"], "hello")
+            descriptor = {
+                "v": 1,
+                "class": "desktop",
+                "timeout": 5000,
+                "params": {},
+                "result": {},
+            }
+            server.send(
+                stream,
+                {
+                    "t": "welcome",
+                    "proto": 1,
+                    "min": 1,
+                    "boot": "publish-a",
+                    "topics": {"settings.store.control-center": 1},
+                    "methods": {
+                        "settings.get": descriptor,
+                        "settings.publish": descriptor,
+                    },
+                },
+            )
+            snapshot = {
+                "store": "control-center",
+                "rev": 0,
+                "exists": False,
+                "data": {"version": 2, "tiles": ["volume"]},
+                "dirty": False,
+            }
+            calls = 0
+            while message := server.read(stream):
+                if message["t"] == "sub":
+                    server.send(
+                        stream,
+                        {
+                            "t": "snap",
+                            "topic": "settings.store.control-center",
+                            "seq": 0,
+                            "data": snapshot,
+                        },
+                    )
+                elif message.get("m") == "settings.get":
+                    server.send(
+                        stream, {"t": "ret", "id": message["id"], "ok": snapshot}
+                    )
+                elif message.get("m") == "settings.publish":
+                    calls += 1
+                    self.assertEqual(
+                        message["p"],
+                        {
+                            "store": "control-center",
+                            "rev": 0,
+                            "value": {"version": 2, "tiles": ["vpn"]},
+                        },
+                    )
+                    snapshot = dict(
+                        snapshot, rev=1, data=message["p"]["value"], dirty=True
+                    )
+                    server.send(
+                        stream, {"t": "ret", "id": message["id"], "ok": snapshot}
+                    )
+                    # The component must not emit saved on the in-memory ACK.
+                    time.sleep(0.2)
+                    server.send(
+                        stream,
+                        {
+                            "t": "patch",
+                            "topic": "settings.store.control-center",
+                            "base": 0,
+                            "seq": 1,
+                            "data": {
+                                "rev": 1,
+                                "data": {"tiles": ["vpn"]},
+                                "dirty": True,
+                            },
+                        },
+                    )
+                    time.sleep(0.1)
+                    server.send(
+                        stream,
+                        {
+                            "t": "patch",
+                            "topic": "settings.store.control-center",
+                            "base": 1,
+                            "seq": 2,
+                            "data": {"exists": True, "dirty": False},
+                        },
+                    )
+                server.observed["publishes"] = calls
+
+        result, observed = self.qml(
+            r"""
+            const store=Qt.createQmlObject('import QtQuick; import qs.utils; import qs.services; NacreStateFile {daemonClient:NacreDaemon; storeId:"control-center"; sourcePath:"/never-write-here"}',root);
+            let received=false;
+            store.stateReceived.connect((value,missing)=>{
+                if (!received) {received=true;store.saveText(JSON.stringify({version:2,tiles:["vpn"]}));}
+            });
+            store.saved.connect(()=>finish({revision:store.revision,busy:store.daemonBusy,path:store.path,error:store.stateError}));
+            """,
+            asynchronous=True,
+            wire=scenario,
+            publisher=True,
+        )
+        self.assertEqual(observed["publishes"], 1)
+        self.assertEqual(result["revision"], 1)
+        self.assertFalse(result["busy"])
+        self.assertEqual(result["path"], "")
+        self.assertEqual(result["error"], "")
+
+    def test_publisher_rejects_same_field_superseded_after_ack(self):
+        result = self.qml(
+            r"""
+            const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null; }',root);
+            const client=Qt.createQmlObject('import QtQuick; QtObject {property bool enabled:true;property bool connected:true;property string boot:"b1";property var topicObject:null;property var calls:[];signal newBoot(string id);function topic(name){return topicObject;}function subscribe(name){}function unsubscribe(name){}function call(method,params,callback){calls.push({method:method,params:params,callback:callback});return calls.length;}}',root);
+            client.topicObject=topic;
+            const stateComponent=Qt.createComponent("utils/NacreStateFile.qml");
+            check(stateComponent.status===Component.Ready,stateComponent.errorString());
+            const store=stateComponent.createObject(root,{daemonClient:client,storeId:"control-center"});
+            let savedCount=0,failedCount=0,finished=false;
+            store.saved.connect(()=>savedCount++);
+            store.saveFailed.connect(()=>{failedCount++;if(!finished){finished=true;Qt.callLater(()=>{topic.data={store:"control-center",rev:3,exists:true,data:{version:2,tiles:["vpn"]},dirty:false};Qt.callLater(()=>finish({saved:savedCount,failed:failedCount,publishes:client.calls.filter(c=>c.method==="settings.publish").length}));});}});
+            const initial={store:"control-center",rev:0,exists:true,data:{version:2,tiles:["volume"]},dirty:false};
+            check(client.calls.length===1&&client.calls[0].method==="settings.get","initial get");
+            client.calls[0].callback(initial,null);
+            store.saveText(JSON.stringify({version:2,tiles:["vpn"]}));
+            check(client.calls.length===2&&client.calls[1].method==="settings.publish","publish dispatched once");
+            client.calls[1].callback({store:"control-center",rev:1,exists:true,data:{version:2,tiles:["vpn"]},dirty:true},null);
+            topic.data={store:"control-center",rev:2,exists:true,data:{version:2,tiles:["other"]},dirty:false};
+            """,
+            asynchronous=True,
+            publisher=True,
+        )
+        self.assertEqual(result, {"saved": 0, "failed": 1, "publishes": 1})
+
+    def test_publisher_accepts_unrelated_change_and_structural_object_equality(self):
+        result = self.qml(
+            r"""
+            const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null; }',root);
+            const client=Qt.createQmlObject('import QtQuick; QtObject {property bool enabled:true;property bool connected:true;property string boot:"b1";property var topicObject:null;property var calls:[];signal newBoot(string id);function topic(name){return topicObject;}function subscribe(name){}function unsubscribe(name){}function call(method,params,callback){calls.push({method:method,params:params,callback:callback});return calls.length;}}',root);
+            client.topicObject=topic;
+            const stateComponent=Qt.createComponent("utils/NacreStateFile.qml");
+            check(stateComponent.status===Component.Ready,stateComponent.errorString());
+            const store=stateComponent.createObject(root,{daemonClient:client,storeId:"control-center"});
+            let savedCount=0,failedCount=0;
+            store.saved.connect(()=>finish({saved:++savedCount,failed:failedCount}));
+            store.saveFailed.connect(()=>failedCount++);
+            client.calls[0].callback({store:"control-center",rev:0,exists:true,data:{version:2,tiles:[]},dirty:false},null);
+            store.saveText(JSON.stringify({version:2,preferences:{a:1,b:[2,3]}}));
+            client.calls[1].callback({store:"control-center",rev:1,exists:true,data:{version:2,preferences:{b:[2,3],a:1}},dirty:true},null);
+            topic.data={store:"control-center",rev:2,exists:true,data:{version:2,preferences:{b:[2,3],a:1},unrelated:"changed"},dirty:false};
+            """,
+            asynchronous=True,
+            publisher=True,
+        )
+        self.assertEqual(result, {"saved": 1, "failed": 0})
+
+    def test_publisher_accepts_already_clean_snapshot(self):
+        result = self.qml(
+            r"""
+            const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null; }',root);
+            const client=Qt.createQmlObject('import QtQuick; QtObject {property bool enabled:true;property bool connected:true;property string boot:"b1";property var topicObject:null;property var calls:[];signal newBoot(string id);function topic(name){return topicObject;}function subscribe(name){}function unsubscribe(name){}function call(method,params,callback){calls.push({method:method,params:params,callback:callback});return calls.length;}}',root);
+            client.topicObject=topic;
+            const stateComponent=Qt.createComponent("utils/NacreStateFile.qml");
+            check(stateComponent.status===Component.Ready,stateComponent.errorString());
+            const store=stateComponent.createObject(root,{daemonClient:client,storeId:"control-center"});
+            let savedCount=0,failedCount=0;
+            store.saved.connect(()=>finish({saved:++savedCount,failed:failedCount}));
+            store.saveFailed.connect(()=>failedCount++);
+            client.calls[0].callback({store:"control-center",rev:0,exists:true,data:{version:2,tiles:[]},dirty:false},null);
+            store.saveText(JSON.stringify({version:2,tiles:["vpn"]}));
+            client.calls[1].callback({store:"control-center",rev:1,exists:true,data:{version:2,tiles:["vpn"]},dirty:false},null);
+            """,
+            asynchronous=True,
+            publisher=True,
+        )
+        self.assertEqual(result, {"saved": 1, "failed": 0})
+
+    def test_publisher_error_cannot_be_revived_by_later_clean_snapshot(self):
+        result = self.qml(
+            r"""
+            const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null; }',root);
+            const client=Qt.createQmlObject('import QtQuick; QtObject {property bool enabled:true;property bool connected:true;property string boot:"b1";property var topicObject:null;property var calls:[];signal newBoot(string id);function topic(name){return topicObject;}function subscribe(name){}function unsubscribe(name){}function call(method,params,callback){calls.push({method:method,params:params,callback:callback});return calls.length;}}',root);
+            client.topicObject=topic;
+            const stateComponent=Qt.createComponent("utils/NacreStateFile.qml");
+            check(stateComponent.status===Component.Ready,stateComponent.errorString());
+            const store=stateComponent.createObject(root,{daemonClient:client,storeId:"control-center"});
+            let savedCount=0,failedCount=0,finished=false;
+            store.saved.connect(()=>savedCount++);
+            store.saveFailed.connect(()=>{failedCount++;if(!finished){finished=true;Qt.callLater(()=>{topic.data={store:"control-center",rev:3,exists:true,data:{version:2,tiles:["vpn"]},dirty:false};Qt.callLater(()=>finish({saved:savedCount,failed:failedCount}));});}});
+            client.calls[0].callback({store:"control-center",rev:0,exists:true,data:{version:2,tiles:[]},dirty:false},null);
+            store.saveText(JSON.stringify({version:2,tiles:["vpn"]}));
+            client.calls[1].callback({store:"control-center",rev:1,exists:true,data:{version:2,tiles:["vpn"]},dirty:true},null);
+            topic.data={store:"control-center",rev:2,exists:true,data:{version:2,tiles:["vpn"]},dirty:false,error:{file:"control-center.json",line:0,message:"cannot save"}};
+            """,
+            asynchronous=True,
+            publisher=True,
+        )
+        self.assertEqual(result, {"saved": 0, "failed": 1})
+
+    def test_publisher_waits_for_first_save_before_dispatching_queued_value(self):
+        result = self.qml(
+            r"""
+            const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null; }',root);
+            const client=Qt.createQmlObject('import QtQuick; QtObject {property bool enabled:true;property bool connected:true;property string boot:"b1";property var topicObject:null;property var calls:[];signal newBoot(string id);function topic(name){return topicObject;}function subscribe(name){}function unsubscribe(name){}function call(method,params,callback){calls.push({method:method,params:params,callback:callback});return calls.length;}}',root);
+            client.topicObject=topic;
+            const stateComponent=Qt.createComponent("utils/NacreStateFile.qml");
+            check(stateComponent.status===Component.Ready,stateComponent.errorString());
+            const store=stateComponent.createObject(root,{daemonClient:client,storeId:"control-center"});
+            let savedCount=0,failedCount=0;
+            store.saved.connect(()=>savedCount++);store.saveFailed.connect(()=>failedCount++);
+            client.calls[0].callback({store:"control-center",rev:0,exists:true,data:{version:2,tiles:[]},dirty:false},null);
+            store.saveText(JSON.stringify({version:2,tiles:["first"]}));
+            store.saveText(JSON.stringify({version:2,tiles:["second"]}));
+            check(client.calls.filter(c=>c.method==="settings.publish").length===1,"only one dispatched save");
+            client.calls[1].callback({store:"control-center",rev:1,exists:true,data:{version:2,tiles:["first"]},dirty:true},null);
+            check(savedCount===0,"accepted dirty snapshot is not saved");
+            topic.data={store:"control-center",rev:1,exists:true,data:{version:2,tiles:["first"]},dirty:false};
+            Qt.callLater(()=>{
+                const publishes=client.calls.filter(c=>c.method==="settings.publish");
+                check(publishes.length===2&&publishes[1].params.rev===1,"queued write uses fresh durable revision");
+                publishes[1].callback({store:"control-center",rev:2,exists:true,data:{version:2,tiles:["second"]},dirty:false},null);
+                finish({saved:savedCount,failed:failedCount,publishes:publishes.length});
+            });
+            """,
+            asynchronous=True,
+            publisher=True,
+        )
+        self.assertEqual(result, {"saved": 2, "failed": 0, "publishes": 2})
+
+    def test_publisher_disconnect_ignores_late_callback_without_replay(self):
+        result = self.qml(
+            r"""
+            const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null; }',root);
+            const client=Qt.createQmlObject('import QtQuick; QtObject {property bool enabled:true;property bool connected:true;property string boot:"b1";property var topicObject:null;property var calls:[];signal newBoot(string id);function topic(name){return topicObject;}function subscribe(name){}function unsubscribe(name){}function call(method,params,callback){calls.push({method:method,params:params,callback:callback});return calls.length;}}',root);
+            client.topicObject=topic;
+            const stateComponent=Qt.createComponent("utils/NacreStateFile.qml");
+            check(stateComponent.status===Component.Ready,stateComponent.errorString());
+            const store=stateComponent.createObject(root,{daemonClient:client,storeId:"control-center"});
+            let savedCount=0,failedCount=0;
+            store.saved.connect(()=>savedCount++);store.saveFailed.connect(()=>{failedCount++;Qt.callLater(()=>finish({saved:savedCount,failed:failedCount,publishes:client.calls.filter(c=>c.method==="settings.publish").length}));});
+            client.calls[0].callback({store:"control-center",rev:0,exists:true,data:{version:2,tiles:[]},dirty:false},null);
+            store.saveText(JSON.stringify({version:2,tiles:["vpn"]}));
+            const old=client.calls[1].callback;
+            client.connected=false;
+            old({store:"control-center",rev:1,exists:true,data:{version:2,tiles:["vpn"]},dirty:false},null);
+            """,
+            asynchronous=True,
+            publisher=True,
+        )
+        self.assertEqual(result, {"saved": 0, "failed": 1, "publishes": 1})
+
+    def test_publisher_new_boot_terminates_ack_and_ignores_old_reply(self):
+        result = self.qml(
+            r"""
+            const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null; }',root);
+            const client=Qt.createQmlObject('import QtQuick; QtObject {property bool enabled:true;property bool connected:true;property string boot:"b1";property var topicObject:null;property var calls:[];signal newBoot(string id);function topic(name){return topicObject;}function subscribe(name){}function unsubscribe(name){}function call(method,params,callback){calls.push({method:method,params:params,callback:callback});return calls.length;}}',root);
+            client.topicObject=topic;
+            const stateComponent=Qt.createComponent("utils/NacreStateFile.qml");
+            check(stateComponent.status===Component.Ready,stateComponent.errorString());
+            const store=stateComponent.createObject(root,{daemonClient:client,storeId:"control-center"});
+            let savedCount=0,failedCount=0;
+            store.saved.connect(()=>savedCount++);store.saveFailed.connect(()=>{failedCount++;Qt.callLater(()=>finish({saved:savedCount,failed:failedCount,publishes:client.calls.filter(c=>c.method==="settings.publish").length}));});
+            client.calls[0].callback({store:"control-center",rev:0,exists:true,data:{version:2,tiles:[]},dirty:false},null);
+            store.saveText(JSON.stringify({version:2,tiles:["vpn"]}));
+            const old=client.calls[1].callback;
+            client.boot="b2";client.newBoot("b2");
+            old({store:"control-center",rev:1,exists:true,data:{version:2,tiles:["vpn"]},dirty:false},null);
+            """,
+            asynchronous=True,
+            publisher=True,
+        )
+        self.assertEqual(result, {"saved": 0, "failed": 1, "publishes": 1})
