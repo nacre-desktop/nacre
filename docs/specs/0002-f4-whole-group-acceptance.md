@@ -45,23 +45,39 @@ publication/install, live config/unit/keybinding/session changes.
 
 ## Current reviewed harness and exclusive grant
 
-Sole heavy slot: **Oct18 20:20 through Oct19 00:45 UTC**. All other workers IDLE;
+Sole heavy slot: **Oct18 21:33 through Oct19 00:00 UTC**. All other workers IDLE;
 B0011 exact source af61d18/CI39147491406 is green and heavy ownership released.
 No other full suite, hosted heavy CI, release build or nested session overlaps.
 
-Reviewed private package: sol-n2-argv-v12-20261018 in the validation cache.
-Driver cb0afb3ed02bd36a9af9d0da58311200bec6a12a680ae5d68271f67e8c61d4cf;
-plan35df7fec5ee046e5c28dbd00aaa48926aafeee66867b26dc06dee090786a8a15;
-smoke2ba3b2c8387f736c8c0bd5da16fefc85472d64e3d710b43be2608862b9af9736.
+Reviewed private package: sol-n2-provenance-v13-20261018 in the validation cache.
+Driver 5a1ab9fa82ac08fb981a6ab3ea59fb12ef8d271f1a767cc37b049336be40839b;
+plana110611b237f419b9ff5a76f0dfc17f659f4175eab840c44970b77e153e40d88;
+smoke13ef450f744f66ce0a2af3ec4ff02cbba5646fc9eb0b2d73459556cf02c8284c.
 Read every other expected hash and exact argv directly from reviewed plan and
-SHA256SUMS, not a manually retyped table. Sol+Terra ACCEPT all37 manifest/27plan
-pins,40core+6smoke+11original tests. The source investigation escalated once to
+SHA256SUMS, not a manually retyped table. Sol+Terra ACCEPT all40 manifest/27plan
+pins,46core+6smoke+11original tests. The source investigation escalated once to
 Astra after repeated real startup census failures; it identified missing bounded
 new-child discovery/read completion. No runtime/application changes were made.
 
-V12 restores byte argv only at the frozen sampler interface, preserving census
-JSON strings. Tests use actual frozen idle/memory_sample/summarize, including
-the new-process decode branch. Readiness smoke now exercises2s actual idle.
+V12 restores byte argv at the frozen sampler interface and exercises actual
+idle. V13 fixes lossy diagnostic metadata merging: a current unavailable exe
+remains UNKNOWN, while a successful SAME-round PID/start-anchored executable
+observation is retained with timestamps/provenance. No previous-round/history
+borrowing, PID reuse or invented errno/current path. Memory primitive, inclusion,
+arithmetic, collector transforms and windows are unchanged. Sol+Terra verified
+this comparability and the immutable four report/method/PASS log hashes.
+
+Continuation entry package sol-n2-v13-continuation-v2-20261018 is independently
+ACCEPT: entry6434e18e119692242e35f392d09e3cb1b21bfada589451878e66b4745b99a556;
+contractc8260a0fa11f91ba5890f5a76b010dfce8fe2b9ddaa7a49849e0e4b7ae6faa15.
+Seven actual-shell mocks/eight manifest entries pass. It checks pinned old
+reports/method/PASS provenance, exact source and new absent outputs; acquires
+one FD9 bench lock, uses a new noclobber log and invokes ONLY H2A/B,N2A/B,
+fail-fast without retry. Do not run the full v13 eight-arm entry. Candidate
+checkout HEAD is manifest.base5f4; manifest.head identifies candidate1382.
+The failed v12 H2-before stays invalid and gets a fresh v13 replacement.
+Record v12 first-four/v13 last-four support provenance separately. No memory
+threshold is waived and no failed historical arm is retrospectively accepted.
 
 ## Steps and measurements
 
@@ -74,12 +90,14 @@ the new-process decode branch. Readiness smoke now exercises2s actual idle.
    existing cleanup. No600s warmup/actions/performance acceptance. Failure stops
    without retry. On PASS plus cleanup, announce CAPTURE_START and proceed with
    the full batch without another permission request.
-3. Use fresh N1A/B,H1A/B,H2A/B,N2A/B, two alternating pairs per compositor
+3. Retain the four reviewed immutable valid v12 N1A/B,H1A/B arms. Run ONLY
+   fresh v13 H2A/B,N2A/B via the reviewed continuation below. The completed
+   comparison remains two alternating pairs per compositor
    (explicit exception to default five). Hyprland virtual120Hz, niri nested60Hz,
    2880×1800/scale1.5. Match private HOME/catalog/palette/settings/actions.
    Every arm gets ONE600s warmup BEFORE phase counters, then THREE full60s idle
    windows.104min fixed waits total, plus startup/actions/validation/cleanup.
-   Do not compress or reuse prior arms; first invalid cell stops entire batch.
+   Do not compress or reuse invalid arms; first invalid cell stops continuation.
 4. Run all descendants in an exact private scope: MemoryMax12884901888 (12GiB),
    MemorySwapMax0. Owner sizing=max(recorded baseline peak×1.5,12GiB), superseding
    the incorrect sub1GiB expectation/2GiB cap. No low scope-peak abort threshold.

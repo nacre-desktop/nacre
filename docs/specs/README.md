@@ -149,14 +149,18 @@ All other workers IDLE. F4 reviewed integration d3622384 remains local pending
 valid capture then published exact-head CI. B0011Done/green; N6 blockers remain.
 
 
-### Active execution — 2026-10-18 20:20 UTC
+### Active execution — 2026-10-18 21:33 UTC
 
-N2 priorfailedcells/readiness preserved,zeroaccepted. Sol+Terra ACCEPTv12:
-57tests/37manifest/27planpins; argv-byte interface fixed and readiness exercises
-actual2sidle. Built-in Luna soleheavy nowthroughOct19 00:45UTC: ONE<=120s smoke,
-ifPASSfresh8arms full600+3x60,strictquiet,12GiBcap/hostabort2GiB. No otherheavyCI.
-Astra investigated bounded snapshot completion after real startup race failures;
-allhelper samplecoverage/unknown lifetimes are explicit in consolidated N2spec.
-F4 reviewed localmerge d3622384 waitsvalidN2thenpublishedexact-headCI.
-B0011Donegreen; N6switch-on blockersremain. No package/live action.
-Visibility permanently saved; lead waits active workers and posts outcomes.
+N2 has four valid immutable v12 arms(N1A/B,H1A/B). Fifth H2baseline stopped
+for lossy exe-provenance merge, not a memory read/quiet failure. V13 fixes only
+same-round metadata provenance; Sol+Terra ACCEPT comparability and retention
+of first4. Failedfifth staysinvalid. Reviewed continuationv2 checks oldhashes,
+overlay topology and invokes ONLY freshH2A/B,N2A/B with one lock/newlog.
+Luna soleheavy nowthroughOct19 00:00UTC: ONE<=120s v13idle-pathsmoke thenifPASS
+remaining4. Strictquiet/full600+3x60/12GiBscope/hostabort2GiB unchanged.
+No otherheavywork. F4reviewedlocalmerge d3622384 awaitseightvalidarms then
+leadreview/publishedexact-headCI. B0011Donegreen; N6blockersremain.
+Sourcepacmanfinding forlaterworker: software_ai::snapshot runs pacman-Sichatgpt
+on software-library load; standaloneQML refresh15s whileactive. Savedprivate
+childmatchescommand; physicalsessioncause/CPUcontributionnotproven. Noproductfix
+or liveactionduringfrozencapture. Visibilitypermanent;leadwaitsactiveworkers.
