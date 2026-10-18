@@ -156,3 +156,35 @@ go to the owner. Measurement requires an explicit exclusive slot grant.
   continue; return the exact non-secret endpoint/expected fingerprint provenance
   and rejection category for review if the existing trusted route cannot be
   recovered. No repeated speculative SSH retries or measurement host probes.
+
+## v10 review disposition — 2026-10-18
+
+Source activation admission/JoinSet split and corrected ownership evidence are
+accepted as reviewed. Local report SHA8d41af15 and full rerun4 log SHA3057003e
+match supplied receipts;438Rust and complete repo results remain scoped to v10.
+Status remains In progress for ONE proof gap; no capture grant.
+
+activation_frecency_failure_never_replays_activation currently calls flush,
+checks store and try_recv, then exits LocalSet. That does not ensure the actor
+consumed the completed JoinSet result/warning branch before teardown cancelled it.
+
+- Add a private cfg(test)-only completion channel at the ACTUAL post-dispatch
+  activation-frecency JoinSet handling branch (after result handling). Pass the
+  handled outcome/error code to the fixture; never emit from the settings flush
+  or background waiter alone, which would miss the actor-consumption proof.
+- For IO, supersession and caller-cancellation cases, await this signal with the
+  existing bounded test deadline, assert expected handled outcome, then check
+  exact one-dispatch/no-replay. No wall-clock sleeps as a substitute for this
+  synchronization. Warning-string capture/framework remains unnecessary.
+- Keep production behavior unchanged; no new wire field/topic/normal-build API.
+  Prove cfg(test) isolation in the diff. Retain source-review acceptance for the
+  bounded activation runtime fix unless new production changes require review.
+- Run focused activation/public-preference tests, fmt and affected test-target
+  Clippy; do not rerun all tools/AI/Brain/parity suites solely for this test hook.
+  Update source/overlay hashes and the Review report, explicitly map unchanged
+  production/helper bytes to existing v10 broader receipts, and state the new
+  focused results separately. If production bytes change, report that scope and
+  rerun affected gates; never relabel v10 tests as new-revision results.
+
+Return N0004 Review after deterministic completion proof. No N0002/grant until
+it passes; the fixed600s+60s fresh8cell plan/baseline5f4 remain unchanged.
