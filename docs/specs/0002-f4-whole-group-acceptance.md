@@ -3,7 +3,7 @@
 - ID: N0002
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: In progress
+- Status: Blocked (host swap-in quiet gate)
 - Depends on: N0001/N0004 source-ready review; explicit slot confirmation; final Done after correctness
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours
@@ -192,3 +192,29 @@ the remainder of N0004's expired correctness slot. Candidate1382a28, existing
 toolchain, private2GiBscope and OOM/memory checks remain mandatory. Return exact
 release hash before CAPTURE_START. If blocked, report immediately; N0003 can
 advance after explicit release instead of waiting idle.
+
+## Gate review — blocked, 2026-10-18
+
+The first fresh Niri baseline arm ran12:07:34–12:19:34UTC and was INVALID.
+Controller stopped before arm2, no retry/substitution and no valid comparison.
+Do not interpret its latency/PSS as accepted performance. Final candidate
+1382a28 release helper439dd355fca276334c2faccbd0992d1b23eac6c6caab311ca1c1c61d3672e92c
+and5f4 baseline helper4a65f4ec were correctly bound. Scope2GiB,peak1687920640B,
+OOM/maxevents0, available memory start/min13640980/12530024KiB. Safety held.
+
+Host-global pswpin invalidated quiet: internal1281pages*4096=5246976bytes;
+outer start-to-cleanup1428pages=5849088bytes; pswpout0. Both exceed strict<1MiB.
+No inference that the measured group caused the host reads. High available RAM
+does not rule out retrieval of earlier swapped pages. Raw artifacts preserved.
+Controller/session/scope ended and lock free at12:19:54UTC.
+
+All prior N0002 capture grants are stopped; NO retry grant. Before considering
+a new full batch, review EXISTING evidence/scripts for exact paging-counter
+window boundaries relative to warmup/idle and any already-recorded process
+fault timeline, max20minutes. If attribution is absent, report UNKNOWN. Do not
+change the window/quiet threshold, drop caches, change swap/sysctl, stop other
+processes, or launch another measurement to reconstruct this arm. Return concise
+finding/quiet-readiness proposal; spec agent decides next gate.
+
+N0003 correctness is the eligible independent work now; no publication of F4
+until N0002 passes. Preserve final release artifact for future same-source gate.

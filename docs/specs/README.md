@@ -6,7 +6,7 @@ Updated2026-10-18. [Standing rules](../architecture/standing-rules.md) apply.
 | --- | --- | --- | --- |
 | 1 | [N0004 activation progress](0004-f4-activation-progress-and-audit.md) | Done | Exact1382a28 focused proof accepted; release artifact under N0002 |
 | 2 | [N0001 F4 review](0001-f4-settings-completion-audit.md) | Review | Source-ready; final Done after N0002 gate and published CI |
-| 3 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | In progress | Build1382a28 release; active12:30–14:30UTC fresh8cell safe gate |
+| 3 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked | First baseline invalid on host paging; no retry grant |
 | 4 | [N0003 network state](0003-core-network-state-adapter.md) | In progress source phase | Independent worktree source/tests while waiting; integration after green F4 |
 
 Restart recovery2026-10-18: published source at recovery is ccc19e3; preserved
@@ -42,3 +42,10 @@ Current sequential schedule: final1382a28 release artifact preparation now–12:
 N0002 capture12:30–14:30UTC; N0003 correctness14:30–15:30UTC, only after explicit
 N0002 release. Bead continues independent B0007 source/hosted CI. One heavy job
 at a time; no automatic takeover at a deadline.
+
+LATEST gate disposition: N0002 stopped12:19:34UTC after first baseline exceeded
+host swap-in quiet gate; zero valid comparisons. Guard/cap held, artifacts
+preserved, no regressions inferred. Former capture windows are withdrawn.
+N0003 correctness owns released lab12:20–13:25UTC; Bead has B0008 source/CI.
+No active capture grant. N0002 existing-evidence diagnosis is bounded20min and
+never authorizes swap/cache changes or another capture.

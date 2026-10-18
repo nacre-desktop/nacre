@@ -3,7 +3,7 @@
 - ID: N0003
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: Ready
+- Status: In progress
 - Depends on: independent source implementation allowed after N0004 local fix; integration after N0001/N0002 Done and green F4
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours
@@ -150,3 +150,10 @@ checks on an isolated exact-source tree, existing toolchain, nice10/Cargo-j2,
 one heavy job and2GiBscope/4GiBavailable preflight. No live/systembus, mutation,
 network probe or measurement. Send START/results/DONE; no implicit clock-based
 handoff. Integration still waits green published F4 and source review.
+
+## Advanced correctness interval — 2026-10-18
+
+After N0002 invalid-arm cleanup and explicit release, correctness-only slot is
+advanced to12:20–13:25UTC, superseding14:30–15:30. Exact398993ef+1eded772,
+existing method/checks and no-live/no-measurement boundaries unchanged. Send
+START/results/DONE; one capped heavy job, no Bead remote overlap.
