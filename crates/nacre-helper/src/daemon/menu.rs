@@ -1,6 +1,6 @@
 //! One launcher owner: indexed application folders, existing stores and shared ranking.
 use super::hub::{failure, Shared};
-use crate::{launcher_preferences, paths::Paths, Result};
+use crate::{paths::Paths, Result};
 use nacre_menu::{
     calculator,
     context::{array, Context},
@@ -17,7 +17,7 @@ use rustix::fs::inotify;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
+    collections::{BTreeMap, BTreeSet, HashMap, VecDeque},
     fs,
     io::Read,
     mem::MaybeUninit,
@@ -33,6 +33,15 @@ const BASE: &str = include_str!("../../../../nacre/shell-tools/launcher-menu.jso
 const DEFAULTS: &str = include_str!("../../../nacre-menu/data/defaults.json");
 const WATCH_MASK: u32 = 0x8 | 0x40 | 0x80 | 0x100 | 0x200 | 0x400 | 0x800;
 type Response = std::result::Result<Value, Failure>;
+struct ActivationPending {
+    key: uuid::Uuid,
+    reply: Option<oneshot::Sender<Response>>,
+}
+struct ActivationLaunchResult {
+    key: uuid::Uuid,
+    result: Response,
+    handled: oneshot::Sender<()>,
+}
 struct Request {
     method: String,
     params: Value,
@@ -885,6 +894,73 @@ impl Drop for Registration {
     }
 }
 pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
+    let roots = roots(&paths);
+    run_with_roots(hub, paths, roots).await
+}
+
+pub(super) async fn run_with_roots(hub: Shared, paths: Paths, roots: Vec<PathBuf>) -> Result<()> {
+    #[cfg(test)]
+    let activation_completions = None;
+    #[cfg(test)]
+    let activation_abort_handles = None;
+    run_inner(
+        hub,
+        paths,
+        roots,
+        #[cfg(test)]
+        activation_completions,
+        #[cfg(test)]
+        activation_abort_handles,
+        #[cfg(test)]
+        ActivationWaiterFault::None,
+    )
+    .await
+}
+
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ActivationFrecencyOutcome {
+    Durable,
+    Failed(ErrorCode),
+    JoinError { replied: bool },
+}
+
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ActivationWaiterFault {
+    None,
+    PanicBeforeReply,
+    PanicAfterReply,
+}
+
+#[cfg(test)]
+async fn run_with_roots_observing_activation(
+    hub: Shared,
+    paths: Paths,
+    roots: Vec<PathBuf>,
+    completions: mpsc::UnboundedSender<ActivationFrecencyOutcome>,
+    abort_handles: mpsc::UnboundedSender<tokio::task::AbortHandle>,
+    fault: ActivationWaiterFault,
+) -> Result<()> {
+    run_inner(
+        hub,
+        paths,
+        roots,
+        Some(completions),
+        Some(abort_handles),
+        fault,
+    )
+    .await
+}
+
+async fn run_inner(
+    hub: Shared,
+    paths: Paths,
+    roots: Vec<PathBuf>,
+    #[cfg(test)] activation_completions: Option<mpsc::UnboundedSender<ActivationFrecencyOutcome>>,
+    #[cfg(test)] activation_abort_handles: Option<mpsc::UnboundedSender<tokio::task::AbortHandle>>,
+    #[cfg(test)] mut activation_waiter_fault: ActivationWaiterFault,
+) -> Result<()> {
     let (requests, mut incoming) = mpsc::channel::<Request>(16);
     hub.borrow_mut().menu = Some(Requests(requests));
     let _registration = Registration(hub.clone());
@@ -901,7 +977,6 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
         .recursive(true)
         .mode(0o700)
         .create(paths.state.join("menu"))?;
-    let roots = roots(&paths);
     let mut watches = Watches::new()?;
     watches.config = Some(paths.config.clone());
     watches.menu_state = Some(paths.state.join("menu"));
@@ -913,12 +988,14 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
     )?;
     let load_paths = paths.clone();
     let load_roots = roots.clone();
-    let loaded = tokio::task::spawn_blocking(move || {
-        let preferences =
-            launcher_preferences::initialize(&load_paths.config.join("launcher.json"))?;
-        load(&load_paths, &load_roots, preferences)
-    })
-    .await??;
+    let settings = hub
+        .borrow()
+        .settings
+        .clone()
+        .ok_or("Settings service is unavailable")?;
+    let preferences = settings.launcher_preferences("load", &Value::Null).await?;
+    let loaded =
+        tokio::task::spawn_blocking(move || load(&load_paths, &load_roots, preferences)).await??;
     watches.add(
         loaded
             .directories
@@ -942,6 +1019,10 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
     hub.borrow_mut().publish("menu", engine.status())?;
     let pool = hub.borrow().providers.clone();
     let mut jobs = tokio::task::JoinSet::new();
+    let mut activation_waiters = HashMap::new();
+    let mut activation_keys = HashMap::new();
+    let mut next_activation_key = 0u64;
+    let (activation_launch_sender, mut activation_launches) = mpsc::unbounded_channel();
     let mut refreshing = true;
     let mut refresh_again = false;
     let initial_pool = pool.clone();
@@ -967,8 +1048,34 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
                 unsafe { nix::libc::malloc_trim(0); }
             },
             request=incoming.recv()=>{
-                let Some(request)=request else {return Ok(());};
+                let Some(mut request)=request else {return Ok(());};
                 if request.reply.is_closed(){continue;}
+                if matches!(request.method.as_str(), "menu.preferences" | "helper.preferences") {
+                    let legacy = request.method == "helper.preferences";
+                    match preference_input(&request.params) {
+                        Err(error) => {
+                            if request.reply.send(Err(error)).is_err(){tracing::debug!("Launcher caller ended");}
+                        }
+                        Ok((action, _value)) if action == "load" => {
+                            if request.reply.send(Ok(engine.loaded.context.preferences.clone())).is_err(){tracing::debug!("Launcher caller ended");}
+                        }
+                        Ok((action, value)) => {
+                            if jobs.len() >= 16 {
+                                if request.reply.send(Err(failure(ErrorCode::Busy,"Launcher preference request limit reached",true))).is_err(){tracing::debug!("Launcher caller ended");}
+                            } else if let Some(settings) = hub.borrow().settings.clone() {
+                                let action_name = if legacy { "legacy-preference" } else { "preference" }.to_owned();
+                                jobs.spawn_local(async move {
+                                    let result = tokio::select! {
+                                        result = settings.launcher_preferences(&action, &value) => result.map_err(|error| preference_failure(error, legacy)),
+                                        _ = request.reply.closed() => Err(failure(ErrorCode::Unavailable,"Launcher caller ended",false)),
+                                    };
+                                    (Some(request), action_name, String::new(), result)
+                                });
+                            } else if request.reply.send(Err(failure(ErrorCode::Unavailable,"Settings service is unavailable",true))).is_err(){tracing::debug!("Launcher caller ended");}
+                        }
+                    }
+                    continue;
+                }
                 if request.method=="menu.query" {
                     if let Ok(query)=serde_json::from_value::<MenuQuery>(request.params.clone()) {
                         if let Err(error)=query.validate(){
@@ -993,13 +1100,70 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
                                 if jobs.len()>=16 {
                                     if request.reply.send(Err(failure(ErrorCode::Busy,"Launcher activation queue is full",true))).is_err(){tracing::debug!("Launcher caller ended");}
                                 }else{
-                                    // Retain existing history: a selected app is recorded before launch.
-                                    let recorded=preference(&paths,&mut engine,json!({"action":"record","value":{"id":activation.id,"enabled":true}}),false).await;
-                                    if let Err(error)=recorded {if request.reply.send(Err(error)).is_err(){tracing::debug!("Launcher caller ended");}continue;}
+                                    // Admit history before dispatch, but keep its durable wait out
+                                    // of this serial actor so another query can make progress.
+                                    let Some(settings) = hub.borrow().settings.clone() else {
+                                        if request.reply.send(Err(failure(ErrorCode::Unavailable,"Settings service is unavailable",true))).is_err(){tracing::debug!("Launcher caller ended");}
+                                        continue;
+                                    };
+                                    let admission = match settings.admit_launcher_preferences("record", &json!({"id":activation.id,"enabled":true})).await {
+                                        Ok(admission) => admission,
+                                        Err(error) => {
+                                            if request.reply.send(Err(preference_failure(error,false))).is_err(){tracing::debug!("Launcher caller ended");}
+                                            continue;
+                                        }
+                                    };
+                                    if let Err(error) = apply_preferences(&mut engine, &admission.result) {
+                                        if request.reply.send(Err(error)).is_err(){tracing::debug!("Launcher caller ended");}
+                                        let settings = settings.clone();
+                                        jobs.spawn_local(async move {
+                                            let result = settings.wait_launcher_preferences_admission(&admission).await.map(|_| Value::Null);
+                                            (None,"activation-frecency-before-dispatch".into(),String::new(),result)
+                                        });
+                                        continue;
+                                    }
                                     engine.prepare_queries().await?;
                                     hub.borrow_mut().publish("menu",engine.status())?;
                                     let encoded=serde_json::to_string(application)?;let pool=pool.clone();
-                                    jobs.spawn_local(async move{let result=pool.request("launch",&encoded).await;(Some(request),"launch".into(),String::new(),result)});
+                                    let reply=request.reply;
+                                    #[cfg(test)]
+                                    let waiter_fault = std::mem::replace(
+                                        &mut activation_waiter_fault,
+                                        ActivationWaiterFault::None,
+                                    );
+                                    let key = uuid::Uuid::new_v4();
+                                    let launch_sender = activation_launch_sender.clone();
+                                    let waiter = jobs.spawn_local(async move {
+                                        let launch = pool.request("launch",&encoded).await.map_err(|mut error| {
+                                            if error.code!=ErrorCode::Busy {
+                                                error.retry=false;
+                                                error=error.dispatch_state(true);
+                                            }
+                                            error
+                                        });
+                                        #[cfg(test)]
+                                        if waiter_fault == ActivationWaiterFault::PanicBeforeReply {
+                                            panic!("injected activation waiter failure before reply delivery");
+                                        }
+                                        let (handled, acknowledged) = oneshot::channel();
+                                        if launch_sender.send(ActivationLaunchResult { key, result: launch, handled }).is_err() {
+                                            return (None,"activation-frecency".into(),String::new(),Err(failure(ErrorCode::Internal,"Launcher activation reply channel ended",false).dispatch_state(true)));
+                                        }
+                                        let _ = acknowledged.await;
+                                        #[cfg(test)]
+                                        if waiter_fault == ActivationWaiterFault::PanicAfterReply {
+                                            panic!("injected activation waiter failure after reply delivery");
+                                        }
+                                        let result = settings.wait_launcher_preferences_admission(&admission).await.map(|_| Value::Null);
+                                        (None,"activation-frecency".into(),String::new(),result)
+                                    });
+                                    let task_id = waiter.id();
+                                    activation_keys.insert(key, task_id);
+                                    activation_waiters.insert(task_id, ActivationPending { key, reply: Some(reply) });
+                                    #[cfg(test)]
+                                    if let Some(handles) = &activation_abort_handles {
+                                        let _ = handles.send(waiter);
+                                    }
                                 }
                                 continue;
                             }
@@ -1009,22 +1173,117 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
                 let result=match request.method.as_str() {
                     "menu.query"=>match serde_json::from_value::<MenuQuery>(request.params){Ok(q)=>engine.query(q),Err(_)=>Err(failure(ErrorCode::InvalidRequest,"Invalid launcher query",false))},
                     "menu.activate"=>match serde_json::from_value::<MenuActivate>(request.params){Ok(q)=>engine.activate(q),Err(_)=>Err(failure(ErrorCode::InvalidRequest,"Invalid launcher activation",false))},
-                    "menu.preferences"=>preference(&paths,&mut engine,request.params,false).await,
-                    "helper.preferences"=>preference(&paths,&mut engine,request.params,true).await,
+                    "menu.preferences"=>preference(hub.clone(),&mut engine,request.params,false).await,
+                    "helper.preferences"=>preference(hub.clone(),&mut engine,request.params,true).await,
                     _=>Err(failure(ErrorCode::UnknownMethod,"Unknown launcher method",false)),
                 };
                 if matches!(request.method.as_str(), "menu.preferences"|"helper.preferences") && result.is_ok(){engine.prepare_queries().await?;hub.borrow_mut().publish("menu",engine.status())?;}
                 if request.reply.send(result).is_err(){tracing::debug!("Launcher caller ended before its reply");}
             },
-            job=jobs.join_next(),if !jobs.is_empty()=>{
-                let (request,action,term,result)=job.ok_or("Launcher provider task disappeared")??;
+            launch=activation_launches.recv()=>{
+                if let Some(launch) = launch {
+                    let task_id = activation_keys.get(&launch.key).copied();
+                    if let Some(task_id) = task_id {
+                        if let Some(pending) = activation_waiters.get_mut(&task_id) {
+                            if let Some(reply) = pending.reply.take() {
+                                if reply.send(launch.result).is_err() {
+                                    tracing::debug!("Launcher activation caller ended before its reply");
+                                }
+                            }
+                        } else {
+                            tracing::warn!("Launcher activation result arrived after its waiter ended");
+                        }
+                    } else {
+                        tracing::warn!("Launcher activation result arrived without a pending waiter");
+                    }
+                    let _ = launch.handled.send(());
+                }
+            },
+            job=jobs.join_next_with_id(),if !jobs.is_empty()=>{
+                let Some(job) = job else {
+                    return Err("Launcher provider task disappeared".into());
+                };
+                let (task_id, completion) = match job {
+                    Ok((task_id, completion)) => (task_id, completion),
+                    Err(error) => {
+                        if let Some(mut pending) = activation_waiters.remove(&error.id()) {
+                            activation_keys.remove(&pending.key);
+                            tracing::warn!(
+                                cancelled = error.is_cancelled(),
+                                "Launcher frecency waiter failed after activation dispatch"
+                            );
+                            let replied = pending.reply.is_none();
+                            if let Some(reply) = pending.reply.take() {
+                                let failure = failure(
+                                    ErrorCode::Internal,
+                                    "Launcher activation result became uncertain after dispatch",
+                                    false,
+                                )
+                                .dispatch_state(true);
+                                if reply.send(Err(failure)).is_err() {
+                                    tracing::debug!("Launcher activation caller ended before its terminal error");
+                                }
+                            }
+                            #[cfg(test)]
+                            if let Some(completions) = &activation_completions {
+                                let _ = completions.send(ActivationFrecencyOutcome::JoinError { replied });
+                            }
+                            continue;
+                        }
+                        tracing::warn!(
+                            cancelled = error.is_cancelled(),
+                            "Launcher background task failed"
+                        );
+                        return Err("Launcher background task failed".into());
+                    }
+                };
+                let (request,action,term,result)=completion;
+                if action == "activation-frecency" {
+                    if let Some(pending) = activation_waiters.remove(&task_id) {
+                        activation_keys.remove(&pending.key);
+                    }
+                }
                 if let Some(request)=request {
                     if request.reply.is_closed(){continue;}
-                    let result=if action=="launch" {result.map_err(|mut error|{if error.code!=ErrorCode::Busy{error.retry=false;error=error.dispatch_state(true);}error})}else{match result {
+                    let result=if action=="launch" {result.map_err(|mut error|{if error.code!=ErrorCode::Busy{error.retry=false;error=error.dispatch_state(true);}error})}else if action=="preference" || action=="legacy-preference" {
+                        match result {
+                            Ok(value) => {
+                                match apply_preferences(&mut engine, &value) {
+                                    Ok(()) => {
+                                        engine.prepare_queries().await?;
+                                        hub.borrow_mut().publish("menu",engine.status())?;
+                                        Ok(value)
+                                    }
+                                    Err(error) => Err(error),
+                                }
+                            }
+                            Err(error) => Err(error),
+                        }
+                    }else{match result {
                         Ok(value)=>{apply_provider(&mut engine.loaded.context,&action,&term,&value);match serde_json::from_value::<MenuQuery>(request.params){Ok(q)=>engine.query(q),Err(_)=>Err(failure(ErrorCode::InvalidRequest,"Invalid launcher query",false))}},
                         Err(error)=>Err(error),
                     }};
                     if request.reply.send(result).is_err(){tracing::debug!("Launcher provider caller ended");}
+                } else if action == "activation-frecency" {
+                    match result {
+                        Ok(_) => {
+                            #[cfg(test)]
+                            if let Some(completions) = &activation_completions {
+                                let _ = completions.send(ActivationFrecencyOutcome::Durable);
+                            }
+                        }
+                        Err(error) => {
+                            tracing::warn!(code=?error.code,"Launcher frecency persistence failed after activation dispatch");
+                            #[cfg(test)]
+                            if let Some(completions) = &activation_completions {
+                                let _ = completions.send(ActivationFrecencyOutcome::Failed(error.code));
+                            }
+                        }
+                    }
+                } else if action == "activation-frecency-before-dispatch" {
+                    if let Err(error) = result {
+                        tracing::warn!(code=?error.code,"Launcher frecency persistence failed before activation dispatch");
+                    }
                 } else {
                     refreshing = false;
                     match result {
@@ -1057,8 +1316,9 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
             changed=watches.changed()=>{
                 changed?;tracing::debug!("Launcher inputs changed; refreshing index");tokio::time::sleep(Duration::from_millis(150)).await;
                 let load_paths=paths.clone();let load_roots=roots.clone();
+                let settings=hub.borrow().settings.clone().ok_or("Settings service is unavailable")?;
+                let preferences=settings.launcher_preferences("load", &Value::Null).await?;
                 match tokio::task::spawn_blocking(move||{
-                    let preferences=launcher_preferences::load(&load_paths.config.join("launcher.json"))?;
                     load(&load_paths,&load_roots,preferences)
                 }).await? {
                     Ok(mut loaded)=>{
@@ -1079,7 +1339,400 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
         }
     }
 }
-async fn preference(paths: &Paths, engine: &mut Engine, params: Value, legacy: bool) -> Response {
+async fn preference(hub: Shared, engine: &mut Engine, params: Value, legacy: bool) -> Response {
+    let (action, value) = preference_input(&params)?;
+    if action == "load" {
+        return Ok(engine.loaded.context.preferences.clone());
+    }
+    let settings = hub.borrow().settings.clone().ok_or_else(|| {
+        failure(
+            ErrorCode::Unavailable,
+            "Settings service is unavailable",
+            true,
+        )
+    })?;
+    let result = settings
+        .launcher_preferences(&action, &value)
+        .await
+        .map_err(|error| preference_failure(error, legacy))?;
+    apply_preferences(engine, &result)?;
+    Ok(result)
+}
+
+#[cfg(test)]
+mod activation_tests {
+    use super::*;
+    use crate::{
+        daemon::{
+            hub::Hub,
+            menu_worker::{Pool, TestRequest},
+            settings::Service,
+        },
+        paths::Paths,
+    };
+    use std::{fs, os::unix::fs::PermissionsExt, rc::Rc, time::Duration};
+    use tempfile::TempDir;
+    use tokio::{sync::mpsc, task::LocalSet};
+
+    struct Fixture {
+        _home: TempDir,
+        paths: Paths,
+        settings: Rc<Service>,
+        menu: Requests,
+        launches: mpsc::UnboundedReceiver<TestRequest>,
+        completions: mpsc::UnboundedReceiver<ActivationFrecencyOutcome>,
+        abort_handles: mpsc::UnboundedReceiver<tokio::task::AbortHandle>,
+    }
+
+    async fn fixture() -> Fixture {
+        fixture_with_fault(ActivationWaiterFault::None).await
+    }
+
+    async fn fixture_with_fault(fault: ActivationWaiterFault) -> Fixture {
+        let home = tempfile::tempdir().unwrap();
+        fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        let paths = Paths::new(home.path());
+        let apps = home.path().join("applications");
+        fs::create_dir_all(&apps).unwrap();
+        fs::create_dir_all(&paths.config).unwrap();
+        fs::write(
+            apps.join("fixture.desktop"),
+            "[Desktop Entry]\nType=Application\nName=Fixture App\nExec=/bin/true\nTerminal=false\n",
+        )
+        .unwrap();
+
+        let hub = Hub::new("activation-test".into(), false, Duration::from_millis(16)).shared();
+        let settings = Service::load(hub.clone(), paths.clone()).await.unwrap();
+        settings.defer_launcher_flush_for_test();
+        let (launch_sender, launches) = mpsc::unbounded_channel();
+        let (completion_sender, completions) = mpsc::unbounded_channel();
+        let (abort_sender, abort_handles) = mpsc::unbounded_channel();
+        {
+            let mut state = hub.borrow_mut();
+            state.settings = Some(settings.clone());
+            state.providers = Pool::with_test_requests(launch_sender);
+        }
+        let menu_hub = hub.clone();
+        let menu_paths = paths.clone();
+        tokio::task::spawn_local(async move {
+            if let Err(error) = run_with_roots_observing_activation(
+                menu_hub,
+                menu_paths,
+                vec![apps],
+                completion_sender,
+                abort_sender,
+                fault,
+            )
+            .await
+            {
+                tracing::error!(%error, "Menu activation test service stopped");
+            }
+        });
+
+        let menu = tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if hub
+                    .borrow()
+                    .snapshot("menu")
+                    .is_some_and(|s| s["available"] == true)
+                {
+                    if let Some(menu) = hub.borrow().menu.clone() {
+                        return menu;
+                    }
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("menu service did not become ready");
+
+        Fixture {
+            _home: home,
+            paths,
+            settings,
+            menu,
+            launches,
+            completions,
+            abort_handles,
+        }
+    }
+
+    async fn query(menu: &Requests) -> Value {
+        menu.call(
+            "menu.query",
+            json!({"query":"","mode":"apps","route":"apps"}),
+        )
+        .await
+        .expect("menu query failed")
+    }
+
+    async fn activation(menu: &Requests, result: &Value) -> oneshot::Receiver<Response> {
+        let id = result["order"][0]
+            .as_str()
+            .expect("fixture application missing");
+        let (reply, response) = oneshot::channel();
+        menu.0
+            .send(Request {
+                method: "menu.activate".into(),
+                params: json!({
+                    "id":id,
+                    "activation":result["items"][id]["activation"],
+                    "catalog_rev":result["catalog_rev"]
+                }),
+                reply,
+            })
+            .await
+            .expect("menu actor ended");
+        response
+    }
+
+    async fn dispatched(fixture: &mut Fixture) -> TestRequest {
+        let request = tokio::time::timeout(Duration::from_secs(2), fixture.launches.recv())
+            .await
+            .expect("activation was not dispatched")
+            .expect("fake launch provider ended");
+        assert_eq!(request.action, "launch");
+        let entry: Value = serde_json::from_str(&request.query).expect("launch entry was invalid");
+        assert_eq!(entry["command"][0], "/bin/true");
+        request
+    }
+
+    async fn assert_menu_actor_serving(fixture: &Fixture) {
+        let response = tokio::time::timeout(Duration::from_secs(2), query(&fixture.menu))
+            .await
+            .expect("menu actor stopped serving after activation waiter failure");
+        assert!(!response["order"].as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn activation_frecency_wait_does_not_block_menu_query() {
+        LocalSet::new()
+            .run_until(async {
+                let mut fixture = fixture().await;
+                let first = query(&fixture.menu).await;
+                assert!(!first["order"].as_array().unwrap().is_empty());
+                let selected_id = first["order"][0].clone();
+                let activation = activation(&fixture.menu, &first).await;
+                let launch = dispatched(&mut fixture).await;
+                launch.reply.send(Ok(json!({"started":true}))).unwrap();
+                assert_eq!(
+                    tokio::time::timeout(Duration::from_secs(2), activation)
+                        .await
+                        .expect("activation reply waited for disk publication")
+                        .unwrap()
+                        .unwrap(),
+                    json!({"started":true})
+                );
+                tokio::task::yield_now().await;
+                assert_eq!(
+                    fixture
+                        .settings
+                        .get(nacre_protocol::settings::SettingsGet {
+                            store: "launcher".into(),
+                        })
+                        .await
+                        .unwrap()["dirty"],
+                    true,
+                    "the test must query while the admitted frecency write is pending"
+                );
+                let during_flush =
+                    tokio::time::timeout(Duration::from_secs(2), query(&fixture.menu))
+                        .await
+                        .expect("serial menu actor blocked on the frecency flush");
+                assert!(during_flush["items"]
+                    .get(selected_id.as_str().unwrap())
+                    .is_some());
+                fixture.settings.flush_for_test().await.unwrap();
+                let saved = fixture
+                    .settings
+                    .get(nacre_protocol::settings::SettingsGet {
+                        store: "launcher".into(),
+                    })
+                    .await
+                    .unwrap();
+                assert_eq!(saved["dirty"], false);
+                assert!(saved["error"].is_null());
+                assert!(saved["data"]["recent"]
+                    .as_array()
+                    .unwrap()
+                    .contains(&selected_id));
+                assert_eq!(
+                    tokio::time::timeout(Duration::from_secs(2), fixture.completions.recv())
+                        .await
+                        .expect("actor did not consume activation persistence completion"),
+                    Some(ActivationFrecencyOutcome::Durable)
+                );
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn activation_frecency_failure_never_replays_activation() {
+        for supersede in [false, true] {
+            LocalSet::new()
+                .run_until(async {
+                    let mut fixture = fixture().await;
+                    let first = query(&fixture.menu).await;
+                    let activation = activation(&fixture.menu, &first).await;
+                    let launch = dispatched(&mut fixture).await;
+                    launch.reply.send(Ok(json!({"started":true}))).unwrap();
+                    assert_eq!(activation.await.unwrap().unwrap(), json!({"started":true}));
+
+                    if supersede {
+                        fixture
+                            .settings
+                            .admit_launcher_preferences(
+                                "favorite",
+                                &json!({"id":"fixture.desktop","enabled":true}),
+                            )
+                            .await
+                            .unwrap();
+                    } else {
+                        let launcher =
+                            crate::state::settings_path_in(&fixture.paths, "launcher").unwrap();
+                        fs::create_dir_all(launcher).unwrap();
+                    }
+                    fixture.settings.flush_for_test().await.unwrap();
+                    let saved = fixture
+                        .settings
+                        .get(nacre_protocol::settings::SettingsGet {
+                            store: "launcher".into(),
+                        })
+                        .await
+                        .unwrap();
+                    assert_eq!(saved["dirty"], false);
+                    if supersede {
+                        assert!(saved["error"].is_null());
+                        assert!(saved["data"]["favorites"]
+                            .as_array()
+                            .unwrap()
+                            .contains(&json!("fixture.desktop")));
+                    } else {
+                        assert!(!saved["error"].is_null());
+                    }
+                    assert_eq!(
+                        tokio::time::timeout(Duration::from_secs(2), fixture.completions.recv())
+                            .await
+                            .expect("actor did not consume activation failure completion"),
+                        Some(ActivationFrecencyOutcome::Failed(if supersede {
+                            ErrorCode::StaleRevision
+                        } else {
+                            ErrorCode::Io
+                        }))
+                    );
+                    assert!(fixture.launches.try_recv().is_err());
+                })
+                .await;
+        }
+
+        LocalSet::new()
+            .run_until(async {
+                let mut fixture = fixture().await;
+                let first = query(&fixture.menu).await;
+                let activation = activation(&fixture.menu, &first).await;
+                let launch = dispatched(&mut fixture).await;
+                drop(activation); // cancellation after the single dispatch is ambiguous to the caller
+                launch.reply.send(Ok(json!({"started":true}))).unwrap();
+                fixture.settings.flush_for_test().await.unwrap();
+                let saved = fixture
+                    .settings
+                    .get(nacre_protocol::settings::SettingsGet {
+                        store: "launcher".into(),
+                    })
+                    .await
+                    .unwrap();
+                assert_eq!(saved["dirty"], false);
+                assert!(saved["error"].is_null());
+                assert_eq!(
+                    tokio::time::timeout(Duration::from_secs(2), fixture.completions.recv())
+                        .await
+                        .expect("actor did not consume canceled caller's persistence completion"),
+                    Some(ActivationFrecencyOutcome::Durable)
+                );
+                assert!(fixture.launches.try_recv().is_err());
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn activation_frecency_join_error_before_reply_recovers_without_replay() {
+        LocalSet::new().run_until(async {
+            let mut fixture = fixture_with_fault(ActivationWaiterFault::PanicBeforeReply).await;
+            let first = query(&fixture.menu).await;
+            let activation = activation(&fixture.menu, &first).await;
+            let launch = dispatched(&mut fixture).await;
+            launch.reply.send(Ok(json!({"started":true}))).unwrap();
+            let failure = tokio::time::timeout(Duration::from_secs(2), activation)
+                .await.expect("activation did not receive terminal uncertainty reply")
+                .unwrap().unwrap_err();
+            assert_eq!(failure.code, ErrorCode::Internal);
+            assert_eq!(failure.dispatched, Some(true));
+            assert!(!failure.retry);
+            assert_eq!(
+                tokio::time::timeout(Duration::from_secs(2), fixture.completions.recv())
+                    .await.expect("actor did not consume activation JoinError"),
+                Some(ActivationFrecencyOutcome::JoinError { replied: false })
+            );
+            assert!(fixture.launches.try_recv().is_err());
+            assert_menu_actor_serving(&fixture).await;
+        }).await;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn activation_frecency_join_error_after_reply_preserves_reply_and_recovers() {
+        LocalSet::new().run_until(async {
+            let mut fixture = fixture_with_fault(ActivationWaiterFault::PanicAfterReply).await;
+            let first = query(&fixture.menu).await;
+            let activation = activation(&fixture.menu, &first).await;
+            let launch = dispatched(&mut fixture).await;
+            launch.reply.send(Ok(json!({"started":true}))).unwrap();
+            assert_eq!(
+                tokio::time::timeout(Duration::from_secs(2), activation)
+                    .await.expect("activation reply was not preserved")
+                    .unwrap().unwrap(),
+                json!({"started":true})
+            );
+            assert_eq!(
+                tokio::time::timeout(Duration::from_secs(2), fixture.completions.recv())
+                    .await.expect("actor did not consume activation JoinError"),
+                Some(ActivationFrecencyOutcome::JoinError { replied: true })
+            );
+            assert!(fixture.launches.try_recv().is_err());
+            assert_menu_actor_serving(&fixture).await;
+        }).await;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn activation_frecency_waiter_cancellation_is_terminal_and_recovers() {
+        LocalSet::new().run_until(async {
+            let mut fixture = fixture().await;
+            let first = query(&fixture.menu).await;
+            let activation = activation(&fixture.menu, &first).await;
+            let launch = dispatched(&mut fixture).await;
+            let waiter = tokio::time::timeout(Duration::from_secs(2), fixture.abort_handles.recv())
+                .await.expect("activation waiter handle was not exposed")
+                .expect("activation waiter handle channel ended");
+            waiter.abort();
+            let failure = tokio::time::timeout(Duration::from_secs(2), activation)
+                .await.expect("cancelled activation did not receive terminal reply")
+                .unwrap().unwrap_err();
+            assert_eq!(failure.code, ErrorCode::Internal);
+            assert_eq!(failure.dispatched, Some(true));
+            assert!(!failure.retry);
+            assert_eq!(
+                tokio::time::timeout(Duration::from_secs(2), fixture.completions.recv())
+                    .await.expect("actor did not consume cancellation JoinError"),
+                Some(ActivationFrecencyOutcome::JoinError { replied: false })
+            );
+            drop(launch);
+            assert!(fixture.launches.try_recv().is_err());
+            assert_menu_actor_serving(&fixture).await;
+        }).await;
+    }
+
+}
+
+fn preference_input(params: &Value) -> std::result::Result<(String, Value), Failure> {
     if params
         .as_object()
         .is_none_or(|p| p.keys().any(|key| key != "action" && key != "value"))
@@ -1097,43 +1750,45 @@ async fn preference(paths: &Paths, engine: &mut Engine, params: Value, legacy: b
             false,
         )
     })?;
-    if action == "load" {
-        return Ok(engine.loaded.context.preferences.clone());
-    }
-    if !["favorite", "hide", "record"].contains(&action) {
+    if action != "load" && !["favorite", "hide", "record"].contains(&action) {
         return Err(failure(
             ErrorCode::Validation,
             "Invalid launcher preference action",
             false,
         ));
     }
-    let path = paths.config.join("launcher.json");
-    let action = action.to_owned();
-    let value = params["value"].clone();
-    let result = tokio::task::spawn_blocking(move || {
-        // The daemon retained its last good preferences after an invalid hand
-        // edit. Do not let the legacy corruption fallback overwrite that file.
-        crate::state::read_strict(&path, json!({}))?;
-        launcher_preferences::change(&path, &action, &value)
-    })
-    .await
-    .map_err(|_| {
-        failure(
-            ErrorCode::Internal,
-            "Launcher preference task failed",
+    if action != "load" && params.get("value").is_none() {
+        return Err(failure(
+            ErrorCode::Validation,
+            "Invalid launcher preference parameters",
             false,
-        )
-    })?
-    .map_err(|error| {
+        ));
+    }
+    Ok((
+        action.to_owned(),
+        params.get("value").cloned().unwrap_or(Value::Null),
+    ))
+}
+
+fn preference_failure(error: Failure, legacy: bool) -> Failure {
+    if matches!(
+        error.code,
+        ErrorCode::StaleRevision | ErrorCode::Io | ErrorCode::Timeout
+    ) {
+        error
+    } else {
         let message = if legacy {
-            error.to_string()
+            error.message.clone()
         } else {
             "Launcher preference was not saved".into()
         };
-        failure(ErrorCode::Validation, &message, false)
-    })?;
-    if engine.loaded.context.preferences == result {
-        return Ok(result);
+        failure(error.code, &message, error.retry)
+    }
+}
+
+fn apply_preferences(engine: &mut Engine, result: &Value) -> std::result::Result<(), Failure> {
+    if &engine.loaded.context.preferences == result {
+        return Ok(());
     }
     let hidden_changed = engine.loaded.context.preferences["hidden"] != result["hidden"];
     if hidden_changed {
@@ -1166,7 +1821,7 @@ async fn preference(paths: &Paths, engine: &mut Engine, params: Value, legacy: b
     engine.tickets.clear();
     engine.order.clear();
     engine.bytes = 0;
-    Ok(result)
+    Ok(())
 }
 
 // Only these compositor fields affect launcher results. Focus/geometry changes
@@ -1303,14 +1958,16 @@ pub fn preferences_client(arguments: &[String], input: Option<Value>) -> Result<
             }
             return Ok(None);
         }
-        client
+        let result = client
             .call(
                 "menu.preferences",
                 json!({"action":action,"value":input}),
                 Some(10000),
             )
-            .await
-            .map(Some)
+            .await?;
+        // The daemon preserves the historical durable-success boundary for
+        // this method. Its reply already owns the mutation's result.
+        Ok(Some(result))
     })
 }
 

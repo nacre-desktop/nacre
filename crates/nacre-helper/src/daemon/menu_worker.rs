@@ -8,6 +8,8 @@ use std::{
     rc::Rc,
     time::{Duration, Instant},
 };
+#[cfg(test)]
+use tokio::sync::mpsc;
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     process::{Child, ChildStdin, ChildStdout, Command},
@@ -39,12 +41,22 @@ impl Drop for Worker {
 pub struct Pool {
     slots: [Rc<Mutex<Option<Worker>>>; 2],
     changed: Rc<tokio::sync::Notify>,
+    #[cfg(test)]
+    test_requests: Option<mpsc::UnboundedSender<TestRequest>>,
+}
+#[cfg(test)]
+pub(crate) struct TestRequest {
+    pub(crate) action: String,
+    pub(crate) query: String,
+    pub(crate) reply: tokio::sync::oneshot::Sender<std::result::Result<Value, Failure>>,
 }
 impl Default for Pool {
     fn default() -> Self {
         Self {
             slots: std::array::from_fn(|_| Rc::new(Mutex::new(None))),
             changed: Rc::new(tokio::sync::Notify::new()),
+            #[cfg(test)]
+            test_requests: None,
         }
     }
 }
@@ -52,7 +64,19 @@ fn failure(code: ErrorCode, message: &str, retry: bool) -> Failure {
     Failure::new(code, message, retry)
 }
 impl Pool {
+    #[cfg(test)]
+    pub(crate) fn with_test_requests(requests: mpsc::UnboundedSender<TestRequest>) -> Self {
+        Self {
+            test_requests: Some(requests),
+            ..Self::default()
+        }
+    }
+
     pub async fn reap_idle(&self) -> Result<()> {
+        #[cfg(test)]
+        if self.test_requests.is_some() {
+            return std::future::pending().await;
+        }
         loop {
             let deadline = self
                 .slots
@@ -86,6 +110,20 @@ impl Pool {
         }
     }
     pub async fn request(&self, action: &str, query: &str) -> std::result::Result<Value, Failure> {
+        #[cfg(test)]
+        if let Some(requests) = &self.test_requests {
+            let (reply, result) = tokio::sync::oneshot::channel();
+            requests
+                .send(TestRequest {
+                    action: action.to_owned(),
+                    query: query.to_owned(),
+                    reply,
+                })
+                .map_err(|_| failure(ErrorCode::Unavailable, "Test provider ended", false))?;
+            return result
+                .await
+                .map_err(|_| failure(ErrorCode::Unavailable, "Test provider ended", false))?;
+        }
         let slot = self
             .slots
             .iter()
@@ -116,6 +154,10 @@ impl Pool {
     /// One coalesced metadata refresh waits for its lane instead of taking both
     /// worker slots away from interactive queries. Its whole deadline includes waiting.
     pub async fn refresh(&self) -> std::result::Result<Value, Failure> {
+        #[cfg(test)]
+        if self.test_requests.is_some() {
+            return Ok(json!({}));
+        }
         tokio::time::timeout(Duration::from_secs(10), async {
             let slot = self.slots[0].lock().await;
             self.request_in(slot, "load", "").await

@@ -84,6 +84,7 @@ pub struct Hub {
     pub helper_lanes: [Rc<tokio::sync::Mutex<()>>; 6],
     pub niri_width_source: super::widths::Source,
     pub compositor: Option<super::compositor_control::Control>,
+    pub settings: Option<Rc<super::settings::Service>>,
 }
 impl Hub {
     pub fn new(boot: String, safe: bool, frame: Duration) -> Self {
@@ -108,6 +109,7 @@ impl Hub {
             helper_lanes: std::array::from_fn(|_| Rc::new(tokio::sync::Mutex::new(()))),
             niri_width_source: super::widths::Source::default(),
             compositor: None,
+            settings: None,
         }
     }
     pub fn shared(self) -> Shared {
@@ -236,6 +238,9 @@ impl Hub {
     }
     fn fixed_methods(&self) -> BTreeMap<String, Method> {
         let mut methods = nacre_protocol::core_methods();
+        if self.settings.is_some() {
+            methods.extend(super::settings::methods());
+        }
         if self.compositor.is_some() && self.topics.contains_key(super::niri_events::TOPIC) {
             methods.extend(super::niri_actions::methods());
         }

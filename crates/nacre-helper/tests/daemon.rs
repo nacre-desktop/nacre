@@ -154,6 +154,430 @@ fn status(home: &Path, source: &Path, endpoint: &Path) -> Result<Value> {
     }
     Ok(serde_json::from_slice(&output.stdout)?)
 }
+
+#[test]
+fn provider_boot_change_and_lost_mutation_reply_never_start_a_disk_writer() -> Result<()> {
+    for changed_boot in [true, false] {
+        let home = tempfile::tempdir()?;
+        fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+        let private = home.path().join("private");
+        fs::create_dir(&private)?;
+        fs::set_permissions(&private, fs::Permissions::from_mode(0o700))?;
+        let endpoint = private.join("daemon.sock");
+        let listener = UnixListener::bind(&endpoint)?;
+        fs::set_permissions(&endpoint, fs::Permissions::from_mode(0o600))?;
+        let path = home.path().join("config/nacre/colors.json");
+        fs::create_dir_all(path.parent().ok_or("Missing colors parent")?)?;
+        let original = b"{\"version\":1,\"favorites\":[{\"id\":\"fixture\"}]}";
+        fs::write(&path, original)?;
+        let peer = thread::spawn(move || -> Result<()> {
+            for index in 0..2 {
+                let mut incoming = [rustix::event::PollFd::new(
+                    &listener,
+                    rustix::event::PollFlags::IN,
+                )];
+                assert_eq!(
+                    rustix::event::poll(
+                        &mut incoming,
+                        Some(&rustix::event::Timespec {
+                            tv_sec: 5,
+                            tv_nsec: 0
+                        })
+                    )?,
+                    1,
+                    "Provider did not connect"
+                );
+                let (stream, _) = listener.accept()?;
+                stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+                let mut reader = BufReader::new(stream);
+                let mut line = String::new();
+                reader.read_line(&mut line)?;
+                assert_eq!(serde_json::from_str::<Value>(&line)?["t"], "hello");
+                let boot = if changed_boot && index == 1 {
+                    "provider-new"
+                } else {
+                    "provider-old"
+                };
+                writeln!(
+                    reader.get_mut(),
+                    "{}",
+                    json!({"t":"welcome","proto":1,"min":1,"boot":boot,"topics":{},"methods":{}})
+                )?;
+                line.clear();
+                let count = reader.read_line(&mut line)?;
+                if index == 0 {
+                    let request: Value = serde_json::from_str(&line)?;
+                    assert_eq!(request["m"], "settings.get");
+                    writeln!(
+                        reader.get_mut(),
+                        "{}",
+                        json!({"t":"ret","id":1,"ok":{"store":"colors","rev":0,"exists":true,"dirty":false,"data":{"version":1,"favorites":[{"id":"fixture"}]}}})
+                    )?;
+                } else if changed_boot {
+                    assert_eq!(count, 0, "A revision cannot cross daemon boots");
+                } else {
+                    let request: Value = serde_json::from_str(&line)?;
+                    assert_eq!(request["m"], "settings.provider");
+                    assert_eq!(request["p"]["value"]["favorites"], json!([]));
+                    // The action may be accepted: lose the reply deliberately.
+                }
+            }
+            Ok(())
+        });
+        let mut child = Process(
+            command(home.path(), &home.path().join("absent-niri"), &endpoint)
+                .env(
+                    "NACRE_HELPER_TOOLS",
+                    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools"),
+                )
+                .args(["colors", "delete"])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::null())
+                .stderr(Stdio::piped())
+                .spawn()?,
+        );
+        writeln!(
+            child.0.stdin.take().ok_or("Missing colors input")?,
+            "{}",
+            json!({"id":"fixture"})
+        )?;
+        assert!(child
+            .0
+            .wait_timeout(Duration::from_secs(10))?
+            .is_some_and(|status| !status.success()));
+        peer.join().unwrap()?;
+        let mut diagnostic = String::new();
+        child
+            .0
+            .stderr
+            .take()
+            .ok_or("Missing provider error")?
+            .read_to_string(&mut diagnostic)?;
+        assert!(
+            diagnostic.contains(if changed_boot {
+                "Daemon restarted"
+            } else {
+                "Daemon disconnected"
+            }),
+            "{diagnostic}"
+        );
+        assert_eq!(fs::read(&path)?, original);
+    }
+    Ok(())
+}
+
+#[test]
+fn settings_writer_preserves_developer_pseudo_language_without_enabling_it_normally() -> Result<()>
+{
+    for developer in [false, true] {
+        let home = tempfile::tempdir()?;
+        fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+        let source_path = home.path().join("niri.sock");
+        let _source = Source::new(source_path.clone())?;
+        let private = home.path().join("private");
+        fs::create_dir(&private)?;
+        fs::set_permissions(&private, fs::Permissions::from_mode(0o700))?;
+        let endpoint = private.join("daemon.sock");
+        let config = home.path().join("config/nacre");
+        fs::create_dir_all(&config)?;
+        let desktop = config.join("desktop.json");
+        fs::write(&desktop, br#"{"version":3,"language":"pseudo"}"#)?;
+        let notify = home.path().join("notify.sock");
+        let notifications = UnixDatagram::bind(&notify)?;
+        notifications.set_read_timeout(Some(Duration::from_secs(10)))?;
+        let _daemon = Process(
+            command(home.path(), &source_path, &endpoint)
+                .arg("daemon")
+                .env("NACRE_DEVELOPER_MODE", if developer { "1" } else { "0" })
+                .env("NOTIFY_SOCKET", &notify)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()?,
+        );
+        notifications.recv(&mut [0; 256])?;
+        let read = || -> Result<Value> {
+            let output = command(home.path(), &source_path, &endpoint)
+                .args(["ctl", "call", "settings.get", r#"{"store":"desktop"}"#])
+                .output()?;
+            assert!(output.status.success());
+            Ok(serde_json::from_slice(&output.stdout)?)
+        };
+        let loaded = read()?;
+        assert_eq!(loaded["error"].is_null(), developer, "{loaded}");
+        if developer {
+            assert_eq!(loaded["data"]["language"], "pseudo");
+            let changed = command(home.path(), &source_path, &endpoint)
+                .args(["desktop-settings", "set", "dnd", "true"])
+                .output()?;
+            assert!(
+                changed.status.success(),
+                "{}",
+                String::from_utf8_lossy(&changed.stderr)
+            );
+            let saved: Value = serde_json::from_slice(&fs::read(&desktop)?)?;
+            assert_eq!(saved["language"], "pseudo");
+            assert_eq!(saved["dnd"], true);
+            assert!(read()?["error"].is_null());
+        } else {
+            assert_ne!(loaded["data"]["language"], "pseudo");
+            assert_eq!(fs::read(&desktop)?, br#"{"version":3,"language":"pseudo"}"#);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_valid_state(
+) -> Result<()> {
+    use nacre_protocol::{Message, Reply};
+    fn link(endpoint: &Path) -> Result<BufReader<UnixStream>> {
+        let mut stream = UnixStream::connect(endpoint)?;
+        stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+        writeln!(
+            stream,
+            "{}",
+            json!({"t":"hello","proto":1,"client":"settings-fixture"})
+        )?;
+        let mut reader = BufReader::new(stream);
+        let mut line = String::new();
+        reader.read_line(&mut line)?;
+        let welcome: Message = serde_json::from_str(&line)?;
+        assert!(
+            matches!(welcome, Message::Welcome{methods,topics,..} if methods.contains_key("settings.set") && topics.contains_key("settings.store.power"))
+        );
+        Ok(reader)
+    }
+    fn call(reader: &mut BufReader<UnixStream>, method: &str, params: Value) -> Result<Reply> {
+        writeln!(
+            reader.get_mut(),
+            "{}",
+            json!({"t":"call","id":1,"m":method,"p":params,"timeout":5000})
+        )?;
+        let mut line = String::new();
+        reader.read_line(&mut line)?;
+        match serde_json::from_str::<Message>(&line)? {
+            Message::Ret { reply, .. } => Ok(reply),
+            _ => Err("Expected a settings reply".into()),
+        }
+    }
+    fn get(reader: &mut BufReader<UnixStream>) -> Result<Value> {
+        match call(reader, "settings.get", json!({"store":"power"}))? {
+            Reply::Ok { ok } => Ok(ok),
+            _ => Err("Settings read failed".into()),
+        }
+    }
+    let home = tempfile::Builder::new()
+        .prefix("settings-daemon-")
+        .tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let private = home.path().join("private");
+    fs::create_dir(&private)?;
+    fs::set_permissions(&private, fs::Permissions::from_mode(0o700))?;
+    let endpoint = private.join("daemon.sock");
+    let notify = home.path().join("notify.sock");
+    let notifications = UnixDatagram::bind(&notify)?;
+    notifications.set_read_timeout(Some(Duration::from_secs(10)))?;
+    let mut daemon = Process(
+        command(home.path(), &source_path, &endpoint)
+            .arg("daemon")
+            .env("NOTIFY_SOCKET", &notify)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    let mut packet = [0; 256];
+    notifications.recv(&mut packet)?;
+    // Legacy QML save commands use the same daemon revision/cache and return
+    // only after publication, rather than racing its delayed writer on disk.
+    let publisher_path = home.path().join("config/nacre/control-center.json");
+    let mut publisher = command(home.path(), &source_path, &endpoint)
+        .args([
+            "state-file",
+            "save",
+            publisher_path.to_str().ok_or("Invalid test path")?,
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    writeln!(
+        publisher.stdin.take().ok_or("Missing publisher input")?,
+        "{}",
+        json!({"version":2,"tiles":["vpn"]})
+    )?;
+    let published = publisher.wait_with_output()?;
+    assert!(
+        published.status.success(),
+        "{}",
+        String::from_utf8_lossy(&published.stdout)
+    );
+    let saved: Value = serde_json::from_slice(&fs::read(&publisher_path)?)?;
+    assert_eq!(saved["tiles"], json!(["vpn"]));
+    let mut first = link(&endpoint)?;
+    assert!(
+        matches!(call(&mut first,"settings.get",json!({"store":"control-center"}))?,Reply::Ok {ok} if ok["rev"]==1 && ok["dirty"]==false)
+    );
+    let mut second = link(&endpoint)?;
+    let desktop = command(home.path(), &source_path, &endpoint)
+        .args(["desktop-settings", "set", "dnd", "true"])
+        .output()?;
+    assert!(
+        desktop.status.success(),
+        "{}",
+        String::from_utf8_lossy(&desktop.stdout)
+    );
+    let durable: Value =
+        serde_json::from_slice(&fs::read(home.path().join("config/nacre/desktop.json"))?)?;
+    assert_eq!(durable["dnd"], true);
+    let mut preferences = command(home.path(), &source_path, &endpoint)
+        .args(["launcher-preferences", "favorite"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    writeln!(
+        preferences.stdin.take().ok_or("Missing preference input")?,
+        "{}",
+        json!({"id":"fixture.desktop","enabled":true})
+    )?;
+    let favorite = preferences.wait_with_output()?;
+    assert!(
+        favorite.status.success(),
+        "{}",
+        String::from_utf8_lossy(&favorite.stderr)
+    );
+    let durable: Value =
+        serde_json::from_slice(&fs::read(home.path().join("config/nacre/launcher.json"))?)?;
+    assert_eq!(durable["favorites"], json!(["fixture.desktop"]));
+    assert!(matches!(
+        call(
+            &mut second,
+            "settings.provider",
+            json!({"store":"colors","value":{"version":1,"favorites":[{"id":"fixture"}]},"rev":0})
+        )?,
+        Reply::Ok { .. }
+    ));
+    let mut colors = command(home.path(), &source_path, &endpoint)
+        .env(
+            "NACRE_HELPER_TOOLS",
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools"),
+        )
+        .args(["colors", "delete"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    writeln!(
+        colors.stdin.take().ok_or("Missing colors input")?,
+        "{}",
+        json!({"id":"fixture"})
+    )?;
+    let deleted = colors.wait_with_output()?;
+    assert!(
+        deleted.status.success(),
+        "{}",
+        String::from_utf8_lossy(&deleted.stderr)
+    );
+    let choices: Value =
+        serde_json::from_slice(&fs::read(home.path().join("config/nacre/colors.json"))?)?;
+    assert_eq!(choices["favorites"], json!([]));
+    assert!(
+        matches!(call(&mut second, "settings.get", json!({"store":"colors"}))?, Reply::Ok {ok} if ok["rev"]==2 && ok["dirty"]==false && ok["data"]["favorites"]==json!([]))
+    );
+    assert_eq!(get(&mut first)?["rev"], 0);
+    let (one, two) = thread::scope(|scope| {
+        let a = scope.spawn(|| {
+            call(
+                &mut first,
+                "settings.set",
+                json!({"store":"power","key":["enabled"],"value":true,"rev":0}),
+            )
+        });
+        let b = scope.spawn(|| {
+            call(
+                &mut second,
+                "settings.set",
+                json!({"store":"power","key":["enabled"],"value":false,"rev":0}),
+            )
+        });
+        (a.join().unwrap(), b.join().unwrap())
+    });
+    let replies = [one?, two?];
+    assert_eq!(
+        replies
+            .iter()
+            .filter(|r| matches!(r, Reply::Ok { .. }))
+            .count(),
+        1
+    );
+    assert_eq!(replies.iter().filter(|r| matches!(r, Reply::Err{err} if err.code == nacre_protocol::ErrorCode::StaleRevision)).count(),1);
+    let path = home.path().join("config/nacre/power.json");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while get(&mut first)?["dirty"] == true {
+        if Instant::now() > deadline {
+            return Err("Settings publication did not finish".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    let old: Value = serde_json::from_slice(&fs::read(&path)?)?;
+    fs::write(&path, "{\n invalid\n}")?;
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let snapshot = get(&mut first)?;
+        if snapshot["error"]["line"] == 2 {
+            assert_eq!(snapshot["data"]["enabled"], old["enabled"]);
+            break;
+        }
+        if Instant::now() > deadline {
+            return Err("Settings hand edit was not observed".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    fs::write(&path, "{\"enabled\":false,\"unknown\":42}")?;
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let restored = loop {
+        let value = get(&mut first)?;
+        if value["data"]["unknown"] == 42 && value.get("error").is_none() {
+            break value;
+        }
+        if Instant::now() > deadline {
+            return Err("Valid settings repair was not observed".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    };
+    assert!(matches!(
+        call(
+            &mut first,
+            "settings.set",
+            json!({"store":"power","key":["enabled"],"value":true,"rev":restored["rev"]})
+        )?,
+        Reply::Ok { .. }
+    ));
+    daemon.0.kill()?;
+    daemon.0.wait()?;
+    // Kill after the in-memory acknowledgement, before or during deferred
+    // publication. The only acceptable disk states are complete old/new JSON.
+    let saved: Value = serde_json::from_slice(&fs::read(&path)?)?;
+    assert_eq!(saved["unknown"], 42);
+    assert!(saved["enabled"].is_boolean());
+    let mut restarted = Process(
+        command(home.path(), &source_path, &endpoint)
+            .arg("daemon")
+            .env("NOTIFY_SOCKET", &notify)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    notifications.recv(&mut packet)?;
+    let snapshot = get(&mut link(&endpoint)?)?;
+    assert_eq!(snapshot["data"]["unknown"], 42);
+    assert_eq!(snapshot["dirty"], false);
+    restarted.0.kill()?;
+    restarted.0.wait()?;
+    Ok(())
+}
 fn next_message(reader: &mut BufReader<ChildStdout>) -> Result<nacre_protocol::Message> {
     let line = next_line(reader)?;
     Ok(nacre_protocol::framing::decode(&line[..line.len() - 1])?)

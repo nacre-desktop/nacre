@@ -15,6 +15,9 @@ pub mod notify;
 pub mod serve_bridge;
 pub mod session;
 pub mod session_policy;
+pub mod settings;
+pub mod settings_controller;
+pub mod settings_validation;
 pub mod socket;
 pub mod supervisor;
 pub mod wallpaper;
@@ -40,6 +43,20 @@ async fn serve(
     let environment: std::collections::BTreeMap<String, String> = std::env::vars().collect();
     let control = compositor_control::Control::new(paths.clone(), environment.clone());
     hub.borrow_mut().compositor = Some(control.clone());
+    let settings_hub = hub.clone();
+    let settings = settings::Service::load(hub.clone(), paths.clone()).await?;
+    hub.borrow_mut().settings = Some(settings.clone());
+    let (settings_ready, settings_initialized) = tokio::sync::oneshot::channel();
+    let settings_ready = Rc::new(RefCell::new(Some(settings_ready)));
+    hub.borrow_mut().service("settings", "starting", 0)?;
+    let settings_service =
+        tokio::task::spawn_local(supervisor::run("settings", hub.clone(), move || {
+            settings::run(
+                settings_hub.clone(),
+                settings.clone(),
+                settings_ready.clone(),
+            )
+        }));
     let session_control = control.clone();
     let session_paths = paths.clone();
     let width_environment = environment.clone();
@@ -188,6 +205,7 @@ async fn serve(
     }
     let ready = async {
         initialized.await?;
+        settings_initialized.await?;
         notify::ready().await?;
         Ok::<(), crate::Error>(())
     };
@@ -229,6 +247,12 @@ async fn serve(
         }
     }
     compositor_service.abort();
+    settings_service.abort();
+    if let Err(error) = settings_service.await {
+        if !error.is_cancelled() {
+            tracing::error!("Settings supervisor failed during shutdown");
+        }
+    }
     if let Some(service) = network_service {
         service.abort();
         if let Err(error) = service.await {

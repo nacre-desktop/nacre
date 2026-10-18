@@ -46,6 +46,8 @@ async fn dispatch(
 ) -> Result<Value, Failure> {
     match method.as_str() {
         "daemon.ping" => Ok(Value::Null),
+        method @ ("settings.get" | "settings.set" | "settings.publish" | "settings.provider"
+        | "settings.desktop") => super::settings::dispatch(hub, method, params).await,
         method @ ("niri.source" | "niri.action") => {
             super::niri_actions::dispatch(hub, method, params).await
         }
@@ -97,7 +99,15 @@ async fn call(
             .map_or(1000, |m| m.timeout)
     });
     let ui = method.starts_with("ui.");
-    let helper = method == "helper.execute" || method == "niri.action";
+    let helper = matches!(
+        method.as_str(),
+        "helper.execute"
+            | "niri.action"
+            | "settings.set"
+            | "settings.publish"
+            | "settings.provider"
+            | "settings.desktop"
+    );
     let future = AssertUnwindSafe(dispatch(hub, method, params, timeout, transfer)).catch_unwind();
     let result = match tokio::time::timeout(Duration::from_millis(u64::from(ms)), future).await {
         Ok(Ok(result)) => result,
