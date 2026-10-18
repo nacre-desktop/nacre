@@ -3,7 +3,7 @@
 - ID: N0005
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: Review (source fixes required; unvalidated)
+- Status: Review (source and scoped correctness accepted; integration gated)
 - Depends on: N0003 source212c3efe; integration after green publishedF4
 - Date: 2026-10-18
 - Size: one focused session, maximum3hours
@@ -132,3 +132,7 @@ and effective memory.max. A preflight process leaf/limit alone is insufficient.
 Use reviewed handshake and mocked gate tests, no new tooling framework. Future
 correctness cap6GiB/start>=10GiB may be used only in a newly assigned slot;
 capture cap stays2GiB. Existing N3 acceptance claims remain withdrawn.
+
+## Scoped correctness review — 2026-10-18
+
+Accepted feature head ecd08dfe8a8449001ac499a14ae92a9620d93fc3 and reported same-runtime transfer c992fc58c1166a951dd48a40fdf6561fbfc375c1. Reviewed the private archive checksum and launcher/test records: held-child membership, systemd and effective6GiB limits, swap0, nice10 before same-PID exec, zero OOM events; lifecycle test and Clippy output match reported success. Three N5 tests and seven N3 core-network regressions passed; fmt passed. This is new scoped evidence, not reinstatement of withdrawn N3 runs. Publication remains gated on F4; no full-repo/CI or broader N3 acceptance claim. Explicit network-primary compatibility fixture/legacy-watch coverage must remain mapped to a receipt before final Done; do not repeat already passing lifecycle tests without a new reason. No active host or capture grant follows this review.
