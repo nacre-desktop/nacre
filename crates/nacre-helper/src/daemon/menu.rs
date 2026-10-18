@@ -1684,10 +1684,10 @@ mod activation_tests {
                         .await
                         .expect("actor did not consume activation JoinError"),
                     Some(ActivationFrecencyOutcome::JoinError {
-                    replied: false,
-                    pending_waiters: 0,
-                    pending_keys: 0,
-                })
+                        replied: false,
+                        pending_waiters: 0,
+                        pending_keys: 0,
+                    })
                 );
                 assert!(fixture.launches.try_recv().is_err());
                 assert_menu_actor_serving(&fixture).await;
@@ -1733,11 +1733,10 @@ mod activation_tests {
         let first = query(&fixture.menu).await;
         let activation = activation(&fixture.menu, &first).await;
         let launch = dispatched(&mut fixture).await;
-        let waiter =
-            tokio::time::timeout(Duration::from_secs(2), fixture.abort_handles.recv())
-                .await
-                .expect("activation waiter handle was not exposed")
-                .expect("activation waiter handle channel ended");
+        let waiter = tokio::time::timeout(Duration::from_secs(2), fixture.abort_handles.recv())
+            .await
+            .expect("activation waiter handle was not exposed")
+            .expect("activation waiter handle channel ended");
 
         if after_reply {
             launch.reply.send(Ok(json!({"started":true}))).unwrap();
