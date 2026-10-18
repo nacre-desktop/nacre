@@ -3,7 +3,7 @@
 - ID: N0002
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: Ready
+- Status: In progress
 - Depends on: N0001/N0004 source-ready review; explicit slot confirmation; final Done after correctness
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours
@@ -157,3 +157,32 @@ An unexplained simultaneous agent shutdown is not proof of OOM or a safe retry.
   owned job without touching those processes. If evidence points to another
   cause, fix it and tell the owner before re-granting. Missing old journals mean
   unknown, not no OOM. Never change global OOM policy, swap, sysctl or caches.
+
+## Active final-candidate grant — 2026-10-18
+
+N0004 Done at1382a28ab544743e32e906f7542bcecdfdfca083. Bead explicitly released
+the private lab due to an installation-permission prerequisite. Prepare only
+the release helper from this exact commit+Orient3efe8d1 on the existing isolated
+build tree, nice10/Cargo-j2,2GiB private scope and >=4GiB available. Record peak
+and OOM counters; report cap failure instead of automatic retry/limit increase.
+No broad correctness rerun. Never reuse eee973 or another old candidate helper.
+
+Exclusive N0002 private nested capture grant Oct18 12:00–14:00UTC on the same
+previously verified lab. Baseline source5f4c0bf3025d5f2944b50ff5546ed7f8a3dcfe57,
+release helper4a65f4ec887bc85e93b5b862f1786fe6f1b7a811875333765ee8f8c052cce0aa;
+candidate1382a28 release binary whose freshly built SHA256 must be recorded and
+sent with CAPTURE_START before first arm. No additional permission wait once
+these prerequisites pass. This grant binds that exact source/profile and actual
+reported artifact; it never permits unrecorded substitution or mutable builds.
+
+Fresh8arms, A/B/A/B per compositor,600s warmup+60s idle each;2880x1800/1.5,
+Hyprlandvirtual120/nirinested60. Preserve mandatory private2GiBscope/verified
+containment, externalwatchdog,4GiBstart/abortbelow2GiB,quiet/OOMcounter gates
+and peer pause. Baseline/payload/method unchanged, no historical partial reuse.
+No builds while measuring. Stop if remaining time cannot fit whole batch; tell
+spec agent BEFORE first arm for immediate adjusted window, never compress it.
+Explicit DONE/IDLE/RELEASED transfers host; Bead cannot preempt a valid arm.
+
+N0001/F4 publication stays held pending this gate and source review; do not push
+local runtime commits yet. If gate fails, return exact evidence for bounded
+fix; independent N0003 source remains eligible.

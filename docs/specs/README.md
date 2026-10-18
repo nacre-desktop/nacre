@@ -4,9 +4,9 @@ Updated2026-10-18. [Standing rules](../architecture/standing-rules.md) apply.
 
 | Order | Spec | Status | Next action |
 | --- | --- | --- | --- |
-| 1 | [N0004 activation progress](0004-f4-activation-progress-and-audit.md) | Review | Focused checks accepted at87911aa1; add after-reply waiter-cancellation variant |
-| 2 | [N0001 F4 review](0001-f4-settings-completion-audit.md) | Review | Runtime/audit accepted; N0004 test proof remains |
-| 3 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Ready, gated | Fresh8cell600s+60s ABAB after source review and slot |
+| 1 | [N0004 activation progress](0004-f4-activation-progress-and-audit.md) | Done | Exact1382a28 focused proof accepted; release artifact under N0002 |
+| 2 | [N0001 F4 review](0001-f4-settings-completion-audit.md) | Review | Source-ready; final Done after N0002 gate and published CI |
+| 3 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | In progress | Build1382a28 release; active12:00–14:00UTC fresh8cell safe gate |
 | 4 | [N0003 network state](0003-core-network-state-adapter.md) | In progress source phase | Independent worktree source/tests while waiting; integration after green F4 |
 
 Restart recovery2026-10-18: published source at recovery is ccc19e3; preserved
@@ -31,3 +31,9 @@ No live session/install/package release/unit changes are authorized.
 
 Use approved commit identity, docs(spec): for spec-agent commits, [no-publish]
 on all Nacre commits. Status edits at start/review/Done, batch notes/clarifications.
+
+Latest handoff: Bead explicitly released the lab. N0004 Done at1382a28;
+Nacre owns N0002 release preparation now and safe capture12:00–14:00UTC.
+This specific handoff supersedes the general Bead window while its dependency
+is blocked. Bead has independent B0007 source/tests; no overlapping lab job.
+Record final helper hash before CAPTURE_START; no second approval chain.

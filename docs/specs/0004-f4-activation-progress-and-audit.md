@@ -3,7 +3,7 @@
 - ID: N0004
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: Review
+- Status: Done
 - Depends on: N0001 v7 source-ready submission; preserve unpublished candidate
 - Date: 2026-10-18
 - Size: one focused session, maximum3hours
@@ -234,3 +234,20 @@ changed test,fmt,affected test-targetClippy; no broad-suite repetition.
 Keep local commits unpublished. After this proof, prepare an exact final release
 artifact/hash on an explicitly free correctness/build host; N0002 still requires
 its separate safe capture grant and fresh8cells. N0003 source remains eligible.
+
+## Final source review — Done, 2026-10-18
+
+Accepted exact local1382a28ab544743e32e906f7542bcecdfdfca083, tree
+dad914e58127fc96cf26378fa26ce6246fd0b671. Inspected delta from87911aa1: only
+cfg(test) outcome metadata, before/after-reply cancellation assertions and
+formatting. Both variants prove actor-handled JoinError, zero pending maps,
+no replay and subsequent query. Production recovery remains as reviewed.
+
+Focused activation5/5 (including parameterized cancellation), publicpreferences5/5,
+fmt and affected helper test-targetClippy pass on exact revision. LogSHA
+ad9076e14ec69a727546f4eac1b5f38dfd57f2717d34f6a11dd3c7cbc002f7f5;
+sourcearchive6c955e2f444b9f68a44179fd30cd1d9b802119fbb23ad7b7e398b051d851c190.
+Private2GiB scope completed at its cap; no new release helper or measurement
+claim. N0004 source/correctness Done; N0001 final Done and F4 publication remain
+gated on N0002. Release artifact/hash is explicitly the next N0002 preparation
+step, not grounds to repeat N0004 tests. Local source commits remain unpublished.
