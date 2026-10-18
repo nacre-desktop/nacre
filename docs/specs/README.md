@@ -108,3 +108,18 @@ Superseded documentation-only full CI39139624556/39139965930/39140394830 cancele
 intentionally to preserve heavy slot, not passed. This docs-only handoff uses
 [skip ci] to avoid launching a full suite during the reservation; it does not
 waive code validation. No status-only or private config files enter this repo.
+
+### Current execution update —16:10UTC
+
+Separate N0002 chat grant withdrawn. Built-in Sol implemented private v6 guard;
+Sol reviewer and Terra both ACCEPT final0cc8dd37 source/mock package,23tests and
+24manifest hashes. Built-in Luna gets16:15–19:00UTC only, ONE containment smoke
+then fresh8arms on success, no retry/quiet waiver. See N0002 active grant for
+exact bindings. No capture has started yet; no other heavy job may overlap.
+
+B0011 source7975382/CI39142524705 FAILED. Retiring implementer ceased edits;
+built-in Sol fixed the actual synchronous-initial-callback race at localfb81b387
+in task/sol-b0011-lifecycle-20261018. Built-in reviewer ACCEPTed source pending
+fmt/compiler/exact-head CI; no push/heavy test grant until N0002 release. This
+supersedes earlier speculative fake-peer ordering diagnoses. No new core service
+implementation or live switching now. F4 publication remains first priority.

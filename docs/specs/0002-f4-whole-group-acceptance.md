@@ -3,7 +3,7 @@
 - ID: N0002
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: Ready (fresh Luna worker; explicit window below)
+- Status: In progress (built-in Luna; active grant below)
 - Depends on: N0001/N0004 source-ready review; explicit slot confirmation; final Done after correctness
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours
@@ -293,3 +293,48 @@ PIDs, UTC deadline. At completion assess whole-group and endpoint rules; send
 Review to coordinator immediately. Publication review follows; no live install.
 Private source/mock fixes to prospective driver allowed within this spec; no
 product optimization during measurement, no new tooling framework or dependency.
+
+## Active built-in worker grant —2026-10-18 16:15–19:00 UTC
+
+This section supersedes the15:30–18:30 separate-chat grant; that worker is retired
+and may not start a payload. N0002 is In progress. Source/mock v6 guard accepted
+by built-in Sol reviewer AND Terra second opinion: launcher
+0cc8dd37b614073be5ce46c76ffe1d98682ef16207ba15aff0ff44b1d427d00b;
+tests b66ca2a2e5818281669e06b9a9a1c352f8b3111ffd1e447699e25a39fc0786df;
+plan f18f82b0519f9aeebc68ca69ecb7967152433e3925e2bb0074360bee0f036c2c.
+All24manifest entries,23actual-launcher/guardian mocks, original11driver mocks,
+Python syntax and18shell syntax checks passed. This is source/mock acceptance,
+not proof of real systemd behavior. No runtime/helper rebuild requested.
+
+A fresh BUILT-IN Luna worker owns one heavy slot for private transfer/preflight,
+ONE small no-pressure containment smoke, then the fresh eight-cell batch within
+16:15–19:00 UTC, only while no other heavy job runs. Both retiring peers explicitly
+ACKed IDLE; Bead39142524705 finished FAILURE, not acceptance. No new Bead heavy CI
+until N0002 explicit release. Collector38118f43/CI39136680743 SUCCESS unchanged.
+Use the same recorded private lab machine digest and frozen baseline/candidate /
+helper/Orient identities above. Verify every transferred source/support pin.
+Do not overwrite old evidence or frozen v3/v4/v5 scripts; v6 uses distinct paths.
+
+Read reviewed REPORT/SHA256SUMS from the owned private v6 directory. Scope smoke
+must exercise held-child gate, final-ready/ACK and guardian teardown using a tiny
+shell payload, not a compositor or memory pressure. Require numeric2GiB/swap0,
+parent/child membership proof before release, final zero OOM/valid events and
+peak, clean owned cleanup. Failure stops; report before another attempt. Smoke
+success is not a measured arm and cannot replace quiet/performance evidence.
+
+On successful smoke, announce exact CAPTURE_START and run all8fresh arms in the
+frozen order, each ONE600s warmup plus THREE60s idle phases.104min fixed waits
+plus transitions/actions; do not compress. Both processSwapPss0 and hostswap-in
+<1MiB over collector AND whole-wrapper intervals remain mandatory. First invalid
+arm stops entire batch with no automatic retry. No accepted latency/PSS claim
+from invalid arms. Keep independent guardian1s memory/scope/OOM/owner checks;
+>=4GiB available before release/abort<2GiB. Parent and guardian record independent
+final events/peak before bounded5s finalhold ACK and before teardown. Guardian
+abort including at normal completion invalidates; evidence-write failure must
+never prevent own-scope cleanup. No other process/cgroup may be stopped.
+
+After complete valid evidence, send Review and DONE/IDLE/RELEASED with artifact
+bindings, per-run values/medians/spreads/peaks and whole-group/endpoint gates.
+No runtime push until lead review; no live install/package/unit/config action.
+No payload beyond19:00; if not ready with enough full-batch margin, report rather
+than begin an unfinishable partial. Do not add tooling/product changes midcapture.
