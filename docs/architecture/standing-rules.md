@@ -197,36 +197,33 @@ not proof from the unavailable earlier laptop journal. Retain all capture-safety
 rules. Closure supersedes incident-review activation holds; it does not waive
 containment, memory, artifact, quiet or explicit peer-pause checks.
 
-## Orchestrator mode — owner decision2026-10-18
+## Standing lead/worker workflow — latest owner decision2026-10-18
 
-The spec agent coordinates fresh Luna worker chats, one spec per worker. Open each
-worker in a visible terminal so the owner can inspect its live conversation.
-At most3 workers are active at once; at most ONE heavy job across workers (full
-suites, release builds, nested sessions or captures). Only the coordinator grants
-heavy/measurement slots. Existing two long-lived implementers finish their current
-specs and retire; no new assignments to those chats. Workers report to the
-coordinator and exit task work, leaving the readable terminal available.
+This supersedes the earlier separate visible-chat worker orchestration rule.
+For multi-step work, use the personal lead-workflow skill and BUILT-IN subagents,
+not separate terminal chats. Default lead GPT-6.1 Sol/medium; Plan high. Default
+worker Luna/medium, high for multi-file work. Read-only explorer Luna/low; Sol
+worker/reviewer medium for unclear/concurrent/risky work or a failed Luna task;
+Terra medium second opinion for high risk or low Sol allowance; Astra low only
+after Sol cannot resolve a root cause or for high-stakes decisions, one at a time.
+One clearer retry then escalate; no default xhigh/ultra. Installed role files and
+standing AGENTS guidance are local user configuration, not repository artifacts.
 
-Verified local CLI: `codex --help` supports interactive `-m MODEL -C WORKTREE
-PROMPT`; `codex exec --help` supports noninteractive execution but is not the
-owner's requested visible-chat route. Start an isolated worktree first, then use
-`kitty --title TASK --directory WORKTREE nice -n 10 codex -m gpt-6-luna
--c 'model_reasoning_effort="high"' -C WORKTREE PROMPT`. Use argument arrays when
-launching, not unsafe shell interpolation. Preserve existing configured AI
-permissions/authentication; no credential copying or permission changes. Give each
-worker this file, exact spec path, its worktree, report format and coordinator
-thread ID in its private launch prompt. Record worker thread/worktree/status in
-docs/specs/README.md. Reasoning effort may be chosen by the coordinator.
+Maximum3 concurrent subagents, isolated writer worktrees, never two writers on
+same files. Maximum ONE heavy job across workers, including hosted full CI,
+release builds, nested sessions and captures. Lead grants the heavy slot and
+reviews before integration. Preserve all existing AI permissions/authentication.
+Small units go in spawn prompts; multi-session units use concise repo specs.
+Queue notes at start/done only, batched with substantive docs changes. Built-in
+reviewer for nontrivial diffs and Terra second opinion for high-risk changes.
 
-GPT-6.1 Sol/Astra coordinators are authorized to delegate to Luna workers. The
-current operational limit remains3 concurrent workers; increasing it requires
-an explicit updated schedule. Never duplicate an active spec across workers.
-If blocked, start independent eligible work; send owner-only blockers immediately
-with one concise request and exact installation command when applicable.
+Existing separate implementer chats finish current specs and retire without new
+assignments; retain their work/evidence. No process killing or forced transfer.
+Fresh leads obtain an explicit worker handoff before another writer touches its
+files. Existing N0002 capture still requires every safety/readiness gate; a
+configuration change or worker migration grants no new payload/slot.
 
-Priority now: F4 publication first, then owner switch-on plan (package publication,
-daemon units, QML opt-in, one-step rollback), then Bead B0002/B0003 measurements,
-then core-service implementation. Owner reports wayland-utils installed and
-wayland-info available; the old missing-package blocker is superseded, not a
-reason to probe or install again. Package/live switch execution remains gated on
-the reviewed owner plan; writing that plan is authorized now.
+Current owner priority: F4 publication first, then reviewed owner switch-on plan,
+then Bead B0002/B0003 captures, then core services. Owner reports wayland-utils
+installed; old missing-wayland-info blocker superseded. Package/live switch
+execution remains owner-controlled and gated on complete handoff/rollback plan.

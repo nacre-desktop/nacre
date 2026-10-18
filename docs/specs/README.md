@@ -48,18 +48,63 @@ Spec-agent commits use docs(spec):. Isolated worktrees, preserve others, no forc
 push, inspect own outgoing commits, check CI after each normal push. Keep private
 raw artifacts outside Git. Historical evidence is retained in specs/reports.
 
-## Orchestrator handoff2026-10-18
+## Lead handoff — 2026-10-18, after standing workflow installation
 
-Fresh visible Luna chats own one spec each; maximum3 active workers, one heavy job. Existing Nacre implementer finishes N2 prospective-driver handoff/CI monitoring, existing Bead implementer finishes B0011, then both retire without new specs. Owner reports wayland-info installed. Priority F4 publication, owner switch-on plan, Bead B2/B3 captures, then core services. Worker thread/worktree IDs will be recorded after launch; coordinator retains review/publication gate.
+**Latest owner direction supersedes separate-chat orchestration:** use installed
+lead-workflow with built-in subagents; at most3, writers isolated, one heavy job
+including hosted full CI. Separate chats finish current tasks then retire. Use
+Luna for clear work; after one clearer failed retry use Sol. Nontrivial review
+uses reviewer; high-risk work also Terra. Existing permissions unchanged.
 
-### Active visible worker chats
+### Current state and work in flight
 
-- N0002: fresh gpt-6-luna/high, branch task/luna-n0002-f4-20261018;
-  terminal title **Luna N0002 F4 capture**. Owns current conditional capture grant.
-- N0006: fresh gpt-6-luna/high, branch task/luna-n0006-plan-20261018;
-  terminal title **Luna N0006 switch-on plan**. Docs-only, no heavy grant.
-- Existing Bead implementer finishes B0011 then retires. Existing Nacre
-  implementer handoff only, no new job. Worker thread IDs pending START reports.
+- F4 runtime candidate1382a28ab544743e32e906f7542bcecdfdfca083 remains LOCAL,
+  unpublished; helper439dd355fca276334c2faccbd0992d1b23eac6c6caab311ca1c1c61d3672e92c.
+  Frozen baseline5f4c0bf3/helper4a65f4ec unchanged. N0004 Done; N0001 Review.
+- N0002 collector38118f43c1f2a450df406c6a047ca0e90a9d9cd4 exact CI39136680743
+  SUCCESS. Prospective private v5 mocks11 pass, one600s warmup+three60s windows
+  per arm, whole-wrapper and collector paging gates unchanged. Minimum104min
+  fixed waits/8arms before overhead. Existing captures invalid; no accepted
+  fresh comparison. Do not relabel partials or waive host paging rejection.
+- N0002 separate worker01a14f98-71e5-7131-98cc-f9dbd3ff4561, branch
+  task/luna-n0002-f4-20261018, owns current source/mock readiness. Both retiring
+  peers explicitly ACKed IDLE. Capture window15:30–18:30UTC is CONDITIONAL;
+  no new CAPTURE_START/accepted arm has been reported at this handoff. The private
+  launch-before-verification watchdog DOES NOT meet the held-child gate. Worker
+  was assigned bounded source correction and actual-launcher mocks; verify its
+  latest output before any payload. Parent systemctl/effective2GiB/swap0 AND
+  exact held-child cgroup membership must pass before samePID exec; external
+ 4GiBstart/abort2GiB monitor. Never infer grant from idle lock. If time insufficient,
+  complete source fix, report release; do not start an unfinishable partial batch.
+- Existing Nacre implementer01a13507-3311-7061-b8a5-38034082b372 completed driver
+  handoff and retired. Sources/private evidence preserved; no owned job.
+- N0006 source-cited plan draft6afd1d1 plus reviewed correction18882109 are
+  incorporated here. Review remains OPEN: durable managed QML opt-in and exclusive
+  installer/activation handoff with restoration are missing; no runnable complete
+  one-command switch rollback yet. No package/live action authorized/executed.
+  Docs worker01a14f98-760b-74b0-a42f-5b576163a702 finished IDLE; no new assignments.
+- N0005 ecd08dfe/c992fc58 scoped lifecycle/regression evidence accepted, runtime
+  integration gated after F4; N0003 broader acceptance unclaimed. Old N3 resource
+  evidence withdrawn. No core-service implementation priority until after Bead gates.
+- Bead B0011 current source72c43f6; CI39141528958 was running at last check.
+  Earlier39140928302/bf02b13 FAILED. No Bead lab capture; wait exact CI conclusion
+  before releasing any N0002 heavy payload. No further Bead CI during capture.
 
-Coordinator thread01a14ba5-08fb-76c1-b611-20b4ee22f5ad. New workers must report here
-and leave readable chats on completion. Keep maximum3 workers/one heavy job.
+### Next units for a fresh built-in lead
+
+1. Explorer reads latest worker output/CI and current queue, not older chat status.
+   If N2 held-child fix still absent after the clearer retry, obtain old worker
+   IDLE/source handoff, assign a built-in Sol worker to that bounded concurrency
+   launcher fix; no simultaneous writers. Reviewer checks source/mock proof.
+2. Finish N2 full valid batch, assess whole-group/endpoints, review source-to-capture
+   mapping, integrate F4 normally and require green exact published-head CI.
+   No runtime push before accepted gate; no rebuild of frozen release artifact.
+3. After F4, implement bounded persistent opt-in/guard/rollback prerequisites and
+   finish owner switch-on plan. Package/unit/live actions need reviewed owner plan.
+   Then schedule Bead B2 and B3, then core services. wayland-info prerequisite is
+   owner-reported resolved; no reinstall or repeated idle probes.
+
+Superseded documentation-only full CI39139624556/39139965930/39140394830 canceled
+intentionally to preserve heavy slot, not passed. This docs-only handoff uses
+[skip ci] to avoid launching a full suite during the reservation; it does not
+waive code validation. No status-only or private config files enter this repo.
