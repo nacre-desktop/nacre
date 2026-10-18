@@ -3,7 +3,7 @@
 - ID: N0003
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: Blocked (native build prerequisite cmake)
+- Status: Review (source lifecycle follow-up; containment deviation)
 - Depends on: independent source implementation allowed after N0004 local fix; integration after N0001/N0002 Done and green F4
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours
@@ -173,3 +173,22 @@ whole-environment/credential dump, new host inventory, install/download/sudo,
 or speculative build retry. If a valid existing path/cache is identified, the
 correctness-only grant through14:00UTC covers revised exact source; otherwise
 remain Blocked and continue the eligible N0002 source-only collector phase.
+
+## Functional review and containment deviation — 2026-10-18
+
+At212c3efe fmt,seven named tests,primary compatibility and helper all-targetClippy
+reported PASS using existing private cmake path, no install. This supersedes the
+missing-cmake blocker. The run was NOT resource-compliant: effectiveMemoryMax
+was infinity and peak4616724480bytes despite requested2GiB;OOM0 does not repair
+that deviation. Preserve functional results honestly; do not rerun merely to
+replace the record. Source review found lifecycle gaps captured in N0005 before
+producer integration. N0003 remains Review, unpublished and gated on greenF4.
+
+No next host build/test/capture until outer launch gate verifies actual numeric
+MemoryMax AND cgroup memory.max plus child containment before releasing payload.
+Reuse reviewed guard handshake; inspect existing argv/unit/cgroup records, no
+new framework. Source/mock gate tests first, then bounded no-pressure smoke.
+For future correctness/build jobs only, spec agent sizes cap6GiB (observed4.3GiB
+peak) with>=10GiB MemAvailable before start, externalwatchdog abort<2GiB; one
+heavy job. Measurement scopes remain2GiB and4GiBstart; no ceiling change to UI.
+Actual granted host window still required. No install, globalsettings or stress.
