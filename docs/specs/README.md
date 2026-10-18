@@ -51,3 +51,15 @@ raw artifacts outside Git. Historical evidence is retained in specs/reports.
 ## Orchestrator handoff2026-10-18
 
 Fresh visible Luna chats own one spec each; maximum3 active workers, one heavy job. Existing Nacre implementer finishes N2 prospective-driver handoff/CI monitoring, existing Bead implementer finishes B0011, then both retire without new specs. Owner reports wayland-info installed. Priority F4 publication, owner switch-on plan, Bead B2/B3 captures, then core services. Worker thread/worktree IDs will be recorded after launch; coordinator retains review/publication gate.
+
+### Active visible worker chats
+
+- N0002: fresh gpt-6-luna/high, branch task/luna-n0002-f4-20261018;
+  terminal title **Luna N0002 F4 capture**. Owns current conditional capture grant.
+- N0006: fresh gpt-6-luna/high, branch task/luna-n0006-plan-20261018;
+  terminal title **Luna N0006 switch-on plan**. Docs-only, no heavy grant.
+- Existing Bead implementer finishes B0011 then retires. Existing Nacre
+  implementer handoff only, no new job. Worker thread IDs pending START reports.
+
+Coordinator thread01a14ba5-08fb-76c1-b611-20b4ee22f5ad. New workers must report here
+and leave readable chats on completion. Keep maximum3 workers/one heavy job.
