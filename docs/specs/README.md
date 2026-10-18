@@ -7,7 +7,7 @@ Updated2026-10-18. [Standing rules](../architecture/standing-rules.md) apply.
 | 1 | [N0004 activation progress](0004-f4-activation-progress-and-audit.md) | Done | Exact1382a28 focused proof accepted; release artifact under N0002 |
 | 2 | [N0001 F4 review](0001-f4-settings-completion-audit.md) | Review | Source-ready; final Done after N0002 gate and published CI |
 | 3 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked | First baseline invalid on host paging; no retry grant |
-| 4 | [N0003 network state](0003-core-network-state-adapter.md) | In progress source phase | Independent worktree source/tests while waiting; integration after green F4 |
+| 4 | [N0003 network state](0003-core-network-state-adapter.md) | Blocked | Native cmake prerequisite; tests not reached; integration after green F4 |
 
 Restart recovery2026-10-18: published source at recovery is ccc19e3; preserved
 F4 has84 dirty entries and network source has4, no outgoing commits. No reset,
@@ -49,3 +49,9 @@ preserved, no regressions inferred. Former capture windows are withdrawn.
 N0003 correctness owns released lab12:20–13:25UTC; Bead has B0008 source/CI.
 No active capture grant. N0002 existing-evidence diagnosis is bounded20min and
 never authorizes swap/cache changes or another capture.
+
+LATEST eligible work: N0003 fmt passed at212c3efe but native compilation needs
+cmake; tests/Clippy NOT RUN. Bounded10min existing-build-record check, then stop
+if absent. N0002 source-only collector correction/mocktests is Ready now (90min),
+with full60s each idle phase and separately recorded paging windows. Existing
+paging rejection remains; NO capture/retry grant. Bead has B0009 source/CI.

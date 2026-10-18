@@ -218,3 +218,46 @@ finding/quiet-readiness proposal; spec agent decides next gate.
 
 N0003 correctness is the eligible independent work now; no publication of F4
 until N0002 passes. Preserve final release artifact for future same-source gate.
+
+## Eligible source-only collector correction — 2026-10-18
+
+This phase is Ready now while captures are Blocked; maximum90minutes. Existing
+saved evidence shows internal pswpin spans before harness main through scenarios
+and cleanup, including1063pages during600s warmup. fresh_static and
+all_panels_closed collect1s; static_after_latency collects60s. Attribution beyond
+host-global counters is UNKNOWN; existing rows lack per-process major faults.
+
+1. Preserve all v3/v4 scripts, reports and invalid arms. Make a separately named
+   prospective collector revision from the existing private N0002 cell scripts,
+   or the existing repository collector if that is their actual source. Report
+   exact touched files; no product/helper/protocol changes, new tooling framework
+   or frozen artifact mutation. Final helper439dd355 remains unchanged.
+2. Retain600s warmup. Collect full60s uninterrupted idle in EACH existing
+   fresh_static, all_panels_closed and static_after_latency phase; preserve
+   actions/latency ordering outside those idle windows. No one-second substitute
+   or marker-only wait. Collect /proc/vmstat pswpin/pswpout immediately before and
+   after EACH idle observation; record page size, elapsed duration, counter values
+   and deltas. Keep warmup and whole-arm start-to-cleanup totals separately.
+3. Preserve strict CURRENT rejection on whole-arm hostswap-in>=1MiB and process
+   SwapPss>0. New per-window data is additional evidence, NOT permission to waive
+   paging, retrospectively accept old arms, change thresholds or run a new batch.
+   Keep guard4GiBstart/2GiBabort,scope2GiB,OOM checks and exact artifact binding.
+4. Add deterministic stdlib fake-clock/counter tests alongside existing collector
+   tests: all_three_idle_phases_observe_full_sixty_seconds;
+   paging_windows_keep_warmup_and_idle_separate;
+   paging_delta_uses_recorded_page_size;
+   whole_arm_paging_failure_remains_invalid;
+   incomplete_idle_or_counter_reset_is_invalid. No real sleep, subprocess,
+   compositor, /proc sampling or memory pressure in tests. Preserve counter
+   validation and cleanup/ownership assertions.
+5. Run those mocked tests,py_compile and diff-check locally. Report source diff /
+   hash, tests and revised COMPLETE8arm duration including all new full windows
+   and transitions; do not assume two hours still fits. Return source Review.
+   This is folded into F4 gate work, no separate tooling spec or runtime rebuild.
+
+Acceptance: correct explicit full60s windows and separately reported counters,
+strict existing rejection preserved, mocks pass, no measurement. Stop if current
+collector cannot be changed in90min without a newframework; report exact gap.
+After review spec agent decides quiet-window interpretation/readiness and a
+future full-batch window; no capture grant is implied here. No cache/swap/sysctl
+changes or stopping unrelated/live processes.

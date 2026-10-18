@@ -3,7 +3,7 @@
 - ID: N0003
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: In progress
+- Status: Blocked (native build prerequisite cmake)
 - Depends on: independent source implementation allowed after N0004 local fix; integration after N0001/N0002 Done and green F4
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours
@@ -157,3 +157,19 @@ After N0002 invalid-arm cleanup and explicit release, correctness-only slot is
 advanced to12:20–13:25UTC, superseding14:30–15:30. Exact398993ef+1eded772,
 existing method/checks and no-live/no-measurement boundaries unchanged. Send
 START/results/DONE; one capped heavy job, no Bead remote overlap.
+
+## Correctness disposition — 2026-10-18
+
+Exact212c3efe5215a11fbb8f5a9e50d2b7199248464c plus193ad75b fixes the initial
+zbus type bounds/test partial move and rustfmt reflows. fmt passes. Focused
+compilation stopped in turbojpeg-sys before test bodies because cmake is absent
+from the configured path/checked existing locations. Seven tests, fixture/security
+and Clippy are NOT RUN. Private2GiBscope exited withOOM0;source unpublished.
+
+Max10min inspect existing successful build records for explicit CMAKE/PATH /
+CARGO_TARGET_DIR or a valid already-built native dependency cache; earlier run
+reached Rust type checking, so check the actual environment difference. No
+whole-environment/credential dump, new host inventory, install/download/sudo,
+or speculative build retry. If a valid existing path/cache is identified, the
+correctness-only grant through14:00UTC covers revised exact source; otherwise
+remain Blocked and continue the eligible N0002 source-only collector phase.
