@@ -66,3 +66,9 @@ AUTHORITATIVE correction: N0003 implementer withdrew prior PASS/OOM reports;
 tests are NOT RUN for acceptance. Preserve commits/logs, do not publish claimed
 results and do not rerun without a new assignment. Current NACRE work is local
 N0002 collector correction only; no host/capture. N0005 stays queued.
+
+N0005 sourcee5c4a3a2 is Review with exact follow-ups in its spec: final owner
+priority/commit check, actual observe/supervisor lifecycle tests and bounded
+compile fixes. Source corrections eligible now; no host validation grant yet.
+N0002 collector source reviewed for integration of d7c9bc2+b2103ee only; preserve
+latest queue/docs rather than replay stale3276a0a. HostedCI pending integration.

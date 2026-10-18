@@ -3,7 +3,7 @@
 - ID: N0005
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: Ready (queued after N0002 collector source correction)
+- Status: Review (source fixes required; unvalidated)
 - Depends on: N0003 source212c3efe; integration after green publishedF4
 - Date: 2026-10-18
 - Size: one focused session, maximum3hours
@@ -100,3 +100,35 @@ No implicit measurement or resource-scope waiver.
 N0005 Review: exact base/final commits,files,named test evidence,resource-gate
 verification if run,old/new owner ID proof,watcher teardown proof,blockers and
 cleanup. Private rawlogs outside Git; no measurement claim.
+
+## Source review — e5c4a3a2, 2026-10-18
+
+Reviewed sourcee5c4a3a21133068b0ea80a6de326725b57e79761; no build/test claim.
+Owner tagging/pinning, staged IDs and owned watcher direction accepted. Required
+fixes before correctness assignment:
+
+1. Final prepublication select must prioritize owner/watcher completion (biased),
+   then check sticky owner_boundary immediately before synchronous Hub publish,
+   with no intervening await. Current unbiased select can choose owner checkOK
+   while the owner-change signal is also ready. Preserve no-old-generation commit.
+2. Existing tests manually create generation1/2 tables, publish stale state and
+   construct a separate watcher. They do not test actual observe restart/commit /
+   cleanup. Factor private observe_on_connection with the SAME production loop;
+   run creates its system connection then delegates. Private fake-bus supervisor
+   factory drives real owner loss/stale/replacement with identical paths. Delayed
+   snapshot barrier must guard actual read/publication; teardown exercises real
+   observe error and parent cancellation. Private cfg(test) publication/drop
+   witness channels at actual production paths are allowed; do not substitute
+   helper tests or sleeps for these lifecycle proofs. Keep existing test names.
+3. New test calls network_manager_owner(...).await? need CoreError conversion;
+   map private test errors to static sanitized crateError instead of widening
+   wire/public API. Mark read_snapshot cfg(test) if now unused outside tests.
+
+Bounded source corrections/local commits remain eligible now. Formatting and
+compiler fixes within scope need no extra design approval. No Rust checks claimed
+or host grant until verified launcher proves PAYLOAD containment before release:
+record exact argv,unit,systemctl ControlGroup/MemoryMax,child PID and child cgroup,
+and effective memory.max. A preflight process leaf/limit alone is insufficient.
+Use reviewed handshake and mocked gate tests, no new tooling framework. Future
+correctness cap6GiB/start>=10GiB may be used only in a newly assigned slot;
+capture cap stays2GiB. Existing N3 acceptance claims remain withdrawn.
