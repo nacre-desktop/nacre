@@ -364,3 +364,47 @@ new evidence/session paths and all eight fresh arms; never reuse invalid cells.
 If readiness slips, require enough room for 104min fixed waits plus measured
 overhead and cleanup; a fresh full four-hour window may be assigned without
 compressing. Report CAPTURE_START, then Review and DONE/IDLE/RELEASED.
+
+
+## Reviewed replacement grant — 2026-10-18 19:00–23:00 UTC
+
+Supersedes the18:00–22:00 grant. V7 stopped after its first baseline cell due
+to incomplete task-counter coverage; zero cells accepted. It is preserved and
+will not be reinterpreted. Its scope and quiet gates held. Saved evidence also
+showed warmup was included in the first phase paging bracket; v8 corrects this.
+
+Built-in Sol and Terra independently ACCEPT the prospective v8 review2 package:
+`sol-n2-boundary-v8-review2-20261018` in the private validation cache.
+Driver ca9c557a6e5b41a499f5d9c9fdd4ebbfa184535c1f4ca1653bcf6d71175ed040;
+census d34c6b5a1fb4904b5738cc6b32f652de95731e41fe77eb19ba769fbc6528f5f2;
+validator 0cdfcfbde8564789d08dd428d7bd01aebe014f8b3c92eccae1ae1e1463d3ead4;
+plan a986827ed9f6da3d180f94e286cf10920be086e28e4b1df21fdbd2042a8e44af.
+All34 manifest entries,17 new actual-driver/validator mocks plus11 original
+mocks, Python syntax and18 shell syntax checks passed independently.
+
+Measurement contract: whole-group PSS/RSS covers every owned process visible
+at each defined phase sampling snapshot. Pin critical process identities from
+launch hooks and verify PID/start identity before/after snapshots and terminal
+scan. Enumerated helpers require measured memory or reject UNKNOWN; confirmed
+departures retain identity and last historical memory separately from concurrent
+PSS. Read errors/unconfirmed departures reject. Do not equate exiting threads
+with lost critical roots. Context-switch survivor deltas are lower bounds;
+whole-group totals with incomplete lifetime coverage are UNKNOWN, never zero
+and never optimization evidence. Between-snapshot/action process lifetimes
+remain unobserved/UNKNOWN; no exhaustive-lifetime PSS peak claim. Cgroup peak
+covers the complete arm and is reported separately from PSS.
+
+Exactly one600s warmup completes before first phase paging brackets, followed
+by three full60s idle windows. Whole-wrapper paging still includes setup,
+warmup, all scenarios and cleanup; strict<1MiB and processSwapPss0 unchanged.
+Frozen runtime/helper/Orient/base collector identities remain unchanged; report
+executed collector patch b226050fc607347495d96414039bd26113bff1ed6cba0c9a15919c670d5b29fe
+separately from frozen base collector. The reviewed12GiB scope,swap0,host4GiB
+start/2GiB abort, independent guardian and final ACK are unchanged.
+
+Luna capture worker owns the sole heavy slot19:00–23:00UTC: hash-verified
+private transfer, one tiny containment smoke, then all8fresh arms. All other
+workers are IDLE; B0011 exact CI is green and released. No retry after an
+invalid cell, no old-cell reuse, no compression or runtime rebuild. Announce
+CAPTURE_START then complete Review and DONE/IDLE/RELEASED. F4 remains unpublished
+until valid N2 evidence and lead integration approval, followed by exact-head CI.

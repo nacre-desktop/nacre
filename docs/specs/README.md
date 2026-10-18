@@ -136,3 +136,14 @@ B0011 is Done: source af61d18 full CI39147491406 green, docs5ad2551; heavy slot
 released. F4 local integration d3622384 remains reviewed and unpublished pending
 valid N2 evidence, then exact published-head CI. N6 switch-on blockers remain;
 no package/live action. Retired separate chats have no assignments or grants.
+
+
+### Current execution handoff — 2026-10-18 18:55 UTC
+
+N2 v7 first baseline invalid for task coverage; raw preserved,zero accepted.
+Source-only v8 review2 fixes warmup boundaries and uses explicit sampled
+whole-group census/critical-root stability; unknown lifetime counters stay
+unknown. Sol+Terra ACCEPT, all34 pins/28 mocks pass. Sole built-in Luna heavy
+grant19:00–23:00UTC for smoke+fresh8arms,12GiB cap/hostabort2GiB unchanged.
+All other workers IDLE. F4 reviewed integration d3622384 remains local pending
+valid capture then published exact-head CI. B0011Done/green; N6 blockers remain.
