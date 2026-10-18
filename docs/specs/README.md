@@ -4,7 +4,7 @@ Updated2026-10-18. [Standing rules](../architecture/standing-rules.md) apply.
 
 | Order | Spec | Status | Next action |
 | --- | --- | --- | --- |
-| 1 | [N0004 activation progress](0004-f4-activation-progress-and-audit.md) | In progress | Finish deterministic actor-consumption test and focused checks; no repeated audit |
+| 1 | [N0004 activation progress](0004-f4-activation-progress-and-audit.md) | Review | Focused checks accepted at87911aa1; add after-reply waiter-cancellation variant |
 | 2 | [N0001 F4 review](0001-f4-settings-completion-audit.md) | Review | Runtime/audit accepted; N0004 test proof remains |
 | 3 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Ready, gated | Fresh8cell600s+60s ABAB after source review and slot |
 | 4 | [N0003 network state](0003-core-network-state-adapter.md) | In progress source phase | Independent worktree source/tests while waiting; integration after green F4 |

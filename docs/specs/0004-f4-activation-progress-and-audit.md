@@ -3,7 +3,7 @@
 - ID: N0004
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: In progress
+- Status: Review
 - Depends on: N0001 v7 source-ready submission; preserve unpublished candidate
 - Date: 2026-10-18
 - Size: one focused session, maximum3hours
@@ -205,3 +205,32 @@ Do not push until reviewed. Do not reset, clean, discard or rewrite others' work
 These commits are explicitly unvalidated until focused checks pass. Continue
 recover-and-continue activation JoinError handling/tests and N0003 source work;
 no build/test overlap with active Bead captures on the same private host.
+
+## Focused source review — 2026-10-18, candidate87911aa1
+
+Reviewed local commits through87911aa1f9c12d8a0c000e68e4d754376ab3ea45
+over baseline5f4c0bf3. Source inspection accepts short admission, bounded task
+wait, actor-consumed completion, pending replies keyed by task ID, conservative
+uncertainty on activation JoinError, no replay, and continued actor service.
+Successful and failed completions remove activation metadata. Public preference
+durable behavior remains intact. Production JoinError recovery is explicitly
+authorized here, superseding earlier test-hook-only wording.
+
+Reported exact-source focused results accepted: activation_frecency_*5/5,
+menu_preferences_*5/5, rustfmt and helper test-target Clippy-Dwarnings pass.
+Log SHA ac20bdeced3454032d3f4318f348e0f220fa06839f3dcb609170d0413b71413d.
+No new release helper built; old helper hashes do not identify this candidate.
+No publication or measurement accepted.
+
+One bounded test fix before Done: parameterize the existing waiter-cancellation
+test for before AND after launch reply. The latter must send launch success,
+await the real reply while controlled flush is pending, abort the waiter, await
+actor-handled JoinError{replied:true}, then prove no replay and subsequent query
+success. Before-reply case keeps conservative Internal/dispatched=true/retry=false.
+Assert metadata release through existing private test access if available; do
+not add a production API or framework. No production change requested. Run only
+changed test,fmt,affected test-targetClippy; no broad-suite repetition.
+
+Keep local commits unpublished. After this proof, prepare an exact final release
+artifact/hash on an explicitly free correctness/build host; N0002 still requires
+its separate safe capture grant and fresh8cells. N0003 source remains eligible.
