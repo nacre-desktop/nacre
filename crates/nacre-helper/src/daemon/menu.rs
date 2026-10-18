@@ -1684,10 +1684,10 @@ mod activation_tests {
                         .await
                         .expect("actor did not consume activation JoinError"),
                     Some(ActivationFrecencyOutcome::JoinError {
-                        replied: false,
-                        pending_waiters: 0,
-                        pending_keys: 0,
-                    })
+                    replied: false,
+                    pending_waiters: 0,
+                    pending_keys: 0,
+                })
                 );
                 assert!(fixture.launches.try_recv().is_err());
                 assert_menu_actor_serving(&fixture).await;
@@ -1783,10 +1783,10 @@ mod activation_tests {
                     .await
                     .expect("actor did not consume cancellation JoinError"),
                 Some(ActivationFrecencyOutcome::JoinError {
-                        replied: false,
-                        pending_waiters: 0,
-                        pending_keys: 0,
-                    })
+                    replied: false,
+                    pending_waiters: 0,
+                    pending_keys: 0,
+                })
             );
             drop(launch);
         }
