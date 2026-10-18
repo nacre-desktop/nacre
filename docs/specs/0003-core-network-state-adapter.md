@@ -3,7 +3,7 @@
 - ID: N0003
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: Review (source lifecycle follow-up; containment deviation)
+- Status: Blocked (correctness acceptance evidence withdrawn)
 - Depends on: independent source implementation allowed after N0004 local fix; integration after N0001/N0002 Done and green F4
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours
@@ -192,3 +192,16 @@ For future correctness/build jobs only, spec agent sizes cap6GiB (observed4.3GiB
 peak) with>=10GiB MemAvailable before start, externalwatchdog abort<2GiB; one
 heavy job. Measurement scopes remain2GiB and4GiBstart; no ceiling change to UI.
 Actual granted host window still required. No install, globalsettings or stress.
+
+## Evidence withdrawal — authoritative correction, 2026-10-18
+
+Implementer withdrew the previously reported N0003 PASS/OOM claims. Do NOT rely
+on or publish them as acceptance evidence. For acceptance, tests/Clippy/resource
+verification are NOT RUN/NOT VERIFIED, notwithstanding earlier historical review
+paragraphs. This correction supersedes those dispositions; retain the original
+logs and local commits without deletion or relabelling. N0003 remains unpublished.
+
+No N0003 rerun or host access is granted. A future correctness run requires a new
+explicit exact-source assignment and verified containment. Current work is only
+the local N0002 collector correction. N0005's source-review lifecycle findings
+remain queued; no assertion they have been implemented or validated.

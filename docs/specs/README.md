@@ -7,7 +7,7 @@ Updated2026-10-18. [Standing rules](../architecture/standing-rules.md) apply.
 | 1 | [N0004 activation progress](0004-f4-activation-progress-and-audit.md) | Done | Exact1382a28 focused proof accepted; release artifact under N0002 |
 | 2 | [N0001 F4 review](0001-f4-settings-completion-audit.md) | Review | Source-ready; final Done after N0002 gate and published CI |
 | 3 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked | First baseline invalid on host paging; no retry grant |
-| 4 | [N0003 network state](0003-core-network-state-adapter.md) | Review | Functional checks pass; containment deviation and N0005 lifecycle follow-up |
+| 4 | [N0003 network state](0003-core-network-state-adapter.md) | Blocked | Prior PASS/OOM claims withdrawn; tests not accepted; no rerun grant |
 
 Restart recovery2026-10-18: published source at recovery is ccc19e3; preserved
 F4 has84 dirty entries and network source has4, no outgoing commits. No reset,
@@ -61,3 +61,8 @@ operational containment is NOT accepted. No host run until verified launchgate.
 Current source work N0002 collector correction, then Ready [N0005 network owner
 lifecycle](0005-network-owner-lifecycle.md). N0003 Review/unpublished pending
 that source follow-up and greenF4. No capture grant; Bead has B0009 source/CI.
+
+AUTHORITATIVE correction: N0003 implementer withdrew prior PASS/OOM reports;
+tests are NOT RUN for acceptance. Preserve commits/logs, do not publish claimed
+results and do not rerun without a new assignment. Current NACRE work is local
+N0002 collector correction only; no host/capture. N0005 stays queued.
