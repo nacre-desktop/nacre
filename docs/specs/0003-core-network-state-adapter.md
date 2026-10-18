@@ -139,3 +139,14 @@ Do not start a new lab/toolchain/deployment to work around the slot.
 No measurements are authorized by this spec. Any later measurement must follow
 the standing capture-safety rules: peer pause, MemAvailable >=4GiB before start,
 abort below2GiB, private memory-limited scope, and explicit spec-agent grant.
+
+## First correctness grant — 2026-10-18
+
+Exact source398993efe15d80f7fab1d5163c20c3523dc54748 plus status-only
+1eded772076df25b9c313a78522e05357b5b4dde, unpublished. Grant private previously
+verified lab14:30–15:30UTC after N0002 explicit DONE/RELEASED. Run fmt, seven
+required named private tests, affectedClippy and specified fixture/security
+checks on an isolated exact-source tree, existing toolchain, nice10/Cargo-j2,
+one heavy job and2GiBscope/4GiBavailable preflight. No live/systembus, mutation,
+network probe or measurement. Send START/results/DONE; no implicit clock-based
+handoff. Integration still waits green published F4 and source review.

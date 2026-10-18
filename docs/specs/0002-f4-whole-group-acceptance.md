@@ -167,7 +167,7 @@ build tree, nice10/Cargo-j2,2GiB private scope and >=4GiB available. Record peak
 and OOM counters; report cap failure instead of automatic retry/limit increase.
 No broad correctness rerun. Never reuse eee973 or another old candidate helper.
 
-Exclusive N0002 private nested capture grant Oct18 12:00–14:00UTC on the same
+Exclusive N0002 private nested capture grant Oct18 12:30–14:30UTC on the same
 previously verified lab. Baseline source5f4c0bf3025d5f2944b50ff5546ed7f8a3dcfe57,
 release helper4a65f4ec887bc85e93b5b862f1786fe6f1b7a811875333765ee8f8c052cce0aa;
 candidate1382a28 release binary whose freshly built SHA256 must be recorded and
@@ -186,3 +186,9 @@ Explicit DONE/IDLE/RELEASED transfers host; Bead cannot preempt a valid arm.
 N0001/F4 publication stays held pending this gate and source review; do not push
 local runtime commits yet. If gate fails, return exact evidence for bounded
 fix; independent N0003 source remains eligible.
+
+The revised preparation window through12:30UTC is a full build-only grant, not
+the remainder of N0004's expired correctness slot. Candidate1382a28, existing
+toolchain, private2GiBscope and OOM/memory checks remain mandatory. Return exact
+release hash before CAPTURE_START. If blocked, report immediately; N0003 can
+advance after explicit release instead of waiting idle.

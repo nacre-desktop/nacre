@@ -251,3 +251,8 @@ Private2GiB scope completed at its cap; no new release helper or measurement
 claim. N0004 source/correctness Done; N0001 final Done and F4 publication remain
 gated on N0002. Release artifact/hash is explicitly the next N0002 preparation
 step, not grounds to repeat N0004 tests. Local source commits remain unpublished.
+
+Final cleanup receipt also confirms memory.events oom=0/oom_kill=0 at the2GiB
+peak, no swap, exact1382a28 transfer and all-target helperClippy pass. Initial
+LOCK_BUSY attempt exited before Cargo; one actual Cargo job completed. No
+release helper or capture was claimed. Do not rerun these passing checks.
