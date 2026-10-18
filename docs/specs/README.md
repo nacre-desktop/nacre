@@ -149,14 +149,14 @@ All other workers IDLE. F4 reviewed integration d3622384 remains local pending
 valid capture then published exact-head CI. B0011Done/green; N6 blockers remain.
 
 
-### Active execution — 2026-10-18 20:00 UTC
+### Active execution — 2026-10-18 20:20 UTC
 
-N2v10 readiness found a real new child between inventory/read; noacceptedarms.
-Astra escalation diagnosed missing within-snapshot discovery/read completion;
-Solv11 implements4additionalpasses/1stotal,uniqueidentityreads,fullclosinglive
-coverage,unknownhistory andstrictallgates. Sol+TerraACCEPT;54tests/37manifest
-passincloneactualowned/procchildbarrier. Luna soleheavy nowthroughOct19 00:30:
-ONE<=120s readiness smoke thenifPASSfresh8arms, nofurtherpermissionneeded.
-12GiBcap/hostabort2GiB/quiet/full600+3x60 unchanged. OtherworkersIDLE.
-F4localreviewedmerge d3622384 remainsunpublisheduntilvalidN2thenexact-headCI.
-B0011Donegreen; N6switch-on blockersremain. LeadstaysWorkingperglobalskill.
+N2 priorfailedcells/readiness preserved,zeroaccepted. Sol+Terra ACCEPTv12:
+57tests/37manifest/27planpins; argv-byte interface fixed and readiness exercises
+actual2sidle. Built-in Luna soleheavy nowthroughOct19 00:45UTC: ONE<=120s smoke,
+ifPASSfresh8arms full600+3x60,strictquiet,12GiBcap/hostabort2GiB. No otherheavyCI.
+Astra investigated bounded snapshot completion after real startup race failures;
+allhelper samplecoverage/unknown lifetimes are explicit in consolidated N2spec.
+F4 reviewed localmerge d3622384 waitsvalidN2thenpublishedexact-headCI.
+B0011Donegreen; N6switch-on blockersremain. No package/live action.
+Visibility permanently saved; lead waits active workers and posts outcomes.
