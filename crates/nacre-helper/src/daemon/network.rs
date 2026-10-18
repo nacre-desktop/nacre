@@ -2,12 +2,658 @@
 use super::{client, hub::Shared};
 use crate::Result;
 use nacre_protocol::{
-    framing, network::NetworkWatch, Id, Message, Mirror, Update, MAX_SAFE_INTEGER,
+    core_services::{
+        AccessPoint, Connection, CoreSnapshot, Device, Entities, EntityId, Health, NetworkState,
+    },
+    framing,
+    network::NetworkWatch,
+    ErrorCode, Failure, Id, Message, Mirror, Update, MAX_SAFE_INTEGER,
 };
 use serde_json::json;
-use std::{cell::Cell, io::Write, path::Path, rc::Rc, time::Duration};
+use std::{
+    cell::Cell,
+    collections::{BTreeMap, HashMap, HashSet},
+    io::Write,
+    path::Path,
+    rc::Rc,
+    time::Duration,
+};
 
 pub const TOPIC: &str = "network.watch";
+pub const CORE_TOPIC: &str = "network";
+
+const NM_SERVICE: &str = "org.freedesktop.NetworkManager";
+const NM_MANAGER: &str = "/org/freedesktop/NetworkManager";
+const MAX_ENTITIES: usize = 2048;
+const MAX_REPLY_BYTES: usize = 2 * 1024 * 1024;
+
+#[derive(Clone, Copy, Debug)]
+enum CoreError {
+    Unavailable,
+    TooLarge,
+    Invalid,
+}
+
+#[derive(Clone, Debug)]
+struct IdentityTable {
+    generation: u64,
+    next: u64,
+    live: HashMap<String, EntityId>,
+}
+
+impl IdentityTable {
+    fn new(generation: u64) -> Self {
+        Self {
+            generation,
+            next: 0,
+            live: HashMap::new(),
+        }
+    }
+
+    fn id(&mut self, kind: &str, source: &str) -> std::result::Result<EntityId, CoreError> {
+        let key = format!("{kind}\0{source}");
+        if let Some(id) = self.live.get(&key) {
+            return Ok(id.clone());
+        }
+        self.next = self.next.checked_add(1).ok_or(CoreError::TooLarge)?;
+        let id = EntityId(format!("net:{}:{}", self.generation, self.next));
+        if !id.valid() {
+            return Err(CoreError::TooLarge);
+        }
+        self.live.insert(key, id.clone());
+        Ok(id)
+    }
+
+    fn retain(&mut self, sources: &HashSet<String>) {
+        self.live.retain(|source, _| sources.contains(source));
+    }
+}
+
+struct NetworkProjection {
+    ids: IdentityTable,
+    last_good: Option<NetworkState>,
+}
+
+impl NetworkProjection {
+    fn new(last_good: Option<NetworkState>, generation: u64) -> Self {
+        Self {
+            ids: IdentityTable::new(generation),
+            last_good,
+        }
+    }
+
+    fn publish_failure(&mut self, hub: &Shared, error: CoreError) -> Result<()> {
+        let state = unavailable_state(self.last_good.clone(), error);
+        hub.borrow_mut()
+            .publish(CORE_TOPIC, serde_json::to_value(state)?)?;
+        Ok(())
+    }
+}
+
+pub fn publish_core_starting(hub: &Shared) -> Result<()> {
+    let state = NetworkState {
+        health: Health {
+            available: false,
+            stale: false,
+            error: None,
+        },
+        wireless_enabled: false,
+        devices: empty_entities(),
+        access_points: empty_entities(),
+        connections: empty_entities(),
+        primary_connection: None,
+    };
+    hub.borrow_mut()
+        .publish(CORE_TOPIC, serde_json::to_value(state)?)?;
+    Ok(())
+}
+
+fn unavailable_state(last_good: Option<NetworkState>, error: CoreError) -> NetworkState {
+    let (code, message) = match error {
+        CoreError::TooLarge => (
+            ErrorCode::TooLarge,
+            "Network state exceeds the supported limit",
+        ),
+        CoreError::Unavailable => (ErrorCode::Unavailable, "NetworkManager is unavailable"),
+        CoreError::Invalid => (ErrorCode::Unavailable, "Network state is unavailable"),
+    };
+    let last_good = if matches!(error, CoreError::TooLarge) {
+        None
+    } else {
+        last_good
+    };
+    match last_good {
+        Some(mut state) => {
+            state.health = Health {
+                available: false,
+                stale: true,
+                error: Some(Failure::new(code, message, true)),
+            };
+            state
+        }
+        None => NetworkState {
+            health: Health {
+                available: false,
+                stale: false,
+                error: Some(Failure::new(code, message, true)),
+            },
+            wireless_enabled: false,
+            devices: empty_entities(),
+            access_points: empty_entities(),
+            connections: empty_entities(),
+            primary_connection: None,
+        },
+    }
+}
+
+fn empty_entities<T>() -> Entities<T> {
+    Entities {
+        items: BTreeMap::new(),
+        order: Vec::new(),
+    }
+}
+
+fn next_identity_generation(counter: &Cell<u64>) -> Result<u64> {
+    let next = counter
+        .get()
+        .checked_add(1)
+        .filter(|value| *value <= MAX_SAFE_INTEGER)
+        .ok_or("Network service generation exhausted")?;
+    counter.set(next);
+    Ok(next)
+}
+
+#[derive(Clone, Debug)]
+struct RawAccessPoint {
+    path: String,
+    ssid: Vec<u8>,
+    strength: u8,
+    flags: u32,
+    wpa_flags: u32,
+    rsn_flags: u32,
+}
+
+#[derive(Clone, Debug)]
+struct RawDevice {
+    path: String,
+    interface: String,
+    kind: u32,
+    state: u32,
+    active_connection: Option<String>,
+    active_access_point: Option<String>,
+    access_points: Vec<RawAccessPoint>,
+}
+
+#[derive(Clone, Debug)]
+struct RawProfile {
+    path: String,
+    name: String,
+    kind: String,
+}
+
+#[derive(Clone, Debug)]
+struct RawNetwork {
+    wireless_enabled: bool,
+    devices: Vec<RawDevice>,
+    profiles: Vec<RawProfile>,
+    active_connections: Vec<(String, String)>,
+    primary_connection: Option<String>,
+}
+
+async fn read_snapshot(
+    connection: &zbus::Connection,
+    ids: &mut IdentityTable,
+) -> std::result::Result<NetworkState, CoreError> {
+    let mut candidate_ids = ids.clone();
+    let raw = read_raw(connection).await?;
+    let state = project(raw, &mut candidate_ids)?;
+    if !CoreSnapshot::Network(state.clone()).valid() {
+        return Err(CoreError::Invalid);
+    }
+    *ids = candidate_ids;
+    Ok(state)
+}
+
+async fn read_raw(connection: &zbus::Connection) -> std::result::Result<RawNetwork, CoreError> {
+    use zbus::zvariant::{OwnedObjectPath, OwnedValue};
+
+    let wireless_enabled =
+        property::<bool>(connection, NM_MANAGER, NM_SERVICE, "WirelessEnabled").await?;
+    let device_paths: Vec<OwnedObjectPath> =
+        call(connection, NM_MANAGER, NM_SERVICE, "GetDevices", &()).await?;
+    let active_paths: Vec<OwnedObjectPath> =
+        property(connection, NM_MANAGER, NM_SERVICE, "ActiveConnections").await?;
+    let primary_path: OwnedObjectPath =
+        property(connection, NM_MANAGER, NM_SERVICE, "PrimaryConnection").await?;
+
+    if device_paths.len() > MAX_ENTITIES || active_paths.len() > MAX_ENTITIES {
+        return Err(CoreError::TooLarge);
+    }
+
+    let mut devices = Vec::with_capacity(device_paths.len());
+    let mut access_point_count = 0usize;
+    for path in device_paths {
+        let object = path.as_str().to_owned();
+        let kind = property::<u32>(
+            connection,
+            &object,
+            "org.freedesktop.NetworkManager.Device",
+            "DeviceType",
+        )
+        .await?;
+        let interface = display_text(
+            &property::<String>(
+                connection,
+                &object,
+                "org.freedesktop.NetworkManager.Device",
+                "Interface",
+            )
+            .await?,
+            64,
+        );
+        let state = property::<u32>(
+            connection,
+            &object,
+            "org.freedesktop.NetworkManager.Device",
+            "State",
+        )
+        .await?;
+        let active_connection = optional_path(
+            property::<OwnedObjectPath>(
+                connection,
+                &object,
+                "org.freedesktop.NetworkManager.Device",
+                "ActiveConnection",
+            )
+            .await?,
+        );
+
+        let (active_access_point, points) = if kind == 2 {
+            let active = property::<OwnedObjectPath>(
+                connection,
+                &object,
+                "org.freedesktop.NetworkManager.Device.Wireless",
+                "ActiveAccessPoint",
+            )
+            .await?;
+            let points: Vec<OwnedObjectPath> = property(
+                connection,
+                &object,
+                "org.freedesktop.NetworkManager.Device.Wireless",
+                "AccessPoints",
+            )
+            .await?;
+            access_point_count = access_point_count
+                .checked_add(points.len())
+                .ok_or(CoreError::TooLarge)?;
+            if access_point_count > MAX_ENTITIES {
+                return Err(CoreError::TooLarge);
+            }
+            (optional_path(active), points)
+        } else {
+            (None, Vec::new())
+        };
+
+        let mut access_points = Vec::with_capacity(points.len());
+        for point in points {
+            let point_path = point.as_str().to_owned();
+            let ssid: Vec<u8> = property(
+                connection,
+                &point_path,
+                "org.freedesktop.NetworkManager.AccessPoint",
+                "Ssid",
+            )
+            .await?;
+            if ssid.len() > 32 {
+                return Err(CoreError::Invalid);
+            }
+            access_points.push(RawAccessPoint {
+                ssid,
+                strength: property(
+                    connection,
+                    &point_path,
+                    "org.freedesktop.NetworkManager.AccessPoint",
+                    "Strength",
+                )
+                .await?,
+                flags: property(
+                    connection,
+                    &point_path,
+                    "org.freedesktop.NetworkManager.AccessPoint",
+                    "Flags",
+                )
+                .await?,
+                wpa_flags: property(
+                    connection,
+                    &point_path,
+                    "org.freedesktop.NetworkManager.AccessPoint",
+                    "WpaFlags",
+                )
+                .await?,
+                rsn_flags: property(
+                    connection,
+                    &point_path,
+                    "org.freedesktop.NetworkManager.AccessPoint",
+                    "RsnFlags",
+                )
+                .await?,
+                path: point_path,
+            });
+        }
+        devices.push(RawDevice {
+            path: object,
+            interface,
+            kind,
+            state,
+            active_connection,
+            active_access_point,
+            access_points,
+        });
+    }
+
+    let settings_paths: Vec<OwnedObjectPath> = call(
+        connection,
+        "/org/freedesktop/NetworkManager/Settings",
+        "org.freedesktop.NetworkManager.Settings",
+        "ListConnections",
+        &(),
+    )
+    .await?;
+    if settings_paths.len() > MAX_ENTITIES {
+        return Err(CoreError::TooLarge);
+    }
+    let mut profiles = Vec::with_capacity(settings_paths.len());
+    for path in settings_paths {
+        // NetworkManager GetSettings omits secrets; never call GetSecrets.
+        let reply = call_raw(
+            connection,
+            path.as_str(),
+            "org.freedesktop.NetworkManager.Settings.Connection",
+            "GetSettings",
+            &(),
+        )
+        .await?;
+        let settings: HashMap<String, HashMap<String, OwnedValue>> = decode_reply(reply)?;
+        let connection_settings = settings.get("connection").ok_or(CoreError::Unavailable)?;
+        let name = display_text(&variant_string(connection_settings.get("id"))?, 128);
+        let kind = display_text(&variant_string(connection_settings.get("type"))?, 64);
+        profiles.push(RawProfile {
+            path: path.as_str().to_owned(),
+            name,
+            kind,
+        });
+    }
+
+    let mut active_connections = Vec::with_capacity(active_paths.len());
+    for path in active_paths {
+        let saved: OwnedObjectPath = property(
+            connection,
+            path.as_str(),
+            "org.freedesktop.NetworkManager.Connection.Active",
+            "Connection",
+        )
+        .await?;
+        if saved.as_str() != "/" {
+            active_connections.push((path.as_str().to_owned(), saved.as_str().to_owned()));
+        }
+    }
+
+    Ok(RawNetwork {
+        wireless_enabled,
+        devices,
+        profiles,
+        active_connections,
+        primary_connection: optional_path(primary_path),
+    })
+}
+
+fn project(
+    raw: RawNetwork,
+    ids: &mut IdentityTable,
+) -> std::result::Result<NetworkState, CoreError> {
+    let mut seen = HashSet::new();
+    let mut devices = empty_entities();
+    let mut device_profile = HashMap::<String, Option<String>>::new();
+    let mut points = Vec::new();
+
+    if raw.devices.len() > MAX_ENTITIES || raw.profiles.len() > MAX_ENTITIES {
+        return Err(CoreError::TooLarge);
+    }
+    let point_count = raw.devices.iter().try_fold(0usize, |count, device| {
+        count
+            .checked_add(device.access_points.len())
+            .filter(|count| *count <= MAX_ENTITIES)
+            .ok_or(CoreError::TooLarge)
+    })?;
+    if point_count > MAX_ENTITIES {
+        return Err(CoreError::TooLarge);
+    }
+    for device in raw.devices {
+        let id = identity(ids, &mut seen, "device", &device.path)?;
+        if devices.items.contains_key(&id) {
+            return Err(CoreError::Invalid);
+        }
+        let profile = device.active_connection.clone();
+        device_profile.insert(device.path.clone(), profile);
+        devices.order.push(id.clone());
+        devices.items.insert(
+            id,
+            Device {
+                name: display_text(&device.interface, 64),
+                kind: device_kind(device.kind).into(),
+                connected: device.state == 100,
+            },
+        );
+        points.push((
+            device.path,
+            device.active_access_point,
+            device.access_points,
+        ));
+    }
+
+    let mut profiles = empty_entities();
+    let mut profile_ids = HashMap::new();
+    for profile in raw.profiles {
+        let id = identity(ids, &mut seen, "connection", &profile.path)?;
+        if profiles.items.contains_key(&id) {
+            return Err(CoreError::Invalid);
+        }
+        profile_ids.insert(profile.path, id.clone());
+        profiles.order.push(id.clone());
+        profiles.items.insert(
+            id,
+            Connection {
+                name: display_text(&profile.name, 128),
+                kind: connection_kind(&profile.kind),
+                active: false,
+            },
+        );
+    }
+
+    let mut active_profile_ids = HashMap::new();
+    for (active_path, profile_path) in raw.active_connections {
+        if let Some(id) = profile_ids.get(&profile_path) {
+            if let Some(profile) = profiles.items.get_mut(id) {
+                profile.active = true;
+            }
+            active_profile_ids.insert(active_path, id.clone());
+        }
+    }
+    let primary_connection = raw
+        .primary_connection
+        .as_ref()
+        .and_then(|path| active_profile_ids.get(path))
+        .filter(|id| {
+            profiles
+                .items
+                .get(*id)
+                .is_some_and(|profile| profile.active)
+        })
+        .cloned();
+
+    let mut access_points = empty_entities();
+    for (device_path, active_point, device_points) in points {
+        let Some(device_id) = ids.live.get(&identity_key("device", &device_path)).cloned() else {
+            return Err(CoreError::Invalid);
+        };
+        let profile_id = device_profile
+            .get(&device_path)
+            .and_then(|active| active.as_ref())
+            .and_then(|active| active_profile_ids.get(active))
+            .cloned();
+        for point in device_points {
+            let id = identity(ids, &mut seen, "access_point", &point.path)?;
+            if access_points.items.contains_key(&id) {
+                return Err(CoreError::Invalid);
+            }
+            let active = active_point.as_deref() == Some(point.path.as_str());
+            access_points.order.push(id.clone());
+            access_points.items.insert(
+                id,
+                AccessPoint {
+                    device: device_id.clone(),
+                    name: display_text(&String::from_utf8_lossy(&point.ssid), 32),
+                    strength: point.strength,
+                    secured: point.flags & 1 != 0 || point.wpa_flags != 0 || point.rsn_flags != 0,
+                    active,
+                    connection: if active { profile_id.clone() } else { None },
+                },
+            );
+        }
+    }
+
+    ids.retain(&seen);
+    Ok(NetworkState {
+        health: Health {
+            available: true,
+            stale: false,
+            error: None,
+        },
+        wireless_enabled: raw.wireless_enabled,
+        devices,
+        access_points,
+        connections: profiles,
+        primary_connection,
+    })
+}
+
+fn identity(
+    ids: &mut IdentityTable,
+    seen: &mut HashSet<String>,
+    kind: &str,
+    source: &str,
+) -> std::result::Result<EntityId, CoreError> {
+    let key = identity_key(kind, source);
+    seen.insert(key);
+    ids.id(kind, source)
+}
+
+fn identity_key(kind: &str, source: &str) -> String {
+    format!("{kind}\0{source}")
+}
+
+fn optional_path(path: zbus::zvariant::OwnedObjectPath) -> Option<String> {
+    (path.as_str() != "/").then(|| path.as_str().to_owned())
+}
+
+fn device_kind(kind: u32) -> &'static str {
+    match kind {
+        1 => "ethernet",
+        2 => "wifi",
+        _ => "unknown",
+    }
+}
+
+fn connection_kind(kind: &str) -> String {
+    match kind {
+        "802-3-ethernet" => "ethernet".into(),
+        "802-11-wireless" => "wifi".into(),
+        other => display_text(other, 64),
+    }
+}
+
+fn display_text(value: &str, max_chars: usize) -> String {
+    let mut output = String::new();
+    for character in value.chars().take(max_chars) {
+        if character == '\n'
+            || character == '\t'
+            || (!character.is_control()
+                && !matches!(character, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}'))
+        {
+            output.push(character);
+        } else {
+            output.push_str(&format!("\\u{{{:x}}}", u32::from(character)));
+        }
+    }
+    output
+}
+
+async fn property<T>(
+    connection: &zbus::Connection,
+    path: &str,
+    interface: &str,
+    name: &str,
+) -> std::result::Result<T, CoreError>
+where
+    T: TryFrom<zbus::zvariant::OwnedValue>,
+{
+    let reply = call_raw(
+        connection,
+        path,
+        "org.freedesktop.DBus.Properties",
+        "Get",
+        &(interface, name),
+    )
+    .await?;
+    let value: zbus::zvariant::OwnedValue = decode_reply(reply)?;
+    T::try_from(value).map_err(|_| CoreError::Unavailable)
+}
+
+async fn call<T: serde::de::DeserializeOwned>(
+    connection: &zbus::Connection,
+    path: &str,
+    interface: &str,
+    method: &str,
+    args: &impl serde::Serialize,
+) -> std::result::Result<T, CoreError> {
+    decode_reply(call_raw(connection, path, interface, method, args).await?)
+}
+
+async fn call_raw(
+    connection: &zbus::Connection,
+    path: &str,
+    interface: &str,
+    method: &str,
+    args: &impl serde::Serialize,
+) -> std::result::Result<zbus::Message, CoreError> {
+    let reply = connection
+        .call_method(Some(NM_SERVICE), path, Some(interface), method, args)
+        .await
+        .map_err(|_| CoreError::Unavailable)?;
+    if reply.body().len() > MAX_REPLY_BYTES {
+        return Err(CoreError::TooLarge);
+    }
+    Ok(reply)
+}
+
+fn decode_reply<T: serde::de::DeserializeOwned>(
+    reply: zbus::Message,
+) -> std::result::Result<T, CoreError> {
+    reply
+        .body()
+        .deserialize()
+        .map_err(|_| CoreError::Unavailable)
+}
+
+fn variant_string(
+    value: Option<&zbus::zvariant::OwnedValue>,
+) -> std::result::Result<String, CoreError> {
+    let value = value
+        .ok_or(CoreError::Unavailable)?
+        .try_clone()
+        .map_err(|_| CoreError::Unavailable)?;
+    String::try_from(value).map_err(|_| CoreError::Unavailable)
+}
 
 pub fn publish(hub: &Shared, generation: u64, available: bool, error: Option<&str>) -> Result<()> {
     let state = NetworkWatch {
@@ -21,8 +667,12 @@ pub fn publish(hub: &Shared, generation: u64, available: bool, error: Option<&st
     Ok(())
 }
 
-pub async fn run(hub: Shared, generation: Rc<Cell<u64>>) -> Result<()> {
-    let result = observe(hub.clone(), generation.clone()).await;
+pub async fn run(
+    hub: Shared,
+    generation: Rc<Cell<u64>>,
+    identity_generation: Rc<Cell<u64>>,
+) -> Result<()> {
+    let result = observe(hub.clone(), generation.clone(), identity_generation).await;
     if result.is_err()
         && publish(
             &hub,
@@ -37,38 +687,120 @@ pub async fn run(hub: Shared, generation: Rc<Cell<u64>>) -> Result<()> {
     result
 }
 
-async fn observe(hub: Shared, generation: Rc<Cell<u64>>) -> Result<()> {
-    let connection = tokio::time::timeout(
-        Duration::from_secs(5),
-        zbus::connection::Builder::system()?
-            .method_timeout(Duration::from_secs(5))
-            .build(),
-    )
-    .await??;
-    let mut running = false;
-    crate::network_state::watch_events(&connection, || {
-        let next = generation
-            .get()
-            .checked_add(1)
-            .filter(|n| *n <= MAX_SAFE_INTEGER)
-            .ok_or("Network event generation exhausted")?;
-        generation.set(next);
-        publish(&hub, next, true, None)?;
-        // The lifecycle state changes once per reader, not once per signal.
-        if !running {
-            let failures = hub
-                .borrow()
-                .services
-                .get("network-watch")
-                .and_then(|v| v["failures"].as_u64())
-                .unwrap_or(0) as usize;
-            hub.borrow_mut()
-                .service("network-watch", "running", failures)?;
-            running = true;
+async fn observe(
+    hub: Shared,
+    generation: Rc<Cell<u64>>,
+    identity_generation: Rc<Cell<u64>>,
+) -> Result<()> {
+    let last_good = hub
+        .borrow()
+        .snapshot(CORE_TOPIC)
+        .and_then(|state| serde_json::from_value::<NetworkState>(state).ok())
+        .filter(|state| state.health.available || state.health.stale);
+    let service_generation = next_identity_generation(&identity_generation)?;
+    let mut projection = NetworkProjection::new(last_good, service_generation);
+    let builder = match zbus::connection::Builder::system() {
+        Ok(builder) => builder.method_timeout(Duration::from_secs(5)),
+        Err(_) => {
+            projection.publish_failure(&hub, CoreError::Unavailable)?;
+            return Err("NetworkManager monitoring connection is unavailable".into());
         }
-        Ok(true)
-    })
-    .await?;
+    };
+    let connection = match tokio::time::timeout(
+        Duration::from_secs(5),
+        builder.build(),
+    )
+    .await
+    {
+        Ok(Ok(connection)) => connection,
+        _ => {
+            projection.publish_failure(&hub, CoreError::Unavailable)?;
+            return Err("NetworkManager monitoring connection is unavailable".into());
+        }
+    };
+    let (refresh, mut refreshes) = tokio::sync::mpsc::channel(1);
+    let event_connection = connection.clone();
+    let event_hub = hub.clone();
+    let event_generation = generation.clone();
+    let event_refresh = refresh.clone();
+    let watcher = tokio::task::spawn_local(async move {
+        let mut running = false;
+        crate::network_state::watch_events(&event_connection, || {
+            let next = event_generation
+                .get()
+                .checked_add(1)
+                .filter(|n| *n <= MAX_SAFE_INTEGER)
+                .ok_or("Network event generation exhausted")?;
+            event_generation.set(next);
+            publish(&event_hub, next, true, None)?;
+            if matches!(
+                event_refresh.try_send(()),
+                Err(tokio::sync::mpsc::error::TrySendError::Closed(()))
+            ) {
+                return Ok(false);
+            }
+            // The lifecycle state changes once per reader, not once per signal.
+            if !running {
+                let failures = event_hub
+                    .borrow()
+                    .services
+                    .get("network-watch")
+                    .and_then(|v| v["failures"].as_u64())
+                    .unwrap_or(0) as usize;
+                event_hub
+                    .borrow_mut()
+                    .service("network-watch", "running", failures)?;
+                running = true;
+            }
+            Ok(true)
+        })
+        .await
+    });
+    drop(refresh);
+
+    while refreshes.recv().await.is_some() {
+        // A short event debounce collapses NetworkManager's multi-property
+        // updates into one coherent, complete snapshot. It is event-triggered,
+        // not a polling interval; the legacy generation remains per signal.
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        while refreshes.try_recv().is_ok() {}
+        match read_snapshot(&connection, &mut projection.ids).await {
+            Ok(state) => {
+                let snapshot = CoreSnapshot::Network(state.clone());
+                if !snapshot.valid() {
+                    projection.publish_failure(&hub, CoreError::Invalid)?;
+                    continue;
+                }
+                let data = serde_json::to_value(&state)?;
+                if let Err(error) = framing::encode(&Message::Snap {
+                    topic: CORE_TOPIC.into(),
+                    seq: 0,
+                    data: data.clone(),
+                }) {
+                    let error = if error.code == ErrorCode::TooLarge {
+                        CoreError::TooLarge
+                    } else {
+                        CoreError::Invalid
+                    };
+                    projection.publish_failure(&hub, error)?;
+                    continue;
+                }
+                let published = hub.borrow_mut().publish(CORE_TOPIC, data);
+                if let Err(error) = published {
+                    if error.code == ErrorCode::TooLarge {
+                        projection.publish_failure(&hub, CoreError::TooLarge)?;
+                        continue;
+                    }
+                    return Err(error.into());
+                }
+                projection.last_good = Some(state);
+            }
+            Err(error) => projection.publish_failure(&hub, error)?,
+        }
+    }
+    let watch_result = watcher.await;
+    projection.publish_failure(&hub, CoreError::Unavailable)?;
+    watch_result??;
     Err("Network monitor ended".into())
 }
 
@@ -189,5 +921,440 @@ mod tests {
         state.available = true;
         state.generation = MAX_SAFE_INTEGER + 1;
         assert!(changed(None, &state).is_err());
+    }
+}
+
+#[cfg(test)]
+mod core_tests {
+    use super::*;
+
+    const DEVICE: &str = "/org/freedesktop/NetworkManager/Devices/1";
+    const AP: &str = "/org/freedesktop/NetworkManager/AccessPoint/1";
+    const PROFILE_ETHERNET: &str = "/org/freedesktop/NetworkManager/Settings/1";
+    const PROFILE_WIFI: &str = "/org/freedesktop/NetworkManager/Settings/2";
+    const ACTIVE_ETHERNET: &str = "/org/freedesktop/NetworkManager/ActiveConnection/1";
+    const ACTIVE_WIFI: &str = "/org/freedesktop/NetworkManager/ActiveConnection/2";
+
+    #[test]
+    fn core_network_service_generation_advances_before_each_observer() {
+        let generation = Cell::new(0);
+        assert_eq!(next_identity_generation(&generation).unwrap(), 1);
+        assert_eq!(next_identity_generation(&generation).unwrap(), 2);
+        generation.set(MAX_SAFE_INTEGER);
+        assert!(next_identity_generation(&generation).is_err());
+        assert_eq!(generation.get(), MAX_SAFE_INTEGER);
+    }
+
+    fn raw_fixture() -> RawNetwork {
+        RawNetwork {
+            wireless_enabled: true,
+            devices: vec![RawDevice {
+                path: DEVICE.into(),
+                interface: "wlan0".into(),
+                kind: 2,
+                state: 100,
+                active_connection: Some(ACTIVE_WIFI.into()),
+                active_access_point: Some(AP.into()),
+                access_points: vec![RawAccessPoint {
+                    path: AP.into(),
+                    ssid: b"Fixture Wi-Fi".to_vec(),
+                    strength: 73,
+                    flags: 1,
+                    wpa_flags: 0,
+                    rsn_flags: 0,
+                }],
+            }],
+            profiles: vec![
+                RawProfile {
+                    path: PROFILE_ETHERNET.into(),
+                    name: "Wired fixture".into(),
+                    kind: "802-3-ethernet".into(),
+                },
+                RawProfile {
+                    path: PROFILE_WIFI.into(),
+                    name: "Wireless fixture".into(),
+                    kind: "802-11-wireless".into(),
+                },
+            ],
+            active_connections: vec![
+                (ACTIVE_ETHERNET.into(), PROFILE_ETHERNET.into()),
+                (ACTIVE_WIFI.into(), PROFILE_WIFI.into()),
+            ],
+            primary_connection: Some(ACTIVE_WIFI.into()),
+        }
+    }
+
+    #[test]
+    fn core_network_ids_survive_update() {
+        let mut ids = IdentityTable::new(1);
+        let first = project(raw_fixture(), &mut ids).unwrap();
+        let second = project(raw_fixture(), &mut ids).unwrap();
+        assert_eq!(first.devices.order, second.devices.order);
+        assert_eq!(first.access_points.order, second.access_points.order);
+        assert_eq!(first.connections.order, second.connections.order);
+    }
+
+    #[test]
+    fn core_network_removed_ids_never_reused() {
+        let mut ids = IdentityTable::new(1);
+        let original = project(raw_fixture(), &mut ids).unwrap();
+        let original_device = original.devices.order[0].clone();
+        let original_point = original.access_points.order[0].clone();
+        let original_profile = original.connections.order[0].clone();
+        let removed = project(
+            RawNetwork {
+                devices: Vec::new(),
+                profiles: Vec::new(),
+                active_connections: Vec::new(),
+                ..raw_fixture()
+            },
+            &mut ids,
+        )
+        .unwrap();
+        assert!(removed.devices.items.is_empty());
+        assert!(removed.access_points.items.is_empty());
+        assert!(removed.connections.items.is_empty());
+        let returned = project(raw_fixture(), &mut ids).unwrap();
+        assert_ne!(original_device, returned.devices.order[0]);
+        assert_ne!(original_point, returned.access_points.order[0]);
+        assert_ne!(original_profile, returned.connections.order[0]);
+        assert!(returned.devices.order[0].valid());
+        assert!(returned.access_points.order[0].valid());
+        assert!(returned.connections.order[0].valid());
+    }
+
+    #[test]
+    fn core_network_primary_uses_active_mapping() {
+        let mut ids = IdentityTable::new(1);
+        let mut raw = raw_fixture();
+        raw.active_connections.reverse();
+        let state = project(raw, &mut ids).unwrap();
+        let primary = state.primary_connection.expect("mapped primary profile");
+        assert_eq!(state.connections.items[&primary].name, "Wireless fixture");
+        assert!(state.connections.items[&primary].active);
+        assert!(CoreSnapshot::Network(state).valid());
+
+        let mut unresolved = raw_fixture();
+        unresolved.primary_connection =
+            Some("/org/freedesktop/NetworkManager/ActiveConnection/missing".into());
+        let state = project(unresolved, &mut ids).unwrap();
+        assert!(state.primary_connection.is_none());
+        assert!(CoreSnapshot::Network(state).valid());
+    }
+
+    #[test]
+    fn core_network_ap_device_references_are_valid() {
+        let mut ids = IdentityTable::new(1);
+        let state = project(raw_fixture(), &mut ids).unwrap();
+        assert!(CoreSnapshot::Network(state.clone()).valid());
+        let point = &state.access_points.items[&state.access_points.order[0]];
+        assert!(state.devices.items.contains_key(&point.device));
+        assert_eq!(point.connection.as_ref(), state.primary_connection.as_ref());
+    }
+
+    #[test]
+    fn core_network_display_text_escapes_controls_and_bidi_markers() {
+        assert_eq!(
+            display_text("Office\u{202e}\u{0001}\nWi-Fi", 64),
+            "Office\\u{202e}\\u{1}\nWi-Fi"
+        );
+    }
+
+    #[test]
+    fn core_network_backend_loss_marks_last_good_stale() {
+        let mut ids = IdentityTable::new(1);
+        let good = project(raw_fixture(), &mut ids).unwrap();
+        let hub = super::super::hub::Hub::new(
+            "network-state-test".into(),
+            false,
+            Duration::from_millis(16),
+        )
+        .shared();
+        hub.borrow_mut()
+            .publish(CORE_TOPIC, serde_json::to_value(good.clone()).unwrap())
+            .unwrap();
+        let mut projection = NetworkProjection::new(Some(good.clone()), 2);
+        projection
+            .publish_failure(&hub, CoreError::Unavailable)
+            .unwrap();
+        let stale: NetworkState = serde_json::from_value(
+            hub.borrow().snapshot(CORE_TOPIC).expect("network snapshot"),
+        )
+        .unwrap();
+        assert!(stale.health.stale);
+        assert!(!stale.health.available);
+        assert_eq!(stale.devices, good.devices);
+        assert_eq!(stale.wireless_enabled, good.wireless_enabled);
+        assert_eq!(stale.health.error.unwrap().code, ErrorCode::Unavailable);
+        let initial = unavailable_state(None, CoreError::Unavailable);
+        assert!(!initial.health.available);
+        assert!(!initial.health.stale);
+        assert!(initial.devices.items.is_empty());
+    }
+
+    #[test]
+    fn core_network_starting_publishes_unavailable_empty_snapshot() {
+        let hub = super::super::hub::Hub::new(
+            "network-starting-test".into(),
+            false,
+            Duration::from_millis(16),
+        )
+        .shared();
+        publish_core_starting(&hub).unwrap();
+        let state: NetworkState = serde_json::from_value(
+            hub.borrow().snapshot(CORE_TOPIC).expect("network snapshot"),
+        )
+        .unwrap();
+        assert!(!state.health.available);
+        assert!(!state.health.stale);
+        assert!(state.health.error.is_none());
+        assert!(state.devices.items.is_empty());
+        assert!(state.access_points.items.is_empty());
+        assert!(state.connections.items.is_empty());
+        assert!(state.primary_connection.is_none());
+        assert!(CoreSnapshot::Network(state).valid());
+    }
+
+    #[test]
+    fn core_network_collection_limit_never_emits_dangling_refs() {
+        let too_many_devices = (0..=MAX_ENTITIES)
+            .map(|index| RawDevice {
+                path: format!("/org/freedesktop/NetworkManager/Devices/{index}"),
+                interface: format!("eth{index}"),
+                kind: 1,
+                state: 30,
+                active_connection: None,
+                active_access_point: None,
+                access_points: Vec::new(),
+            })
+            .collect();
+        let too_many_points = (0..=MAX_ENTITIES)
+            .map(|index| RawAccessPoint {
+                path: format!("/org/freedesktop/NetworkManager/AccessPoint/{index}"),
+                ssid: format!("Fixture {index}").into_bytes(),
+                strength: 50,
+                flags: 0,
+                wpa_flags: 0,
+                rsn_flags: 0,
+            })
+            .collect();
+        let mut raw_points = raw_fixture();
+        raw_points.devices[0].access_points = too_many_points;
+        let too_many_profiles = (0..=MAX_ENTITIES)
+            .map(|index| RawProfile {
+                path: format!("/org/freedesktop/NetworkManager/Settings/{index}"),
+                name: format!("Profile {index}"),
+                kind: "802-3-ethernet".into(),
+            })
+            .collect();
+
+        for raw in [
+            RawNetwork {
+                devices: too_many_devices,
+                ..raw_fixture()
+            },
+            raw_points,
+            RawNetwork {
+                profiles: too_many_profiles,
+                ..raw_fixture()
+            },
+        ] {
+            let mut ids = IdentityTable::new(1);
+            assert!(matches!(project(raw, &mut ids), Err(CoreError::TooLarge)));
+            let unavailable = unavailable_state(None, CoreError::TooLarge);
+            assert!(!unavailable.health.available);
+            assert!(CoreSnapshot::Network(unavailable.clone()).valid());
+            assert!(unavailable.devices.items.is_empty());
+            assert!(unavailable.access_points.items.is_empty());
+            assert!(unavailable.connections.items.is_empty());
+        }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn core_network_never_scans_or_reads_secrets() -> Result<()> {
+        use std::{
+            io::{BufRead, BufReader},
+            process::{Child, Command, Stdio},
+            sync::{
+                atomic::{AtomicUsize, Ordering},
+                Arc,
+            },
+        };
+        use zbus::zvariant::{OwnedObjectPath, OwnedValue, Value as Variant};
+
+        struct Bus(Child);
+        impl Drop for Bus {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        struct Manager;
+        #[zbus::interface(name = "org.freedesktop.NetworkManager")]
+        impl Manager {
+            fn get_devices(&self) -> Vec<OwnedObjectPath> {
+                vec![OwnedObjectPath::try_from(DEVICE).unwrap()]
+            }
+            #[zbus(property)]
+            fn active_connections(&self) -> Vec<OwnedObjectPath> {
+                vec![OwnedObjectPath::try_from(ACTIVE_WIFI).unwrap()]
+            }
+            #[zbus(property)]
+            fn primary_connection(&self) -> OwnedObjectPath {
+                OwnedObjectPath::try_from(ACTIVE_WIFI).unwrap()
+            }
+            #[zbus(property)]
+            fn wireless_enabled(&self) -> bool {
+                true
+            }
+        }
+        struct Device;
+        #[zbus::interface(name = "org.freedesktop.NetworkManager.Device")]
+        impl Device {
+            #[zbus(property)]
+            fn device_type(&self) -> u32 {
+                2
+            }
+            #[zbus(property)]
+            fn interface(&self) -> String {
+                "wlan0".into()
+            }
+            #[zbus(property)]
+            fn state(&self) -> u32 {
+                100
+            }
+            #[zbus(property)]
+            fn active_connection(&self) -> OwnedObjectPath {
+                OwnedObjectPath::try_from(ACTIVE_WIFI).unwrap()
+            }
+        }
+        struct Wireless(Arc<AtomicUsize>);
+        #[zbus::interface(name = "org.freedesktop.NetworkManager.Device.Wireless")]
+        impl Wireless {
+            #[zbus(property)]
+            fn active_access_point(&self) -> OwnedObjectPath {
+                OwnedObjectPath::try_from(AP).unwrap()
+            }
+            #[zbus(property)]
+            fn access_points(&self) -> Vec<OwnedObjectPath> {
+                vec![OwnedObjectPath::try_from(AP).unwrap()]
+            }
+            fn request_scan(&self, _options: HashMap<String, OwnedValue>) {
+                self.0.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+        struct AccessPoint;
+        #[zbus::interface(name = "org.freedesktop.NetworkManager.AccessPoint")]
+        impl AccessPoint {
+            #[zbus(property)]
+            fn ssid(&self) -> Vec<u8> {
+                b"Fixture Wi-Fi".to_vec()
+            }
+            #[zbus(property)]
+            fn strength(&self) -> u8 {
+                73
+            }
+            #[zbus(property)]
+            fn flags(&self) -> u32 {
+                1
+            }
+            #[zbus(property)]
+            fn wpa_flags(&self) -> u32 {
+                0
+            }
+            #[zbus(property)]
+            fn rsn_flags(&self) -> u32 {
+                0
+            }
+        }
+        struct Settings;
+        #[zbus::interface(name = "org.freedesktop.NetworkManager.Settings")]
+        impl Settings {
+            fn list_connections(&self) -> Vec<OwnedObjectPath> {
+                vec![OwnedObjectPath::try_from(PROFILE_WIFI).unwrap()]
+            }
+        }
+        struct Profile(Arc<AtomicUsize>);
+        #[zbus::interface(name = "org.freedesktop.NetworkManager.Settings.Connection")]
+        impl Profile {
+            fn get_settings(&self) -> HashMap<String, HashMap<String, OwnedValue>> {
+                HashMap::from([(
+                    "connection".into(),
+                    HashMap::from([
+                        (
+                            "id".into(),
+                            OwnedValue::try_from(Variant::new("Wireless fixture")).unwrap(),
+                        ),
+                        (
+                            "type".into(),
+                            OwnedValue::try_from(Variant::new("802-11-wireless")).unwrap(),
+                        ),
+                    ]),
+                )])
+            }
+            fn get_secrets(&self, _setting: &str) -> HashMap<String, HashMap<String, OwnedValue>> {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                HashMap::new()
+            }
+        }
+        struct Active;
+        #[zbus::interface(name = "org.freedesktop.NetworkManager.Connection.Active")]
+        impl Active {
+            #[zbus(property)]
+            fn connection(&self) -> OwnedObjectPath {
+                OwnedObjectPath::try_from(PROFILE_WIFI).unwrap()
+            }
+        }
+
+        let home = tempfile::tempdir()?;
+        let mut bus = Bus(Command::new("dbus-daemon")
+            .args([
+                "--session",
+                "--nofork",
+                "--print-address",
+                &format!("--address=unix:path={}", home.path().join("bus").display()),
+            ])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .stdin(Stdio::null())
+            .spawn()?);
+        let mut address = String::new();
+        BufReader::new(bus.0.stdout.take().ok_or("Missing private bus address")?)
+            .read_line(&mut address)?;
+        let scans = Arc::new(AtomicUsize::new(0));
+        let secrets = Arc::new(AtomicUsize::new(0));
+        let server = zbus::connection::Builder::address(address.trim())?
+            .name(NM_SERVICE)?
+            .serve_at(NM_MANAGER, Manager)?
+            .serve_at(DEVICE, Device)?
+            .serve_at(DEVICE, Wireless(scans.clone()))?
+            .serve_at(AP, AccessPoint)?
+            .serve_at("/org/freedesktop/NetworkManager/Settings", Settings)?
+            .serve_at(PROFILE_WIFI, Profile(secrets.clone()))?
+            .serve_at(ACTIVE_WIFI, Active)?
+            .build()
+            .await?;
+        let client = zbus::connection::Builder::address(address.trim())?
+            .method_timeout(Duration::from_secs(3))
+            .build()
+            .await?;
+        let mut ids = IdentityTable::new(1);
+        let state = read_snapshot(&client, &mut ids)
+            .await
+            .expect("private NetworkManager snapshot");
+        assert!(CoreSnapshot::Network(state.clone()).valid());
+        assert_eq!(state.devices.items.len(), 1);
+        assert_eq!(state.access_points.items.len(), 1);
+        assert_eq!(state.connections.items.len(), 1);
+        assert_eq!(scans.load(Ordering::SeqCst), 0);
+        assert_eq!(secrets.load(Ordering::SeqCst), 0);
+        let serialized = serde_json::to_string(&state)?;
+        assert!(!serialized.contains(DEVICE));
+        assert!(!serialized.contains(AP));
+        assert!(!serialized.contains(PROFILE_WIFI));
+        drop(client);
+        drop(server);
+        drop(bus);
+        Ok(())
     }
 }

@@ -108,14 +108,22 @@ async fn serve(
     }
     let network_service = if !counter.safe {
         network::publish(&hub, 0, false, None)?;
+        network::publish_core_starting(&hub)?;
         hub.borrow_mut().service("network-watch", "starting", 0)?;
         let service_hub = hub.clone();
         let factory_hub = hub.clone();
         let generation = Rc::new(std::cell::Cell::new(0));
+        let identity_generation = Rc::new(std::cell::Cell::new(0));
         Some(tokio::task::spawn_local(supervisor::run(
             "network-watch",
             service_hub,
-            move || network::run(factory_hub.clone(), generation.clone()),
+            move || {
+                network::run(
+                    factory_hub.clone(),
+                    generation.clone(),
+                    identity_generation.clone(),
+                )
+            },
         )))
     } else {
         None
