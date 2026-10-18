@@ -196,3 +196,37 @@ crash entries; likely lost Codex connection. This is the owner's disposition,
 not proof from the unavailable earlier laptop journal. Retain all capture-safety
 rules. Closure supersedes incident-review activation holds; it does not waive
 containment, memory, artifact, quiet or explicit peer-pause checks.
+
+## Orchestrator mode — owner decision2026-10-18
+
+The spec agent coordinates fresh Luna worker chats, one spec per worker. Open each
+worker in a visible terminal so the owner can inspect its live conversation.
+At most3 workers are active at once; at most ONE heavy job across workers (full
+suites, release builds, nested sessions or captures). Only the coordinator grants
+heavy/measurement slots. Existing two long-lived implementers finish their current
+specs and retire; no new assignments to those chats. Workers report to the
+coordinator and exit task work, leaving the readable terminal available.
+
+Verified local CLI: `codex --help` supports interactive `-m MODEL -C WORKTREE
+PROMPT`; `codex exec --help` supports noninteractive execution but is not the
+owner's requested visible-chat route. Start an isolated worktree first, then use
+`kitty --title TASK --directory WORKTREE nice -n 10 codex -m gpt-6-luna
+-c 'model_reasoning_effort="high"' -C WORKTREE PROMPT`. Use argument arrays when
+launching, not unsafe shell interpolation. Preserve existing configured AI
+permissions/authentication; no credential copying or permission changes. Give each
+worker this file, exact spec path, its worktree, report format and coordinator
+thread ID in its private launch prompt. Record worker thread/worktree/status in
+docs/specs/README.md. Reasoning effort may be chosen by the coordinator.
+
+GPT-6.1 Sol/Astra coordinators are authorized to delegate to Luna workers. The
+current operational limit remains3 concurrent workers; increasing it requires
+an explicit updated schedule. Never duplicate an active spec across workers.
+If blocked, start independent eligible work; send owner-only blockers immediately
+with one concise request and exact installation command when applicable.
+
+Priority now: F4 publication first, then owner switch-on plan (package publication,
+daemon units, QML opt-in, one-step rollback), then Bead B0002/B0003 measurements,
+then core-service implementation. Owner reports wayland-utils installed and
+wayland-info available; the old missing-package blocker is superseded, not a
+reason to probe or install again. Package/live switch execution remains gated on
+the reviewed owner plan; writing that plan is authorized now.

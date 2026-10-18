@@ -6,16 +6,16 @@ sections and thread messages. Status changes are batched at start/review/Done.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Capture Blocked; collector source accepted | Collector integrated5f50d7f8; fix task-caused Ruff B023 in test closure from CI39134154257/head6c1551c0, normal push and exact-head CI. No runtime push/capture. |
-| 2 | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review; scoped correctness accepted | ecd08dfe/c992fc58 lifecycle and seven core-network tests/fmt/Clippy accepted with verified payload containment; integration remains gated after F4. |
-| 3 | [N0003 network state](0003-core-network-state-adapter.md) | Blocked | Prior PASS/OOM claims withdrawn; no acceptance or rerun. Preserve local commits/logs. |
-| 4 | [N0001 F4 review](0001-f4-settings-completion-audit.md) | Review | Source-ready; final Done waits N0002 and published-head CI. |
-| 5 | [N0004 activation progress](0004-f4-activation-progress-and-audit.md) | Done | Exact1382a28 accepted; do not repeat tests or build old candidates. |
+| 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Ready: fresh Luna worker | Priority capture15:30–18:30UTC after source/mock/CI readiness; exact frozen candidate1382/helper439dd355. One heavy job only. |
+| 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Ready: fresh Luna docs worker | Draft source-verified owner commands/rollback in parallel; no execution or heavy job. |
+| 3 | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review | Scoped evidence accepted; runtime integration waits F4 and later core-service priority. |
+| 4 | [N0003 network state](0003-core-network-state-adapter.md) | Blocked | Broader acceptance unclaimed; old evidence withdrawn. No new core implementation before owner priority. |
+| 5 | [N0001 F4 review](0001-f4-settings-completion-audit.md) | Review | Source-ready; Done after N0002/published-head CI. |
+| 6 | [N0004 activation](0004-f4-activation-progress-and-audit.md) | Done |1382a28 accepted. |
 
 ## Current execution limits
 
-**No host build/test/capture slot is active. All earlier UTC capture/correctness
-windows are withdrawn or expired.** Do not restart from older thread grants.
+**N0002 exclusively holds15:30–18:30UTC subject to the current spec readiness gate. All older grants are expired.** Do not restart from older thread grants.
 A future job requires an explicit exact-source/host/window assignment and verified
 payload containment before release. No deadline automatically transfers a host.
 
@@ -47,3 +47,7 @@ Author/committer approved siverteh noreply; [no-publish] on every Nacre commit.
 Spec-agent commits use docs(spec):. Isolated worktrees, preserve others, no force
 push, inspect own outgoing commits, check CI after each normal push. Keep private
 raw artifacts outside Git. Historical evidence is retained in specs/reports.
+
+## Orchestrator handoff2026-10-18
+
+Fresh visible Luna chats own one spec each; maximum3 active workers, one heavy job. Existing Nacre implementer finishes N2 prospective-driver handoff/CI monitoring, existing Bead implementer finishes B0011, then both retire without new specs. Owner reports wayland-info installed. Priority F4 publication, owner switch-on plan, Bead B2/B3 captures, then core services. Worker thread/worktree IDs will be recorded after launch; coordinator retains review/publication gate.

@@ -3,7 +3,7 @@
 - ID: N0002
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: Blocked (host swap-in quiet gate)
+- Status: Ready (fresh Luna worker; explicit window below)
 - Depends on: N0001/N0004 source-ready review; explicit slot confirmation; final Done after correctness
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours
@@ -261,3 +261,35 @@ collector cannot be changed in90min without a newframework; report exact gap.
 After review spec agent decides quiet-window interpretation/readiness and a
 future full-batch window; no capture grant is implied here. No cache/swap/sysctl
 changes or stopping unrelated/live processes.
+
+## Current owner-priority execution grant — supersedes all older windows
+
+Fresh worker owns this spec only, with its own isolated task worktree. Baseline
+5f4c0bf3025d5f2944b50ff5546ed7f8a3dcfe57/helper
+4a65f4ec887bc85e93b5b862f1786fe6f1b7a811875333765ee8f8c052cce0aa;
+candidate1382a28ab544743e32e906f7542bcecdfdfca083/helper
+439dd355fca276334c2faccbd0992d1b23eac6c6caab311ca1c1c61d3672e92c,
+Orient3efe8d1e7fb50200d74a3e0193ad63699cb8ebe8. Do not rebuild or substitute.
+Coordinator grants2026-10-18 15:30–18:30 UTC exclusive private-lab capture window,
+recorded machine digest fb7ab717874d5e6493f6e30fadcc8b5c01ab65268a56c6256261a8df387a938a.
+No arm before source/mock readiness, peer IDLE acknowledgment and no other heavy
+job. Verify collector38118f43 exact-head CI39136680743 conclusion first; task-caused
+failures require correction before activation. Driver v5 remains source-only
+until worker verifies corrected actual-wrapper mock proves ONE600s warmup per
+arm and THREE60s idle phases; minimum104min for8arms before transitions/actions.
+Use fresh distinct output paths, no historical cells. Order N1A/B,H1A/B,H2A/B,N2A/B.
+Hash-pin the exact collector and driver/support files, preserve old scripts.
+Record separate warmup, each idle phase and whole-wrapper paging boundaries;
+whole-arm and start-to-cleanup swap-in>=1MiB both reject. No counter/window waiver.
+
+Each arm runs in verified private2GiB user scope/swap0, with parent effective
+limit/held-child containment proof before same-PID payload release; external1s
+monitor,>=4GiB MemAvailable before release, abort below2GiB. Stop only owned scope/
+PIDs. No other build/test/nested job during capture. Invalid first arm stops batch;
+no automatic retry or baseline laundering. Report promptly and retain evidence.
+If ready too late to finish uncompressed inside window, report before starting.
+Report CAPTURE_START with source/profile/binary/driver hashes, session/controller
+PIDs, UTC deadline. At completion assess whole-group and endpoint rules; send
+Review to coordinator immediately. Publication review follows; no live install.
+Private source/mock fixes to prospective driver allowed within this spec; no
+product optimization during measurement, no new tooling framework or dependency.
