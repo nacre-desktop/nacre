@@ -90,7 +90,7 @@ impl NetworkProjection {
     fn publish_failure(&mut self, hub: &Shared, error: CoreError) -> Result<()> {
         let state = unavailable_state(self.last_good.clone(), error);
         hub.borrow_mut()
-            .publish(CORE_TOPIC, serde_json::to_value(state.clone())?)?;
+            .publish(CORE_TOPIC, serde_json::to_value(&state)?)?;
         #[cfg(test)]
         if let Some(witness) = &self.publication_witness {
             let _ = witness.send(state);
@@ -1597,10 +1597,13 @@ mod core_tests {
                 while notices.try_recv().is_ok() {}
                 let (publish_started_tx, publish_started_rx) = tokio::sync::oneshot::channel();
                 let (publish_release_tx, publish_release_rx) = tokio::sync::oneshot::channel();
+                let (replacement_published_tx, mut replacement_published_rx) =
+                    tokio::sync::mpsc::unbounded_channel();
                 let replacement_task = supervisor.start(
                     replacement_client.clone(),
                     ObserveHooks {
                         before_publish_gate: Some((publish_started_tx, publish_release_rx)),
+                        publication_witness: Some(replacement_published_tx),
                         ..ObserveHooks::default()
                     },
                 );
@@ -1622,6 +1625,20 @@ mod core_tests {
                 assert!(!stale.health.available);
                 assert!(stale.health.stale);
                 assert_eq!(stale.connections.order, last_good.connections.order);
+                let replacement_witnessed: Vec<_> =
+                    std::iter::from_fn(|| replacement_published_rx.try_recv().ok()).collect();
+                assert!(
+                    replacement_witnessed
+                        .iter()
+                        .any(|state| !state.health.available && state.health.stale),
+                    "replacement owner loss publishes stale health"
+                );
+                assert!(
+                    replacement_witnessed
+                        .iter()
+                        .all(|state| !state.health.available),
+                    "replacement owner candidate never publishes as healthy"
+                );
                 drop(next_server);
                 Ok::<(), crate::Error>(())
             }),
