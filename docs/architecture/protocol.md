@@ -521,3 +521,90 @@ emits direct argv for `nacrectl ui` commands; their operands stay literal, inclu
 empty strings and shell metacharacters. Other generated commands retain their
 existing transport. The old binding fixture is unchanged; its15 intended Hyprland
 UI command swaps are compared explicitly, with all keys and flags still exact.
+
+### Revisioned Settings ownership (F4)
+
+`settings.get {store}` returns `SettingsStore`: `store`, `rev`, `exists`, `data`,
+`dirty`, and an optional `error {file,line,message}`. The same object is published
+on `settings.store.<id>`. Revisions belong to one daemon boot. Invalid hand edits
+retain the last good data; the error uses the registry-relative filename.
+The existing pseudo-language is accepted only with `NACRE_DEVELOPER_MODE=1`,
+matching the desktop controller; it is not added to the public language enum.
+
+`settings.set {store,key,value,rev}` validates registered writable keys before
+changing memory. A stale revision returns `stale_revision`. Writes become durable
+after 150 ms quiet; `dirty:false` confirms publication. `settings.desktop
+{arguments,rev}` uses the existing controller and compositor connection; reads
+may omit `rev`. Display rollback journals remain durable before physical changes.
+Caller loss never replays an admitted mutation or starts a fallback writer.
+
+`settings.publish {store,value,rev}` preserves the three existing QML publishers:
+`control-center`, `dashboard-extras`, and `battery-alerts`. It accepts their
+current document version and owned fields, retains unknown existing fields, and
+rejects other stores. It grants no arbitrary path, provider, or privileged write.
+The native `state-file` client uses the same revisions and waits for a durable
+snapshot before reporting success. An absent default socket permits standalone
+compatibility; connection, validation, and dispatched errors do not.
+
+`settings.provider {store,value,rev}` admits only the existing colors, wallpaper
+picker, dashboard preferences, CLI accent, default-app initialization, and launcher
+workflow providers. Their exact store IDs are `colors`, `wallpaper-picker`,
+`dashboard`, `cli`, `apps`, and `launcher-workflows`. Registered settings and
+explicit provider fields are validated; unknown existing fields survive unchanged.
+No other provider, root-owned store, or arbitrary filename is writable. Native
+read/modify/write operations check both the originating boot and revision, wait
+for durable publication, and route rollback through the same owner.
+
+Intended difference: with the daemon present, legacy `state-file save-id` bulk
+writes outside the three QML publisher stores are refused; validated `set-id`
+remains available. Provider-owned/read-only stores and unported tools retain
+their existing privilege boundaries; this step does not migrate all 72 stores.
+
+An accepted mutation advances the in-memory revision; it is not, by itself, a
+durable-success claim. A client that reports durable success must observe the
+same boot and store, a revision at least as new as the accepted revision,
+`dirty:false`, no read/publication error, and the operation's owned values still
+present. `settings.set` checks the requested key even for a no-op. A publisher
+checks every field it supplied, not unrelated retained data. A provider
+replacement also expects omitted provider-owned fields to remain absent; unknown
+retained fields are outside that comparison. For `colors.appThemes`, only the
+eight registered theme keys are checked. Values compare as JSON structures, so
+object member order is irrelevant and absence differs from JSON null. A mismatch
+is a visible superseded/conflict result, never a replay or fallback write.
+
+`menu.preferences` favorite, hide and record mutations preserve their legacy
+durable-success reply: the daemon waits for a clean matching publication of
+favorites, hidden, recent and usage before returning success. The load action is
+read-only. The native controller response's `rev` identifies its admitted store
+revision; a later `settings.get` with another revision cannot be used as that
+operation's receipt. Native clients compare changed/deleted operation-owned
+paths against the exact receipt before waiting for durability.
+
+The Settings actor owns only the 19 registry entries with Settings metadata
+(16 writable and 3 read-only), plus the separately owned `battery-alerts` state
+publisher. Its six narrow provider adapters are `colors`, `wallpaper-picker`,
+`dashboard`, `cli`, `apps` and `launcher-workflows`; `settings.publish` remains
+limited to `control-center`, `dashboard-extras` and `battery-alerts`. The other
+53 registry records retain their named provider/root/tool owners; this is not a
+generic 72-store write API. `profile` permits the session-owned `aurReview`
+setting only. Whole-profile replacement is an offline installer/deployment
+operation and is unsupported while the daemon owning the destination is active.
+The current destination writers are the explicit `nacre setup` path and the
+explicit release deployment path (`nacre deploy`, or `tools/manage.py --apply`)
+through `tools/releases.py`; neither has an implemented stopped-daemon guard in
+this stage. `tools/releases.py` reads whether selected desktop services are
+active, but that snapshot does not prove destination ownership or exclude a
+socket-activation/startup race. `tools/prepare.py` writes only
+into a separately selected empty staging tree. Inotify and fingerprint checks
+detect some external edits but do not establish exclusive ownership. No ordinary
+session/UI caller of replacement was found; active-daemon installation remains
+unsupported pending a separate owner-approved, destination-scoped enforcement
+or handoff specification that covers socket activation and startup races.
+
+`launcher-menu` is marked `config/write` in the registry but has no enabled
+Settings descriptor. The two `NacreMenuContext` FileViews at lines 1677–1697
+only read, parse and watch the defaults and user extension; they have no write
+call, and both paths are empty in shared mode. The daemon menu engine reads the
+merged configuration. No competing daemon-mode application writer was found;
+standalone user-edited files do not establish one. `settings.set` does not admit
+this store, and no generic setter or descriptor is implied by the registry tag.
