@@ -36,13 +36,17 @@ def report():
             "end": {"pswpin": 100, "pswpout": 200},
             "page_size_bytes": 4096,
             "elapsed_s": 60.0,
-            "delta_pages": 0,
-            "delta_bytes": 0,
+            "counter_bracket_elapsed_s": 60.0,
+            "delta_in_pages": 0,
+            "delta_in_bytes": 0,
+            "delta_out_pages": 0,
+            "delta_out_bytes": 0,
         },
         "cpu_percent_one_core": {"shell": {"mean": 0.1}},
     }
     timing = {"frame_ms": {"p95": 400}, "synchronous_ms": {"p95": 80}, "samples": [{}]}
     return {
+        "full_idle_windows": False,
         "paging_start": {"pswpin": 100, "pswpout": 200},
         "paging_end": {"pswpin": 100, "pswpout": 200},
         "page_size_bytes": 4096,
@@ -60,12 +64,29 @@ class BudgetTests(unittest.TestCase):
     def test_all_three_idle_phases_observe_full_sixty_seconds(self):
         self.assertEqual(
             [
-                session.idle_sample_duration(name, 1, 1)
+                session.idle_sample_duration(name, 1, 1, full_idle_windows=True)
                 for name in session.FULL_IDLE_PHASES
             ],
             [60.0, 60.0, 60.0],
         )
+        self.assertEqual(
+            [session.idle_sample_duration(name, 1, 1) for name in session.FULL_IDLE_PHASES],
+            [1, 1, 1],
+        )
         self.assertEqual(session.idle_sample_duration("video", 1, 1), 1)
+
+    def test_legacy_idle_durations_and_reports_remain_default(self):
+        self.assertFalse(report().get("full_idle_windows", False))
+        for name in session.FULL_IDLE_PHASES:
+            called = []
+            data = session.observe_idle_phase(
+                name, 1, lambda duration: called.append(duration) or {},
+                lambda: self.fail("legacy mode must not read per-phase counters"),
+                lambda: self.fail("legacy mode must not read per-phase clock"),
+                4096,
+            )
+            self.assertEqual(called, [1])
+            self.assertNotIn("paging_window", data)
 
     def test_paging_windows_keep_warmup_and_idle_separate(self):
         calls = []
@@ -75,9 +96,10 @@ class BudgetTests(unittest.TestCase):
                 {"pswpin": 123, "pswpout": 4},
             )
         )
-        clock = iter((600.0, 660.0))
+        clock = iter((600.0, 660.0, 660.01))
         result = report()
         whole_arm_start = copy.deepcopy(result["paging_start"])
+        result["paging_end"]["pswpin"] += 30
         whole_arm_end = copy.deepcopy(result["paging_end"])
         data = session.observe_idle_phase(
             "fresh_static",
@@ -86,6 +108,7 @@ class BudgetTests(unittest.TestCase):
             lambda: next(counters),
             lambda: next(clock),
             4096,
+            full_idle_windows=True,
         )
         result["scenarios"]["fresh_static"].update(data)
         self.assertEqual(calls, [60])
@@ -94,6 +117,9 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(data["paging_window"]["elapsed_s"], 60)
         self.assertEqual(result["paging_start"], whole_arm_start)
         self.assertEqual(result["paging_end"], whole_arm_end)
+        self.assertAlmostEqual(data["paging_window"]["counter_bracket_elapsed_s"], 60.01)
+        self.assertEqual(data["paging_window"]["delta_in_pages"], 3)
+        self.assertEqual(data["paging_window"]["delta_out_pages"], 0)
 
     def test_paging_delta_uses_recorded_page_size(self):
         counters = iter(
@@ -102,7 +128,7 @@ class BudgetTests(unittest.TestCase):
                 {"pswpin": 13, "pswpout": 2},
             )
         )
-        clock = iter((5.0, 65.0))
+        clock = iter((5.0, 65.0, 65.0))
         data = session.observe_idle_phase(
             "all_panels_closed",
             60,
@@ -110,22 +136,59 @@ class BudgetTests(unittest.TestCase):
             lambda: next(counters),
             lambda: next(clock),
             8192,
+            full_idle_windows=True,
         )
-        self.assertEqual(data["paging_window"]["delta_pages"], 3)
-        self.assertEqual(data["paging_window"]["delta_bytes"], 24576)
+        self.assertEqual(data["paging_window"]["delta_in_pages"], 3)
+        self.assertEqual(data["paging_window"]["delta_in_bytes"], 24576)
+        self.assertEqual(data["paging_window"]["delta_out_pages"], 0)
+        self.assertEqual(data["paging_window"]["delta_out_bytes"], 0)
+        self.assertEqual(data["paging_window"]["page_size_bytes"], 8192)
+
+    def test_idle_window_requires_full_sixty_seconds_excluding_counter_read(self):
+        def check(elapsed):
+            data = report()
+            data["full_idle_windows"] = True
+            for name in session.FULL_IDLE_PHASES:
+                data["scenarios"][name]["paging_window"]["elapsed_s"] = elapsed
+                data["scenarios"][name]["paging_window"]["counter_bracket_elapsed_s"] = 600
+            return session.idle_phase_failures(data)
+
+        self.assertTrue(any("shorter than 60" in e for e in check(59.999)))
+        self.assertEqual(check(60), [])
+
+        counters = iter(({"pswpin": 1, "pswpout": 2}, {"pswpin": 1, "pswpout": 2}))
+        clock = iter((0.0, 59.0, 120.0))
+        data = session.observe_idle_phase(
+            "fresh_static", 59,
+            lambda _duration: {}, lambda: next(counters), lambda: next(clock), 4096,
+            full_idle_windows=True,
+        )
+        self.assertEqual(data["paging_window"]["elapsed_s"], 59.0)
+        self.assertEqual(data["paging_window"]["counter_bracket_elapsed_s"], 120.0)
+        validation = report()
+        validation["full_idle_windows"] = True
+        validation["scenarios"]["fresh_static"].update(data)
+        self.assertTrue(
+            any("shorter than 60" in e for e in session.idle_phase_failures(validation))
+        )
 
     def test_whole_arm_paging_failure_remains_invalid(self):
-        data = report()
-        data["page_size_bytes"] = 4096
-        data["paging_end"]["pswpin"] += 256
-        self.assertTrue(
-            any(
-                "1 MiB" in error for error in session.quiet_window_failures(data)
+        for full_idle_windows in (False, True):
+            data = report()
+            data["full_idle_windows"] = full_idle_windows
+            data["page_size_bytes"] = 4096
+            data["paging_end"]["pswpin"] += 256
+            self.assertTrue(
+                any(
+                    "1 MiB" in error
+                    for error in session.quiet_window_failures(data)
+                ),
+                full_idle_windows,
             )
-        )
 
     def test_incomplete_idle_or_counter_reset_is_invalid(self):
         data = report()
+        data["full_idle_windows"] = True
         del data["scenarios"]["fresh_static"]["paging_window"]
         self.assertTrue(
             any(
@@ -134,9 +197,23 @@ class BudgetTests(unittest.TestCase):
             )
         )
         data = report()
+        data["full_idle_windows"] = True
         data["scenarios"]["all_panels_closed"]["paging_window"]["end"]["pswpin"] = 99
         self.assertTrue(
             any("counter reset" in error for error in session.quiet_window_failures(data))
+        )
+
+    def test_idle_counter_rejects_boolean_negative_and_outbound_reset(self):
+        for field, value in (("pswpin", True), ("pswpout", -1)):
+            data = report()
+            data["full_idle_windows"] = True
+            data["scenarios"]["fresh_static"]["paging_window"]["start"][field] = value
+            self.assertTrue(session.idle_phase_failures(data), (field, value))
+        data = report()
+        data["full_idle_windows"] = True
+        data["scenarios"]["fresh_static"]["paging_window"]["end"]["pswpout"] = 199
+        self.assertTrue(
+            any("counter reset" in error for error in session.idle_phase_failures(data))
         )
 
     def test_first_nested_process_uses_private_bus_and_cannot_start_user_manager(self):

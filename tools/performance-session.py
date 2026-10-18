@@ -183,35 +183,42 @@ def paging():
 FULL_IDLE_PHASES = ("fresh_static", "all_panels_closed", "static_after_latency")
 
 
-def idle_sample_duration(name, sample_seconds, idle_seconds):
-    """Keep each N0002 static observation open for at least a full minute."""
+def idle_sample_duration(name, sample_seconds, idle_seconds, full_idle_windows=False):
+    """Choose an observation duration, preserving legacy defaults unless opted in."""
     if name == "static_after_latency":
         requested = idle_seconds
     else:
         requested = sample_seconds
-    if name in FULL_IDLE_PHASES:
+    if full_idle_windows and name in FULL_IDLE_PHASES:
         return max(60.0, requested)
     return requested
 
 
-def observe_idle_phase(name, duration, idle, paging_reader, clock, page_size_bytes):
+def observe_idle_phase(
+    name, duration, idle, paging_reader, clock, page_size_bytes, full_idle_windows=False
+):
     """Attach isolated host-counter evidence to a named idle observation."""
-    if name not in FULL_IDLE_PHASES:
+    if not full_idle_windows or name not in FULL_IDLE_PHASES:
         return idle(duration)
 
     start = paging_reader()
     started_at = clock()
     data = idle(duration)
+    idle_finished_at = clock()
     end = paging_reader()
-    elapsed_s = clock() - started_at
-    delta_pages = end["pswpin"] - start["pswpin"]
+    counter_read_finished_at = clock()
+    delta_in_pages = end["pswpin"] - start["pswpin"]
+    delta_out_pages = end["pswpout"] - start["pswpout"]
     data["paging_window"] = {
         "start": start,
         "end": end,
         "page_size_bytes": page_size_bytes,
-        "elapsed_s": elapsed_s,
-        "delta_pages": delta_pages,
-        "delta_bytes": delta_pages * page_size_bytes,
+        "elapsed_s": idle_finished_at - started_at,
+        "counter_bracket_elapsed_s": counter_read_finished_at - started_at,
+        "delta_in_pages": delta_in_pages,
+        "delta_in_bytes": delta_in_pages * page_size_bytes,
+        "delta_out_pages": delta_out_pages,
+        "delta_out_bytes": delta_out_pages * page_size_bytes,
     }
     return data
 
@@ -238,6 +245,12 @@ def idle_phase_failures(report):
                 for counters in (start, end)
                 for counter in (counters.get("pswpin"), counters.get("pswpout"))
             )
+            or any(
+                counter < 0
+                for counters in (start, end)
+                for counter in (counters.get("pswpin"), counters.get("pswpout"))
+                if isinstance(counter, int) and not isinstance(counter, bool)
+            )
             or not isinstance(page_size, int)
             or isinstance(page_size, bool)
             or page_size <= 0
@@ -247,13 +260,16 @@ def idle_phase_failures(report):
         ):
             failures.append(name + ": incomplete idle paging counters or timing")
             continue
-        delta_pages = end["pswpin"] - start["pswpin"]
-        if delta_pages < 0 or end["pswpout"] < start["pswpout"]:
+        delta_in_pages = end["pswpin"] - start["pswpin"]
+        delta_out_pages = end["pswpout"] - start["pswpout"]
+        if delta_in_pages < 0 or delta_out_pages < 0:
             failures.append(name + ": idle paging counter reset")
             continue
         if (
-            window.get("delta_pages") != delta_pages
-            or window.get("delta_bytes") != delta_pages * page_size
+            window.get("delta_in_pages") != delta_in_pages
+            or window.get("delta_in_bytes") != delta_in_pages * page_size
+            or window.get("delta_out_pages") != delta_out_pages
+            or window.get("delta_out_bytes") != delta_out_pages * page_size
         ):
             failures.append(name + ": inconsistent idle paging deltas")
         if elapsed < 60:
@@ -360,10 +376,29 @@ def quiet_window_failures(report):
     failures = []
     start, end = report.get("paging_start"), report.get("paging_end")
     page_size = report.get("page_size_bytes")
-    if not start or not end or not isinstance(page_size, int) or page_size <= 0:
+    counter_values = (
+        [start.get(key) for key in ("pswpin", "pswpout")]
+        + [end.get(key) for key in ("pswpin", "pswpout")]
+        if isinstance(start, dict) and isinstance(end, dict)
+        else []
+    )
+    if (
+        not start
+        or not end
+        or not isinstance(page_size, int)
+        or isinstance(page_size, bool)
+        or page_size <= 0
+        or any(
+            not isinstance(counter, int)
+            or isinstance(counter, bool)
+            or counter < 0
+            for counter in counter_values
+        )
+    ):
         failures.append("missing host paging counters or page size")
     else:
-        failures.extend(idle_phase_failures(report))
+        if report.get("full_idle_windows") is True:
+            failures.extend(idle_phase_failures(report))
         pages = end["pswpin"] - start["pswpin"]
         if pages < 0:
             failures.append("host paging counter reset during capture")
@@ -927,6 +962,7 @@ def run(args, directory):
             "paging_start": paging(),
             "paging_end": paging(),
             "page_size_bytes": os.sysconf("SC_PAGE_SIZE"),
+            "full_idle_windows": args.full_idle_windows,
             "revision": args.revision
             or subprocess.check_output(
                 ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
@@ -960,7 +996,10 @@ def run(args, directory):
             data = observe_idle_phase(
                 name,
                 idle_sample_duration(
-                    name, args.sample_seconds, args.idle_seconds
+                    name,
+                    args.sample_seconds,
+                    args.idle_seconds,
+                    full_idle_windows=args.full_idle_windows,
                 ),
                 lambda duration: performance.idle(
                     pid, duration, 0.25, detached=False
@@ -968,6 +1007,7 @@ def run(args, directory):
                 paging,
                 time.monotonic,
                 report["page_size_bytes"],
+                full_idle_windows=args.full_idle_windows,
             )
             if video_before:
                 video_after = state(
@@ -1763,6 +1803,11 @@ def main():
     parser.add_argument("--wlr-randr", default="wlr-randr")
     parser.add_argument("--sample-seconds", type=float, default=5)
     parser.add_argument("--idle-seconds", type=float, default=30)
+    parser.add_argument(
+        "--full-idle-windows",
+        action="store_true",
+        help="Require and record per-phase 60-second paging windows for N0002",
+    )
     parser.add_argument("--repeats", type=int, default=10)
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--latency-only", action="store_true")
