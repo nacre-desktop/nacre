@@ -14,11 +14,20 @@ F4 has84 dirty entries and network source has4, no outgoing commits. No reset,
 clean, deletion or process termination performed by the spec agent. N0003 source
 phase is In progress in its isolated worktree; integration remains gated on F4.
 
-All former capture windows are expired/superseded. Incident review and the new
-[capture safety](../architecture/standing-rules.md#capture-safety--restart-rule-2026-10-18)
-are prerequisites. Bead B0002 then B0003 has priority once prerequisites pass;
-Nacre N0002 has no grant. Only explicit peer release transfers the host.
-No live session/install/package/tag/release/unit changes are authorized.
+Incident CLOSED by owner2026-10-18: likely lost Codex connection; no OOM/oomd
+kills or relevant kernel crash attribution. Keep the capture-safety rules.
+
+Bead B0002 ACTIVE Oct18 11:00–19:00UTC, then B0003 19:00–21:00UTC after
+B0002 PASS, private nested lab only. Nacre N0002 takes the first released slot
+once source/correctness ready; spec agent issues exact final-artifact grant.
+No overlapping heavy jobs on that host. Ask the peer to pause; never kill others.
+
+Nacre must immediately commit preserved F4 work locally in small logical commits
+with approved identity/[no-publish], without pushing until spec-agent review.
+Unvalidated local commits protect work and do not claim a passing gate. Continue
+N0004 and independent N0003 source now; no waiting for further preservation
+approval. Preserve the separate worktrees and record remaining uncommitted files.
+No live session/install/package release/unit changes are authorized.
 
 Use approved commit identity, docs(spec): for spec-agent commits, [no-publish]
 on all Nacre commits. Status edits at start/review/Done, batch notes/clarifications.

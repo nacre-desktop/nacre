@@ -195,3 +195,13 @@ it passes; the fixed600s+60s fresh8cell plan/baseline5f4 remain unchanged.
 No measurements are authorized by this spec. Any later measurement must follow
 the standing capture-safety rules: peer pause, MemAvailable >=4GiB before start,
 abort below2GiB, private memory-limited scope, and explicit spec-agent grant.
+
+## Recovery preservation — owner decision, 2026-10-18
+
+Immediately protect the current preserved F4 changes with small logical LOCAL
+commits, approved identity and [no-publish]. Include intended tracked/untracked
+files and deletion, inspect each staged diff, and record remaining dirty paths.
+Do not push until reviewed. Do not reset, clean, discard or rewrite others' work.
+These commits are explicitly unvalidated until focused checks pass. Continue
+recover-and-continue activation JoinError handling/tests and N0003 source work;
+no build/test overlap with active Bead captures on the same private host.

@@ -188,3 +188,11 @@ host scope/window; no owner relay required. Bead B0002 goes first now, then B000
 measured work; Nacre N0002 follows when ready. No build/test overlap on the active
 capture host. If one gate is blocked, assign the next independent product work
 instead of repeated audits/report rewriting. Physical/live tests remain owner-only.
+
+## Incident closed — owner decision, 2026-10-18
+
+Owner closed the incident review: no OOM/systemd-oomd kills or relevant kernel
+crash entries; likely lost Codex connection. This is the owner's disposition,
+not proof from the unavailable earlier laptop journal. Retain all capture-safety
+rules. Closure supersedes incident-review activation holds; it does not waive
+containment, memory, artifact, quiet or explicit peer-pause checks.
