@@ -123,3 +123,16 @@ in task/sol-b0011-lifecycle-20261018. Built-in reviewer ACCEPTed source pending
 fmt/compiler/exact-head CI; no push/heavy test grant until N0002 release. This
 supersedes earlier speculative fake-peer ordering diagnoses. No new core service
 implementation or live switching now. F4 publication remains first priority.
+
+
+### Execution handoff — 2026-10-18 17:38 UTC
+
+N0002 v6 stopped during first baseline warmup, zero accepted cells; lab released.
+Owner supersedes the sizing assumption: capture cap max(baseline peak×1.5,12GiB),
+currently12GiB; host abort below2GiB unchanged. Distinct v7 source/mock update
+and review in progress. Fresh full-batch grant18:00–22:00UTC, conditional only
+on reviewed v7 pins and containment smoke; no other heavy work during it.
+B0011 is Done: source af61d18 full CI39147491406 green, docs5ad2551; heavy slot
+released. F4 local integration d3622384 remains reviewed and unpublished pending
+valid N2 evidence, then exact published-head CI. N6 switch-on blockers remain;
+no package/live action. Retired separate chats have no assignments or grants.

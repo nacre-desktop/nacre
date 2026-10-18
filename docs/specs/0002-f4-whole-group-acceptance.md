@@ -338,3 +338,29 @@ bindings, per-run values/medians/spreads/peaks and whole-group/endpoint gates.
 No runtime push until lead review; no live install/package/unit/config action.
 No payload beyond19:00; if not ready with enough full-batch margin, report rather
 than begin an unfinishable partial. Do not add tooling/product changes midcapture.
+
+
+## Owner-sized replacement grant — 2026-10-18 18:00–22:00 UTC
+
+Supersedes the expired v6 grant. The v6 first baseline arm was stopped during
+warmup for a planning-headroom concern, not OOM or a measured paging failure.
+Zero cells accepted; preserve its raw evidence. Scope peak 1,566,932,992 bytes
+was below the already recorded baseline peak 1,687,920,640 bytes. The previous
+below-1-GiB expectation was incorrect for the complete nested scope.
+
+Owner directs MemoryMax=max(recorded baseline peak × 1.5, 12 GiB) on this
+30 GiB host. Therefore prospective v7 uses **12,884,901,888 bytes**, swap zero.
+No separate low scope-peak abort threshold applies. Keep host start >=4 GiB
+and abort below2 GiB, independent guardian, effective parent/held-child scope
+proof, OOM and paging gates unchanged. Product source, binaries, collector and
+600s+three60s per arm remain frozen. No cap-induced retry or shortened windows.
+
+Fresh built-in capture worker receives the sole heavy slot 18:00–22:00 UTC
+after the distinct v7 source/pin/mock review and tiny containment smoke pass.
+B0011 source af61d18/CI39147491406 is green, its worker explicitly released
+the heavy slot. All other heavy work remains paused for this grant. Lead sends
+the final reviewed v7 hashes directly to the worker before any payload. Use
+new evidence/session paths and all eight fresh arms; never reuse invalid cells.
+If readiness slips, require enough room for 104min fixed waits plus measured
+overhead and cleanup; a fresh full four-hour window may be assigned without
+compressing. Report CAPTURE_START, then Review and DONE/IDLE/RELEASED.

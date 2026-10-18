@@ -93,8 +93,12 @@ An unexplained simultaneous agent shutdown is not proof of OOM or a safe retry.
   and invalidate the arm if below 2 GiB (2,097,152 KiB), or if monitoring fails.
 - Run the harness and all measured descendants (private compositor, UI, daemon,
   helpers and input driver) inside one new private systemd user scope. Set an
-  explicit MemoryMax well above expected peak: 2 GiB for the existing nested
-  lanes, expected below 1 GiB. Verify the effective cgroup limit before any arm;
+  explicit MemoryMax well above expected peak. Owner sizing decision (2026-10-18):
+  use max(recorded baseline scope peak × 1.5, 12 GiB) on the 30 GiB lab host;
+  current N0002 cap is 12 GiB (12,884,901,888 bytes), swap limit zero. The
+  earlier below-1-GiB expectation and 2-GiB capture cap are superseded. Host
+  MemAvailable below 2 GiB remains the abort threshold; do not invent a lower
+  scope-peak stop threshold. Verify the effective cgroup limit before any arm;
   no unlimited fallback. If expected peak cannot fit with generous headroom,
   stop for spec-agent sizing instead of silently raising it. Scope setup is
   transient and task-private, not a live unit/configuration change.
