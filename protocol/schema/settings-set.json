@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsSet",
+  "type": "object",
+  "properties": {
+    "store": {
+      "type": "string"
+    },
+    "key": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "maxItems": 16
+    },
+    "value": true,
+    "rev": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "store",
+    "key",
+    "value",
+    "rev"
+  ]
+}

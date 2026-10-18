@@ -9,6 +9,7 @@ pub mod helpers;
 pub mod menu;
 pub mod network;
 pub mod patch;
+pub mod settings;
 pub mod wallpaper;
 pub mod widths;
 

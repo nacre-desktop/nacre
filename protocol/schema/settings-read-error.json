@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsReadError",
+  "type": "object",
+  "properties": {
+    "file": {
+      "description": "Registry-relative filename, never an arbitrary path supplied by a caller.",
+      "type": "string"
+    },
+    "line": {
+      "type": "integer",
+      "format": "uint",
+      "minimum": 0
+    },
+    "message": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "file",
+    "line",
+    "message"
+  ]
+}

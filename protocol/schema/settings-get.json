@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsGet",
+  "type": "object",
+  "properties": {
+    "store": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "store"
+  ]
+}

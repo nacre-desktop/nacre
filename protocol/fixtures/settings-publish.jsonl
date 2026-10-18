@@ -1,0 +1,4 @@
+{"t":"call","id":190,"m":"settings.publish","p":{"store":"battery-alerts","value":{"version":1,"severity":2},"rev":0}}
+{"t":"ret","id":190,"ok":{"store":"battery-alerts","rev":1,"exists":false,"data":{"version":1,"severity":2},"dirty":true}}
+{"t":"snap","topic":"settings.store.battery-alerts","seq":0,"data":{"store":"battery-alerts","rev":1,"exists":false,"data":{"version":1,"severity":2},"dirty":true}}
+{"t":"patch","topic":"settings.store.battery-alerts","base":0,"seq":1,"data":{"exists":true,"dirty":false}}

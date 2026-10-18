@@ -16,4 +16,4 @@ schemars = "1"
 proptest = "=1.9.0"
 # Export order stays deterministic without enabling ordered maps for consumers.
 serde_json = { version = "1", features = ["preserve_order"] }
-tokio = { version = "1", features = ["rt", "macros"] }
+tokio = { version = "1", features = ["rt", "macros", "time"] }

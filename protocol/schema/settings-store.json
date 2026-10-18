@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsStore",
+  "type": "object",
+  "properties": {
+    "store": {
+      "type": "string"
+    },
+    "rev": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "exists": {
+      "type": "boolean"
+    },
+    "data": true,
+    "dirty": {
+      "type": "boolean"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SettingsReadError"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "store",
+    "rev",
+    "exists",
+    "data",
+    "dirty"
+  ],
+  "$defs": {
+    "SettingsReadError": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "description": "Registry-relative filename, never an arbitrary path supplied by a caller.",
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "line",
+        "message"
+      ]
+    }
+  }
+}

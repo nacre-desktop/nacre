@@ -1,0 +1,10 @@
+{"t":"call","id":180,"m":"settings.get","p":{"store":"desktop"}}
+{"t":"ret","id":180,"ok":{"store":"desktop","rev":0,"exists":false,"data":{"dnd":false},"dirty":false}}
+{"t":"snap","topic":"settings.store.desktop","seq":0,"data":{"store":"desktop","rev":0,"exists":false,"data":{"dnd":false},"dirty":false}}
+{"t":"call","id":181,"m":"settings.set","p":{"store":"desktop","key":["dnd"],"value":true,"rev":0}}
+{"t":"ret","id":181,"ok":{"store":"desktop","rev":1,"exists":false,"data":{"dnd":true},"dirty":true}}
+{"t":"patch","topic":"settings.store.desktop","base":0,"seq":1,"data":{"rev":1,"data":{"dnd":true},"dirty":true}}
+{"t":"patch","topic":"settings.store.desktop","base":1,"seq":2,"data":{"exists":true,"dirty":false}}
+{"t":"call","id":182,"m":"settings.set","p":{"store":"desktop","key":["dnd"],"value":false,"rev":0}}
+{"t":"ret","id":182,"err":{"code":"stale_revision","message":"Settings changed; refresh before writing","retry":true}}
+{"t":"patch","topic":"settings.store.desktop","base":2,"seq":3,"data":{"error":{"file":"nacre/desktop.json","line":2,"message":"Invalid settings document"}}}

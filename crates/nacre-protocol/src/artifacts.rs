@@ -210,6 +210,7 @@ pub fn generate() -> BTreeMap<String, String> {
     out.extend(wallpaper_exports());
     out.extend(crate::core_artifacts::generate());
     out.extend(compositor_exports());
+    out.extend(crate::settings::exports());
     out
 }
 

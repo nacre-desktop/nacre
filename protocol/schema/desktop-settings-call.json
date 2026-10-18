@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DesktopSettingsCall",
+  "type": "object",
+  "properties": {
+    "arguments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "maxItems": 16
+    },
+    "rev": {
+      "description": "Required for mutations; state reads may omit it.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "arguments"
+  ]
+}

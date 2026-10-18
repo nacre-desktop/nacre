@@ -1,0 +1,4 @@
+{"t":"call","id":191,"m":"settings.provider","p":{"store":"colors","value":{"version":1,"favorites":[]},"rev":0}}
+{"t":"ret","id":191,"ok":{"store":"colors","rev":1,"exists":false,"data":{"version":1,"favorites":[]},"dirty":true}}
+{"t":"snap","topic":"settings.store.colors","seq":0,"data":{"store":"colors","rev":1,"exists":false,"data":{"version":1,"favorites":[]},"dirty":true}}
+{"t":"patch","topic":"settings.store.colors","base":0,"seq":1,"data":{"exists":true,"dirty":false}}

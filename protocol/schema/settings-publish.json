@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettingsPublish",
+  "description": "Existing QML publishers only; unknown fields already in a store are retained.",
+  "type": "object",
+  "properties": {
+    "store": {
+      "type": "string",
+      "pattern": "^(control-center|dashboard-extras|battery-alerts)$"
+    },
+    "value": true,
+    "rev": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "store",
+    "value",
+    "rev"
+  ]
+}
