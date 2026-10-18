@@ -643,9 +643,7 @@ where
     Ok(reply)
 }
 
-fn decode_reply<T>(
-    reply: zbus::Message,
-) -> std::result::Result<T, CoreError>
+fn decode_reply<T>(reply: zbus::Message) -> std::result::Result<T, CoreError>
 where
     T: serde::de::DeserializeOwned + zbus::zvariant::Type,
 {
