@@ -96,13 +96,25 @@ build/test jobs on the measurement host. Never preempt an existing measurement.
 
 ## Dependency exception
 
-Scoped exception ONLY for RUSTSEC-2026-0370, RUSTSEC-2026-0371 and
+Existing scoped exceptions for RUSTSEC-2026-0370, RUSTSEC-2026-0371 and
 RUSTSEC-2026-0372: zbus 5's zvariant, zvariant_derive and zbus_names maintenance
 advisories, informational, no vulnerability; merged into zbus 6. Reason/source:
 https://github.com/z-galaxy/zbus/issues/2043 . Revisit when AccessKit, AT-SPI and
 tray support zbus 6, or 2027-01-31, whichever comes first. Apply the same exact-ID
-exception if Nacre adopts cargo-deny or deps/bead. Every other advisory fails CI;
-security vulnerabilities always go to the owner. No blanket ignore policy.
+exception if Nacre adopts cargo-deny or deps/bead.
+
+Owner update2026-10-18 ratifies pre-existing documented exceptions, including
+RUSTSEC-2026-0192: ttf-parser informational unmaintained via fontdb/cosmic-text
+and usvg, no patched release; existing installed-fonts-only reason is retained.
+Source: https://rustsec.org/advisories/RUSTSEC-2026-0192.html . Revisit when
+cosmic-text/fontdb/usvg move off ttf-parser, before loading untrusted font files,
+or by2027-01-31, whichever comes first.
+
+The spec agent may approve new informational unmaintained advisories only when
+no vulnerability is reported and no maintained alternative exists in the actual
+dependency chain. Each approval is scoped by exact ID with reason, primary link
+and revisit date. Vulnerability AND unsound advisories always go to the owner;
+other unapproved advisories fail CI. No wildcard or blanket suppression.
 
 ## Owner-only decisions
 
@@ -110,7 +122,8 @@ Escalate physical/live session tests; enabling daemon units; notification
 ownership; live keybindings; package/tag/release publication or removing
 [no-publish]; moving nacre-shell; perf-lab setup; typing acceptance candidate;
 memory beyond 27 MiB; regressions outside these rules; Bead work outside core
-switch; priority changes; security advisories. Nobody changes AI permissions.
+switch; priority changes; vulnerability/unsound advisories and advisory decisions
+outside the delegation above. Nobody changes AI permissions.
 Send one short escalation with options, recommendation, and cost of each.
 
 ## Review and reporting
@@ -119,3 +132,22 @@ Implementers report the spec ID, starting/final commits, files, named acceptance
 checks and CI URLs, raw measurement locations and exact method if granted,
 regressions/unknowns, owned-process cleanup, and deviations/questions. Spec agent
 marks Done only after checking the criteria; otherwise writes exact follow-ups.
+
+## Throughput and proportional evidence — owner update2026-10-18
+
+Product first: each active implementation spec advances the core switch or F4
+with its tests. Fold small harness/tooling fixes into the feature/gate needing
+them; do not create additional standalone tooling specs. Touch spec status at
+start, review and Done; batch clarifications, notes and commits. No separate
+slot-release or minor-clarification commits.
+
+For nested measurement provenance, exact source commit, build profile and binary
+hash in the report suffice. For an unpublished F4 tree also record its base and
+exact overlay/manifest, without demanding elaborate attestation. Preserve frozen
+references but do not block fresh work on retroactive provenance paperwork.
+
+Spec agent grants private/nested slots as soon as prerequisites pass and names
+host scope/window; no owner relay required. Bead B0002 goes first now, then B0003
+measured work; Nacre N0002 follows when ready. No build/test overlap on the active
+capture host. If one gate is blocked, assign the next independent product work
+instead of repeated audits/report rewriting. Physical/live tests remain owner-only.

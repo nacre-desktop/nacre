@@ -4,7 +4,7 @@
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
 - Status: Ready
-- Depends on: N0001/N0002 Done; F4 published with full CI green
+- Depends on: independent source implementation allowed after N0004 local fix; integration after N0001/N0002 Done and green F4
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours
 
@@ -120,3 +120,15 @@ locations (never commit private paths). For captures include per-run numbers,
 medians/min/max/peaks, quiet counters, attribution and owned-PID cleanup. Missing
 is unknown. Ask the spec thread directly; do not improvise or ask the owner for
 routine design. Submit Review, then start the next eligible Ready spec.
+
+## Independent source phase — owner throughput update2026-10-18
+
+While waiting for the shared measurement/build host, implement this already
+specified network-state adapter and its tests in a SEPARATE isolated worktree
+based on current main. Reserved network contracts are already published5f4.
+Do not modify the frozen F4 candidate or introduce new wire APIs. Source work
+may proceed before F4 publication; final integration remains after reviewed green
+F4. Before that integration reconcile daemon/hub wiring with the actual F4 head.
+No build/test on Bead's active capture host; run only on an independent verified
+existing environment, or keep source/test implementation ready for host release.
+Do not start a new lab/toolchain/deployment to work around the slot.
