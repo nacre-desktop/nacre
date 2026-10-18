@@ -477,3 +477,39 @@ further permission. TwelveGiB cap/swap0,host4GiB start/2GiB abort, independent
 guard, strict whole-wrapper paging and full600+3x60 windows unchanged.
 Failure stops without retry. Previous evidence remains invalid and preserved.
 All peersIDLE. No runtime rebuild/push/install; final Review/DONE release.
+
+
+## Current v11 grant — Oct18 20:00 through Oct19 00:30 UTC
+
+Supersedes previous windows. V10 readiness stopped correctly for a new live
+helper spawned between its one initial inventory/read pass and final scan.
+No accepted arms. Astra investigated after repeated Sol designs failed actual
+startup races: one-pass sampling could not satisfy the final-live-read rule.
+Its bounded recommendation is implemented in v11, independently ACCEPT by
+Sol and Terra. Preserved previous evidence remains invalid, not reinterpreted.
+
+Within ONE sequential snapshot, retain initial reads and complete discovery
+with at most4 additional passes and1s TOTAL wall time, whichever bound expires
+first. Read only new/unattempted PID/start identities; retain first attempts
+including original sampler retries. Never resample for a favorable value.
+Closing inventory requires every final-live identity's valid own read, critical
+roots stable, departures confirmed, observed Swap/error evidence retained.
+Record pass identities/read timestamps/elapsed/unresolved set. Budget expiry
+invalidates the snapshot/arm, not a retry. Original bounded exit-confirmation
+delays remain inside this budget; no added completion sleeps. All sampling
+limitations and independent whole-arm scope peak disclosure remain unchanged.
+
+Reviewed private package sol-n2-completed-snapshot-v11-20261018: driver
+c6744e92f8cfac8bd17dd4ad33eb23f788c7eb011b3ef12f7a12a4a7b015e06f; plan
+68de43cd24fde7bb62220f94675e4f9b6e7cd3614da448a8c3c2879d16403a4f.
+Read all other expected hashes and exact argv directly from reviewed manifest
+and plan.37core tests (including real owned-child /proc barrier),6smoke and
+11original tests pass;37manifest/27plan pins pass. Sol independently reran
+36mock cases excluding the already-recorded real-process test.
+
+Built-in Luna owns soleheavy now throughOct19 00:30UTC. ONE reviewed <=120s
+real readiness smoke first; on PASS+verifiedcleanup announce CAPTURE_START and
+run all8fresh arms without further permission. Full600+3x60 timing, strict
+whole-wrapper paging/Swap0,12GiBscope/swap0/host4GiBstart2GiBabort unchanged.
+No otherheavyjobs, runtime rebuild/install/push, arm reuse or compression.
+First failure stops without automatic retry. Final Review and DONE release.
