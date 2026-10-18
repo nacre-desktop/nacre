@@ -11,6 +11,10 @@ Singleton {
     property var errors: ({})
     property var present: ({})
     property var queue: []
+    readonly property bool daemonMode: NacreDaemon.enabled
+    property bool daemonBusy: false
+    property var revisions: ({})
+    readonly property var watchedIds: !daemonMode ? [] : NacrePanelState.settingsVisible ? ids : ["power"]
     readonly property var registry: JSON.parse(registryFile.text()).files
     readonly property var ids: registry.filter(item => !!item.settings).map(item => item.id)
     function path(id) {
@@ -33,11 +37,98 @@ Singleton {
         return true;
     }
     function next() {
+        if (daemonMode) {
+            if (daemonBusy || !NacreDaemon.connected || !queue.length)
+                return;
+            const change = queue[0];
+            // A new daemon boot has a new revision namespace. Reads may be
+            // repeated; dispatched mutations are never put back in this queue.
+            const needRevision = change.key !== null && revisions[change.id] === undefined;
+            if (!needRevision)
+                queue = queue.slice(1);
+            daemonBusy = true;
+            const method = change.key === null || needRevision ? "settings.get" : "settings.set";
+            const params = method === "settings.get" ? {
+                store: change.id
+            } : {
+                store: change.id,
+                key: change.key,
+                value: change.value,
+                rev: revisions[change.id]
+            };
+            NacreDaemon.call(method, params, (result, failure) => {
+                if (failure) {
+                    errors = Object.assign({}, errors, {
+                        [change.id]: failure.message
+                    });
+                    if (needRevision)
+                        queue = queue.slice(1);
+                } else {
+                    acceptDaemon(change.id, result);
+                }
+                daemonBusy = false;
+                Qt.callLater(next);
+            });
+            return;
+        }
         if (!worker.running && queue.length) {
             worker.change = queue[0];
             queue = queue.slice(1);
             worker.command = [NacrePaths.helperBinary, "state-file", worker.change.key === null ? "load-id" : "set-id", worker.change.id];
             worker.running = true;
+        }
+    }
+    function acceptDaemon(id, snapshot) {
+        if (!snapshot || snapshot.store !== id || !snapshot.data)
+            return;
+        revisions = Object.assign({}, revisions, {
+            [id]: snapshot.rev
+        });
+        documents = Object.assign({}, documents, {
+            [id]: snapshot.data
+        });
+        present = Object.assign({}, present, {
+            [id]: snapshot.exists === true
+        });
+        errors = Object.assign({}, errors, {
+            [id]: snapshot.error?.message || ""
+        });
+    }
+    function refreshDaemon() {
+        if (!daemonMode || !NacreDaemon.connected)
+            return;
+        for (const id of watchedIds)
+            request(id);
+        next();
+    }
+    onWatchedIdsChanged: refreshDaemon()
+    Connections {
+        target: NacreDaemon
+        function onConnectedChanged() {
+            if (!NacreDaemon.connected)
+                root.revisions = ({});
+            root.refreshDaemon();
+        }
+        function onNewBoot() {
+            root.revisions = ({});
+            root.refreshDaemon();
+        }
+    }
+    Component.onCompleted: refreshDaemon()
+    Instantiator {
+        model: root.watchedIds
+        delegate: QtObject {
+            required property string modelData
+            readonly property string topicName: "settings.store." + modelData
+            readonly property var stream: NacreDaemon.topic(topicName)
+            readonly property Connections changes: Connections {
+                target: stream
+                function onDataChanged() {
+                    root.acceptDaemon(modelData, stream.data);
+                }
+            }
+            Component.onCompleted: NacreDaemon.subscribe(topicName)
+            Component.onDestruction: NacreDaemon.unsubscribe(topicName)
         }
     }
     FileView {
@@ -46,7 +137,7 @@ Singleton {
         blockLoading: true
     }
     Instantiator {
-        model: root.ids
+        model: root.daemonMode ? [] : root.ids
         delegate: FileView {
             required property string modelData
             path: root.path(modelData)

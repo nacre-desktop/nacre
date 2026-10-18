@@ -110,12 +110,22 @@ Singleton {
     NacreStateFile {
         id: ledger
         objectName: "batteryAlertLedger"
-        path: NacrePaths.state + "/battery-alert-state.json"
+        daemonClient: NacreDaemon
+        storeId: "battery-alerts"
+        sourcePath: NacrePaths.state + "/battery-alert-state.json"
         printErrors: false
         atomicWrites: true
         watchChanges: false
-        onLoaded: root.restore(text())
+        onLoaded: if (!daemonMode)
+            root.restore(text())
+        onStateReceived: (value, missing) => root.restore(value, missing)
+        onStateUnavailable: message => {
+            root.cacheError = message;
+            root.restore("", true);
+        }
         onLoadFailed: error => {
+            if (daemonMode)
+                return;
             if (error !== FileViewError.FileNotFound)
                 root.cacheError = "Cannot read prior battery warning state";
             root.restore("", true);

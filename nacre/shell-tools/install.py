@@ -325,7 +325,7 @@ def deploy(code_only=False):
         capture_output=True,
     )
     subprocess.run(
-        ["python3", str(ROOT / "desktop-settings.py"), "init"],
+        [str(ROOT / "nacre-helper"), "desktop-settings", "init"],
         check=True,
         stdout=subprocess.DEVNULL,
     )

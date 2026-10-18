@@ -68,11 +68,16 @@ Singleton {
     }
     NacreStateFile {
         id: store
-        path: NacrePaths.config + "/control-center.json"
+        daemonClient: NacreDaemon
+        storeId: "control-center"
+        sourcePath: NacrePaths.config + "/control-center.json"
         printErrors: false
         atomicWrites: true
         objectName: "controlPreferencesStore"
-        onLoaded: root.receive(text())
+        onLoaded: if (!daemonMode)
+            root.receive(text())
+        onStateReceived: (value, missing) => root.receive(value)
+        onStateUnavailable: message => root.error = message
         onSaveFailed: root.error = NacreI18n.tr("controlcenter.preferences.save-failed", "Could not save the tiles.")
     }
 }

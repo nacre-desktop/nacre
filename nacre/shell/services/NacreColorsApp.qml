@@ -31,6 +31,24 @@ Singleton {
     property var library: []
     property var favorites: []
     property var history: []
+    readonly property var daemonStore: NacreDaemon.enabled ? NacreDaemon.topic("settings.store.colors") : null
+    Connections {
+        target: root.daemonStore
+        function onDataChanged() {
+            const snapshot = root.daemonStore.data;
+            if (snapshot.store !== "colors")
+                return;
+            if (snapshot.error)
+                root.error = snapshot.error.message;
+            else
+                root.saved = snapshot.data;
+        }
+    }
+    // Hourly tide-mode publication also consumes this data while the window is closed.
+    Component.onCompleted: if (NacreDaemon.enabled)
+        NacreDaemon.subscribe("settings.store.colors")
+    Component.onDestruction: if (NacreDaemon.enabled)
+        NacreDaemon.unsubscribe("settings.store.colors")
     property var saved: ({
             wallpapers: {}
         })
@@ -338,11 +356,13 @@ Singleton {
         }
     }
     FileView {
-        path: NacrePaths.config + "/colors.json"
-        watchChanges: true
+        path: NacreDaemon.enabled ? "" : NacrePaths.config + "/colors.json"
+        watchChanges: !NacreDaemon.enabled
         printErrors: false
         onFileChanged: reload()
         onLoaded: {
+            if (NacreDaemon.enabled)
+                return;
             try {
                 root.saved = JSON.parse(text());
             } catch (error) {

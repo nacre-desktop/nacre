@@ -20,10 +20,16 @@ Singleton {
     property string message: ""
     property string error: ""
     property var queue: []
+    readonly property bool daemonMode: NacreDaemon.enabled
+    property bool daemonBusy: false
+    property double remoteRevision: -1
+    readonly property var daemonState: NacreDaemon.topic("settings.desktop")
+    readonly property var daemonStore: NacreDaemon.topic("settings.store.desktop")
+    property bool daemonSubscribed: false
     property bool externalWriteBlocked: false
     onExternalWriteBlockedChanged: if (!externalWriteBlocked)
         next()
-    readonly property bool busy: worker.running
+    readonly property bool busy: worker.running || daemonBusy
     function request(args) {
         const change = {
             arguments: args
@@ -53,14 +59,57 @@ Singleton {
         next();
     }
     function next() {
-        if (!worker.running && !externalWriteBlocked && queue.length) {
+        if (!busy && !externalWriteBlocked && queue.length) {
+            if (daemonMode) {
+                if (!NacreDaemon.connected)
+                    return;
+                daemonBusy = true;
+                if (remoteRevision < 0 && queue[0].arguments[0] !== "state") {
+                    NacreDaemon.call("settings.get", {
+                        store: "desktop"
+                    }, (result, failure) => {
+                        if (failure) {
+                            error = failure.message;
+                            message = error;
+                            worker.change = queue[0];
+                            queue = queue.slice(1);
+                            daemonBusy = false;
+                            finish(1);
+                        } else {
+                            remoteRevision = result.rev;
+                            daemonBusy = false;
+                            next();
+                        }
+                    });
+                    return;
+                }
+                worker.change = queue[0];
+                queue = queue.slice(1);
+                const params = {
+                    arguments: worker.change.arguments
+                };
+                if (remoteRevision >= 0)
+                    params.rev = remoteRevision;
+                NacreDaemon.call("settings.desktop", params, (result, failure) => {
+                    if (failure) {
+                        error = failure.message;
+                        message = error;
+                    } else {
+                        remoteRevision = result.rev;
+                        accept(JSON.stringify(result));
+                    }
+                    daemonBusy = false;
+                    finish(failure ? 1 : 0);
+                }, 30000);
+                return;
+            }
             worker.change = queue[0];
             queue = queue.slice(1);
             const hostTools = NacrePaths.hostTools || NacrePaths.tools;
             const environment = hostTools !== NacrePaths.tools ? ["NACRE_NIRI_TOOLS_SOURCE=" + hostTools, "NACRE_HELPER_BINARY=" + hostTools + "/nacre-helper"] : [];
             if (NacrePaths.niriDesktopConfig)
                 environment.push("NACRE_NIRI_DESKTOP_CONFIG=" + NacrePaths.niriDesktopConfig);
-            worker.command = [...(environment.length ? ["env", ...environment] : []), "python3", NacrePaths.tools + "/desktop-settings.py", ...worker.change.arguments];
+            worker.command = [...(environment.length ? ["env", ...environment] : []), NacrePaths.helperBinary, "desktop-settings", ...worker.change.arguments];
             worker.running = true;
         }
     }
@@ -100,35 +149,98 @@ Singleton {
         if (!queue.some(item => item.arguments[0] === "state"))
             request(["state"]);
     }
-    Component.onCompleted: request(["state"])
-    FileView {
-        printErrors: false
-        onLoadFailed: error => {
-            if (error !== FileViewError.FileNotFound)
-                console.warn("Desktop settings could not be read (" + error + ")");
+    function subscribeDaemon() {
+        if (daemonMode && !daemonSubscribed) {
+            daemonSubscribed = true;
+            NacreDaemon.subscribe("settings.desktop");
+            NacreDaemon.subscribe("settings.store.desktop");
+        } else if (!daemonMode && daemonSubscribed) {
+            daemonSubscribed = false;
+            NacreDaemon.unsubscribe("settings.desktop");
+            NacreDaemon.unsubscribe("settings.store.desktop");
         }
-        path: NacrePaths.config + "/desktop.json"
-        watchChanges: true
-        onFileChanged: reload()
-        onLoaded: {
-            try {
-                const data = JSON.parse(text());
-                if ((data.version || 0) < 2) {
-                    const aliases = {
-                        topEdge: ["frameTopEnabled", "topBarEnabled"],
-                        leftEdge: ["frameLeftEnabled"],
-                        rightEdge: ["frameRightEnabled", "controlCenterEnabled"],
-                        bottomEdge: ["frameBottomEnabled"],
-                        leftDrawer: ["aiSidebarEnabled"]
-                    };
-                    for (const key of Object.keys(aliases))
-                        for (const next of aliases[key])
-                            if (data[next] === undefined && data[key] !== undefined)
-                                data[next] = data[key];
+        next();
+    }
+    onDaemonModeChanged: subscribeDaemon()
+    Component.onCompleted: {
+        subscribeDaemon();
+        request(["state"]);
+    }
+    Component.onDestruction: if (daemonSubscribed) {
+        NacreDaemon.unsubscribe("settings.desktop");
+        NacreDaemon.unsubscribe("settings.store.desktop");
+    }
+    Connections {
+        target: root.daemonState
+        function onDataChanged() {
+            if (root.daemonMode && root.daemonState.data.available)
+                root.accept(JSON.stringify(root.daemonState.data));
+        }
+    }
+    Connections {
+        target: root.daemonStore
+        function onDataChanged() {
+            const snapshot = root.daemonStore.data;
+            if (!root.daemonMode || snapshot.store !== "desktop")
+                return;
+            const changed = root.remoteRevision !== snapshot.rev;
+            root.remoteRevision = snapshot.rev;
+            if (snapshot.error) {
+                root.error = snapshot.error.message;
+                root.message = root.error;
+            } else if (changed && !root.daemonBusy) {
+                root.refresh();
+            }
+        }
+    }
+    Connections {
+        target: NacreDaemon
+        function onNewBoot() {
+            root.remoteRevision = -1;
+            root.refresh();
+        }
+        function onConnectedChanged() {
+            if (NacreDaemon.connected) {
+                root.refresh();
+                root.next();
+            } else {
+                root.remoteRevision = -1;
+            }
+        }
+    }
+    Loader {
+        active: !root.daemonMode
+        sourceComponent: Component {
+            FileView {
+                printErrors: false
+                onLoadFailed: error => {
+                    if (error !== FileViewError.FileNotFound)
+                        console.warn("Desktop settings could not be read (" + error + ")");
                 }
-                root.persistedData = data;
-            } catch (e) {
-                console.warn("DesktopSettings: Cannot decode persisted desktop settings:", e);
+                path: NacrePaths.config + "/desktop.json"
+                watchChanges: true
+                onFileChanged: reload()
+                onLoaded: {
+                    try {
+                        const data = JSON.parse(text());
+                        if ((data.version || 0) < 2) {
+                            const aliases = {
+                                topEdge: ["frameTopEnabled", "topBarEnabled"],
+                                leftEdge: ["frameLeftEnabled"],
+                                rightEdge: ["frameRightEnabled", "controlCenterEnabled"],
+                                bottomEdge: ["frameBottomEnabled"],
+                                leftDrawer: ["aiSidebarEnabled"]
+                            };
+                            for (const key of Object.keys(aliases))
+                                for (const next of aliases[key])
+                                    if (data[next] === undefined && data[key] !== undefined)
+                                        data[next] = data[key];
+                        }
+                        root.persistedData = data;
+                    } catch (e) {
+                        console.warn("DesktopSettings: Cannot decode persisted desktop settings:", e);
+                    }
+                }
             }
         }
     }
@@ -150,12 +262,17 @@ Singleton {
                 transform: monitor.transform
             })).sort((a, b) => String(a.name).localeCompare(String(b.name))))
     onMonitorSignatureChanged: refresh()
-    FileView {
-        preload: true
-        path: NacrePaths.config + "/display-pending" + (NacreCompositor.backendName === "niri" ? "-niri" : "") + ".json"
-        watchChanges: true
-        printErrors: false
-        onFileChanged: root.refresh()
+    Loader {
+        active: !root.daemonMode
+        sourceComponent: Component {
+            FileView {
+                preload: true
+                path: NacrePaths.config + "/display-pending" + (NacreCompositor.backendName === "niri" ? "-niri" : "") + ".json"
+                watchChanges: true
+                printErrors: false
+                onFileChanged: root.refresh()
+            }
+        }
     }
     Process {
         id: worker

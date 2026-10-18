@@ -12,6 +12,38 @@ Singleton {
             albumPalette: true,
             focusMinutes: 25
         })
+    readonly property var daemonPreferences: NacreDaemon.enabled ? NacreDaemon.topic("settings.store.dashboard") : null
+    property bool daemonPreferencesSubscribed: false
+    function subscribePreferences() {
+        const wanted = NacreDaemon.enabled && (shown || NacrePanelState.settingsVisible);
+        if (wanted === daemonPreferencesSubscribed)
+            return;
+        daemonPreferencesSubscribed = wanted;
+        if (wanted)
+            NacreDaemon.subscribe("settings.store.dashboard");
+        else
+            NacreDaemon.unsubscribe("settings.store.dashboard");
+    }
+    Connections {
+        target: root.daemonPreferences
+        function onDataChanged() {
+            const snapshot = root.daemonPreferences.data;
+            if (snapshot.store !== "dashboard")
+                return;
+            if (snapshot.error)
+                root.message = snapshot.error.message;
+            else
+                root.preferences = Object.assign({}, root.preferences, snapshot.data);
+        }
+    }
+    Connections {
+        target: NacrePanelState
+        function onSettingsVisibleChanged() {
+            root.subscribePreferences();
+        }
+    }
+    Component.onDestruction: if (daemonPreferencesSubscribed)
+        NacreDaemon.unsubscribe("settings.store.dashboard")
     property var focusState: ({})
     property var calendar: ({
             events: []
@@ -84,13 +116,25 @@ Singleton {
     }
     NacreStateFile {
         id: extraFile
-        path: NacrePaths.config + "/dashboard-extras.json"
+        daemonClient: NacreDaemon
+        storeId: "dashboard-extras"
+        sourcePath: NacrePaths.config + "/dashboard-extras.json"
         atomicWrites: true
         watchChanges: true
         printErrors: false
-        onLoaded: root.restoreExtras(text())
+        onLoaded: if (!daemonMode)
+            root.restoreExtras(text())
+        onStateReceived: (value, missing) => {
+            if (missing)
+                root.extrasReady = true;
+            else
+                root.restoreExtras(value);
+        }
+        onStateUnavailable: message => root.message = message
         onFileChanged: reload()
         onLoadFailed: error => {
+            if (daemonMode)
+                return;
             if (error === FileViewError.FileNotFound)
                 root.extrasReady = true;
         }
@@ -121,7 +165,12 @@ Singleton {
     }
     function saveMany(values) {
         preferences = Object.assign({}, preferences, values);
-        request("preferences", JSON.stringify(preferences));
+        if (NacreDaemon.enabled) {
+            for (const [key, value] of Object.entries(values))
+                NacreSettingsStorage.request("dashboard", [key], value);
+        } else {
+            request("preferences", JSON.stringify(preferences));
+        }
     }
     function save(key, value) {
         saveMany({
@@ -187,7 +236,7 @@ Singleton {
             }
             if (!data.preferences || !Array.isArray(data.preferences.tabs) || !data.focus || !data.calendar || !data.home)
                 throw new Error();
-            root.preferences = data.preferences;
+            root.preferences = Object.assign({}, data.preferences, NacreDaemon.enabled && root.daemonPreferences.fresh ? root.daemonPreferences.data.data || {} : {});
             if (!root.focusWriteFailed || root.activeAction.startsWith("focus-"))
                 root.focusState = data.focus;
             if (root.activeAction.startsWith("focus-"))
@@ -225,13 +274,19 @@ Singleton {
         if (typeof path === "string" && path.startsWith("/"))
             Quickshell.execDetached(["xdg-open", path]);
     }
-    onShownChanged: if (shown)
-        Qt.callLater(root.refresh)
+    onShownChanged: {
+        subscribePreferences();
+        if (shown)
+            Qt.callLater(root.refresh);
+    }
     onBrainShownChanged: if (brainShown)
         request("context")
     onFocusShownChanged: if (focusShown)
         request("context")
-    Component.onCompleted: refresh()
+    Component.onCompleted: {
+        subscribePreferences();
+        refresh();
+    }
     Connections {
         target: DesktopSettings
         function onDataChanged() {

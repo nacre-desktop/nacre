@@ -14,6 +14,25 @@ Singleton {
     property string error: ""
     property bool ready: false
     property var pending: []
+    readonly property var daemonStore: NacreDaemon.enabled ? NacreDaemon.topic("settings.store.launcher") : null
+    Connections {
+        target: root.daemonStore
+        function onDataChanged() {
+            const snapshot = root.daemonStore.data;
+            if (snapshot.store !== "launcher")
+                return;
+            if (snapshot.error)
+                root.error = snapshot.error.message;
+            else {
+                root.accept(JSON.stringify(snapshot.data));
+                root.ready = true;
+            }
+        }
+    }
+    Component.onCompleted: if (NacreDaemon.enabled)
+        NacreDaemon.subscribe("settings.store.launcher")
+    Component.onDestruction: if (NacreDaemon.enabled)
+        NacreDaemon.unsubscribe("settings.store.launcher")
 
     function update(action, id, enabled) {
         pending.push({
@@ -68,7 +87,8 @@ Singleton {
         command: [NacrePaths.helperBinary, "launcher-preferences", "load"]
         onExited: {
             root.ready = true;
-            watcher.reload();
+            if (!NacreDaemon.enabled)
+                watcher.reload();
         }
 
         onOutput: line => {
@@ -94,9 +114,10 @@ Singleton {
         id: watcher
 
         preload: root.ready
-        path: NacrePaths.config + "/launcher.json"
-        watchChanges: true
+        path: NacreDaemon.enabled ? "" : NacrePaths.config + "/launcher.json"
+        watchChanges: !NacreDaemon.enabled
         onFileChanged: reload()
-        onLoaded: root.accept(text())
+        onLoaded: if (!NacreDaemon.enabled)
+            root.accept(text())
     }
 }
