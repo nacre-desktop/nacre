@@ -609,23 +609,30 @@ where
     T::try_from(value).map_err(|_| CoreError::Unavailable)
 }
 
-async fn call<T: serde::de::DeserializeOwned>(
+async fn call<T, A>(
     connection: &zbus::Connection,
     path: &str,
     interface: &str,
     method: &str,
-    args: &impl serde::Serialize,
-) -> std::result::Result<T, CoreError> {
+    args: &A,
+) -> std::result::Result<T, CoreError>
+where
+    T: serde::de::DeserializeOwned + zbus::zvariant::Type,
+    A: serde::Serialize + zbus::zvariant::DynamicType,
+{
     decode_reply(call_raw(connection, path, interface, method, args).await?)
 }
 
-async fn call_raw(
+async fn call_raw<A>(
     connection: &zbus::Connection,
     path: &str,
     interface: &str,
     method: &str,
-    args: &impl serde::Serialize,
-) -> std::result::Result<zbus::Message, CoreError> {
+    args: &A,
+) -> std::result::Result<zbus::Message, CoreError>
+where
+    A: serde::Serialize + zbus::zvariant::DynamicType,
+{
     let reply = connection
         .call_method(Some(NM_SERVICE), path, Some(interface), method, args)
         .await
@@ -636,9 +643,12 @@ async fn call_raw(
     Ok(reply)
 }
 
-fn decode_reply<T: serde::de::DeserializeOwned>(
+fn decode_reply<T>(
     reply: zbus::Message,
-) -> std::result::Result<T, CoreError> {
+) -> std::result::Result<T, CoreError>
+where
+    T: serde::de::DeserializeOwned + zbus::zvariant::Type,
+{
     reply
         .body()
         .deserialize()
@@ -706,12 +716,7 @@ async fn observe(
             return Err("NetworkManager monitoring connection is unavailable".into());
         }
     };
-    let connection = match tokio::time::timeout(
-        Duration::from_secs(5),
-        builder.build(),
-    )
-    .await
-    {
+    let connection = match tokio::time::timeout(Duration::from_secs(5), builder.build()).await {
         Ok(Ok(connection)) => connection,
         _ => {
             projection.publish_failure(&hub, CoreError::Unavailable)?;
@@ -1029,9 +1034,12 @@ mod core_tests {
         let mut raw = raw_fixture();
         raw.active_connections.reverse();
         let state = project(raw, &mut ids).unwrap();
-        let primary = state.primary_connection.expect("mapped primary profile");
-        assert_eq!(state.connections.items[&primary].name, "Wireless fixture");
-        assert!(state.connections.items[&primary].active);
+        let primary = state
+            .primary_connection
+            .as_ref()
+            .expect("mapped primary profile");
+        assert_eq!(state.connections.items[primary].name, "Wireless fixture");
+        assert!(state.connections.items[primary].active);
         assert!(CoreSnapshot::Network(state).valid());
 
         let mut unresolved = raw_fixture();
@@ -1077,10 +1085,9 @@ mod core_tests {
         projection
             .publish_failure(&hub, CoreError::Unavailable)
             .unwrap();
-        let stale: NetworkState = serde_json::from_value(
-            hub.borrow().snapshot(CORE_TOPIC).expect("network snapshot"),
-        )
-        .unwrap();
+        let stale: NetworkState =
+            serde_json::from_value(hub.borrow().snapshot(CORE_TOPIC).expect("network snapshot"))
+                .unwrap();
         assert!(stale.health.stale);
         assert!(!stale.health.available);
         assert_eq!(stale.devices, good.devices);
@@ -1101,10 +1108,9 @@ mod core_tests {
         )
         .shared();
         publish_core_starting(&hub).unwrap();
-        let state: NetworkState = serde_json::from_value(
-            hub.borrow().snapshot(CORE_TOPIC).expect("network snapshot"),
-        )
-        .unwrap();
+        let state: NetworkState =
+            serde_json::from_value(hub.borrow().snapshot(CORE_TOPIC).expect("network snapshot"))
+                .unwrap();
         assert!(!state.health.available);
         assert!(!state.health.stale);
         assert!(state.health.error.is_none());
