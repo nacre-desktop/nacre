@@ -3,7 +3,7 @@
 - ID: N0002
 - Repo: nacre-desktop/nacre
 - Implementer: built-in Luna capture worker; lead reviews/integrates
-- Status: Blocked — required-profile correction
+- Status: In progress — reviewed required-profile readiness
 - Depends on: accepted N0001/N0004 source review; reviewed prospective harness
 - Date: 2026-10-18
 - Size: one focused capture session, through the granted cutoff
@@ -47,61 +47,57 @@ later normal integration after lead acceptance. Small harness corrections are
 reviewed here. Out: runtime optimization, new services, physical tests, package
 publication/install, live config/unit/keybinding/session changes.
 
-## Previous harness — grant closed, diagnostic only
+## Current geometry-corrected harness and exclusive grant
 
-Closed heavy slot: **Oct18 21:33 through Oct19 00:00 UTC**. No payload authorized. All other workers IDLE;
+Sole heavy slot: **Oct18 22:50 through Oct19 03:15 UTC**. All other workers IDLE;
 B0011 exact source af61d18/CI39147491406 is green and heavy ownership released.
 No other full suite, hosted heavy CI, release build or nested session overlaps.
 
-Reviewed private package: sol-n2-provenance-v13-20261018 in the validation cache.
-Driver 5a1ab9fa82ac08fb981a6ab3ea59fb12ef8d271f1a767cc37b049336be40839b;
-plana110611b237f419b9ff5a76f0dfc17f659f4175eab840c44970b77e153e40d88;
-smoke13ef450f744f66ce0a2af3ec4ff02cbba5646fc9eb0b2d73459556cf02c8284c.
-Read every other expected hash and exact argv directly from reviewed plan and
-SHA256SUMS, not a manually retyped table. Sol+Terra ACCEPT all40 manifest/27plan
-pins,46core+6smoke+11original tests. The source investigation escalated once to
-Astra after repeated real startup census failures; it identified missing bounded
-new-child discovery/read completion. No runtime/application changes were made.
+Reviewed private package: `sol-n2-geometry-v14-20261019` in the validation cache.
+Driver `a97c7b195a4f0dcb605adbbea5f4dbb068cb2a0737da268a733d1dae3935e42e`;
+plan `45c1d0a1c684ba4081d409c4822526d56b2a2fffdfacbde1f2552509e51b55a2`;
+geometry module `6e4987fc1cb98cb83591d253b91152f88b7d93bb7cc858f2a2e046d777cbcc9f`;
+smoke `0794204b574f8dac46408e026a4597b2887f94dce66924729a2acbf26e536a5d`.
+Read all other expected hashes/argv directly from the plan and SHA256SUMS; never
+manually retype a comparison table. Sol+Terra ACCEPT 40 manifest/29 plan pins,
+51 core/geometry, 7 smoke and 11 original tests. Existing sampling functions,
+census, timing and quiet gates are unchanged; four geometry-only collector
+patches and an independent raw-output readiness gate were added. Report the
+executed collector patch separately from frozen base collector.
 
-V12 restores byte argv at the frozen sampler interface and exercises actual
-idle. V13 fixes lossy diagnostic metadata merging: a current unavailable exe
-remains UNKNOWN, while a successful SAME-round PID/start-anchored executable
-observation is retained with timestamps/provenance. No previous-round/history
-borrowing, PID reuse or invented errno/current path. Memory primitive, inclusion,
-arithmetic, collector transforms and windows are unchanged. Sol+Terra verified
-this comparability and the immutable four report/method/PASS log hashes.
+Geometry must be ACTUAL, not just requested: parent output-manager IPC, nested
+Hyprland/Niri IPC and direct QML screen proof before readiness/warmup. Required
+physical 2880×1800, scale 1.5, logical 1920×1200; Hyprland 120 Hz, niri 60 Hz.
+Units, transforms and source/display identifiers are explicit. Parent/Hyprland
+logical sizes may be transparently derived from observed mode/scale/transform;
+niri logical size is reported directly. The cell validator reparses raw proof
+and checks every phase's QML logical size. Missing/unsupported/malformed modes,
+wrong scale or refresh and a 60 Hz Hyprland fallback reject. Actual tool/query
+capability remains unverified until both real backend smokes pass.
 
-Continuation entry package sol-n2-v13-continuation-v2-20261018 is independently
-ACCEPT: entry6434e18e119692242e35f392d09e3cb1b21bfada589451878e66b4745b99a556;
-contractc8260a0fa11f91ba5890f5a76b010dfce8fe2b9ddaa7a49849e0e4b7ae6faa15.
-Seven actual-shell mocks/eight manifest entries pass. It checks pinned old
-reports/method/PASS provenance, exact source and new absent outputs; acquires
-one FD9 bench lock, uses a new noclobber log and invokes ONLY H2A/B,N2A/B,
-fail-fast without retry. Do not run the full v13 eight-arm entry. Candidate
-checkout HEAD is manifest.base5f4; manifest.head identifies candidate1382.
-The failed v12 H2-before stays invalid and gets a fresh v13 replacement.
-Record v12 first-four/v13 last-four support provenance separately. No memory
-threshold is waived and no failed historical arm is retrospectively accepted.
+All previous eight v12/v13 arms remain diagnostic only. Their geometry differs;
+no continuation or reuse is permitted for the corrected target-profile gate.
 
 ## Steps and measurements
 
 1. Verify local and remote reviewed hashes, raw machine digest, free lock, peers
    IDLE, no competing heavy job, fresh output paths and >=4GiB MemAvailable.
    Transfer only absent/identical reviewed files; never overwrite evidence.
-2. Run ONE reviewed real readiness smoke (<=120s total; payload45s/controller85s).
-   It verifies actual shell IPC, exact full-argv owned supervisor selection,
+2. Run ONE reviewed real readiness smoke PER BACKEND, sequentially
+   (<=120s each, <=240s combined; payload45s/controller85s).
+   Each requires actual parent/nested/QML geometry proof above, actual shell
+   IPC, exact full-argv owned supervisor selection,
    seven critical roots, census/terminal checks and2s actual idle, then unwinds
    existing cleanup. No600s warmup/actions/performance acceptance. Failure stops
-   without retry. On PASS plus cleanup, announce CAPTURE_START and proceed with
+   without retry. Only on BOTH backend PASS plus cleanup, announce CAPTURE_START and proceed with
    the full batch without another permission request.
-3. Retain the four reviewed immutable valid v12 N1A/B,H1A/B arms. Run ONLY
-   fresh v13 H2A/B,N2A/B via the reviewed continuation below. The completed
-   comparison remains two alternating pairs per compositor
-   (explicit exception to default five). Hyprland virtual120Hz, niri nested60Hz,
-   2880×1800/scale1.5. Match private HOME/catalog/palette/settings/actions.
-   Every arm gets ONE600s warmup BEFORE phase counters, then THREE full60s idle
-   windows.104min fixed waits total, plus startup/actions/validation/cleanup.
-   Do not compress or reuse invalid arms; first invalid cell stops continuation.
+3. Use eight NEW arms: N1A/B,H1A/B,H2A/B,N2A/B. Two alternating pairs per
+   compositor are an explicit exception to the default five. Hyprland virtual
+   120 Hz and niri nested 60 Hz, both 2880×1800/scale 1.5. Match private HOME,
+   catalog, palette, settings and actions. Every arm gets ONE 600s warmup BEFORE
+   phase counters, then THREE full 60s idle windows. Total fixed waits 104min,
+   plus startup/actions/validation/cleanup. Do not compress or reuse old arms;
+   the first invalid cell stops the entire new batch without automatic retry.
 4. Run all descendants in an exact private scope: MemoryMax12884901888 (12GiB),
    MemorySwapMax0. Owner sizing=max(recorded baseline peak×1.5,12GiB), superseding
    the incorrect sub1GiB expectation/2GiB cap. No low scope-peak abort threshold.
