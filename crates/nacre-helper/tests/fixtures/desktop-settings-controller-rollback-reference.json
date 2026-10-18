@@ -1,0 +1,4027 @@
+{
+  "source_sha256": "c5f7f314549e92539c99fb0d233d2d356a97b61b7f8b26bdb1524e4a5da5c4d9",
+  "cases": [
+    {
+      "failure": "mono-font-state",
+      "backend": "hyprland",
+      "environment": {
+        "HOME": "{home}",
+        "XDG_CONFIG_HOME": "{home}/.config",
+        "XDG_STATE_HOME": "{home}/.local/state",
+        "XDG_CACHE_HOME": "{home}/.cache",
+        "XDG_DATA_HOME": "{home}/.local/share",
+        "NIRI_SOCKET": "{home}/runtime/niri.sock",
+        "NIRI_CONFIG": "{home}/.config/niri/config.kdl",
+        "NACRE_COMPOSITOR": "hyprland",
+        "NACRE_HELPER_BINARY": "{root}/target/release/nacre-helper"
+      },
+      "args": [
+        "set",
+        "monoFont",
+        "\"Fixture Mono\""
+      ],
+      "stdout": "{\"data\": {\"animations\": true, \"blur\": true, \"shadow\": true, \"followMouse\": true, \"naturalScroll\": true, \"gapsIn\": 6, \"gapsOut\": 27, \"borderSize\": 3, \"rounding\": 10, \"frameWidth\": 10, \"frameRounding\": 25, \"frameSheen\": true, \"workspaceWindowHints\": true, \"detachablePanels\": true, \"dragPanels\": true, \"clickEdgeMenus\": false, \"livePreviews\": true, \"nativePalette\": true, \"nativeOverview\": true, \"nativeClipboard\": true, \"dnd\": false, \"lockMedia\": false, \"lockWeather\": false, \"lockNotifications\": false, \"lockNotificationContents\": true, \"weatherLocation\": \"Fixture city\", \"weatherFahrenheit\": true, \"interfaceFont\": \"\", \"language\": \"system\", \"frameTopEnabled\": true, \"topBarEnabled\": true, \"frameLeftEnabled\": true, \"frameRightEnabled\": true, \"controlCenterEnabled\": true, \"frameBottomEnabled\": true, \"aiSidebarEnabled\": true, \"dashboardEnabled\": true, \"lipHoverDelay\": 350, \"interfaceGradients\": true, \"monoFont\": \"Old Mono\", \"textSize\": 12, \"reduceMotion\": false}, \"error\": \"fixture write failure\", \"pending\": false}\n",
+      "exit": 0,
+      "effects": [
+        {
+          "operation": "terminal-font",
+          "args": [
+            "Fixture Mono"
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "terminal-font",
+          "args": [
+            "Old Mono"
+          ],
+          "kwargs": {}
+        }
+      ],
+      "files": {
+        ".config": {
+          "mode": "0o755",
+          "directory": true
+        },
+        ".config/nacre": {
+          "mode": "0o755",
+          "directory": true
+        },
+        ".config/nacre/desktop.json": {
+          "mode": "0o644",
+          "text": "{\"animations\": true, \"blur\": true, \"shadow\": true, \"followMouse\": true, \"naturalScroll\": true, \"gapsIn\": 6, \"gapsOut\": 27, \"borderSize\": 3, \"rounding\": 10, \"frameWidth\": 10, \"frameRounding\": 25, \"frameSheen\": true, \"workspaceWindowHints\": true, \"detachablePanels\": true, \"dragPanels\": true, \"clickEdgeMenus\": false, \"livePreviews\": true, \"nativePalette\": true, \"nativeOverview\": true, \"nativeClipboard\": true, \"dnd\": false, \"lockMedia\": false, \"lockWeather\": false, \"lockNotifications\": false, \"lockNotificationContents\": true, \"weatherLocation\": \"Fixture city\", \"weatherFahrenheit\": true, \"interfaceFont\": \"\", \"language\": \"system\", \"frameTopEnabled\": true, \"topBarEnabled\": true, \"frameLeftEnabled\": true, \"frameRightEnabled\": true, \"controlCenterEnabled\": true, \"frameBottomEnabled\": true, \"aiSidebarEnabled\": true, \"dashboardEnabled\": true, \"lipHoverDelay\": 350, \"interfaceGradients\": true, \"monoFont\": \"Old Mono\", \"textSize\": 12, \"reduceMotion\": false}"
+        },
+        ".config/nacre/desktop.lock": {
+          "mode": "0o644",
+          "text": ""
+        }
+      }
+    },
+    {
+      "failure": "display-config",
+      "backend": "hyprland",
+      "environment": {
+        "HOME": "{home}",
+        "XDG_CONFIG_HOME": "{home}/.config",
+        "XDG_STATE_HOME": "{home}/.local/state",
+        "XDG_CACHE_HOME": "{home}/.cache",
+        "XDG_DATA_HOME": "{home}/.local/share",
+        "NIRI_SOCKET": "{home}/runtime/niri.sock",
+        "NIRI_CONFIG": "{home}/.config/niri/config.kdl",
+        "NACRE_COMPOSITOR": "hyprland",
+        "NACRE_HELPER_BINARY": "{root}/target/release/nacre-helper"
+      },
+      "args": [
+        "display",
+        "extend-right",
+        "DP-1"
+      ],
+      "stdout": "{\"data\": {\"animations\": true, \"blur\": true, \"shadow\": true, \"followMouse\": true, \"naturalScroll\": true, \"gapsIn\": 6, \"gapsOut\": 27, \"borderSize\": 3, \"rounding\": 10, \"frameWidth\": 10, \"frameRounding\": 25, \"frameSheen\": true, \"workspaceWindowHints\": true, \"detachablePanels\": true, \"dragPanels\": true, \"clickEdgeMenus\": false, \"livePreviews\": true, \"nativePalette\": true, \"nativeOverview\": true, \"nativeClipboard\": true, \"dnd\": false, \"lockMedia\": false, \"lockWeather\": false, \"lockNotifications\": false, \"lockNotificationContents\": true, \"weatherLocation\": \"Fixture city\", \"weatherFahrenheit\": true, \"interfaceFont\": \"\", \"language\": \"system\", \"frameTopEnabled\": true, \"topBarEnabled\": true, \"frameLeftEnabled\": true, \"frameRightEnabled\": true, \"controlCenterEnabled\": true, \"frameBottomEnabled\": true, \"aiSidebarEnabled\": true, \"dashboardEnabled\": true, \"lipHoverDelay\": 350, \"interfaceGradients\": true, \"monoFont\": \"\", \"textSize\": 12, \"reduceMotion\": false, \"displays\": []}, \"error\": \"fixture write failure\", \"pending\": false}\n",
+      "exit": 0,
+      "effects": [
+        {
+          "operation": "systemd-run",
+          "args": [
+            [
+              "systemd-run",
+              "--user",
+              "--collect",
+              "--quiet",
+              "--unit=nacre-display-revert-0123456789abcdef0123456789abcdef",
+              "{root}/.venv/bin/python",
+              "{root}/nacre/shell-tools/desktop-settings.py",
+              "rollback-after",
+              "0123456789abcdef0123456789abcdef"
+            ]
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "configure_monitors",
+          "args": [
+            [
+              {
+                "name": "DP-1",
+                "width": 2560,
+                "height": 1440,
+                "refreshRate": 120,
+                "scale": 1.25,
+                "x": 0,
+                "y": 0,
+                "transform": 0,
+                "disabled": false,
+                "mirrorOf": "none",
+                "availableModes": [
+                  "2560x1440@120Hz"
+                ]
+              },
+              {
+                "name": "DP-2",
+                "width": 1920,
+                "height": 1080,
+                "refreshRate": 120,
+                "scale": 1,
+                "x": 2048,
+                "y": 0,
+                "transform": 0,
+                "disabled": false,
+                "mirrorOf": "none",
+                "availableModes": [
+                  "1920x1080@120Hz"
+                ]
+              }
+            ]
+          ],
+          "kwargs": {
+            "timeout": 8
+          }
+        },
+        {
+          "operation": "configure_monitors",
+          "args": [
+            [
+              {
+                "name": "DP-1",
+                "width": 2560,
+                "height": 1440,
+                "refreshRate": 120,
+                "scale": 1.25,
+                "x": 0,
+                "y": 0,
+                "transform": 0,
+                "disabled": false,
+                "mirrorOf": "none",
+                "availableModes": [
+                  "2560x1440@120Hz"
+                ]
+              },
+              {
+                "name": "DP-2",
+                "width": 1920,
+                "height": 1080,
+                "refreshRate": 120,
+                "scale": 1,
+                "x": 0,
+                "y": 0,
+                "transform": 0,
+                "disabled": false,
+                "mirrorOf": "none",
+                "availableModes": [
+                  "1920x1080@120Hz"
+                ]
+              }
+            ]
+          ],
+          "kwargs": {
+            "timeout": 8
+          }
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.001
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.002
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.004
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.008
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.016
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.032
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.001
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.002
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.004
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.008
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.016
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.032
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        }
+      ],
+      "files": {
+        ".config": {
+          "mode": "0o755",
+          "directory": true
+        },
+        ".config/nacre": {
+          "mode": "0o755",
+          "directory": true
+        },
+        ".config/nacre/desktop.json": {
+          "mode": "0o600",
+          "text": "{\"animations\": true, \"blur\": true, \"shadow\": true, \"followMouse\": true, \"naturalScroll\": true, \"gapsIn\": 6, \"gapsOut\": 27, \"borderSize\": 3, \"rounding\": 10, \"frameWidth\": 10, \"frameRounding\": 25, \"frameSheen\": true, \"workspaceWindowHints\": true, \"detachablePanels\": true, \"dragPanels\": true, \"clickEdgeMenus\": false, \"livePreviews\": true, \"nativePalette\": true, \"nativeOverview\": true, \"nativeClipboard\": true, \"dnd\": false, \"lockMedia\": false, \"lockWeather\": false, \"lockNotifications\": false, \"lockNotificationContents\": true, \"weatherLocation\": \"Fixture city\", \"weatherFahrenheit\": true, \"interfaceFont\": \"\", \"language\": \"system\", \"frameTopEnabled\": true, \"topBarEnabled\": true, \"frameLeftEnabled\": true, \"frameRightEnabled\": true, \"controlCenterEnabled\": true, \"frameBottomEnabled\": true, \"aiSidebarEnabled\": true, \"dashboardEnabled\": true, \"lipHoverDelay\": 350, \"interfaceGradients\": true, \"monoFont\": \"\", \"textSize\": 12, \"reduceMotion\": false, \"displays\": [], \"version\": 2}\n"
+        },
+        ".config/nacre/desktop.json.pre-v0-to-v2.bak": {
+          "mode": "0o600",
+          "text": "{\"animations\": true, \"blur\": true, \"shadow\": true, \"followMouse\": true, \"naturalScroll\": true, \"gapsIn\": 6, \"gapsOut\": 27, \"borderSize\": 3, \"rounding\": 10, \"frameWidth\": 10, \"frameRounding\": 25, \"frameSheen\": true, \"workspaceWindowHints\": true, \"detachablePanels\": true, \"dragPanels\": true, \"clickEdgeMenus\": false, \"livePreviews\": true, \"nativePalette\": true, \"nativeOverview\": true, \"nativeClipboard\": true, \"dnd\": false, \"lockMedia\": false, \"lockWeather\": false, \"lockNotifications\": false, \"lockNotificationContents\": true, \"weatherLocation\": \"Fixture city\", \"weatherFahrenheit\": true, \"interfaceFont\": \"\", \"language\": \"system\", \"frameTopEnabled\": true, \"topBarEnabled\": true, \"frameLeftEnabled\": true, \"frameRightEnabled\": true, \"controlCenterEnabled\": true, \"frameBottomEnabled\": true, \"aiSidebarEnabled\": true, \"dashboardEnabled\": true, \"lipHoverDelay\": 350, \"interfaceGradients\": true, \"monoFont\": \"\", \"textSize\": 12, \"reduceMotion\": false}"
+        },
+        ".config/nacre/desktop.json.schema.lock": {
+          "mode": "0o600",
+          "text": ""
+        },
+        ".config/nacre/desktop.lock": {
+          "mode": "0o644",
+          "text": ""
+        },
+        ".config/nacre/desktop.lua": {
+          "mode": "0o600",
+          "text": "hl.config({[\"animations.enabled\"]=true,[\"decoration.blur.enabled\"]=true,[\"decoration.shadow.enabled\"]=true,[\"input.follow_mouse\"]=1,[\"input.touchpad.natural_scroll\"]=true,[\"general.gaps_in\"]=6,[\"general.gaps_out\"]=27,[\"general.border_size\"]=3,[\"decoration.rounding\"]=10})\n\n"
+        },
+        ".config/nacre/display-pending.json.schema.lock": {
+          "mode": "0o600",
+          "text": ""
+        }
+      }
+    },
+    {
+      "failure": "mono-font-state",
+      "backend": "niri",
+      "environment": {
+        "HOME": "{home}",
+        "XDG_CONFIG_HOME": "{home}/.config",
+        "XDG_STATE_HOME": "{home}/.local/state",
+        "XDG_CACHE_HOME": "{home}/.cache",
+        "XDG_DATA_HOME": "{home}/.local/share",
+        "NIRI_SOCKET": "{home}/runtime/niri.sock",
+        "NIRI_CONFIG": "{home}/.config/niri/config.kdl",
+        "NACRE_COMPOSITOR": "niri",
+        "NACRE_HELPER_BINARY": "{root}/target/release/nacre-helper"
+      },
+      "args": [
+        "set",
+        "monoFont",
+        "\"Fixture Mono\""
+      ],
+      "stdout": "{\"data\": {\"animations\": true, \"blur\": true, \"shadow\": true, \"followMouse\": true, \"naturalScroll\": true, \"gapsIn\": 6, \"gapsOut\": 27, \"borderSize\": 3, \"rounding\": 10, \"frameWidth\": 10, \"frameRounding\": 25, \"frameSheen\": true, \"workspaceWindowHints\": true, \"detachablePanels\": true, \"dragPanels\": true, \"clickEdgeMenus\": false, \"livePreviews\": true, \"nativePalette\": true, \"nativeOverview\": true, \"nativeClipboard\": true, \"dnd\": false, \"lockMedia\": false, \"lockWeather\": false, \"lockNotifications\": false, \"lockNotificationContents\": true, \"weatherLocation\": \"Fixture city\", \"weatherFahrenheit\": true, \"interfaceFont\": \"\", \"language\": \"system\", \"frameTopEnabled\": true, \"topBarEnabled\": true, \"frameLeftEnabled\": true, \"frameRightEnabled\": true, \"controlCenterEnabled\": true, \"frameBottomEnabled\": true, \"aiSidebarEnabled\": true, \"dashboardEnabled\": true, \"lipHoverDelay\": 350, \"interfaceGradients\": true, \"monoFont\": \"Old Mono\", \"textSize\": 12, \"reduceMotion\": false, \"displays\": []}, \"error\": \"fixture write failure\", \"pending\": false}\n",
+      "exit": 0,
+      "effects": [
+        {
+          "operation": "terminal-font",
+          "args": [
+            "Fixture Mono"
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "terminal-font",
+          "args": [
+            "Old Mono"
+          ],
+          "kwargs": {}
+        }
+      ],
+      "files": {
+        ".config": {
+          "mode": "0o755",
+          "directory": true
+        },
+        ".config/nacre": {
+          "mode": "0o755",
+          "directory": true
+        },
+        ".config/nacre/desktop.json": {
+          "mode": "0o644",
+          "text": "{\"animations\": true, \"blur\": true, \"shadow\": true, \"followMouse\": true, \"naturalScroll\": true, \"gapsIn\": 6, \"gapsOut\": 27, \"borderSize\": 3, \"rounding\": 10, \"frameWidth\": 10, \"frameRounding\": 25, \"frameSheen\": true, \"workspaceWindowHints\": true, \"detachablePanels\": true, \"dragPanels\": true, \"clickEdgeMenus\": false, \"livePreviews\": true, \"nativePalette\": true, \"nativeOverview\": true, \"nativeClipboard\": true, \"dnd\": false, \"lockMedia\": false, \"lockWeather\": false, \"lockNotifications\": false, \"lockNotificationContents\": true, \"weatherLocation\": \"Fixture city\", \"weatherFahrenheit\": true, \"interfaceFont\": \"\", \"language\": \"system\", \"frameTopEnabled\": true, \"topBarEnabled\": true, \"frameLeftEnabled\": true, \"frameRightEnabled\": true, \"controlCenterEnabled\": true, \"frameBottomEnabled\": true, \"aiSidebarEnabled\": true, \"dashboardEnabled\": true, \"lipHoverDelay\": 350, \"interfaceGradients\": true, \"monoFont\": \"Old Mono\", \"textSize\": 12, \"reduceMotion\": false}"
+        },
+        ".config/nacre/desktop.lock": {
+          "mode": "0o644",
+          "text": ""
+        }
+      }
+    },
+    {
+      "failure": "display-config",
+      "backend": "niri",
+      "environment": {
+        "HOME": "{home}",
+        "XDG_CONFIG_HOME": "{home}/.config",
+        "XDG_STATE_HOME": "{home}/.local/state",
+        "XDG_CACHE_HOME": "{home}/.cache",
+        "XDG_DATA_HOME": "{home}/.local/share",
+        "NIRI_SOCKET": "{home}/runtime/niri.sock",
+        "NIRI_CONFIG": "{home}/.config/niri/config.kdl",
+        "NACRE_COMPOSITOR": "niri",
+        "NACRE_HELPER_BINARY": "{root}/target/release/nacre-helper"
+      },
+      "args": [
+        "display",
+        "extend-right",
+        "DP-1"
+      ],
+      "stdout": "{\"data\": {\"animations\": true, \"blur\": true, \"shadow\": true, \"followMouse\": true, \"naturalScroll\": true, \"gapsIn\": 6, \"gapsOut\": 27, \"borderSize\": 3, \"rounding\": 10, \"frameWidth\": 10, \"frameRounding\": 25, \"frameSheen\": true, \"workspaceWindowHints\": true, \"detachablePanels\": true, \"dragPanels\": true, \"clickEdgeMenus\": false, \"livePreviews\": true, \"nativePalette\": true, \"nativeOverview\": true, \"nativeClipboard\": true, \"dnd\": false, \"lockMedia\": false, \"lockWeather\": false, \"lockNotifications\": false, \"lockNotificationContents\": true, \"weatherLocation\": \"Fixture city\", \"weatherFahrenheit\": true, \"interfaceFont\": \"\", \"language\": \"system\", \"frameTopEnabled\": true, \"topBarEnabled\": true, \"frameLeftEnabled\": true, \"frameRightEnabled\": true, \"controlCenterEnabled\": true, \"frameBottomEnabled\": true, \"aiSidebarEnabled\": true, \"dashboardEnabled\": true, \"lipHoverDelay\": 350, \"interfaceGradients\": true, \"monoFont\": \"\", \"textSize\": 12, \"reduceMotion\": false, \"displays\": [{\"name\": \"DP-1\", \"width\": 2560, \"height\": 1440, \"refreshRate\": 120, \"scale\": 1.25, \"x\": 0, \"y\": 0, \"transform\": 0, \"disabled\": false, \"mirrorOf\": \"none\", \"availableModes\": [\"2560x1440@120Hz\"]}, {\"name\": \"DP-2\", \"width\": 1920, \"height\": 1080, \"refreshRate\": 120, \"scale\": 1, \"x\": 0, \"y\": 0, \"transform\": 0, \"disabled\": false, \"mirrorOf\": \"none\", \"availableModes\": [\"1920x1080@120Hz\"]}], \"compositorDisplays\": {\"niri\": [{\"name\": \"DP-1\", \"width\": 2560, \"height\": 1440, \"refreshRate\": 120, \"scale\": 1.25, \"x\": 0, \"y\": 0, \"transform\": 0, \"disabled\": false, \"mirrorOf\": \"none\", \"availableModes\": [\"2560x1440@120Hz\"]}, {\"name\": \"DP-2\", \"width\": 1920, \"height\": 1080, \"refreshRate\": 120, \"scale\": 1, \"x\": 0, \"y\": 0, \"transform\": 0, \"disabled\": false, \"mirrorOf\": \"none\", \"availableModes\": [\"1920x1080@120Hz\"]}]}}, \"error\": \"fixture write failure\", \"pending\": false}\n",
+      "exit": 0,
+      "effects": [
+        {
+          "operation": "systemd-run",
+          "args": [
+            [
+              "systemd-run",
+              "--user",
+              "--collect",
+              "--quiet",
+              "--unit=nacre-display-revert-0123456789abcdef0123456789abcdef",
+              "--setenv=NACRE_COMPOSITOR=niri",
+              "--setenv=NIRI_SOCKET={home}/runtime/niri.sock",
+              "--setenv=NIRI_CONFIG={home}/.config/niri/config.kdl",
+              "--setenv=HOME={home}",
+              "--setenv=XDG_CONFIG_HOME={home}/.config",
+              "--setenv=XDG_STATE_HOME={home}/.local/state",
+              "--setenv=XDG_CACHE_HOME={home}/.cache",
+              "--setenv=XDG_DATA_HOME={home}/.local/share",
+              "--setenv=NACRE_HELPER_BINARY={root}/target/release/nacre-helper",
+              "{root}/.venv/bin/python",
+              "{root}/nacre/shell-tools/desktop-settings.py",
+              "rollback-after",
+              "0123456789abcdef0123456789abcdef"
+            ]
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "configure_monitors",
+          "args": [
+            [
+              {
+                "name": "DP-1",
+                "width": 2560,
+                "height": 1440,
+                "refreshRate": 120,
+                "scale": 1.25,
+                "x": 0,
+                "y": 0,
+                "transform": 0,
+                "disabled": false,
+                "mirrorOf": "none",
+                "availableModes": [
+                  "2560x1440@120Hz"
+                ]
+              },
+              {
+                "name": "DP-2",
+                "width": 1920,
+                "height": 1080,
+                "refreshRate": 120,
+                "scale": 1,
+                "x": 2048,
+                "y": 0,
+                "transform": 0,
+                "disabled": false,
+                "mirrorOf": "none",
+                "availableModes": [
+                  "1920x1080@120Hz"
+                ]
+              }
+            ]
+          ],
+          "kwargs": {
+            "timeout": 8
+          }
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.001
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.002
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.004
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.008
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.016
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.032
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.001
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.002
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.004
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.008
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.016
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.032
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "configure_monitors",
+          "args": [
+            [
+              {
+                "name": "DP-1",
+                "width": 2560,
+                "height": 1440,
+                "refreshRate": 120,
+                "scale": 1.25,
+                "x": 0,
+                "y": 0,
+                "transform": 0,
+                "disabled": false,
+                "mirrorOf": "none",
+                "availableModes": [
+                  "2560x1440@120Hz"
+                ]
+              },
+              {
+                "name": "DP-2",
+                "width": 1920,
+                "height": 1080,
+                "refreshRate": 120,
+                "scale": 1,
+                "x": 0,
+                "y": 0,
+                "transform": 0,
+                "disabled": false,
+                "mirrorOf": "none",
+                "availableModes": [
+                  "1920x1080@120Hz"
+                ]
+              }
+            ]
+          ],
+          "kwargs": {
+            "timeout": 8
+          }
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.001
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.002
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.004
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.008
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.016
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.032
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.001
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.002
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.004
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.008
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.016
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.032
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        },
+        {
+          "operation": "sleep",
+          "args": [
+            0.05
+          ],
+          "kwargs": {}
+        }
+      ],
+      "files": {
+        ".config": {
+          "mode": "0o755",
+          "directory": true
+        },
+        ".config/nacre": {
+          "mode": "0o755",
+          "directory": true
+        },
+        ".config/nacre/desktop-niri.kdl": {
+          "mode": "0o600",
+          "text": "animations {  }\nlayout {\n    gaps 6\n    border { width 3; }\n    focus-ring { width 3; }\n}\nwindow-rule {\n    exclude app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl \"\n    geometry-corner-radius 10\n    clip-to-geometry true\n}\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\nwindow-rule {\n    shadow { on; }\n    background-effect { blur true; }\n}\ninput {\n    focus-follows-mouse max-scroll-amount=\"0%\"\n    touchpad { natural-scroll; scroll-factor 0.25; }\n}\noutput \"DP-1\" {\n    mode \"2560x1440@120.000\"\n    scale 1.25\n    position x=0 y=0\n    transform \"normal\"\n}\noutput \"DP-2\" {\n    mode \"1920x1080@120.000\"\n    scale 1\n    position x=0 y=0\n    transform \"normal\"\n}\n\n"
+        },
+        ".config/nacre/desktop.json": {
+          "mode": "0o600",
+          "text": "{\"animations\": true, \"blur\": true, \"shadow\": true, \"followMouse\": true, \"naturalScroll\": true, \"gapsIn\": 6, \"gapsOut\": 27, \"borderSize\": 3, \"rounding\": 10, \"frameWidth\": 10, \"frameRounding\": 25, \"frameSheen\": true, \"workspaceWindowHints\": true, \"detachablePanels\": true, \"dragPanels\": true, \"clickEdgeMenus\": false, \"livePreviews\": true, \"nativePalette\": true, \"nativeOverview\": true, \"nativeClipboard\": true, \"dnd\": false, \"lockMedia\": false, \"lockWeather\": false, \"lockNotifications\": false, \"lockNotificationContents\": true, \"weatherLocation\": \"Fixture city\", \"weatherFahrenheit\": true, \"interfaceFont\": \"\", \"language\": \"system\", \"frameTopEnabled\": true, \"topBarEnabled\": true, \"frameLeftEnabled\": true, \"frameRightEnabled\": true, \"controlCenterEnabled\": true, \"frameBottomEnabled\": true, \"aiSidebarEnabled\": true, \"dashboardEnabled\": true, \"lipHoverDelay\": 350, \"interfaceGradients\": true, \"monoFont\": \"\", \"textSize\": 12, \"reduceMotion\": false, \"displays\": [], \"compositorDisplays\": {\"niri\": [{\"name\": \"DP-1\", \"width\": 2560, \"height\": 1440, \"refreshRate\": 120, \"scale\": 1.25, \"x\": 0, \"y\": 0, \"transform\": 0, \"disabled\": false, \"mirrorOf\": \"none\", \"availableModes\": [\"2560x1440@120Hz\"]}, {\"name\": \"DP-2\", \"width\": 1920, \"height\": 1080, \"refreshRate\": 120, \"scale\": 1, \"x\": 0, \"y\": 0, \"transform\": 0, \"disabled\": false, \"mirrorOf\": \"none\", \"availableModes\": [\"1920x1080@120Hz\"]}]}, \"version\": 2}\n"
+        },
+        ".config/nacre/desktop.json.pre-v0-to-v2.bak": {
+          "mode": "0o600",
+          "text": "{\"animations\": true, \"blur\": true, \"shadow\": true, \"followMouse\": true, \"naturalScroll\": true, \"gapsIn\": 6, \"gapsOut\": 27, \"borderSize\": 3, \"rounding\": 10, \"frameWidth\": 10, \"frameRounding\": 25, \"frameSheen\": true, \"workspaceWindowHints\": true, \"detachablePanels\": true, \"dragPanels\": true, \"clickEdgeMenus\": false, \"livePreviews\": true, \"nativePalette\": true, \"nativeOverview\": true, \"nativeClipboard\": true, \"dnd\": false, \"lockMedia\": false, \"lockWeather\": false, \"lockNotifications\": false, \"lockNotificationContents\": true, \"weatherLocation\": \"Fixture city\", \"weatherFahrenheit\": true, \"interfaceFont\": \"\", \"language\": \"system\", \"frameTopEnabled\": true, \"topBarEnabled\": true, \"frameLeftEnabled\": true, \"frameRightEnabled\": true, \"controlCenterEnabled\": true, \"frameBottomEnabled\": true, \"aiSidebarEnabled\": true, \"dashboardEnabled\": true, \"lipHoverDelay\": 350, \"interfaceGradients\": true, \"monoFont\": \"\", \"textSize\": 12, \"reduceMotion\": false}"
+        },
+        ".config/nacre/desktop.json.schema.lock": {
+          "mode": "0o600",
+          "text": ""
+        },
+        ".config/nacre/desktop.lock": {
+          "mode": "0o644",
+          "text": ""
+        },
+        ".config/nacre/display-pending-niri.json.schema.lock": {
+          "mode": "0o600",
+          "text": ""
+        }
+      }
+    }
+  ]
+}

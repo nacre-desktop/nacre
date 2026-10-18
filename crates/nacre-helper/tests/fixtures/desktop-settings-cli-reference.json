@@ -1,0 +1,60 @@
+{
+  "source_sha256": "c5f7f314549e92539c99fb0d233d2d356a97b61b7f8b26bdb1524e4a5da5c4d9",
+  "cases": [
+    {
+      "args": [],
+      "stdout": "",
+      "stderr": "usage: desktop-settings.py [-h]\n                           {state,init,set,display,display-edit,confirm,revert,rollback-after,preset,save-workflow}\n                           [args ...]\ndesktop-settings.py: error: the following arguments are required: action\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--help"
+      ],
+      "stdout": "usage: desktop-settings.py [-h]\n                           {state,init,set,display,display-edit,confirm,revert,rollback-after,preset,save-workflow}\n                           [args ...]\n\npositional arguments:\n  {state,init,set,display,display-edit,confirm,revert,rollback-after,preset,save-workflow}\n  args\n\noptions:\n  -h, --help            show this help message and exit\n",
+      "stderr": "",
+      "exit": 0
+    },
+    {
+      "args": [
+        "bad"
+      ],
+      "stdout": "",
+      "stderr": "usage: desktop-settings.py [-h]\n                           {state,init,set,display,display-edit,confirm,revert,rollback-after,preset,save-workflow}\n                           [args ...]\ndesktop-settings.py: error: argument action: invalid choice: 'bad' (choose from 'state', 'init', 'set', 'display', 'display-edit', 'confirm', 'revert', 'rollback-after', 'preset', 'save-workflow')\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--bad"
+      ],
+      "stdout": "",
+      "stderr": "usage: desktop-settings.py [-h]\n                           {state,init,set,display,display-edit,confirm,revert,rollback-after,preset,save-workflow}\n                           [args ...]\ndesktop-settings.py: error: the following arguments are required: action\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--help=invalid"
+      ],
+      "stdout": "",
+      "stderr": "usage: desktop-settings.py [-h]\n                           {state,init,set,display,display-edit,confirm,revert,rollback-after,preset,save-workflow}\n                           [args ...]\ndesktop-settings.py: error: argument -h/--help: ignored explicit argument 'invalid'\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "state",
+        "--unknown"
+      ],
+      "stdout": "",
+      "stderr": "usage: desktop-settings.py [-h]\n                           {state,init,set,display,display-edit,confirm,revert,rollback-after,preset,save-workflow}\n                           [args ...]\ndesktop-settings.py: error: unrecognized arguments: --unknown\n",
+      "exit": 2
+    },
+    {
+      "args": [
+        "--h"
+      ],
+      "stdout": "usage: desktop-settings.py [-h]\n                           {state,init,set,display,display-edit,confirm,revert,rollback-after,preset,save-workflow}\n                           [args ...]\n\npositional arguments:\n  {state,init,set,display,display-edit,confirm,revert,rollback-after,preset,save-workflow}\n  args\n\noptions:\n  -h, --help            show this help message and exit\n",
+      "stderr": "",
+      "exit": 0
+    }
+  ]
+}

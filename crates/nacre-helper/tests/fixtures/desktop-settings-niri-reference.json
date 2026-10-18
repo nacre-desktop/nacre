@@ -1,0 +1,136 @@
+{
+  "source_sha256": "9e03628b725e272d60431ab6fbe6908d61f049e92aa280992acd78ac78262497",
+  "defaults": {
+    "monitorWorkspaceActions": false,
+    "niriWorkspaceMode": "primary-dynamic",
+    "workspacePrimaryOutput": ""
+  },
+  "excludedFromPresets": [
+    "monitorWorkspaceActions",
+    "niriWorkspaceMode",
+    "workspacePrimaryOutput"
+  ],
+  "validation": [
+    {
+      "key": "monitorWorkspaceActions",
+      "value": false,
+      "result": false
+    },
+    {
+      "key": "monitorWorkspaceActions",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "monitorWorkspaceActions",
+      "value": 0,
+      "error": "monitorWorkspaceActions must be true or false",
+      "type": "ValueError"
+    },
+    {
+      "key": "monitorWorkspaceActions",
+      "value": 1,
+      "error": "monitorWorkspaceActions must be true or false",
+      "type": "ValueError"
+    },
+    {
+      "key": "monitorWorkspaceActions",
+      "value": "false",
+      "error": "monitorWorkspaceActions must be true or false",
+      "type": "ValueError"
+    },
+    {
+      "key": "monitorWorkspaceActions",
+      "value": null,
+      "error": "monitorWorkspaceActions must be true or false",
+      "type": "ValueError"
+    },
+    {
+      "key": "niriWorkspaceMode",
+      "value": "primary-dynamic",
+      "result": "primary-dynamic"
+    },
+    {
+      "key": "niriWorkspaceMode",
+      "value": "fixed-all",
+      "result": "fixed-all"
+    },
+    {
+      "key": "niriWorkspaceMode",
+      "value": "dynamic",
+      "error": "Choose primary with dynamic secondary monitors, or fixed sets on all monitors",
+      "type": "ValueError"
+    },
+    {
+      "key": "niriWorkspaceMode",
+      "value": "",
+      "error": "Choose primary with dynamic secondary monitors, or fixed sets on all monitors",
+      "type": "ValueError"
+    },
+    {
+      "key": "niriWorkspaceMode",
+      "value": true,
+      "error": "Choose primary with dynamic secondary monitors, or fixed sets on all monitors",
+      "type": "ValueError"
+    },
+    {
+      "key": "niriWorkspaceMode",
+      "value": null,
+      "error": "Choose primary with dynamic secondary monitors, or fixed sets on all monitors",
+      "type": "ValueError"
+    },
+    {
+      "key": "workspacePrimaryOutput",
+      "value": "",
+      "result": ""
+    },
+    {
+      "key": "workspacePrimaryOutput",
+      "value": "DP-1",
+      "result": "DP-1"
+    },
+    {
+      "key": "workspacePrimaryOutput",
+      "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    {
+      "key": "workspacePrimaryOutput",
+      "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "error": "Use text up to80characters without control characters",
+      "type": "ValueError"
+    },
+    {
+      "key": "workspacePrimaryOutput",
+      "value": "line\nbreak",
+      "error": "Use text up to80characters without control characters",
+      "type": "ValueError"
+    },
+    {
+      "key": "workspacePrimaryOutput",
+      "value": "x\u007f",
+      "result": "x\u007f"
+    },
+    {
+      "key": "workspacePrimaryOutput",
+      "value": "\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394",
+      "result": "\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394\u0394"
+    },
+    {
+      "key": "workspacePrimaryOutput",
+      "value": true,
+      "error": "Use text up to80characters without control characters",
+      "type": "ValueError"
+    },
+    {
+      "key": "workspacePrimaryOutput",
+      "value": null,
+      "error": "Use text up to80characters without control characters",
+      "type": "ValueError"
+    }
+  ],
+  "files": {},
+  "intendedDifferences": [
+    "Absolute custom XDG roots follow NacrePaths.qml."
+  ]
+}

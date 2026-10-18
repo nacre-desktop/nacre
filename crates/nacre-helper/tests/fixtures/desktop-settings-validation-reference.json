@@ -1,0 +1,1312 @@
+{
+  "source_sha256": "c5f7f314549e92539c99fb0d233d2d356a97b61b7f8b26bdb1524e4a5da5c4d9",
+  "defaults": {
+    "animations": true,
+    "blur": true,
+    "shadow": true,
+    "followMouse": true,
+    "naturalScroll": true,
+    "gapsIn": 6,
+    "gapsOut": 12,
+    "borderSize": 3,
+    "rounding": 10,
+    "frameWidth": 10,
+    "frameRounding": 25,
+    "frameSheen": true,
+    "workspaceWindowHints": true,
+    "detachablePanels": true,
+    "dragPanels": true,
+    "clickEdgeMenus": false,
+    "livePreviews": true,
+    "nativePalette": true,
+    "nativeOverview": true,
+    "nativeClipboard": true,
+    "dnd": false,
+    "lockMedia": true,
+    "lockWeather": true,
+    "lockNotifications": true,
+    "lockNotificationContents": false,
+    "weatherLocation": "",
+    "weatherFahrenheit": false,
+    "interfaceFont": "",
+    "language": "system",
+    "frameTopEnabled": true,
+    "topBarEnabled": true,
+    "frameLeftEnabled": true,
+    "frameRightEnabled": true,
+    "controlCenterEnabled": true,
+    "frameBottomEnabled": true,
+    "aiSidebarEnabled": true,
+    "dashboardEnabled": true,
+    "lipHoverDelay": 350,
+    "interfaceGradients": true,
+    "keyRepeatDelay": 600,
+    "keyRepeatRate": 25,
+    "mouseSpeed": 0.0,
+    "mouseAcceleration": "adaptive",
+    "mouseLeftHanded": false,
+    "mouseNaturalScroll": false,
+    "touchpadSpeed": 0.0,
+    "touchpadTap": true,
+    "touchpadTypingGuard": true,
+    "monoFont": "",
+    "textSize": 12,
+    "reduceMotion": false
+  },
+  "inputKeys": [
+    "keyRepeatDelay",
+    "keyRepeatRate",
+    "mouseSpeed",
+    "mouseAcceleration",
+    "mouseLeftHanded",
+    "mouseNaturalScroll",
+    "touchpadSpeed",
+    "touchpadTap",
+    "touchpadTypingGuard"
+  ],
+  "presetKeys": [
+    "animations",
+    "blur",
+    "shadow",
+    "followMouse",
+    "naturalScroll",
+    "gapsIn",
+    "gapsOut",
+    "borderSize",
+    "rounding",
+    "frameWidth",
+    "frameRounding",
+    "frameSheen",
+    "workspaceWindowHints",
+    "detachablePanels",
+    "dragPanels",
+    "clickEdgeMenus",
+    "livePreviews",
+    "nativePalette",
+    "nativeOverview",
+    "nativeClipboard",
+    "dnd",
+    "frameTopEnabled",
+    "topBarEnabled",
+    "frameLeftEnabled",
+    "frameRightEnabled",
+    "controlCenterEnabled",
+    "frameBottomEnabled",
+    "aiSidebarEnabled",
+    "dashboardEnabled",
+    "lipHoverDelay",
+    "textSize",
+    "reduceMotion"
+  ],
+  "validation": [
+    {
+      "key": "animations",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "blur",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "shadow",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "followMouse",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "naturalScroll",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "gapsIn",
+      "value": 6,
+      "result": 6
+    },
+    {
+      "key": "gapsOut",
+      "value": 12,
+      "result": 12
+    },
+    {
+      "key": "borderSize",
+      "value": 3,
+      "result": 3
+    },
+    {
+      "key": "rounding",
+      "value": 10,
+      "result": 10
+    },
+    {
+      "key": "frameWidth",
+      "value": 10,
+      "result": 10
+    },
+    {
+      "key": "frameRounding",
+      "value": 25,
+      "result": 25
+    },
+    {
+      "key": "frameSheen",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "workspaceWindowHints",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "detachablePanels",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "dragPanels",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "clickEdgeMenus",
+      "value": false,
+      "result": false
+    },
+    {
+      "key": "livePreviews",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "nativePalette",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "nativeOverview",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "nativeClipboard",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "dnd",
+      "value": false,
+      "result": false
+    },
+    {
+      "key": "lockMedia",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "lockWeather",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "lockNotifications",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "lockNotificationContents",
+      "value": false,
+      "result": false
+    },
+    {
+      "key": "weatherLocation",
+      "value": "",
+      "result": ""
+    },
+    {
+      "key": "weatherFahrenheit",
+      "value": false,
+      "result": false
+    },
+    {
+      "key": "interfaceFont",
+      "value": "",
+      "result": ""
+    },
+    {
+      "key": "language",
+      "value": "system",
+      "result": "system"
+    },
+    {
+      "key": "frameTopEnabled",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "topBarEnabled",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "frameLeftEnabled",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "frameRightEnabled",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "controlCenterEnabled",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "frameBottomEnabled",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "aiSidebarEnabled",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "dashboardEnabled",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "lipHoverDelay",
+      "value": 350,
+      "result": 350
+    },
+    {
+      "key": "interfaceGradients",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "keyRepeatDelay",
+      "value": 600,
+      "result": 600
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": 25,
+      "result": 25
+    },
+    {
+      "key": "mouseSpeed",
+      "value": 0.0,
+      "result": 0.0
+    },
+    {
+      "key": "mouseAcceleration",
+      "value": "adaptive",
+      "result": "adaptive"
+    },
+    {
+      "key": "mouseLeftHanded",
+      "value": false,
+      "result": false
+    },
+    {
+      "key": "mouseNaturalScroll",
+      "value": false,
+      "result": false
+    },
+    {
+      "key": "touchpadSpeed",
+      "value": 0.0,
+      "result": 0.0
+    },
+    {
+      "key": "touchpadTap",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "touchpadTypingGuard",
+      "value": true,
+      "result": true
+    },
+    {
+      "key": "monoFont",
+      "value": "",
+      "result": ""
+    },
+    {
+      "key": "textSize",
+      "value": 12,
+      "result": 12
+    },
+    {
+      "key": "reduceMotion",
+      "value": false,
+      "result": false
+    },
+    {
+      "key": "unknown",
+      "value": true,
+      "error": "Unknown setting",
+      "type": "ValueError"
+    },
+    {
+      "key": "mouseSpeed",
+      "value": true,
+      "error": "Pointer speed must be from -1 to 1",
+      "type": "ValueError"
+    },
+    {
+      "key": "mouseSpeed",
+      "value": -1,
+      "result": -1
+    },
+    {
+      "key": "mouseSpeed",
+      "value": 1,
+      "result": 1
+    },
+    {
+      "key": "mouseSpeed",
+      "value": -1.01,
+      "error": "Pointer speed must be from -1 to 1",
+      "type": "ValueError"
+    },
+    {
+      "key": "mouseSpeed",
+      "value": 1.01,
+      "error": "Pointer speed must be from -1 to 1",
+      "type": "ValueError"
+    },
+    {
+      "key": "mouseSpeed",
+      "value": "0.5",
+      "error": "Pointer speed must be from -1 to 1",
+      "type": "ValueError"
+    },
+    {
+      "key": "mouseSpeed",
+      "value": null,
+      "error": "Pointer speed must be from -1 to 1",
+      "type": "ValueError"
+    },
+    {
+      "key": "touchpadSpeed",
+      "value": false,
+      "error": "Pointer speed must be from -1 to 1",
+      "type": "ValueError"
+    },
+    {
+      "key": "touchpadSpeed",
+      "value": -1,
+      "result": -1
+    },
+    {
+      "key": "touchpadSpeed",
+      "value": 1,
+      "result": 1
+    },
+    {
+      "key": "touchpadSpeed",
+      "value": 2,
+      "error": "Pointer speed must be from -1 to 1",
+      "type": "ValueError"
+    },
+    {
+      "key": "mouseAcceleration",
+      "value": "flat",
+      "result": "flat"
+    },
+    {
+      "key": "mouseAcceleration",
+      "value": "other",
+      "error": "Choose Adaptive or Flat acceleration",
+      "type": "ValueError"
+    },
+    {
+      "key": "mouseAcceleration",
+      "value": null,
+      "error": "Choose Adaptive or Flat acceleration",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": true,
+      "error": "keyRepeatRate must be an integer from 1 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": 0,
+      "error": "keyRepeatRate must be an integer from 1 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": 1,
+      "result": 1
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": 80,
+      "result": 80
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": 81,
+      "error": "keyRepeatRate must be an integer from 1 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": 1.0,
+      "error": "keyRepeatRate must be an integer from 1 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "language",
+      "value": "system",
+      "result": "system"
+    },
+    {
+      "key": "language",
+      "value": "en",
+      "result": "en"
+    },
+    {
+      "key": "language",
+      "value": "pseudo",
+      "error": "Choose System default or English",
+      "type": "ValueError"
+    },
+    {
+      "key": "language",
+      "value": "unknown",
+      "error": "Choose System default or English",
+      "type": "ValueError"
+    },
+    {
+      "key": "weatherLocation",
+      "value": "",
+      "result": ""
+    },
+    {
+      "key": "weatherLocation",
+      "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "result": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    {
+      "key": "weatherLocation",
+      "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "error": "Use text up to80characters without control characters",
+      "type": "ValueError"
+    },
+    {
+      "key": "weatherLocation",
+      "value": "line\nbreak",
+      "error": "Use text up to80characters without control characters",
+      "type": "ValueError"
+    },
+    {
+      "key": "weatherLocation",
+      "value": "x\u007f",
+      "result": "x\u007f"
+    },
+    {
+      "key": "weatherLocation",
+      "value": null,
+      "error": "Use text up to80characters without control characters",
+      "type": "ValueError"
+    },
+    {
+      "key": "interfaceFont",
+      "value": "Fixture Sans",
+      "result": "Fixture Sans"
+    },
+    {
+      "key": "interfaceFont",
+      "value": true,
+      "error": "Use text up to80characters without control characters",
+      "type": "ValueError"
+    },
+    {
+      "key": "monoFont",
+      "value": "Fixture Mono",
+      "result": "Fixture Mono"
+    },
+    {
+      "key": "monoFont",
+      "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "error": "Use text up to80characters without control characters",
+      "type": "ValueError"
+    },
+    {
+      "key": "animations",
+      "value": false,
+      "result": false
+    },
+    {
+      "key": "animations",
+      "value": 0,
+      "error": "animations must be true or false",
+      "type": "ValueError"
+    },
+    {
+      "key": "animations",
+      "value": "false",
+      "error": "animations must be true or false",
+      "type": "ValueError"
+    },
+    {
+      "key": "animations",
+      "value": null,
+      "error": "animations must be true or false",
+      "type": "ValueError"
+    },
+    {
+      "key": "gapsIn",
+      "value": -1,
+      "error": "gapsIn must be an integer from 0 to 30",
+      "type": "ValueError"
+    },
+    {
+      "key": "gapsIn",
+      "value": 0,
+      "result": 0
+    },
+    {
+      "key": "gapsIn",
+      "value": 30,
+      "result": 30
+    },
+    {
+      "key": "gapsIn",
+      "value": 31,
+      "error": "gapsIn must be an integer from 0 to 30",
+      "type": "ValueError"
+    },
+    {
+      "key": "gapsIn",
+      "value": true,
+      "error": "gapsIn must be an integer from 0 to 30",
+      "type": "ValueError"
+    },
+    {
+      "key": "gapsIn",
+      "value": 0.0,
+      "error": "gapsIn must be an integer from 0 to 30",
+      "type": "ValueError"
+    },
+    {
+      "key": "gapsOut",
+      "value": -1,
+      "error": "gapsOut must be an integer from 0 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "gapsOut",
+      "value": 0,
+      "result": 0
+    },
+    {
+      "key": "gapsOut",
+      "value": 80,
+      "result": 80
+    },
+    {
+      "key": "gapsOut",
+      "value": 81,
+      "error": "gapsOut must be an integer from 0 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "gapsOut",
+      "value": true,
+      "error": "gapsOut must be an integer from 0 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "gapsOut",
+      "value": 0.0,
+      "error": "gapsOut must be an integer from 0 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "borderSize",
+      "value": -1,
+      "error": "borderSize must be an integer from 0 to 8",
+      "type": "ValueError"
+    },
+    {
+      "key": "borderSize",
+      "value": 0,
+      "result": 0
+    },
+    {
+      "key": "borderSize",
+      "value": 8,
+      "result": 8
+    },
+    {
+      "key": "borderSize",
+      "value": 9,
+      "error": "borderSize must be an integer from 0 to 8",
+      "type": "ValueError"
+    },
+    {
+      "key": "borderSize",
+      "value": true,
+      "error": "borderSize must be an integer from 0 to 8",
+      "type": "ValueError"
+    },
+    {
+      "key": "borderSize",
+      "value": 0.0,
+      "error": "borderSize must be an integer from 0 to 8",
+      "type": "ValueError"
+    },
+    {
+      "key": "rounding",
+      "value": -1,
+      "error": "rounding must be an integer from 0 to 40",
+      "type": "ValueError"
+    },
+    {
+      "key": "rounding",
+      "value": 0,
+      "result": 0
+    },
+    {
+      "key": "rounding",
+      "value": 40,
+      "result": 40
+    },
+    {
+      "key": "rounding",
+      "value": 41,
+      "error": "rounding must be an integer from 0 to 40",
+      "type": "ValueError"
+    },
+    {
+      "key": "rounding",
+      "value": true,
+      "error": "rounding must be an integer from 0 to 40",
+      "type": "ValueError"
+    },
+    {
+      "key": "rounding",
+      "value": 0.0,
+      "error": "rounding must be an integer from 0 to 40",
+      "type": "ValueError"
+    },
+    {
+      "key": "frameWidth",
+      "value": -1,
+      "error": "frameWidth must be an integer from 0 to 30",
+      "type": "ValueError"
+    },
+    {
+      "key": "frameWidth",
+      "value": 0,
+      "result": 0
+    },
+    {
+      "key": "frameWidth",
+      "value": 30,
+      "result": 30
+    },
+    {
+      "key": "frameWidth",
+      "value": 31,
+      "error": "frameWidth must be an integer from 0 to 30",
+      "type": "ValueError"
+    },
+    {
+      "key": "frameWidth",
+      "value": true,
+      "error": "frameWidth must be an integer from 0 to 30",
+      "type": "ValueError"
+    },
+    {
+      "key": "frameWidth",
+      "value": 0.0,
+      "error": "frameWidth must be an integer from 0 to 30",
+      "type": "ValueError"
+    },
+    {
+      "key": "frameRounding",
+      "value": -1,
+      "error": "frameRounding must be an integer from 0 to 40",
+      "type": "ValueError"
+    },
+    {
+      "key": "frameRounding",
+      "value": 0,
+      "result": 0
+    },
+    {
+      "key": "frameRounding",
+      "value": 40,
+      "result": 40
+    },
+    {
+      "key": "frameRounding",
+      "value": 41,
+      "error": "frameRounding must be an integer from 0 to 40",
+      "type": "ValueError"
+    },
+    {
+      "key": "frameRounding",
+      "value": true,
+      "error": "frameRounding must be an integer from 0 to 40",
+      "type": "ValueError"
+    },
+    {
+      "key": "frameRounding",
+      "value": 0.0,
+      "error": "frameRounding must be an integer from 0 to 40",
+      "type": "ValueError"
+    },
+    {
+      "key": "lipHoverDelay",
+      "value": -1,
+      "error": "lipHoverDelay must be an integer from 0 to 800",
+      "type": "ValueError"
+    },
+    {
+      "key": "lipHoverDelay",
+      "value": 0,
+      "result": 0
+    },
+    {
+      "key": "lipHoverDelay",
+      "value": 800,
+      "result": 800
+    },
+    {
+      "key": "lipHoverDelay",
+      "value": 801,
+      "error": "lipHoverDelay must be an integer from 0 to 800",
+      "type": "ValueError"
+    },
+    {
+      "key": "lipHoverDelay",
+      "value": true,
+      "error": "lipHoverDelay must be an integer from 0 to 800",
+      "type": "ValueError"
+    },
+    {
+      "key": "lipHoverDelay",
+      "value": 0.0,
+      "error": "lipHoverDelay must be an integer from 0 to 800",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatDelay",
+      "value": 99,
+      "error": "keyRepeatDelay must be an integer from 100 to 1000",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatDelay",
+      "value": 100,
+      "result": 100
+    },
+    {
+      "key": "keyRepeatDelay",
+      "value": 1000,
+      "result": 1000
+    },
+    {
+      "key": "keyRepeatDelay",
+      "value": 1001,
+      "error": "keyRepeatDelay must be an integer from 100 to 1000",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatDelay",
+      "value": true,
+      "error": "keyRepeatDelay must be an integer from 100 to 1000",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatDelay",
+      "value": 100.0,
+      "error": "keyRepeatDelay must be an integer from 100 to 1000",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": 0,
+      "error": "keyRepeatRate must be an integer from 1 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": 1,
+      "result": 1
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": 80,
+      "result": 80
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": 81,
+      "error": "keyRepeatRate must be an integer from 1 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": true,
+      "error": "keyRepeatRate must be an integer from 1 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "keyRepeatRate",
+      "value": 1.0,
+      "error": "keyRepeatRate must be an integer from 1 to 80",
+      "type": "ValueError"
+    },
+    {
+      "key": "textSize",
+      "value": 8,
+      "error": "textSize must be an integer from 9 to 18",
+      "type": "ValueError"
+    },
+    {
+      "key": "textSize",
+      "value": 9,
+      "result": 9
+    },
+    {
+      "key": "textSize",
+      "value": 18,
+      "result": 18
+    },
+    {
+      "key": "textSize",
+      "value": 19,
+      "error": "textSize must be an integer from 9 to 18",
+      "type": "ValueError"
+    },
+    {
+      "key": "textSize",
+      "value": true,
+      "error": "textSize must be an integer from 9 to 18",
+      "type": "ValueError"
+    },
+    {
+      "key": "textSize",
+      "value": 9.0,
+      "error": "textSize must be an integer from 9 to 18",
+      "type": "ValueError"
+    }
+  ],
+  "developerPseudo": {
+    "result": "pseudo"
+  },
+  "plans": [
+    {
+      "monitors": [
+        {
+          "name": "DP-1",
+          "width": 2560,
+          "height": 1440,
+          "scale": 1.25,
+          "transform": 0
+        },
+        {
+          "name": "DP-2",
+          "width": 2880,
+          "height": 1800,
+          "scale": 1.5,
+          "transform": 1
+        },
+        {
+          "name": "DP-3",
+          "width": 1920,
+          "height": 1080,
+          "scale": 1,
+          "transform": 0
+        }
+      ],
+      "primary": "DP-1",
+      "mode": "extend-right",
+      "result": [
+        {
+          "name": "DP-1",
+          "width": 2560,
+          "height": 1440,
+          "scale": 1.25,
+          "transform": 0,
+          "x": 0,
+          "y": 0,
+          "mirrorOf": "none"
+        },
+        {
+          "name": "DP-2",
+          "width": 2880,
+          "height": 1800,
+          "scale": 1.5,
+          "transform": 1,
+          "y": 0,
+          "mirrorOf": "none",
+          "x": 2048
+        },
+        {
+          "name": "DP-3",
+          "width": 1920,
+          "height": 1080,
+          "scale": 1,
+          "transform": 0,
+          "y": 0,
+          "mirrorOf": "none",
+          "x": 3248
+        }
+      ]
+    },
+    {
+      "monitors": [
+        {
+          "name": "DP-1",
+          "width": 2560,
+          "height": 1440,
+          "scale": 1.25,
+          "transform": 0
+        },
+        {
+          "name": "DP-2",
+          "width": 2880,
+          "height": 1800,
+          "scale": 1.5,
+          "transform": 1
+        },
+        {
+          "name": "DP-3",
+          "width": 1920,
+          "height": 1080,
+          "scale": 1,
+          "transform": 0
+        }
+      ],
+      "primary": "DP-1",
+      "mode": "extend-left",
+      "result": [
+        {
+          "name": "DP-1",
+          "width": 2560,
+          "height": 1440,
+          "scale": 1.25,
+          "transform": 0,
+          "x": 0,
+          "y": 0,
+          "mirrorOf": "none"
+        },
+        {
+          "name": "DP-2",
+          "width": 2880,
+          "height": 1800,
+          "scale": 1.5,
+          "transform": 1,
+          "y": 0,
+          "mirrorOf": "none",
+          "x": -1200
+        },
+        {
+          "name": "DP-3",
+          "width": 1920,
+          "height": 1080,
+          "scale": 1,
+          "transform": 0,
+          "y": 0,
+          "mirrorOf": "none",
+          "x": -3120
+        }
+      ]
+    },
+    {
+      "monitors": [
+        {
+          "name": "DP-1",
+          "width": 2560,
+          "height": 1440,
+          "scale": 1.25,
+          "transform": 0
+        },
+        {
+          "name": "DP-2",
+          "width": 2880,
+          "height": 1800,
+          "scale": 1.5,
+          "transform": 1
+        },
+        {
+          "name": "DP-3",
+          "width": 1920,
+          "height": 1080,
+          "scale": 1,
+          "transform": 0
+        }
+      ],
+      "primary": "DP-1",
+      "mode": "mirror",
+      "result": [
+        {
+          "name": "DP-1",
+          "width": 2560,
+          "height": 1440,
+          "scale": 1.25,
+          "transform": 0,
+          "x": 0,
+          "y": 0,
+          "mirrorOf": "none"
+        },
+        {
+          "name": "DP-2",
+          "width": 2880,
+          "height": 1800,
+          "scale": 1.5,
+          "transform": 1,
+          "y": 0,
+          "mirrorOf": "DP-1",
+          "x": 0
+        },
+        {
+          "name": "DP-3",
+          "width": 1920,
+          "height": 1080,
+          "scale": 1,
+          "transform": 0,
+          "y": 0,
+          "mirrorOf": "DP-1",
+          "x": 0
+        }
+      ]
+    },
+    {
+      "monitors": [
+        {
+          "name": "DP-1",
+          "width": 2560,
+          "height": 1440,
+          "scale": 1.25,
+          "transform": 0
+        },
+        {
+          "name": "DP-2",
+          "width": 2880,
+          "height": 1800,
+          "scale": 1.5,
+          "transform": 1
+        },
+        {
+          "name": "DP-3",
+          "width": 1920,
+          "height": 1080,
+          "scale": 1,
+          "transform": 0
+        }
+      ],
+      "primary": "DP-2",
+      "mode": "extend-right",
+      "result": [
+        {
+          "name": "DP-2",
+          "width": 2880,
+          "height": 1800,
+          "scale": 1.5,
+          "transform": 1,
+          "x": 0,
+          "y": 0,
+          "mirrorOf": "none"
+        },
+        {
+          "name": "DP-1",
+          "width": 2560,
+          "height": 1440,
+          "scale": 1.25,
+          "transform": 0,
+          "y": 0,
+          "mirrorOf": "none",
+          "x": 1200
+        },
+        {
+          "name": "DP-3",
+          "width": 1920,
+          "height": 1080,
+          "scale": 1,
+          "transform": 0,
+          "y": 0,
+          "mirrorOf": "none",
+          "x": 3248
+        }
+      ]
+    },
+    {
+      "monitors": [
+        {
+          "name": "DP-1",
+          "width": 2560,
+          "height": 1440,
+          "scale": 1.25,
+          "transform": 0
+        }
+      ],
+      "primary": "DP-1",
+      "mode": "extend-right",
+      "error": "Connect a second display first",
+      "type": "ValueError"
+    },
+    {
+      "monitors": [
+        {
+          "name": "DP-1",
+          "width": 2560,
+          "height": 1440,
+          "scale": 1.25,
+          "transform": 0
+        },
+        {
+          "name": "DP-2",
+          "width": 2880,
+          "height": 1800,
+          "scale": 1.5,
+          "transform": 1
+        },
+        {
+          "name": "DP-3",
+          "width": 1920,
+          "height": 1080,
+          "scale": 1,
+          "transform": 0
+        }
+      ],
+      "primary": "missing",
+      "mode": "extend-left",
+      "error": "Selected display is disconnected",
+      "type": "ValueError"
+    },
+    {
+      "monitors": [
+        {
+          "name": "DP-1",
+          "width": 2560,
+          "height": 1440,
+          "scale": 1.25,
+          "transform": 0
+        },
+        {
+          "name": "DP-2",
+          "width": 2880,
+          "height": 1800,
+          "scale": 1.5,
+          "transform": 1
+        },
+        {
+          "name": "DP-3",
+          "width": 1920,
+          "height": 1080,
+          "scale": 1,
+          "transform": 0
+        }
+      ],
+      "primary": "DP-1",
+      "mode": "other",
+      "error": "Unsupported display arrangement",
+      "type": "ValueError"
+    }
+  ],
+  "load": {
+    "saved": {
+      "frameWidth": 8,
+      "wallpaperTransition": "old",
+      "normalSnapshot": {
+        "wallpaperTransition": "old",
+        "gapsOut": 27
+      },
+      "displays": [
+        {
+          "name": "legacy"
+        }
+      ],
+      "compositorDisplays": {
+        "niri": [
+          {
+            "name": "winit"
+          }
+        ]
+      }
+    },
+    "result": {
+      "animations": true,
+      "blur": true,
+      "shadow": true,
+      "followMouse": true,
+      "naturalScroll": true,
+      "gapsIn": 6,
+      "gapsOut": 12,
+      "borderSize": 3,
+      "rounding": 10,
+      "frameWidth": 8,
+      "frameRounding": 25,
+      "frameSheen": true,
+      "workspaceWindowHints": true,
+      "detachablePanels": true,
+      "dragPanels": true,
+      "clickEdgeMenus": false,
+      "livePreviews": true,
+      "nativePalette": true,
+      "nativeOverview": true,
+      "nativeClipboard": true,
+      "dnd": false,
+      "lockMedia": true,
+      "lockWeather": true,
+      "lockNotifications": true,
+      "lockNotificationContents": false,
+      "weatherLocation": "",
+      "weatherFahrenheit": false,
+      "interfaceFont": "",
+      "language": "system",
+      "frameTopEnabled": true,
+      "topBarEnabled": true,
+      "frameLeftEnabled": true,
+      "frameRightEnabled": true,
+      "controlCenterEnabled": true,
+      "frameBottomEnabled": true,
+      "aiSidebarEnabled": true,
+      "dashboardEnabled": true,
+      "lipHoverDelay": 350,
+      "interfaceGradients": true,
+      "monoFont": "",
+      "textSize": 12,
+      "reduceMotion": false,
+      "normalSnapshot": {
+        "gapsOut": 27
+      },
+      "displays": [
+        {
+          "name": "winit"
+        }
+      ],
+      "compositorDisplays": {
+        "niri": [
+          {
+            "name": "winit"
+          }
+        ]
+      }
+    }
+  }
+}

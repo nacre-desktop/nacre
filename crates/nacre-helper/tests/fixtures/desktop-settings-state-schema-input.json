@@ -1,0 +1,17 @@
+{
+  "id": "desktop",
+  "paths": [
+    "nacre/desktop.json"
+  ],
+  "owner": "desktop-settings",
+  "shape": "object",
+  "version": 2,
+  "keepVersion": false,
+  "defaults": {
+    "interfaceGradients": true
+  },
+  "settings": {
+    "root": "config",
+    "access": "write"
+  }
+}
