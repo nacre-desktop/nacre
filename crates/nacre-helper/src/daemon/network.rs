@@ -205,6 +205,7 @@ struct RawNetwork {
     primary_connection: Option<String>,
 }
 
+#[cfg(test)]
 async fn read_snapshot(
     connection: &zbus::Connection,
     ids: &mut IdentityTable,
@@ -773,13 +774,7 @@ async fn observe(
     generation: Rc<Cell<u64>>,
     identity_generation: Rc<Cell<u64>>,
 ) -> Result<()> {
-    let last_good = hub
-        .borrow()
-        .snapshot(CORE_TOPIC)
-        .and_then(|state| serde_json::from_value::<NetworkState>(state).ok())
-        .filter(|state| state.health.available || state.health.stale);
-    let service_generation = next_identity_generation(&identity_generation)?;
-    let mut projection = NetworkProjection::new(last_good, service_generation);
+    let projection = new_projection(&hub, &identity_generation)?;
     let builder = match zbus::connection::Builder::system() {
         Ok(builder) => builder.method_timeout(Duration::from_secs(5)),
         Err(_) => {
@@ -794,6 +789,82 @@ async fn observe(
             return Err("NetworkManager monitoring connection is unavailable".into());
         }
     };
+    observe_on_connection(hub, generation, projection, connection, ObserveHooks::default()).await
+}
+
+fn new_projection(hub: &Shared, identity_generation: &Cell<u64>) -> Result<NetworkProjection> {
+    let last_good = hub
+        .borrow()
+        .snapshot(CORE_TOPIC)
+        .and_then(|state| serde_json::from_value::<NetworkState>(state).ok())
+        .filter(|state| state.health.available || state.health.stale);
+    let service_generation = next_identity_generation(identity_generation)?;
+    Ok(NetworkProjection::new(last_good, service_generation))
+}
+
+#[derive(Default)]
+struct ObserveHooks {
+    #[cfg(test)]
+    watcher_dropped: Option<tokio::sync::oneshot::Sender<()>>,
+    #[cfg(test)]
+    watcher_events: Option<tokio::sync::mpsc::UnboundedSender<crate::network_state::NetworkEvent>>,
+    #[cfg(test)]
+    snapshot_gate: Option<SnapshotReadGate>,
+    #[cfg(test)]
+    before_publish_gate:
+        Option<(tokio::sync::oneshot::Sender<()>, tokio::sync::oneshot::Receiver<()>)>,
+}
+
+#[cfg(test)]
+struct SnapshotReadGate {
+    started: tokio::sync::oneshot::Sender<()>,
+    release: tokio::sync::oneshot::Receiver<()>,
+    resumed: tokio::sync::oneshot::Sender<()>,
+}
+
+impl ObserveHooks {
+    async fn after_snapshot_read(&mut self) {
+        #[cfg(test)]
+        if let Some(gate) = self.snapshot_gate.take() {
+            let _ = gate.started.send(());
+            if gate.release.await.is_ok() {
+                let _ = gate.resumed.send(());
+            }
+        }
+        #[cfg(not(test))]
+        let _ = self;
+    }
+
+    async fn before_publish(&mut self) {
+        #[cfg(test)]
+        if let Some((started, release)) = self.before_publish_gate.take() {
+            let _ = started.send(());
+            let _ = release.await;
+        }
+        #[cfg(not(test))]
+        let _ = self;
+    }
+}
+
+#[cfg(test)]
+struct WatcherDropSignal(Option<tokio::sync::oneshot::Sender<()>>);
+
+#[cfg(test)]
+impl Drop for WatcherDropSignal {
+    fn drop(&mut self) {
+        if let Some(signal) = self.0.take() {
+            let _ = signal.send(());
+        }
+    }
+}
+
+async fn observe_on_connection(
+    hub: Shared,
+    generation: Rc<Cell<u64>>,
+    mut projection: NetworkProjection,
+    connection: zbus::Connection,
+    mut hooks: ObserveHooks,
+) -> Result<()> {
     let expected_owner = match network_manager_owner(&connection).await {
         Ok(owner) => owner,
         Err(error) => {
@@ -810,9 +881,19 @@ async fn observe(
     let event_refresh = refresh.clone();
     let event_owner_boundary = owner_boundary.clone();
     let mut owner_changed_tx = Some(owner_changed_tx);
+    #[cfg(test)]
+    let watcher_dropped = hooks.watcher_dropped.take();
+    #[cfg(test)]
+    let watcher_events = hooks.watcher_events.take();
     let watcher = tokio::task::spawn_local(async move {
+        #[cfg(test)]
+        let _drop_signal = WatcherDropSignal(watcher_dropped);
         let mut running = false;
         crate::network_state::watch_events_tagged(&event_connection, |event| {
+            #[cfg(test)]
+            if let Some(events) = &watcher_events {
+                let _ = events.send(event);
+            }
             if event == crate::network_state::NetworkEvent::OwnerChanged {
                 event_owner_boundary.set(true);
                 let next = event_generation
@@ -891,7 +972,12 @@ async fn observe(
                 read_from_expected_owner(
                     &connection,
                     &expected_owner,
-                    read_snapshot_candidate(&connection, &projection.ids),
+                    async {
+                        let snapshot =
+                            read_snapshot_candidate(&connection, &projection.ids).await;
+                        hooks.after_snapshot_read().await;
+                        snapshot
+                    },
                 ),
             )
             .await;
@@ -921,15 +1007,20 @@ async fn observe(
                 projection.publish_failure(&hub, error)?;
                 continue;
             }
+            hooks.before_publish().await;
             tokio::select! {
+                biased;
                 _ = &mut owner_changed => return Err("NetworkManager owner changed before publish".into()),
                 _ = watcher.wait() => return Err("NetworkManager event watcher stopped before publish".into()),
                 current = require_network_manager_owner(&connection, &expected_owner) => {
-                    current.map_err(|_| {
+                    if current.is_err() {
                         owner_boundary.set(true);
-                        "NetworkManager owner changed before publish"
-                    })?;
+                        return Err("NetworkManager owner changed before publish".into());
+                    }
                 }
+            }
+            if owner_boundary.get() {
+                return Err("NetworkManager owner changed before publish".into());
             }
             if let Err(error) = hub.borrow_mut().publish(CORE_TOPIC, data) {
                 if error.code == ErrorCode::TooLarge {
@@ -1122,10 +1213,6 @@ mod core_tests {
     use std::{
         io::{BufRead, BufReader},
         process::{Child, Command, Stdio},
-        sync::{
-            atomic::{AtomicUsize, Ordering},
-            Arc,
-        },
     };
     use zbus::zvariant::{OwnedObjectPath, OwnedValue};
 
@@ -1238,35 +1325,62 @@ mod core_tests {
             .await?)
     }
 
-    struct WatchLease(Arc<AtomicUsize>);
+    struct FixtureSupervisor {
+        hub: Shared,
+        generation: Rc<Cell<u64>>,
+        identity_generation: Rc<Cell<u64>>,
+    }
 
-    impl Drop for WatchLease {
-        fn drop(&mut self) {
-            self.0.fetch_add(1, Ordering::SeqCst);
+    impl FixtureSupervisor {
+        fn new(hub: Shared) -> Self {
+            Self {
+                hub,
+                generation: Rc::new(Cell::new(0)),
+                identity_generation: Rc::new(Cell::new(0)),
+            }
+        }
+
+        fn start(
+            &self,
+            connection: zbus::Connection,
+            hooks: ObserveHooks,
+        ) -> tokio::task::JoinHandle<Result<()>> {
+            let hub = self.hub.clone();
+            let generation = self.generation.clone();
+            let identity_generation = self.identity_generation.clone();
+            tokio::task::spawn_local(async move {
+                let projection = new_projection(&hub, &identity_generation)?;
+                observe_on_connection(hub, generation, projection, connection, hooks).await
+            })
         }
     }
 
-    fn test_watcher(
-        connection: zbus::Connection,
-        callbacks: Arc<AtomicUsize>,
-        dropped: Arc<AtomicUsize>,
-        ready: tokio::sync::oneshot::Sender<()>,
-    ) -> AbortWatcher {
-        let lease = WatchLease(dropped);
-        AbortWatcher(Some(tokio::task::spawn_local(async move {
-            let mut ready = Some(ready);
-            crate::network_state::watch_events_tagged(&connection, move |event| {
-                let _keep_lease = &lease;
-                callbacks.fetch_add(1, Ordering::SeqCst);
-                if event == crate::network_state::NetworkEvent::Initial {
-                    if let Some(ready) = ready.take() {
-                        let _ = ready.send(());
-                    }
-                }
-                Ok(true)
-            })
-            .await
-        })))
+    async fn wait_for_core_health(
+        hub: &Shared,
+        notices: &mut tokio::sync::broadcast::Receiver<super::super::hub::Notice>,
+        available: bool,
+        stale: bool,
+    ) -> NetworkState {
+        loop {
+            let notice = notices
+                .recv()
+                .await
+                .expect("private hub observer remains open");
+            if !matches!(
+                notice,
+                super::super::hub::Notice::Changed { ref topic, .. } if topic == CORE_TOPIC
+            ) {
+                continue;
+            }
+            let Some(snapshot) = hub.borrow().snapshot(CORE_TOPIC) else {
+                continue;
+            };
+            let state: NetworkState =
+                serde_json::from_value(snapshot).expect("valid network topic");
+            if state.health.available == available && state.health.stale == stale {
+                return state;
+            }
+        }
     }
 
     #[test]
@@ -1287,32 +1401,41 @@ mod core_tests {
                 let old_server = owner_fixture(&address).await?;
                 let client = fixture_client(&address).await?;
                 let old_owner = network_manager_owner(&client).await?;
-                let (old_state, old_ids) =
-                    read_snapshot_candidate(&client, &IdentityTable::new(1))
-                        .await
-                        .map_err(|_| "Initial private snapshot failed")?;
+                let hub = super::super::hub::Hub::new(
+                    "owner-replacement-test".into(),
+                    false,
+                    Duration::from_millis(16),
+                )
+                .shared();
+                publish_core_starting(&hub)?;
+                let mut notices = hub.borrow().observe();
+                let supervisor = FixtureSupervisor::new(hub.clone());
+                let old_task = supervisor.start(client.clone(), ObserveHooks::default());
+                let old_state = wait_for_core_health(&hub, &mut notices, true, false).await;
                 let old_id = old_state.connections.order[0].clone();
                 assert!(CoreSnapshot::Network(old_state.clone()).valid());
 
-                drop(old_server);
+                assert!(old_server.release_name(NM_SERVICE).await?);
+                let stale = wait_for_core_health(&hub, &mut notices, false, true).await;
+                assert_eq!(stale.connections.order, old_state.connections.order);
+                assert!(old_task.await?.is_err());
+
                 let new_server = owner_fixture(&address).await?;
-                let new_owner = network_manager_owner(&client).await?;
+                let new_client = fixture_client(&address).await?;
+                let new_owner = network_manager_owner(&new_client).await?;
                 assert_ne!(old_owner, new_owner);
-                let (new_state, new_ids) =
-                    read_snapshot_candidate(&client, &IdentityTable::new(2))
-                        .await
-                        .map_err(|_| "Replacement private snapshot failed")?;
-                assert_eq!(new_state.connections.items[&new_state.connections.order[0]].name,
-                    old_state.connections.items[&old_state.connections.order[0]].name);
+                let new_task = supervisor.start(new_client, ObserveHooks::default());
+                let new_state = wait_for_core_health(&hub, &mut notices, true, false).await;
+                assert_eq!(
+                    new_state.connections.items[&new_state.connections.order[0]].name,
+                    old_state.connections.items[&old_state.connections.order[0]].name
+                );
                 assert_ne!(old_id, new_state.connections.order[0]);
                 assert!(CoreSnapshot::Network(new_state.clone()).valid());
 
-                let (repeated, _) = read_snapshot_candidate(&client, &new_ids)
-                    .await
-                    .map_err(|_| "Repeated replacement snapshot failed")?;
-                assert_eq!(new_state.connections.order, repeated.connections.order);
-                assert!(!old_ids.live.is_empty());
-                drop(new_server);
+                assert!(new_server.release_name(NM_SERVICE).await?);
+                let _ = wait_for_core_health(&hub, &mut notices, false, true).await;
+                assert!(new_task.await?.is_err());
                 Ok::<(), crate::Error>(())
             })
             .await?;
@@ -1326,9 +1449,9 @@ mod core_tests {
             .run_until(async {
                 let old_server = owner_fixture(&address).await?;
                 let client = fixture_client(&address).await?;
-                let expected_owner = network_manager_owner(&client).await?;
-                let (last_good, ids) =
-                    read_snapshot_candidate(&client, &IdentityTable::new(1))
+                let old_owner = network_manager_owner(&client).await?;
+                let (last_good, _) =
+                    read_snapshot_candidate(&client, &IdentityTable::new(99))
                         .await
                         .map_err(|_| "Initial private snapshot failed")?;
                 let hub = super::super::hub::Hub::new(
@@ -1339,85 +1462,84 @@ mod core_tests {
                 .shared();
                 hub.borrow_mut()
                     .publish(CORE_TOPIC, serde_json::to_value(last_good.clone())?)?;
-                let mut projection = NetworkProjection::new(Some(last_good.clone()), 2);
-                let (owner_changed_tx, mut owner_changed_rx) =
-                    tokio::sync::oneshot::channel();
-                let (owner_seen_tx, owner_seen_rx) = tokio::sync::oneshot::channel();
-                let (watch_ready_tx, watch_ready_rx) = tokio::sync::oneshot::channel();
-                let watch_connection = client.clone();
-                let mut owner_changed_tx = Some(owner_changed_tx);
-                let mut owner_seen_tx = Some(owner_seen_tx);
-                let mut watch_ready_tx = Some(watch_ready_tx);
-                let watcher = tokio::task::spawn_local(async move {
-                    crate::network_state::watch_events_tagged(&watch_connection, |event| {
-                        if event == crate::network_state::NetworkEvent::Initial {
-                            if let Some(ready) = watch_ready_tx.take() {
-                                let _ = ready.send(());
-                            }
-                        }
-                        if event == crate::network_state::NetworkEvent::OwnerChanged {
-                            if let Some(signal) = owner_changed_tx.take() {
-                                let _ = signal.send(());
-                            }
-                            if let Some(signal) = owner_seen_tx.take() {
-                                let _ = signal.send(());
-                            }
-                            return Ok(false);
-                        }
-                        Ok(true)
-                    })
-                    .await
-                });
-                let mut watcher = AbortWatcher(Some(watcher));
-                let (started_tx, started_rx) = tokio::sync::oneshot::channel();
-                let (resume_tx, resume_rx) = tokio::sync::oneshot::channel();
-                let dropped = Rc::new(Cell::new(false));
-                struct DropWitness(Rc<Cell<bool>>);
-                impl Drop for DropWitness {
-                    fn drop(&mut self) {
-                        self.0.set(true);
-                    }
-                }
-                let witness = DropWitness(dropped.clone());
-                let old_snapshot = (last_good.clone(), ids);
-                let read_expected_owner = expected_owner.clone();
-                let delayed_read = async move {
-                    let _witness = witness;
-                    let _ = started_tx.send(());
-                    let _ = resume_rx.await;
-                    Ok(old_snapshot)
+                let mut notices = hub.borrow().observe();
+                let supervisor = FixtureSupervisor::new(hub.clone());
+                let (read_started_tx, read_started_rx) = tokio::sync::oneshot::channel();
+                let (read_release_tx, read_release_rx) = tokio::sync::oneshot::channel();
+                let (read_resumed_tx, read_resumed_rx) = tokio::sync::oneshot::channel();
+                let (read_events_tx, mut read_events_rx) =
+                    tokio::sync::mpsc::unbounded_channel();
+                let hooks = ObserveHooks {
+                    snapshot_gate: Some(SnapshotReadGate {
+                        started: read_started_tx,
+                        release: read_release_rx,
+                        resumed: read_resumed_tx,
+                    }),
+                    watcher_events: Some(read_events_tx),
+                    ..ObserveHooks::default()
                 };
-                let guarded = cancel_read_on_owner_change(
-                    &mut owner_changed_rx,
-                    &mut watcher,
-                    read_from_expected_owner(&client, &read_expected_owner, delayed_read),
+                let old_task = supervisor.start(client, hooks);
+                assert_eq!(
+                    read_events_rx.recv().await,
+                    Some(crate::network_state::NetworkEvent::Initial)
                 );
-                let replacement_client = client.clone();
-                let replace_owner = async move {
-                    started_rx.await?;
-                    watch_ready_rx.await?;
-                    drop(old_server);
-                    let new_server = owner_fixture(&address).await?;
-                    let new_owner = network_manager_owner(&replacement_client).await?;
-                    assert_ne!(expected_owner, new_owner);
-                    owner_seen_rx.await?;
-                    let _ = resume_tx.send(());
-                    Ok::<_, crate::Error>(new_server)
-                };
-                let (read_result, replacement) = tokio::join!(guarded, replace_owner);
-                let replacement = replacement?;
-                assert!(matches!(read_result, Err(CoreError::OwnerChanged)));
-                assert!(dropped.get(), "cancelled old snapshot future must be dropped");
+                read_started_rx.await?;
 
-                projection.publish_failure(&hub, CoreError::OwnerChanged)?;
+                // The real observer has completed its D-Bus snapshot read, but
+                // its owner-checked read future is held before it can commit.
+                assert!(old_server.release_name(NM_SERVICE).await?);
+                let replacement = owner_fixture(&address).await?;
+                let replacement_client = fixture_client(&address).await?;
+                let replacement_owner = network_manager_owner(&replacement_client).await?;
+                assert_ne!(old_owner, replacement_owner);
+                assert_eq!(
+                    read_events_rx.recv().await,
+                    Some(crate::network_state::NetworkEvent::OwnerChanged)
+                );
+                let _ = read_release_tx.send(());
+                assert!(read_resumed_rx.await.is_err());
+                let stale = wait_for_core_health(&hub, &mut notices, false, true).await;
+                assert!(old_task.await?.is_err());
+                assert_eq!(stale.connections.order, last_good.connections.order);
+                assert!(!stale.health.available);
+
+                // Start a replacement generation and hold its freshly read
+                // candidate immediately before the final synchronous publish.
+                while notices.try_recv().is_ok() {}
+                let (publish_started_tx, publish_started_rx) = tokio::sync::oneshot::channel();
+                let (publish_release_tx, publish_release_rx) = tokio::sync::oneshot::channel();
+                let replacement_task = supervisor.start(
+                    replacement_client.clone(),
+                    ObserveHooks {
+                        before_publish_gate: Some((publish_started_tx, publish_release_rx)),
+                        ..ObserveHooks::default()
+                    },
+                );
+                publish_started_rx.await?;
+                let second_owner = network_manager_owner(&replacement_client).await?;
+                assert!(replacement.release_name(NM_SERVICE).await?);
+                let next_server = owner_fixture(&address).await?;
+                let latest_owner = network_manager_owner(&fixture_client(&address).await?).await?;
+                assert_ne!(second_owner, latest_owner);
+                publish_release_tx.send(()).map_err(|_| "publish gate was dropped")?;
+                assert!(replacement_task.await?.is_err());
                 let stale: NetworkState = serde_json::from_value(
                     hub.borrow().snapshot(CORE_TOPIC).expect("stale network snapshot"),
                 )?;
                 assert!(!stale.health.available);
                 assert!(stale.health.stale);
-                assert_eq!(stale.devices, projection.last_good.as_ref().unwrap().devices);
-                drop(replacement);
-                watcher.abort_and_join().await;
+                assert_eq!(stale.connections.order, last_good.connections.order);
+                let published_after_boundary = std::iter::from_fn(|| notices.try_recv().ok()).any(
+                    |notice| {
+                        matches!(
+                            notice,
+                            super::super::hub::Notice::Changed { ref topic, .. }
+                                if topic == CORE_TOPIC
+                        )
+                    },
+                );
+                assert!(!published_after_boundary);
+                drop(next_server);
                 Ok::<(), crate::Error>(())
             })
             .await?;
@@ -1431,20 +1553,67 @@ mod core_tests {
             .run_until(async {
                 let server = owner_fixture(&address).await?;
                 let client = fixture_client(&address).await?;
-                let expected_owner = network_manager_owner(&client).await?;
-                let callbacks = Arc::new(AtomicUsize::new(0));
-                let dropped = Arc::new(AtomicUsize::new(0));
-
-                let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
-                let mut watcher = test_watcher(
+                let hub = super::super::hub::Hub::new(
+                    "watcher-lifecycle-test".into(),
+                    false,
+                    Duration::from_millis(16),
+                )
+                .shared();
+                publish_core_starting(&hub)?;
+                let mut notices = hub.borrow().observe();
+                let supervisor = FixtureSupervisor::new(hub.clone());
+                let (error_dropped_tx, error_dropped_rx) = tokio::sync::oneshot::channel();
+                let (error_events_tx, mut error_events_rx) =
+                    tokio::sync::mpsc::unbounded_channel();
+                let error_task = supervisor.start(
                     client.clone(),
-                    callbacks.clone(),
-                    dropped.clone(),
-                    ready_tx,
+                    ObserveHooks {
+                        watcher_dropped: Some(error_dropped_tx),
+                        watcher_events: Some(error_events_tx),
+                        ..ObserveHooks::default()
+                    },
                 );
-                ready_rx.await?;
-                watcher.abort_and_join().await;
-                assert_eq!(dropped.load(Ordering::SeqCst), 1);
+                assert_eq!(
+                    error_events_rx.recv().await,
+                    Some(crate::network_state::NetworkEvent::Initial)
+                );
+                let _ = wait_for_core_health(&hub, &mut notices, true, false).await;
+                assert!(server.release_name(NM_SERVICE).await?);
+                assert_eq!(
+                    error_events_rx.recv().await,
+                    Some(crate::network_state::NetworkEvent::OwnerChanged)
+                );
+                let _ = wait_for_core_health(&hub, &mut notices, false, true).await;
+                assert!(error_task.await?.is_err());
+                error_dropped_rx.await?;
+
+                let server = owner_fixture(&address).await?;
+                let client = fixture_client(&address).await?;
+                let (cancel_dropped_tx, cancel_dropped_rx) = tokio::sync::oneshot::channel();
+                let (cancel_events_tx, mut cancel_events_rx) =
+                    tokio::sync::mpsc::unbounded_channel();
+                let cancel_task = supervisor.start(
+                    client.clone(),
+                    ObserveHooks {
+                        watcher_dropped: Some(cancel_dropped_tx),
+                        watcher_events: Some(cancel_events_tx),
+                        ..ObserveHooks::default()
+                    },
+                );
+                assert_eq!(
+                    cancel_events_rx.recv().await,
+                    Some(crate::network_state::NetworkEvent::Initial)
+                );
+                let _ = wait_for_core_health(&hub, &mut notices, true, false).await;
+                let before = hub
+                    .borrow()
+                    .snapshot(TOPIC)
+                    .expect("network watch topic")["generation"]
+                    .as_u64()
+                    .expect("network watch generation");
+                cancel_task.abort();
+                assert!(cancel_task.await?.is_cancelled());
+                cancel_dropped_rx.await?;
                 server
                     .emit_signal(
                         None::<&str>,
@@ -1454,32 +1623,23 @@ mod core_tests {
                         &(OwnedObjectPath::try_from(DEVICE)?,),
                     )
                     .await?;
-                assert_eq!(network_manager_owner(&client).await?, expected_owner);
-                assert_eq!(callbacks.load(Ordering::SeqCst), 1);
-
-                let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
-                let watcher = test_watcher(
-                    client.clone(),
-                    callbacks.clone(),
-                    dropped.clone(),
-                    ready_tx,
-                );
-                ready_rx.await?;
-                drop(watcher);
-                tokio::task::yield_now().await;
-                assert_eq!(dropped.load(Ordering::SeqCst), 2);
-                server
-                    .emit_signal(
-                        None::<&str>,
+                let _ = client
+                    .call_method(
+                        Some(NM_SERVICE),
                         NM_MANAGER,
-                        NM_SERVICE,
-                        "DeviceAdded",
-                        &(OwnedObjectPath::try_from(DEVICE)?,),
+                        Some(NM_SERVICE),
+                        "GetDevices",
+                        &(),
                     )
                     .await?;
-                assert_eq!(network_manager_owner(&client).await?, expected_owner);
-                assert_eq!(callbacks.load(Ordering::SeqCst), 2);
-                drop(server);
+                assert!(cancel_events_rx.try_recv().is_err());
+                let after = hub
+                    .borrow()
+                    .snapshot(TOPIC)
+                    .expect("network watch topic")["generation"]
+                    .as_u64()
+                    .expect("network watch generation");
+                assert_eq!(before, after, "cancelled observer left no live watcher");
                 Ok::<(), crate::Error>(())
             })
             .await?;
