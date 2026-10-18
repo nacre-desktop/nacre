@@ -389,9 +389,7 @@ def quiet_window_failures(report):
         or isinstance(page_size, bool)
         or page_size <= 0
         or any(
-            not isinstance(counter, int)
-            or isinstance(counter, bool)
-            or counter < 0
+            not isinstance(counter, int) or isinstance(counter, bool) or counter < 0
             for counter in counter_values
         )
     ):
@@ -1001,9 +999,7 @@ def run(args, directory):
                     args.idle_seconds,
                     full_idle_windows=args.full_idle_windows,
                 ),
-                lambda duration: performance.idle(
-                    pid, duration, 0.25, detached=False
-                ),
+                lambda duration: performance.idle(pid, duration, 0.25, detached=False),
                 paging,
                 time.monotonic,
                 report["page_size_bytes"],

@@ -70,7 +70,10 @@ class BudgetTests(unittest.TestCase):
             [60.0, 60.0, 60.0],
         )
         self.assertEqual(
-            [session.idle_sample_duration(name, 1, 1) for name in session.FULL_IDLE_PHASES],
+            [
+                session.idle_sample_duration(name, 1, 1)
+                for name in session.FULL_IDLE_PHASES
+            ],
             [1, 1, 1],
         )
         self.assertEqual(session.idle_sample_duration("video", 1, 1), 1)
@@ -80,7 +83,9 @@ class BudgetTests(unittest.TestCase):
         for name in session.FULL_IDLE_PHASES:
             called = []
             data = session.observe_idle_phase(
-                name, 1, lambda duration: called.append(duration) or {},
+                name,
+                1,
+                lambda duration: called.append(duration) or {},
                 lambda: self.fail("legacy mode must not read per-phase counters"),
                 lambda: self.fail("legacy mode must not read per-phase clock"),
                 4096,
@@ -117,7 +122,9 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(data["paging_window"]["elapsed_s"], 60)
         self.assertEqual(result["paging_start"], whole_arm_start)
         self.assertEqual(result["paging_end"], whole_arm_end)
-        self.assertAlmostEqual(data["paging_window"]["counter_bracket_elapsed_s"], 60.01)
+        self.assertAlmostEqual(
+            data["paging_window"]["counter_bracket_elapsed_s"], 60.01
+        )
         self.assertEqual(data["paging_window"]["delta_in_pages"], 3)
         self.assertEqual(data["paging_window"]["delta_out_pages"], 0)
 
@@ -150,7 +157,9 @@ class BudgetTests(unittest.TestCase):
             data["full_idle_windows"] = True
             for name in session.FULL_IDLE_PHASES:
                 data["scenarios"][name]["paging_window"]["elapsed_s"] = elapsed
-                data["scenarios"][name]["paging_window"]["counter_bracket_elapsed_s"] = 600
+                data["scenarios"][name]["paging_window"][
+                    "counter_bracket_elapsed_s"
+                ] = 600
             return session.idle_phase_failures(data)
 
         self.assertTrue(any("shorter than 60" in e for e in check(59.999)))
@@ -159,8 +168,12 @@ class BudgetTests(unittest.TestCase):
         counters = iter(({"pswpin": 1, "pswpout": 2}, {"pswpin": 1, "pswpout": 2}))
         clock = iter((0.0, 59.0, 120.0))
         data = session.observe_idle_phase(
-            "fresh_static", 59,
-            lambda _duration: {}, lambda: next(counters), lambda: next(clock), 4096,
+            "fresh_static",
+            59,
+            lambda _duration: {},
+            lambda: next(counters),
+            lambda: next(clock),
+            4096,
             full_idle_windows=True,
         )
         self.assertEqual(data["paging_window"]["elapsed_s"], 59.0)
@@ -179,10 +192,7 @@ class BudgetTests(unittest.TestCase):
             data["page_size_bytes"] = 4096
             data["paging_end"]["pswpin"] += 256
             self.assertTrue(
-                any(
-                    "1 MiB" in error
-                    for error in session.quiet_window_failures(data)
-                ),
+                any("1 MiB" in error for error in session.quiet_window_failures(data)),
                 full_idle_windows,
             )
 
@@ -200,7 +210,10 @@ class BudgetTests(unittest.TestCase):
         data["full_idle_windows"] = True
         data["scenarios"]["all_panels_closed"]["paging_window"]["end"]["pswpin"] = 99
         self.assertTrue(
-            any("counter reset" in error for error in session.quiet_window_failures(data))
+            any(
+                "counter reset" in error
+                for error in session.quiet_window_failures(data)
+            )
         )
 
     def test_idle_counter_rejects_boolean_negative_and_outbound_reset(self):
