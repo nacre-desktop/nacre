@@ -147,3 +147,14 @@ unknown. Sol+Terra ACCEPT, all34 pins/28 mocks pass. Sole built-in Luna heavy
 grant19:00–23:00UTC for smoke+fresh8arms,12GiB cap/hostabort2GiB unchanged.
 All other workers IDLE. F4 reviewed integration d3622384 remains local pending
 valid capture then published exact-head CI. B0011Done/green; N6 blockers remain.
+
+
+### Active execution — 2026-10-18 19:27 UTC
+
+N2v8 stopped before measurement: supervisor selector also matched D-Bus wrapper.
+V9 full-argv/PID-start fix independently ACCEPT Sol+Terra; no runtime changes.
+Luna soleheavy19:27–23:30UTC: first ONE<=120s reviewed real launch/census smoke;
+ifPASSandcleanupconfirmed proceedfresh8arm batch without furtherpermission.
+No accepted historical cells, no reuse/compression;12GiB/hostabort2GiB unchanged.
+AllotherworkersIDLE. F4 local reviewed merge d3622384 still awaits valid N2 then
+published-head CI. OwnerVisibility saved in global skill; lead waits workers.

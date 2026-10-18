@@ -408,3 +408,36 @@ workers are IDLE; B0011 exact CI is green and released. No retry after an
 invalid cell, no old-cell reuse, no compression or runtime rebuild. Announce
 CAPTURE_START then complete Review and DONE/IDLE/RELEASED. F4 remains unpublished
 until valid N2 evidence and lead integration approval, followed by exact-head CI.
+
+
+## Current grant — 2026-10-18 19:27–23:30 UTC
+
+Supersedes the19:00–23:00 grant. V8 stopped before measurement/report because
+a token selector matched both the D-Bus wrapper and actual supervisor child.
+No accepted cells; preserve its evidence. Xwayland warning is not established
+as cause. Reviewed v9 selects full exact collector launch argv inside the owned
+branch and rechecks PID/start/argv; ambiguity/missing/reuse reject.
+
+Sol+Terra ACCEPT v9 source/mock: driver
+ab1ba863d850e7ffa369f8915dad1ed7c7134f7b7061435c2c1183c3dee4d97d; plan
+a88a6f0458c58080a423e4291c31772fa6e7c9b4ab7a0b8ab4c2d015e413acfd.
+21new+11original mocks,syntax and30 manifest entries pass. All other v8
+contracts and frozen runtime/artifact identities remain unchanged. Executed
+collector patch04f87e5d9d5ec531c0d070a554adfaf88d4094e421fbabfff9de7a9fe4fc20b7.
+
+Before any fresh batch, run ONE separately reviewed real nested readiness smoke
+(max120s) from private sol-n2-v9-readiness-smoke-20261018 REPORT. Controller
+a5e68bfc82ecb63ddae1fd0c644a0b4eb32a5b1ee1bddaa7de1e477be6b44fc2; inner
+ab8b432c86b53335aace240cd636b972f4a00a2e00d2aaead3754ec4ff5fc11e.
+Source review ACCEPT;6mocks and5manifest entries pass. It checks actual shell
+IPC,all7pinned roots,census snapshots and terminal roots, then unwinds existing
+cleanup BEFORE600s warmup/idle/actions. No performance result. Payload45s,
+controller85s and total120s bounds; same12GiBguard and exact owned cleanup.
+Failure stops and reports without retry. Correct machine digest hashes raw
+/etc/machine-id bytes, consistent with original scripts; never strip newline.
+
+On smoke PASS and confirmed owned cleanup, announce CAPTURE_START and execute
+all8fresh v9 arms without further permission, within19:27–23:30UTC. No other
+heavy jobs; peersIDLE. No runtime rebuild or old-cell reuse; existing guard,
+whole-wrapper quiet and full600+3x60 timing gates unchanged. First invalid cell
+stops batch; Review and DONE/IDLE/RELEASED required before another heavy job.
