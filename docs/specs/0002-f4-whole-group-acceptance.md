@@ -3,7 +3,7 @@
 - ID: N0002
 - Repo: nacre-desktop/nacre
 - Implementer: built-in Luna capture worker; lead reviews/integrates
-- Status: In progress
+- Status: Blocked — required-profile correction
 - Depends on: accepted N0001/N0004 source review; reviewed prospective harness
 - Date: 2026-10-18
 - Size: one focused capture session, through the granted cutoff
@@ -31,6 +31,10 @@ fb7ab717874d5e6493f6e30fadcc8b5c01ab65268a56c6256261a8df387a938a.
 Hash raw /etc/machine-id bytes; stripping newline yields a different digest.
 Use the existing trusted runner; never inspect/copy its credentials.
 
+See [eight-arm diagnostic](../research/f4-n0002-eight-arm-diagnostic.md):
+v12/v13 passed cell validators but used wrong geometry; no target-profile
+acceptance. New capture requires prospective geometry review and a new grant.
+
 Historical v25 partials and v3–v11 failed attempts remain preserved, not current
 acceptance. Earlier grants and harness pins in Git history are superseded.
 No accepted current eight-arm batch exists. Frozen Wave3 and pending physical
@@ -43,9 +47,9 @@ later normal integration after lead acceptance. Small harness corrections are
 reviewed here. Out: runtime optimization, new services, physical tests, package
 publication/install, live config/unit/keybinding/session changes.
 
-## Current reviewed harness and exclusive grant
+## Previous harness — grant closed, diagnostic only
 
-Sole heavy slot: **Oct18 21:33 through Oct19 00:00 UTC**. All other workers IDLE;
+Closed heavy slot: **Oct18 21:33 through Oct19 00:00 UTC**. No payload authorized. All other workers IDLE;
 B0011 exact source af61d18/CI39147491406 is green and heavy ownership released.
 No other full suite, hosted heavy CI, release build or nested session overlaps.
 
