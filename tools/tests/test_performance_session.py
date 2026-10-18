@@ -85,7 +85,7 @@ class BudgetTests(unittest.TestCase):
             data = session.observe_idle_phase(
                 name,
                 1,
-                lambda duration: called.append(duration) or {},
+                lambda duration, target=called: target.append(duration) or {},
                 lambda: self.fail("legacy mode must not read per-phase counters"),
                 lambda: self.fail("legacy mode must not read per-phase clock"),
                 4096,
