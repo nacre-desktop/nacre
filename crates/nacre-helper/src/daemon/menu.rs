@@ -922,7 +922,11 @@ pub(super) async fn run_with_roots(hub: Shared, paths: Paths, roots: Vec<PathBuf
 enum ActivationFrecencyOutcome {
     Durable,
     Failed(ErrorCode),
-    JoinError { replied: bool },
+    JoinError {
+        replied: bool,
+        pending_waiters: usize,
+        pending_keys: usize,
+    },
 }
 
 #[cfg(test)]
@@ -1226,7 +1230,11 @@ async fn run_inner(
                             }
                             #[cfg(test)]
                             if let Some(completions) = &activation_completions {
-                                let _ = completions.send(ActivationFrecencyOutcome::JoinError { replied });
+                                let _ = completions.send(ActivationFrecencyOutcome::JoinError {
+                                    replied,
+                                    pending_waiters: activation_waiters.len(),
+                                    pending_keys: activation_keys.len(),
+                                });
                             }
                             continue;
                         }
@@ -1675,7 +1683,11 @@ mod activation_tests {
                     tokio::time::timeout(Duration::from_secs(2), fixture.completions.recv())
                         .await
                         .expect("actor did not consume activation JoinError"),
-                    Some(ActivationFrecencyOutcome::JoinError { replied: false })
+                    Some(ActivationFrecencyOutcome::JoinError {
+                        replied: false,
+                        pending_waiters: 0,
+                        pending_keys: 0,
+                    })
                 );
                 assert!(fixture.launches.try_recv().is_err());
                 assert_menu_actor_serving(&fixture).await;
@@ -1704,7 +1716,11 @@ mod activation_tests {
                     tokio::time::timeout(Duration::from_secs(2), fixture.completions.recv())
                         .await
                         .expect("actor did not consume activation JoinError"),
-                    Some(ActivationFrecencyOutcome::JoinError { replied: true })
+                    Some(ActivationFrecencyOutcome::JoinError {
+                        replied: true,
+                        pending_waiters: 0,
+                        pending_keys: 0,
+                    })
                 );
                 assert!(fixture.launches.try_recv().is_err());
                 assert_menu_actor_serving(&fixture).await;
@@ -1712,37 +1728,79 @@ mod activation_tests {
             .await;
     }
 
+    async fn assert_waiter_cancellation(after_reply: bool) {
+        let mut fixture = fixture().await;
+        let first = query(&fixture.menu).await;
+        let activation = activation(&fixture.menu, &first).await;
+        let launch = dispatched(&mut fixture).await;
+        let waiter =
+            tokio::time::timeout(Duration::from_secs(2), fixture.abort_handles.recv())
+                .await
+                .expect("activation waiter handle was not exposed")
+                .expect("activation waiter handle channel ended");
+
+        if after_reply {
+            launch.reply.send(Ok(json!({"started":true}))).unwrap();
+            assert_eq!(
+                tokio::time::timeout(Duration::from_secs(2), activation)
+                    .await
+                    .expect("activation success reply was not delivered before cancellation")
+                    .unwrap()
+                    .unwrap(),
+                json!({"started":true})
+            );
+            let pending = fixture
+                .settings
+                .get(nacre_protocol::settings::SettingsGet {
+                    store: "launcher".into(),
+                })
+                .await
+                .unwrap();
+            assert!(pending["dirty"].as_bool().unwrap());
+            waiter.abort();
+            assert_eq!(
+                tokio::time::timeout(Duration::from_secs(2), fixture.completions.recv())
+                    .await
+                    .expect("actor did not consume post-reply cancellation JoinError"),
+                Some(ActivationFrecencyOutcome::JoinError {
+                    replied: true,
+                    pending_waiters: 0,
+                    pending_keys: 0,
+                })
+            );
+        } else {
+            waiter.abort();
+            let failure = tokio::time::timeout(Duration::from_secs(2), activation)
+                .await
+                .expect("cancelled activation did not receive terminal reply")
+                .unwrap()
+                .unwrap_err();
+            assert_eq!(failure.code, ErrorCode::Internal);
+            assert_eq!(failure.dispatched, Some(true));
+            assert!(!failure.retry);
+            assert_eq!(
+                tokio::time::timeout(Duration::from_secs(2), fixture.completions.recv())
+                    .await
+                    .expect("actor did not consume cancellation JoinError"),
+                Some(ActivationFrecencyOutcome::JoinError {
+                        replied: false,
+                        pending_waiters: 0,
+                        pending_keys: 0,
+                    })
+            );
+            drop(launch);
+        }
+
+        assert!(fixture.launches.try_recv().is_err());
+        assert_menu_actor_serving(&fixture).await;
+    }
+
     #[tokio::test(flavor = "current_thread")]
     async fn activation_frecency_waiter_cancellation_is_terminal_and_recovers() {
         LocalSet::new()
             .run_until(async {
-                let mut fixture = fixture().await;
-                let first = query(&fixture.menu).await;
-                let activation = activation(&fixture.menu, &first).await;
-                let launch = dispatched(&mut fixture).await;
-                let waiter =
-                    tokio::time::timeout(Duration::from_secs(2), fixture.abort_handles.recv())
-                        .await
-                        .expect("activation waiter handle was not exposed")
-                        .expect("activation waiter handle channel ended");
-                waiter.abort();
-                let failure = tokio::time::timeout(Duration::from_secs(2), activation)
-                    .await
-                    .expect("cancelled activation did not receive terminal reply")
-                    .unwrap()
-                    .unwrap_err();
-                assert_eq!(failure.code, ErrorCode::Internal);
-                assert_eq!(failure.dispatched, Some(true));
-                assert!(!failure.retry);
-                assert_eq!(
-                    tokio::time::timeout(Duration::from_secs(2), fixture.completions.recv())
-                        .await
-                        .expect("actor did not consume cancellation JoinError"),
-                    Some(ActivationFrecencyOutcome::JoinError { replied: false })
-                );
-                drop(launch);
-                assert!(fixture.launches.try_recv().is_err());
-                assert_menu_actor_serving(&fixture).await;
+                assert_waiter_cancellation(false).await;
+                assert_waiter_cancellation(true).await;
             })
             .await;
     }
