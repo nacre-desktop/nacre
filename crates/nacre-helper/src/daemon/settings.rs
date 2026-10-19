@@ -978,7 +978,7 @@ mod tests {
         let hub =
             super::super::hub::Hub::new("settings-test".into(), false, Duration::from_millis(16))
                 .shared();
-        let lease = Arc::new(WriterLease::acquire(&paths.config).unwrap());
+        let lease = Arc::new(WriterLease::acquire_for_paths(&paths.config, &paths.state).unwrap());
         let service = Service::load(hub.clone(), paths.clone(), Some(lease))
             .await
             .unwrap();

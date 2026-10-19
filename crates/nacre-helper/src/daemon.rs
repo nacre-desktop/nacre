@@ -329,7 +329,10 @@ pub fn run(arguments: &[String]) -> Result<i32> {
         tracing::error!("Daemon task panicked; payload omitted")
     }));
     let paths = Paths::environment()?;
-    let writer_lease = std::sync::Arc::new(writer_lease::WriterLease::acquire(&paths.config)?);
+    let writer_lease = std::sync::Arc::new(writer_lease::WriterLease::acquire_for_paths(
+        &paths.config,
+        &paths.state,
+    )?);
     let path = socket::path()?;
     let listener = socket::Listener::acquire(path.clone())?;
     let counter = crashes::Counter::begin(path.parent().ok_or("Missing daemon socket folder")?)?;

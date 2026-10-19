@@ -290,8 +290,11 @@ pub fn read_document_pinned(
     let Some(name) = path.file_name() else {
         return Err((0, "Cannot safely read settings file"));
     };
+    let Some(root) = lease.directory_fd(path) else {
+        return Err((0, "Cannot safely read settings file"));
+    };
     let file = match openat(
-        lease.config_dir_fd(),
+        root,
         name,
         OFlag::O_RDONLY | OFlag::O_NOFOLLOW | OFlag::O_CLOEXEC | OFlag::O_NONBLOCK,
         nix::sys::stat::Mode::empty(),
@@ -367,9 +370,11 @@ pub fn write_checked_pinned(
         return Err("Invalid settings path".into());
     }
     if !lease.contains_path(path) {
-        return Err("Settings path does not belong to the leased config directory".into());
+        return Err("Settings path is outside the leased settings roots".into());
     }
-    let root = lease.config_dir_fd();
+    let root = lease
+        .directory_fd(path)
+        .ok_or("Settings path does not belong to a leased config or state directory")?;
     lease.ensure_valid()?;
     let lock_name = format!("{name}.schema.lock");
     let lock_file = File::from(openat(
