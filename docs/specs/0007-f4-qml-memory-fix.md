@@ -337,3 +337,13 @@ Original scenes/geometry/fixtures/source/helper pins and guardian unchanged.
 External25min bound; conditional standard parse<=15min after parity/drain/cleanup;
 verify full phase time coverage. Baseline has no debugger: diagnostic only, no
 matched PSS/acceptance claim. No further retry/profiler iteration automatically.
+
+## Completed traces and standard GUI analysis
+
+See [heaptrack result](../research/f4-n0007-heaptrack.md). Full A and assisted B
+traces/standard parses plus whole-run diff complete; no supported source fix.
+Leaked/Peak and time-origin limits are retained. One reviewed private GUI session
+is granted to Luna<=30min, same guardian/cap, exact display/window/PID controls.
+Root checks loaded A summary before prefix[0,T]/Leaked view or B. No new capture,
+parser or physical display input. All runtime authority and cache files removed
+after exact-owned GUI/bus/Xvfb cleanup. No acceptance/publication gate is waived.

@@ -225,3 +225,21 @@ plus coordinator review is insufficient. Astra requires explicit owner direction
 Personal lead-workflow, standing AGENTS and installed roles updated with backups.
 Existing F4 profiler worker finishes its current active assignment; ordinary
 analysis/execution/fixes thereafter go to Luna. One heavy job remains in force.
+
+## Latest profiling checkpoint
+
+See [heaptrack diagnostic](../research/f4-n0007-heaptrack.md). Full standalone A
+and GDB-assisted B workload/trace/parse completed; exact-owned cleanup released.
+Luna whole-run diff passed but no supported product fix. Standard Massif owner
+trees are empty; phase timing origin uncertain about0.28s, no endpoint claim.
+Luna prepares standard GUI prefix[0,T]/Leaked view in private Xvfb only, no new
+capture. Extra installed tools xdotool/xclip only; xauth already present, no
+system upgrade. No GUI payload grant until coordinator source review. F4 remains
+unpublished and memory gate blocked. New Luna-first routing applies to all new
+work; previous Sol profiler finished and exited.
+
+Standard GUI prefix analysis source ACCEPTED; one30-minute private authenticated
+Xvfb session now granted to Luna. Start with loaded baseline summary screenshot,
+root review before any filter/B. Explicit owned display/window input only; original
+12GiB/swap0 guardian and exact-owned cleanup, no live desktop. No new profiling
+capture. F4 and switch-on remain blocked pending supported fix and acceptance.
