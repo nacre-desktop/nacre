@@ -91,3 +91,23 @@ private DISPLAY/Xauthority and exact GUI window/PID checks gate all input.
 No physical display, app configuration, profiling capture or tool parser changes.
 The prefix must visibly begin at0 and sort by Leaked; a nonzero start or Peak sort
 is not held-state evidence. Time selection precision remains explicitly limited.
+
+## Closed diagnostic — owner disposition 2026-10-19 afternoon
+
+The already-started private GUI analysis completed and cleaned up before the
+owner stopped the profiling hunt. No further GUI, Heaptrack or buffer analysis
+is authorized now. Both valid prefix summaries were preserved: A[0,730s]
+34,805,519calls/108.8MB consumption delta, B[0,732s]
+34,871,305calls/102.9MB. Values are diagnostic, with GUI second/pixel precision,
+B debugger asymmetry and a displayed A12.3KB suppression note despite flags.
+B Bottom-Up displayed zero columns; no B ownership stack comparison was made.
+These results do not establish a retained-heap cause or justify a product fix.
+Owned GUI, private bus/Xvfb/runtime/authentication files, scope/tmux and lock
+cleanup verified13:18:54UTC. No live session was touched.
+
+Retained memory sampler source returns only name-category PSS totals; raw VMA
+rows were never stored. Bucket `shared_buffers` means name contains memfd:/dev/shm,
+not kernel Pss_Shmem or proof of a rendering allocation. No further investigation
+is scheduled: the owner instead authorized standard five-pair/compositor
+acceptance because baseline run-to-run variation exceeds the single-pair gap.
+See N0002 for the replacing decision rule and source8a binding.

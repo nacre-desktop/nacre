@@ -5,15 +5,15 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; GC diagnostic finished; no supported fix. Baseline heaptrack trace/parse complete. One GDB-assisted candidate profile granted after startup-stall diagnosis; acceptance blocked. |
-| 2 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: product correction | Both v14 geometry checks passed; only Niri A/B valid. H baseline failed whole-wrapper swap-in; no eight-run PASS. |
-| 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Corrected plan retained; F4/package readiness, exclusive installer handoff and managed persistent opt-in/rollback missing. No live action. |
-| — | [N0009 exclusive destination writer handoff](0009-f4-switch-prerequisites.md) | Blocked: after green F4 | Draft design reviewed; no implementation/live grant. |
-| — | [N0010 managed opt-in and rollback](0010-f4-managed-opt-in-and-rollback.md) | Blocked: N0009 + green F4 | Draft reviewed for verified maskable package units only; source-staged units refuse, recovery boundaries explicit. |
-| 3 | [N0001 F4 source review](0001-f4-settings-completion-audit.md) | Review | Source accepted; Done after correct N2 and published-head CI. |
-| 4 | [N0004 activation](0004-f4-activation-progress-and-audit.md) | Done | Exact1382 accepted. |
-| 5 | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review | Scoped evidence retained; unpublished, integration after F4. |
-| 6 | [N0003 network adapter](0003-core-network-state-adapter.md) | Blocked | Broader acceptance unclaimed; old scope evidence withdrawn; no unassigned rerun. |
+| 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Ready: standard five-pair method | Luna prepares unchanged v14/source8a batch; capture after prerequisite checks/review, exclusive12h from actual start. No profiling. |
+| 2 | [N0009 installer handoff](0009-f4-switch-prerequisites.md) | In progress: Luna local implementation | Separate worktree; private checks before capture, no push/live changes; integration after green F4. |
+| 3 | [N0010 opt-in/rollback](0010-f4-managed-opt-in-and-rollback.md) | In progress: Luna local implementation | Separate worktree; coordinate N9 API, private checks before capture, no push/live changes. |
+| — | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | Source accepted; profiling stopped | Source8a correctness retained. Single-pair veto superseded by owner five-pair rule. No further investigation now. |
+| — | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Plan needs accepted implementation and green F4; no live execution. |
+| — | [N0001 F4 source review](0001-f4-settings-completion-audit.md) | Review | Done after accepted N2 and published-head CI. |
+| — | [N0004 activation](0004-f4-activation-progress-and-audit.md) | Done | Exact1382 accepted. |
+| — | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review | Unpublished; integration after F4. |
+| — | [N0003 network adapter](0003-core-network-state-adapter.md) | Blocked | Broader acceptance unclaimed; old scope evidence withdrawn. |
 
 ## Current result and preserved work
 

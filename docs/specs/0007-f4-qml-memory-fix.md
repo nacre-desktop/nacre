@@ -347,3 +347,11 @@ is granted to Luna<=30min, same guardian/cap, exact display/window/PID controls.
 Root checks loaded A summary before prefix[0,T]/Leaked view or B. No new capture,
 parser or physical display input. All runtime authority and cache files removed
 after exact-owned GUI/bus/Xvfb cleanup. No acceptance/publication gate is waived.
+
+## Owner disposition — 2026-10-19 afternoon
+
+Stop profiling hunt, GUI and mapped/rendering investigation. Existing GUI job
+already cleaned up13:18:54UTC. Source8a correctness accepted; no new product fix
+required before the owner-authorized standard five-pair/compositor N0002.
+The single-pair5MiB veto and quick-plus-eight confirmation are superseded.
+Only owner rule failure (>8MiB group or>2MiB QML) reopens investigation.
