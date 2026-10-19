@@ -1498,8 +1498,8 @@ ShellRoot {
             const power=client.topic("settings.store.power");
             power.data={store:"power",rev:3,exists:true,data:{enabled:true,unknown:{keep:1}},dirty:false};power.fresh=true;
             const storage=NacreSettingsStorage;
-            check(storage.documents.power.unknown.keep===1&&storage.revisions.power===3,"late subscriber projects current cached document");
             check(client.calls.length===0&&power.users===1,"initial subscription needs no parallel read");
+            check(storage.documents.power.unknown.keep===1&&storage.revisions.power===3,"late subscriber projects current cached document");
             client.connected=false;power.fresh=false;
             client.connected=true;
             check(storage.revisions.power===undefined&&client.calls.length===0,"reconnect does not consume retained stale revision or request read");
@@ -1510,12 +1510,29 @@ ShellRoot {
             power.data={store:"power",rev:0,exists:true,data:{enabled:true},dirty:false};power.fresh=true;
             check(storage.revisions.power===0&&storage.documents.power.enabled,"new boot accepts its own revision namespace");
             const colors=client.topic("settings.store.colors");
-            colors.data={store:"colors",rev:1,exists:true,data:{unknown:"preserved"},dirty:false};colors.fresh=true;
+            colors.data={store:"colors",rev:9,exists:true,data:{unknown:"old boot"},dirty:false};colors.fresh=false;
             NacrePanelState.settingsVisible=true;
-            check(colors.users===1&&storage.documents.colors.unknown==="preserved"&&client.calls.length===0,"adding watched store uses its current subscribed snapshot");
+            check(colors.users===1&&storage.documents.colors===undefined&&client.calls.length===0,"adding watched store refuses cached stale boot data without a parallel read");
+            colors.data={store:"colors",rev:0,exists:true,data:{unknown:"preserved"},dirty:false};colors.fresh=true;
+            check(storage.documents.colors.unknown==="preserved"&&storage.revisions.colors===0,"added store accepts its current subscribed snapshot");
             NacrePanelState.settingsVisible=false;
             check(colors.users===0&&power.users===1,"closing settings releases only optional subscriptions");
         ''', settings=True, storage_client=True)
+
+    def test_storage_unwatched_mutation_reads_revision_once_without_replay(self):
+        self.qml(r'''
+            const client=FixtureClient,storage=NacreSettingsStorage;
+            storage.request("dashboard",["lyrics"],false);
+            check(client.calls.length===1&&client.calls[0].method==="settings.get","unwatched mutation acquires its revision exactly once");
+            client.calls[0].callback({store:"dashboard",rev:7,exists:true,data:{lyrics:true},dirty:false},null);
+            Qt.callLater(()=>{
+                check(client.calls.length===2&&client.calls[1].method==="settings.set"&&client.calls[1].params.rev===7,"queued mutation uses acquired revision");
+                client.calls[1].callback(null,{message:"connection lost after dispatch"});
+                client.connected=false;client.connected=true;client.boot="two";client.newBoot("two");
+                check(client.calls.length===2&&storage.queue.length===0&&storage.errors.dashboard==="connection lost after dispatch","reconnect and new boot never replay a dispatched mutation");
+                finish();
+            });
+        ''', settings=True, storage_client=True, asynchronous=True)
 
     def test_storage_equal_documents_preserve_metadata_explicit_reads_and_mutation_revision(self):
         self.qml(r'''
