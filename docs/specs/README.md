@@ -8,6 +8,8 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 | 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Fresh bindings ACCEPT; Niri-only capture granted09:00–11:00UTC. Hyprland/full-eight require separate grant. |
 | 2 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: product correction | Both v14 geometry checks passed; only Niri A/B valid. H baseline failed whole-wrapper swap-in; no eight-run PASS. |
 | 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Corrected plan retained; F4/package readiness, exclusive installer handoff and managed persistent opt-in/rollback missing. No live action. |
+| — | [N0009 exclusive destination writer handoff](0009-f4-switch-prerequisites.md) | Blocked: after green F4 | Draft design reviewed; no implementation/live grant. |
+| — | [N0010 managed opt-in and rollback](0010-f4-managed-opt-in-and-rollback.md) | Blocked: N0009 + green F4 | Draft reviewed for verified maskable package units only; source-staged units refuse, recovery boundaries explicit. |
 | 3 | [N0001 F4 source review](0001-f4-settings-completion-audit.md) | Review | Source accepted; Done after correct N2 and published-head CI. |
 | 4 | [N0004 activation](0004-f4-activation-progress-and-audit.md) | Done | Exact1382 accepted. |
 | 5 | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review | Scoped evidence retained; unpublished, integration after F4. |
@@ -104,3 +106,14 @@ Rust formatting/compilation/tests/Clippy NOT RUN and no source push. It awaits a
 separate correctness slot after F4. No Bead heavy job/capture is active. A Luna
 read-only explorer maps existing switch-on lock/opt-in hooks only; no live probe.
 Pacman probe follow-up N0008 stays parked; do not implement it now.
+
+## Future switch prerequisites — reviewed blocked drafts
+
+N0009/N0010 drafts from16b6e867 independently ACCEPTED for specification only.
+Pinned destination leases, safe private anchors under sticky /tmp, ownership-safe
+disable preflight, durable write-ahead rollback and downgrade-surviving recovery
+are required. Runtime/install roots must be resolved and leased explicitly.
+Current bounded fence supports only verified maskable package units; source-staged
+user units refuse. Fail-stopped guarantee ends at boot/user-manager restart or
+activation. These limitations keep N6 non-runnable until implemented and validated.
+No implementation, package publication, install, opt-in or unit action is granted.
