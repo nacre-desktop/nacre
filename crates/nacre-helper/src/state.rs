@@ -353,8 +353,8 @@ pub fn write_checked_pinned(
     expected: Option<[u8; 32]>,
 ) -> Result<()> {
     use nix::{
-        fcntl::{openat, renameat, Flock, FlockArg, OFlag},
-        sys::stat::{fstatat, AtFlags, Mode, SFlag},
+        fcntl::{openat, renameat, AtFlags, Flock, FlockArg, OFlag},
+        sys::stat::{fstatat, Mode, SFlag},
         unistd::{linkat, unlinkat, LinkatFlags, UnlinkatFlags},
     };
     use std::{fs::File, io::Write, os::unix::fs::MetadataExt};

@@ -1,8 +1,8 @@
 //! Exclusive ownership of the actual daemon config directory.
 use crate::Result;
 use nix::{
-    fcntl::{openat, Flock, FlockArg, OFlag},
-    sys::stat::{fstat, fstatat, mkdirat, AtFlags, Mode, SFlag},
+    fcntl::{openat, AtFlags, Flock, FlockArg, OFlag},
+    sys::stat::{fstat, fstatat, mkdirat, Mode, SFlag},
     unistd::Uid,
 };
 use std::{
