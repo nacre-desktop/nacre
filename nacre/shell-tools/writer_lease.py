@@ -113,6 +113,65 @@ class PinnedDirectory:
         except OSError:
             _fail()
 
+    def readlink(self, name: str) -> str | None:
+        """Read one owned symlink target without following the link."""
+        if (
+            not isinstance(name, str)
+            or not name
+            or "/" in name
+            or "\0" in name
+            or name in (".", "..")
+        ):
+            _fail()
+
+        def link_stat():
+            try:
+                return os.stat(name, dir_fd=self._dirs[-1], follow_symlinks=False)
+            except FileNotFoundError:
+                return None
+            except OSError:
+                _fail()
+
+        def validate_link(meta) -> None:
+            if meta is None or (
+                not stat.S_ISLNK(meta.st_mode)
+                or meta.st_uid != os.getuid()
+                or stat.S_IMODE(meta.st_mode) != 0o777
+                or meta.st_nlink != 1
+            ):
+                _fail()
+
+        def identity(meta):
+            return (
+                meta.st_dev,
+                meta.st_ino,
+                meta.st_uid,
+                stat.S_IMODE(meta.st_mode),
+                meta.st_ctime_ns,
+                meta.st_nlink,
+            )
+
+        self.ensure_valid()
+        before = link_stat()
+        if before is None:
+            self.ensure_valid()
+            if link_stat() is not None:
+                _fail()
+            self.ensure_valid()
+            return None
+        validate_link(before)
+        self.ensure_valid()
+        try:
+            target = os.readlink(name, dir_fd=self._dirs[-1])
+        except OSError:
+            _fail()
+        after = link_stat()
+        validate_link(after)
+        if identity(before) != identity(after):
+            _fail()
+        self.ensure_valid()
+        return target
+
     def identity(self) -> tuple[int, int]:
         self.ensure_valid()
         meta = os.fstat(self._dirs[-1])

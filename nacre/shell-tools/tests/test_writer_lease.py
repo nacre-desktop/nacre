@@ -2,8 +2,11 @@ import fcntl
 import importlib.util
 import os
 from pathlib import Path
+import stat
 import tempfile
+from types import SimpleNamespace
 import unittest
+from unittest import mock
 
 
 
@@ -14,6 +17,181 @@ SPEC.loader.exec_module(writer_lease)
 
 
 class WriterLeaseTests(unittest.TestCase):
+    def test_readlink_returns_the_target_without_following_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "private" / "config" / "nacre"
+            with writer_lease.writer_lease(root) as lease:
+                target = root / "target-file"
+                target.write_text("link target contents")
+                (root / "socket-link").symlink_to(target.name)
+                self.assertEqual(lease.readlink("socket-link"), target.name)
+                self.assertIsNone(lease.readlink("missing-link"))
+
+    def test_readlink_rejects_replacement_during_read(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "private" / "config" / "nacre"
+            with writer_lease.writer_lease(root) as lease:
+                link = root / "socket-link"
+                link.symlink_to("first-target")
+                original_readlink = os.readlink
+
+                def replace_then_read(name, *, dir_fd=None):
+                    os.unlink(name, dir_fd=dir_fd)
+                    os.symlink("replacement-target", name, dir_fd=dir_fd)
+                    return original_readlink(name, dir_fd=dir_fd)
+
+                with mock.patch.object(
+                    writer_lease.os, "readlink", side_effect=replace_then_read
+                ):
+                    with self.assertRaises(writer_lease.WriterLeaseError):
+                        lease.readlink("socket-link")
+                self.assertEqual(os.readlink(link), "replacement-target")
+
+    def test_readlink_rejects_changed_ctime_during_read(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "private" / "config" / "nacre"
+            with writer_lease.writer_lease(root) as lease:
+                link = root / "socket-link"
+                link.symlink_to("target")
+                original_readlink = os.readlink
+
+                def touch_then_read(name, *, dir_fd=None):
+                    current = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+                    os.utime(
+                        name,
+                        ns=(current.st_atime_ns, current.st_mtime_ns + 1_000_000_000),
+                        dir_fd=dir_fd,
+                        follow_symlinks=False,
+                    )
+                    return original_readlink(name, dir_fd=dir_fd)
+
+                with mock.patch.object(
+                    writer_lease.os, "readlink", side_effect=touch_then_read
+                ):
+                    with self.assertRaises(writer_lease.WriterLeaseError):
+                        lease.readlink("socket-link")
+
+    def test_readlink_rejects_foreign_owner_or_unsafe_link_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "private" / "config" / "nacre"
+            with writer_lease.writer_lease(root) as lease:
+                (root / "socket-link").symlink_to("target")
+                original_stat = os.stat
+                root_fd = lease._dirs[-1]
+
+                for overrides in (
+                    {"st_uid": os.getuid() + 1},
+                    {"st_mode": stat.S_IFLNK | 0o755},
+                ):
+                    with self.subTest(overrides=overrides):
+                        def unsafe_link_stat(name, *args, **kwargs):
+                            meta = original_stat(name, *args, **kwargs)
+                            if (
+                                name == "socket-link"
+                                and kwargs.get("dir_fd") == root_fd
+                            ):
+                                values = {
+                                    "st_dev": meta.st_dev,
+                                    "st_ino": meta.st_ino,
+                                    "st_uid": meta.st_uid,
+                                    "st_mode": meta.st_mode,
+                                    "st_ctime_ns": meta.st_ctime_ns,
+                                    "st_nlink": meta.st_nlink,
+                                }
+                                values.update(overrides)
+                                return SimpleNamespace(**values)
+                            return meta
+
+                        with mock.patch.object(
+                            writer_lease.os, "stat", side_effect=unsafe_link_stat
+                        ):
+                            with self.assertRaises(writer_lease.WriterLeaseError):
+                                lease.readlink("socket-link")
+
+    def test_readlink_missing_result_requires_stable_absence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "private" / "config" / "nacre"
+            with writer_lease.writer_lease(root) as lease:
+                original_stat = os.stat
+                inserted = False
+                root_fd = lease._dirs[-1]
+
+                def insert_after_missing(name, *args, **kwargs):
+                    nonlocal inserted
+                    try:
+                        return original_stat(name, *args, **kwargs)
+                    except FileNotFoundError:
+                        if (
+                            name == "appearing-link"
+                            and kwargs.get("dir_fd") == root_fd
+                            and not inserted
+                        ):
+                            inserted = True
+                            os.symlink("target", name, dir_fd=root_fd)
+                        raise
+
+                with mock.patch.object(
+                    writer_lease.os, "stat", side_effect=insert_after_missing
+                ):
+                    with self.assertRaises(writer_lease.WriterLeaseError):
+                        lease.readlink("appearing-link")
+
+    def test_readlink_rejects_nonlink_and_invalid_basename(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "private" / "config" / "nacre"
+            with writer_lease.writer_lease(root) as lease:
+                (root / "regular-file").write_text("not a link")
+                with self.assertRaises(writer_lease.WriterLeaseError):
+                    lease.readlink("regular-file")
+                for name in (
+                    "nested/link",
+                    "..",
+                    ".",
+                    "",
+                    b"socket-link",
+                    "bad\0name",
+                ):
+                    with self.assertRaises(writer_lease.WriterLeaseError):
+                        lease.readlink(name)
+
+    def test_readlink_rejects_unsafe_parent_and_replaced_ancestry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            parent = base / "parent"
+            parent.mkdir(mode=0o700)
+            root = parent / "config" / "nacre"
+            with writer_lease.writer_lease(root) as lease:
+                (root / "socket-link").symlink_to("target")
+                parent.chmod(0o770)
+                with self.assertRaises(writer_lease.WriterLeaseError):
+                    lease.readlink("socket-link")
+
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            parent = base / "parent"
+            parent.mkdir(mode=0o700)
+            config = parent / "config"
+            root = config / "nacre"
+            with writer_lease.writer_lease(root) as lease:
+                (root / "socket-link").symlink_to("target")
+                original_readlink = os.readlink
+
+                def replace_ancestor_then_read(name, *, dir_fd=None):
+                    retired = base / "retired-config"
+                    config.rename(retired)
+                    config.mkdir(mode=0o700)
+                    (config / "nacre").mkdir(mode=0o700)
+                    return original_readlink(name, dir_fd=dir_fd)
+
+                with mock.patch.object(
+                    writer_lease.os,
+                    "readlink",
+                    side_effect=replace_ancestor_then_read,
+                ):
+                    with self.assertRaises(writer_lease.WriterLeaseError):
+                        lease.readlink("socket-link")
+                self.assertFalse((config / "nacre" / "socket-link").exists())
+
     def test_lease_publishes_and_excludes_another_writer(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "private" / "config" / "nacre"
