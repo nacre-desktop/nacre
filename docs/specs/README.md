@@ -509,3 +509,35 @@ N10localHEADecaf0500 readonlystatus/recoveryprototype30switchtests+8recovery
 PASS(rootindependentlyrerun), productionmutatorsstillrefuse/fullACnotDone.
 N9local6f048e60 leasehooks/readlink/focusedchecksretainpreviouslimits; notDone.
 Allstate localcommits; no productpush/package/install/liveunitactionauthorized.
+
+Actual START for the final fix screen: 2026-10-19 22:07:28 UTC, batch
+`N0011-diag-2pair-generic-20261019T2202Z`, controller PID 1820199 / start ticks 31727974.
+B is frozen at 67e0ef0c; initial swap used 0 and capacity exact. N2 worker owns the sole
+heavy slot and monitors four fresh arms; no GC instrumentation. Await all-four
+report before decision; cutoff Oct20 01:00 UTC. The fallback remains unarmed.
+
+N9 source-only review follow-up: `304d28fee60538dd2037760ed981829128688056`
+now pins daemon startup and refresh reads to the acquired writer lease; two
+private replaced-config-ancestry regression tests added. Root inspected the diff;
+Cargo/fmt/Clippy NOT RUN on this delta, deferred until N2 releases heavy slot.
+Final diagnostic first baseline arm valid at22:22Z (1/4); candidate arm active.
+No memory conclusion until all four; no other heavy job authorized.
+
+### Final fix screen terminal — Oct19 23:02:30 UTC
+
+Candidate67e0ef0c completed4/4 valid Niri arms, zero retries. Root independently
+recomputed per-arm sample medians then condition medians. Group/QML deltas MiB:
+fresh +7.211/+5.434; closed +5.219/+1.595; after-latency +13.747/+9.795.
+FAIL final diagnostic limits; park optimization as evidence, do not integrate.
+Raw archive SHA175d8c5422aeec29326b67ecf30e5a1d73719d6defbe308bd90d70715785c944
+at private validation n0011-niri-generic-2pair-prospective-20261019T2202Z.
+All four scope/quiet guards passed, no source/helper changes.
+
+Owner final-attempt allowance now used; stop fix/profiling hunt. Proceed ORIGINAL
+8a as owner-approved tracked Niri memory debt, conditional on five Hyprland pairs
+(group increase <=12MiB in each phase), then normal integration/exact-head CI.
+Root advances prospective fallback window to Oct19 23:15–Oct20 04:30 UTC, ample
+for ten uncompressed arms plus at most two quiet-only end retries. Worker doing
+local schedule/source/mocks review; payload still UNARMED until root grant.
+No Colors or67e in fallback. N9 new304d28fe local read fix remains untested;
+N10 still source prototype, no live action authorized.
