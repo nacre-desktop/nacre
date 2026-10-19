@@ -3,9 +3,10 @@ import fcntl
 import os
 import tempfile
 import unittest
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 spec = importlib.util.spec_from_file_location(
     "release", Path(__file__).parents[1] / "releases.py"
@@ -15,6 +16,87 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_deploy_contention_refuses_before_plan_or_destination_changes(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            home = root / "home"
+            config = home / ".config/nacre"
+            config.mkdir(parents=True)
+            foreign = config / "profile.json"
+            foreign.write_bytes(b"owner data")
+            identity = foreign.stat().st_ino
+            keyboard = root / "wtype"
+            keyboard.touch()
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m, "STATE", root / "state"),
+                patch.object(m.subprocess, "check_output") as check_output,
+                patch.object(m.subprocess, "run") as run,
+                patch.object(m, "capture") as capture,
+                m._writer.writer_lease(config),
+            ):
+                with self.assertRaises(m._writer.WriterLeaseError):
+                    m.deploy(root, [], str(keyboard))
+            check_output.assert_not_called()
+            run.assert_not_called()
+            capture.assert_not_called()
+            self.assertEqual(foreign.read_bytes(), b"owner data")
+            self.assertEqual(foreign.stat().st_ino, identity)
+
+    def test_package_transaction_passes_held_lease_to_nested_writers(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            home = root / "home"
+            home.mkdir()
+            config = home / ".config/nacre"
+            config.mkdir(parents=True)
+            repo = root / "package"
+            repo.mkdir()
+            (repo / "package.json.installed").write_text("fixture")
+            release = root / "release"
+            record = {"entries": [], "created": "fixture", "previous": "baseline"}
+            plan = Mock(return_value=[])
+            install = Mock()
+            profiles = SimpleNamespace(install=install)
+            configure = SimpleNamespace(apply=Mock())
+            package_runtime = SimpleNamespace(
+                metadata=Mock(return_value={"revision": "fixture"}), apply=Mock()
+            )
+            setup = SimpleNamespace(
+                supported_compositors=Mock(return_value=["mock"]),
+                policy=Mock(return_value=profiles),
+            )
+            package_sessions = SimpleNamespace(backends=Mock(return_value=["mock"]))
+            keyboard = SimpleNamespace(seed=Mock())
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m, "STATE", root / "state"),
+                patch.object(m, "package_plan", plan),
+                patch.object(m, "package_configuration", return_value=nullcontext([])),
+                patch.object(m, "capture", return_value=(release, record)),
+                patch.object(m, "atomic"),
+                patch.dict(
+                    "sys.modules",
+                    {
+                        "configure": configure,
+                        "package_runtime": package_runtime,
+                        "setup": setup,
+                        "package_sessions": package_sessions,
+                        "keyboard": keyboard,
+                    },
+                ),
+                m._writer.writer_lease(config) as lease,
+            ):
+                result = m._deploy_package_locked(
+                    repo, {"id": "fixture"}, {"layout": "us"}, "mock", lease
+                )
+                self.assertEqual(result["status"], "prepared")
+                self.assertIs(plan.call_args.kwargs["lease"], lease)
+                self.assertIs(install.call_args.kwargs["lease"], lease)
+                with self.assertRaises(m._writer.WriterLeaseError):
+                    with m._writer.writer_lease(config):
+                        self.fail("nested package writers released their parent lease")
+
     def test_capture_and_restore_config_directory_preserve_lock_inodes(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

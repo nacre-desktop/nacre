@@ -11,7 +11,7 @@ sys.path.insert(0, str(TOOLS))
 SPEC = importlib.util.spec_from_file_location("profile_policy", TOOLS / "profile-policy.py")
 profile_policy = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(profile_policy)
-from writer_lease import Lease, WriterLeaseError
+from writer_lease import Lease, WriterLeaseError, writer_lease
 
 
 class ProfilePolicyLeaseTests(unittest.TestCase):
@@ -33,6 +33,36 @@ class ProfilePolicyLeaseTests(unittest.TestCase):
             self.assertTrue((root / "profile.lua").is_file())
             self.assertEqual((root / "profile.json").stat().st_mode & 0o777, 0o600)
             self.assertEqual((root / "profile.lua").stat().st_mode & 0o777, 0o600)
+
+    def test_direct_install_contention_refuses_before_profile_read_or_write(self):
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home) / ".config/nacre"
+            root.mkdir(mode=0o700, parents=True)
+            profile = root / "profile.json"
+            original = b"foreign profile\n"
+            profile.write_bytes(original)
+            identity = profile.stat().st_ino
+            selected_calls = []
+            profile_policy.selected = lambda: selected_calls.append(True)
+            with writer_lease(root):
+                with self.assertRaises(WriterLeaseError):
+                    profile_policy.install(Path(home))
+            self.assertEqual(selected_calls, [])
+            self.assertEqual(profile.read_bytes(), original)
+            self.assertEqual(profile.stat().st_ino, identity)
+            self.assertFalse((root / "profile.lua").exists())
+
+    def test_install_reuses_explicit_parent_lease(self):
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home) / ".config/nacre"
+            with writer_lease(root) as lease:
+                value = profile_policy.install(Path(home), lease=lease)
+                self.assertEqual(
+                    json.loads((root / "profile.json").read_text()), value
+                )
+                with self.assertRaises(WriterLeaseError):
+                    with writer_lease(root):
+                        self.fail("profile installation dropped its parent lease")
 
     def test_future_profile_is_refused_before_either_publication(self):
         with tempfile.TemporaryDirectory() as home:

@@ -34,6 +34,11 @@ class PackageSetupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root, home, profile = self.fixture(folder)
             state = home / "releases"
+            config = home / ".config/nacre"
+            config.mkdir(parents=True)
+            foreign = config / "profile.json"
+            foreign.write_bytes(b"owner profile")
+            identity = foreign.stat().st_ino
             with (
                 patch.object(releases, "HOME", home),
                 patch.object(releases, "STATE", state),
@@ -46,6 +51,8 @@ class PackageSetupTests(unittest.TestCase):
             plan.assert_not_called()
             capture.assert_not_called()
             self.assertFalse(list(state.glob("*/release.json")))
+            self.assertEqual(foreign.read_bytes(), b"owner profile")
+            self.assertEqual(foreign.stat().st_ino, identity)
 
     def test_initial_wallpaper_record_keeps_private_palette_and_image(self):
         with tempfile.TemporaryDirectory() as directory:

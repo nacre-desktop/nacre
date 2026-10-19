@@ -55,6 +55,66 @@ class WriterLeaseTests(unittest.TestCase):
                 finally:
                     os.close(unrelated)
 
+    def test_inherited_fd_must_match_the_requested_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            first = base / "first" / "nacre"
+            second = base / "second" / "nacre"
+            with writer_lease.writer_lease(second):
+                pass
+            second_lock = second / ".writer.lock"
+            before = (second_lock.stat().st_ino, second_lock.read_bytes())
+            with writer_lease.writer_lease(first) as lease:
+                duplicate = os.dup(lease.fd)
+                try:
+                    with self.assertRaises(writer_lease.WriterLeaseError):
+                        with writer_lease.writer_lease(second, inherited_fd=duplicate):
+                            self.fail("a lock fd for another destination was accepted")
+                finally:
+                    os.close(duplicate)
+            self.assertEqual(
+                (second_lock.stat().st_ino, second_lock.read_bytes()), before
+            )
+            self.assertFalse((second / "profile.lua").exists())
+
+    def test_symlink_ancestor_refusal_leaves_foreign_tree_unchanged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            parent = base / "parent"
+            parent.mkdir(mode=0o700)
+            foreign = base / "foreign"
+            foreign.mkdir(mode=0o700)
+            sentinel = foreign / "sentinel"
+            sentinel.write_bytes(b"foreign")
+            identity = sentinel.stat().st_ino
+            (parent / "config").symlink_to(foreign, target_is_directory=True)
+            with self.assertRaises(writer_lease.WriterLeaseError):
+                with writer_lease.writer_lease(parent / "config" / "nacre"):
+                    self.fail("a symlink ancestor was accepted")
+            self.assertEqual(sentinel.read_bytes(), b"foreign")
+            self.assertEqual(sentinel.stat().st_ino, identity)
+            self.assertFalse((foreign / "nacre").exists())
+
+    def test_replaced_destination_path_refusal_does_not_touch_replacement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            parent = base / "parent"
+            parent.mkdir(mode=0o700)
+            root = parent / "nacre"
+            with writer_lease.writer_lease(root) as lease:
+                retired = base / "retired"
+                root.rename(retired)
+                root.mkdir(mode=0o700)
+                sentinel = root / "sentinel"
+                sentinel.write_bytes(b"replacement")
+                identity = sentinel.stat().st_ino
+                with self.assertRaises(writer_lease.WriterLeaseError):
+                    lease.publish("profile.lua", b"must not reach replacement")
+                self.assertEqual(sentinel.read_bytes(), b"replacement")
+                self.assertEqual(sentinel.stat().st_ino, identity)
+                self.assertFalse((root / "profile.lua").exists())
+                self.assertFalse((retired / "profile.lua").exists())
+
     def test_ancestry_replacement_never_redirects_publication(self):
         with tempfile.TemporaryDirectory() as directory:
             parent = Path(directory) / "parent"
