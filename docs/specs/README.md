@@ -259,3 +259,29 @@ Earlier dependency/profiling holds above are superseded by this handoff.
 Owner timing clarification: desktop unused rest of Oct19; start acceptance as
 soon as prerequisite tests/review finish, no20:00 wait. Exclusive12h from actual
 CAPTURE_START, recorded by lead. No timing/gate compression.
+
+Implementation checkpoint: N9 exact5962 compiled and lease tests passed, but
+launcher migration regression failed at backup hard-link validation order. N9 also must
+pin/lease actual config AND state roots; no source acceptance yet. N10 local
+checkpoint67b4393f has38 focused tests/isolated recovery component; controller
+mutators still refuse, full package/unit/activation rollback is NOT implemented.
+All N9/N10 commits remain local. N2 prospective batch/mocks ready for final review;
+no capture payload yet. No further profiling.
+
+## Pre-capture correctness handoff — 2026-10-19 14:49 UTC
+
+N9 local84497fa14328640abc3f06dbdd12bc1b81ba7e9d passed fmt/check,3 Rust
+lease tests,15 settings tests,2 pinned publication tests and affected all-target
+Clippy;9 Python lease/profile tests also passed. Scope6GiB/swap0 verified, OOM
+counters zero, owned scopes inactive/lock free. No full N9 acceptance or push;
+installer/release integration/barrier coverage remains for review. N10 local
+67b4393f checkpoint38 focused checks passes, still refuses every mutator; full
+package/unit activation/rollback remains unfinished. Neither is integrated.
+
+N2 r3 standard20-arm outer schedule accepted after independent mock/report
+review. Frozen v14 sampling/geometry/quiet/safety bytes unchanged. Root grants
+exclusive12h from actual CAPTURE_START, starting immediately after the above
+N9 release; worker records actualUTC/deadline, no historic peer-ACK chain.
+All other workers are local light source only; no hostedCI/build/nested overlap.
+Report source5f4 vs8a explicitly and per-phase group/component median results;
+owner-approved end-only quiet retries/max2 and threshold rule remain mandatory.

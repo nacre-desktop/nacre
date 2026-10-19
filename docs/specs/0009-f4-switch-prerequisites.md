@@ -119,3 +119,18 @@ local commits only, no push/live operations. Coordinator final review required.
 Private builds/tests serialize before tonight’s N0002 window; request the heavy
 slot with exact revision/argv, do not self-start. No profiling. Integrate only
 after F4 is green. Report commits, AC evidence and unsupported cases honestly.
+
+## Settings state-root clarification — 2026-10-19 implementation review
+
+Actor stores include state-root documents (notably writable battery-alerts),
+not just config-root documents. Daemon must pin AND nonblocking-lease both actual
+Paths.config and Paths.state before startup, deduplicated by inode and acquired
+in stable bytewise absolute-path order; release all on any failure. Installer
+profile publication leases its actual config destination. Every settings read/
+publication selects only its schema-authorized exact pinned parent, never a
+basename redirected into config or an arbitrary caller path. Different config
+roots can coexist only when their other writer roots are disjoint; shared state
+roots exclude concurrent daemons even with different config/socket roots. Tests
+cover state-root durability, shared-state exclusion and fully disjoint roots.
+This fixes N9 only; frozen N2 source8a remains unchanged. N10 must include actual
+writer roots in its quiescence lease set when restoring those destinations.

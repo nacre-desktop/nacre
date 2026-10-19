@@ -215,3 +215,7 @@ reviews security/rollback evidence. Serialize builds/tests before tonight’s
 N0002 capture; request heavy slot before execution. Agree N0009 lease API with
 that worker and keep ownership disjoint. Never weaken refusal/rollback criteria
 to meet the deadline. Integration remains after green F4 and accepted N0009.
+
+N9 implementation clarification: Settings includes Paths.state stores; lease all
+actual runtime config/state writer roots needed for quiescence, not config alone,
+in stable deduplicated order. Shared-state roots are not independent sessions.
