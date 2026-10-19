@@ -302,3 +302,23 @@ One bounded25-minute execution window after independent source ACCEPT; no retry.
 Require compression integrity, successful standard parser, useful allocation stacks
 and trace coverage through final phase. Failure preserves partials and stops.
 Heaptrack output remains diagnostic; standard private analysis only, never live GUI.
+
+## Heaptrack capability result — no valid profile
+
+Corrected original Bash launch reached QS; original10s health call timed out.
+Standard compressed output failed integrity after normal whole-group cleanup.
+No geometry/phase acceptance, cause of health timeout UNKNOWN. Owned cleanup
+complete11:15:12UTC, no B or retry. One source-only standard attach feasibility
+review is permitted; no altered health deadline, custom parser/sampler or source
+optimization. Attach would omit startup allocations; do not infer complete live set.
+
+## Standalone private profiling approval
+
+Independent source review ACCEPTED inventory62c1ae7f (private package, no public
+host metadata). One baseline profile uses standard heaptrack and existing fixture,
+geometry, environment, source/helper pins and timed actions, but replaces native
+supervisor lifecycle solely for diagnostic drainage. Exact QS identities checked
+at phase/action boundaries; terminate actual QS only, wait standard pipeline<=30s,
+validate compression before other cleanup. Original verified12GiB/swap0 guardian
+and host4GiB/2GiB remain. No sampler/parser or acceptance collector modification.
+Baseline-only25min external supervision; B unarmed. All results diagnostic.

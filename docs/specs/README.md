@@ -5,7 +5,7 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; GC diagnostic finished; no supported fix. Heaptrack plan independently accepted; baseline-only capability run granted, B unarmed. |
+| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; GC diagnostic finished; no supported fix. Standalone private heaptrack baseline profile independently reviewed/granted; candidate B unarmed, acceptance blocked. |
 | 2 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: product correction | Both v14 geometry checks passed; only Niri A/B valid. H baseline failed whole-wrapper swap-in; no eight-run PASS. |
 | 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Corrected plan retained; F4/package readiness, exclusive installer handoff and managed persistent opt-in/rollback missing. No live action. |
 | — | [N0009 exclusive destination writer handoff](0009-f4-switch-prerequisites.md) | Blocked: after green F4 | Draft design reviewed; no implementation/live grant. |
@@ -168,3 +168,27 @@ full frozen baseline A capability run, external25min deadline from actual start.
 No candidate B/retry/repair. Verify compression integrity after cleanup; standard
 parser/GUI analysis needs separate grant. Trace drain remains unproven because
 normal whole-group cleanup may terminate compressor. Instrumented data diagnostic.
+
+## Heaptrack capability outcome — 2026-10-19
+
+First launch stopped in terminal job control introduced by external timeout; no QS
+or trace. Removed timeout after independent review, original explicit Bash/tmux
+launch restored. Sole corrected baseline reached real QS but original10s IPC
+health timed out; no geometry/phase PASS. Trace zstd integrity failed (premature
+end), confirming drainage prerequisite unmet. No allocation or acceptance claim.
+Exact recorded task identities/scope/tmux/FIFO removed; lock free11:15:12UTC.
+No candidate B or retry. Sol source-only reviews standard heaptrack attach to
+validated owned QS outside collector killpg, within original capped scope; startup
+allocations would be absent. No frozen health/cleanup changes or payload grant.
+
+## Standalone standard profiling grant — 2026-10-19
+
+Attach feasibility was not safe within frozen collector scope teardown. Root
+authorizes minimal PRIVATE PROFILE launch lifecycle, leaving acceptance modules
+unchanged. Package inventory62c1ae7f independently ACCEPTED after identity/drain
+and serialization mock fixes. Reuses exact fixtures, geometry and guardian;
+standard heaptrack from startup, same timed actions, diagnostic readiness60s.
+Native supervisor is replaced by private lifecycle, an explicit comparability
+limitation. No acceptance/PSS inference. One baseline A only,25min externally
+supervised; QS-only pidfd TERM, then profiler drain<=30s and compression integrity
+before remaining fixture/scope cleanup. B and analysis need lead review.
