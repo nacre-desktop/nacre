@@ -284,3 +284,21 @@ limits](../research/f4-n0007-gc-diagnostic.md). No further source change or capt
 Owner-only heaptrack installation requested for native allocation-stack evidence;
 no install or future heavy/profile run granted. Source8a remains clean, memory
 acceptance blocked. Light independent source work continues while owner decides.
+
+## Owner-approved allocation profiling preparation — 2026-10-19
+
+Heaptrack1.5.0 is installed and owner authorizes profiling. Sol prepares a minimal
+standard heaptrack QML A/B diagnostic using existing correct-size private launch
+and census. Review actual wrapper/child ownership, phase live allocation evidence
+and trace drain before execution. Preserve source8a/native helper439 and baseline
+5f4/helper4a65; frozen measurement modules unchanged. Instrumented memory is not
+acceptance. Root grants execution only after plan review; one heavy job, existing
+12GiB/swap0 verified scope, host4GiB start/2GiB abort, no listeners or live changes.
+
+Proposed first stage is baseline-only standard heaptrack capability evidence, using
+the ORIGINAL full600s+three60s arm and unchanged frozen cleanup. Standard wrapper
+forks QS/interpreter/compressor; trace drainage is unproven and must pass before B.
+One bounded25-minute execution window after independent source ACCEPT; no retry.
+Require compression integrity, successful standard parser, useful allocation stacks
+and trace coverage through final phase. Failure preserves partials and stops.
+Heaptrack output remains diagnostic; standard private analysis only, never live GUI.

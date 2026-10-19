@@ -5,7 +5,7 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; GC diagnostic finished; no supported fix. Allocation-stack tool request pending owner; no capture grant. |
+| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; GC diagnostic finished; no supported fix. Heaptrack plan independently accepted; baseline-only capability run granted, B unarmed. |
 | 2 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: product correction | Both v14 geometry checks passed; only Niri A/B valid. H baseline failed whole-wrapper swap-in; no eight-run PASS. |
 | 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Corrected plan retained; F4/package readiness, exclusive installer handoff and managed persistent opt-in/rollback missing. No live action. |
 | — | [N0009 exclusive destination writer handoff](0009-f4-switch-prerequisites.md) | Blocked: after green F4 | Draft design reviewed; no implementation/live grant. |
@@ -143,11 +143,28 @@ No implementation, package publication, install, opt-in or unit action is grante
 Authoritative current state is this queue, not older grant paragraphs. All Nacre
 sessions/scopes/locks released. N7source8a is correctness accepted but valid quick
 fresh/closed exceeds5MiB; F4 is NOT published, H/full-eight NOT run. Logging-only
-diagnostic and interpretation complete, no supported code fix. Owner-only
-heaptrack desktop install request pending; no further private heavy grant.
+diagnostic and interpretation complete, no supported code fix. Owner approved heaptrack installation and profiling; installed tool verified. Baseline-only profiling capability grant active; no acceptance capture grant.
 Local integrationb003aa8 remains conditional and needs latest docs before eventual
 publication; never publish without acceptance/exact-head CI. BeadB13 Done at
 021fdaad/CI39230443828SUCCESS/docs85f89e9. B14 source8c9e9e1 has two fixture
 review fixes assigned to Sol in a fresh worktree; no test/build/CI execution yet.
 N9/N10 blocked drafts reviewed; no switch/live/package action. N8pacman remains
 parked. Relevant private archives/reports and immutable corpus identities retained.
+
+## Allocation profiling restart — 2026-10-19
+
+Owner authorized heaptrack installation and profiling. Heaptrack1.5.0 verified;
+only heaptrack plus kdiagram/threadweaver dependencies installed, no system upgrade.
+All prior jobs and hosted workflows are terminal. Sol prepares a standard-tool
+allocation profile plan against baseline5f4 and source8a; independent review before
+payload. Existing correct geometry, 12GiB/swap0 containment, host4GiB/2GiB guardian
+and exact-owned cleanup remain. Instrumented values are diagnostic only. No
+acceptance retry, product speculation, live changes or package publication.
+Bead B0014 Done: source dcf541a9, exact-sourceCI39240289443 SUCCESS; docs0759bca9.
+Duplicate exact-source main CI39241346554 deliberately cancelled, not passed.
+
+Independent heaptrack launch review ACCEPTED. At11:09UTC lead granted Sol one
+full frozen baseline A capability run, external25min deadline from actual start.
+No candidate B/retry/repair. Verify compression integrity after cleanup; standard
+parser/GUI analysis needs separate grant. Trace drain remains unproven because
+normal whole-group cleanup may terminate compressor. Instrumented data diagnostic.
