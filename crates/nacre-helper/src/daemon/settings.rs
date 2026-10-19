@@ -1,4 +1,5 @@
 //! Serialized settings ownership. Disk work uses the daemon's bounded blocking pool.
+use super::writer_lease::WriterLease;
 use super::{
     hub::{failure, Shared},
     settings_validation as validation,
@@ -17,6 +18,7 @@ use std::{
     collections::BTreeMap,
     path::PathBuf,
     rc::{Rc, Weak},
+    sync::Arc,
     time::Duration,
 };
 use tokio::{
@@ -40,6 +42,7 @@ pub struct Service {
     durable_changed: Notify,
     hub: Weak<RefCell<super::hub::Hub>>,
     paths: Paths,
+    writer_lease: Option<Arc<WriterLease>>,
     mutations: Cell<usize>,
     #[cfg(test)]
     defer_launcher_flush: Cell<bool>,
@@ -76,7 +79,11 @@ fn read_error(schema: &state::Schema, line: usize, message: &str) -> SettingsRea
 }
 
 impl Service {
-    pub async fn load(hub: Shared, paths: Paths) -> Result<Rc<Self>> {
+    pub async fn load(
+        hub: Shared,
+        paths: Paths,
+        writer_lease: Option<Arc<WriterLease>>,
+    ) -> Result<Rc<Self>> {
         let service_paths = paths.clone();
         let stores = tokio::task::spawn_blocking(move || -> Result<BTreeMap<String, Store>> {
             let mut stores = BTreeMap::new();
@@ -133,6 +140,7 @@ impl Service {
             durable_changed: Notify::new(),
             hub: Rc::downgrade(&hub),
             paths: service_paths,
+            writer_lease,
             mutations: Cell::new(0),
             #[cfg(test)]
             defer_launcher_flush: Cell::new(false),
@@ -650,6 +658,9 @@ impl Service {
     }
 
     async fn flush(&self) -> Result<()> {
+        if let Some(lease) = &self.writer_lease {
+            lease.ensure_valid()?;
+        }
         let mut stores = self.stores.lock().await;
         for store in stores
             .values_mut()
@@ -659,10 +670,18 @@ impl Service {
             let schema = store.schema;
             let data = store.snapshot.data.clone();
             let expected = store.fingerprint;
+            let lease = self.writer_lease.clone();
+            let config_dir = self.paths.config.clone();
             let result = tokio::task::spawn_blocking(move || -> Result<_> {
-                state::write_checked(&path, schema, &data, expected)?;
-                state::read_document(&path, schema)
-                    .map_err(|_| "Cannot verify saved settings".into())
+                let pinned_config = path.parent() == Some(config_dir.as_path());
+                let written = if let Some(lease) = lease.as_ref().filter(|_| pinned_config) {
+                    state::write_checked_pinned(lease, &path, schema, &data, expected)?;
+                    state::read_document_pinned(lease, &path, schema)
+                } else {
+                    state::write_checked(&path, schema, &data, expected)?;
+                    state::read_document(&path, schema)
+                };
+                written.map_err(|_| "Cannot verify saved settings".into())
             })
             .await?;
             store.deadline = None;
@@ -959,7 +978,10 @@ mod tests {
         let hub =
             super::super::hub::Hub::new("settings-test".into(), false, Duration::from_millis(16))
                 .shared();
-        let service = Service::load(hub.clone(), paths.clone()).await.unwrap();
+        let lease = Arc::new(WriterLease::acquire(&paths.config).unwrap());
+        let service = Service::load(hub.clone(), paths.clone(), Some(lease))
+            .await
+            .unwrap();
         (home, paths, hub, service)
     }
     fn change(rev: u64, value: bool) -> SettingsSet {

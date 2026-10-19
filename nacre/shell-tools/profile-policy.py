@@ -9,6 +9,7 @@ import importlib.util
 import os
 from pathlib import Path
 import re
+from writer_lease import inherited_fd_from_env, writer_lease
 
 DEFAULT = dict(
     version=1,
@@ -190,22 +191,59 @@ def lua(profile):
     )
 
 
-def install(home=None):
+def install(home=None, lease=None):
     home = home or Path.home()
-    value = selected()
     directory = home / ".config/nacre"
-    directory.mkdir(parents=True, exist_ok=True)
-    for name, text in (
-        ("profile.json", json.dumps(value, indent=2) + "\n"),
-        ("profile.lua", lua(value)),
-    ):
-        target = directory / name
-        if _state.write_text_if_managed(target, text):
-            continue
-        pending = target.with_name("." + name + ".next")
-        pending.write_text(text)
-        pending.chmod(0o600)
-        os.replace(pending, target)
+    inherited_fd = inherited_fd_from_env() if lease is None else None
+    manager = writer_lease(directory, inherited_fd=inherited_fd) if lease is None else None
+    if manager is None:
+        lease.ensure_valid()
+        if lease.root != directory:
+            raise RuntimeError("Nacre destination busy or unsafe")
+        active = lease
+        return _install(active)
+    with manager as active:
+        return _install(active)
+
+
+def _install(lease):
+    lease.ensure_valid()
+    value = selected()
+    # Snapshot both checked files while the destination lease is held. If the
+    # second replace fails, restore the first under the same pinned directory.
+    previous = {name: lease.read(name) for name in ("profile.json", "profile.lua")}
+    raw_profile = previous["profile.json"]
+    if raw_profile is not None:
+        entry = _state.schema(lease.root / "profile.json")
+        try:
+            _, old_version = _state._decode(json.loads(raw_profile), entry)
+        except _state.NewerVersionError:
+            raise
+        except (ValueError, UnicodeError, _state.InvalidVersionError):
+            lease.backup_once("profile.json.corrupt.bak", raw_profile)
+        else:
+            if old_version < entry["version"]:
+                lease.backup_once(
+                    f"profile.json.pre-v{old_version}-to-v{entry['version']}.bak",
+                    raw_profile,
+                )
+    try:
+        lease.publish("profile.json", (json.dumps(value, indent=2) + "\n").encode())
+        lease.ensure_valid()
+        lease.publish("profile.lua", lua(value).encode())
+    except BaseException:
+        try:
+            lease.ensure_valid()
+            for name, content in previous.items():
+                if content is None:
+                    lease.unlink(name)
+                else:
+                    lease.publish(name, content)
+        except BaseException as restore_error:
+            raise RuntimeError(
+                "Nacre destination busy or unsafe; profile restoration incomplete"
+            ) from restore_error
+        raise
     return value
 
 

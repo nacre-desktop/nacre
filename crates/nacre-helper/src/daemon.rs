@@ -23,6 +23,7 @@ pub mod supervisor;
 pub mod wallpaper;
 pub mod widths;
 pub mod workers;
+pub mod writer_lease;
 
 use crate::{paths::Paths, Result};
 use serde_json::json;
@@ -32,6 +33,8 @@ async fn serve(
     mut listener: socket::Listener,
     mut counter: crashes::Counter,
     frame: Duration,
+    paths: Paths,
+    writer_lease: std::sync::Arc<writer_lease::WriterLease>,
 ) -> Result<()> {
     let listener_socket = tokio::net::UnixListener::from_std(listener.take()?)?;
     helpers::cleanup()?;
@@ -39,12 +42,11 @@ async fn serve(
     hub.borrow_mut().publish("compositor",json!({"available":false,"error":"Connecting to compositor","outputs":{},"outputOrder":[],"workspaces":{},"workspaceOrder":[],"windows":{},"windowOrder":[]}))?;
     let status = hub.borrow().status();
     hub.borrow_mut().publish("daemon", status)?;
-    let paths = Paths::environment()?;
     let environment: std::collections::BTreeMap<String, String> = std::env::vars().collect();
     let control = compositor_control::Control::new(paths.clone(), environment.clone());
     hub.borrow_mut().compositor = Some(control.clone());
     let settings_hub = hub.clone();
-    let settings = settings::Service::load(hub.clone(), paths.clone()).await?;
+    let settings = settings::Service::load(hub.clone(), paths.clone(), Some(writer_lease)).await?;
     hub.borrow_mut().settings = Some(settings.clone());
     let (settings_ready, settings_initialized) = tokio::sync::oneshot::channel();
     let settings_ready = Rc::new(RefCell::new(Some(settings_ready)));
@@ -326,6 +328,8 @@ pub fn run(arguments: &[String]) -> Result<i32> {
     std::panic::set_hook(Box::new(|_| {
         tracing::error!("Daemon task panicked; payload omitted")
     }));
+    let paths = Paths::environment()?;
+    let writer_lease = std::sync::Arc::new(writer_lease::WriterLease::acquire(&paths.config)?);
     let path = socket::path()?;
     let listener = socket::Listener::acquire(path.clone())?;
     let counter = crashes::Counter::begin(path.parent().ok_or("Missing daemon socket folder")?)?;
@@ -344,7 +348,13 @@ pub fn run(arguments: &[String]) -> Result<i32> {
         .build()?;
     let result = tokio::task::LocalSet::new().block_on(
         &runtime,
-        serve(listener, counter, Duration::from_millis(frame)),
+        serve(
+            listener,
+            counter,
+            Duration::from_millis(frame),
+            paths,
+            writer_lease,
+        ),
     );
     runtime.shutdown_timeout(Duration::from_secs(2));
     result?;

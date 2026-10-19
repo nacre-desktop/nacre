@@ -277,6 +277,53 @@ pub fn read_document(path: &Path, schema: &Schema) -> DocumentRead {
     Ok((value, Some(Sha256::digest(&raw).into())))
 }
 
+pub fn read_document_pinned(
+    lease: &crate::daemon::writer_lease::WriterLease,
+    path: &Path,
+    schema: &Schema,
+) -> DocumentRead {
+    use nix::fcntl::{openat, OFlag};
+    use std::{fs::File, os::unix::fs::MetadataExt};
+    if lease.ensure_valid().is_err() {
+        return Err((0, "Cannot safely read settings file"));
+    }
+    let Some(name) = path.file_name() else {
+        return Err((0, "Cannot safely read settings file"));
+    };
+    let file = match openat(
+        lease.config_dir_fd(),
+        name,
+        OFlag::O_RDONLY | OFlag::O_NOFOLLOW | OFlag::O_CLOEXEC | OFlag::O_NONBLOCK,
+        nix::sys::stat::Mode::empty(),
+    ) {
+        Ok(fd) => File::from(fd),
+        Err(nix::errno::Errno::ENOENT) => return Ok((schema.defaults.clone(), None)),
+        Err(_) => return Err((0, "Cannot safely read settings file")),
+    };
+    let meta = match file.metadata() {
+        Ok(meta) => meta,
+        Err(_) => return Err((0, "Cannot safely read settings file")),
+    };
+    if !meta.is_file()
+        || meta.nlink() != 1
+        || meta.uid() != nix::unistd::getuid().as_raw()
+        || meta.mode() & 0o022 != 0
+    {
+        return Err((0, "Cannot safely read settings file"));
+    }
+    let mut raw = Vec::new();
+    if file.take(LIMIT + 1).read_to_end(&mut raw).is_err() || raw.len() as u64 > LIMIT {
+        return Err((0, "Cannot safely read settings file"));
+    }
+    if lease.ensure_valid().is_err() {
+        return Err((0, "Cannot safely read settings file"));
+    }
+    let value = serde_json::from_slice(&raw).map_err(|e| (e.line(), "Invalid settings JSON"))?;
+    let (value, _) = decode(value, schema)
+        .map_err(|_| (0, "Unsupported settings document; original preserved"))?;
+    Ok((value, Some(Sha256::digest(&raw).into())))
+}
+
 #[derive(Debug)]
 pub struct WriteConflict;
 impl std::fmt::Display for WriteConflict {
@@ -293,6 +340,197 @@ pub fn write_checked(
     expected: Option<[u8; 32]>,
 ) -> Result<()> {
     update_formatted(path, schema, |_| Ok(value.clone()), None, Some(expected))
+}
+
+/// Publish a checked Settings document relative to the daemon's pinned config fd.
+/// This preserves the schema lock, fingerprint check, backups and atomic replace
+/// while preventing a replaced path ancestor from redirecting the write.
+pub fn write_checked_pinned(
+    lease: &crate::daemon::writer_lease::WriterLease,
+    path: &Path,
+    schema: &Schema,
+    value: &Value,
+    expected: Option<[u8; 32]>,
+) -> Result<()> {
+    use nix::{
+        fcntl::{openat, renameat, Flock, FlockArg, OFlag},
+        sys::stat::{fstat, fstatat, AtFlags, Mode, SFlag},
+        unistd::{linkat, unlinkat, LinkatFlags, UnlinkatFlags},
+    };
+    use std::{fs::File, io::Write, os::unix::fs::MetadataExt};
+
+    let name = path
+        .file_name()
+        .ok_or("Invalid settings path")?
+        .to_string_lossy();
+    if name.is_empty() || name.contains('/') || name == "." || name == ".." {
+        return Err("Invalid settings path".into());
+    }
+    let root = lease.config_dir_fd();
+    lease.ensure_valid()?;
+    let lock_name = format!("{name}.schema.lock");
+    let lock_file = File::from(openat(
+        root,
+        lock_name.as_str(),
+        OFlag::O_RDWR | OFlag::O_CREAT | OFlag::O_NOFOLLOW | OFlag::O_CLOEXEC,
+        Mode::from_bits_truncate(0o600),
+    )?);
+    let lock_meta = lock_file.metadata()?;
+    let named_lock = fstatat(root, lock_name.as_str(), AtFlags::AT_SYMLINK_NOFOLLOW)?;
+    if !lock_meta.is_file()
+        || lock_meta.uid() != nix::unistd::getuid().as_raw()
+        || lock_meta.nlink() != 1
+        || lock_meta.mode() & 0o777 != 0o600
+        || named_lock.st_dev as u64 != lock_meta.dev()
+        || named_lock.st_ino as u64 != lock_meta.ino()
+    {
+        return Err("Refusing unsafe settings lock".into());
+    }
+    let _schema_lock =
+        Flock::lock(lock_file, FlockArg::LockExclusive).map_err(|(_, error)| error)?;
+    lease.ensure_valid()?;
+
+    let mut original_identity = None;
+    let raw = match openat(
+        root,
+        name.as_ref(),
+        OFlag::O_RDONLY | OFlag::O_NOFOLLOW | OFlag::O_CLOEXEC | OFlag::O_NONBLOCK,
+        Mode::empty(),
+    ) {
+        Ok(fd) => {
+            let file = File::from(fd);
+            let meta = file.metadata()?;
+            if !meta.is_file()
+                || meta.uid() != nix::unistd::getuid().as_raw()
+                || meta.nlink() != 1
+                || meta.mode() & 0o022 != 0
+            {
+                return Err("Refusing unsafe settings file".into());
+            }
+            original_identity = Some((meta.dev(), meta.ino()));
+            let mut raw = Vec::new();
+            file.take(LIMIT + 1).read_to_end(&mut raw)?;
+            if raw.len() as u64 > LIMIT {
+                return Err("State file too large; original preserved".into());
+            }
+            Some(raw)
+        }
+        Err(nix::errno::Errno::ENOENT) => None,
+        Err(error) => return Err(error.into()),
+    };
+    if raw
+        .as_ref()
+        .map(|raw| <[u8; 32]>::from(Sha256::digest(raw)))
+        != expected
+    {
+        return Err(WriteConflict.into());
+    }
+    let (old, corrupt) = match raw.as_ref() {
+        Some(raw) => match serde_json::from_slice(raw)
+            .map_err(|_| StateError::Corrupt)
+            .and_then(|value| decode(value, schema))
+        {
+            Ok((_value, version)) => (version, false),
+            Err(StateError::Corrupt) => (schema.version, true),
+            Err(error) => return Err(error.into()),
+        },
+        None => (schema.version, false),
+    };
+    let bytes = encoded(value, schema)?;
+    if bytes.len() as u64 > LIMIT {
+        return Err("State file too large; original preserved".into());
+    }
+    if let Some(raw) = raw.as_ref() {
+        let suffix = if corrupt {
+            Some(".corrupt".to_owned())
+        } else if old < schema.version {
+            Some(format!(".pre-v{old}-to-v{}", schema.version))
+        } else {
+            None
+        };
+        if let Some(suffix) = suffix {
+            let backup_name = format!("{name}{suffix}.bak");
+            lease.ensure_valid()?;
+            match fstatat(root, backup_name.as_str(), AtFlags::AT_SYMLINK_NOFOLLOW) {
+                Ok(meta) => {
+                    if meta.st_mode & SFlag::S_IFMT.bits() != SFlag::S_IFREG.bits()
+                        || meta.st_uid != nix::unistd::getuid().as_raw()
+                        || meta.st_nlink != 1
+                        || meta.st_mode & 0o022 != 0
+                    {
+                        return Err("Refusing unsafe settings backup".into());
+                    }
+                }
+                Err(nix::errno::Errno::ENOENT) => {
+                    let temporary = format!(".{name}.{}.next", uuid::Uuid::new_v4());
+                    let fd = openat(
+                        root,
+                        temporary.as_str(),
+                        OFlag::O_WRONLY
+                            | OFlag::O_CREAT
+                            | OFlag::O_EXCL
+                            | OFlag::O_NOFOLLOW
+                            | OFlag::O_CLOEXEC,
+                        Mode::from_bits_truncate(0o600),
+                    )?;
+                    let mut file = File::from(fd);
+                    file.write_all(raw)?;
+                    file.sync_all()?;
+                    lease.ensure_valid()?;
+                    match linkat(
+                        root,
+                        temporary.as_str(),
+                        root,
+                        backup_name.as_str(),
+                        LinkatFlags::empty(),
+                    ) {
+                        Ok(()) => {}
+                        Err(nix::errno::Errno::EEXIST) => {}
+                        Err(error) => return Err(error.into()),
+                    }
+                    let backup_meta =
+                        fstatat(root, backup_name.as_str(), AtFlags::AT_SYMLINK_NOFOLLOW)?;
+                    if backup_meta.st_mode & SFlag::S_IFMT.bits() != SFlag::S_IFREG.bits()
+                        || backup_meta.st_uid != nix::unistd::getuid().as_raw()
+                        || backup_meta.st_nlink != 1
+                        || backup_meta.st_mode & 0o022 != 0
+                    {
+                        return Err("Refusing unsafe settings backup".into());
+                    }
+                    unlinkat(root, temporary.as_str(), UnlinkatFlags::NoRemoveDir)?;
+                    lease.ensure_valid()?;
+                }
+                Err(error) => return Err(error.into()),
+            }
+        }
+    }
+
+    let temporary = format!(".{name}.{}.next", uuid::Uuid::new_v4());
+    lease.ensure_valid()?;
+    let fd = openat(
+        root,
+        temporary.as_str(),
+        OFlag::O_WRONLY | OFlag::O_CREAT | OFlag::O_EXCL | OFlag::O_NOFOLLOW | OFlag::O_CLOEXEC,
+        Mode::from_bits_truncate(0o600),
+    )?;
+    let mut file = File::from(fd);
+    file.write_all(&bytes)?;
+    file.sync_all()?;
+    drop(file);
+    lease.ensure_valid()?;
+    match (
+        original_identity,
+        fstatat(root, name.as_ref(), AtFlags::AT_SYMLINK_NOFOLLOW),
+    ) {
+        (Some((device, inode)), Ok(current))
+            if current.st_dev as u64 == device && current.st_ino as u64 == inode => {}
+        (None, Err(nix::errno::Errno::ENOENT)) => {}
+        _ => return Err(WriteConflict.into()),
+    }
+    renameat(root, temporary.as_str(), root, name.as_ref())?;
+    root.sync_all()?;
+    lease.ensure_valid()?;
+    Ok(())
 }
 pub fn read_as(path: &Path, schema: Option<&Schema>, fallback: Value) -> Result<Value> {
     read_internal(path, schema, fallback, true)

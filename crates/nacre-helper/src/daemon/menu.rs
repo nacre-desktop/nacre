@@ -1410,7 +1410,9 @@ mod activation_tests {
         .unwrap();
 
         let hub = Hub::new("activation-test".into(), false, Duration::from_millis(16)).shared();
-        let settings = Service::load(hub.clone(), paths.clone()).await.unwrap();
+        let settings = Service::load(hub.clone(), paths.clone(), None)
+            .await
+            .unwrap();
         settings.defer_launcher_flush_for_test();
         let (launch_sender, launches) = mpsc::unbounded_channel();
         let (completion_sender, completions) = mpsc::unbounded_channel();
