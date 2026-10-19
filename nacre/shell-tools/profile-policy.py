@@ -211,8 +211,47 @@ def _install(lease):
     value = selected()
     # Snapshot both checked files while the destination lease is held. If the
     # second replace fails, restore the first under the same pinned directory.
-    previous = {name: lease.read(name) for name in ("profile.json", "profile.lua")}
-    raw_profile = previous["profile.json"]
+    def snapshot(name):
+        before = lease.stat(name)
+        content = lease.read(name)
+        after = lease.stat(name)
+        if (before is None) != (after is None):
+            raise RuntimeError("Nacre destination busy or unsafe")
+        if before is not None and (
+            (
+                before.st_dev,
+                before.st_ino,
+                before.st_mode,
+                before.st_ctime_ns,
+                before.st_mtime_ns,
+            )
+            != (
+                after.st_dev,
+                after.st_ino,
+                after.st_mode,
+                after.st_ctime_ns,
+                after.st_mtime_ns,
+            )
+        ):
+            raise RuntimeError("Nacre destination busy or unsafe")
+        return None if after is None else {
+            "content": content,
+            "mode": after.st_mode & 0o777,
+            "identity": (after.st_dev, after.st_ino),
+            "change": (after.st_ctime_ns, after.st_mtime_ns),
+        }
+
+    names = ("profile.json", "profile.lua")
+    previous = {name: snapshot(name) for name in names}
+    desired = {
+        "profile.json": (json.dumps(value, indent=2) + "\n").encode(),
+        "profile.lua": lua(value).encode(),
+    }
+    raw_profile = (
+        previous["profile.json"]["content"]
+        if previous["profile.json"] is not None
+        else None
+    )
     if raw_profile is not None:
         entry = _state.schema(lease.root / "profile.json")
         try:
@@ -227,18 +266,54 @@ def _install(lease):
                     f"profile.json.pre-v{old_version}-to-v{entry['version']}.bak",
                     raw_profile,
                 )
+    published = {}
     try:
-        lease.publish("profile.json", (json.dumps(value, indent=2) + "\n").encode())
+        lease.publish("profile.json", desired["profile.json"])
+        published["profile.json"] = snapshot("profile.json")
         lease.ensure_valid()
-        lease.publish("profile.lua", lua(value).encode())
+        lease.publish("profile.lua", desired["profile.lua"])
+        published["profile.lua"] = snapshot("profile.lua")
     except BaseException:
         try:
             lease.ensure_valid()
-            for name, content in previous.items():
-                if content is None:
+            current = {name: snapshot(name) for name in names}
+            for name in names:
+                before = previous[name]
+                after = current[name]
+                own = published.get(name)
+                # A publish may raise after replace/fsync; recognize only its
+                # exact bytes and private mode in that case. Never roll back a
+                # different post-publication edit from an external editor.
+                interrupted_own_publish = (
+                    own is None
+                    and name not in published
+                    and after is not None
+                    and after["content"] == desired[name]
+                    and after["mode"] == 0o600
+                )
+                if after != before and after != own and not interrupted_own_publish:
+                    raise RuntimeError("Profile changed during restoration")
+            for name in names:
+                before = previous[name]
+                after = current[name]
+                if after == before:
+                    continue
+                lease.ensure_valid()
+                if before is None:
                     lease.unlink(name)
                 else:
-                    lease.publish(name, content)
+                    lease.publish(name, before["content"], before["mode"])
+            restored = {name: snapshot(name) for name in names}
+            for name in names:
+                before = previous[name]
+                after = restored[name]
+                if before is None:
+                    if after is not None:
+                        raise RuntimeError("Profile restoration verification failed")
+                elif after is None or (
+                    after["content"], after["mode"]
+                ) != (before["content"], before["mode"]):
+                    raise RuntimeError("Profile restoration verification failed")
         except BaseException as restore_error:
             raise RuntimeError(
                 "Nacre destination busy or unsafe; profile restoration incomplete"

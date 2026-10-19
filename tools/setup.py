@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # Also resolve the shared message runtime when invoked from installed packages.
 sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
 _state = importlib.import_module("nacre_state")
+_writer = importlib.import_module("writer_lease")
 
 tr = importlib.import_module("nacre_i18n").tr
 
@@ -295,9 +296,16 @@ def main(argv=None):
                 {"plan": "--plan", "yes": "--yes"},
             )
         )
-    profile, keyboard, compositor = selection(
-        args, ROOT, Path.home(), interactive and not args.review_selected
-    )
+    if args.plan:
+        profile, keyboard, compositor = selection(
+            args, ROOT, Path.home(), interactive and not args.review_selected
+        )
+    else:
+        with _writer.writer_lease(Path.home() / ".config/nacre") as lease:
+            lease.ensure_valid()
+            profile, keyboard, compositor = selection(
+                args, ROOT, Path.home(), interactive and not args.review_selected
+            )
     selected_backends = [compositor, *getattr(args, "additional_compositors", [])]
     with tempfile.TemporaryDirectory(prefix="nacre-setup-") as temporary:
         selected = Path(temporary) / "profile.json"
@@ -308,9 +316,25 @@ def main(argv=None):
             from releases import package_plan, deploy_package
 
             missing = missing_packages(ROOT, profile, selected_backends)
-            plan = package_plan(
-                ROOT, profile, selected_backends, keyboard, validate_config=not missing
-            )
+            if args.plan:
+                plan = package_plan(
+                    ROOT,
+                    profile,
+                    selected_backends,
+                    keyboard,
+                    validate_config=not missing,
+                )
+            else:
+                with _writer.writer_lease(Path.home() / ".config/nacre") as lease:
+                    lease.ensure_valid()
+                    plan = package_plan(
+                        ROOT,
+                        profile,
+                        selected_backends,
+                        keyboard,
+                        validate_config=not missing,
+                        lease=lease,
+                    )
             print(
                 tr(
                     "setup.plan.summary",

@@ -2,6 +2,7 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
@@ -12,6 +13,77 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_capture_excludes_destination_and_transaction_lockfiles(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            home = root / "home"
+            config = home / ".config/nacre"
+            config.mkdir(parents=True)
+            lease_file = config / ".writer.lock"
+            transaction_lock = root / "state/release.lock"
+            ordinary = root / "ordinary.json"
+            lease_file.write_text("lease")
+            lease_file.chmod(0o600)
+            transaction_lock.parent.mkdir()
+            transaction_lock.write_text("transaction")
+            ordinary.write_text("ordinary")
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m, "STATE", root / "state"),
+                m._writer.writer_lease(config) as lease,
+            ):
+                release, record = m.capture(
+                    root,
+                    "fixture",
+                    [lease_file, transaction_lock, ordinary],
+                    package=True,
+                    lease=lease,
+                )
+            self.assertEqual([Path(item["path"]) for item in record["entries"]], [ordinary])
+            self.assertEqual(lease_file.read_text(), "lease")
+            self.assertEqual(transaction_lock.read_text(), "transaction")
+
+    def test_deploy_inherits_lease_fd_and_keeps_parent_lease_through_restore(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            home = root / "home"
+            home.mkdir()
+            keyboard = root / "wtype"
+            keyboard.touch()
+            release = root / "release"
+            record = {"entries": [], "created": "fixture", "previous": "baseline"}
+            outputs = iter(("revision\n", ""))
+
+            def run(command, **kwargs):
+                if "profile-policy.py" in " ".join(map(str, command)):
+                    self.assertEqual(kwargs["pass_fds"], (lease.fd,))
+                    self.assertEqual(
+                        kwargs["env"]["NACRE_WRITER_LEASE_FD"], str(lease.fd)
+                    )
+                    with self.assertRaises(m._writer.WriterLeaseError):
+                        with m._writer.writer_lease(home / ".config/nacre"):
+                            pass
+                    raise RuntimeError("stop after handoff check")
+                return SimpleNamespace(returncode=1)
+
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m, "STATE", root / "state"),
+                patch.object(m.subprocess, "check_output", side_effect=lambda *a, **k: next(outputs)),
+                patch.object(m.subprocess, "run", side_effect=run),
+                patch.object(m, "capture", return_value=(release, record)),
+                patch.object(m, "atomic"),
+                patch.object(m, "restore") as restore,
+                m._writer.writer_lease(home / ".config/nacre") as lease,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "stop after handoff check"):
+                    m._deploy_locked(root, [], str(keyboard), lease=lease)
+                restore.assert_called_once()
+                self.assertIs(restore.call_args.kwargs["lease"], lease)
+                with self.assertRaises(m._writer.WriterLeaseError):
+                    with m._writer.writer_lease(home / ".config/nacre"):
+                        pass
+
     def test_doctor_forwards_export_mode_without_an_extra_json_prefix(self):
         import io
         import sys

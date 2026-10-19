@@ -2,7 +2,7 @@
 """Versioned desktop releases: snapshot, stage, exercise, promote, or restore."""
 
 import argparse
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import datetime as dt
 import fcntl
 import hashlib
@@ -25,6 +25,7 @@ for _state_directory in (
         sys.path.insert(0, str(_state_directory))
         break
 _state = importlib.import_module("nacre_state")
+_writer = importlib.import_module("writer_lease")
 
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre/releases"
@@ -154,7 +155,9 @@ def paths(repo):
     return sorted(set(result), key=str)
 
 
-def capture(repo, revision, extra=(), package=False):
+def capture(repo, revision, extra=(), package=False, *, lease=None):
+    if lease is not None:
+        lease.ensure_valid()
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     release = STATE / dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     release.mkdir(mode=0o700)
@@ -171,7 +174,14 @@ def capture(repo, revision, extra=(), package=False):
         entries=[],
     )
     captured = set(extra) if package else set(paths(repo)) | set(extra)
+    captured = {
+        path
+        for path in captured
+        if path.name not in {".writer.lock", "release.lock"}
+    }
     for i, path in enumerate(sorted(captured, key=str)):
+        if lease is not None:
+            lease.ensure_valid()
         entry = dict(
             path=str(path),
             before=fingerprint(path),
@@ -179,6 +189,8 @@ def capture(repo, revision, extra=(), package=False):
             backup=str(release / "snapshot" / str(i)),
         )
         backup = Path(entry["backup"])
+        if lease is not None:
+            lease.ensure_valid()
         backup.parent.mkdir(parents=True, exist_ok=True)
         if (
             not package
@@ -207,11 +219,13 @@ def capture(repo, revision, extra=(), package=False):
             entry["kind"] = "file"
             shutil.copy2(path, backup)
         record["entries"].append(entry)
+    if lease is not None:
+        lease.ensure_valid()
     atomic(release / "release.json", record)
     return release, record
 
 
-def restore(release, record=None, force=False):
+def _restore_locked(release, record=None, force=False, *, lease):
     record = record or _state.read_json_file(release / "release.json")
     if not force:
         for e in record["entries"]:
@@ -230,24 +244,38 @@ def restore(release, record=None, force=False):
                 ["systemctl", "--user", "stop", service], capture_output=True
             )
     for e in record["entries"]:
+        # Confirm the pinned destination and lock are still reachable before
+        # each destructive restore step.
+        # _restore_locked is only called through restore with this lease held.
+        lease.ensure_valid()
         path = Path(e["path"])
         if path.is_symlink() or path.is_file():
+            lease.ensure_valid()
             path.unlink()
         elif path.is_dir():
+            lease.ensure_valid()
             shutil.rmtree(path)
+        lease.ensure_valid()
         path.parent.mkdir(parents=True, exist_ok=True)
         if e["kind"] == "runtime":
             restored = STATE / "restored-runtimes" / release.name
+            lease.ensure_valid()
             restored.parent.mkdir(parents=True, exist_ok=True)
             if restored.exists():
+                lease.ensure_valid()
                 shutil.rmtree(restored)
+            lease.ensure_valid()
             shutil.copytree(e["backup"], restored, symlinks=True)
+            lease.ensure_valid()
             path.symlink_to(restored)
         elif e["kind"] == "link":
+            lease.ensure_valid()
             path.symlink_to(e["link"])
         elif e["kind"] == "directory":
+            lease.ensure_valid()
             shutil.copytree(e["backup"], path, symlinks=True)
         elif e["kind"] == "file":
+            lease.ensure_valid()
             shutil.copy2(e["backup"], path)
     if live:
         subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
@@ -271,12 +299,26 @@ def restore(release, record=None, force=False):
             capture_output=True,
         )
     record["status"] = "rolled-back"
+    lease.ensure_valid()
     atomic(release / "release.json", record)
+    lease.ensure_valid()
     atomic(
         STATE / "current.json",
         dict(revision=record["previous"], restoredFrom=str(release), status="restored"),
     )
     return record["previous"]
+
+
+def restore(release, record=None, force=False, *, lease=None):
+    """Restore a snapshot while holding the destination writer lease."""
+    manager = (
+        nullcontext(lease)
+        if lease is not None
+        else _writer.writer_lease(HOME / ".config/nacre")
+    )
+    with manager as held:
+        held.ensure_valid()
+        return _restore_locked(release, record, force, lease=held)
 
 
 def install_controller(repo):
@@ -375,7 +417,7 @@ def required_live_services(components, initially_active):
     return sorted(required)
 
 
-def deploy(repo, components, keyboard, migrate=False):
+def _deploy_locked(repo, components, keyboard, migrate=False, *, lease):
     repo = repo.resolve()
     revision = subprocess.check_output(
         ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True
@@ -408,9 +450,12 @@ def deploy(repo, components, keyboard, migrate=False):
         ).returncode
         == 0
     }
-    release, record = capture(repo, revision)
-    environment = dict(os.environ, NACRE_RELEASE_TRANSACTION="1")
+    lease.ensure_valid()
+    release, record = capture(repo, revision, lease=lease)
+    environment = dict(os.environ)
+    environment["NACRE_WRITER_LEASE_FD"] = str(lease.fd)
     try:
+        lease.ensure_valid()
         subprocess.run(
             [
                 sys.executable,
@@ -418,9 +463,11 @@ def deploy(repo, components, keyboard, migrate=False):
                 "install",
             ],
             env=environment,
+            pass_fds=(lease.fd,),
             check=True,
         )
         for component in components:
+            lease.ensure_valid()
             commands = {
                 "configs": [
                     sys.executable,
@@ -442,7 +489,7 @@ def deploy(repo, components, keyboard, migrate=False):
                 "brain": [sys.executable, str(repo / "brain/install.py")],
                 "ai": [sys.executable, str(repo / "ai/install-component.py")],
             }
-            subprocess.run(commands[component], env=environment, check=True)
+            subprocess.run(commands[component], env=environment, pass_fds=(lease.fd,), check=True)
             if component == "configs" and any(
                 Path(entry["path"]).is_relative_to(HOME / ".config/hypr")
                 and entry["before"] != fingerprint(Path(entry["path"]))
@@ -496,8 +543,17 @@ def deploy(repo, components, keyboard, migrate=False):
         record["status"] = "failed"
         record["error"] = str(error)
         atomic(release / "release.json", record)
-        restore(release, record, force=True)
+        restore(release, record, force=True, lease=lease)
         raise
+
+
+def deploy(repo, components, keyboard, migrate=False):
+    """Run a source deployment under the config destination lease."""
+    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (STATE / "release.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        with _writer.writer_lease(HOME / ".config/nacre") as lease:
+            return _deploy_locked(repo, components, keyboard, migrate, lease=lease)
 
 
 @contextmanager
@@ -544,8 +600,16 @@ def package_configuration(repo, profile, keyboard, compositor, *, validate_confi
 
 
 def package_plan(
-    repo, profile, compositor="hyprland", keyboard=None, *, validate_config=True
+    repo,
+    profile,
+    compositor="hyprland",
+    keyboard=None,
+    *,
+    validate_config=True,
+    lease=None,
 ):
+    if lease is not None:
+        lease.ensure_valid()
     import configure
     import package_runtime
     from keyboard import system_keyboard
@@ -573,11 +637,22 @@ def package_plan(
             HOME / ".config/nacre" / name
             for name in ("profile.json", "profile.lua", "keyboard.lua")
         ]
+        if lease is not None:
+            lease.ensure_valid()
         return sorted(set(result), key=str)
 
 
 def deploy_package(repo, profile, keyboard, compositor):
     """Apply prebuilt files without a running desktop; use the same rollback owner."""
+    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (STATE / "release.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        with _writer.writer_lease(HOME / ".config/nacre") as lease:
+            lease.ensure_valid()
+            return _deploy_package_locked(repo, profile, keyboard, compositor, lease)
+
+
+def _deploy_package_locked(repo, profile, keyboard, compositor, lease):
     import configure
     import package_runtime
     from keyboard import seed
@@ -591,50 +666,54 @@ def deploy_package(repo, profile, keyboard, compositor):
         )
     if not (repo / "package.json.installed").is_file():
         raise RuntimeError("Package metadata missing")
-    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
-    with (STATE / "release.lock").open("w") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        desired = package_plan(repo, profile, compositor, keyboard)
-        extra = desired + [
-            HOME / ".local/state/nacre/package-links.json",
-            HOME / ".local/state/nacre/configuration.json",
-        ]
-        revision = package_runtime.metadata(repo)["revision"]
-        release, record = capture(repo, revision, extra, package=True)
-        record.update(
-            deployment="package",
-            compositor=selected[0],
-            compositors=list(selected),
-            release=str(release),
+    desired = package_plan(repo, profile, compositor, keyboard, lease=lease)
+    lease.ensure_valid()
+    extra = desired + [
+        HOME / ".local/state/nacre/package-links.json",
+        HOME / ".local/state/nacre/configuration.json",
+    ]
+    revision = package_runtime.metadata(repo)["revision"]
+    release, record = capture(repo, revision, extra, package=True, lease=lease)
+    record.update(
+        deployment="package",
+        compositor=selected[0],
+        compositors=list(selected),
+        release=str(release),
+    )
+    try:
+        with package_configuration(repo, profile, keyboard, compositor) as scope:
+            lease.ensure_valid()
+            seed(HOME, keyboard)
+            lease.ensure_valid()
+            configure.apply(HOME, repo, only=scope)
+            profiles = setup.policy(repo)
+            profiles.selected = lambda: profile
+            profiles.install(HOME, lease=lease)
+            lease.ensure_valid()
+            package_runtime.apply(HOME, repo, profile, compositor)
+        for entry in record["entries"]:
+            lease.ensure_valid()
+            entry["after"] = fingerprint(Path(entry["path"]))
+        record["status"] = "prepared"
+        lease.ensure_valid()
+        atomic(release / "release.json", record)
+        lease.ensure_valid()
+        atomic(
+            STATE / "current.json",
+            dict(
+                revision=revision,
+                release=str(release),
+                status="prepared",
+                checked=record["created"],
+            ),
         )
-        try:
-            with package_configuration(repo, profile, keyboard, compositor) as scope:
-                seed(HOME, keyboard)
-                configure.apply(HOME, repo, only=scope)
-                profiles = setup.policy(repo)
-                profiles.selected = lambda: profile
-                profiles.install(HOME)
-                package_runtime.apply(HOME, repo, profile, compositor)
-            for entry in record["entries"]:
-                entry["after"] = fingerprint(Path(entry["path"]))
-            record["status"] = "prepared"
-            atomic(release / "release.json", record)
-            atomic(
-                STATE / "current.json",
-                dict(
-                    revision=revision,
-                    release=str(release),
-                    status="prepared",
-                    checked=record["created"],
-                ),
-            )
-            return record
-        except BaseException as error:
-            record.update(status="failed", error=str(error))
-            atomic(release / "release.json", record)
-            restore(release, record, force=True)
-            raise
-
+        return record
+    except BaseException as error:
+        record.update(status="failed", error=str(error))
+        lease.ensure_valid()
+        atomic(release / "release.json", record)
+        restore(release, record, force=True, lease=lease)
+        raise
 
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "session":
@@ -701,20 +780,21 @@ def main():
             check=True,
         )
         return
-    with (STATE / "release.lock").open("w") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        if a.action == "deploy":
-            print(
-                json.dumps(
-                    deploy(
-                        a.repo or Path.cwd(),
-                        a.component or ["configs", "shell", "brain"],
-                        a.keyboard,
-                        a.migrate_owned,
-                    )
+    if a.action == "deploy":
+        print(
+            json.dumps(
+                deploy(
+                    a.repo or Path.cwd(),
+                    a.component or ["configs", "shell", "brain"],
+                    a.keyboard,
+                    a.migrate_owned,
                 )
             )
-        elif a.action == "status":
+        )
+        return
+    with (STATE / "release.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if a.action == "status":
             print(
                 (STATE / "current.json").read_text()
                 if (STATE / "current.json").exists()

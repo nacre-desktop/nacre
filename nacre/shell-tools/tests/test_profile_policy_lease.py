@@ -62,6 +62,8 @@ class ProfilePolicyLeaseTests(unittest.TestCase):
             lua = b"before lua\n"
             (root / "profile.json").write_bytes(profile)
             (root / "profile.lua").write_bytes(lua)
+            (root / "profile.json").chmod(0o640)
+            (root / "profile.lua").chmod(0o644)
             publish = Lease.publish
             failed = False
 
@@ -79,6 +81,35 @@ class ProfilePolicyLeaseTests(unittest.TestCase):
             finally:
                 Lease.publish = publish
             self.assertEqual((root / "profile.json").read_bytes(), profile)
+            self.assertEqual((root / "profile.lua").read_bytes(), lua)
+            self.assertEqual((root / "profile.json").stat().st_mode & 0o777, 0o640)
+            self.assertEqual((root / "profile.lua").stat().st_mode & 0o777, 0o644)
+
+    def test_partial_publication_preserves_external_json_edit(self):
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home) / ".config/nacre"
+            root.mkdir(mode=0o700, parents=True)
+            original = b'{"version":1,"id":"before"}\n'
+            external = b'{"version":1,"id":"external"}\n'
+            lua = b"before lua\n"
+            (root / "profile.json").write_bytes(original)
+            (root / "profile.lua").write_bytes(lua)
+            publish = Lease.publish
+
+            def edit_after_json(lease, name, content, mode=0o600):
+                if name == "profile.lua":
+                    (root / "profile.json").write_bytes(external)
+                    (root / "profile.json").chmod(0o600)
+                    raise WriterLeaseError("injected Lua publication failure")
+                return publish(lease, name, content, mode)
+
+            Lease.publish = edit_after_json
+            try:
+                with self.assertRaisesRegex(RuntimeError, "restoration incomplete"):
+                    profile_policy.install(Path(home))
+            finally:
+                Lease.publish = publish
+            self.assertEqual((root / "profile.json").read_bytes(), external)
             self.assertEqual((root / "profile.lua").read_bytes(), lua)
 
 

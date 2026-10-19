@@ -4,7 +4,12 @@ import json
 import importlib.util
 import shutil
 import subprocess
+import sys
+import os
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "nacre/shell-tools"))
+from writer_lease import writer_lease
 
 
 def module(path, name):
@@ -15,9 +20,15 @@ def module(path, name):
 
 
 def prepare(repo, destination, profile):
-    destination = destination.expanduser().resolve()
+    destination = Path(os.path.abspath(destination.expanduser()))
     if destination.exists() and any(destination.iterdir()):
         raise ValueError("Preparation destination must be empty")
+    with writer_lease(destination / ".config/nacre") as lease:
+        lease.ensure_valid()
+        return _prepare_locked(repo, destination, profile, lease)
+
+
+def _prepare_locked(repo, destination, profile, lease):
     destination.mkdir(parents=True, exist_ok=True)
     policy = module(repo / "nacre/shell-tools/profile-policy.py", "prepare_profile")
     profile = policy.validate(profile)
@@ -34,8 +45,8 @@ def prepare(repo, destination, profile):
         config.selected_profile = original
     data = destination / ".config/nacre"
     data.mkdir(parents=True, exist_ok=True)
-    (data / "profile.json").write_text(json.dumps(profile, indent=2) + "\n")
-    (data / "profile.lua").write_text(policy.lua(profile))
+    lease.publish("profile.json", (json.dumps(profile, indent=2) + "\n").encode())
+    lease.publish("profile.lua", policy.lua(profile).encode())
     shell = destination / ".local/share/nacre/shell"
     shutil.copytree(
         repo / "nacre/shell",

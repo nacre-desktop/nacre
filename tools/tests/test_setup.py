@@ -30,6 +30,23 @@ def load(path, name):
 
 
 class PackageSetupTests(unittest.TestCase):
+    def test_busy_writer_lease_refuses_before_package_plan_or_capture(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            state = home / "releases"
+            with (
+                patch.object(releases, "HOME", home),
+                patch.object(releases, "STATE", state),
+                releases._writer.writer_lease(home / ".config/nacre"),
+                patch.object(releases, "package_plan") as plan,
+                patch.object(releases, "capture") as capture,
+            ):
+                with self.assertRaises(releases._writer.WriterLeaseError):
+                    releases.deploy_package(root, profile, {"layout": "us"}, "hyprland")
+            plan.assert_not_called()
+            capture.assert_not_called()
+            self.assertFalse(list(state.glob("*/release.json")))
+
     def test_initial_wallpaper_record_keeps_private_palette_and_image(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
