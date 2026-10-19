@@ -124,3 +124,17 @@ Quick screening compares published baseline5f4 against fixed0df, one A/B pair
 per compositor, to assess the absolute standing memory budget. The old1382 pair
 is diagnostic context. No capture is armed until lead reviews those bindings and
 records a fresh exclusive window; no new measurement-tool version is allowed.
+
+## Quick-screen grant — 2026-10-19 07:10–09:10 UTC
+
+Lead grants the private lab exclusively to four arms: Niri baseline/fixed, then
+Hyprland baseline/fixed. Baseline5f4/helper4a65; fixed source0df0bc14 with
+unchanged helper439dd355. Source/input review ACCEPT. Manifest3b2302c9,
+overlay8d071d08 and immutable v14 method retained. Bindings only changed; no
+v15 tool. Each arm retains600s warmup plus three60s phases and actual
+2880×1800/1.5 (1920×1200 logical), N60/H120 proofs. One batch lock, fail first,
+no retry or automatic full-eight run. Equal seeded inputs and prescribed action
+outcomes must be verified before interpreting memory. All existing12GiB/swap0,
+held-child/guardian/final-ACK, host4GiB start/2GiB abort and strict whole-arm
+quiet gates apply. No build/install/live action. Bead is local light source only.
+Full-eight confirmation is separately granted only after this screen passes.

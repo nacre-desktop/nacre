@@ -5,7 +5,7 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | Review: source accepted | Fixed source0df0bc14; all14 selected correctness cases pass. Prepare unchanged-v14 quick A/B inputs, no capture armed. |
+| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | Review: source accepted | Fixed source0df0bc14; all14 selected correctness cases pass. Quick-only exclusive lab grant07:10–09:10UTC, four unchanged-v14 arms; no full-eight auto-start. |
 | 2 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: product correction | Both v14 geometry checks passed; only Niri A/B valid. H baseline failed whole-wrapper swap-in; no eight-run PASS. |
 | 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Corrected plan retained; F4/package readiness, exclusive installer handoff and managed persistent opt-in/rollback missing. No live action. |
 | 3 | [N0001 F4 source review](0001-f4-settings-completion-audit.md) | Review | Source accepted; Done after correct N2 and published-head CI. |
@@ -34,8 +34,8 @@ screen profiles; Niri baseline/candidate passed, H baseline failed swap-in
 2,592,768B and later five cells did not run. Archive3aae67b5...d84cd retained.
 Niri fresh/closed/after deltas+7.343/+10.530/−3.520MiB at correct geometry.
 Sol source0df0bc14 is accepted with all14 selected correctness cases passed.
-Memory effect remains unverified. No active heavy job; quick-input preparation
-only is assigned. No v15 tool. Next one
+Memory effect remains unverified. Quick-only exclusive lab grant07:10–09:10UTC
+is assigned: baseline5f4 vs fixed0df, NiriA/B thenHyprlandA/B. No v15 tool. Next one
 quick pair per compositor, then full eight-arm confirmation once. If measurement
 tool execution prevents that, use standard five pairs per compositor instead,
 with a separately granted window. Bead restarts independent LIGHT preparation.
