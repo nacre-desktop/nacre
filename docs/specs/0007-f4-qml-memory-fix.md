@@ -3,7 +3,7 @@
 - ID: N0007
 - Repo: nacre-desktop/nacre
 - Implementer: one built-in Sol worker
-- Status: Review (source accepted; memory screening pending)
+- Status: In progress (correctness accepted; memory screen failed, source follow-up)
 - Depends on: N0001/N0004 accepted source; v14 correct-profile diagnostic pair
 - Date: 2026-10-19
 - Size: one focused source/fix session, then separately granted checks
@@ -144,3 +144,38 @@ as a literal. A private copy substitutes only1382→0df (SHAab2a4225); every oth
 byte/check is identical. This is source input binding, not a new measuring tool.
 The unchanged v14 method, root-level launch copies and manifest passed staged
 inventory/source checks. No arm ran during staging corrections.
+
+## Failed first screen and reopened source review — 2026-10-19
+
+Source0df Niri quick pair passed geometry/quiet but whole-group deltas were
++13.413/+15.101/+11.047MiB. Stop: no Hyprland/full-eight. Only wayland-utils
+was installed08:08:50UTC during B warmup; retain that comparability caveat.
+Archive62ce9f233bc5dfde70e596ae2411b9fa4a2e8ce94fd7c3e9612335ba228a9a72.
+
+Reopened local source8a1df35c6fec44e660530643ffef367e6b57ef89 is independently
+ACCEPTED with21 local fake-QML and2 exact-helper wire cases PASS. It shares the
+stateless JS library, removes duplicate storage lifecycle reads and rejects old
+client/generation/boot callbacks without replay. Native source/helper unchanged.
+Wire log26f41c40b43a2dc31af59a4c7a6b83ef69ec2c2632bca00bb6e525823ac1c27e;
+receipt archivea592e8ee29d8e84c03f32111b44cfa4a45443309fb62e784525b07ffdb5cfc55.
+The initial tar-mode preflight stopped before payload; sole actual execution
+verified all145 source files using exact bytes plus Git executable-bit semantics
+(archive0664 extracted0644). Scope12GiB/swap0, no OOM; cleanup complete.
+SCHED_IDLE was preserved, numeric nice was not inferred from ps NI='-'.
+Memory improvement is UNKNOWN. Fresh bindings retain the frozen v14 method,
+Niri pair first and separate Hyprland resume grant; no full-eight activation.
+
+## Fresh Niri-only grant — 2026-10-19 09:00–11:00 UTC
+
+Independent bindings ACCEPT: inventory6f117c58c1d5d57a4ce57d4ec6c412c2cb6c1ea08c42073ab0b940d1bc8649f4,
+manifest24c9b63108c3bca905d54b0de9c739182fb60abf7e8b6894b14805aae35c5c2b,
+overlay5a908c1f26d253f495d29250feb6f456c7c83b78d8f8d09045a148c5166dd344.
+Private lab identity and baseline/helper pins remain as above; B source8a uses
+unchanged1382/helper439. New source/output roots, frozen v14 algorithm. All peers
+released; sole heavy slot assigned to sol_n7_quick_capture. Stage before09:00,
+measure only in window. Entry runs ONLY Niri A/B and exits normally. No retry,
+no automatic Hyprland or full-eight. Both arms are after wayland-utils install.
+Require exact source, geometry, seeded-input parity and existing scope/quiet
+checks. Lead reviews per-phase group/QML results and unknowns after cleanup.
+If whole-group increase>=5MiB, unexplained anonymous growth>1MiB or other
+standing-rule failure: STOP. Hyprland needs separate explicit resume grant.
