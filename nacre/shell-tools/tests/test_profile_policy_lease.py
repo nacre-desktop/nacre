@@ -112,6 +112,55 @@ class ProfilePolicyLeaseTests(unittest.TestCase):
             self.assertEqual((root / "profile.json").read_bytes(), external)
             self.assertEqual((root / "profile.lua").read_bytes(), lua)
 
+    def test_unreceipted_post_replace_failure_fails_closed(self):
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home) / ".config/nacre"
+            root.mkdir(mode=0o700, parents=True)
+            original = b'{"version":1,"id":"before"}\n'
+            (root / "profile.json").write_bytes(original)
+            publish = Lease.publish
+
+            def publish_then_fail(lease, name, content, mode=0o600):
+                publish(lease, name, content, mode)
+                if name == "profile.json":
+                    raise WriterLeaseError("injected post-replace failure")
+
+            Lease.publish = publish_then_fail
+            try:
+                with self.assertRaisesRegex(RuntimeError, "restoration incomplete"):
+                    profile_policy.install(Path(home))
+            finally:
+                Lease.publish = publish
+            self.assertNotEqual((root / "profile.json").read_bytes(), original)
+            self.assertFalse((root / "profile.lua").exists())
+
+    def test_identical_external_replacement_has_no_publication_receipt(self):
+        with tempfile.TemporaryDirectory() as home:
+            root = Path(home) / ".config/nacre"
+            root.mkdir(mode=0o700, parents=True)
+            original = b'{"version":1,"id":"before"}\n'
+            (root / "profile.json").write_bytes(original)
+            expected = (json.dumps(profile_policy.DEFAULT, indent=2) + "\n").encode()
+            publish = Lease.publish
+
+            def replace_after_json(lease, name, content, mode=0o600):
+                publish(lease, name, content, mode)
+                if name == "profile.json":
+                    replacement = root / "external.next"
+                    replacement.write_bytes(expected)
+                    replacement.chmod(0o600)
+                    replacement.replace(root / "profile.json")
+                    raise WriterLeaseError("injected post-publication edit")
+
+            Lease.publish = replace_after_json
+            try:
+                with self.assertRaisesRegex(RuntimeError, "restoration incomplete"):
+                    profile_policy.install(Path(home))
+            finally:
+                Lease.publish = publish
+            self.assertEqual((root / "profile.json").read_bytes(), expected)
+            self.assertFalse((root / "profile.lua").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

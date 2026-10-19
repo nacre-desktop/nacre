@@ -2,8 +2,9 @@
 """Versioned desktop releases: snapshot, stage, exercise, promote, or restore."""
 
 import argparse
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 import datetime as dt
+import errno
 import fcntl
 import hashlib
 import importlib
@@ -30,6 +31,12 @@ _writer = importlib.import_module("writer_lease")
 HOME = Path.home()
 STATE = HOME / ".local/state/nacre/releases"
 CONTROL = HOME / ".local/share/nacre/control"
+LOCKFILES = {".writer.lock", "release.lock"}
+
+
+def _ignore_snapshot_locks(directory, names):
+    del directory
+    return [name for name in names if name in LOCKFILES or name == "__pycache__"]
 
 
 def compositor():
@@ -57,6 +64,8 @@ def atomic(path, data):
 
 
 def fingerprint(path):
+    if path.name in LOCKFILES:
+        return None
     if path.is_symlink():
         return (
             "link:"
@@ -68,7 +77,7 @@ def fingerprint(path):
     h = hashlib.sha256()
     files = sorted(path.rglob("*")) if path.is_dir() else [path]
     for p in files:
-        if "__pycache__" in p.parts:
+        if p.name in LOCKFILES or "__pycache__" in p.parts:
             continue
         if p.is_symlink():
             h.update(str(p.relative_to(path) if path.is_dir() else p.name).encode())
@@ -177,7 +186,7 @@ def capture(repo, revision, extra=(), package=False, *, lease=None):
     captured = {
         path
         for path in captured
-        if path.name not in {".writer.lock", "release.lock"}
+        if path.name not in LOCKFILES
     }
     for i, path in enumerate(sorted(captured, key=str)):
         if lease is not None:
@@ -203,7 +212,7 @@ def capture(repo, revision, extra=(), package=False, *, lease=None):
                 path.resolve(),
                 backup,
                 symlinks=True,
-                ignore=shutil.ignore_patterns("__pycache__"),
+                ignore=_ignore_snapshot_locks,
             )
         elif path.is_symlink():
             entry.update(kind="link", link=os.readlink(path))
@@ -213,7 +222,7 @@ def capture(repo, revision, extra=(), package=False, *, lease=None):
                 path,
                 backup,
                 symlinks=True,
-                ignore=shutil.ignore_patterns("__pycache__"),
+                ignore=_ignore_snapshot_locks,
             )
         elif path.is_file():
             entry["kind"] = "file"
@@ -223,6 +232,39 @@ def capture(repo, revision, extra=(), package=False, *, lease=None):
         lease.ensure_valid()
     atomic(release / "release.json", record)
     return release, record
+
+
+def _clear_tree_preserving_lockfiles(path, lease):
+    """Remove snapshot-owned children while retaining any transaction lock."""
+    for child in path.iterdir():
+        if child.name in LOCKFILES:
+            continue
+        lease.ensure_valid()
+        if child.is_dir() and not child.is_symlink():
+            _clear_tree_preserving_lockfiles(child, lease)
+            try:
+                lease.ensure_valid()
+                child.rmdir()
+            except OSError as error:
+                # A nested lockfile keeps its containing directory in place.
+                if error.errno not in (errno.ENOTEMPTY, errno.EEXIST):
+                    raise
+        else:
+            lease.ensure_valid()
+            child.unlink()
+
+
+def _restore_directory(backup, destination, lease):
+    destination.mkdir(parents=True, exist_ok=True)
+    _clear_tree_preserving_lockfiles(destination, lease)
+    lease.ensure_valid()
+    shutil.copytree(
+        backup,
+        destination,
+        symlinks=True,
+        dirs_exist_ok=True,
+        ignore=_ignore_snapshot_locks,
+    )
 
 
 def _restore_locked(release, record=None, force=False, *, lease):
@@ -249,12 +291,19 @@ def _restore_locked(release, record=None, force=False, *, lease):
         # _restore_locked is only called through restore with this lease held.
         lease.ensure_valid()
         path = Path(e["path"])
+        if path.name in LOCKFILES:
+            continue
         if path.is_symlink() or path.is_file():
             lease.ensure_valid()
             path.unlink()
-        elif path.is_dir():
-            lease.ensure_valid()
-            shutil.rmtree(path)
+        elif path.is_dir() and e["kind"] != "directory":
+            _clear_tree_preserving_lockfiles(path, lease)
+            try:
+                lease.ensure_valid()
+                path.rmdir()
+            except OSError as error:
+                if error.errno not in (errno.ENOTEMPTY, errno.EEXIST):
+                    raise
         lease.ensure_valid()
         path.parent.mkdir(parents=True, exist_ok=True)
         if e["kind"] == "runtime":
@@ -262,10 +311,21 @@ def _restore_locked(release, record=None, force=False, *, lease):
             lease.ensure_valid()
             restored.parent.mkdir(parents=True, exist_ok=True)
             if restored.exists():
-                lease.ensure_valid()
-                shutil.rmtree(restored)
+                _clear_tree_preserving_lockfiles(restored, lease)
+                try:
+                    lease.ensure_valid()
+                    restored.rmdir()
+                except OSError as error:
+                    if error.errno not in (errno.ENOTEMPTY, errno.EEXIST):
+                        raise
             lease.ensure_valid()
-            shutil.copytree(e["backup"], restored, symlinks=True)
+            shutil.copytree(
+                e["backup"],
+                restored,
+                symlinks=True,
+                dirs_exist_ok=True,
+                ignore=_ignore_snapshot_locks,
+            )
             lease.ensure_valid()
             path.symlink_to(restored)
         elif e["kind"] == "link":
@@ -273,7 +333,7 @@ def _restore_locked(release, record=None, force=False, *, lease):
             path.symlink_to(e["link"])
         elif e["kind"] == "directory":
             lease.ensure_valid()
-            shutil.copytree(e["backup"], path, symlinks=True)
+            _restore_directory(e["backup"], path, lease)
         elif e["kind"] == "file":
             lease.ensure_valid()
             shutil.copy2(e["backup"], path)
@@ -311,14 +371,15 @@ def _restore_locked(release, record=None, force=False, *, lease):
 
 def restore(release, record=None, force=False, *, lease=None):
     """Restore a snapshot while holding the destination writer lease."""
-    manager = (
-        nullcontext(lease)
-        if lease is not None
-        else _writer.writer_lease(HOME / ".config/nacre")
-    )
-    with manager as held:
-        held.ensure_valid()
-        return _restore_locked(release, record, force, lease=held)
+    if lease is not None:
+        lease.ensure_valid()
+        return _restore_locked(release, record, force, lease=lease)
+    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (STATE / "release.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        with _writer.writer_lease(HOME / ".config/nacre") as held:
+            held.ensure_valid()
+            return _restore_locked(release, record, force, lease=held)
 
 
 def install_controller(repo):
@@ -802,7 +863,16 @@ def main():
             )
         else:
             current = _state.read_json_file(STATE / "current.json")
-            print(json.dumps(dict(restored=restore(Path(current["release"])))))
+            with _writer.writer_lease(HOME / ".config/nacre") as lease:
+                print(
+                    json.dumps(
+                        dict(
+                            restored=restore(
+                                Path(current["release"]), lease=lease
+                            )
+                        )
+                    )
+                )
 
 
 if __name__ == "__main__":

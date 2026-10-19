@@ -281,17 +281,10 @@ def _install(lease):
                 before = previous[name]
                 after = current[name]
                 own = published.get(name)
-                # A publish may raise after replace/fsync; recognize only its
-                # exact bytes and private mode in that case. Never roll back a
-                # different post-publication edit from an external editor.
-                interrupted_own_publish = (
-                    own is None
-                    and name not in published
-                    and after is not None
-                    and after["content"] == desired[name]
-                    and after["mode"] == 0o600
-                )
-                if after != before and after != own and not interrupted_own_publish:
+                # Only a completed publish returns a receipt with the inode
+                # identity and timestamps we may safely roll back. If publish
+                # raises after changing the file, ownership is unproven.
+                if after != before and after != own:
                     raise RuntimeError("Profile changed during restoration")
             for name in names:
                 before = previous[name]

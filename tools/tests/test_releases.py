@@ -1,4 +1,6 @@
 import importlib.util
+import fcntl
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +15,90 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_capture_and_restore_config_directory_preserve_lock_inodes(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            home = root / "home"
+            config = home / ".config/nacre"
+            config.mkdir(parents=True)
+            profile = config / "profile.json"
+            profile.write_text("before")
+            nested = config / "nested"
+            nested.mkdir()
+            nested_release_lock = nested / "release.lock"
+            nested_release_lock.write_text("keep")
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m, "STATE", root / "state"),
+                m._writer.writer_lease(config) as lease,
+            ):
+                writer_identity = (config / ".writer.lock").stat().st_ino
+                release, record = m.capture(
+                    root, "fixture", [config], package=True, lease=lease
+                )
+                record["deployment"] = "package"
+                backup = Path(record["entries"][0]["backup"])
+                self.assertFalse((backup / ".writer.lock").exists())
+                self.assertFalse((backup / "nested/release.lock").exists())
+                profile.write_text("after")
+                obsolete = config / "obsolete.json"
+                obsolete.write_text("remove on restore")
+                m.restore(release, record, force=True, lease=lease)
+                self.assertEqual(profile.read_text(), "before")
+                self.assertFalse(obsolete.exists())
+                self.assertEqual((config / ".writer.lock").stat().st_ino, writer_identity)
+                self.assertEqual(nested_release_lock.read_text(), "keep")
+
+    def test_standalone_restore_locks_release_then_destination(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            home = root / "home"
+            state = root / "state"
+
+            def inspect_locked(release, record, force, *, lease):
+                lease.ensure_valid()
+                fd = os.open(state / "release.lock", os.O_RDWR)
+                try:
+                    with self.assertRaises(BlockingIOError):
+                        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                finally:
+                    os.close(fd)
+                with self.assertRaises(m._writer.WriterLeaseError):
+                    with m._writer.writer_lease(home / ".config/nacre"):
+                        pass
+                return "restored"
+
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m, "STATE", state),
+                patch.object(m, "_restore_locked", side_effect=inspect_locked),
+            ):
+                self.assertEqual(m.restore(root / "release", {}), "restored")
+                with m._writer.writer_lease(home / ".config/nacre"):
+                    pass
+                fd = os.open(state / "release.lock", os.O_RDWR)
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                finally:
+                    os.close(fd)
+
+    def test_restore_with_parent_lease_does_not_reacquire_release_lock(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            home = root / "home"
+            state = root / "state"
+            state.mkdir()
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m, "STATE", state),
+                (state / "release.lock").open("a") as lock,
+                m._writer.writer_lease(home / ".config/nacre") as lease,
+            ):
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                with patch.object(m, "_restore_locked", return_value="ok") as restore:
+                    self.assertEqual(m.restore(root / "release", {}, lease=lease), "ok")
+                    restore.assert_called_once()
+
     def test_capture_excludes_destination_and_transaction_lockfiles(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
