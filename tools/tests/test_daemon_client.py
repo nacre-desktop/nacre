@@ -1392,6 +1392,28 @@ ShellRoot {
             check(preferences.favorites.length===11,"live update remains reactive");
         ''', launcher=True)
 
+    def test_launcher_offline_initialization_keeps_legacy_text_reader(self):
+        self.qml(r'''
+            FixtureClient.enabled=false;
+            const preferences=LauncherPreferences;
+            check(FixtureClient.loads===1&&FixtureClient.subscribers===0,"offline mode retains its legacy reader");
+            preferences.accept('{"favorites":["one","two"],"hidden":[],"recent":["two"],"usage":{}}');
+            check(preferences.favorites.length===2&&preferences.recent[0]==="two"&&!preferences.error,"legacy text projection remains compatible");
+        ''', launcher=True)
+
+    def test_desktop_snapshot_and_reply_share_one_owned_projection(self):
+        self.qml(r'''
+            const desktop=DesktopSettings;
+            let projections=0;desktop.persistedDataChanged.connect(()=>projections++);
+            const snapshot={data:{dnd:false,unknown:{keep:[1,2]}},monitors:[{name:"one",modes:["mode"]}],pending:false};
+            desktop.acceptData(snapshot);desktop.acceptData(JSON.parse(JSON.stringify(snapshot)));
+            check(projections===1,"equivalent snapshot and reply project settings once");
+            desktop.persistedData.unknown.keep.push(3);desktop.monitors[0].modes.push("local");
+            check(snapshot.data.unknown.keep.length===2&&snapshot.monitors[0].modes.length===1,"mutable desktop projection cannot alter committed snapshot");
+            desktop.accept('{"data":{"dnd":true,"unknown":{"kept":true}},"pending":false}');
+            check(desktop.data.dnd&&desktop.data.unknown.kept,"legacy text response preserves complete data");
+        ''', settings=True)
+
     def test_publisher_projects_snapshot_and_reply_once_and_ignores_older_read(self):
         self.qml(r'''
             const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null}',root);
