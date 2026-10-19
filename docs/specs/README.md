@@ -5,7 +5,7 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; logging-only diagnostic grant10:10–11:05UTC; no observer, no acceptance run. |
+| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; GC diagnostic finished; no supported fix. Allocation-stack tool request pending owner; no capture grant. |
 | 2 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: product correction | Both v14 geometry checks passed; only Niri A/B valid. H baseline failed whole-wrapper swap-in; no eight-run PASS. |
 | 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Corrected plan retained; F4/package readiness, exclusive installer handoff and managed persistent opt-in/rollback missing. No live action. |
 | — | [N0009 exclusive destination writer handoff](0009-f4-switch-prerequisites.md) | Blocked: after green F4 | Draft design reviewed; no implementation/live grant. |
@@ -51,12 +51,14 @@ inference. Cleanup verified; archive57445658849cc72cef311cf511430ffb5fbfc7567af7
 Actual startup Qt GC numeric records were present. No observer repair/retry.
 Independent feasibility found the existing frozen census already records PSS/USS,
 PID/start and read brackets; supplemental observer is unnecessary for first question.
-NEW logging-only packagea949c63e independently ACCEPTED:19 pins, frozen7 unchanged,
-reviewed wrapper+logging env only, no sampler/watchdog/discovery/parser. Sole
-heavy diagnostic grant10:10–11:05UTC to sol_n7_quick_capture, exact reviewed
-Quickshell7796116a and same source/helpers/fixtures/geometry/cap/quiet controls.
-Explicit Bash entry avoids Fish syntax; fresh namespace, one pair/no retry.
-Empty/incomplete GC yields UNKNOWN offline. Output NEVER acceptance; no H/full8.
+Logging-only packagea949c63e completed10:38:54UTC; both structural/quiet/safety
+checks and input parity passed, no acceptance claim. Lab released. Offline
+analysis finds65A/61B complete GC groups, one per phase. Managed use falls at GC
+while adjacent USS rises; large private drops have no overlapping GC, delayed
+page return unknown. No causal fix supported. See [diagnostic review](../research/f4-n0007-gc-diagnostic.md).
+No more captures or source speculation; heaptrack installation requested from
+owner for allocation stacks. Keep private heavy jobs paused until install decision;
+light Bead B0014 fixture completion/review continues. Source8a remains clean.
 Full QML debugger route is rejected
 because Quickshell0.3.2 exposes all interfaces with its supported debug CLI.
 The Niri pair used frozen v14 unchanged and both arms after owner-installed
@@ -135,3 +137,17 @@ Current bounded fence supports only verified maskable package units; source-stag
 user units refuse. Fail-stopped guarantee ends at boot/user-manager restart or
 activation. These limitations keep N6 non-runnable until implemented and validated.
 No implementation, package publication, install, opt-in or unit action is granted.
+
+## Lead handoff — 2026-10-19 allocation-stack prerequisite
+
+Authoritative current state is this queue, not older grant paragraphs. All Nacre
+sessions/scopes/locks released. N7source8a is correctness accepted but valid quick
+fresh/closed exceeds5MiB; F4 is NOT published, H/full-eight NOT run. Logging-only
+diagnostic and interpretation complete, no supported code fix. Owner-only
+heaptrack desktop install request pending; no further private heavy grant.
+Local integrationb003aa8 remains conditional and needs latest docs before eventual
+publication; never publish without acceptance/exact-head CI. BeadB13 Done at
+021fdaad/CI39230443828SUCCESS/docs85f89e9. B14 source8c9e9e1 has two fixture
+review fixes assigned to Sol in a fresh worktree; no test/build/CI execution yet.
+N9/N10 blocked drafts reviewed; no switch/live/package action. N8pacman remains
+parked. Relevant private archives/reports and immutable corpus identities retained.

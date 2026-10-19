@@ -275,3 +275,12 @@ All peers/CI released; sole heavy worker sol_n7_quick_capture. Explicit Bash,
 fresh roots, original12GiB/swap0/heldchild/guardian/finalACK/host4GiB/2GiB/quiet
 and geometry/input checks unchanged. No tool repair/retry/H/full-eight/install/
 forcedGC/tuning. Both arms are DIAGNOSTIC ONLY, no landing or gate waiver.
+
+## Diagnostic completed; allocation-stack prerequisite
+
+Logging-only pair released10:38:54UTC, complete original safety/quiet/input checks.
+Offline review found no supported causal fix. Read [complete interpretation and
+limits](../research/f4-n0007-gc-diagnostic.md). No further source change or capture.
+Owner-only heaptrack installation requested for native allocation-stack evidence;
+no install or future heavy/profile run granted. Source8a remains clean, memory
+acceptance blocked. Light independent source work continues while owner decides.
