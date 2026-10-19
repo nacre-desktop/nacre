@@ -358,9 +358,28 @@ pub fn write_checked_pinned(
     use nix::{
         fcntl::{openat, renameat, AtFlags, Flock, FlockArg, OFlag},
         sys::stat::{fstatat, Mode, SFlag},
-        unistd::{linkat, unlinkat, LinkatFlags, UnlinkatFlags},
+        unistd::{linkat, LinkatFlags},
     };
     use std::{fs::File, io::Write, os::unix::fs::MetadataExt};
+
+    struct TempCleanup<'a> {
+        root: &'a File,
+        name: String,
+    }
+    impl TempCleanup<'_> {
+        fn remove(&self) {
+            let _ = nix::unistd::unlinkat(
+                self.root,
+                self.name.as_str(),
+                nix::unistd::UnlinkatFlags::NoRemoveDir,
+            );
+        }
+    }
+    impl Drop for TempCleanup<'_> {
+        fn drop(&mut self) {
+            self.remove();
+        }
+    }
 
     let name = path
         .file_name()
@@ -481,21 +500,41 @@ pub fn write_checked_pinned(
                             | OFlag::O_CLOEXEC,
                         Mode::from_bits_truncate(0o600),
                     )?;
+                    let cleanup = TempCleanup {
+                        root,
+                        name: temporary.clone(),
+                    };
                     let mut file = File::from(fd);
                     file.write_all(raw)?;
                     file.sync_all()?;
                     lease.ensure_valid()?;
-                    match linkat(
+                    let temp_meta = file.metadata()?;
+                    let created = match linkat(
                         root,
                         temporary.as_str(),
                         root,
                         backup_name.as_str(),
                         LinkatFlags::empty(),
                     ) {
-                        Ok(()) => {}
-                        Err(nix::errno::Errno::EEXIST) => {}
+                        Ok(()) => true,
+                        Err(nix::errno::Errno::EEXIST) => false,
                         Err(error) => return Err(error.into()),
+                    };
+                    drop(file);
+                    let backup_meta =
+                        fstatat(root, backup_name.as_str(), AtFlags::AT_SYMLINK_NOFOLLOW)?;
+                    if backup_meta.st_mode & SFlag::S_IFMT.bits() != SFlag::S_IFREG.bits()
+                        || backup_meta.st_uid != nix::unistd::getuid().as_raw()
+                        || backup_meta.st_mode & 0o022 != 0
+                        || (created
+                            && (backup_meta.st_dev as u64 != temp_meta.dev()
+                                || backup_meta.st_ino as u64 != temp_meta.ino()
+                                || backup_meta.st_nlink != 2))
+                        || (!created && backup_meta.st_nlink != 1)
+                    {
+                        return Err("Refusing unsafe settings backup".into());
                     }
+                    cleanup.remove();
                     let backup_meta =
                         fstatat(root, backup_name.as_str(), AtFlags::AT_SYMLINK_NOFOLLOW)?;
                     if backup_meta.st_mode & SFlag::S_IFMT.bits() != SFlag::S_IFREG.bits()
@@ -505,7 +544,6 @@ pub fn write_checked_pinned(
                     {
                         return Err("Refusing unsafe settings backup".into());
                     }
-                    unlinkat(root, temporary.as_str(), UnlinkatFlags::NoRemoveDir)?;
                     lease.ensure_valid()?;
                 }
                 Err(error) => return Err(error.into()),
@@ -521,19 +559,43 @@ pub fn write_checked_pinned(
         OFlag::O_WRONLY | OFlag::O_CREAT | OFlag::O_EXCL | OFlag::O_NOFOLLOW | OFlag::O_CLOEXEC,
         Mode::from_bits_truncate(0o600),
     )?;
+    let _cleanup = TempCleanup {
+        root,
+        name: temporary.clone(),
+    };
     let mut file = File::from(fd);
     file.write_all(&bytes)?;
     file.sync_all()?;
     drop(file);
     lease.ensure_valid()?;
-    match (
-        original_identity,
-        fstatat(root, name.as_ref(), AtFlags::AT_SYMLINK_NOFOLLOW),
+    match openat(
+        root,
+        name.as_ref(),
+        OFlag::O_RDONLY | OFlag::O_NOFOLLOW | OFlag::O_CLOEXEC | OFlag::O_NONBLOCK,
+        Mode::empty(),
     ) {
-        (Some((device, inode)), Ok(current))
-            if current.st_dev as u64 == device && current.st_ino as u64 == inode => {}
-        (None, Err(nix::errno::Errno::ENOENT)) => {}
-        _ => return Err(WriteConflict.into()),
+        Ok(current_fd) => {
+            let current = File::from(current_fd);
+            let meta = current.metadata()?;
+            if !meta.is_file()
+                || meta.uid() != nix::unistd::getuid().as_raw()
+                || meta.nlink() != 1
+                || meta.mode() & 0o022 != 0
+                || original_identity != Some((meta.dev(), meta.ino()))
+            {
+                return Err(WriteConflict.into());
+            }
+            let mut current_raw = Vec::new();
+            current.take(LIMIT + 1).read_to_end(&mut current_raw)?;
+            if current_raw.len() as u64 > LIMIT
+                || Some(<[u8; 32]>::from(Sha256::digest(&current_raw))) != expected
+            {
+                return Err(WriteConflict.into());
+            }
+        }
+        Err(nix::errno::Errno::ENOENT) if expected.is_none() && original_identity.is_none() => {}
+        Err(nix::errno::Errno::ENOENT) => return Err(WriteConflict.into()),
+        Err(error) => return Err(error.into()),
     }
     renameat(root, temporary.as_str(), root, name.as_ref())?;
     root.sync_all()?;
@@ -1131,6 +1193,75 @@ pub fn legacy_snapshot(mut files: Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pinned_config_root_migrates_backup_and_cleans_temporary_files() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = crate::paths::Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        fs::create_dir_all(&paths.state)?;
+        let lease = crate::daemon::writer_lease::WriterLease::acquire_for_paths(
+            &paths.config,
+            &paths.state,
+        )?;
+        let path = paths.config.join("launcher.json");
+        let original = br#"{"favorites":[],"hidden":[],"unknown":42}"#;
+        fs::write(&path, original)?;
+        let schema = by_id("launcher")?;
+        let read = read_document_pinned(&lease, &path, schema)
+            .map_err(|_| "Pinned state fixture could not be read")?;
+        write_checked_pinned(
+            &lease,
+            &path,
+            schema,
+            &read.0,
+            Some(Sha256::digest(original).into()),
+        )?;
+        assert_eq!(
+            fs::read(paths.config.join("launcher.json.pre-v0-to-v1.bak"))?,
+            original
+        );
+        assert_eq!(fs::metadata(paths.config.join("launcher.json.pre-v0-to-v1.bak"))?.nlink(), 1);
+        assert!(fs::read_dir(&paths.config)?.all(|entry| {
+            !entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .ends_with(".next")
+        }));
+        let (_, fingerprint) = read_document_pinned(&lease, &path, schema)
+            .map_err(|_| "Pinned state fixture could not be verified")?;
+        assert!(fingerprint.is_some());
+        Ok(())
+    }
+
+    #[test]
+    fn pinned_battery_alert_state_writes_inside_leased_state_root() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = crate::paths::Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        fs::create_dir_all(&paths.state)?;
+        let lease = crate::daemon::writer_lease::WriterLease::acquire_for_paths(
+            &paths.config,
+            &paths.state,
+        )?;
+        let path = paths.state.join("battery-alert-state.json");
+        let schema = by_id("battery-alerts")?;
+        let value = json!({"version": 1, "severity": 2});
+        write_checked_pinned(&lease, &path, schema, &value, None)?;
+        assert_eq!(
+            fs::read(&path)?,
+            json::encode(&value)?.as_bytes()
+        );
+        assert!(fs::read_dir(&paths.state)?.all(|entry| {
+            !entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .ends_with(".next")
+        }));
+        Ok(())
+    }
 
     #[test]
     fn desktop_v2_splits_edges_and_profile_snapshots() -> Result<()> {

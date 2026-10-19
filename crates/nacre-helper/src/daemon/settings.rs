@@ -714,7 +714,9 @@ impl Service {
                         },
                     ));
                     store.snapshot.dirty = false;
-                    tracing::error!(store = %schema.id, error = ?error, "Settings publication failed; original file preserved");
+                    #[cfg(test)]
+                    tracing::debug!(store = %schema.id, error = ?error, "Settings test publication failure");
+                    tracing::error!(store = %schema.id, "Settings publication failed; original file preserved");
                 }
             }
             self.publish(store)?;
