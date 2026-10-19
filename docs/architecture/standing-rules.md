@@ -237,3 +237,11 @@ Current owner priority: F4 publication first, then reviewed owner switch-on plan
 then Bead B0002/B0003 captures, then core services. Owner reports wayland-utils
 installed; old missing-wayland-info blocker superseded. Package/live switch
 execution remains owner-controlled and gated on complete handoff/rollback plan.
+
+## F4 owner exception — 2026-10-19 afternoon
+
+N0002 now uses five alternating pairs per compositor, unchanged v14, replacing
+quick/eight-arm gates. Owner-approved <5MiB / explained5–8MiB with QML<=2MiB
+acceptance and quiet-only one-retry/max2-arms policy are specified in N0002.
+This is F4-specific, not a general budget relaxation. No further profiling now.
+N0009/N0010 local implementation is authorized before F4; integration still waits.

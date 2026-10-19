@@ -2,10 +2,10 @@
 
 - ID: N0009
 - Repo: nacre-desktop/nacre
-- Implementer: one fresh Sol worker after coordinator assignment
-- Status: **Blocked: F4 green publication**; docs draft, no implementation grant
-- Depends on: accepted N0007, fresh N0002 PASS, N0001 Done and exact published
-  F4 head with successful source CI; quick/correctness PASS alone is insufficient
+- Implementer: one fresh Luna worker; coordinator final review
+- Status: **Ready: local implementation authorized**; integration after green F4
+- Depends on: source8a/F4 candidate for local implementation; N0002 PASS and
+  exact-head green F4 remain integration gates
 - Date: 2026-10-19
 
 ## Goal
@@ -16,8 +16,8 @@ and refusal of unsafe files; unblock the ownership prerequisite for N0006/N0010.
 
 ## Context and scope
 
-Starting commit: exact green published F4 hash, resolved and recorded by coordinator
-BEFORE Ready; draft source base 5b8d4e92 is not an implementation baseline.
+Starting source: prospective F4 integration b003aa8fb0ce095a851bba95ceabf202fd3bf9e2
+(source8a). Own isolated worktree, local commits only; preserve frozen capture source.
 Read N0001/N0004, foundation/protocol/standing-rules and N0006's switch-on plan.
 Relevant files: crates/nacre-helper/src/daemon.rs, daemon/socket.rs, paths.rs and
 actual settings publication hook; nacre/shell-tools/profile-policy.py; tools/
@@ -111,3 +111,11 @@ slot assignment. This draft grants no implementation or measurement.
 No build/test/CI/live probe or publication/install/unit change was run for this draft.
 Owner approval remains required for package publication/install and live execution.
 Commit using approved identity, docs(spec):, [no-publish] and [skip ci] for this draft.
+
+## Owner implementation grant — 2026-10-19 afternoon
+
+This supersedes the draft-only/blocked wording above: implement now using Luna,
+local commits only, no push/live operations. Coordinator final review required.
+Private builds/tests serialize before tonight’s N0002 window; request the heavy
+slot with exact revision/argv, do not self-start. No profiling. Integrate only
+after F4 is green. Report commits, AC evidence and unsupported cases honestly.

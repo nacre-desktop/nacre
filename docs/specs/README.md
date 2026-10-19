@@ -243,3 +243,19 @@ Xvfb session now granted to Luna. Start with loaded baseline summary screenshot,
 root review before any filter/B. Explicit owned display/window input only; original
 12GiB/swap0 guardian and exact-owned cleanup, no live desktop. No new profiling
 capture. F4 and switch-on remain blocked pending supported fix and acceptance.
+
+## Authoritative handoff — owner decision 2026-10-19 afternoon
+
+Profiling hunt STOPPED; all profiler jobs cleaned up. Baseline noise means a
+single pair is no longer the F4 decision. N0002 Ready: unchanged v14, source8a
+vs5f4, five alternating pairs each compositor,20 arms; overnight exclusive
+20:00UTC Oct19–08:00UTC Oct20. Quiet-only retry once at end for at most2 arms;
+other failures stop. New owner <5 / explained5–8 / >8 or QML>2 rule is in N2.
+N0009 and N0010 Ready NOW for Luna local implementation, independent worktrees,
+no push/live operations; builds/tests serialize before20:00. Integration after
+green F4. Bead light source work only during overnight capture, no heavy CI.
+Earlier dependency/profiling holds above are superseded by this handoff.
+
+Owner timing clarification: desktop unused rest of Oct19; start acceptance as
+soon as prerequisite tests/review finish, no20:00 wait. Exclusive12h from actual
+CAPTURE_START, recorded by lead. No timing/gate compression.

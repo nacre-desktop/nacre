@@ -3,7 +3,7 @@
 - ID: N0002
 - Repo: nacre-desktop/nacre
 - Implementer: built-in Luna capture worker; lead reviews/integrates
-- Status: Blocked — owner-directed N0007 QML correction
+- Status: Ready — owner-authorized overnight five-pair acceptance
 - Depends on: accepted N0001/N0004 source review; reviewed prospective harness
 - Date: 2026-10-18
 - Size: one focused capture session, through the granted cutoff
@@ -168,3 +168,40 @@ Nacre commits [no-publish]. nice10/Cargo-j2; private/nested only. No live deskto
 installed Nacre/configs/keys/units or publication without owner approval. Preserve
 AI permissions and paru command. Stop only PIDs started by this task. No host
 memory pressure/cache drops/sysctl. No overbuilding; extras one line in report.
+
+## Authoritative owner acceptance amendment — 2026-10-19 afternoon
+
+This supersedes quick-screen/eight-arm requirements and all older windows. Stop
+profiling: no further Heaptrack GUI or mapped/rendering investigation now.
+Standard unchanged v14 method, source8a1df35c6fec44e660530643ffef367e6b57ef89
+versus baseline5f4c0bf3025d5f2944b50ff5546ed7f8a3dcfe57; release helpers remain
+439dd355fca276334c2faccbd0992d1b23eac6c6caab311ca1c1c61d3672e92c and
+4a65f4ec887bc85e93b5b862f1786fe6f1b7a811875333765ee8f8c052cce0aa.
+Five alternating A/B pairs per compositor (20 arms), correct2880×1800/1.5,
+niri60Hz and Hyprland120Hz. Preserve v14 sampling/actions/timing:600s warmup,
+three full60s idle phases. Only outer scheduling, immutable input selection,
+and reporting change; no v15 tool or shortened windows.
+
+Exclusive private lab availability: **immediately after prerequisite checks and
+coordinator batch review on2026-10-19, for12hours from actual CAPTURE_START**.
+Owner confirms desktop unused rest of day; no need to wait for night.
+No other heavy work, including Bead CI, builds or nested sessions. Start after
+coordinator review and explicit peer pauses; source readiness/preflight may be
+prepared locally now. Existing 12GiB/swap0 held-child containment, independent
+watchdog, >=4GiB start/<2GiB abort, geometry, SwapPss0 and whole-arm host swap-in
+<1MiB gates remain. Owned cleanup only; no live desktop or package actions.
+If only host swap-in quiet gate fails, preserve invalid arm and rerun that same
+arm ONCE at batch end. At most TWO distinct arms may need this; third such arm,
+failed retry or any other failure stops batch. No replacement of other evidence.
+
+Report each arm and per-compositor A/B aggregate medians, spreads, and paired
+deltas for whole group and QML/daemon/other helpers separately, each idle phase.
+Compute component sums within each sample before its median; do not sum
+independent medians. Apply thresholds to each reported phase; any ambiguity
+returns to coordinator, not a worker-selected favorable summary.
+Owner rule (MiB): group increase <5 on both compositors passes; 5–8 inclusive
+passes ONLY if QML increase<=2 and remaining increase is accounted for in daemon
+settings residency (not unexplained other helpers), with tracked follow-up spec.
+Group>8 or QML>2 stops/report; only then resume buffer investigation. Equality5
+uses explained-cost branch. No single-pair5MiB veto. Lead reviews before F4
+integration, exact-head CI required; no release/live switch granted.

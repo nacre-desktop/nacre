@@ -2,8 +2,8 @@
 
 - ID: N0010
 - Repo: nacre-desktop/nacre
-- Implementer: one fresh Sol worker after coordinator assignment
-- Status: **Blocked: F4 green publication and N0009**; no implementation grant
+- Implementer: one fresh Luna worker; coordinator final review
+- Status: **Ready: parallel local implementation authorized**; integration after F4/N0009
 - Depends on: exact published-green F4 source and accepted/published N0009
 - Date: 2026-10-19
 
@@ -15,8 +15,9 @@ and recorded activation without overwriting later user changes or assuming defau
 
 ## Context and scope
 
-Starting commit: exact green published F4 hash plus published N0009, resolved and
-recorded BEFORE Ready; draft base 5b8d4e92 is not an implementation baseline.
+Starting source: prospective F4 integration b003aa8fb0ce095a851bba95ceabf202fd3bf9e2.
+Implement in a separate worktree; coordinate N0009 lease API without editing its
+files. Local commits only, integration requires accepted N0009 and green F4.
 Read N0001/N0004/N0006/N0009, standing-rules and docs/development/f4-switch-on.md.
 Relevant files: tools/releases.py and bounded switch module; package/controller
 staging; shell-tools/nacre-shell.service and nacre-daemon service/socket templates;
@@ -205,3 +206,12 @@ package publication/install, live units, QML opt-in and rollback execution.
 This draft grants no implementation or measurement; no build/test/CI, live probe,
 publication, installation or unit change was run. Approved docs-only commit identity,
 docs(spec):, [no-publish], [skip ci]; no queue edit or push for this revision.
+
+## Owner implementation grant — 2026-10-19 afternoon
+
+This supersedes draft-only dependency holds: Luna implements now in its own
+worktree, local commits only, no live/package/unit action or push. Coordinator
+reviews security/rollback evidence. Serialize builds/tests before tonight’s
+N0002 capture; request heavy slot before execution. Agree N0009 lease API with
+that worker and keep ownership disjoint. Never weaken refusal/rollback criteria
+to meet the deadline. Integration remains after green F4 and accepted N0009.
