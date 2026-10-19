@@ -5,7 +5,7 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; reviewed logging-only diagnostic gated grant10:00–10:50UTC, no acceptance run. |
+| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; logging-only diagnostic grant10:10–11:05UTC; no observer, no acceptance run. |
 | 2 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: product correction | Both v14 geometry checks passed; only Niri A/B valid. H baseline failed whole-wrapper swap-in; no eight-run PASS. |
 | 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Corrected plan retained; F4/package readiness, exclusive installer handoff and managed persistent opt-in/rollback missing. No live action. |
 | — | [N0009 exclusive destination writer handoff](0009-f4-switch-prerequisites.md) | Blocked: after green F4 | Draft design reviewed; no implementation/live grant. |
@@ -45,12 +45,19 @@ Sol residual review and one bounded Astra escalation found no supported fix.
 Escalation reason: Sol corrected source but could not identify residual cause from
 matched saved evidence; no speculative product change. Source8a remains clean.
 QML construction/GC/native allocation lifetimes are missing discriminators.
-Logging-only diagnostic package2440a5cf independently ACCEPTED after one bounded
-source correction; no acceptance rerun or forcedGC/tuning. Sole heavy private
-Niri A/B diagnostic grant10:00–10:50UTC to sol_n7_quick_capture. Installed binary
-pin/options/env proof must be reviewed before payload; strict90s real GC/startup
-evidence gate, existing12GiB/swap0/guardian and quiet rules, no retry. Missing
-evidence stops UNKNOWN. Output is diagnostic only; H/full-eight remain blocked. Full QML debugger route is rejected
+First diagnostic package2440a5cf failed first A after2.004s on supplemental
+observer identity check; offending PID UNKNOWN, no rollups/gate/B. No app-crash
+inference. Cleanup verified; archive57445658849cc72cef311cf511430ffb5fbfc7567af78064b20a95853530815b.
+Actual startup Qt GC numeric records were present. No observer repair/retry.
+Independent feasibility found the existing frozen census already records PSS/USS,
+PID/start and read brackets; supplemental observer is unnecessary for first question.
+NEW logging-only packagea949c63e independently ACCEPTED:19 pins, frozen7 unchanged,
+reviewed wrapper+logging env only, no sampler/watchdog/discovery/parser. Sole
+heavy diagnostic grant10:10–11:05UTC to sol_n7_quick_capture, exact reviewed
+Quickshell7796116a and same source/helpers/fixtures/geometry/cap/quiet controls.
+Explicit Bash entry avoids Fish syntax; fresh namespace, one pair/no retry.
+Empty/incomplete GC yields UNKNOWN offline. Output NEVER acceptance; no H/full8.
+Full QML debugger route is rejected
 because Quickshell0.3.2 exposes all interfaces with its supported debug CLI.
 The Niri pair used frozen v14 unchanged and both arms after owner-installed
 ONLY wayland-utils08:08:50UTC. Earlier source0df failed quick +13.413/+15.101/+11.047;

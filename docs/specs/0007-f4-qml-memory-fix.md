@@ -248,3 +248,30 @@ host>=4GiB start/<2GiB abort, strict paging/SwapPss gates remain. No other heavy
 job/CI may overlap. GC/rollup/logging overhead makes all output DIAGNOSTIC ONLY;
 existing report.accepted filenames denote structural validity, never landing.
 Grant no forcedGC, allocator/render tuning, data reduction or acceptance waiver.
+
+## Diagnostic failure and logging-only simplification — 2026-10-19
+
+Original compound tmux launch used Bash syntax through Fish and failed before
+payload. One explicit-Bash correction was granted; sole actual A then stopped
+2.004s into the supplemental observer on 'owned identity exited'. Offending PID
+was not retained, so critical vs transient child is UNKNOWN. No rollups/startup
+gate PASS/B/usable comparison. Raw startup GC records exist, not an acceptance
+trace. Scope failed-ACK status retained; all exact owned identities/cgroup/tmux
+gone and lock free. Archive57445658849cc72cef311cf511430ffb5fbfc7567af78064b20a95853530815b.
+No repair/retry of that observer.
+
+Independent feasibility instead confirms original census memory_observations
+already has PSS/USS/PID/start/read brackets. Remove the optional observer entirely.
+Logging-only packagea949c63ef857ffc8eb22ceaffba453fd361ca8a2aeb9abdb6c7812ab4180b27d
+independently ACCEPTED19pins/four normalized arm scripts/frozen7/wrapper/probes.
+Only private namespace and logging env change; no custom sampler/watchdog/parser
+or discovery remains. Reuse original safety controls and paired action sequence.
+GC records are evaluated offline against adjacent samples, never virtual heap
+capacity subtracted from PSS. Missing naturalGC/proof remains UNKNOWN.
+
+Lead grants one logging-only diagnostic Niri A/B10:10–11:05UTC, same private host,
+source5f4/helper4a65 vs8a/helper439, realQS7796116aa1bf0139df37d023feba9e25ac02650eca678dc2bd4d23e1f09a045f.
+All peers/CI released; sole heavy worker sol_n7_quick_capture. Explicit Bash,
+fresh roots, original12GiB/swap0/heldchild/guardian/finalACK/host4GiB/2GiB/quiet
+and geometry/input checks unchanged. No tool repair/retry/H/full-eight/install/
+forcedGC/tuning. Both arms are DIAGNOSTIC ONLY, no landing or gate waiver.
