@@ -1,5 +1,5 @@
 //! Actual native entry points on private sockets; no ambient desktop or bus discovery.
-use nacre_helper::Result;
+use nacre_helper::{daemon::writer_lease::WriterLease, Result};
 use serde_json::{json, Value};
 use std::{
     fs,
@@ -9,7 +9,7 @@ use std::{
         net::{UnixDatagram, UnixListener, UnixStream},
     },
     path::{Path, PathBuf},
-    process::{Child, ChildStdout, Command, Stdio},
+    process::{Child, ChildStdin, ChildStdout, Command, Stdio},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -24,6 +24,50 @@ impl Drop for Process {
         let _ = self.0.kill();
         let _ = self.0.wait();
     }
+}
+struct PythonLease {
+    child: Child,
+    input: Option<ChildStdin>,
+}
+impl Drop for PythonLease {
+    fn drop(&mut self) {
+        self.input.take();
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+fn hold_python_lease(config: &Path) -> Result<PythonLease> {
+    let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
+    let script = r#"
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from writer_lease import writer_lease
+with writer_lease(Path(sys.argv[2])):
+    print("HELD", flush=True)
+    sys.stdin.readline()
+"#;
+    let mut child = Command::new("python3")
+        .arg("-c")
+        .arg(script)
+        .arg(tools)
+        .arg(config)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()?;
+    let input = child.stdin.take().ok_or("Missing Python lease stdin")?;
+    let stdout = child.stdout.take().ok_or("Missing Python lease stdout")?;
+    let mut output = BufReader::new(stdout);
+    let mut ready = String::new();
+    output.read_line(&mut ready)?;
+    if ready.trim() != "HELD" {
+        return Err("Python lease barrier did not become ready".into());
+    }
+    Ok(PythonLease {
+        child,
+        input: Some(input),
+    })
 }
 struct Wallet;
 #[zbus::interface(name = "org.freedesktop.Secret.Collection")]
@@ -1390,6 +1434,141 @@ fn inherited_systemd_socket_is_adopted_and_preserved_without_a_live_manager() ->
     assert!(
         endpoint.exists(),
         "The activated listener belongs to the socket manager"
+    );
+    Ok(())
+}
+
+#[test]
+fn python_writer_lease_blocks_normal_daemon_startup_for_each_endpoint() -> Result<()> {
+    use std::os::unix::fs::MetadataExt;
+
+    let home = tempfile::tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let config = home.path().join("config/nacre");
+    let _python = hold_python_lease(&config)?;
+    let lock = config.join(".writer.lock");
+    let before = fs::metadata(&lock)?;
+    let source = home.path().join("unused-niri.sock");
+    for name in ["first", "second"] {
+        let folder = home.path().join(name);
+        fs::create_dir(&folder)?;
+        fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
+        let endpoint = folder.join("daemon.sock");
+        let output = command(home.path(), &source, &endpoint)
+            .arg("daemon")
+            .output()?;
+        assert!(!output.status.success());
+        assert!(!endpoint.exists(), "busy startup created its endpoint");
+        let after = fs::metadata(&lock)?;
+        assert_eq!((before.dev(), before.ino()), (after.dev(), after.ino()));
+    }
+    Ok(())
+}
+
+#[test]
+fn python_writer_lease_blocks_activated_daemon_before_service_publication() -> Result<()> {
+    use std::os::unix::fs::MetadataExt;
+
+    let activator = Path::new("/usr/bin/systemd-socket-activate");
+    if !activator.is_file() {
+        eprintln!("Skipping activated lease barrier: systemd-socket-activate is not installed");
+        return Ok(());
+    }
+    let home = tempfile::tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let config = home.path().join("config/nacre");
+    let _python = hold_python_lease(&config)?;
+    let lock = config.join(".writer.lock");
+    let before = fs::metadata(&lock)?;
+    let folder = home.path().join("private");
+    fs::create_dir(&folder)?;
+    fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
+    let endpoint = folder.join("daemon.sock");
+    let source = home.path().join("unused-niri.sock");
+    let changes = rustix::fs::inotify::init(rustix::fs::inotify::CreateFlags::CLOEXEC)?;
+    rustix::fs::inotify::add_watch(&changes, &folder, rustix::fs::inotify::WatchFlags::CREATE)?;
+    let mut activate = Command::new(activator);
+    environment(&mut activate, home.path(), &source, &endpoint);
+    let names: Vec<_> = activate
+        .get_envs()
+        .filter_map(|(name, value)| value.map(|_| name.to_owned()))
+        .collect();
+    for name in names {
+        activate.arg("-E").arg(name);
+    }
+    activate
+        .arg("-l")
+        .arg(&endpoint)
+        .arg(env!("CARGO_BIN_EXE_nacre-helper"))
+        .arg("daemon")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let mut daemon = Process(activate.spawn()?);
+    let mut descriptors = [rustix::event::PollFd::new(
+        &changes,
+        rustix::event::PollFlags::IN,
+    )];
+    let timeout = rustix::event::Timespec {
+        tv_sec: 10,
+        tv_nsec: 0,
+    };
+    assert!(
+        rustix::event::poll(&mut descriptors, Some(&timeout))? > 0,
+        "Socket activator did not create its private endpoint"
+    );
+    let mut client = UnixStream::connect(&endpoint)?;
+    client.set_read_timeout(Some(Duration::from_secs(5)))?;
+    let mut response = [0];
+    assert_eq!(client.read(&mut response)?, 0, "busy daemon published a service");
+    let after = fs::metadata(&lock)?;
+    assert_eq!((before.dev(), before.ino()), (after.dev(), after.ino()));
+    daemon.0.kill()?;
+    daemon.0.wait()?;
+    Ok(())
+}
+
+#[test]
+fn native_writer_lease_blocks_python_profile_install_without_replacing_files() -> Result<()> {
+    use std::os::unix::fs::MetadataExt;
+
+    let home = tempfile::tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let config = home.path().join(".config/nacre");
+    let state = home.path().join(".local/state/nacre");
+    let _native = WriterLease::acquire_for_paths(&config, &state)?;
+    let lock = config.join(".writer.lock");
+    let before_lock = fs::metadata(&lock)?;
+    let profile = config.join("profile.json");
+    let original = br#"{"external":"keep"}"#;
+    fs::write(&profile, original)?;
+    let before_profile = fs::metadata(&profile)?;
+    let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
+    let script = r#"
+import runpy
+import sys
+from pathlib import Path
+tools, home = Path(sys.argv[1]), Path(sys.argv[2])
+sys.path.insert(0, str(tools))
+runpy.run_path(str(tools / "profile-policy.py"))["install"](home)
+"#;
+    let output = Command::new("python3")
+        .arg("-c")
+        .arg(script)
+        .arg(tools)
+        .arg(home.path())
+        .output()?;
+    assert!(!output.status.success());
+    let after_profile = fs::metadata(&profile)?;
+    assert_eq!(fs::read(&profile)?, original);
+    assert_eq!(
+        (before_profile.dev(), before_profile.ino()),
+        (after_profile.dev(), after_profile.ino())
+    );
+    let after_lock = fs::metadata(&lock)?;
+    assert_eq!(
+        (before_lock.dev(), before_lock.ino()),
+        (after_lock.dev(), after_lock.ino()),
+        "installer replaced the native lease file"
     );
     Ok(())
 }
