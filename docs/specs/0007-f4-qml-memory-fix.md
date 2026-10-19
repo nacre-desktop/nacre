@@ -322,3 +322,18 @@ at phase/action boundaries; terminate actual QS only, wait standard pipeline<=30
 validate compression before other cleanup. Original verified12GiB/swap0 guardian
 and host4GiB/2GiB remain. No sampler/parser or acceptance collector modification.
 Baseline-only25min external supervision; B unarmed. All results diagnostic.
+
+## Standard profiling progress and assisted B boundary
+
+Full baseline standalone trace/standard parse succeeded. Plain candidate stalled
+before configuration loaded; its1.46s allocation trace is not full60s coverage.
+One standard backtrace caught libunwind inside heaptrack at existing Qt.md5; IPC
+succeeded after detach. Mechanism UNKNOWN, unchanged16 hash callsites prohibit
+speculative hash fix. All failed traces and exact-owned cleanup retained.
+
+Independently accepted inventory38ffa207 permits ONE full candidate profile with
+that same brief debugger step, detached and credential-free BEFORE600s settling.
+Original scenes/geometry/fixtures/source/helper pins and guardian unchanged.
+External25min bound; conditional standard parse<=15min after parity/drain/cleanup;
+verify full phase time coverage. Baseline has no debugger: diagnostic only, no
+matched PSS/acceptance claim. No further retry/profiler iteration automatically.

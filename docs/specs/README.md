@@ -5,7 +5,7 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; GC diagnostic finished; no supported fix. Standalone private heaptrack baseline profile independently reviewed/granted; candidate B unarmed, acceptance blocked. |
+| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; GC diagnostic finished; no supported fix. Baseline heaptrack trace/parse complete. One GDB-assisted candidate profile granted after startup-stall diagnosis; acceptance blocked. |
 | 2 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: product correction | Both v14 geometry checks passed; only Niri A/B valid. H baseline failed whole-wrapper swap-in; no eight-run PASS. |
 | 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Corrected plan retained; F4/package readiness, exclusive installer handoff and managed persistent opt-in/rollback missing. No live action. |
 | — | [N0009 exclusive destination writer handoff](0009-f4-switch-prerequisites.md) | Blocked: after green F4 | Draft design reviewed; no implementation/live grant. |
@@ -192,3 +192,27 @@ Native supervisor is replaced by private lifecycle, an explicit comparability
 limitation. No acceptance/PSS inference. One baseline A only,25min externally
 supervised; QS-only pidfd TERM, then profiler drain<=30s and compression integrity
 before remaining fixture/scope cleanup. B and analysis need lead review.
+
+## Profiling handoff — standard tool, not acceptance
+
+Standalone A full workload and trace/drain/parse passed. Standard output runtime
+833.90s, useful exported Qt stacks, private symbol limitations; Massif totals are
+interval peaks and detailed trees are zero placeholders, not phase owner proof.
+Plain B stopped before configuration completion/IPC60s; trace events stop1.46s,
+not full wall-wait coverage. No paired allocation/memory inference. All cleanup
+complete and partials retained.
+
+One brief standard GDB startup snapshot captured main thread read/libunwind/
+unw_backtrace/heaptrack_malloc during existing Qt.md5/OpenSSL allocation; IPC
+then succeeded after detach. Exact mechanism UNKNOWN. Baseline/candidate have
+16 identical Qt.md5 callsites; do not replace hashing or claim OpenSSL memory
+cause. Standard alternative unwinder is build-time only; no rebuild granted.
+
+Independent source ACCEPT inventory38ffa207 grants ONE full candidate profile
+with the same20s read-only backtrace before settling. Debugger exit/detach and
+credential absence gate all workload. Same original scenes/fixtures/geometry and
+12GiB/swap0 guardian. External25min supervision; no retries/further profiler
+iterations. A had no debugger, explicit diagnostic difference, no PSS acceptance.
+Conditional standard parse after all parity/drain/cleanup gates, max15min, same
+capped guardian; continuous trace coverage through phases must be verified.
+No GUI/diff/source fix/new acceptance run granted by this note.
