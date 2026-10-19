@@ -144,9 +144,13 @@ class DaemonClientTests(unittest.TestCase):
             if network:
                 shutil.copy2(ROOT / "nacre/shell/services/NacreNetwork.qml", services)
             if launcher:
-                source = (ROOT / "nacre/shell/services/LauncherPreferences.qml").read_text()
-                (services / "LauncherPreferences.qml").write_text(source.replace("NacreDaemon", "FixtureClient"))
-                (services / "FixtureClient.qml").write_text('''pragma Singleton
+                source = (
+                    ROOT / "nacre/shell/services/LauncherPreferences.qml"
+                ).read_text()
+                (services / "LauncherPreferences.qml").write_text(
+                    source.replace("NacreDaemon", "FixtureClient")
+                )
+                (services / "FixtureClient.qml").write_text("""pragma Singleton
 import QtQuick
 QtObject {
  property bool enabled:true
@@ -156,8 +160,8 @@ QtObject {
  function topic(name){return stream}
  function subscribe(name){subscribers++}
  function unsubscribe(name){subscribers--}
-}''')
-                (services / "NacreHelperTask.qml").write_text('''import QtQuick
+}""")
+                (services / "NacreHelperTask.qml").write_text("""import QtQuick
 QtObject {
  property var command:[]
  property bool running:false
@@ -167,7 +171,7 @@ QtObject {
  signal exited()
  function write(value){}
  Component.onCompleted: if(running) FixtureClient.loads++
-}''')
+}""")
             if menu:
                 shutil.copy2(ROOT / "nacre/shell/services/NacreMenuQuery.qml", services)
             if render_state:
@@ -175,10 +179,20 @@ QtObject {
                 for folder in ("widgets", "config", "frame"):
                     (root / folder).mkdir()
                 for name in ("NacreTokens.qml", "size-scale.json"):
-                    shutil.copy2(ROOT / "nacre/shell/widgets" / name, root / "widgets" / name)
-                shutil.copy2(ROOT / "nacre/shell/config/NacreFrame.qml", root / "config")
-                shutil.copy2(ROOT / "nacre/shell/modules/drawers/NacreFrameRim.qml", root / "frame")
-                shutil.copy2(ROOT / "nacre/shell-tools/tests/qml/fixtures/NacreColours.qml", services)
+                    shutil.copy2(
+                        ROOT / "nacre/shell/widgets" / name, root / "widgets" / name
+                    )
+                shutil.copy2(
+                    ROOT / "nacre/shell/config/NacreFrame.qml", root / "config"
+                )
+                shutil.copy2(
+                    ROOT / "nacre/shell/modules/drawers/NacreFrameRim.qml",
+                    root / "frame",
+                )
+                shutil.copy2(
+                    ROOT / "nacre/shell-tools/tests/qml/fixtures/NacreColours.qml",
+                    services,
+                )
             if settings:
                 for name in ("DesktopSettings.qml", "NacreSettingsStorage.qml"):
                     shutil.copy2(ROOT / "nacre/shell/services" / name, services)
@@ -193,8 +207,10 @@ QtObject {
                 shutil.copy2(ROOT / "nacre/shell-tools/nacre-state-files.json", tools)
             if storage_client:
                 storage = services / "NacreSettingsStorage.qml"
-                storage.write_text(storage.read_text().replace("NacreDaemon", "FixtureClient"))
-                (services / "FixtureClient.qml").write_text('''pragma Singleton
+                storage.write_text(
+                    storage.read_text().replace("NacreDaemon", "FixtureClient")
+                )
+                (services / "FixtureClient.qml").write_text("""pragma Singleton
 import QtQuick
 QtObject {
  id:client
@@ -209,7 +225,7 @@ QtObject {
  function subscribe(name){topic(name).users++}
  function unsubscribe(name){topic(name).users--}
  function call(method,params,callback){calls=[...calls,{method:method,params:params,callback:callback}];return calls.length}
-}''')
+}""")
             if compositor:
                 folder = services / "compositor"
                 folder.mkdir()
@@ -270,7 +286,8 @@ ShellRoot {
                 )
             if render_state:
                 source = source.replace(
-                    "import qs.services", "import qs.services\nimport qs.config\nimport qs.widgets"
+                    "import qs.services",
+                    "import qs.services\nimport qs.config\nimport qs.widgets",
                 )
             if compositor:
                 source = source.replace(
@@ -397,8 +414,10 @@ ShellRoot {
             check(!value.data.windows.w1 && original.windows.w1.id === "w1", "delete without mutation");
         """)
 
-    def test_independent_consumers_share_stateless_script_without_sharing_projections(self):
-        self.qml(r'''
+    def test_independent_consumers_share_stateless_script_without_sharing_projections(
+        self,
+    ):
+        self.qml(r"""
             const source='import QtQuick; import "services/daemon-state.js" as State; QtObject {readonly property var copier:State.copy;readonly property var merger:State.merge}';
             const first=Qt.createQmlObject(source,root,"first-consumer");
             const second=Qt.createQmlObject(source,root,"second-consumer");
@@ -407,7 +426,7 @@ ShellRoot {
             const one=first.copier(committed),two=second.copier(committed);
             one.unknown.values.push(3);
             check(committed.unknown.values.length===2&&two.unknown.values.length===2,"sharing code never shares mutable projections");
-        ''')
+        """)
 
     def test_last_subscriber_releases_cache_but_active_disconnect_keeps_state(self):
         self.qml("""
@@ -500,18 +519,31 @@ ShellRoot {
                             if not topic.startswith("settings.store."):
                                 continue
                             store = topic.removeprefix("settings.store.")
-                            server.send(stream, {
-                                "t": "snap", "topic": topic, "seq": 0,
-                                "data": {"store": store, "rev": revisions[store],
-                                         "exists": True, "dirty": False,
-                                         "data": desktop if store == "desktop" else {"enabled": revisions[store] > 0}},
-                            })
+                            server.send(
+                                stream,
+                                {
+                                    "t": "snap",
+                                    "topic": topic,
+                                    "seq": 0,
+                                    "data": {
+                                        "store": store,
+                                        "rev": revisions[store],
+                                        "exists": True,
+                                        "dirty": False,
+                                        "data": desktop
+                                        if store == "desktop"
+                                        else {"enabled": revisions[store] > 0},
+                                    },
+                                },
+                            )
                         continue
                     if request["t"] != "call":
                         continue
                     method, params = request["m"], request["p"]
                     if method == "settings.get":
-                        server.observed["get_calls"] = server.observed.get("get_calls", 0) + 1
+                        server.observed["get_calls"] = (
+                            server.observed.get("get_calls", 0) + 1
+                        )
                     if method == "settings.desktop":
                         argv = params["arguments"]
                         if argv[0] == "set":
@@ -1431,8 +1463,11 @@ ShellRoot {
         self.assertEqual(result["path"], "")
         self.assertEqual(result["error"], "")
 
-    def test_launcher_snapshot_initial_late_reconnect_and_boot_preserve_seeded_favorites(self):
-        self.qml(r'''
+    def test_launcher_snapshot_initial_late_reconnect_and_boot_preserve_seeded_favorites(
+        self,
+    ):
+        self.qml(
+            r"""
             const client=FixtureClient;
             const favorites=Array.from({length:12},(_,i)=>"performance-demo-"+String(i).padStart(2,"0"));
             const snapshot={store:"launcher",rev:0,exists:true,dirty:false,data:{favorites:favorites,usage:{one:{count:2,last:10}}}};
@@ -1451,19 +1486,25 @@ ShellRoot {
             }
             client.stream.data={store:"launcher",rev:1,exists:true,dirty:false,data:{favorites:favorites.slice(0,11)}};
             check(preferences.favorites.length===11,"live update remains reactive");
-        ''', launcher=True)
+        """,
+            launcher=True,
+        )
 
     def test_launcher_offline_initialization_keeps_legacy_text_reader(self):
-        self.qml(r'''
+        self.qml(
+            r"""
             FixtureClient.enabled=false;
             const preferences=LauncherPreferences;
             check(FixtureClient.loads===1&&FixtureClient.subscribers===0,"offline mode retains its legacy reader");
             preferences.accept('{"favorites":["one","two"],"hidden":[],"recent":["two"],"usage":{}}');
             check(preferences.favorites.length===2&&preferences.recent[0]==="two"&&!preferences.error,"legacy text projection remains compatible");
-        ''', launcher=True)
+        """,
+            launcher=True,
+        )
 
     def test_desktop_snapshot_and_reply_share_one_owned_projection(self):
-        self.qml(r'''
+        self.qml(
+            r"""
             const desktop=DesktopSettings;
             let projections=0;desktop.persistedDataChanged.connect(()=>projections++);
             const snapshot={data:{dnd:false,unknown:{keep:[1,2]}},monitors:[{name:"one",modes:["mode"]}],pending:false};
@@ -1473,11 +1514,18 @@ ShellRoot {
             check(snapshot.data.unknown.keep.length===2&&snapshot.monitors[0].modes.length===1,"mutable desktop projection cannot alter committed snapshot");
             desktop.accept('{"data":{"dnd":true,"unknown":{"kept":true}},"pending":false}');
             check(desktop.data.dnd&&desktop.data.unknown.kept,"legacy text response preserves complete data");
-        ''', settings=True)
+        """,
+            settings=True,
+        )
 
-    def test_sparse_file_and_normalized_snapshot_have_identical_frame_and_token_state(self):
-        defaults = json.loads((ROOT / "nacre/shell-tools/desktop-defaults.json").read_text())
-        self.qml(r'''
+    def test_sparse_file_and_normalized_snapshot_have_identical_frame_and_token_state(
+        self,
+    ):
+        defaults = json.loads(
+            (ROOT / "nacre/shell-tools/desktop-defaults.json").read_text()
+        )
+        self.qml(
+            r"""
             const desktop=DesktopSettings;
             const rimComponent=Qt.createComponent("frame/NacreFrameRim.qml");
             check(rimComponent.status===Component.Ready,rimComponent.errorString());
@@ -1491,10 +1539,14 @@ ShellRoot {
             check(observed()===sparse,"normalized native snapshot preserves sparse-file frame geometry, text, colours, rim opacity and effects");
             check(NacreFrame.headerHeight===50&&NacreFrame.rounding===25&&NacreTokens.textPointSize===12,"seeded defaults resolve to expected visible geometry");
             finish({effective:JSON.parse(observed())});
-        '''.replace("DEFAULTS", json.dumps(defaults)), render_state=True, asynchronous=True)
+        """.replace("DEFAULTS", json.dumps(defaults)),
+            render_state=True,
+            asynchronous=True,
+        )
 
     def test_storage_subscription_lifecycle_uses_snapshots_without_implicit_reads(self):
-        self.qml(r'''
+        self.qml(
+            r"""
             const client=FixtureClient;
             const power=client.topic("settings.store.power");
             power.data={store:"power",rev:3,exists:true,data:{enabled:true,unknown:{keep:1}},dirty:false};power.fresh=true;
@@ -1518,10 +1570,14 @@ ShellRoot {
             check(storage.documents.colors.unknown==="preserved"&&storage.revisions.colors===0,"added store accepts its current subscribed snapshot");
             NacrePanelState.settingsVisible=false;
             check(colors.users===0&&power.users===1,"closing settings releases only optional subscriptions");
-        ''', settings=True, storage_client=True)
+        """,
+            settings=True,
+            storage_client=True,
+        )
 
     def test_storage_unwatched_mutation_reads_revision_once_without_replay(self):
-        self.qml(r'''
+        self.qml(
+            r"""
             const client=FixtureClient,storage=NacreSettingsStorage;
             storage.request("dashboard",["lyrics"],false);
             check(client.calls.length===1&&client.calls[0].method==="settings.get","unwatched mutation acquires its revision exactly once");
@@ -1533,10 +1589,17 @@ ShellRoot {
                 check(client.calls.length===2&&storage.queue.length===0&&storage.errors.dashboard==="connection lost after dispatch","reconnect and new boot never replay a dispatched mutation");
                 finish();
             });
-        ''', settings=True, storage_client=True, asynchronous=True)
+        """,
+            settings=True,
+            storage_client=True,
+            asynchronous=True,
+        )
 
-    def test_storage_equal_documents_preserve_metadata_explicit_reads_and_mutation_revision(self):
-        self.qml(r'''
+    def test_storage_equal_documents_preserve_metadata_explicit_reads_and_mutation_revision(
+        self,
+    ):
+        self.qml(
+            r"""
             const client=FixtureClient,storage=NacreSettingsStorage;
             const power=client.topic("settings.store.power");
             let projections=0;storage.documentsChanged.connect(()=>projections++);
@@ -1558,10 +1621,14 @@ ShellRoot {
             check(client.calls.length===2&&client.calls[1].method==="settings.set"&&client.calls[1].params.rev===4,"mutation uses current subscribed revision without extra read");
             client.calls[1].callback({store:"power",rev:5,exists:true,data:{enabled:true},dirty:true,error:{message:"not durable"}},null);
             check(storage.revisions.power===5&&storage.errors.power==="not durable","dirty mutation failure is visible and never invented as durable success");
-        ''', settings=True, storage_client=True)
+        """,
+            settings=True,
+            storage_client=True,
+        )
 
     def test_publisher_projects_snapshot_and_reply_once_and_ignores_older_read(self):
-        self.qml(r'''
+        self.qml(
+            r"""
             const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null}',root);
             const client=Qt.createQmlObject('import QtQuick; QtObject {property bool enabled:true;property bool connected:true;property string boot:"b1";property var topicObject:null;property var calls:[];signal newBoot(string id);function topic(name){return topicObject;}function subscribe(name){}function unsubscribe(name){}function call(method,params,callback){calls.push({method:method,callback:callback});return calls.length;}}',root);
             client.topicObject=topic;
@@ -1575,10 +1642,15 @@ ShellRoot {
             topic.data={store:"control-center",rev:1,exists:true,dirty:false,data:{version:2,tiles:["battery"]}};
             store.accept(initial);
             check(projections===2&&last.tiles[0]==="battery"&&store.revision===1,"late old reply cannot revert committed projection");
-        ''', publisher=True)
+        """,
+            publisher=True,
+        )
 
-    def test_publisher_shared_subscription_avoids_get_and_recovers_late_reconnect_new_boot(self):
-        self.qml(r'''
+    def test_publisher_shared_subscription_avoids_get_and_recovers_late_reconnect_new_boot(
+        self,
+    ):
+        self.qml(
+            r"""
             const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null;property bool fresh:false}',root);
             const client=Qt.createQmlObject('import QtQuick; QtObject {property bool enabled:true;property bool connected:true;property string boot:"b1";property var topicObject:null;property int calls:0;signal newBoot(string id);function topic(name){return topicObject;}function subscribe(name){}function unsubscribe(name){}function call(method,params,callback){calls++;return calls;}}',root);
             client.topicObject=topic;
@@ -1595,7 +1667,9 @@ ShellRoot {
             topic.fresh=false;client.boot="b2";client.newBoot("b2");
             topic.data={store:"control-center",rev:0,exists:true,dirty:false,data:{tiles:["volume"]}};topic.fresh=true;
             check(projections===3&&last.tiles[0]==="volume"&&store.revision===0&&client.calls===0,"new boot replaces old revision namespace");
-        ''', publisher=True)
+        """,
+            publisher=True,
+        )
 
     def test_publisher_rejects_same_field_superseded_after_ack(self):
         result = self.qml(
