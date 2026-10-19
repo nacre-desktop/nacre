@@ -5,7 +5,7 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Ready: standard five-pair method | Luna prepares unchanged v14/source8a batch; capture after prerequisite checks/review, exclusive12h from actual start. No profiling. |
+| 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: owner swap reset | Fresh unchanged v14/source8a batch prepared; sudo-n reset failed before any arm. Await owner reset, then recheck all gates. No profiling. |
 | 2 | [N0009 installer handoff](0009-f4-switch-prerequisites.md) | In progress: Luna local implementation | Separate worktree; private checks before capture, no push/live changes; integration after green F4. |
 | 3 | [N0010 opt-in/rollback](0010-f4-managed-opt-in-and-rollback.md) | In progress: Luna local implementation | Separate worktree; coordinate N9 API, private checks before capture, no push/live changes. |
 | — | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | Source accepted; profiling stopped | Source8a correctness retained. Single-pair veto superseded by owner five-pair rule. No further investigation now. |
@@ -285,3 +285,100 @@ N9 release; worker records actualUTC/deadline, no historic peer-ACK chain.
 All other workers are local light source only; no hostedCI/build/nested overlap.
 Report source5f4 vs8a explicitly and per-phase group/component median results;
 owner-approved end-only quiet retries/max2 and threshold rule remain mandatory.
+
+## ACTIVE capture handoff — 2026-10-19 14:52 UTC
+
+CAPTURE_START14:52:01.045668UTC; deadline2026-10-20 02:52:01.045668UTC.
+Batch N0002-std-v14-20261019-145037Z, task-private controllerPID1611119.
+Standard20arms source5f4/8a, unchangedv14; no accepted results at initial check.
+Luna N2 worker owns all capture processes/lock/safety; no other heavy job/CI.
+Authorized scheduleSHA5720ffe55d4e8a645fb4a9f8697f6b3e6d7cc90083232bef0e44413ee9bb5018;
+bindings b569ca0e3f312aa6fcb4558e030f186b4849912fc126c3f5af9bd0e58402de07;
+outerdriver d7f01656e2d795afef5899792b173770ea7bee0e88f52eb06566b688005fa57a;
+classifier ea66e7ac2e6c73413ed1bff5ef16617a44eb10b2fc581fc4beb6ca1124dea622;
+reportparser e3cde2da1d66d3bd44da4fcd5cbf9c4c156be7395ad4392bc0b3013c30935336.
+These outer schedule/retry/report adapters do not change frozen samplers.
+Original/invalid arm evidence is retained; only permitted quiet-only retry at
+end/max2 applies. No source integration before all results and lead decision.
+
+Light workers: N9 installer release hooks in separate local worktree; B15 daemon
+audio view source review/fixes. Neither may access lab/startCI/build/capture.
+N10 checkpoint is safe unavailable controller + regular-file recovery primitives,
+NOT complete enable/rollback. Preserve all local source and tests until review.
+If lead restarts, read actual N2 ledger and obtain worker ownership handoff; never
+start a duplicate capture or kill another worker’s processes. No more profiling.
+
+### First-arm quiet rejection and continuation review — 15:12 UTC
+
+First niri-r1-A ran824.58s and is INVALID: whole-wrapper host swap-in
+exceeded1MiB. No accepted arms; raw results are diagnostic only. Guardian
+released=true, rc1,12GiB/swap0 and clean finalACK/OOM0; controller/scope/lock
+released. The outer retry classifier incorrectly rejected the expected
+RuntimeError:payload failed abort reason for the exact quiet-only payload exit.
+Local classifier checkpoint4ab7d7dc fixes only this narrow classification;
+coordinator mock independently PASS. Frozen v14 method remains unchanged.
+Continuation adapter is under local source/mock review, NOT yet launched:
+retain original ledger/raw arm, start next unattempted niri-r1-B and defer A
+retry to batch end. Original A consumes one of max2 distinct quiet retries.
+Original deadline02:52:01UTC remains; no other heavy work is eligible meanwhile.
+N9 release-hook checkpointa4ce3368 has22 focused Python checks PASS; broader
+barrier/security acceptance remains unverified. No N9/N10 product integration.
+
+Continuation approved after root mock/source review at checkpoint91036a6d.
+Actual continuation start2026-10-19T15:17:46.972UTC, same02:52:01UTC deadline.
+Ledger N0002-std-v14-20261019-145037Z-continuation-2f31f17f7bfa838f.json
+in original private batch directory. Session
+n0002-standard-v14-continuation-20261019-151724Z; first arm niri-r1-B.
+Original A failure/evidence/ledger unchanged; seeded retry consumes1/2 slots.
+Classifier26d0ef02a041f412efd9c87a205cf76d39c6bebbebf79945517294b023a9d1f8;
+continuation079bcca92a965dbd044006b2b49ee37461dae4f8411b1f4c8e70128fd83e203d.
+Frozen v14 method/geometry/guardian/source/helper identities unchanged.
+
+Continuation r1-B also INVALID for quiet-only whole-wrapper swap-in:
+inner3,846,144B/outer4,067,328B; phase quiet checks otherwise passed, clean
+finalACK/12GiB/swap0/OOM0. No accepted arms. Both r1 A/B are deferred at end,
+using2/2 distinct quiet retries. niri-r2-A active next; any third distinct quiet
+failure stops without retry or a gate change. Diagnostic PSS is not acceptance.
+N9 additional local checkpoint3b747e4f extends refusal/nested-lease tests; focused
+Python checks pass, native daemon startup/cross-endpoint barriers still pending.
+
+### N2 terminal stop / N9 correctness handoff — 2026-10-19
+
+Third distinct quiet failure niri-r2-A stops continuation. Zero accepted arms,
+zero retries executed. Outer swap-in A1=15,962,112B, B1=4,067,328B,
+A2=1,789,952B; all exceed strict1MiB. No F4 memory-budget conclusion.
+A2 finalACK clean except expected quiet rc1,12GiB/swap0/OOM0; controller,
+scopes absent and lockfree. Preserve allraw/ledgers; no new capture grant.
+N9 exact local checkpointbf328db4 now owns sole correctness-heavy slot,90min
+maximum after START: verified6GiB/swap0 heldchild,10GiB-start/2GiB-abort;
+focused native startup/barrier tests+helperClippy/fmt and privatePython only.
+No fullsuite/release/hostedCI/live/capture. Record actual workerSTART/result.
+
+Owner fresh N2 authorization after N9 heavy release: same standard20arm5f4/8a
+v14, reset quiet-only allowance2; batch/eacharm must see swapused<64MiB.
+Scoped owner swapoff/swapon exception only noheavyjobs and available>swap+8GiB,
+record free-h beforeafter; failedcondition/sudo unavailable stops for owner.
+Outer source/mock prep is light only now; no reset/capture before N9DONE.
+
+N9 focused desktop slot DONE/RELEASED at source8ed20957f02af870b9ad7fb410339e0203091d71,
+clean tree6003c687d9277ddc79cfac399815adbe755cd89a. Rustfmt,lease/settings/pinned
+regressions,normal/activated startup and native-vs-Python barriers,Clippy and
+33 focusedPython checks PASS; broader N9 AC remain unverified.6GiB/swap0
+same-child evidence/OOM0/scopesinactive/lockfree; failedfmt/socketassert retained.
+Fresh N2 guard root-review PASS: guardbf2ff17fd34f692940f30d248baa5653e53941939d61ff96eb9cb0ee833a588c,
+runner0dcb15db554f18ff886d103a8d0c6af2baa5242428f430ea4a5b388b932c4541;
+originalschedulerd7f01656 and correctedclassifier26d0ef02 unchanged. Actualrunner
+mock and directswapguard script PASS; unittest discovery found0tests, not evidence.
+Bothrepos latestCI terminal verified. Fresh N2 soleheavy12hactualstart granted;
+remote stage/preflight next, no arm until swap<64MiB and othergatesclose. If
+swapresetneeded but sudo unavailable, stop/reportowner/noarm. No secret transfer.
+
+### Restart preflight blocked — 2026-10-19 16:05 UTC
+
+Fresh swap guard verified noactiveN2/build and MemAvailable13,926,928,384B
+strictly>swapused644,202,496B+8GiB, but sudo swapoff returned1. No reset, arm,
+ledger or accepted capture. Remote swap-audit preserved in
+~/nacre-quiet/n0002-f4-restart-20261019T1610Z/swap-audit.jsonl. Launcher16:05:32
+is NOT CAPTURE_START. Worker ended; tmuxgone/lockreleased/noN2scope. Owner
+notified to run sudo swapoff-a && sudo swapon-a; waitforconfirmation/recheck,
+no automatic retry. Soleheavy reservation remains N2; no otherworker running.

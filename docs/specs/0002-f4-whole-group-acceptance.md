@@ -205,3 +205,24 @@ settings residency (not unexplained other helpers), with tracked follow-up spec.
 Group>8 or QML>2 stops/report; only then resume buffer investigation. Equality5
 uses explained-cost branch. No single-pair5MiB veto. Lead reviews before F4
 integration, exact-head CI required; no release/live switch granted.
+
+### Actual capture start
+
+Started2026-10-19 14:52:01.045668UTC, exclusive until2026-10-20 02:52:01.045668UTC.
+Batch N0002-std-v14-20261019-145037Z, unchanged source8a/baseline5f4 bindings.
+All peers heavy-IDLE confirmed by coordinator, no historic ACK hold. N9 focused
+checks released, N10 current checkpoint38lightchecks complete, remaining switch
+source work may continue without heavy overlap. No acceptance claim yet.
+
+## Owner fresh-batch swap exception — 2026-10-19
+
+After N9 correctness releases sole heavy slot, start fresh standard5 alternating
+A/B pairs per compositor,8a vs5f4, unchangedv14/gates, fresh output/ledger and
+2 distinct quiet-only end retries maximum. Third quiet failure stops.
+Before batch and EVERY primary/retry arm require host swap used<64MiB.
+Batch-only exception: when swapused>=64MiB, no arm/build/CI is running, and
+MemAvailable strictly>swapused+8GiB, owner permits
+`sudo swapoff -a && sudo swapon -a`. Log before/after `free -h`; recheck swap
+under64MiB before release. If unavailable sudo/failed conditions/reset failure,
+stop and report owner; no fallback. No cache drops/sysctl/other host changes.
+Keep method/geometry/quiet thresholds and scope/host-memory guards unchanged.
