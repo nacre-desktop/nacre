@@ -28,6 +28,7 @@ impl Drop for Process {
 struct PythonLease {
     child: Child,
     input: Option<ChildStdin>,
+    output: Option<BufReader<ChildStdout>>,
 }
 impl Drop for PythonLease {
     fn drop(&mut self) {
@@ -47,7 +48,7 @@ with writer_lease(Path(sys.argv[2])):
     print("HELD", flush=True)
     sys.stdin.readline()
 "#;
-    let mut child = Command::new("python3")
+    let child = Command::new("python3")
         .arg("-c")
         .arg(script)
         .arg(tools)
@@ -56,18 +57,43 @@ with writer_lease(Path(sys.argv[2])):
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()?;
-    let input = child.stdin.take().ok_or("Missing Python lease stdin")?;
-    let stdout = child.stdout.take().ok_or("Missing Python lease stdout")?;
-    let mut output = BufReader::new(stdout);
+    let mut lease = PythonLease {
+        child,
+        input: None,
+        output: None,
+    };
+    lease.input = Some(
+        lease
+            .child
+            .stdin
+            .take()
+            .ok_or("Missing Python lease stdin")?,
+    );
+    lease.output = Some(BufReader::new(
+        lease
+            .child
+            .stdout
+            .take()
+            .ok_or("Missing Python lease stdout")?,
+    ));
+    let output = lease.output.as_mut().ok_or("Missing Python lease stdout")?;
+    let mut descriptors = [rustix::event::PollFd::new(
+        output.get_ref(),
+        rustix::event::PollFlags::IN,
+    )];
+    let timeout = rustix::event::Timespec {
+        tv_sec: 5,
+        tv_nsec: 0,
+    };
+    if rustix::event::poll(&mut descriptors, Some(&timeout))? == 0 {
+        return Err("Python lease barrier timed out".into());
+    }
     let mut ready = String::new();
     output.read_line(&mut ready)?;
     if ready.trim() != "HELD" {
         return Err("Python lease barrier did not become ready".into());
     }
-    Ok(PythonLease {
-        child,
-        input: Some(input),
-    })
+    Ok(lease)
 }
 struct Wallet;
 #[zbus::interface(name = "org.freedesktop.Secret.Collection")]
@@ -1445,19 +1471,54 @@ fn python_writer_lease_blocks_normal_daemon_startup_for_each_endpoint() -> Resul
     let home = tempfile::tempdir()?;
     fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
     let config = home.path().join("config/nacre");
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let baseline_folder = home.path().join("baseline");
+    fs::create_dir(&baseline_folder)?;
+    fs::set_permissions(&baseline_folder, fs::Permissions::from_mode(0o700))?;
+    let baseline_endpoint = baseline_folder.join("daemon.sock");
+    let ready_path = home.path().join("baseline-ready.sock");
+    let ready = UnixDatagram::bind(&ready_path)?;
+    ready.set_read_timeout(Some(Duration::from_secs(10)))?;
+    let mut baseline = Process(
+        command(home.path(), &source_path, &baseline_endpoint)
+            .arg("daemon")
+            .env("NOTIFY_SOCKET", &ready_path)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    let mut ready_message = [0; 256];
+    let ready_size = ready.recv(&mut ready_message)?;
+    assert!(std::str::from_utf8(&ready_message[..ready_size])?.contains("READY=1"));
+    assert!(status(home.path(), &source_path, &baseline_endpoint).is_ok());
+    nix::sys::signal::kill(
+        nix::unistd::Pid::from_raw(baseline.0.id() as i32),
+        nix::sys::signal::Signal::SIGTERM,
+    )?;
+    assert!(baseline
+        .0
+        .wait_timeout(Duration::from_secs(5))?
+        .ok_or("Unleased daemon did not stop")?
+        .success());
+
     let _python = hold_python_lease(&config)?;
     let lock = config.join(".writer.lock");
     let before = fs::metadata(&lock)?;
-    let source = home.path().join("unused-niri.sock");
     for name in ["first", "second"] {
         let folder = home.path().join(name);
         fs::create_dir(&folder)?;
         fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
         let endpoint = folder.join("daemon.sock");
-        let output = command(home.path(), &source, &endpoint)
+        let output = command(home.path(), &source_path, &endpoint)
             .arg("daemon")
             .output()?;
         assert!(!output.status.success());
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("Nacre destination busy or unsafe"),
+            "startup failed for an unrelated reason: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         assert!(!endpoint.exists(), "busy startup created its endpoint");
         let after = fs::metadata(&lock)?;
         assert_eq!((before.dev(), before.ino()), (after.dev(), after.ino()));
@@ -1485,6 +1546,7 @@ fn python_writer_lease_blocks_activated_daemon_before_service_publication() -> R
     fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
     let endpoint = folder.join("daemon.sock");
     let source = home.path().join("unused-niri.sock");
+    let activation_log = home.path().join("activation.log");
     let changes = rustix::fs::inotify::init(rustix::fs::inotify::CreateFlags::CLOEXEC)?;
     rustix::fs::inotify::add_watch(&changes, &folder, rustix::fs::inotify::WatchFlags::CREATE)?;
     let mut activate = Command::new(activator);
@@ -1502,7 +1564,7 @@ fn python_writer_lease_blocks_activated_daemon_before_service_publication() -> R
         .arg(env!("CARGO_BIN_EXE_nacre-helper"))
         .arg("daemon")
         .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stderr(fs::File::create(&activation_log)?);
     let mut daemon = Process(activate.spawn()?);
     let mut descriptors = [rustix::event::PollFd::new(
         &changes,
@@ -1520,10 +1582,16 @@ fn python_writer_lease_blocks_activated_daemon_before_service_publication() -> R
     client.set_read_timeout(Some(Duration::from_secs(5)))?;
     let mut response = [0];
     assert_eq!(client.read(&mut response)?, 0, "busy daemon published a service");
+    assert!(
+        fs::read_to_string(&activation_log)?.contains("Nacre destination busy or unsafe"),
+        "activated daemon failed for an unrelated reason"
+    );
     let after = fs::metadata(&lock)?;
     assert_eq!((before.dev(), before.ino()), (after.dev(), after.ino()));
-    daemon.0.kill()?;
-    daemon.0.wait()?;
+    if daemon.0.try_wait()?.is_none() {
+        daemon.0.kill()?;
+        daemon.0.wait()?;
+    }
     Ok(())
 }
 
@@ -1539,17 +1607,22 @@ fn native_writer_lease_blocks_python_profile_install_without_replacing_files() -
     let lock = config.join(".writer.lock");
     let before_lock = fs::metadata(&lock)?;
     let profile = config.join("profile.json");
-    let original = br#"{"external":"keep"}"#;
+    let original = br#"{"version":1,"id":"existing"}"#;
     fs::write(&profile, original)?;
     let before_profile = fs::metadata(&profile)?;
     let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
     let script = r#"
-import runpy
+import importlib.util
 import sys
 from pathlib import Path
 tools, home = Path(sys.argv[1]), Path(sys.argv[2])
 sys.path.insert(0, str(tools))
-runpy.run_path(str(tools / "profile-policy.py"))["install"](home)
+spec = importlib.util.spec_from_file_location("profile_policy", tools / "profile-policy.py")
+profile = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(profile)
+profile.selected = lambda: dict(profile.DEFAULT)
+profile.lua = lambda value: "-- controlled fixture\n"
+profile.install(home)
 "#;
     let output = Command::new("python3")
         .arg("-c")
@@ -1558,6 +1631,11 @@ runpy.run_path(str(tools / "profile-policy.py"))["install"](home)
         .arg(home.path())
         .output()?;
     assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("Nacre destination busy or unsafe"),
+        "installer failed for an unrelated reason: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let after_profile = fs::metadata(&profile)?;
     assert_eq!(fs::read(&profile)?, original);
     assert_eq!(
