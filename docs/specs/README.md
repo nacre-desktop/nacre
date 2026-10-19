@@ -5,7 +5,7 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Fresh bindings ACCEPT; Niri-only capture granted09:00–11:00UTC. Hyprland/full-eight require separate grant. |
+| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol source-only residual diagnosis. |
 | 2 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: product correction | Both v14 geometry checks passed; only Niri A/B valid. H baseline failed whole-wrapper swap-in; no eight-run PASS. |
 | 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Corrected plan retained; F4/package readiness, exclusive installer handoff and managed persistent opt-in/rollback missing. No live action. |
 | — | [N0009 exclusive destination writer handoff](0009-f4-switch-prerequisites.md) | Blocked: after green F4 | Draft design reviewed; no implementation/live grant. |
@@ -31,24 +31,26 @@ SourceCI39136680743SUCCESS. No rebuild withoutcause.
 
 ## Ownership and next units
 
-**N0007 source8a ready for a fresh quick screen.** Earlier source0df Niri
-A/B validators passed, but memory screen failed +13.413/+15.101/+11.047MiB;
-Hyprland never ran. Owner installed ONLY wayland-utils on the desktop at08:08:50UTC
-during B warmup; preserve the installation caveat, not a clean causal regression
-claim. No other packages changed. Desktop prerequisite is now resolved.
+**N0007 source8a Niri pair STOP/RELEASED09:28UTC.** Both cells passed geometry,
+quiet and containment; whole-group medians fresh/closed/after A541.409/573.119/581.385,
+B547.165/579.240/581.873MiB, deltas+5.756/+6.121/+0.488. QML A495.099/520.727/530.434,
+B496.172/529.528/529.334. Standing memory screen FAIL: no Hyprland/full-eight,
+no retry, F4 unpublished. Source8a remains correctness-accepted (21 local+2 wire).
+Phase favorites12, closed visible12, normalized final six configs/catalog match;
+early B geometry favorites0 vs A12 recovered later, startup readiness UNKNOWN.
+Wrapper swap-in A4096/B20480B, SwapPss0; no OOM, cleanup18 exact identities,
+both cgroups/tmux gone, lock free. Evidence archive940f5f88c57c947fab2c1c20a3c3f4ebac50621325c6ba52ccacd13dfd319a35.
 
-Source8a1df35c shares stateless JS imports, avoids duplicate store initialization
-reads and rejects stale callbacks across daemon boots. Independent source review
-ACCEPT;21 local and2 exact-helper wire checks PASS. Rust/protocol unchanged;
-existing helper439 reused, no rebuild. Native-wire scope released after checks;
-memory effect remains UNKNOWN. Bead focused correctness cdd9fb2 completed and
-released08:39UTC; no other heavy worker is authorized. Fresh source8a quick
-bindings independently ACCEPTED. Sole heavy lab grant09:00–11:00UTC Oct19:
-Niri A/B entry ONLY, staging allowed before09:00. Worker sol_n7_quick_capture
-uses manifest24c9b631 / inventory6f117c58, baseline5f4/helper4a65 versus
-source8a/helper439 at unchanged1382 artifact path. All other workers released;
-no build/CI overlap. Separate Hyprland resume grant after Niri review; no full-eight.
-Stop at invalid quiet/geometry/input gates or out-of-budget growth, no retry.
+One Sol is assigned source-only residual diagnosis, matched phase evidence first,
+no product change before supported proposal; no runtime probes or capture grant.
+The Niri pair used frozen v14 unchanged and both arms after owner-installed
+ONLY wayland-utils08:08:50UTC. Earlier source0df failed quick +13.413/+15.101/+11.047;
+retain its installation-during-B caveat and archive, no cross-pair causal claim.
+Bead owns the sole hosted-heavy CI slot for reviewed Wi-Fi integration after
+Niri release; no lab job. Nacre local integration b003aa8f structurally ACCEPTED,
+contains exact8a plus preserved current-main terminal/collector/docs changes;
+no source publication until memory gates and exact-head CI. Old merge d362 remains
+preserved and superseded for prospective integration only.
 
 V14 previously proved both screen profiles; Niri deltas
 +7.343/+10.530/−3.520MiB at correct geometry. H baseline failed swap-in

@@ -179,3 +179,22 @@ Require exact source, geometry, seeded-input parity and existing scope/quiet
 checks. Lead reviews per-phase group/QML results and unknowns after cleanup.
 If whole-group increase>=5MiB, unexplained anonymous growth>1MiB or other
 standing-rule failure: STOP. Hyprland needs separate explicit resume grant.
+
+## Source8a quick result — STOP 2026-10-19 09:28 UTC
+
+Both Niri cells valid. Fresh/closed/after whole-group MiB A541.409/573.119/581.385,
+B547.165/579.240/581.873: +5.756/+6.121/+0.488 blocks H/full-eight. QML phase
+medians A495.099/520.727/530.434, B496.172/529.528/529.334. Independent component
+medians are not additive to group medians. Existing mapping endpoints are not
+phase medians; no causal explanation inferred. Phase favorites12 and closed
+visible12, final six configs/catalog match after exact private-path normalization.
+Early B geometry0 vs A12 recovers before measured phases; readiness remains UNKNOWN.
+Wrapper swap-in4096/20480B; SwapPss0.12GiB/swap0 scopes, no OOM; normal exit,
+all owned identities/cgroups/tmux absent and lock free. No H/retry/full-eight.
+Archive940f5f88c57c947fab2c1c20a3c3f4ebac50621325c6ba52ccacd13dfd319a35.
+
+Next bounded assignment: same Sol source worker,60min source-only diagnosis of
+matched residual, with evidence and smallest fix proposal before code. No runtime
+probe/build/CI/capture; native scope expansion needs lead decision. Preserve all
+accepted fixes and23-case correctness evidence; no claim full acceptance. Root
+may schedule Bead hosted CI while this investigation remains local/read-only.
