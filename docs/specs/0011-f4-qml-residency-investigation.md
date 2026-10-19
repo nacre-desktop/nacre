@@ -113,3 +113,81 @@ against5f4 remain required; prospective outer orchestration is being reviewed.
 The four-hour deadline remains23:14UTC; source-only N9/N10 continue independently.
 
 Operational limitation: the focused correctness process verified its effective6GiB/swap0 cgroup, but the worker did not record the required same-held-PID parent proof before release. That launch-gate proof is UNKNOWN and this run is not claimed compliant with that operational requirement. The36/36 functional outputs remain separate. Future diagnostic must use the existing reviewed held-child guardian and retain the complete pre-release proof.
+
+### Diagnostic active — Oct19 20:00UTC
+
+Exact corrected source94866a374388cd3796a96ed2eb73a2b04d56b492, nativehelper439dd355
+unchanged, baseline5f4/helper4a65. The final focused repeat passed36/36 through
+the unchanged reviewed held-child guardian, with parent/effective12GiB/swap0,
+exactPID membership pre-release and finalACK preserved. This closes the earlier
+missing launch proof; two temporary harness final-handshake failures remain
+preserved and excluded from operational-pass claims.
+
+Fresh diagnosticN0011-diag-2pair-20261019 actualstart20:00:15.6Z; controller
+PID1750522/startticks30964700, tmuxn0011-diagnostic-2pair-20261019. Four arms
+Niri1A/B then2A/B, unchangedv14, no builds/CI overlap. Originalswapcapacity
+15569252352bytes andused0 verified beforebatch/arm1. Hardcutoff23:14Z.
+Candidate fullarchive67d5b8dff08043883b99094fb1c4360b1a1e7daaee9acbc0aee2255c94d51f64;
+manifestfa079ccd6059c510089c1c1e64e5168a96c74ea66e705fbbd9d074d74d17c946.
+No accepted-memory conclusion yet.
+
+The20:00diagnostic stopped after validA1 (hostpaging0/0) and B1 setup failure:
+an unresolved product-directory placeholder in the outer invocation reached
+unchangedv14 and caused FileNotFoundError before measurement. Neither a memory
+regression nor a quiet-only retry. Evidence preserved; no laterarms ran.
+Root-reviewed fresh outer package rejects placeholders in every selected
+primary/retry script and verifies candidate B argv. Its scheduler/static/report
+mocks passed independently. Runtime measuring/geometry/guardian remain unchanged.
+Fresh batchN0011-diag-2pair-rerun-20261019T2015Z actualstart20:19:06.9UTC,
+controller1760818/startticks31077831, tmuxn0011-diagnostic-rerun-2015.
+Allfourarms are fresh; priorA1 is not reused. Initialswapused0 andcapacityexact.
+Hardcutoff23:14UTC remains. Resultpending.
+
+Escalation rationale20:55UTC: Luna completed step(b) bounded audit without a safe persistent-copy removal; coordinator review found immutable-projection and durable-intent contracts prevent blindly removing copies. Owner explicitly permits Sol only when Luna gets stuck. One20minute Sol source-only escalation may identify a narrow safe allocation fix or conclude none; no profiling/tool changes/heavy overlap and deadline23:14UTC unchanged.
+
+## Owner superseding final-attempt decision — Oct19 ~21:00UTC
+
+Finish current2Niripairs first. If Colors optimization is worse, park it as
+evidence only and revert to original8a for next diagnostic. If it meets every
+phase's group<=8MiB/QML<=2MiB limits, proceed directly to full5pairs/compositor.
+
+Otherwise measure first: about1hour, one private correct-geometry Niri session
+each baseline5f4 and original8a, at panels-closed compare complete owned-QML
+smaps/rollup, [heap]/anonymous/shared-memfd-dmabuf/file-backed categories, exact
+private windows/layer-surface identities/sizes, QV4_MM_STATS=1 output atGC where
+available. Anonymous/kernelbacking alone does not establish JS/graphics ownership;
+retain unknowns and absent statistics. No GUIheaptrack. Fix only the category
+that grew; if unclear bisect QML commits5f4..8a with3panels-closed repeats/step.
+Smallest safe change, correctness green, no protocol/schema change, Luna first.
+Check2alternatingNiripairs, then full5pairs/compositor ifgroup<=8/QML<=2 perphase.
+
+New fix cutoff is Oct20 **03:00Europe/Oslo=01:00UTC**, superseding23:14UTC.
+If no qualifying fix by cutoff, owner pre-approves original8a as tracked F4
+memory debt using validated Niri5pair evidence: QML+4.8..8.2MiB, group+6.7..10.1.
+Then run5Hyprlandpairs on8a; accept only ifHyprlandgroupincrease<=12MiB.
+Otherwise stop/report. After acceptance integrate normally, exact-headCI, then
+N9/N10. Recorddebt/lowpriorityfollowup; laterphases may notincreaseQML beyond
+recordeddebtwithoutfix. No live action authorized. Existingempty-swap/safety
+andsoleheavy gates stay; Beadlight. Currentdiagnosticcontroller's23:14cutoff
+neednotchangebecauseits fourarms finishbeforethen.
+
+### Final Colors diagnostic outcome and category-probe grant
+
+All4fresharms accepted withhostpaging0/0 andclean12GiB/swap0 guardian, no
+retries. LocalaggregateparserhadNameErrorresultinfinalgatingfield; local-only
+repairpreservedrawreports. ReportSHA16e41937eaa6389fdbdfa729274b626ddb21f31944da54038bd2ecf2569cc03a.
+ConditionmedianB-A MiB(group/QML/daemon/other): fresh14.6865/12.1147/2.0952/.4229;
+closed15.3999/14.8291/.4346/.4165; afterlatency18.7090/15.2781/-1.1826/.4316.
+Everyphasefailsgroup<=8/QML<=2. Colors94866a37 isparkedevidence-only, not
+integrated; differingbatchbaselinesmeanthisdoesnotbyitselfproveColorsthecause.
+Rootverifiedreportarithmeticandreviewedthefourarmraw/guardmirror.
+
+N0011categoryprobe grant21:25–22:25UTC, A5f4 thenoriginal8a, separateprivate
+Niri sessions, sameQSH/usr/bin/quickshell SHA7796116aa1bf0139df37d023feba9e25ac02650eca678dc2bd4d23e1f09a045f.
+Diagnostic-onlycopiedcollectorinsertsoneexternalhookafterclosed60ssampleand
+beforenextaction; acceptancev14unchanged. QV4_MM_STATS1 plusQt6GClogging,
+completeQMLsmaps/rollup/fdinfoandprivateNiriWindows/Layers; absentstats/sizes
+remainUNKNOWN, kernelbackingisnotallocator/GPUattribution. Rootindependent9
+unitmocktests+5generatedpathassertionspassed. Ownerempty-swap/strictpaging/
+processSwapPss0/12GiBheldguard/swap0/host4Gstart2Gabort/soleheavy preserved.
+No payloadbeforeverifiedsource/binary/cgroup/memberidentity.

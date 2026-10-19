@@ -446,3 +446,21 @@ Ownworktree luna-n0011-js-fix-20261019 base8a. No protocol/schema/nativechange;
 all durableownedintent/boot/error/fallbackcorrectnessmandatory. QML<=2/group<=8
 in2pairdiagnostic requiredbeforeowner-authorizedfull5pairspercompositor.
 N9/N10local/sourcecontinue, Beadlight, nootherheavy/CI. No F4publication yet.
+
+## Current owner final-attempt decision — Oct19 ~21:00UTC (supersedes23:14 cutoff)
+
+Colors94866a37 is parked, not integrated: four valid quiet/safety-clean diagnostic
+arms gave group+14.69/+15.40/+18.71MiB andQML+12.11/+14.83/+15.28 perphase.
+Raw evidence preserved; no full acceptance qualification. Original8a remains
+candidate for final category-led attempt. N0011 Luna owns one private Niri
+session each5f4/8a atpanelsclosed: smaps/rollup/kernelbacking, ownedprivate
+surfaceinventory, QV4_MM_STATS1/availableQtGCoutput. Guard12GiB/swap0/empty-swap
+andsoleheavy remain. Current probe pair running with sharedbenchlock; no CI.
+
+Owner final fix cutoff Oct20 **03:00Oslo=01:00UTC**. If no qualifying fix, owner
+pre-approves original8a as tracked Niri memory debt, then requires five Hyprland
+pairs on8a with groupincrease<=12MiB before acceptance/integration/exact-headCI.
+Qualifying fix still requires2Niripairs(QML<=2/group<=8), then5pairs/compositor.
+No live action. N9/N10 source-only/private work continues; N10HEAD795e39be8private
+recoverytestsPASS independentlyrerun, CLIstillrefuses andswitchnotrunnable.
+N11spec contains exact evidence/source/guard/deadline. Beadlightonly.
