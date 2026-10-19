@@ -464,3 +464,48 @@ Qualifying fix still requires2Niripairs(QML<=2/group<=8), then5pairs/compositor.
 No live action. N9/N10 source-only/private work continues; N10HEAD795e39be8private
 recoverytestsPASS independentlyrerun, CLIstillrefuses andswitchnotrunnable.
 N11spec contains exact evidence/source/guard/deadline. Beadlightonly.
+
+## Handoff/current final attempt — Oct19 22:04UTC
+
+Category diagnostic5f4/8a completed withsame1QML64x48window+6layers. Explicit
+JSGCHeap:QtQml resident81,616→87,056KiB; Qtallocatedcapacity82,384,896→87,890,176B;
+liveafterGC18,399,648→18,395,264B. KernelPSSsinglepoint528,663→527,008KiB;
+otheranonymous/THPvariationoffsetstheJSdelta. Bothmapjemalloc/no[heap]; no
+blanketanon=JSormemfd=graphicsclaim. NaturalQtdebugGCobserved, literal
+QV4_MM_STATSoutputabsentdespiteenv1. Onepairdiagnosticonly, notacceptance.
+Fullmirrors underprivatevalidation/n0011-residency-probe-prep-20261019/remote-evidence.
+
+Final narrow fix **67e0ef0ccd6b094d05b0ad78824d8d7d296ab749**, ownworktree
+`luna-n0011-statefile-object-20261019`, baseORIGINAL8a, clean. Default-off
+NacreStateFileobjectprojectionusedonlyControlPreferences+DashboardStateextras;
+normalizeownedarrays/scalars, defaulttext/BatteryAlertsunchanged. No native/schema/
+protocolchange/noColors. Local5testsPASS; desktop35daemon+5consumerQtPASS0skip;
+3productionQMLformatmatches. Rootreviewedactual40testlogs andunchangedguardian
+latestpre-releaseparent/effective12GiB/swap0/PIDproof, parentfinal0events,
+finalACKsamePIDticksrc0/done. Summarywriterargbugpreserved; no functionaltestfailure.
+Post-stopmissingcg rereadnotclaimedpass. TestsDONE/IDLE/RELEASED, benchlockfree.
+
+**N2worker /root/luna_n2_colors_diagnostic_prep owns soleheavy grant NOW22:04:24Z
+throughOct20 01:00:00Z** forfreshNiriN1A/B,N2A/B, baseline5f4/helper4a65,
+B67e/helper439unchanged; exactOrient3efe andQSH7796116a...045f. Package:
+`~/.cache/nacre/rust-migration-validation/n0011-niri-generic-2pair-prospective-20261019T2202Z`.
+Rootindependentstatic/runner/rawreportmocksPASS. Fullsourceoverlaybase5f4→67e
+86files+1deletion; manifestdbdd76be285100e5252a605f78e78cc2f6a3a370a71863d752d82e008277ce6c,
+tar2ea51a9d5aec9b8f801052b863ba36de1c7e8dcc1fe48190bb77d3a3d144a80f.
+Standardv14runtimeunchanged/noGCdebugshims;12GiBheldguard/swap0/start4G/abort2G,
+originalSwapTotal15569252352B/used<64MiBbeforeeacharm, strictwholearmpswpin<1MiB,
+processSwapPss0. Quiet-onlyretryonceatendmax2;third/otherfailurestops.
+NeedallphaseconditionmedianQML<=2/group<=8 beforefull5pairsBOTHcompositors.
+Nootherheavy/CI; Beadlight. AwaitactualSTART/PIDfromworker, then4armterminalreport.
+
+Ifnoqualifyingfinalfixby03:00Oslo/01:00UTC, ownerpreapprovedORIGINAL8aNiri
+memorydebtusing5pairreport226ec4...e9, then5Hyprpairs≤12MiBgroup everyphase.
+UnarmedpreparedHyprfallback:
+`~/.cache/nacre/rust-migration-validation/n0011-fallback-hypr-5pair-20261020T0100Z`,
+prospective01–05UTC. RootMUSTreview/explicitgrantbeforetransfer/payload.
+NeverintegrateColors94866a37; parkedfourarmfailedmemoryevidenceonly.
+AfteracceptanceintegrateF4/exactheadCI thenN9/N10; no live switchapproval.
+N10localHEADecaf0500 readonlystatus/recoveryprototype30switchtests+8recovery
+PASS(rootindependentlyrerun), productionmutatorsstillrefuse/fullACnotDone.
+N9local6f048e60 leasehooks/readlink/focusedchecksretainpreviouslimits; notDone.
+Allstate localcommits; no productpush/package/install/liveunitactionauthorized.
