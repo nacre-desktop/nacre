@@ -198,3 +198,30 @@ matched residual, with evidence and smallest fix proposal before code. No runtim
 probe/build/CI/capture; native scope expansion needs lead decision. Preserve all
 accepted fixes and23-case correctness evidence; no claim full acceptance. Root
 may schedule Bead hosted CI while this investigation remains local/read-only.
+
+## Residual diagnosis and diagnostic-preparation boundary
+
+Sol source review and one bounded Astra low read-only escalation found no
+supported small residual fix. Astra was used only after Sol could not identify
+cause following accepted source correction plus a fresh valid failed screen.
+No product edits, host probes or new acceptance runs by either investigator.
+Closed QML private-memory drops appear in USS/RSS as well as PSS, with no sampled
+process-set change; medians20–30s and30–40s still show excess. Native fresh cost
+is separate. Saved mappings/endpoints cannot establish object/GC/allocator/render
+causation. Source8a remains clean and all speculative tuning is rejected.
+
+Installed QML profiler is not a safe route here: Quickshell0.3.2 calls Qt debug
+server without a hostname, which listens on all interfaces; supported CLI has
+no host option. Do not start it, change firewall or invent an environment bypass.
+Sources: [Quickshell launch](https://github.com/quickshell-mirror/quickshell/blob/v0.3.2/src/launch/launch.cpp#L275-L279),
+[Qt debug server](https://doc.qt.io/qt-6/qqmldebuggingenabler.html#startTcpDebugServer).
+
+Lead authorizes SOURCE PREPARATION ONLY of a private logging/owned-memory diagnostic:
+identical Qt GC log rules on both arms, pinned owned QML/daemon rollups, no debug
+listener, forced GC, tuning, install, protocol/data changes or collector rewrite.
+Frozen v14 modules remain byte-identical and acceptance blocked. Profiled values
+would be diagnostic only, never substitute for an acceptance arm. Independent
+review requires exact launch/probe pass-through, executed identity/descendant
+checks, bounded observer progress and startup evidence, exact owned cleanup and
+meaningful failure mocks. Initial draft failed that review and is on one bounded
+source-only correction pass. No runtime/profiler slot is granted by this note.
