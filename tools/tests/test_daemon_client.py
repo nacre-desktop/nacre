@@ -219,12 +219,14 @@ QtObject {
  property string boot:"one"
  property var streams:({})
  property var calls:[]
+ property var cancellations:[]
  signal newBoot(string id)
  property Component factory: Component {QtObject {property var data:({});property bool fresh:false;property int users:0}}
  function topic(name){if(!streams[name])streams[name]=factory.createObject(client);return streams[name]}
  function subscribe(name){topic(name).users++}
  function unsubscribe(name){topic(name).users--}
  function call(method,params,callback){calls=[...calls,{method:method,params:params,callback:callback}];return calls.length}
+ function cancel(id){cancellations=[...cancellations,id]}
 }""")
             if compositor:
                 folder = services / "compositor"
@@ -1573,6 +1575,81 @@ ShellRoot {
         """,
             settings=True,
             storage_client=True,
+        )
+
+    def test_storage_old_boot_read_callback_cannot_replace_revision_zero_or_new_request(
+        self,
+    ):
+        self.qml(
+            r"""
+            const client=FixtureClient,storage=NacreSettingsStorage;
+            const power=client.topic("settings.store.power");
+            power.data={store:"power",rev:6,exists:true,data:{enabled:false},dirty:false};power.fresh=true;
+            storage.request("power");const old=client.calls[0].callback;
+            power.fresh=false;client.boot="two";client.newBoot("two");
+            const disconnectedError=storage.errors.power;
+            old({store:"power",rev:7,exists:true,data:{enabled:false},dirty:false},null);
+            check(storage.revisions.power===undefined&&storage.errors.power===disconnectedError&&!storage.daemonBusy,"old boot read changes no current state or error");
+            power.data={store:"power",rev:0,exists:true,data:{enabled:true},dirty:false};power.fresh=true;
+            check(storage.revisions.power===0&&storage.documents.power.enabled&&storage.errors.power==="","fresh lower revision remains admissible");
+            storage.request("power");const current=client.calls[1].callback;
+            old(null,{message:"stale failure"});
+            check(storage.daemonBusy&&storage.errors.power===""&&storage.revisions.power===0,"late callback cannot release new request or replace its metadata");
+            current({store:"power",rev:0,exists:true,data:{enabled:true},dirty:false},null);
+            check(!storage.daemonBusy&&storage.queue.length===0,"only current request owns completion");
+        """,
+            settings=True,
+            storage_client=True,
+        )
+
+    def test_storage_old_boot_mutation_callback_never_replays_or_completes_new_write(
+        self,
+    ):
+        self.qml(
+            r"""
+            const client=FixtureClient,storage=NacreSettingsStorage;
+            const power=client.topic("settings.store.power");
+            power.data={store:"power",rev:6,exists:true,data:{enabled:false},dirty:false};power.fresh=true;
+            storage.request("power",["enabled"],true);const old=client.calls[0].callback;
+            check(client.calls[0].method==="settings.set"&&storage.queue.length===0,"first mutation dispatched once");
+            power.fresh=false;client.boot="two";client.newBoot("two");
+            power.data={store:"power",rev:0,exists:true,data:{enabled:true},dirty:false};power.fresh=true;
+            old({store:"power",rev:7,exists:true,data:{enabled:false},dirty:true},null);
+            check(storage.revisions.power===0&&storage.documents.power.enabled&&client.calls.length===1,"late dispatched reply cannot replace new state or replay write");
+            storage.request("power",["enabled"],false);const current=client.calls[1].callback;
+            old(null,{message:"old failure"});
+            check(storage.daemonBusy&&storage.errors.power===""&&client.calls[1].params.rev===0,"old reply cannot complete or fail the new write");
+            current({store:"power",rev:1,exists:true,data:{enabled:false},dirty:false},null);
+            check(storage.revisions.power===1&&!storage.documents.power.enabled&&!storage.daemonBusy,"new write owns its own completion");
+        """,
+            settings=True,
+            storage_client=True,
+        )
+
+    def test_storage_old_revision_read_cannot_dispatch_its_intent_or_remove_new_queue_owner(
+        self,
+    ):
+        self.qml(
+            r"""
+            const client=FixtureClient,storage=NacreSettingsStorage;
+            storage.request("dashboard",["lyrics"],false);const old=client.calls[0].callback;
+            storage.request("power",["enabled"],true);
+            client.boot="two";client.newBoot("two");
+            check(client.calls.length===2&&client.calls[1].params.store==="power"&&storage.queue.length===1,"new queued intent survives old revision-read invalidation");
+            old({store:"dashboard",rev:7,exists:true,data:{lyrics:true},dirty:false},null);
+            check(client.calls.length===2&&storage.queue.length===1&&storage.queue[0].id==="power"&&storage.revisions.dashboard===undefined,"old callback cannot populate stale revision or own the new queue item");
+            client.calls[1].callback({store:"power",rev:0,exists:true,data:{enabled:false},dirty:false},null);
+            Qt.callLater(()=>{
+                check(client.calls.length===3&&client.calls[2].method==="settings.set"&&client.calls[2].params.store==="power"&&client.calls[2].params.rev===0,"only the new queued intent dispatches with current revision");
+                old(null,{message:"old read failure"});
+                check(storage.daemonBusy&&storage.queue.length===0,"old read cannot release current mutation ownership");
+                client.calls[2].callback({store:"power",rev:1,exists:true,data:{enabled:true},dirty:false},null);
+                finish();
+            });
+        """,
+            settings=True,
+            storage_client=True,
+            asynchronous=True,
         )
 
     def test_storage_unwatched_mutation_reads_revision_once_without_replay(self):

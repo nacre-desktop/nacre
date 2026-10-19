@@ -14,6 +14,8 @@ Singleton {
     property var queue: []
     readonly property bool daemonMode: NacreDaemon.enabled
     property bool daemonBusy: false
+    property int connectionGeneration: 0
+    property var activeRequest: null
     property var revisions: ({})
     readonly property var watchedIds: !daemonMode ? [] : NacrePanelState.settingsVisible ? ids : ["power"]
     readonly property var registry: JSON.parse(registryFile.text()).files
@@ -57,7 +59,19 @@ Singleton {
                 value: change.value,
                 rev: revisions[change.id]
             };
-            NacreDaemon.call(method, params, (result, failure) => {
+            const context = {
+                client: NacreDaemon,
+                generation: connectionGeneration,
+                boot: NacreDaemon.boot,
+                change: change,
+                needRevision: needRevision,
+                callId: 0
+            };
+            activeRequest = context;
+            context.callId = context.client.call(method, params, (result, failure) => {
+                if (activeRequest !== context || context.client !== NacreDaemon || context.generation !== connectionGeneration || context.boot !== NacreDaemon.boot)
+                    return;
+                activeRequest = null;
                 if (failure) {
                     errors = Object.assign({}, errors, {
                         [change.id]: failure.message
@@ -78,6 +92,20 @@ Singleton {
             worker.command = [NacrePaths.helperBinary, "state-file", worker.change.key === null ? "load-id" : "set-id", worker.change.id];
             worker.running = true;
         }
+    }
+    function invalidateDaemonRequest() {
+        const context = activeRequest;
+        if (!context)
+            return;
+        activeRequest = null;
+        daemonBusy = false;
+        if (context.needRevision)
+            queue = queue.filter(item => item !== context.change);
+        errors = Object.assign({}, errors, {
+            [context.change.id]: context.needRevision || context.change.key === null ? "Connection changed before settings were read" : "Connection changed; the settings action may already have completed"
+        });
+        if (context.callId && context.client.cancel)
+            context.client.cancel(context.callId);
     }
     function acceptDaemon(id, snapshot) {
         if (!snapshot || snapshot.store !== id || !snapshot.data)
@@ -110,14 +138,22 @@ Singleton {
         next();
     }
     onWatchedIdsChanged: refreshDaemon()
+    onDaemonModeChanged: {
+        connectionGeneration++;
+        invalidateDaemonRequest();
+    }
     Connections {
         target: NacreDaemon
         function onConnectedChanged() {
+            root.connectionGeneration++;
+            root.invalidateDaemonRequest();
             if (!NacreDaemon.connected)
                 root.revisions = ({});
             root.refreshDaemon();
         }
         function onNewBoot() {
+            root.connectionGeneration++;
+            root.invalidateDaemonRequest();
             root.revisions = ({});
             root.refreshDaemon();
         }
