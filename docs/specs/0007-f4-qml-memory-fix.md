@@ -225,3 +225,26 @@ review requires exact launch/probe pass-through, executed identity/descendant
 checks, bounded observer progress and startup evidence, exact owned cleanup and
 meaningful failure mocks. Initial draft failed that review and is on one bounded
 source-only correction pass. No runtime/profiler slot is granted by this note.
+
+## Logging-only diagnostic gated grant — 2026-10-19 10:00–10:50 UTC
+
+Private package2440a5cfb46e475dc41fc751c1f0657a51e824d9dac642df66b8063fd5ce9fca
+independently ACCEPTED after one bounded source-fix pass; six initial review
+failures preserved,119 source pins checked. Correct health-command pass-through,
+actual executed identities/argv/descendant edges, attributable numeric GC details,
+3s sampling/90s startup/30s cleanup bounds, independent observer heartbeat and
+first-reason-preserving aborts. These are diagnostic support only; seven frozen
+acceptance modules remain unchanged. Mocks are not runtime proof.
+
+Lead assigns sole heavy private lab slot to sol_n7_quick_capture, baseline5f4/
+helper4a65 vs source8a/helper439, actual Niri geometry/fixtures unchanged. Read-only
+preflight/staging allowed before10:00. Before payload, verify/review installed
+Quickshell digest/options/Qt versions and supervisor environment preservation;
+no listener/profiler install/build/source patch. Fresh private artifacts/output.
+Strict90s real startup gate must pass or stop UNKNOWN, not retry/repair. If it
+passes, only one sequential diagnostic pair with600s+three60s each, normal owned
+cleanup; no H/full-eight. Existing held-child12GiB/swap0/independentguardian,
+host>=4GiB start/<2GiB abort, strict paging/SwapPss gates remain. No other heavy
+job/CI may overlap. GC/rollup/logging overhead makes all output DIAGNOSTIC ONLY;
+existing report.accepted filenames denote structural validity, never landing.
+Grant no forcedGC, allocator/render tuning, data reduction or acceptance waiver.

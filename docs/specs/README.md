@@ -5,7 +5,7 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; logging-only diagnostic source prep under review. No runtime grant. |
+| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | In progress: memory correction | Source8a independently accepted;21 local+2 wire checks pass. Source8a quick screen failed +5.756/+6.121/+0.488MiB; no H/full-eight. Sol/Astra cause unknown; reviewed logging-only diagnostic gated grant10:00–10:50UTC, no acceptance run. |
 | 2 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: product correction | Both v14 geometry checks passed; only Niri A/B valid. H baseline failed whole-wrapper swap-in; no eight-run PASS. |
 | 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Corrected plan retained; F4/package readiness, exclusive installer handoff and managed persistent opt-in/rollback missing. No live action. |
 | — | [N0009 exclusive destination writer handoff](0009-f4-switch-prerequisites.md) | Blocked: after green F4 | Draft design reviewed; no implementation/live grant. |
@@ -45,8 +45,12 @@ Sol residual review and one bounded Astra escalation found no supported fix.
 Escalation reason: Sol corrected source but could not identify residual cause from
 matched saved evidence; no speculative product change. Source8a remains clean.
 QML construction/GC/native allocation lifetimes are missing discriminators.
-Logging-only private diagnostic source prep is under review; no runtime grant,
-no acceptance rerun, no forcedGC/tuning. Full QML debugger route is rejected
+Logging-only diagnostic package2440a5cf independently ACCEPTED after one bounded
+source correction; no acceptance rerun or forcedGC/tuning. Sole heavy private
+Niri A/B diagnostic grant10:00–10:50UTC to sol_n7_quick_capture. Installed binary
+pin/options/env proof must be reviewed before payload; strict90s real GC/startup
+evidence gate, existing12GiB/swap0/guardian and quiet rules, no retry. Missing
+evidence stops UNKNOWN. Output is diagnostic only; H/full-eight remain blocked. Full QML debugger route is rejected
 because Quickshell0.3.2 exposes all interfaces with its supported debug CLI.
 The Niri pair used frozen v14 unchanged and both arms after owner-installed
 ONLY wayland-utils08:08:50UTC. Earlier source0df failed quick +13.413/+15.101/+11.047;
