@@ -125,7 +125,7 @@ per compositor, to assess the absolute standing memory budget. The old1382 pair
 is diagnostic context. No capture is armed until lead reviews those bindings and
 records a fresh exclusive window; no new measurement-tool version is allowed.
 
-## Quick-screen grant — 2026-10-19 07:10–09:10 UTC
+## Quick-screen grant — 2026-10-19 07:10–10:10 UTC
 
 Lead grants the private lab exclusively to four arms: Niri baseline/fixed, then
 Hyprland baseline/fixed. Baseline5f4/helper4a65; fixed source0df0bc14 with
@@ -138,3 +138,9 @@ outcomes must be verified before interpreting memory. All existing12GiB/swap0,
 held-child/guardian/final-ACK, host4GiB start/2GiB abort and strict whole-arm
 quiet gates apply. No build/install/live action. Bead is local light source only.
 Full-eight confirmation is separately granted only after this screen passes.
+
+Reviewed staging correction: the existing source checker pins candidate identity
+as a literal. A private copy substitutes only1382→0df (SHAab2a4225); every other
+byte/check is identical. This is source input binding, not a new measuring tool.
+The unchanged v14 method, root-level launch copies and manifest passed staged
+inventory/source checks. No arm ran during staging corrections.
