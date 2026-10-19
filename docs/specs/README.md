@@ -216,3 +216,12 @@ iterations. A had no debugger, explicit diagnostic difference, no PSS acceptance
 Conditional standard parse after all parity/drain/cleanup gates, max15min, same
 capped guardian; continuous trace coverage through phases must be verified.
 No GUI/diff/source fix/new acceptance run granted by this note.
+
+## Owner workflow update — 2026-10-19
+
+Luna handles almost all subagent work; coordinator performs final reviews. Terra
+routing removed; Sol workers only rare documented bounded escalations after Luna
+plus coordinator review is insufficient. Astra requires explicit owner direction.
+Personal lead-workflow, standing AGENTS and installed roles updated with backups.
+Existing F4 profiler worker finishes its current active assignment; ordinary
+analysis/execution/fixes thereafter go to Luna. One heavy job remains in force.

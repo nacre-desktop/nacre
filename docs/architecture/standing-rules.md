@@ -201,25 +201,31 @@ not proof from the unavailable earlier laptop journal. Retain all capture-safety
 rules. Closure supersedes incident-review activation holds; it does not waive
 containment, memory, artifact, quiet or explicit peer-pause checks.
 
-## Standing lead/worker workflow — latest owner decision2026-10-18
+## Standing lead/worker workflow — latest owner decision2026-10-19
 
-This supersedes the earlier separate visible-chat worker orchestration rule.
-For multi-step work, use the personal lead-workflow skill and BUILT-IN subagents,
-not separate terminal chats. Default lead GPT-6.1 Sol/medium; Plan high. Default
-worker Luna/medium, high for multi-file work. Read-only explorer Luna/low; Sol
-worker/reviewer medium for unclear/concurrent/risky work or a failed Luna task;
-Terra medium second opinion for high risk or low Sol allowance; Astra low only
-after Sol cannot resolve a root cause or for high-stakes decisions, one at a time.
-One clearer retry then escalate; no default xhigh/ultra. Installed role files and
-standing AGENTS guidance are local user configuration, not repository artifacts.
+This supersedes earlier model-routing and separate terminal-chat rules. Use the
+personal lead-workflow skill and BUILT-IN subagents. Sol remains coordinator;
+Luna handles almost all implementation, tests, investigation, documentation,
+fixed-procedure measurements and optional independent evidence checking. Default
+Luna medium; explorer low, high only when needed for a bounded multi-file task.
+The coordinator performs final reviews; no automatic Sol review tier.
+
+No Terra workers. Sol workers are very rare bounded escalations only after a
+clear Luna attempt plus coordinator review leaves a concrete design/correctness
+problem; record why Luna plus lead review is insufficient. A failed test alone
+is not escalation. One clearer Luna retry when useful, then narrow the task or
+have the coordinator resolve it. Astra requires a new explicit owner request.
+No default xhigh/ultra; prefer one or two useful workers over filling all slots.
+Existing workers finish their current assignments; routine follow-ups go to Luna.
+Installed agent configuration stays local, not in repository artifacts.
 
 Maximum3 concurrent subagents, isolated writer worktrees, never two writers on
 same files. Maximum ONE heavy job across workers, including hosted full CI,
 release builds, nested sessions and captures. Lead grants the heavy slot and
 reviews before integration. Preserve all existing AI permissions/authentication.
 Small units go in spawn prompts; multi-session units use concise repo specs.
-Queue notes at start/done only, batched with substantive docs changes. Built-in
-reviewer for nontrivial diffs and Terra second opinion for high-risk changes.
+Queue notes at start/done only, batched with substantive docs changes. Optional
+Luna review may supplement the coordinator; no expensive review tier by default.
 
 Existing separate implementer chats finish current specs and retire without new
 assignments; retain their work/evidence. No process killing or forced transfer.
