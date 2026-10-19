@@ -671,10 +671,11 @@ impl Service {
             let data = store.snapshot.data.clone();
             let expected = store.fingerprint;
             let lease = self.writer_lease.clone();
-            let config_dir = self.paths.config.clone();
             let result = tokio::task::spawn_blocking(move || -> Result<_> {
-                let pinned_config = path.parent() == Some(config_dir.as_path());
-                let written = if let Some(lease) = lease.as_ref().filter(|_| pinned_config) {
+                let written = if let Some(lease) = lease.as_ref() {
+                    if !lease.contains_path(&path) {
+                        return Err("Settings path is outside the leased settings roots".into());
+                    }
                     state::write_checked_pinned(lease, &path, schema, &data, expected)?;
                     state::read_document_pinned(lease, &path, schema)
                 } else {
@@ -713,7 +714,7 @@ impl Service {
                         },
                     ));
                     store.snapshot.dirty = false;
-                    tracing::error!(store = %schema.id, "Settings publication failed; original file preserved");
+                    tracing::error!(store = %schema.id, error = ?error, "Settings publication failed; original file preserved");
                 }
             }
             self.publish(store)?;
