@@ -255,15 +255,14 @@ impl WriterLease {
     }
 
     fn path_root(&self, path: &Path) -> Option<&PinnedPath> {
-        if path.parent() != Some(self.config_path.as_path())
-            && path.parent() != Some(self.state_path.as_path())
-        {
+        let parent = path.parent()?;
+        if parent != self.config_path.as_path() && parent != self.state_path.as_path() {
             return None;
         }
         self.roots
             .iter()
             .flat_map(|root| &root.paths)
-            .find(|pinned| pinned.path == path.parent().unwrap_or_default())
+            .find(|pinned| pinned.path == parent)
     }
 
     pub fn config_dir_fd(&self) -> &File {
