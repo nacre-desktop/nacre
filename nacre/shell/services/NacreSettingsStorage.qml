@@ -4,6 +4,7 @@ import QtQml.Models
 import Quickshell
 import Quickshell.Io
 import qs.utils
+import "daemon-state.js" as State
 
 Singleton {
     id: root
@@ -81,24 +82,31 @@ Singleton {
     function acceptDaemon(id, snapshot) {
         if (!snapshot || snapshot.store !== id || !snapshot.data)
             return;
-        revisions = Object.assign({}, revisions, {
-            [id]: snapshot.rev
-        });
-        documents = Object.assign({}, documents, {
-            [id]: snapshot.data
-        });
-        present = Object.assign({}, present, {
-            [id]: snapshot.exists === true
-        });
-        errors = Object.assign({}, errors, {
-            [id]: snapshot.error?.message || ""
-        });
+        if (revisions[id] !== undefined && snapshot.rev < revisions[id])
+            return;
+        if (revisions[id] !== snapshot.rev)
+            revisions = Object.assign({}, revisions, {
+                [id]: snapshot.rev
+            });
+        if (!State.equal(documents[id], snapshot.data))
+            documents = Object.assign({}, documents, {
+                [id]: State.copy(snapshot.data)
+            });
+        if (present[id] !== (snapshot.exists === true))
+            present = Object.assign({}, present, {
+                [id]: snapshot.exists === true
+            });
+        const message = snapshot.error?.message || "";
+        if (errors[id] !== message)
+            errors = Object.assign({}, errors, {
+                [id]: message
+            });
     }
     function refreshDaemon() {
         if (!daemonMode || !NacreDaemon.connected)
             return;
-        for (const id of watchedIds)
-            request(id);
+        // Subscriptions deliver full snapshots at creation and after reconnect.
+        // Only explicit reads and writes need RPC callbacks in this queue.
         next();
     }
     onWatchedIdsChanged: refreshDaemon()
@@ -127,7 +135,11 @@ Singleton {
                     root.acceptDaemon(modelData, stream.data);
                 }
             }
-            Component.onCompleted: NacreDaemon.subscribe(topicName)
+            Component.onCompleted: {
+                NacreDaemon.subscribe(topicName);
+                if (NacreDaemon.connected && stream.fresh)
+                    root.acceptDaemon(modelData, stream.data);
+            }
             Component.onDestruction: NacreDaemon.unsubscribe(topicName)
         }
     }

@@ -125,6 +125,7 @@ class DaemonClientTests(unittest.TestCase):
         publisher=False,
         launcher=False,
         render_state=False,
+        storage_client=False,
     ):
         helpers = helpers or network
         with tempfile.TemporaryDirectory(prefix="nacre-daemon-client-") as folder:
@@ -190,6 +191,25 @@ QtObject {
                 tools = root / "home/.local/share/nacre/shell/tools"
                 tools.mkdir(parents=True)
                 shutil.copy2(ROOT / "nacre/shell-tools/nacre-state-files.json", tools)
+            if storage_client:
+                storage = services / "NacreSettingsStorage.qml"
+                storage.write_text(storage.read_text().replace("NacreDaemon", "FixtureClient"))
+                (services / "FixtureClient.qml").write_text('''pragma Singleton
+import QtQuick
+QtObject {
+ id:client
+ property bool enabled:true
+ property bool connected:true
+ property string boot:"one"
+ property var streams:({})
+ property var calls:[]
+ signal newBoot(string id)
+ property Component factory: Component {QtObject {property var data:({});property bool fresh:false;property int users:0}}
+ function topic(name){if(!streams[name])streams[name]=factory.createObject(client);return streams[name]}
+ function subscribe(name){topic(name).users++}
+ function unsubscribe(name){topic(name).users--}
+ function call(method,params,callback){calls=[...calls,{method:method,params:params,callback:callback}];return calls.length}
+}''')
             if compositor:
                 folder = services / "compositor"
                 folder.mkdir()
@@ -475,9 +495,23 @@ ShellRoot {
                     request = server.read(stream)
                     if request is None:
                         break
+                    if request["t"] == "sub":
+                        for topic in request["topics"]:
+                            if not topic.startswith("settings.store."):
+                                continue
+                            store = topic.removeprefix("settings.store.")
+                            server.send(stream, {
+                                "t": "snap", "topic": topic, "seq": 0,
+                                "data": {"store": store, "rev": revisions[store],
+                                         "exists": True, "dirty": False,
+                                         "data": desktop if store == "desktop" else {"enabled": revisions[store] > 0}},
+                            })
+                        continue
                     if request["t"] != "call":
                         continue
                     method, params = request["m"], request["p"]
+                    if method == "settings.get":
+                        server.observed["get_calls"] = server.observed.get("get_calls", 0) + 1
                     if method == "settings.desktop":
                         argv = params["arguments"]
                         if argv[0] == "set":
@@ -552,6 +586,7 @@ ShellRoot {
         self.assertEqual(result["powerRevision"], 1)
         self.assertEqual(observed["desktop_writes"], 1)
         self.assertEqual(observed["power_writes"], 1)
+        self.assertEqual(observed.get("get_calls", 0), 0)
 
     def test_disconnected_call_is_refused_before_dispatch(self):
         result = self.qml(
@@ -1456,6 +1491,56 @@ ShellRoot {
             check(observed()===sparse,"normalized native snapshot preserves sparse-file frame geometry, text, colours, rim opacity and effects");
             check(NacreFrame.headerHeight===50&&NacreFrame.rounding===25&&NacreTokens.textPointSize===12,"seeded defaults resolve to expected visible geometry");
         '''.replace("DEFAULTS", json.dumps(defaults)), render_state=True)
+
+    def test_storage_subscription_lifecycle_uses_snapshots_without_implicit_reads(self):
+        self.qml(r'''
+            const client=FixtureClient;
+            const power=client.topic("settings.store.power");
+            power.data={store:"power",rev:3,exists:true,data:{enabled:true,unknown:{keep:1}},dirty:false};power.fresh=true;
+            const storage=NacreSettingsStorage;
+            check(storage.documents.power.unknown.keep===1&&storage.revisions.power===3,"late subscriber projects current cached document");
+            check(client.calls.length===0&&power.users===1,"initial subscription needs no parallel read");
+            client.connected=false;power.fresh=false;
+            client.connected=true;
+            check(storage.revisions.power===undefined&&client.calls.length===0,"reconnect does not consume retained stale revision or request read");
+            power.data={store:"power",rev:4,exists:true,data:{enabled:false},dirty:false};power.fresh=true;
+            check(storage.revisions.power===4&&!storage.documents.power.enabled,"fresh reconnect snapshot restores state");
+            power.fresh=false;client.boot="two";client.newBoot("two");
+            check(storage.revisions.power===undefined&&client.calls.length===0,"new boot waits for full snapshot");
+            power.data={store:"power",rev:0,exists:true,data:{enabled:true},dirty:false};power.fresh=true;
+            check(storage.revisions.power===0&&storage.documents.power.enabled,"new boot accepts its own revision namespace");
+            const colors=client.topic("settings.store.colors");
+            colors.data={store:"colors",rev:1,exists:true,data:{unknown:"preserved"},dirty:false};colors.fresh=true;
+            NacrePanelState.settingsVisible=true;
+            check(colors.users===1&&storage.documents.colors.unknown==="preserved"&&client.calls.length===0,"adding watched store uses its current subscribed snapshot");
+            NacrePanelState.settingsVisible=false;
+            check(colors.users===0&&power.users===1,"closing settings releases only optional subscriptions");
+        ''', settings=True, storage_client=True)
+
+    def test_storage_equal_documents_preserve_metadata_explicit_reads_and_mutation_revision(self):
+        self.qml(r'''
+            const client=FixtureClient,storage=NacreSettingsStorage;
+            const power=client.topic("settings.store.power");
+            let projections=0;storage.documentsChanged.connect(()=>projections++);
+            const document={enabled:true,unknown:{keep:1}};
+            power.data={store:"power",rev:2,exists:true,data:document,dirty:false};power.fresh=true;
+            const projected=storage.documents;
+            power.data={store:"power",rev:3,exists:false,data:{unknown:{keep:1},enabled:true},dirty:true,error:{message:"cannot persist"}};
+            check(storage.documents===projected&&projections===1,"equal document avoids rebuilding dependent models");
+            check(storage.revisions.power===3&&!storage.present.power&&storage.errors.power==="cannot persist","revision, existence and publication error remain reactive with equal data");
+            power.data={store:"power",rev:3,exists:true,data:document,dirty:false};
+            check(storage.present.power&&storage.errors.power===""&&projections===1,"clean error-free metadata clears failure independently of data");
+            storage.documents.power.unknown.keep=2;
+            check(document.unknown.keep===1,"mutable settings UI document cannot alter the shared committed topic");
+            check(storage.request("power")&&client.calls.length===1&&client.calls[0].method==="settings.get","explicit read remains one RPC");
+            power.data={store:"power",rev:4,exists:true,data:{enabled:false},dirty:false};
+            client.calls[0].callback({store:"power",rev:3,exists:true,data:document,dirty:false},null);
+            check(storage.revisions.power===4&&!storage.documents.power.enabled,"older explicit reply cannot replace newer subscribed state");
+            storage.request("power",["enabled"],true);
+            check(client.calls.length===2&&client.calls[1].method==="settings.set"&&client.calls[1].params.rev===4,"mutation uses current subscribed revision without extra read");
+            client.calls[1].callback({store:"power",rev:5,exists:true,data:{enabled:true},dirty:true,error:{message:"not durable"}},null);
+            check(storage.revisions.power===5&&storage.errors.power==="not durable","dirty mutation failure is visible and never invented as durable success");
+        ''', settings=True, storage_client=True)
 
     def test_publisher_projects_snapshot_and_reply_once_and_ignores_older_read(self):
         self.qml(r'''
