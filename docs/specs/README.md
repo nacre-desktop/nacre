@@ -5,7 +5,7 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: owner swap reset | Fresh unchanged v14/source8a batch prepared; sudo-n reset failed before any arm. Await owner reset, then recheck all gates. No profiling. |
+| 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: validated Niri memory regression | Ten Niri arms valid; five-pair group/QML medians fail owner budget. Batch stopped; partial Hyprland excluded. N0011 investigation next. |
 | 2 | [N0009 installer handoff](0009-f4-switch-prerequisites.md) | In progress: Luna local implementation | Separate worktree; private checks before capture, no push/live changes; integration after green F4. |
 | 3 | [N0010 opt-in/rollback](0010-f4-managed-opt-in-and-rollback.md) | In progress: Luna local implementation | Separate worktree; coordinate N9 API, private checks before capture, no push/live changes. |
 | — | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | Source accepted; profiling stopped | Source8a correctness retained. Single-pair veto superseded by owner five-pair rule. No further investigation now. |
@@ -382,3 +382,67 @@ ledger or accepted capture. Remote swap-audit preserved in
 is NOT CAPTURE_START. Worker ended; tmuxgone/lockreleased/noN2scope. Owner
 notified to run sudo swapoff-a && sudo swapon-a; waitforconfirmation/recheck,
 no automatic retry. Soleheavy reservation remains N2; no otherworker running.
+
+Owner requested lead run desktop reset directly. At16:39UTC, exacthost+noCI/
+build/scope+lockfree+headroom confirmed. sudo via private credentialstdin only;
+swapoff-a/swapon-a returned0 but zram was not restored by swapon-a. Lead restored
+existing/dev/zram0 with generatedunit's priority100/discard; capacity15,569,252,352B,
+used0, available~12GiB. Audits owner-swap-reset-20261019T163916Z{,-restore}.json
+in private remoteartifacts. No cache/sysctl/config change. FreshN2preflight
+reverifiedexactsource/staticpins and0/40outputs; narrow outercapacityinvariant
+is underfastmockreview beforearm, frozenv14unchanged. Laterresetneededstopfor
+lead to avoid disablingzram silently. No payload at this checkpoint.
+
+### Actual fresh N2 payload START — 2026-10-19 16:46:44 UTC
+
+Freshbatchrestart-b actuallyexecutesniri-r1-A; deadline2026-10-20 04:46:44UTC.
+Session n2-standard-v14-restart-b-r3 controller1648255, heldpayload1648318,
+scope nacre-n0002-standard-v14-restart-b-niri-r1-A-db3df6f0be7f41568f621b324d91d46f.scope.
+ProofSHA2d675a576606e70698a0abdca21e0b1be84e585d2d9400c6f26502e33b4f8006.
+Guardready/firstsample noerrors,12GiB/swap0, hostSwapTotal15,569,252,352B used0.
+Fresh20arms/quietallowance0/2, 5f4vs8a unchangedv14method. Currentpackageroot
+~/nacre-quiet/n0002-f4-restart-20261019T1646Z. Earlierrestart-a missing-inner
+attemptand malformedproof rejection preserved separately, noacceptedmeasurement.
+Outerbatchdf325d866f8266be799c9937e706dc88e5e008b72782d475a727aef744390982;
+guarde559937bc1c9ac700290dbbbc08fddc3e438551c1c4f0204ffdf3f83b097a144;
+runner0dcb15db554f18ff886d103a8d0c6af2baa5242428f430ea4a5b388b932c4541.
+No otherheavyjob/CI. Workerownscontroller/scope/lock; donotduplicateorstopforeign
+processes. Anycapacitychange/highswapstopsforlead; thirdquietstop/noextras.
+
+First freshrestart-b baseline niri-r1-A ACCEPTED at17:00:29UTC: wrapperrc0,
+acceptedreportvalid, outerpswpin/out0, all3phasewindowsvalid>=60s,
+finalACKnoerrors/OOM0. Acceptedcount1/20; candidateB began17:00:29UTC.
+Do notmisreadguardian released:true asarmcompletion: liveflagrecordsheldchild
+release; requireterminalledger/report/finalACK. No F4memorydecision beforefullbatch.
+N10 localcheckpoint62ea3863/privateengine47checksPASS; livemutatorsstilldisabled,
+package/setup/recoveryACpending. N9readlinkAPI6f048e60/root15testsPASSnotintegrated.
+
+Firstcandidate niri-r1-B ACCEPTED: outerpswpin/out0, allmandatoryfrozengatesPASS;
+count2/20, niri-r2-Aactive. Task-switch windows2/3 incompletebecause7ownedtasks
+exited: counter_valid/noerrors/durationsvalid, wholegrouptotalUNKNOWN and survivor
+LOWER_BOUND perexistingcontract, notnewgate. Firstpairdiagnostic(groupB-A MiB):
+fresh+14.759,closed+15.993,afterlatency+0.492; QML+12.055,+10.998,-2.287.
+SinglepairisNOTdecision; finishownerfivepairs/compositor withoutprofilinghunt.
+N10local9a522d3e source/fake50checksPASS; pinnedlinkauthoritativeundermask;
+realprotocolhealthnotimplemented, productionCLIrefuses, N10notDone.
+
+## Niri five-pair memory FAIL — 2026-10-19 19:10 UTC
+
+10Niri arms valid/noquietfailures. Groupconditionmedian deltas fresh+9.499,
+closed+10.098,afterlatency+6.679MiB; QML+5.643,+8.173,+4.799. Allphases fail
+ownerbudget. ReportSHA226ec4f6fd14ac7f5faa7811da68a385c74b783ea9924f983980a47f059412e9;
+rootindependent30rowrecomputePASS. N2worker directed exactownedcleanup of partial
+Hyprlandr1A; no morearms/retries/F4publication. Awaitexplicitcleanuprelease.
+N0011Ready read-only Sol escalation justified by prior Luna fixes+heap/source
+review failing to explain now-validated QMLresidencygap. No heavyprobe yet.
+N10localHEAD3694f4ec prototype/privatechecks only, actualCLIunavailable; HOMEunit
+fence/packagehelpers/recoveryintegration remain blockers, no live switch grant.
+
+OwnernewN0011fixgrant19:14UTC: LunaFIRST, Solonlyifstuck, deadline23:14UTC
+conservative4hsource+correctness+2NiriABpairs. Trylazytopics→inplacecanonical
+snapshot/noJSONroundtrips→inplacemodels. PriorSolread-onlycompletedUNKNOWN/noedit.
+Niri5pairfailremains, N2released/lockfree, soleheavyavailableN0011checks/diagnostic.
+Ownworktree luna-n0011-js-fix-20261019 base8a. No protocol/schema/nativechange;
+all durableownedintent/boot/error/fallbackcorrectnessmandatory. QML<=2/group<=8
+in2pairdiagnostic requiredbeforeowner-authorizedfull5pairspercompositor.
+N9/N10local/sourcecontinue, Beadlight, nootherheavy/CI. No F4publication yet.
