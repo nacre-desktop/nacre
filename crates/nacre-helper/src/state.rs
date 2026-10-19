@@ -1193,6 +1193,7 @@ pub fn legacy_snapshot(mut files: Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::unix::fs::MetadataExt;
 
     #[test]
     fn pinned_config_root_migrates_backup_and_cleans_temporary_files() -> Result<()> {
