@@ -541,3 +541,20 @@ for ten uncompressed arms plus at most two quiet-only end retries. Worker doing
 local schedule/source/mocks review; payload still UNARMED until root grant.
 No Colors or67e in fallback. N9 new304d28fe local read fix remains untested;
 N10 still source prototype, no live action authorized.
+
+Root fallback ACTIVATION GRANT issued after independent validate_prep ALL PASS:
+Oct19 23:15–Oct20 04:30UTC, sole heavy worker luna_n2_colors_diagnostic_prep.
+ORIGINAL8a/helper439 vs5f4/helper4a, five Hyprland A/B pairs (10arms), unchanged
+v14/geometry/safety/paging/swap gates and max2quiet-only end retries. Group<=12MiB
+everyphase; QML/daemon/others reported. PeersIDLE/nootherheavy/CI. No new owner
+approval chain. Await actualSTART/PID; previous67e capture cleaned.
+Schedule030ac1bde532e4767365fc233637d48ae51dbaf9d92112e36a966cc915087e2e,
+runner9990c478dc345be8d4016e8bde6e611ffbc5103ed94e827ddadd5a2be13fda91.
+No morefixhunt; after this accepted result integrate+exactheadCI, debtfollowup,
+N9/N10 source continuation. No liveaction.
+
+Actual fallback START23:15:30UTC, controllerPID1861730/startticks32136159;
+exactA5f4/4a vsORIGINAL8a/439, QSH7796116a, hostfb7ab. Preflight available
+13240213504B, swapcapacity15569252352B/use19320832B, geometry/source/runtime
+passed. Worker owns soleheavy10-armbatch. New queued low-priorityN0012 records
+conditional Niri memory debt and no-later-QML-growth rule; NOT F4 accepted yet.
