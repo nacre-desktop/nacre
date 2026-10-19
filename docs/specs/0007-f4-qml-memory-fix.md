@@ -3,7 +3,7 @@
 - ID: N0007
 - Repo: nacre-desktop/nacre
 - Implementer: one built-in Sol worker
-- Status: Ready
+- Status: Review (source accepted; memory screening pending)
 - Depends on: N0001/N0004 accepted source; v14 correct-profile diagnostic pair
 - Date: 2026-10-19
 - Size: one focused source/fix session, then separately granted checks
@@ -108,3 +108,19 @@ Cargo-j2, one granted heavy job. Private/nested only; capture cap12GiB/swap0,
 host>=4GiB start/abort<2GiB, verified held-child scope and watchdog. No live desktop,
 installed Nacre/configs/keys/units, publication, AI-policy/paru changes, other
 people's PIDs, memory pressure/cache drops/sysctl. Extras go in report, not code.
+
+## Source review — 2026-10-19
+
+Accepted local source `0df0bc145968f51ce156075caf380cf64619f00d` after
+independent Sol review. It removes duplicate initialization/projection, preserves
+owned mutable copies and durable-intent checks, and fixes the seeded favorites
+initialization race. All fourteen selected correctness checks passed: twelve
+local private Qt cases and two exact-helper wire cases in the verified scope.
+Rust/protocol trees are unchanged from1382; helper439dd355 is reusable without a
+rebuild. Source acceptance is not a memory claim or publication approval.
+
+Next: bind the unchanged v14 method to fresh outputs and this exact source.
+Quick screening compares published baseline5f4 against fixed0df, one A/B pair
+per compositor, to assess the absolute standing memory budget. The old1382 pair
+is diagnostic context. No capture is armed until lead reviews those bindings and
+records a fresh exclusive window; no new measurement-tool version is allowed.
