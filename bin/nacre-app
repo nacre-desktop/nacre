@@ -4,6 +4,7 @@
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -14,6 +15,67 @@ DEFAULTS = {
     "mail": ["google-chrome-stable", "--app=https://mail.google.com/"],
     "emoji": ["nacre-menu", "actions.emoji"],
 }
+
+
+def restricted_niri_session():
+    """Only bridge desktop terminals affected by Niri's staged user namespace."""
+    if os.environ.get("NACRE_COMPOSITOR") != "niri":
+        return False
+    try:
+        mappings = Path("/proc/self/uid_map").read_text().splitlines()
+        if mappings and not any(int(row.split()[1]) == 0 for row in mappings):
+            return True
+        return any(
+            line.split() == ["NoNewPrivs:", "1"]
+            for line in Path("/proc/self/status").read_text().splitlines()
+        )
+    except (OSError, ValueError, IndexError):
+        return False
+
+
+def host_terminal(argv):
+    """Launch through the normal user manager, outside the compositor overlay."""
+    runner = shutil.which("systemd-run")
+    if not runner:
+        raise SystemExit("Cannot open a normal terminal: systemd-run is unavailable")
+    command = [
+        runner,
+        "--user",
+        "--quiet",
+        "--wait",
+        "--collect",
+        "--expand-environment=no",
+        "--property=Type=exec",
+        "--working-directory=" + str(Path.cwd()),
+    ]
+    for name in (
+        "DISPLAY",
+        "WAYLAND_DISPLAY",
+        "XDG_RUNTIME_DIR",
+        "DBUS_SESSION_BUS_ADDRESS",
+        "XAUTHORITY",
+        "NIRI_SOCKET",
+        "XDG_CURRENT_DESKTOP",
+        "XDG_SESSION_TYPE",
+        "NACRE_COMPOSITOR",
+        "LANG",
+        "LC_ALL",
+        "LC_CTYPE",
+        "SSH_AUTH_SOCK",
+    ):
+        if name in os.environ:
+            command.append("--setenv=" + name + "=" + os.environ[name])
+    # Resolve the terminal in the host manager's PATH, not the overlay's bin tree.
+    command += ["--", "/usr/bin/env", "--", *argv]
+    try:
+        result = subprocess.run(command)
+    except OSError as error:
+        raise SystemExit(f"Cannot open a normal terminal: {error}") from error
+    if result.returncode:
+        raise SystemExit(
+            "Cannot open a normal terminal through the user manager "
+            f"(exit {result.returncode})"
+        )
 
 
 def main():
@@ -39,7 +101,11 @@ def main():
         raise SystemExit(
             "Install the selected application or edit ~/.config/nacre/apps.json"
         )
-    os.execvp(argv[0], [*argv, *sys.argv[2:]])
+    argv = [*argv, *sys.argv[2:]]
+    if name == "terminal" and restricted_niri_session():
+        host_terminal(argv)
+        return
+    os.execvp(argv[0], argv)
 
 
 if __name__ == "__main__":

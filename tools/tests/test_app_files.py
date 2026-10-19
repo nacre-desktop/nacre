@@ -33,6 +33,7 @@ class FilesRouteTests(unittest.TestCase):
                         app.shutil, "which", return_value="/usr/bin/installed"
                     ),
                     patch.object(app.os, "execvp") as execute,
+                    patch.object(app, "restricted_niri_session", return_value=False),
                 ):
                     app.main()
                     execute.assert_called_once_with(argv[0], argv)
